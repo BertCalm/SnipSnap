@@ -5,6 +5,8 @@ import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.KitPad
 import com.snipsnap.mpc3.Acvs
@@ -18,6 +20,7 @@ import com.snipsnap.synth.LibrationVoice
 import com.snipsnap.synth.PadRecipe
 import java.io.File
 import java.util.concurrent.CancellationException
+import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.math.abs
 import kotlin.math.log2
 import kotlin.test.*
@@ -60,11 +63,13 @@ class LibrationPadMakerTest {
             val program = LibrationPadMaker.export(patch.name, spec, notes, dir)
             val (sidecar, instrument) = InstrumentStore.list(dir).single()
             assertEquals(spec.releaseSeconds, instrument.release)
+            assertTrue(instrument.explicitNoteOn)
             val data = File(dir, Mpc3TrackWriter.trackDataDirName(patch.name))
             val xpm = File(data, "${patch.name}.xpm").readText()
             val xty = Acvs.read(File(dir, "${patch.name}.xty")).payloadText
             assertTrue("<VolumeAttack>0.000000</VolumeAttack>" in xpm)
             assertTrue("<VolumeRelease>0.400000</VolumeRelease>" in xpm)
+            assertTrue("<TriggerMode>2</TriggerMode>" in xpm)
             assertTrue("\"LoopMode\": 1" in xty)
             for ((i, zone) in instrument.zones.withIndex()) {
                 val file = File(sidecar.parentFile, zone.sample)
@@ -100,6 +105,52 @@ class LibrationPadMakerTest {
             val released = render(player, spec.releaseSeconds + .15f, 48000)
             assertTrue(released.samples.takeLast(960).all { it == 0f })
             assertTrue(player.activeNotes.isEmpty())
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test fun `export descriptors keep the clipped authored range rather than spanning the whole keyboard`() {
+        val dir = kotlin.io.path.createTempDirectory("libration-range-").toFile()
+        try {
+            for (root in listOf(36, 37, 60, 83, 84)) {
+                val setting = LibrationPadMaker.Spec(patch.copy(midi = root))
+                val fixture = KeyNote(Snip(FloatArray(1024), 1, 44100), 512)
+                val name = "ORBIT RANGE $root"
+                val program = LibrationPadMaker.export(name, setting,
+                    LibrationPadMaker.zoneMidis(setting).map { fixture }, dir)
+                val expected = program.keygroups.map { it.lowNote to it.highNote }
+                val phone = InstrumentStore.read(InstrumentStore.sidecar(dir, name))
+                assertEquals(expected, phone.zones.map { it.lowNote to it.highNote },
+                    "phone descriptor retains the rendered LIBRATION range at root $root")
+                assertNull(phone.zoneFor(expected.first().first - 1))
+                assertNull(phone.zoneFor(expected.last().second + 1))
+                assertTrue(phone.explicitNoteOn)
+
+                val data = File(dir, Mpc3TrackWriter.trackDataDirName(name))
+                val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(data, "$name.xpm"))
+                val instruments = xml.getElementsByTagName("Instrument")
+                val xpmRanges = (0 until program.keygroups.size).map { index ->
+                    val node = instruments.item(index) as org.w3c.dom.Element
+                    assertEquals("2", node.getElementsByTagName("TriggerMode").item(0).textContent,
+                        "MPC 2 zone $index sustains until key-up")
+                    node.getElementsByTagName("LowNote").item(0).textContent.toInt() to
+                        node.getElementsByTagName("HighNote").item(0).textContent.toInt()
+                }
+                assertEquals(expected, xpmRanges, "MPC 2 retains the rendered LIBRATION range at root $root")
+
+                val decoded = Json.parse(Acvs.read(File(dir, "$name.xty")).payloadText) as JsonValue.Obj
+                val nativeData = decoded.entries.getValue("data") as JsonValue.Obj
+                val nativeProgram = nativeData.entries.getValue("program") as JsonValue.Obj
+                val drum = nativeProgram.entries.getValue("drum") as JsonValue.Obj
+                val zones = drum.entries.getValue("instruments") as JsonValue.Arr
+                val nativeRanges = zones.items.take(program.keygroups.size).map { value ->
+                    val zone = (value as JsonValue.Obj).entries
+                    assertEquals(2, (zone.getValue("triggerMode") as JsonValue.Num).value.toInt(),
+                        "MPC 3 zone sustains until key-up")
+                    (zone.getValue("lowNote") as JsonValue.Num).value.toInt() to
+                        (zone.getValue("highNote") as JsonValue.Num).value.toInt()
+                }
+                assertEquals(expected, nativeRanges, "MPC 3 retains the rendered LIBRATION range at root $root")
+            }
         } finally { dir.deleteRecursively() }
     }
 

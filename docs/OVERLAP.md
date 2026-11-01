@@ -1,4 +1,4 @@
-# OVERLAP — factory bank and finite kit
+# OVERLAP: finite bank and held instruments
 
 OVERLAP adapts the [XOmnibus guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/overlap_synthesis_guide.md)
 as a deterministic finite six-delay resonator in `:synth`. The owner approved
@@ -11,6 +11,8 @@ the MPC kit handoff alongside them. The
 and [original audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/r1/index.html)
 remain available. The first, second and musical auditions keep their existing
 audio; factory registration changes their availability in the app.
+Explicit HELD playback now adds the accepted steady articulation to saved
+phone instruments while preserving those finite recipes and their sound.
 
 ## Approved factory bank
 
@@ -49,10 +51,10 @@ LOW PIN, LOW CUP and LOW SEED: copies of the first four plucks one octave down,
 with their remaining patch fields preserved. Each pad carries its full
 `PadRecipe`, reference-note metadata and native rendered sample.
 
-All sixteen pads are TONAL one-shots. They play their complete finite sample
-once, including its native end fade. HOLD extends excitation before decay;
-individual renders end within eight seconds. Held notes and sustained loop
-support are a separate future step. Captured-snip excitation also remains
+All sixteen starter pads are TONAL one-shots. They play their complete finite
+sample once, including its native end fade. HOLD extends excitation before
+decay; individual finite renders end within eight seconds. The separate held
+workflow below does not change this starter. Captured-snip excitation remains
 future work.
 
 ## MPC kit handoff
@@ -121,8 +123,10 @@ one-shot export. Relevant checks are:
 
 Android CI builds the app and runs the focused `OverlapSynthScreenTest` on an
 emulator. Local JVM checks do not establish physical phone or MPC behavior.
-The checks below record the outstanding manual hardware pass; save a custom
-preset before leaving SYNTH to retain its note and velocity across recreation.
+The owner accepted the separate held MPC trial on 2026-10-31; the acceptance
+ledger below records the limit of that report. The finite starter and real-phone
+checks below still need their own recorded results. Save a custom preset before
+leaving SYNTH to retain its note and velocity across recreation.
 
 ## Manual real phone pass
 
@@ -220,9 +224,11 @@ antialias decimator. Output is mono 44.1 kHz.
 | RING | Nominal low-frequency T60 `.55 × 24^RING` seconds, before additional spectral losses |
 | HOLD | Finite excitation duration `.040 + 5.96 × HOLD²` seconds; at one, six seconds plus decay |
 
-All outputs remain finite, capped at eight seconds. HOLD does not export a
-seamless or indefinite loop. Picker registration and the starter kit preserve
-that finite behavior. Captured-snip input and held-note support remain future work.
+All outputs from the finite model renderers remain finite, capped at eight
+seconds. Their HOLD control does not export a seamless or indefinite loop.
+The original factory bank and starter kit preserve that behavior. The separate
+held workflow uses the steady source described below. Captured-snip input
+remains future work.
 
 ## Recipes and regeneration
 
@@ -254,8 +260,8 @@ accessible on the retained first- and second-listen pages.
 
 ## Separate steady held proof
 
-The held experiment is an opt-in Kotlin prototype, separate from saved engine
-models and the approved factory bank. Its gesture is excitation builds → the
+The held experiment began as an opt-in Kotlin prototype, separate from saved
+engine models and the approved factory bank. Its gesture is excitation builds → the
 network settles into sustain → note-off withdraws the drive → stored energy
 rings out. It keeps the six delay proportions, fractional-delay tuning, passive
 scattering and pickup of model 2. A periodic six-node excitation replaces the
@@ -266,8 +272,9 @@ the original finite gesture.
 ./gradlew :synth:generateOverlapHeldAudition
 ```
 
-`OverlapHeldPrototype` is not registered as a patch or connected to the phone
-picker. `generateOverlapHeldAudition` writes reproducible listening assets under
+`OverlapHeldPrototype` supplies the separate physical proof; its experimental
+audition recipes are not ordinary saved patches. `generateOverlapHeldAudition`
+writes reproducible listening assets under
 `testkit/overlap-held-audition/`, with source in
 `prototype/overlap-held-audition/`. The original bank and both earlier auditions
 remain the listening references. The experiment introduces no new factory presets.
@@ -332,12 +339,11 @@ engine-specific aliasing bound remain unverified.
   state. Deterministic noise alone would not guarantee a short seamless loop.
 - Withdrawing the drive preserves the resonator's own release instead of
   replacing it with an arbitrary output envelope.
-- The bounded settling search is export/prototype work. A future interactive
-  path needs a bounded cache keyed by topology, KNOT, RING, reference MIDI,
-  period frames, excitation seed and prototype revision. Matrix and geometry
-  setup already happen once per render; caching those alone will not remove
-  repeated network simulation. Phone timing and a cache implementation are not
-  established by this proof.
+- The bounded settling search is export/prototype work. An interactive path
+  needs to cache completed notes rather than only matrix and geometry setup:
+  those small setup steps do not remove repeated network simulation. The phone
+  integration below adds that bounded cache. This earlier proof does not
+  establish phone timing.
 
 ## Held keygroup hardware trial
 
@@ -359,7 +365,8 @@ Each topology uses reference MIDI 36, 48 and 60. The three inclusive zones are
 30–42, 43–54 and 55–66; notes outside 30–66 deliberately have no zone. Roots are
 the synthesis reference notes, not a claim that each topology's strongest
 partial is that note. The lower and upper references extend the settings heard
-in the approved MIDI-48 proof and still need listening acceptance.
+in the approved MIDI-48 proof. The owner accepted this MPC trial on 2026-10-31;
+no separate register-by-register measurements were supplied.
 
 Each WAV has an onset period followed by one untouched settled period. A short
 fade at the start of the onset prevents an abrupt start; the second period is
@@ -380,16 +387,17 @@ introduced by this package.
 
 `README.txt` carries the hardware checklist: load each program, hold each
 sampled reference through several repeats, tap and release early, play across
-zone boundaries, try a small chord and check final note-off. Record the MPC
-model/firmware and any clicks, unexpected pitch jumps, missing notes or stuck
-voices. Hardware loading, envelope timing, polyphony and playability remain
-pending until that check is performed.
+zone boundaries, try a small chord and check final note-off. The owner accepted
+the trial on 2026-10-31. The MPC model, OS/firmware and individual checklist
+results were not supplied, so this records acceptance rather than measured
+envelope timing, polyphony or a device-specific pass. Future bench notes should
+record those details and any clicks, pitch jumps, missing notes or stuck voices.
 
 The package records deterministic audio and source hashes separately from
 host render-time measurements. Generation is an offline, bounded export job;
 it does not establish interactive phone performance. Saved held recipes,
-phone controls, completed-note caching, loopable breathing and GLOW remain
-subsequent integration work.
+phone controls and completed-note caching are the integration scope below.
+Loopable breathing and GLOW remain deferred.
 
 ### Why it is built this way
 
@@ -401,3 +409,222 @@ subsequent integration work.
   bounds, reducing format-specific disagreements.
 - The sampler release is a deliberate approximation to test on the MPC before
   making it part of the phone workflow.
+
+## Acceptance ledger
+
+| Evidence | Status and limit |
+| --- | --- |
+| Finite factory bank | The owner accepted the twelve model-2 musical recipes. Their registration and finite audio remain separate from held playback. |
+| Steady held listening proof | The owner accepted the steady proof. Its recorded host tests establish recurrence, independent-neighbour seam checks and source-withdrawal behavior under the tested settings. |
+| Held MPC keygroup trial | Owner accepted in conversation on 2026-10-31. No MPC model, OS/firmware or per-check hardware measurements were supplied. Do not infer a particular device, measured release time or polyphony limit. |
+| Phone integration | Implementation revision `2b07c5ef` has passing Android/native CI and a 355-test emulator run with no failures and one unrelated benchmark skip. The separate clean local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies. Physical-phone listening and timing remain unmeasured. |
+| Production audio compatibility | Local checkpoint `8b6d0aea` rechecked all twelve complete production PCM24 WAVs, including sampler metadata, against the accepted trial: all are byte-identical. The measured held-source files match implementation revision `2b07c5ef`; the local checkpoint was not published as the PR head. |
+
+Owner acceptance is a listening and use decision. It does not replace a measured
+latency, pitch, aliasing or sampler-envelope report. The existing held package
+uses a collection gain of `1` for the approved samples; this records that export,
+not a guarantee that every future KNOT, RING or reference setting stays below
+the same peak without protection.
+
+## Held phone workflow: as built, 2026-10-31
+
+The integration adds explicit saved held playback, dry touch preview and
+ordinary instrument-library/MPC export. The baseline for this update is
+`2b3e1688`. Implementation revision `2b07c5ef` has passing Android/native CI
+and a successful emulator run. The separate clean local `8b6d0aea` gate passed
+7,452 JVM cases and all three APK assemblies. Local focused, accepted-audio,
+benchmark and mutation evidence is recorded separately below. No physical-phone
+listening or timing is claimed.
+
+### Saved playback and controls
+
+`OverlapPatch` appends `playback`, `releaseSeconds` and `heldVersion`, with
+explicit `OverlapPlayback.FINITE` and `OverlapPlayback.HELD` choices. HELD
+uses `OverlapHeld.VERSION = 1` while the finite engine remains model `2`.
+Default finite JSON omits the new default fields; a legacy recipe with no
+playback remains finite, and missing model still means model 1. HELD JSON
+requires its explicit version and refuses unsupported versions. Saving,
+loading, editing macros and changing velocity preserve the playback choice
+and its saved release. Focused checks cover finite JSON/audio compatibility.
+
+The held path requires model 2, HOLD `1`, and PULSE, GLOW and LOCK `0`.
+SELF exposes RING; the other three topologies expose KNOT and RING. All share
+ROOT, VELOCITY and RELEASE. KNOT is physically inactive in the approved SELF
+network, so hiding it does not revoice the sound. The complete six-macro map
+remains saved. Entering HELD starts with RING `.6`, KNOT `0` for SELF or `1`
+for the other topologies, and the steady controls above. The nominal source
+clock period stays fixed at `1.5` seconds. This adds no breathing or new motion;
+breathing and GLOW are deferred until their moving state has its own recurrence
+and listening decision.
+
+The saved reference remains MIDI `24` to `84`. Release defaults to `.6` and
+accepts `.1` to `1.5` in the existing sampler-envelope field. The field's name
+does not establish an MPC release duration in measured seconds. Its sampler
+fade also differs from the prototype's physical source withdrawal and passive
+network decay.
+
+### Completed notes, preview and export
+
+`OverlapHeld.render` requests a roughly `1.5`-second settled body, then builds
+two periods: the first has a `20` ms onset ramp, and the second remains the
+untouched sustain loop. Its positive loop start preserves the existing keygroup
+convention. One only-down scalar per completed note enforces a `.90` peak
+ceiling; the approved trial's gain-1 samples retain their values.
+
+A completed-note LRU is bounded to `12` entries and `8 MiB`, with defensive
+sample copies on insertion and retrieval. Release is not part of its audio
+key because it changes the sampler envelope rather than the captured body.
+Cancelled, failed or superseded work does not enter the cache. The cold solve
+is still bounded simulation, not a measured instant phone render. A touch plays
+already prepared attack-and-loop audio; it does not start DSP on the press.
+
+`OverlapPerformanceControls` supplies explicit mode selection and saved
+performance controls. `rememberOverlapHeldPreview` prepares cancellable audio
+off the main thread and reuses the sample-only held gesture. It stops on touch
+cancellation, disposal and backgrounding; audio-focus behavior belongs to the
+existing sample player. The phone workflow adds saved presets and MAKE
+INSTRUMENT through `OverlapPadMaker` and the ordinary instrument library/MPC
+export path. One-shot SEND TO PAD and SPREAD play finite deliveries with a
+saved `20` ms terminal fade. `OverlapPadMaker.ONE_SHOT_FADE_MS` supplies the
+shared value; `deliveryRecipe(patch)` supplies SPREAD's rendered and saved
+`PadRecipe`, so applying, reopening and replaying the pad retain the fade.
+Those pad-only fades do not change the native exported sustain body.
+`Spread.detect` uses the authored reference MIDI for held OVERLAP while finite
+OVERLAP retains its existing detector behavior. For a default reference of
+MIDI `48`, an instrument
+uses sampled references `36`, `48`, `60` with inclusive zones `30–42`, `43–54`,
+`55–66`. Other saved references shift the three-note layout while retaining
+the saved reference itself. Below `36`, the sources are `[m, m+12, m+24]`;
+above `72`, they are `[m-24, m-12, m]`; otherwise they are `[m-12, m, m+12]`.
+This keeps synthesis references within MIDI `24` to `84`. Midpoint zone splits
+and six-semitone end extensions keep each source's resampling span bounded.
+The reference remains a geometry request rather than a guaranteed strongest
+perceived root. The earlier owner acceptance covers the fixed MPC trial; it
+does not supply a hardware measurement for every new reference or control edit.
+
+### Replay a saved held recipe from the CLI
+
+The CLI uses the saved playback choice. For a saved HELD MIRROR recipe:
+
+```text
+./gradlew :cli:run --args="synth OVERLAP MIRROR --patch /absolute/path/held-mirror.patch.json --out /tmp/overlap-held-note"
+./gradlew :cli:run --args="synth OVERLAP MIRROR --patch /absolute/path/held-mirror.patch.json --instrument --release .6 --out /tmp/overlap-held-instrument"
+```
+
+The first command writes the native onset-plus-loop WAV with its sampler loop
+metadata and a saved patch beside it. The second samples the three reference
+zones through `OverlapPadMaker` and the normal native/legacy package path,
+retaining an instrument sidecar and the complete patch. `--midi` and
+`--velocity` override their saved values without discarding the playback state;
+`--release` changes the instrument's saved sampler release.
+
+There is no new `--held` flag. `--instrument` requires an explicitly saved HELD
+patch and refuses a finite recipe instead of changing its playback. The engine
+and topology arguments must match the saved patch. The original prototype
+audition recipes remain distinct from these normal `OverlapPatch` files.
+
+### Host measurements and verification
+
+#### CI evidence for implementation revision `2b07c5ef`
+
+For source revision `2b07c5ef`, PR #778's Android and native jobs passed in
+[run 41249627352](https://github.com/BertCalm/SnipSnap/actions/runs/41249627352).
+A development APK was downloaded from that
+successful Android job with matching source-head provenance; its artifact
+name uses synthetic PR merge `8a72056b`, not the source-head SHA.
+
+The exact-head, unfiltered [emulator run 41249627309](https://github.com/BertCalm/SnipSnap/actions/runs/41249627309),
+job `124680223174`, completed `355` tests with `0` failures and `1` skip,
+ending `BUILD SUCCESSFUL`. The only skipped case was
+`LibrationRenderBenchmark.record_cold_physics_reuse_and_audio_recall`.
+This is executed emulator evidence, distinct from APK compilation and from
+physical-phone listening, touch latency or device-specific performance.
+
+#### Local checkpoint evidence
+
+The combined local gate exited `0` on 2026-11-01 at clean `8b6d0aea`, unchanged
+before and after the run. With the Android SDK available, it ran unfiltered
+tests across all nine pure-JVM modules (`test -x :app:test`) and assembled
+debug, StrikeFx and instrumentation APKs. Its `901` JUnit reports contain
+`7,452` valid cases with no failures, errors or skips: `5,991` emitted PASS
+events and `1,461` valid up-to-date cases were reused. All three APK hashes
+were reverified. This is local regression evidence, not a claim that the
+separate PR JVM job passed.
+
+At the same local checkpoint, `106` focused tests passed
+(`69` synth, `35` shell and `2` CLI), exit `0`, with no failures, errors or
+skips. That checkpoint was superseded by the authoritative PR head and was
+not pushed. These local results remain distinct from PR CI.
+Coverage includes
+finite JSON/audio compatibility, held round trip and version refusal, strict
+steady-control validation, cache ownership/eviction, cancellation without
+publication, loop/sample bounds, saved preset handling and complete
+instrument-library/export replay. The final shell regressions also verify saved
+finite delivery fades without changing the source, actual SPREAD
+apply/reopen/replay/tuning, and finite-detector fallback.
+
+A negative control removed the completed-cache defensive sample copy. The
+named cache-ownership test then failed with the expected caller-mutation
+assertion. Restoring the source restored its exact SHA-256
+`a595eaf38eb5349bacc8e4ab189728f36794fded331d876e9ce9d5467a37ea76`;
+the restored seven-test `OverlapHeldTest` run exited `0` without failures,
+errors or skips. This demonstrates that the ownership guard detects its
+intended failure rather than only passing the implementation.
+
+All twelve complete WAVs were rechecked through the production CLI and
+`OverlapPadMaker` at clean local `8b6d0aea`. They remain byte-identical to the
+retained accepted trial, including
+PCM24 audio and `smpl` root/loop metadata. The references are MIDI `36`, `48`
+and `60` for all four topologies; every approved capture kept gain `1`.
+The measured `OverlapHeld`, prototype, maker and CLI source hashes match
+implementation revision `2b07c5ef`; this is source continuity, not a new CI audio measurement.
+
+The retained `OverlapHeldBenchmark` recorded `24` production-render calls on
+a Linux host,
+OpenJDK `21.0.13`, with four visible processors. At MIDI `48`, velocity `.8`:
+
+| Path | Render time range | Median |
+| --- | --- | --- |
+| Fresh completed-cache miss, one per topology | `127.389–281.649 ms` | `143.276 ms` |
+| Exact completed-cache hit, one per topology | `0.134–0.349 ms` | `0.221 ms` |
+
+Counters independently confirmed exact, name-only and release-only hits, and
+changed-key misses. PCM hashes confirmed that renaming or changing release
+does not change source audio. Callback cancellation and thread interruption
+were observed on real uncached work and left no cache entry. Timers surround
+`OverlapHeld.render` only; they exclude PCM encoding, hashes and file I/O.
+These are host completed-cache measurements, not phone touch latency or fresh
+JVM startup measurements. Reproduce the report with a new output filename:
+
+```text
+./gradlew :synth:benchmarkOverlapHeld -PoverlapHeldBenchmarkOutput=/absolute/path/new-held-report.json
+```
+
+The combined local gate completed `:app:assembleDebug`,
+`:app:assembleStrikeFx` and `:app:assembleDebugAndroidTest`. Its compiled
+`OverlapHeldSynthScreenTest` coverage contains four cases for explicit
+mode/finite return, same-frame performance edits and saved one-shot delivery,
+prepared release without name/release recapture, and MAKE INSTRUMENT's three
+roots. The save/send cases also exercise the actual SPREAD overlay and compare
+complete recipes and PCM. APK builds do not execute the instrumentation cases.
+
+A physical-phone pass still needs listening, press/early-release and
+cancellation behavior, background/focus loss, saved preset/instrument reopening
+and MPC export from the phone. Record device/build and cold/warm timing rather
+than treating host timings, emulator results, APK compilation or earlier MPC
+acceptance as that physical pass.
+
+### Why it is built this way
+
+- An explicit playback choice keeps accepted finite recipes and their sound
+  intact while making a saved held instrument unambiguous.
+- The steady restrictions expose controls this held body can reproduce;
+  breathing and GLOW need their own moving-state proof.
+- A prepared onset and untouched loop give the sampler a clean note entrance
+  without changing every return of the accepted body. SEND and SPREAD save
+  their finite terminal fade in the pad recipe, keeping replay consistent
+  without modifying instrument loops.
+- Caching complete notes removes repeated settling work on a warm edit, while
+  bounds and owned copies limit memory use and accidental PCM mutation.
+- The sampled release follows the phone and MPC instrument path; keeping it
+  distinct from physical network decay makes the approximation explicit.

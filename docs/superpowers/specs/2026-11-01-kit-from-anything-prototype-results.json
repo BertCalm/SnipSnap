@@ -20,6 +20,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -30,13 +31,14 @@
       "class": "SNARE",
       "confidence": 0.95,
       "seconds": 0.69,
-      "centroid_hz": 10074,
+      "centroid_hz": 10075,
       "decay_ms": 215,
       "low": 0.0,
       "mid": 0.03,
       "high": 0.97,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -54,6 +56,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -71,6 +74,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -88,6 +92,7 @@
       "high": 0.97,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -95,14 +100,15 @@
       "genre": "BOOM_BAP",
       "slot": "RIDE",
       "file": "PLUCK_BOOM_BAP_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 5024,
-      "decay_ms": 395,
+      "centroid_hz": 7770,
+      "decay_ms": 325,
       "low": 0.0,
-      "mid": 0.05,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -110,14 +116,15 @@
       "genre": "BOOM_BAP",
       "slot": "CRASH",
       "file": "PLUCK_BOOM_BAP_07_CRASH.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "HAT_OPEN",
+      "confidence": 0.8,
       "seconds": 1.3,
-      "centroid_hz": 5297,
-      "decay_ms": 511,
+      "centroid_hz": 14641,
+      "decay_ms": 888,
       "low": 0.0,
-      "mid": 0.15,
-      "high": 0.85,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -133,8 +140,12 @@
       "low": 0.0,
       "mid": 0.32,
       "high": 0.68,
-      "pitch_hz": 290.17,
-      "pitch_confidence": 0.331,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 1.5,
+      "siren_status": "pass",
+      "gate_pass": true,
+      "pitch_hz": 289.75,
+      "pitch_confidence": 0.166,
       "under_loop_line": true
     },
     {
@@ -151,7 +162,10 @@
       "mid": 0.83,
       "high": 0.01,
       "pitch_hz": 110.05,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.887,
+      "target_hz": 110.0,
+      "cents": 0.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -167,8 +181,11 @@
       "low": 0.15,
       "mid": 0.83,
       "high": 0.02,
-      "pitch_hz": 130.69,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.71,
+      "pitch_confidence": 0.91,
+      "target_hz": 130.81,
+      "cents": -1.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -184,8 +201,11 @@
       "low": 0.14,
       "mid": 0.85,
       "high": 0.02,
-      "pitch_hz": 164.86,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 164.88,
+      "pitch_confidence": 0.949,
+      "target_hz": 164.81,
+      "cents": 0.6,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -201,8 +221,11 @@
       "low": 0.05,
       "mid": 0.94,
       "high": 0.02,
-      "pitch_hz": 220.05,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 220.08,
+      "pitch_confidence": 0.927,
+      "target_hz": 220.0,
+      "cents": 0.6,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -218,8 +241,11 @@
       "low": 0.01,
       "mid": 0.76,
       "high": 0.23,
-      "pitch_hz": 440.41,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.45,
+      "pitch_confidence": 0.817,
+      "target_hz": 440.0,
+      "cents": 1.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -235,8 +261,11 @@
       "low": 0.01,
       "mid": 0.7,
       "high": 0.29,
-      "pitch_hz": 523.56,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 523.57,
+      "pitch_confidence": 0.822,
+      "target_hz": 523.25,
+      "cents": 1.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -252,8 +281,11 @@
       "low": 0.01,
       "mid": 0.65,
       "high": 0.34,
-      "pitch_hz": 658.45,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 658.46,
+      "pitch_confidence": 0.858,
+      "target_hz": 659.26,
+      "cents": -2.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -269,8 +301,11 @@
       "low": 0.01,
       "mid": 0.56,
       "high": 0.43,
-      "pitch_hz": 879.76,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 879.77,
+      "pitch_confidence": 0.867,
+      "target_hz": 880.0,
+      "cents": -0.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -288,6 +323,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -298,13 +334,14 @@
       "class": "SNARE",
       "confidence": 0.95,
       "seconds": 0.51,
-      "centroid_hz": 10055,
+      "centroid_hz": 10054,
       "decay_ms": 145,
       "low": 0.0,
       "mid": 0.03,
       "high": 0.97,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -322,6 +359,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -339,6 +377,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -356,6 +395,7 @@
       "high": 0.97,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -363,14 +403,15 @@
       "genre": "HOUSE",
       "slot": "RIDE",
       "file": "PLUCK_HOUSE_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 5022,
-      "decay_ms": 412,
+      "centroid_hz": 7769,
+      "decay_ms": 325,
       "low": 0.0,
-      "mid": 0.05,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -378,14 +419,15 @@
       "genre": "HOUSE",
       "slot": "CRASH",
       "file": "PLUCK_HOUSE_07_CRASH.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "HAT_OPEN",
+      "confidence": 0.8,
       "seconds": 1.4,
-      "centroid_hz": 5298,
-      "decay_ms": 528,
+      "centroid_hz": 14640,
+      "decay_ms": 911,
       "low": 0.0,
-      "mid": 0.15,
-      "high": 0.85,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -401,8 +443,12 @@
       "low": 0.0,
       "mid": 0.4,
       "high": 0.6,
-      "pitch_hz": 372.86,
-      "pitch_confidence": 0.146,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 34.3,
+      "siren_status": "pass",
+      "gate_pass": true,
+      "pitch_hz": 372.87,
+      "pitch_confidence": 0.074,
       "under_loop_line": true
     },
     {
@@ -418,8 +464,11 @@
       "low": 0.15,
       "mid": 0.83,
       "high": 0.02,
-      "pitch_hz": 109.89,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 109.9,
+      "pitch_confidence": 0.909,
+      "target_hz": 110.0,
+      "cents": -1.6,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -436,7 +485,10 @@
       "mid": 0.86,
       "high": 0.03,
       "pitch_hz": 130.87,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.911,
+      "target_hz": 130.81,
+      "cents": 0.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -452,8 +504,11 @@
       "low": 0.12,
       "mid": 0.86,
       "high": 0.02,
-      "pitch_hz": 164.62,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 164.71,
+      "pitch_confidence": 0.918,
+      "target_hz": 164.81,
+      "cents": -1.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -469,8 +524,11 @@
       "low": 0.03,
       "mid": 0.94,
       "high": 0.02,
-      "pitch_hz": 219.95,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 220.0,
+      "pitch_confidence": 0.898,
+      "target_hz": 220.0,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -486,8 +544,11 @@
       "low": 0.01,
       "mid": 0.76,
       "high": 0.23,
-      "pitch_hz": 440.38,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.43,
+      "pitch_confidence": 0.817,
+      "target_hz": 440.0,
+      "cents": 1.7,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -504,7 +565,10 @@
       "mid": 0.7,
       "high": 0.29,
       "pitch_hz": 523.54,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.822,
+      "target_hz": 523.25,
+      "cents": 1.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -515,13 +579,16 @@
       "class": "PERC",
       "confidence": 0.4,
       "seconds": 1.4,
-      "centroid_hz": 1074,
+      "centroid_hz": 1073,
       "decay_ms": 261,
       "low": 0.01,
       "mid": 0.65,
       "high": 0.34,
       "pitch_hz": 658.48,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.859,
+      "target_hz": 659.26,
+      "cents": -2.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -537,8 +604,11 @@
       "low": 0.01,
       "mid": 0.56,
       "high": 0.43,
-      "pitch_hz": 879.76,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 879.77,
+      "pitch_confidence": 0.867,
+      "target_hz": 880.0,
+      "cents": -0.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -556,6 +626,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -573,6 +644,7 @@
       "high": 0.97,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -590,6 +662,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -607,6 +680,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -624,6 +698,7 @@
       "high": 0.96,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -631,14 +706,15 @@
       "genre": "TECHNO",
       "slot": "RIDE",
       "file": "PLUCK_TECHNO_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 5028,
-      "decay_ms": 377,
+      "centroid_hz": 7771,
+      "decay_ms": 302,
       "low": 0.0,
-      "mid": 0.05,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -646,14 +722,15 @@
       "genre": "TECHNO",
       "slot": "CRASH",
       "file": "PLUCK_TECHNO_07_CRASH.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "HAT_OPEN",
+      "confidence": 0.8,
       "seconds": 1.2,
-      "centroid_hz": 5296,
-      "decay_ms": 459,
+      "centroid_hz": 14643,
+      "decay_ms": 830,
       "low": 0.0,
-      "mid": 0.15,
-      "high": 0.85,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -669,8 +746,12 @@
       "low": 0.0,
       "mid": 0.35,
       "high": 0.65,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 1.8,
+      "siren_status": "pass",
+      "gate_pass": true,
       "pitch_hz": 263.6,
-      "pitch_confidence": 0.389,
+      "pitch_confidence": 0.197,
       "under_loop_line": true
     },
     {
@@ -686,8 +767,11 @@
       "low": 0.15,
       "mid": 0.84,
       "high": 0.01,
-      "pitch_hz": 110.17,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 110.18,
+      "pitch_confidence": 0.876,
+      "target_hz": 110.0,
+      "cents": 2.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -703,8 +787,11 @@
       "low": 0.16,
       "mid": 0.83,
       "high": 0.01,
-      "pitch_hz": 65.33,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.71,
+      "pitch_confidence": 0.922,
+      "target_hz": 130.81,
+      "cents": -1.3,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -720,8 +807,11 @@
       "low": 0.16,
       "mid": 0.83,
       "high": 0.01,
-      "pitch_hz": 164.27,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 164.37,
+      "pitch_confidence": 0.912,
+      "target_hz": 164.81,
+      "cents": -4.7,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -737,8 +827,11 @@
       "low": 0.04,
       "mid": 0.95,
       "high": 0.01,
-      "pitch_hz": 55.04,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 219.77,
+      "pitch_confidence": 0.943,
+      "target_hz": 220.0,
+      "cents": -1.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -754,8 +847,11 @@
       "low": 0.01,
       "mid": 0.76,
       "high": 0.23,
-      "pitch_hz": 440.55,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.6,
+      "pitch_confidence": 0.816,
+      "target_hz": 440.0,
+      "cents": 2.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -771,8 +867,11 @@
       "low": 0.01,
       "mid": 0.7,
       "high": 0.3,
-      "pitch_hz": 523.68,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 523.69,
+      "pitch_confidence": 0.823,
+      "target_hz": 523.25,
+      "cents": 1.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -788,8 +887,11 @@
       "low": 0.01,
       "mid": 0.65,
       "high": 0.34,
-      "pitch_hz": 658.28,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 658.29,
+      "pitch_confidence": 0.855,
+      "target_hz": 659.26,
+      "cents": -2.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -805,8 +907,11 @@
       "low": 0.01,
       "mid": 0.56,
       "high": 0.43,
-      "pitch_hz": 879.77,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 879.79,
+      "pitch_confidence": 0.864,
+      "target_hz": 880.0,
+      "cents": -0.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -824,6 +929,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -841,6 +947,7 @@
       "high": 0.4,
       "wanted": "SNARE",
       "agrees": false,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -858,6 +965,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -875,6 +983,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -892,6 +1001,7 @@
       "high": 0.5,
       "wanted": "CLAP",
       "agrees": false,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -902,11 +1012,12 @@
       "class": "PERC",
       "confidence": 0.4,
       "seconds": 1.4,
-      "centroid_hz": 8484,
-      "decay_ms": 23,
+      "centroid_hz": 7252,
+      "decay_ms": 325,
       "low": 0.0,
-      "mid": 0.04,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -914,14 +1025,15 @@
       "genre": "BOOM_BAP",
       "slot": "CRASH",
       "file": "KICK_BOOM_BAP_07_CRASH.wav",
-      "class": "TOM",
-      "confidence": 0.78,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.3,
-      "centroid_hz": 155,
-      "decay_ms": 226,
-      "low": 0.74,
-      "mid": 0.26,
-      "high": 0.0,
+      "centroid_hz": 6511,
+      "decay_ms": 714,
+      "low": 0.0,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -937,8 +1049,12 @@
       "low": 0.0,
       "mid": 0.17,
       "high": 0.83,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 0.7,
+      "siren_status": "pass",
+      "gate_pass": true,
       "pitch_hz": 505.41,
-      "pitch_confidence": 0.287,
+      "pitch_confidence": 0.144,
       "under_loop_line": true
     },
     {
@@ -954,8 +1070,11 @@
       "low": 0.45,
       "mid": 0.55,
       "high": 0.0,
-      "pitch_hz": 110.06,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 110.09,
+      "pitch_confidence": 0.994,
+      "target_hz": 110.0,
+      "cents": 1.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -971,8 +1090,11 @@
       "low": 0.52,
       "mid": 0.47,
       "high": 0.0,
-      "pitch_hz": 130.8,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.91,
+      "pitch_confidence": 0.996,
+      "target_hz": 130.81,
+      "cents": 1.3,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -989,7 +1111,10 @@
       "mid": 0.46,
       "high": 0.0,
       "pitch_hz": 164.91,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.997,
+      "target_hz": 164.81,
+      "cents": 1.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1005,8 +1130,11 @@
       "low": 0.1,
       "mid": 0.89,
       "high": 0.01,
-      "pitch_hz": 220.08,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 220.1,
+      "pitch_confidence": 0.998,
+      "target_hz": 220.0,
+      "cents": 0.8,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1022,8 +1150,11 @@
       "low": 0.05,
       "mid": 0.37,
       "high": 0.58,
-      "pitch_hz": 439.97,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 439.98,
+      "pitch_confidence": 0.997,
+      "target_hz": 440.0,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1040,7 +1171,10 @@
       "mid": 0.16,
       "high": 0.78,
       "pitch_hz": 523.24,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.994,
+      "target_hz": 523.25,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1057,7 +1191,10 @@
       "mid": 0.15,
       "high": 0.8,
       "pitch_hz": 659.2,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.999,
+      "target_hz": 659.26,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1073,8 +1210,11 @@
       "low": 0.05,
       "mid": 0.07,
       "high": 0.89,
-      "pitch_hz": 880.04,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 880.06,
+      "pitch_confidence": 0.997,
+      "target_hz": 880.0,
+      "cents": 0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1092,6 +1232,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1109,6 +1250,7 @@
       "high": 0.58,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1126,6 +1268,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1143,6 +1286,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1160,6 +1304,7 @@
       "high": 0.42,
       "wanted": "CLAP",
       "agrees": false,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -1170,11 +1315,12 @@
       "class": "PERC",
       "confidence": 0.4,
       "seconds": 1.4,
-      "centroid_hz": 8484,
-      "decay_ms": 23,
+      "centroid_hz": 7249,
+      "decay_ms": 302,
       "low": 0.0,
-      "mid": 0.04,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1182,14 +1328,15 @@
       "genre": "HOUSE",
       "slot": "CRASH",
       "file": "KICK_HOUSE_07_CRASH.wav",
-      "class": "TOM",
-      "confidence": 0.78,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 155,
-      "decay_ms": 226,
-      "low": 0.74,
-      "mid": 0.26,
-      "high": 0.0,
+      "centroid_hz": 6510,
+      "decay_ms": 807,
+      "low": 0.0,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1205,8 +1352,12 @@
       "low": 0.0,
       "mid": 0.34,
       "high": 0.66,
-      "pitch_hz": 508.2,
-      "pitch_confidence": 0.149,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 2.7,
+      "siren_status": "pass",
+      "gate_pass": true,
+      "pitch_hz": 508.21,
+      "pitch_confidence": 0.075,
       "under_loop_line": true
     },
     {
@@ -1222,8 +1373,11 @@
       "low": 0.44,
       "mid": 0.55,
       "high": 0.0,
-      "pitch_hz": 109.87,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 109.92,
+      "pitch_confidence": 0.989,
+      "target_hz": 110.0,
+      "cents": -1.3,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1239,8 +1393,11 @@
       "low": 0.51,
       "mid": 0.49,
       "high": 0.0,
-      "pitch_hz": 130.61,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.79,
+      "pitch_confidence": 0.992,
+      "target_hz": 130.81,
+      "cents": -0.3,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1256,8 +1413,11 @@
       "low": 0.51,
       "mid": 0.49,
       "high": 0.01,
-      "pitch_hz": 82.39,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 164.81,
+      "pitch_confidence": 0.995,
+      "target_hz": 164.81,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1273,8 +1433,11 @@
       "low": 0.1,
       "mid": 0.89,
       "high": 0.01,
-      "pitch_hz": 109.99,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 220.03,
+      "pitch_confidence": 0.997,
+      "target_hz": 220.0,
+      "cents": 0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1290,8 +1453,11 @@
       "low": 0.05,
       "mid": 0.37,
       "high": 0.58,
-      "pitch_hz": 439.97,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 439.98,
+      "pitch_confidence": 0.997,
+      "target_hz": 440.0,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1308,7 +1474,10 @@
       "mid": 0.16,
       "high": 0.78,
       "pitch_hz": 523.24,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.994,
+      "target_hz": 523.25,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1325,7 +1494,10 @@
       "mid": 0.15,
       "high": 0.8,
       "pitch_hz": 659.2,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.999,
+      "target_hz": 659.26,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1341,8 +1513,11 @@
       "low": 0.05,
       "mid": 0.07,
       "high": 0.89,
-      "pitch_hz": 880.04,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 880.06,
+      "pitch_confidence": 0.997,
+      "target_hz": 880.0,
+      "cents": 0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1360,6 +1535,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1377,6 +1553,7 @@
       "high": 0.69,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1394,6 +1571,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1411,6 +1589,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1428,6 +1607,7 @@
       "high": 0.55,
       "wanted": "CLAP",
       "agrees": false,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -1438,11 +1618,12 @@
       "class": "PERC",
       "confidence": 0.4,
       "seconds": 1.4,
-      "centroid_hz": 8484,
-      "decay_ms": 23,
+      "centroid_hz": 7257,
+      "decay_ms": 325,
       "low": 0.0,
-      "mid": 0.05,
-      "high": 0.95,
+      "mid": 0.01,
+      "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1450,14 +1631,15 @@
       "genre": "TECHNO",
       "slot": "CRASH",
       "file": "KICK_TECHNO_07_CRASH.wav",
-      "class": "TOM",
-      "confidence": 0.78,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.2,
-      "centroid_hz": 155,
-      "decay_ms": 221,
-      "low": 0.74,
-      "mid": 0.26,
-      "high": 0.0,
+      "centroid_hz": 6513,
+      "decay_ms": 731,
+      "low": 0.0,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1473,8 +1655,12 @@
       "low": 0.0,
       "mid": 0.35,
       "high": 0.65,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 0.4,
+      "siren_status": "pass",
+      "gate_pass": true,
       "pitch_hz": 481.51,
-      "pitch_confidence": 0.279,
+      "pitch_confidence": 0.14,
       "under_loop_line": true
     },
     {
@@ -1490,8 +1676,11 @@
       "low": 0.48,
       "mid": 0.52,
       "high": 0.0,
-      "pitch_hz": 109.23,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 109.29,
+      "pitch_confidence": 0.98,
+      "target_hz": 110.0,
+      "cents": -11.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1507,8 +1696,11 @@
       "low": 0.56,
       "mid": 0.44,
       "high": 0.0,
-      "pitch_hz": 65.05,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.18,
+      "pitch_confidence": 0.987,
+      "target_hz": 130.81,
+      "cents": -8.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1524,8 +1716,11 @@
       "low": 0.59,
       "mid": 0.41,
       "high": 0.0,
-      "pitch_hz": 54.75,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 164.21,
+      "pitch_confidence": 0.991,
+      "target_hz": 164.81,
+      "cents": -6.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1541,8 +1736,11 @@
       "low": 0.17,
       "mid": 0.82,
       "high": 0.01,
-      "pitch_hz": 73.17,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 219.48,
+      "pitch_confidence": 0.995,
+      "target_hz": 220.0,
+      "cents": -4.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1558,8 +1756,11 @@
       "low": 0.06,
       "mid": 0.36,
       "high": 0.58,
-      "pitch_hz": 439.97,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 439.98,
+      "pitch_confidence": 0.997,
+      "target_hz": 440.0,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1575,8 +1776,11 @@
       "low": 0.06,
       "mid": 0.16,
       "high": 0.78,
-      "pitch_hz": 261.61,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 523.24,
+      "pitch_confidence": 0.994,
+      "target_hz": 523.25,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1593,7 +1797,10 @@
       "mid": 0.16,
       "high": 0.79,
       "pitch_hz": 659.19,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.999,
+      "target_hz": 659.26,
+      "cents": -0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1609,8 +1816,11 @@
       "low": 0.05,
       "mid": 0.07,
       "high": 0.88,
-      "pitch_hz": 880.03,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 880.05,
+      "pitch_confidence": 0.997,
+      "target_hz": 880.0,
+      "cents": 0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1628,6 +1838,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1645,6 +1856,7 @@
       "high": 0.95,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1662,6 +1874,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1679,6 +1892,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1696,6 +1910,7 @@
       "high": 0.86,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1703,14 +1918,15 @@
       "genre": "BOOM_BAP",
       "slot": "RIDE",
       "file": "BARK_BOOM_BAP_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 8003,
-      "decay_ms": 35,
+      "centroid_hz": 8079,
+      "decay_ms": 563,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1718,14 +1934,15 @@
       "genre": "BOOM_BAP",
       "slot": "CRASH",
       "file": "BARK_BOOM_BAP_07_CRASH.wav",
-      "class": "SNARE",
-      "confidence": 0.95,
+      "class": "HAT_OPEN",
+      "confidence": 0.56,
       "seconds": 1.3,
-      "centroid_hz": 6608,
-      "decay_ms": 139,
+      "centroid_hz": 12558,
+      "decay_ms": 697,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1741,8 +1958,12 @@
       "low": 0.0,
       "mid": 0.03,
       "high": 0.97,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 2.0,
+      "siren_status": "pass",
+      "gate_pass": true,
       "pitch_hz": 490.68,
-      "pitch_confidence": 0.113,
+      "pitch_confidence": 0.057,
       "under_loop_line": true
     },
     {
@@ -1759,7 +1980,10 @@
       "mid": 0.48,
       "high": 0.52,
       "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.994,
+      "target_hz": 110.0,
+      "cents": 0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1776,7 +2000,10 @@
       "mid": 0.47,
       "high": 0.53,
       "pitch_hz": 130.81,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.995,
+      "target_hz": 130.81,
+      "cents": 0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1793,7 +2020,10 @@
       "mid": 0.49,
       "high": 0.5,
       "pitch_hz": 164.8,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.984,
+      "target_hz": 164.81,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1810,7 +2040,10 @@
       "mid": 0.52,
       "high": 0.48,
       "pitch_hz": 220.01,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.99,
+      "target_hz": 220.0,
+      "cents": 0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1826,8 +2059,11 @@
       "low": 0.0,
       "mid": 0.05,
       "high": 0.95,
-      "pitch_hz": 109.99,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.44,
+      "pitch_confidence": 0.904,
+      "target_hz": 440.0,
+      "cents": 1.7,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1844,7 +2080,10 @@
       "mid": 0.05,
       "high": 0.95,
       "pitch_hz": 523.69,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.915,
+      "target_hz": 523.25,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1861,7 +2100,10 @@
       "mid": 0.08,
       "high": 0.92,
       "pitch_hz": 658.93,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.986,
+      "target_hz": 659.26,
+      "cents": -0.9,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1878,7 +2120,10 @@
       "mid": 0.11,
       "high": 0.89,
       "pitch_hz": 880.77,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.983,
+      "target_hz": 880.0,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1896,6 +2141,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1913,6 +2159,7 @@
       "high": 0.96,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1930,6 +2177,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1947,6 +2195,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1964,6 +2213,7 @@
       "high": 0.87,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1971,14 +2221,15 @@
       "genre": "HOUSE",
       "slot": "RIDE",
       "file": "BARK_HOUSE_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 7958,
-      "decay_ms": 35,
+      "centroid_hz": 8078,
+      "decay_ms": 668,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -1986,14 +2237,15 @@
       "genre": "HOUSE",
       "slot": "CRASH",
       "file": "BARK_HOUSE_07_CRASH.wav",
-      "class": "SNARE",
-      "confidence": 0.95,
+      "class": "HAT_OPEN",
+      "confidence": 0.56,
       "seconds": 1.4,
-      "centroid_hz": 6605,
-      "decay_ms": 151,
+      "centroid_hz": 12559,
+      "decay_ms": 702,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2009,8 +2261,12 @@
       "low": 0.0,
       "mid": 0.04,
       "high": 0.96,
+      "siren_reads": 1,
+      "siren_worst_cents_off_trajectory": 1.1,
+      "siren_status": "unmeasured",
+      "gate_pass": null,
       "pitch_hz": 489.5,
-      "pitch_confidence": 0.083,
+      "pitch_confidence": 0.041,
       "under_loop_line": true
     },
     {
@@ -2027,7 +2283,10 @@
       "mid": 0.42,
       "high": 0.58,
       "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.989,
+      "target_hz": 110.0,
+      "cents": 0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2044,7 +2303,10 @@
       "mid": 0.4,
       "high": 0.6,
       "pitch_hz": 130.81,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.992,
+      "target_hz": 130.81,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2061,7 +2323,10 @@
       "mid": 0.42,
       "high": 0.57,
       "pitch_hz": 164.81,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.977,
+      "target_hz": 164.81,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2077,8 +2342,11 @@
       "low": 0.0,
       "mid": 0.44,
       "high": 0.56,
-      "pitch_hz": 220.01,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 220.02,
+      "pitch_confidence": 0.985,
+      "target_hz": 220.0,
+      "cents": 0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2094,8 +2362,11 @@
       "low": 0.0,
       "mid": 0.05,
       "high": 0.95,
-      "pitch_hz": 109.99,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.44,
+      "pitch_confidence": 0.904,
+      "target_hz": 440.0,
+      "cents": 1.7,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2112,7 +2383,10 @@
       "mid": 0.05,
       "high": 0.95,
       "pitch_hz": 523.69,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.915,
+      "target_hz": 523.25,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2129,7 +2403,10 @@
       "mid": 0.08,
       "high": 0.92,
       "pitch_hz": 658.93,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.986,
+      "target_hz": 659.26,
+      "cents": -0.9,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2146,7 +2423,10 @@
       "mid": 0.11,
       "high": 0.89,
       "pitch_hz": 880.77,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.983,
+      "target_hz": 880.0,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2164,6 +2444,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2181,6 +2462,7 @@
       "high": 0.96,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2198,6 +2480,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2215,6 +2498,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2232,6 +2516,7 @@
       "high": 0.86,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2239,14 +2524,15 @@
       "genre": "TECHNO",
       "slot": "RIDE",
       "file": "BARK_TECHNO_06_RIDE.wav",
-      "class": "PERC",
-      "confidence": 0.4,
+      "class": "SNARE",
+      "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 8066,
-      "decay_ms": 35,
+      "centroid_hz": 8079,
+      "decay_ms": 546,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2254,14 +2540,15 @@
       "genre": "TECHNO",
       "slot": "CRASH",
       "file": "BARK_TECHNO_07_CRASH.wav",
-      "class": "SNARE",
-      "confidence": 0.95,
+      "class": "HAT_OPEN",
+      "confidence": 0.56,
       "seconds": 1.2,
-      "centroid_hz": 6611,
-      "decay_ms": 128,
+      "centroid_hz": 12557,
+      "decay_ms": 604,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2277,8 +2564,12 @@
       "low": 0.0,
       "mid": 0.04,
       "high": 0.96,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 1.7,
+      "siren_status": "pass",
+      "gate_pass": true,
       "pitch_hz": 468.68,
-      "pitch_confidence": 0.125,
+      "pitch_confidence": 0.063,
       "under_loop_line": true
     },
     {
@@ -2295,7 +2586,10 @@
       "mid": 0.54,
       "high": 0.46,
       "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.978,
+      "target_hz": 110.0,
+      "cents": -0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2311,8 +2605,11 @@
       "low": 0.01,
       "mid": 0.52,
       "high": 0.47,
-      "pitch_hz": 65.41,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 130.81,
+      "pitch_confidence": 0.983,
+      "target_hz": 130.81,
+      "cents": 0.0,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2329,7 +2626,10 @@
       "mid": 0.54,
       "high": 0.45,
       "pitch_hz": 164.83,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.974,
+      "target_hz": 164.81,
+      "cents": 0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2346,7 +2646,10 @@
       "mid": 0.58,
       "high": 0.42,
       "pitch_hz": 220.04,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.989,
+      "target_hz": 220.0,
+      "cents": 0.3,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2362,8 +2665,11 @@
       "low": 0.0,
       "mid": 0.05,
       "high": 0.95,
-      "pitch_hz": 109.99,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 440.44,
+      "pitch_confidence": 0.903,
+      "target_hz": 440.0,
+      "cents": 1.7,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2379,8 +2685,11 @@
       "low": 0.0,
       "mid": 0.05,
       "high": 0.95,
-      "pitch_hz": 174.38,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 523.69,
+      "pitch_confidence": 0.915,
+      "target_hz": 523.25,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2397,7 +2706,10 @@
       "mid": 0.08,
       "high": 0.92,
       "pitch_hz": 658.93,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.986,
+      "target_hz": 659.26,
+      "cents": -0.9,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2414,7 +2726,10 @@
       "mid": 0.11,
       "high": 0.89,
       "pitch_hz": 880.78,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.983,
+      "target_hz": 880.0,
+      "cents": 1.5,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2432,6 +2747,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2449,6 +2765,7 @@
       "high": 0.92,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2466,6 +2783,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2483,6 +2801,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2500,6 +2819,7 @@
       "high": 0.87,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2510,11 +2830,12 @@
       "class": "SNARE",
       "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 8976,
-      "decay_ms": 163,
+      "centroid_hz": 7882,
+      "decay_ms": 534,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2525,11 +2846,12 @@
       "class": "HAT_OPEN",
       "confidence": 0.54,
       "seconds": 1.3,
-      "centroid_hz": 12386,
-      "decay_ms": 453,
+      "centroid_hz": 12322,
+      "decay_ms": 610,
       "low": 0.0,
-      "mid": 0.01,
-      "high": 0.99,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2545,8 +2867,12 @@
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
-      "pitch_hz": 1473.11,
-      "pitch_confidence": 0.259,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 2445.2,
+      "siren_status": "fail",
+      "gate_pass": false,
+      "pitch_hz": 1473.1,
+      "pitch_confidence": 0.13,
       "under_loop_line": true
     },
     {
@@ -2562,8 +2888,11 @@
       "low": 0.07,
       "mid": 0.88,
       "high": 0.04,
-      "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 908.65,
+      "pitch_confidence": 0.861,
+      "target_hz": 110.0,
+      "cents": 3655.5,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2579,8 +2908,11 @@
       "low": 0.09,
       "mid": 0.86,
       "high": 0.05,
-      "pitch_hz": 130.81,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1068.99,
+      "pitch_confidence": 0.86,
+      "target_hz": 130.81,
+      "cents": 3636.8,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2596,8 +2928,11 @@
       "low": 0.12,
       "mid": 0.81,
       "high": 0.07,
-      "pitch_hz": 164.81,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1352.2,
+      "pitch_confidence": 0.847,
+      "target_hz": 164.81,
+      "cents": 3643.7,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2613,8 +2948,11 @@
       "low": 0.06,
       "mid": 0.78,
       "high": 0.16,
-      "pitch_hz": 220.0,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1789.23,
+      "pitch_confidence": 0.813,
+      "target_hz": 220.0,
+      "cents": 3628.5,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2630,8 +2968,11 @@
       "low": 0.01,
       "mid": 0.04,
       "high": 0.95,
-      "pitch_hz": 440.1,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 500.55,
+      "pitch_confidence": 0.817,
+      "target_hz": 440.0,
+      "cents": 223.2,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2647,8 +2988,11 @@
       "low": 0.01,
       "mid": 0.03,
       "high": 0.96,
-      "pitch_hz": 523.38,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 595.39,
+      "pitch_confidence": 0.805,
+      "target_hz": 523.25,
+      "cents": 223.6,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2665,7 +3009,10 @@
       "mid": 0.03,
       "high": 0.96,
       "pitch_hz": 659.2,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.996,
+      "target_hz": 659.26,
+      "cents": -0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2682,7 +3029,10 @@
       "mid": 0.03,
       "high": 0.96,
       "pitch_hz": 880.23,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.992,
+      "target_hz": 880.0,
+      "cents": 0.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2700,6 +3050,7 @@
       "high": 0.0,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2717,6 +3068,7 @@
       "high": 0.94,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2734,6 +3086,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2751,6 +3104,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2768,6 +3122,7 @@
       "high": 0.87,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2778,11 +3133,12 @@
       "class": "SNARE",
       "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 8941,
-      "decay_ms": 163,
+      "centroid_hz": 7881,
+      "decay_ms": 546,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2793,11 +3149,12 @@
       "class": "HAT_OPEN",
       "confidence": 0.54,
       "seconds": 1.4,
-      "centroid_hz": 12385,
-      "decay_ms": 488,
+      "centroid_hz": 12322,
+      "decay_ms": 650,
       "low": 0.0,
-      "mid": 0.01,
-      "high": 0.99,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2813,8 +3170,12 @@
       "low": 0.0,
       "mid": 0.02,
       "high": 0.98,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 3667.2,
+      "siren_status": "fail",
+      "gate_pass": false,
       "pitch_hz": 1446.97,
-      "pitch_confidence": 0.15,
+      "pitch_confidence": 0.075,
       "under_loop_line": true
     },
     {
@@ -2830,8 +3191,11 @@
       "low": 0.06,
       "mid": 0.88,
       "high": 0.06,
-      "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 913.87,
+      "pitch_confidence": 0.852,
+      "target_hz": 110.0,
+      "cents": 3665.4,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2847,8 +3211,11 @@
       "low": 0.07,
       "mid": 0.87,
       "high": 0.06,
-      "pitch_hz": 130.8,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1075.18,
+      "pitch_confidence": 0.858,
+      "target_hz": 130.81,
+      "cents": 3646.8,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2864,8 +3231,11 @@
       "low": 0.08,
       "mid": 0.83,
       "high": 0.09,
-      "pitch_hz": 82.4,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1357.88,
+      "pitch_confidence": 0.86,
+      "target_hz": 164.81,
+      "cents": 3650.9,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2881,8 +3251,11 @@
       "low": 0.04,
       "mid": 0.77,
       "high": 0.19,
-      "pitch_hz": 110.0,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1789.59,
+      "pitch_confidence": 0.84,
+      "target_hz": 220.0,
+      "cents": 3628.9,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2898,8 +3271,11 @@
       "low": 0.01,
       "mid": 0.04,
       "high": 0.95,
-      "pitch_hz": 440.1,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 500.55,
+      "pitch_confidence": 0.817,
+      "target_hz": 440.0,
+      "cents": 223.2,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2915,8 +3291,11 @@
       "low": 0.01,
       "mid": 0.03,
       "high": 0.96,
-      "pitch_hz": 523.38,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 595.39,
+      "pitch_confidence": 0.805,
+      "target_hz": 523.25,
+      "cents": 223.6,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -2933,7 +3312,10 @@
       "mid": 0.03,
       "high": 0.96,
       "pitch_hz": 659.2,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.996,
+      "target_hz": 659.26,
+      "cents": -0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2950,7 +3332,10 @@
       "mid": 0.03,
       "high": 0.96,
       "pitch_hz": 880.23,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.993,
+      "target_hz": 880.0,
+      "cents": 0.4,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2968,6 +3353,7 @@
       "high": 0.01,
       "wanted": "KICK",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -2985,6 +3371,7 @@
       "high": 0.95,
       "wanted": "SNARE",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3002,6 +3389,7 @@
       "high": 1.0,
       "wanted": "HAT_CLOSED",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3019,6 +3407,7 @@
       "high": 1.0,
       "wanted": "HAT_OPEN",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3036,6 +3425,7 @@
       "high": 0.87,
       "wanted": "CLAP",
       "agrees": true,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3046,11 +3436,12 @@
       "class": "SNARE",
       "confidence": 0.95,
       "seconds": 1.4,
-      "centroid_hz": 9024,
-      "decay_ms": 157,
+      "centroid_hz": 7883,
+      "decay_ms": 470,
       "low": 0.0,
       "mid": 0.01,
       "high": 0.99,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3061,11 +3452,12 @@
       "class": "HAT_OPEN",
       "confidence": 0.54,
       "seconds": 1.2,
-      "centroid_hz": 12386,
-      "decay_ms": 424,
+      "centroid_hz": 12322,
+      "decay_ms": 580,
       "low": 0.0,
-      "mid": 0.01,
-      "high": 0.99,
+      "mid": 0.02,
+      "high": 0.98,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3081,8 +3473,12 @@
       "low": 0.0,
       "mid": 0.02,
       "high": 0.98,
-      "pitch_hz": 2232.72,
-      "pitch_confidence": 0.774,
+      "siren_reads": 8,
+      "siren_worst_cents_off_trajectory": 3667.4,
+      "siren_status": "fail",
+      "gate_pass": false,
+      "pitch_hz": 2232.81,
+      "pitch_confidence": 0.387,
       "under_loop_line": true
     },
     {
@@ -3098,8 +3494,11 @@
       "low": 0.11,
       "mid": 0.86,
       "high": 0.03,
-      "pitch_hz": 109.97,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 904.25,
+      "pitch_confidence": 0.857,
+      "target_hz": 110.0,
+      "cents": 3647.1,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -3115,8 +3514,11 @@
       "low": 0.14,
       "mid": 0.82,
       "high": 0.04,
-      "pitch_hz": 65.4,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1065.33,
+      "pitch_confidence": 0.844,
+      "target_hz": 130.81,
+      "cents": 3630.9,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -3132,8 +3534,11 @@
       "low": 0.18,
       "mid": 0.76,
       "high": 0.06,
-      "pitch_hz": 54.93,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 1353.22,
+      "pitch_confidence": 0.826,
+      "target_hz": 164.81,
+      "cents": 3645.0,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -3149,8 +3554,11 @@
       "low": 0.1,
       "mid": 0.76,
       "high": 0.14,
-      "pitch_hz": 73.33,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 219.99,
+      "pitch_confidence": 0.992,
+      "target_hz": 220.0,
+      "cents": -0.1,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3166,8 +3574,11 @@
       "low": 0.01,
       "mid": 0.04,
       "high": 0.95,
-      "pitch_hz": 440.1,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 500.55,
+      "pitch_confidence": 0.817,
+      "target_hz": 440.0,
+      "cents": 223.2,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -3183,8 +3594,11 @@
       "low": 0.01,
       "mid": 0.03,
       "high": 0.96,
-      "pitch_hz": 523.37,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 595.39,
+      "pitch_confidence": 0.805,
+      "target_hz": 523.25,
+      "cents": 223.6,
+      "gate_pass": false,
       "under_loop_line": true
     },
     {
@@ -3201,7 +3615,10 @@
       "mid": 0.03,
       "high": 0.96,
       "pitch_hz": 659.19,
-      "pitch_confidence": 1.0,
+      "pitch_confidence": 0.996,
+      "target_hz": 659.26,
+      "cents": -0.2,
+      "gate_pass": true,
       "under_loop_line": true
     },
     {
@@ -3217,8 +3634,11 @@
       "low": 0.01,
       "mid": 0.03,
       "high": 0.96,
-      "pitch_hz": 880.22,
-      "pitch_confidence": 1.0,
+      "pitch_hz": 999.67,
+      "pitch_confidence": 0.795,
+      "target_hz": 880.0,
+      "cents": 220.7,
+      "gate_pass": false,
       "under_loop_line": true
     }
   ],
@@ -3232,6 +3652,61 @@
       "HAT_OPEN": 12,
       "CLAP": 9
     },
-    "kits": 12
+    "kits": 12,
+    "pads": 192,
+    "fallback_set": 25,
+    "fallback_by_slot": {
+      "SNARE": [
+        "KICK/BOOM_BAP"
+      ],
+      "CLAP": [
+        "KICK/BOOM_BAP",
+        "KICK/HOUSE",
+        "KICK/TECHNO"
+      ],
+      "SIREN": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "BASS1": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "BASS3": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "BASS5": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "BASS8": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE"
+      ],
+      "TONE1": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "TONE3": [
+        "SNARE/BOOM_BAP",
+        "SNARE/HOUSE",
+        "SNARE/TECHNO"
+      ],
+      "TONE8": [
+        "SNARE/TECHNO"
+      ]
+    },
+    "unmeasured": 1,
+    "unmeasured_by_slot": {
+      "SIREN": [
+        "BARK/HOUSE"
+      ]
+    }
   }
 }

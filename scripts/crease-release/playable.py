@@ -46,12 +46,14 @@ def source_hashes():
     paths = [Path(__file__), Path(__file__).with_name('CreaseReleaseBank.java'),
              Path(__file__).with_name('CreaseReleaseExperiment.java'),
              Path(__file__).with_name('playable-protocol.md')]
+    if Path(__file__).with_name('phone-protocol.md').exists():
+        paths.append(Path(__file__).with_name('phone-protocol.md'))
     for module in ['synth', 'audio', 'json', 'kit', 'xpm']:
         paths.extend((ROOT/module/'src/main').rglob('*.kt'))
     return {str(x.relative_to(ROOT)): sha(x.read_bytes()) for x in sorted(paths)}
 
 
-def execute(raw, skip_build):
+def execute(raw, skip_build, adaptive=False):
     env = os.environ.copy()
     env.pop('ANDROID_HOME', None); env.pop('ANDROID_SDK_ROOT', None)
     if not skip_build:
@@ -69,6 +71,7 @@ def execute(raw, skip_build):
                     str(Path(__file__).with_name('CreaseReleaseBank.java'))], check=True, cwd=ROOT)
     cmd = [str(bins/'java'), '-Xmx2g', '-cp', cp+os.pathsep+str(classes),
            'CreaseReleaseBank', str(raw)]
+    if adaptive: cmd.append('adaptive')
     before = source_hashes()
     with (raw/'capture.log').open('w') as f:
         result = subprocess.run(cmd, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT)
@@ -79,6 +82,7 @@ def execute(raw, skip_build):
                'sources': before, 'jars': {str(j): sha(j.read_bytes()) for j in jars},
                'javaCommand': cmd, 'javaExit': result.returncode,
                'build': 'explicit prebuilt JAR reuse' if skip_build else 'fresh :synth:jar',
+               'captureMode': 'adaptive' if adaptive else 'original',
                'capturedAt': datetime.now(timezone.utc).isoformat()}
     write(raw/'provenance.json',receipt)
     return receipt
@@ -182,6 +186,9 @@ def analyse(out,receipt):
     raw_banks={cut:np.fromfile(raw/f'bank-{i:04d}.f32',dtype='<f4') for i,cut in enumerate(all_cuts)}
     max_peak=max(float(np.max(np.abs(held_raw))),*(float(np.max(np.abs(x))) for x in raw_banks.values()))
     gain=min(.1834*meta['velocity']**.4/meta['sustainLoudness'], .85/max_peak)
+    if receipt.get('captureMode') == 'adaptive':
+        gain=1.2239602314709794  # The owner-approved study's exact common gain.
+        p.require(max_peak*gain<1,'the accepted gain would clip this capture')
     def pcm(x): return np.rint(x.astype(np.float64)*gain*32767).astype('<i2')
     held_pcm=pcm(held_raw); banks_pcm={k:pcm(v) for k,v in raw_banks.items()}
     held=held_pcm.astype(np.float64)/32767
@@ -196,11 +203,13 @@ def analyse(out,receipt):
                           'keyUpStepError':.001,'pcmBytes':32*1024**2,'compressedBytes':12*1024**2},
             'candidates':[]}
     eligible=[]
-    for n in [16,32,64]:
+    for n in sorted(map(int,meta['grids'])):
         grid=meta['grids'][str(n)]; rows=[]
         for cut,reference in references.items():
             actual=approximation(cut,grid,banks,held,meta)*fade
-            row={'cutFrame':cut,'holdSeconds':cut/RATE,**metrics(actual,reference,meta)}
+            row={'cutFrame':cut,'holdSeconds':cut/RATE,
+                 'group':'original' if cut in meta.get('originalTestCuts',meta['testCuts']) else 'holdout',
+                 **metrics(actual,reference,meta)}
             row['passed']=row['normalizedErrorRms']<=.031623 and row['peakError']<=.025 and max(row['harmonicTv'])<=.02 and row['keyUpStepError']<=.001
             rows.append(row)
         size=held_pcm.nbytes+sum(banks_pcm[c].nbytes for c in grid)
@@ -253,6 +262,11 @@ def analyse(out,receipt):
               'releaseSeconds':SECONDS,'releaseFrames':FADE_FRAMES,
               'crossfadeFrames':CROSSFADE,'maxVoices':8,
               'approximationPassed':bool(selected['passed']),'container':container,'clips':clips,
+              'phoneStudy':1 if receipt.get('captureMode')=='adaptive' else 0,
+              'capturePolicy':meta.get('capturePolicy','original'),
+              'accuracy':{'total':len(selected['cases']),'passed':len(selected['cases'])-selected['failedCases'],
+                          'failed':selected['failedCases'],'maxPeakError':selected['maxPeakError'],
+                          'peakErrorLimit':.025,'holdouts':len(meta.get('holdoutTestCuts',[]))},
               'cacheIdentity':{'patch':{'preset':'reed-mark','midi':60,'velocity':meta['velocity'],'model':3,'macros':meta['macros']},
                                'sourceHashes':receipt['sources'],'jarHashes':receipt['jars'],
                                'algorithm':'carrier-aligned-linear-v1','rate':RATE,'grid':grid}}
@@ -268,8 +282,10 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--analyse-only',action='store_true')
     parser.add_argument('--skip-build',action='store_true',help='explicitly reuse the already freshly built unchanged synth JAR')
+    parser.add_argument('--adaptive',action='store_true')
+    parser.add_argument('--output',default='testkit/crease-playable-release')
     args=parser.parse_args()
-    out=ROOT/'testkit/crease-playable-release';raw=out/'raw';raw.mkdir(parents=True,exist_ok=True)
+    out=(ROOT/args.output).resolve();raw=out/'raw';raw.mkdir(parents=True,exist_ok=True)
     started=time.monotonic()
     if args.analyse_only:
         receipt=json.loads((raw/'provenance.json').read_text())
@@ -280,7 +296,7 @@ def main():
         p.require(receipt['jars']=={str(j):sha(j.read_bytes()) for j in p.classpath()},'runtime JARs changed')
     else:
         p.require(not p.git('status','--porcelain'),'commit the experiment before rendering')
-        receipt=execute(raw,args.skip_build)
+        receipt=execute(raw,args.skip_build,args.adaptive)
     report=analyse(out,receipt)
     print(json.dumps({'approximationPassed':report['approximationPassed'],'selectedN':report['selectedN'],
                       'analysisSeconds':time.monotonic()-started,'output':str(out)}),flush=True)

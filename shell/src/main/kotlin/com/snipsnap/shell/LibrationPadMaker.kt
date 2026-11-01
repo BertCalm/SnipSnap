@@ -100,7 +100,7 @@ object LibrationPadMaker {
             )
         }
         // The sample already speaks from rest. A second program attack would soften it twice.
-        return KeygroupProgram(name, groups, volumeRelease = spec.releaseSeconds) to samples
+        return KeygroupProgram(name, groups, volumeRelease = spec.releaseSeconds, explicitNoteOn = true) to samples
     }
 
     fun recipeFile(destRoot: File, name: String) = File(destRoot, "$name$RECIPE_SUFFIX")
@@ -109,7 +109,8 @@ object LibrationPadMaker {
         val (program, samples) = assemble(name, spec, notes)
         val recipe = recipeFile(destRoot, name)
         if (recipe.exists() && !overwrite) throw DestinationExists(recipe)
-        OneNote.writePackage(name, program, samples, destRoot, overwrite)
+        // The authored root span is deliberate; every descriptor must keep it.
+        OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         AtomicFile.writeText(recipe, spec.toJsonText())
         return program
     }
