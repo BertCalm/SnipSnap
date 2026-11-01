@@ -126,7 +126,7 @@ reasoning goes in the design, not in a table of adjectives.
 
 Grep engine-inventory.md for the mechanism and for the macro words. If two shipped engines
 already cover the gesture, say so and propose the design as a voice or a preset family of the
-nearest one. The roster is 66 engines deep; the house's own roadmap notes six of the last ten
+nearest one. The roster is 84 engines deep; the house's own roadmap notes six of the last ten
 share the "physically inspired, five macros plus HOLD, six voices" mould. A new engine earns a
 pad by doing something the siblings cannot: a different gesture, a different sample-side
 behaviour (loop vs one-shot), or a different place in a kit (bass register, drum class).
