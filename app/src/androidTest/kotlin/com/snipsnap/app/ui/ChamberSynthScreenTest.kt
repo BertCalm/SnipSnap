@@ -263,16 +263,18 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         SynthDrafts.write(settings, listOf(original))
         show(root, settings)
         press("SAVE PRESET")
-        val savedName = "QUEUED ROOM"
-        compose.onNode(hasSetTextAction()).performTextReplacement(savedName)
+        compose.onNode(hasSetTextAction()).performTextReplacement("QUEUED ROOM")
         pump()
-        compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true).assertIsEnabled()
         val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val velocityEdit = requireNotNull(compose.onNodeWithContentDescription("VELOCITY", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val response = requireNotNull(compose.onNodeWithContentDescription("USE WIDER RESPONSE", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        // The semantics action fires whether or not the button is enabled, so a name the
+        // sheet refuses (over the 14-letter limit) would otherwise fail 30 seconds later
+        // with "save never came" instead of here.
+        compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true).assertIsEnabled()
         val save = requireNotNull(compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         val expected = original.copy(midi = 84, velocity = .63f, model = 5)
@@ -287,10 +289,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertTrue(save())
         }
         waitFor("same-frame complete CHAMBER save", timeoutMillis = 30_000) {
-            UserPresets.read(root).any { it.name == savedName }
+            UserPresets.read(root).any { it.name == "QUEUED ROOM" }
         }
-        val saved = UserPresets.read(root).single { it.name == savedName }.patch as ChamberPatch
-        assertEquals(expected.copy(name = savedName), saved)
+        val saved = UserPresets.read(root).single { it.name == "QUEUED ROOM" }.patch as ChamberPatch
+        assertEquals(expected.copy(name = "QUEUED ROOM"), saved)
 
         val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)

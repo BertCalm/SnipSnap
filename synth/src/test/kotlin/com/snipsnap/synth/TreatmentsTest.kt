@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged", "roomed",
             ),
             Treatments.names,
         )
@@ -113,6 +113,7 @@ class TreatmentsTest {
             "rockwahed" to "wah",
             "delayed" to "echo",
             "forged" to "forge",
+            "roomed" to "room",
         )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)

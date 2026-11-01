@@ -228,9 +228,10 @@ class CreasePadMakerTest {
         // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
         // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
         // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
-        // pair, the .xpm's program-level voice tags).
+        // pair, the .xpm's program-level voice tags). The sidecar was re-pinned once more when it began carrying
+        // explicitNoteOn.
         val expected = mapOf(
-            "Crease Paper Keys.instrument.json" to "cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
+            "Crease Paper Keys.instrument.json" to "4123f312c6f2ef3376e86bd30252aed2634b87ea87c414da37162d2da88d30d1",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
             "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "7a46aac454783287fbcd92e38f8368b0b45ac8844599abe9b4795b80bdb28391",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A3.wav" to "973f4979c6dba53b72e8de565aba6717cebc64d79e957d155cb65d0ac888f680",
@@ -249,7 +250,14 @@ class CreasePadMakerTest {
         val rendered = CreasePadMaker.zoneMidis(legacy).map { CreasePadMaker.renderLayers(legacy, it) }
         CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
         val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
-        assertEquals(expected, actual, "no --touch must retain every original package byte")
+        assertEquals(expected, actual, "no --touch must retain the pinned package bytes")
+        val sidecar = Json.parse(File(dest, "Crease Paper Keys.instrument.json").readText()).obj()
+        assertEquals(JsonValue.Bool(false), sidecar.getValue("explicitNoteOn"))
+        val previousBytes = Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)
+        val previousHash = MessageDigest.getInstance("SHA-256").digest(previousBytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", previousHash,
+            "only the explicit note-on field may differ from the previous sidecar")
     }
 
     @Test

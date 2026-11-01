@@ -102,6 +102,7 @@ object Patches {
             StoopPatch.ENGINE -> StoopPatch.fromJsonValue(value)
             LacquerPatch.ENGINE -> LacquerPatch.fromJsonValue(value)
             SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
+            LorentzPatch.ENGINE -> LorentzPatch.fromJsonValue(value)
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
             OverlapPatch.ENGINE -> OverlapPatch.fromJsonValue(value)
             FlockPatch.ENGINE -> FlockPatch.fromJsonValue(value)

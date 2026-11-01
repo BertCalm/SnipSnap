@@ -123,6 +123,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "obbligato", "OBBLIGATO",
+            "Flute and reed share the lead across four relationships, with soft, medium and strong strikes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.obbligato() },
+        Starter(
             "otis", "OTIS",
             "Organ, steam pipe, blues harmonica and shared Squeeze chords. Sixteen finite performances.",
             seeded = false,
@@ -184,7 +190,7 @@ object StarterKits {
         ) { SynthKits.thaw() },
         Starter(
             "scour", "SCOUR",
-            "Metal, glass and thunder-sheet impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            "Metal, glass, thunder-sheet and girder impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scour() },
@@ -350,6 +356,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
+        Starter(
+            "murmur-selected", "MURMUR SELECTED",
+            "Selected vowel keys, four voice contrasts and lower-air choir at C2 and C3.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.murmurSelected() },
         Starter(
             "scanned-chain", "SCANNED CHAIN",
             "Moving shapes become plucks, metal and growing tones in C minor pentatonic.",

@@ -89,10 +89,14 @@ class MeridianPadMakerTest {
         assertEquals(midis, instrument.zones.map { it.rootNote })
         assertEquals(39, instrument.sampleFiles.size)
         val samples = linkedMapOf<String, FloatArray>()
+        // The held export keeps its declared C2-C5 limits (export passes spanKeyboard = false),
+        // so the sidecar is compared with the program itself.
         for ((zoneIndex, zone) in instrument.zones.withIndex()) {
             assertEquals(program.keygroups[zoneIndex].lowNote, zone.lowNote)
             assertEquals(program.keygroups[zoneIndex].highNote, zone.highNote)
-            assertTrue((zone.lowNote..zone.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 })
+            val rendered = program.keygroups[zoneIndex]
+            assertTrue((rendered.lowNote..rendered.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 },
+                "each rendered zone stays within a semitone of its root")
             assertEquals(listOf(0, 43, 85), zone.layers.map { it.velStart })
             assertEquals(listOf(42, 84, 127), zone.layers.map { it.velEnd })
             val native = instruments[zoneIndex].obj()

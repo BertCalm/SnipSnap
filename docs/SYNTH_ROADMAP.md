@@ -244,7 +244,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### LIBRATION — finite orbital gestures (native integration)
+### LIBRATION — finite gestures and recurring held keys (native integration)
 
 GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
 trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
@@ -254,11 +254,14 @@ picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
 soft/hard velocity layers through both MPC export formats.
 
 A bounded preview cache reuses trajectories and previously rendered audio.
-Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
-phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
-and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
-records the preserved rendering versions, audition generators, measured limits
-and hardware acceptance checks.
+The owner accepted finite phone/MPC behavior on 2026-10-31; phone timing remains
+unmeasured. An independently versioned HOLD path periodically traverses the same
+physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
+exports its real onset, verified sustain loop and player amplitude release.
+Generation is serial and cancellable, and fresh renders take seconds on the cloud
+JVM. The new held transport awaits owner listening and phone/MPC checks.
+[LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
+[held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
 ### CREASE — pressure memory in a phase map (native integration)
 
@@ -761,8 +764,13 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-The expanded preset bank's listening review, phone/MPC validation and release
-naming remain open.
+The shared roster also appends six listening-selected settings: four C4 KEY
+MOTION cases and lower-breath CHOIR at C2/C3, all with saved render version 3.
+MURMUR SELECTED is a separate FRESH TAPE starter; `generateMurmurSelectedKit`
+exports its sixteen pads as MPC 2 and MPC 3 with editable recipes. Original
+presets, the original starter and historical audition cases remain unchanged.
+The expanded bank's separate listening review, physical phone/MPC validation and
+release naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
@@ -2692,7 +2700,7 @@ word, two stutters. The longest render takes about 60 ms.
 
 ## NACRE — playable finite harp revision
 
-Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
+Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** A separate sixteen-pad MPC starter trial uses an eight-note Pearl Close scale and complete soft/medium/hard C3 comparisons for all three presets. Its native MPC 3/MPC 2 export, editable recipes and exact sample playback are checked before the hardware listen; factory-menu promotion remains pending that listen. Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
 
 ## S24 — FLOTILLA, as built
 
@@ -2750,7 +2758,11 @@ path. Saved models 1/2 retain their audio. Scoped engine/export checks and
 desktop/mobile audition checks pass; physical MPC playback and the owner's
 musical-bank verdict remain open.
 
-Android integration adds APSIS to SYNTH with PASSAGE and the six presets,
+Android integration adds APSIS to SYNTH with PASSAGE, GRAIN and ANCHOR.
+PASSAGE keeps its six presets and native bank; each new voice has three starters.
+The preferred Python GRAIN/ANCHOR laws now render in Kotlin with model-3 recipes,
+immutable geometry reuse and complete held material state.
+[Port notes](APSIS-POPULATIONS.md) record fidelity and verification. All voices use
 independent ROOT/VELOCITY, all six movement controls, complete recipe restoration,
 SAVE PRESET/YOURS, SPREAD's authored root and SEND TO PAD. Held previews repeat
 the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
@@ -3018,3 +3030,6 @@ LENGTH scales a finite performance; this landing does not add periodic HOLD or a
 held-keyboard export. Shared pressure applies within the saved score. Independent
 MPC pads cannot share an offline renderer's state. Cold render cost, cache behavior,
 Android compilation and remaining device validation are recorded in [OTIS.md](OTIS.md).
+## LORENTZ finite collision handoff
+
+LORENTZ ports the accepted third Python listening pass into the JVM synth: falling sweep, finite collision, irreversible capture and a steady sub tail. FUSE and LORENTZ share the root but have distinct contact behavior. IMPACT and GAP retain their widened audible ranges; HOLD is a finite decay extension. Saved model/velocity, factory anchors, CLI controls, raw reference probes, a dry sixteen-pad kit and Kotlin audition tasks are wired in. Classification uses actual PCM rather than forcing every hit into KICK. Android picker integration remains deferred to an SDK-backed session. See [LORENTZ](engines/LORENTZ.md) for source provenance, validation and the As built record.

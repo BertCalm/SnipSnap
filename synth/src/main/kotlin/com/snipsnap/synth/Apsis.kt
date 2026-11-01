@@ -6,7 +6,7 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class ApsisVoice { PASSAGE }
+enum class ApsisVoice { PASSAGE, GRAIN, ANCHOR }
 
 /** Saved models replay their original sound; new patches use the current musical model. */
 data class ApsisConfig(val modelVersion: Int = 3, val seedContext: Int = 0)
@@ -28,7 +28,10 @@ data class ApsisConfig(val modelVersion: Int = 3, val seedContext: Int = 0)
 object Apsis {
     const val MODEL_VERSION = 3
     const val LEGACY_MODEL_VERSION = 1
+    const val POPULATION_MODEL_VERSION = 3
     fun supportsModel(model: Int) = model in LEGACY_MODEL_VERSION..MODEL_VERSION
+    fun supportsModel(voice: ApsisVoice, model: Int) =
+        supportsModel(model) && (voice == ApsisVoice.PASSAGE || model == POPULATION_MODEL_VERSION)
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_MIDI = 60
@@ -152,18 +155,20 @@ object Apsis {
     private val preparationCache = ApsisPreparationCache<MotionKey, PreparedMotion>(maxEntryBytes = MAX_PREPARED_ENTRY_BYTES)
     internal fun clearPreparationCache() = preparationCache.clear()
     internal fun preparationCacheSnapshot() = preparationCache.snapshot()
-    private class Bank(val rate: Int, val hz: Double, val upperRatios: DoubleArray) {
+    internal class Bank(val rate: Int, val hz: Double, val upperRatios: DoubleArray,
+        frequencies: DoubleArray? = null) {
         val x = DoubleArray(COUNT)
         val v = DoubleArray(COUNT)
         val co = DoubleArray(COUNT)
         val si = DoubleArray(COUNT)
         val radiation = DoubleArray(COUNT)
         init {
+            require(frequencies == null || frequencies.size == COUNT && frequencies.all { it.isFinite() && it > 0 && it < rate * .5 })
             for (i in 0 until COUNT) {
                 val ratio = if (i < CENTER) i + 1.0 else when ((i - CENTER) % MODES) {
                     0 -> 1.0; 1 -> 2.0; 2 -> 3.0; else -> upperRatios[(i - CENTER) / MODES]
                 }
-                val frequency = hz * ratio
+                val frequency = frequencies?.get(i) ?: (hz * ratio)
                 co[i] = cos(TAU * frequency / rate); si[i] = sin(TAU * frequency / rate)
                 radiation[i] = smooth((19_000 - frequency) / 3_000)
             }
@@ -209,6 +214,8 @@ object Apsis {
         macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: ApsisConfig = ApsisConfig(),
         options: ProbeOptions = ProbeOptions(), cancelled: () -> Boolean = { false }): Probe {
+        if (voice != ApsisVoice.PASSAGE)
+            return ApsisPopulation.probe(voice, macros, midi, velocity, config, options, cancelled)
         val began = System.nanoTime()
         require(supportsModel(config.modelVersion)) { "Unsupported APSIS model ${config.modelVersion}" }
         val legacy = config.modelVersion == LEGACY_MODEL_VERSION

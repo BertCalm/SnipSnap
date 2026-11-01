@@ -1,15 +1,14 @@
 # SCOUR Engine: Engineering Specification
-Version 1.6 · 2026-10-31 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+Version 1.7 · 2026-11-01 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
 1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
 listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, the SHEET voice and the
-kit's bank B)
-Status: R1 to R4 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C)
+Status: R1 to R5 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1, R1.1, R2 and R3 auditions; the R4 page is published and not yet heard.
+renders (section 20.1) and the R1 to R4 auditions; the R5 page is published and not yet heard.
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. BEAM is next, after the R4 listen. The phone's synth picker
-and a docs page remain.
+voices as built are in the As built sections. The phone's synth picker and a docs page remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -591,7 +590,10 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | the kit's presets and build lengths are the right ones | heard: the kit yes, the lengths yes | the R3 kit page (As built: R4) |
 | the free 3:1 rectangle values (SHEET) | verified (solve) | the same solve reproduces the square at 1:1 and approaches the free-free beam at 8:1 (As built: R4) |
 | SHEET's note reads down to C2 | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a low-register grid (As built: R4) |
-| SHEET sounds like a thunder sheet and earns bank B | heard? | the R4 page |
+| SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
+| the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
+| BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
+| bank B now varies enough, and BEAM sounds like a struck girder | heard? | the R5 page |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -1043,3 +1045,101 @@ its listen.
    pitch is hardest.
 4. **Bank B, not a reshuffle.** The owner said yes to bank A as it is, so SHEET's pads go beside it in
    the same order: builds at two tempos, then presets, plus a low line of hits.
+
+## As built: R5, the beam and a varied bank B (2026-11-01)
+
+R5 varies bank B and adds a fourth voice, BEAM, with its own bank C. It changes `Scour.kt`, `ScourPresets.kt`
+and `SynthKits.kt`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; and the
+audition and kit generators and the page.
+
+### Heard (the owner, R4 page, 2026-11-01)
+
+| Question | Answer | Note |
+|---|---|---|
+| Would you load bank B as it is? | with changes | "Probably some parameter variation" |
+| Would you reach for SHEET into a drop? | yes | |
+| Does SHEET sound like a thunder sheet? | yes, it rumbles | |
+| SHEET sits an octave below the other two. Is that the right place for it? | right | "With a bit of variation in the bank" |
+| Which pads would you keep, change or drop? | | "They sound pretty similar" |
+| Each control swept; edges | | "Pretty good"; "Pretty good" |
+
+Asked how to vary bank B, the owner chose character and pitch together. Asked whether to build BEAM in the
+same round, the owner said yes, with its own bank C.
+
+### What changed
+
+- **Bank B varies pad by pad.** The first bank B gave twelve of its sixteen pads one setting apart from BUILD
+  or TUNE. Now:
+  - each build keeps its beat-cut length but has its own note between C2 and C3 and its own roller, shot,
+    hardening and ring;
+  - the short hits moved up to E♭2, F2, G2 and B♭2, because STEEL BOOM beside them is already the bare slam
+    on C2 (the C2 hit and STEEL BOOM rendered as near-copies, below);
+  - SHEET RISE moved to F2.
+
+  The builds' and hits' settings came from a search over steps of .1. It kept every build's SHOT at .2 or
+  more and used no note more than twice, and it maximised the closest pair.
+- **BEAM's body.** A free-free steel beam (a girder hung by its ends), heard in bending.
+  - Its modes are the roots of `cos βL · cosh βL = 1`, listed as `(βL)² = ωL²√(ρA/EI)`. The first five are
+    Leissa Table 4.72's beam row (22.373, 61.673, 120.903, 199.860, 298.556), which the closed form
+    reproduces.
+  - Ratios 1, 2.757, 5.404, 8.933, 13.344, 18.638, 24.814, 31.872: few and wide apart, a struck bar's clang.
+- **BEAM is heard on a node.** The listening point is .0509 of the length from one end, the first node of the
+  18.638 mode. That mode sits near 37/2 and would split the pitch read, as SHEET's 5.468 did; 13.344 (near
+  27/2) moves only .186 as much as the root there.
+  - The mode shapes are the closed form `cosh βx + cos βx − σ(sinh βx + sin βx)`.
+  - The listening point was chosen by the curvature budget of R4's diagnosis: a partial at ratio r flattens
+    the root's autocorrelation peak by its power times r², times −cos 2πr.
+  - The seven modes heard at that point are kept.
+- **BEAM's voicing.**
+  - The pair (2.757 and 5.404) sits at .5 of the gain law and .7 of its ring, under a .85 gain law with
+    each mode above .85 as long.
+  - The root rings 3 s. Steel keeps its hardening (κ .015, ρ .12/s), with PLATE's stretch (.3).
+  - The roller is the quietest of the four (.04), and BEAM takes the whole output trim.
+  - BEAM plays from C3, like PLATE and PANE.
+- **Four BEAM presets**, on C minor pentatonic from C3:
+  - GIRDER CLANG, the bare slam on C3;
+  - RIVET RISE, at G3;
+  - GANTRY RUN, at E♭3;
+  - FOUNDRY BELL, a hardened ring at C4.
+- **Bank C.** `SynthKits.scour()` now returns forty-eight pads. Bank C is laid out like bank B and varied the
+  same way: builds from C3 to C4, the four presets, and hits on E♭3, F3, G3 and B♭3. The SCOUR starter fills
+  all three banks, `StarterKitsTest` expects forty-eight slots, and the starter's blurb names the girder.
+- **The body test holds four bodies apart.**
+  - BEAM's probe ratios are 5.404, 24.814 and 31.872; its others sit within 2 % of SHEET's.
+  - In each voice's render, another voice's probe ratio within 2 % of one of its own modes is left out,
+    since there the two bodies share a partial: SHEET's 2.778 against BEAM's 2.757. The modes come from a
+    new internal `Scour.bodyRatios`.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| BEAM, pair at full level | 28 of 37 asserted corners at the onset and 27 in the tail, all misses flat (2.757 pulls the period long) |
+| BEAM, pair at .5 and .7 | 37 of 37 at both windows for gain laws .8 to .88 |
+| BEAM on 243 corners at C3, E♭3 and F3 | at a roller level of .07, 230 to 232 at the onset and 239 in the tail, the misses flat at full roller speed: the roller's ring partly cancels the root at the slam, as in R4. At .04: 243 and 243 (a .9 gain law reads 242) |
+| BEAM's raw peak | 0.65 at C3 after the longest build at full roller and blast, 0.43 at the default |
+| BEAM's hit over build (default) | 12.1 dB |
+| BEAM's render cost | the default (5 s) in about 80 ms, the longest (17 s) in about 265 ms |
+| Body separation | BEAM's margins over every other body's ratios are 24.7 dB or more; the narrowest margin overall is still SHEET's at C3, 15.6 dB |
+| Bank spread, controls (asserted) | every pair in banks B and C except hit against hit at least .26 apart, RMS over the six controls; the test's bar is .2 |
+| Bank spread, rendered (measured, not asserted) | Third-octave band energy over each pad's whole render, RMS difference in dB. Old bank B: mean 14.3 dB, closest pair 1.3 dB (the C2 hit and STEEL BOOM). New bank B: mean 18.5 dB, closest pair 6.3 dB. Bank C: mean 22.1 dB, closest pair 7.9 dB. Before the hits moved up, the closest pair was still the root hit beside its bare-slam preset (2.2 dB in bank B, 5.1 dB in bank C) |
+| Tests | `ScourTest` 13, `ScourPresetsTest` 7 (the bank spread among them), the SCOUR determinism canary, `PresetsTest` 8, `PadRecipeTest` 20, `PatchesTest` 3, `StarterKitsTest` 7 and `ConventionTest` 64, all passing |
+| Audition | 12 phrases and 78 gestures, 168 24-bit WAVs; the published page carries 90 16-bit clips at one shared gain of 11 dB, including all four voices on C3 |
+
+### Disclosed, not fixed
+
+- BEAM is one plane of Euler-Bernoulli bending: no torsion, no second bending plane, no shear. A real I-beam
+  girder has all three, and shear would lower its upper modes.
+- Bank spread is asserted on the controls, not on the sound. The rendered distances above were measured once.
+- The hits within a bank are held apart from every other pad but not from each other: they are one line on
+  four notes.
+- SHEET's lowest octave on a phone speaker or an MPC is still unheard.
+
+### Why R5 is built this way
+
+1. **Variation where the owner heard sameness.** The note named the pads, not the sound of SHEET, so the
+   voice stays and the bank changes. Build lengths are kept because the owner approved them twice.
+2. **Measured on the sound, not just the knobs.** Two pads can sit far apart on the controls and still sound
+   alike when they share a note and a short build. That is why the hits moved up the scale.
+3. **A beam is the sparse end of the family.** PLATE crowds, PANE is glassy, SHEET rumbles. BEAM's few,
+   widely spaced modes are a clang, and it gets the same listening-point treatment for its note.

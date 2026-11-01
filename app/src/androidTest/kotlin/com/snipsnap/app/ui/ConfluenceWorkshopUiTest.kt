@@ -105,7 +105,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         }
 
         clickAction("Low voice: ROUNDED OO")
-        compose.onNode(gatheringSlider("ROOM"), useUnmergedTree = true)
+        compose.onNode(gatheringControl("ROOM"), useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 assertTrue(setProgress(.70f))
             }
@@ -159,13 +159,13 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
     private fun hasText(text: String): Boolean =
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
-    private fun sliderState(label: String): String? =
-        compose.onAllNodes(gatheringSlider(label), useUnmergedTree = true)
-            .fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.StateDescription)
+    // STRIKE FX has its own ROOM control above the gathering editor.
+    private fun gatheringControl(label: String) =
+        hasContentDescription(label) and hasAnyAncestor(hasTestTag("confluence-gathering"))
 
-    // STRIKE FX has its own always-composed ROOM slider outside the MAKE card.
-    private fun gatheringSlider(label: String) = hasContentDescription(label) and
-        hasAnyAncestor(hasTestTag(CONFLUENCE_GATHERING_CARD_TAG))
+    private fun sliderState(label: String): String? =
+        compose.onAllNodes(gatheringControl(label), useUnmergedTree = true)
+            .fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.StateDescription)
 
     private fun clickAction(label: String) {
         compose.onNodeWithContentDescription(label, useUnmergedTree = true)

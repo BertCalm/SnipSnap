@@ -179,7 +179,8 @@ class OverlapPadMakerTest {
             val phone = InstrumentStore.read(sidecar)
             assertEquals(source.releaseSeconds, phone.release)
             assertEquals(listOf(43, 55, 67), phone.zones.map { it.rootNote })
-            assertEquals(listOf(37..49, 50..61, 62..73), phone.zones.map { it.lowNote..it.highNote })
+            // Held OVERLAP exports keep their declared limits (spanKeyboard = false).
+            assertEquals(listOf(37..49, 50..61, 62..73), phone.zones.map { it.lowNote..it.highNote }, "edge zones keep their declared limits")
             val native = Mpc3Project.read(File(dir, "$name.xty")).tracks.single()
                 .getValue("program").obj().getValue("drum").obj().getValue("instruments").arr()
             val data = File(dir, "${name}_[TrackData]")

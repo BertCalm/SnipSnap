@@ -12,6 +12,17 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `APSIS saved populations reproduce finite and held material after cold geometry preparation`() {
+        for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (hold in listOf(0f, 1f)) {
+            val patch = ApsisPatch("Population canary", voice,
+                Apsis.defaults(voice) + ("HOLD" to hold), midi = 55, velocity = .61f,
+                config = ApsisConfig(3, Int.MIN_VALUE))
+            val original = patch.render().samples
+            ApsisPopulation.clearPreparationCache()
+            assertContentEquals(original, PadRecipe.fromJsonText(PadRecipe(patch).toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -27,6 +38,14 @@ class DeterminismTest {
             val original = patch.render()
             Otis.clearCache()
             assertContentEquals(original.samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
+    fun `LORENTZ collision recipes regenerate both voices and finite HOLD exactly`() {
+        for (voice in LorentzVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = LorentzPatch("Collision canary", voice, Lorentz.defaults(voice) + ("HOLD" to hold), velocity = .67f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
         }
     }
 
@@ -249,6 +268,17 @@ class DeterminismTest {
             val patch = LibrationPatch("Recall canary", voice,
                 Libration.defaults(voice) + mapOf("REGION" to .375f, "SWARM" to .65f),
                 midi = 43, velocity = .35f, sourceSeconds = .37)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
+    fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Held recall canary", voice,
+                Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
+                midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)
             val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
             assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
         }
