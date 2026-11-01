@@ -613,6 +613,17 @@ tasks.register<JavaExec>("generateWickAudition") {
     if (providers.gradleProperty("wickQuick").orNull == "true") args("--quick")
 }
 
+/** Same RATTLE movement with diagnostic alternate tonal bodies; normal patches stay fixed. */
+tasks.register<JavaExec>("generateWickSourceStudy") {
+    group = "distribution"
+    description = "Render four RATTLE source families at three notes, held notes and an identical phrase."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickSourceStudyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickSourceOutput").orNull ?: "${rootDir}/testkit/wick-source-study")
+}
+
 tasks.register<JavaExec>("generateWickKit") {
     group = "distribution"
     description = "Export the dry provisional WICK MPC 3 kit, MPC 2 program twin and regenerable recipes."
