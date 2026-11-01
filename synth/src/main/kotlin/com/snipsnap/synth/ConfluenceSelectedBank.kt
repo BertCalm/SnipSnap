@@ -78,10 +78,9 @@ class ConfluenceSelectedBank private constructor(
             ?: throw IllegalArgumentException("asset is not part of selected bank: $relativePath")
 
     fun writePortableBank(directory: File, overwrite: Boolean = false) {
-        noSymlinks(directory)
-        val root = directory.canonicalFile
+        val root = portableRoot(directory)
         val outputs = assetPaths.map { path ->
-            noSymlinks(File(root, path))
+            noSymlinks(root, File(root, path))
             val file = File(root, path).canonicalFile
             require(file.toPath().startsWith(root.toPath())) { "selected bank asset escapes its directory" }
             path to file
@@ -89,7 +88,7 @@ class ConfluenceSelectedBank private constructor(
         require(overwrite || outputs.none { it.second.exists() }) { "selected bank destination is occupied" }
         for ((path, file) in outputs) {
             require(file.parentFile.isDirectory || file.parentFile.mkdirs()) { "cannot create selected bank directory" }
-            noSymlinks(file)
+            noSymlinks(root, file)
             file.writeBytes(assetBytes(path))
         }
     }
@@ -184,11 +183,10 @@ class ConfluenceSelectedBank private constructor(
         }
 
         fun fromDirectory(directory: File): ConfluenceSelectedBank {
-            noSymlinks(directory)
-            val root = directory.canonicalFile
+            val root = portableRoot(directory)
             fun read(path: String): ByteArray {
                 safePath(path)
-                noSymlinks(File(root, path))
+                noSymlinks(root, File(root, path))
                 val file = File(root, path).canonicalFile
                 require(file.toPath().startsWith(root.toPath())) { "selected bank asset escapes its directory" }
                 require(file.isFile && file.length() in 1L..MAX_ASSET_BYTES.toLong()) { "missing or oversized selected bank asset $path" }
@@ -354,11 +352,24 @@ class ConfluenceSelectedBank private constructor(
         }
         private fun safePath(path: String) = require(path.isNotBlank() && !path.startsWith('/') &&
             path.split('/').all { it.matches(Regex("[A-Za-z0-9_.-]+")) && it != "." && it != ".." }) { "selected bank asset path must remain relative: $path" }
-        private fun noSymlinks(file: File) {
+        private fun portableRoot(directory: File): File {
+            val requested = directory.absoluteFile
+            // The bank and its immediate container are caller-controlled. Higher ancestors can
+            // legitimately be platform storage aliases (for example Android's app-data paths).
+            // Kit callers additionally check every path component from their own kit root.
+            for (file in listOfNotNull(requested, requested.parentFile)) {
+                require(!Files.isSymbolicLink(file.toPath())) { "selected bank paths must not contain symbolic links" }
+            }
+            return requested.canonicalFile
+        }
+        private fun noSymlinks(root: File, file: File) {
+            val boundary = root.toPath().toAbsolutePath().normalize()
             var path = file.toPath().toAbsolutePath().normalize()
+            require(path.startsWith(boundary)) { "selected bank asset escapes its directory" }
             while (true) {
                 require(!Files.isSymbolicLink(path)) { "selected bank paths must not contain symbolic links" }
-                path = path.parent ?: break
+                if (path == boundary) break
+                path = requireNotNull(path.parent) { "selected bank asset escapes its directory" }
             }
         }
         private fun validId(id: String) = require(id.matches(Regex("[a-z][a-z0-9-]{1,63}"))) { "invalid selected bank ID" }

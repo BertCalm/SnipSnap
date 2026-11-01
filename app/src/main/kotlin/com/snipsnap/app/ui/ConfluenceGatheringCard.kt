@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.tape
@@ -15,6 +16,8 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.synth.ConfluenceBankVoice
 import java.util.Locale
 import kotlin.math.roundToInt
+
+internal const val CONFLUENCE_GATHERING_CARD_TAG = "confluence-gathering-card"
 
 /** Local gathering settings only: HEAR previews them, MAKE writes a separate ordinary pad. */
 @Composable
@@ -36,7 +39,7 @@ internal fun ConfluenceGatheringCard(
     onMake: () -> Unit,
 ) {
     val enabled = controls != null && ready && !loading && !busy
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().testTag(CONFLUENCE_GATHERING_CARD_TAG), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TapeText("GATHERING · A NEW VARIATION", TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
         TapeText(
             "REBUILDS THE SAVED GATHERING. THIS PAD'S CURRENT EDITS AND FX STAY ON THE ORIGINAL.",

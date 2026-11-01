@@ -90,8 +90,9 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
         val expectedSettings = ConfluenceSelectedWorkshop.Settings(voice.id, ConfluenceSelectedWorkshop.Mode.GROUP, .4f, .25f)
         val exact = ConfluenceSelectedWorkshop.prepare(expectedSettings)
         val expectedBytes = ByteArrayOutputStream().also { WavWriter.write(it, exact.snip) }.toByteArray()
+        val beforeSave = toasts.size
         click("SAVE → A02")
-        waitFor("the source-backed new pad", timeoutMillis = 180_000) { toasts.contains("VOICE PASSAGE SAVED ON A02") }
+        waitForSavedPad("the source-backed new pad", toasts, after = beforeSave, slot = "A02")
         val saved = KitStore.load(model.kitDir)
         assertEquals(original, saved.pad(1))
         assertArrayEquals(originalBytes, File(model.kitDir, original.sampleFile).readBytes())
@@ -130,8 +131,9 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
         assertEquals(occupied, KitStore.load(model.kitDir).pad(1))
         assertArrayEquals(occupiedBytes, File(model.kitDir, occupied.sampleFile).readBytes())
         waitFor("the next destination label") { hasText("SAVE → A02") }
+        val beforeRetry = toasts.size
         click("SAVE → A02")
-        waitFor("the explicit retry to a new empty pad", timeoutMillis = 180_000) { toasts.contains("VOICE PASSAGE SAVED ON A02") }
+        waitForSavedPad("the explicit retry to a new empty pad", toasts, after = beforeRetry, slot = "A02")
         assertEquals(2, KitStore.load(model.kitDir).pads.size)
     }
 
@@ -158,6 +160,16 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
     }
 
     private fun smallHit(): Snip = Snip(floatArrayOf(.25f, -.25f, 0f), 1, WavWriter.MPC_SAMPLE_RATE)
+    private fun waitForSavedPad(what: String, toasts: List<String>, after: Int, slot: String) {
+        val expected = "VOICE PASSAGE SAVED ON $slot"
+        waitFor(what, timeoutMillis = 180_000) {
+            val received = toasts.drop(after)
+            received.firstOrNull { it != expected }?.let { refusal ->
+                throw AssertionError("$what was refused: $refusal")
+            }
+            expected in received
+        }
+    }
     private fun hasText(text: String): Boolean = compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     private fun click(label: String) {
         compose.onNodeWithContentDescription(label).performSemanticsAction(SemanticsActions.OnClick) { action -> assertTrue(action()) }

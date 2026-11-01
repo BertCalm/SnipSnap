@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
@@ -103,7 +105,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         }
 
         clickAction("Low voice: ROUNDED OO")
-        compose.onNodeWithContentDescription("ROOM", useUnmergedTree = true)
+        compose.onNode(gatheringSlider("ROOM"), useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 assertTrue(setProgress(.70f))
             }
@@ -158,8 +160,12 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
     private fun sliderState(label: String): String? =
-        compose.onAllNodesWithContentDescription(label, useUnmergedTree = true)
+        compose.onAllNodes(gatheringSlider(label), useUnmergedTree = true)
             .fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.StateDescription)
+
+    // STRIKE FX has its own always-composed ROOM slider outside the MAKE card.
+    private fun gatheringSlider(label: String) = hasContentDescription(label) and
+        hasAnyAncestor(hasTestTag(CONFLUENCE_GATHERING_CARD_TAG))
 
     private fun clickAction(label: String) {
         compose.onNodeWithContentDescription(label, useUnmergedTree = true)
