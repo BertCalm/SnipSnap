@@ -1109,6 +1109,76 @@ object Ballast {
         return LoopRender(loop, seam, preroll, calm)
     }
 
+    // ---- a held key: the onset, the structure settling, then the loop ------------------------------
+
+    /** A quarter second simulated past the cut, so the band-limit and the decimator's edge never reach the loop. */
+    const val HELD_PAST_CUT_SECONDS = 0.25
+
+    /** The span a held zone is levelled over: the shortest one-shot's gate plus its release. */
+    const val HELD_LEVEL_SECONDS = GATE_MIN_SECONDS + RELEASE_SECONDS
+
+    /**
+     * A held key's note: [audio] from the onset to the loop's end, with the loop running from [loopStart] to the end.
+     * [seam] is [Keys.seamError] at [loopStart] on [audio] itself. [calm] is the pass that closed it (0 is the plain
+     * structure; 1 and 2 are [LOOP_ATTEMPTS]' calmer last resorts, which also quieten the onset's rattle).
+     */
+    internal class HeldNote(val audio: FloatArray, val loopStart: Int, val seam: Double, val calm: Int, val prerollSeconds: Double)
+
+    /**
+     * The held loop with its own onset kept in front of it, for a keygroup zone. [renderLoopMeasured] already runs the
+     * structure from a real onset (the source's attack, its filter sweep, the kick into the wires, the first knocks)
+     * through a preroll until the structure repeats, then keeps only the loop. This keeps the preroll as the zone's
+     * attack and cuts nothing in between, so the frame before the loop's start is the frame its end wraps back to,
+     * and the seam is measured on exactly the sample that ships. The loop is not rotated to a zero crossing: the
+     * wrap is continuous by construction, and rotating it would break the join with the onset.
+     *
+     * Levelled where it is struck: the first [HELD_LEVEL_SECONDS], the span of BALLAST's own shortest one-shot (its
+     * minimum gate and its release), set the level, then a peak limit. A bass line is mostly short notes, and the
+     * source's two oscillators beat with a phase seeded per note, so a zone's onset sits anywhere from about 4 dB
+     * under its settled loop to 2.5 dB over it. Levelled by the loop (RESIN's rule at [Keys.resinPad], right for a
+     * pad) ROOT's short notes spread 6.8 dB over the thirteen zones, up to 4.4 dB between neighbours; levelled here
+     * the short notes match, and the loops differ by up to 3.5 dB between neighbours, heard only on a long hold. Both scale the whole buffer, so the seam ratio
+     * is unchanged.
+     *
+     * [cancelled] is asked before each pass; one pass is a single simulation and does not stop part-way.
+     */
+    internal fun renderHeldNote(
+        voice: BallastVoice,
+        macros: Map<String, Float>,
+        velocity: Double = 1.0,
+        cancelled: () -> Boolean = { false },
+    ): HeldNote {
+        val m = settled(macros, voice)
+        val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
+        val plan = planLoop(voice, hz)
+        val preroll = prerollSeconds(voice, m)
+        var best: HeldNote? = null
+        for ((calm, longer) in LOOP_ATTEMPTS) {
+            if (Thread.currentThread().isInterrupted || cancelled()) {
+                throw java.util.concurrent.CancellationException("BALLAST held note no longer wanted")
+            }
+            val r = heldStretch(voice, m, plan, min(preroll * longer, LOOP_MAX_PREROLL_SECONDS), velocity, calm)
+            if (best == null || r.seam < best.seam) best = r
+            if (r.seam < Keys.MAX_SEAM_ERROR * LOOP_MARGIN) break
+        }
+        return best!!
+    }
+
+    private fun heldStretch(voice: BallastVoice, m: Map<String, Float>, plan: LoopPlan, preroll: Double, velocity: Double, calm: Int): HeldNote {
+        val warm = Math.round(preroll * RATE).toInt()
+        val end = warm + plan.frames
+        val total = end + Math.round(HELD_PAST_CUT_SECONDS * RATE).toInt()
+        val steady = Plan(plan.hz, plan.ratioB, plan.wobbleCycles / plan.seconds, true, total * Dsp.OVERSAMPLE, 0, 0, calm)
+        val audio = condition(simulate(voice, steady, m, velocity).raw).copyOf(end)
+        val loud = Loudness.of(audio.copyOfRange(0, min(end, Math.round(HELD_LEVEL_SECONDS * RATE).toInt())), 1, RATE)
+        if (loud > 1e-6f) {
+            val g = Dsp.MELODIC_LOUDNESS_TARGET / loud
+            for (i in audio.indices) audio[i] *= g
+        }
+        Dsp.limitPeak(audio, 0.99f)
+        return HeldNote(audio, warm, Keys.seamError(audio, warm), calm, preroll)
+    }
+
     /**
      * A one-shot taken apart for the audition page: the bass alone, the bass with the frame and the wires, and everything,
      * all conditioned and scaled by the one gain that levels the whole, so the three are directly comparable. A

@@ -271,6 +271,8 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     LIVE_SNAP(Place.MAKE, "LIVE"),
     DRAW(Place.MAKE, "DRAW"),
     FIELD(Place.MAKE, "PHOTO FIELD"),
+    /** Record a short vowel into a personal voice; works with or without an open kit. */
+    MY_VOICE(Place.MAKE, "MY VOICE"),
     // Behind the gear, from anywhere: opened over whatever is showing.
     SETUP(Place.SHELF, "SETUP"),
     HELP(Place.SHELF, "HELP"),

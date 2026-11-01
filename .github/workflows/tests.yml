@@ -107,7 +107,7 @@ jobs:
         with:
           packages: ""
       - name: Assemble the app and compile device tests
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin
+        run: ./gradlew --no-daemon -PcreaseStudyBuild=true :app:testDebugUnitTest :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin :app:testCreaseStudyUnitTest :app:compileCreaseStudyKotlin
       # The job already builds a working APK and then throws it away with
       # the runner. Keeping it is the difference between "the app compiles"
       # and "here is the app" — every green build on every branch becomes
@@ -145,6 +145,8 @@ jobs:
       # only here (fetched from the pinned release by the test's CMake).
       # The production CMake and the harness name the engine sources
       # separately. This fails the job when a new .cpp lands in only one.
+      - name: Phone study admission checks
+        run: python3 -m unittest discover -s scripts/crease-release -p test_prepare_phone.py
       - name: Engine sources are named in both CMake files
         run: python3 scripts/check_native_sources.py
       - name: Configure

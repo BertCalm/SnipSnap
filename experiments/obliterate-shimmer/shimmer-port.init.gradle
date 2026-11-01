@@ -1,0 +1,36 @@
+// Isolated Kotlin port evidence; production source sets and build settings are unchanged.
+// JDK17: ./gradlew --offline -I experiments/obliterate-shimmer/shimmer-port.init.gradle :synth:renderShimmerPort
+gradle.projectsEvaluated {
+    def synth = gradle.rootProject.project(':synth')
+    def runtime = synth.sourceSets.main.runtimeClasspath
+    def compiler = synth.configurations.create('shimmerPortCompiler')
+    synth.dependencies.add(compiler.name, 'org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21')
+    def repo = gradle.rootProject.projectDir
+    def classes = new File(repo, 'build/shimmer-port-helper-classes')
+    def props = gradle.startParameter.projectProperties
+    def inputs = props.get('shimmerPortInputs') ?: new File(repo, 'testkit/obliterate-shimmer-kotlin/reference.json').path
+    def output = props.get('shimmerPortOutput') ?: new File(repo, 'testkit/obliterate-shimmer-kotlin').path
+    synth.tasks.register('compileShimmerPortRenderer', JavaExec) {
+        dependsOn synth.tasks.named('classes')
+        classpath compiler, runtime
+        mainClass.set('org.jetbrains.kotlin.cli.jvm.K2JVMCompiler')
+        maxHeapSize = '1g'
+        doFirst {
+            classes.mkdirs()
+            args '-jvm-target', '17', '-no-stdlib', '-no-reflect', '-classpath', runtime.asPath,
+                '-Xfriend-paths=' + new File(repo, 'synth/build/classes/kotlin/main').path,
+                '-d', classes.path, new File(repo, 'experiments/obliterate-shimmer/ShimmerPortRenderer.kt').path
+        }
+    }
+    synth.tasks.register('renderShimmerPort', JavaExec) {
+        dependsOn synth.tasks.named('compileShimmerPortRenderer')
+        // When both tasks are selected, keep compilation/test load outside the benchmark.
+        mustRunAfter synth.tasks.named('test')
+        mustRunAfter gradle.rootProject.project(':shell').tasks.named('test')
+        classpath classes, runtime
+        mainClass.set('com.snipsnap.synth.ShimmerPortRenderer')
+        maxHeapSize = '1g'
+        workingDir repo
+        args repo.path, new File(output).absolutePath
+    }
+}
