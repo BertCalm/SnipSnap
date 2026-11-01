@@ -19,6 +19,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.ScannedChainEditor
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.ScannedChain
@@ -88,6 +89,73 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
             .fetchSemanticsNode().config.getOrNull(SemanticsProperties.ProgressBarRangeInfo)
         assertNotNull("$label lost its current value", progress)
         assertEquals(target, progress!!.current, .0001f)
+    }
+
+    @Test
+    fun opening_saved_envelopes_keeps_their_exact_values_in_both_models() {
+        val original = fixture(ScannedChainVoice.BLOOM).copy(
+            model = 1,
+            config = fixture(ScannedChainVoice.BLOOM).config.copy(
+                seconds = .25f, attackSeconds = .8234567f, releaseSeconds = 1.7654321f,
+            ),
+        )
+        show(original)
+        assertEquals(original.toJsonText(), currentPatch.toJsonText())
+        assertEquals(0, changeCount)
+
+        val updated = original.copy(model = 2)
+        compose.runOnUiThread { currentPatch = updated }
+        pump()
+        assertEquals(updated.toJsonText(), currentPatch.toJsonText())
+        assertEquals("opening a recipe never quantizes or shortens its envelope", 0, changeCount)
+    }
+
+    @Test
+    fun envelope_edits_preserve_the_complete_source_and_other_fields_in_both_models() {
+        val original = fixture(ScannedChainVoice.PLUCK).copy(
+            model = 1,
+            shape = ScannedChainShape.drawn(FloatArray(128) { i -> if (i % 11 < 5) .21f else -.13f }, "KEPT SOURCE"),
+        )
+        show(original)
+        for (model in listOf(1, 2)) {
+            val saved = original.copy(model = model)
+            compose.runOnUiThread { currentPatch = saved }
+            pump()
+
+            adjust("ATTACK", .2f)
+            val attacked = saved.copy(config = saved.config.copy(attackSeconds = ScannedChainEditor.attackSeconds(.2f)))
+            assertEquals(attacked, currentPatch)
+
+            adjust("RELEASE", .9f)
+            val released = attacked.copy(config = attacked.config.copy(releaseSeconds = ScannedChainEditor.releaseSeconds(.9f)))
+            assertEquals(released, currentPatch)
+            assertEquals(released, ScannedChainPatch.fromJsonText(currentPatch.toJsonText()))
+        }
+        assertEquals(4, changeCount)
+    }
+
+    @Test
+    fun consecutive_envelope_and_length_edits_keep_each_other_before_recomposition() {
+        val original = fixture(ScannedChainVoice.METAL).copy(model = 1)
+        show(original)
+        fun action(label: String) = compose.onNodeWithContentDescription(label, useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+        val attack = action("ATTACK")
+        val release = action("RELEASE")
+        val length = action("LENGTH")
+        compose.runOnUiThread {
+            assertTrue(attack(.8f))
+            assertTrue(release(.95f))
+            assertTrue(length(.25f))
+        }
+        pump()
+
+        assertEquals(original.copy(config = original.config.copy(
+            seconds = .25f,
+            attackSeconds = ScannedChainEditor.attackSeconds(.8f),
+            releaseSeconds = ScannedChainEditor.releaseSeconds(.95f),
+        )), currentPatch)
+        assertEquals("long envelopes remain deliberate choices when length is reduced", 3, changeCount)
     }
 
     @Test
