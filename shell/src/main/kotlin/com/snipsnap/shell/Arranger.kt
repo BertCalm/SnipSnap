@@ -255,6 +255,15 @@ object Arranger {
      * ring-out pushed the next downbeat 0.6 s late, 0.92 of a beat at the
      * default tempo, and the song stumbled at every boundary
      * (docs/plans/2026-10-30-song-making.md, phase 2).
+     *
+     * The drums of each stretch the pull-up does not interrupt render as
+     * one take ([KitPreview.renderNotes]), not section by section, so the
+     * kit's chokes reach across a boundary: an open hat on the last off-beat
+     * of the theme stops at the variation's closed hat on one, as it would
+     * on the hardware, instead of ringing over it. The tape stop runs on the
+     * whole song at the outro's end, because a tape carries everything on
+     * it: a bass note still ringing from the reprise slows and dies with the
+     * drums rather than playing on past the ending.
      */
     fun mixdown(kit: Kit, kitDir: File, plan: Arrangement): Mix {
         val bpm = KitPreview.playedBpm(kit.tempoBpm)
@@ -268,29 +277,42 @@ object Arranger {
         val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
         val starts = plan.sections.indices.map { frameAt(startPulses[it]) }
 
-        val segments = plan.sections.mapIndexed { i, s ->
-            var seg = KitPreview.render(kit, kitDir, clip = clips[i], tempoBpm = bpm)
-            if (bed != null && s.name in BED_SECTIONS) {
-                seg = sum(seg, renderBed(bed, clips[i].lengthPulses, framesPerPulse))
+        val turn = plan.sections.indexOfFirst { it.name == "the turn" }
+        val stretches = if (turn > 0) listOf(0 until turn, turn until plan.sections.size) else listOf(plan.sections.indices)
+
+        var songEnd = 0
+        val pieces = stretches.map { range ->
+            val first = range.first
+            val notes = range.flatMap { i ->
+                val offset = startPulses[i] - startPulses[first]
+                clips[i].notes.map { it.copy(timePulses = it.timePulses + offset) }
             }
-            when {
-                plan.sections.getOrNull(i + 1)?.name == "the turn" -> {
-                    val lastBeat = frameAt(startPulses[i + 1] - Mpc3Clip.PULSES_PER_BEAT) - starts[i]
-                    pullUpOver(seg, cut = lastBeat, end = starts[i + 1] - starts[i])
+            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm)
+            // The last stretch's drums, ring-out included, are where the song ends.
+            songEnd = starts[first] + drums.frameCount
+            var audio = drums
+            if (bed != null) {
+                for (i in range) {
+                    if (plan.sections[i].name in BED_SECTIONS) {
+                        audio = addAt(audio, renderBed(bed, clips[i].lengthPulses, framesPerPulse), starts[i] - starts[first])
+                    }
                 }
-                i == plan.sections.lastIndex -> BeatTape.tapeStop(seg)
-                else -> seg
             }
+            if (range.last + 1 == turn) {
+                val lastBeat = frameAt(startPulses[turn] - Mpc3Clip.PULSES_PER_BEAT) - starts[first]
+                audio = pullUpOver(audio, cut = lastBeat, end = starts[turn] - starts[first])
+            }
+            starts[first] to audio
         }
 
-        val frames = segments.indices.maxOf { starts[it] + segments[it].frameCount }
+        val frames = pieces.maxOf { (at, audio) -> at + audio.frameCount }
         val out = FloatArray(frames * 2)
-        segments.forEachIndexed { i, seg ->
-            val base = starts[i] * 2
-            for (j in seg.samples.indices) out[base + j] += seg.samples[j]
+        for ((at, audio) in pieces) {
+            for (j in audio.samples.indices) out[at * 2 + j] += audio.samples[j]
         }
-        SongBus.ceiling(out)
-        return Mix(Snip(out, 2, KitPreview.RATE), starts)
+        val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
+        SongBus.ceiling(song.samples)
+        return Mix(song, starts)
     }
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
@@ -416,12 +438,12 @@ object Arranger {
             sum / snip.channels
         }
 
-    /** Sum two stereo snips, the longer one setting the length. */
-    private fun sum(a: Snip, b: Snip): Snip {
-        val frames = maxOf(a.frameCount, b.frameCount)
+    /** Stereo [b] added into stereo [a] from frame [at], the longer reach setting the length. */
+    private fun addAt(a: Snip, b: Snip, at: Int): Snip {
+        val frames = maxOf(a.frameCount, at + b.frameCount)
         val out = FloatArray(frames * 2)
         a.samples.copyInto(out)
-        for (i in b.samples.indices) out[i] += b.samples[i]
+        for (i in b.samples.indices) out[at * 2 + i] += b.samples[i]
         return Snip(out, 2, KitPreview.RATE)
     }
 }

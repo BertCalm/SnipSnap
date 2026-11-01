@@ -4,6 +4,8 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
@@ -667,5 +669,67 @@ class ArrangerTest {
         )
         val twoBars = Mpc3Clip("Bass", 2, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(43, bar + bar / 2, 0.8f)))
         assertEquals(listOf(0L), Arranger.bedNotes(twoBars, bar).map { it.timePulses }, "a two-bar line stops at a one-bar section's end")
+    }
+
+    /** Energy of the left channel over [fromMs, toMs) after [frame]. */
+    private fun energyAfter(mix: Snip, frame: Int, fromMs: Int, toMs: Int): Double {
+        val rate = com.snipsnap.kit.KitPreview.RATE
+        var acc = 0.0
+        for (f in frame + fromMs * rate / 1000 until minOf(frame + toMs * rate / 1000, mix.frameCount)) {
+            acc += mix.samples[f * 2] * mix.samples[f * 2].toDouble()
+        }
+        return acc
+    }
+
+    @Test
+    fun `an open hat chokes on the next section's closed hat`() {
+        // Sections overlap now that each ring-out sounds under the next one's
+        // opening, so the kit's choke has to reach across the boundary. The
+        // open hat sits on the theme's last 16th (about 160 ms before the
+        // boundary) and rings 500 ms; the closed hat is 80 ms long, so from
+        // 100 to 300 ms past the boundary only an unchoked open hat sounds.
+        val m = KitBuilderModel.create("Choke", File(temp, "Choke"))
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.save()
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val open = Mpc3Clip("Open", 1, listOf(Mpc3Note(39, 15 * s16, 1f)))
+        fun song(next: Mpc3Clip) = Arranger.Arrangement(
+            "Choke Song", 0,
+            listOf(Arranger.Section("theme", open, 1, "open hat last"), Arranger.Section("variation", next, 1, "then this")),
+        )
+        val closed = Arranger.mixdown(m.kit, m.kitDir, song(Mpc3Clip("Closed", 1, listOf(Mpc3Note(38, 0, 1f)))))
+        val boundary = closed.sectionStarts[1]
+        assertTrue(energyAfter(closed.snip, boundary, 100, 300) < 1e-6, "the closed hat on one chokes the open hat: ${energyAfter(closed.snip, boundary, 100, 300)}")
+
+        // The control: with nothing in the group on one, the same window does hold the open hat's tail.
+        val late = Arranger.mixdown(m.kit, m.kitDir, song(Mpc3Clip("Late", 1, listOf(Mpc3Note(38, 12 * s16, 1f)))))
+        assertTrue(energyAfter(late.snip, late.sectionStarts[1], 100, 300) > 1e-3, "the window hears an unchoked open hat")
+    }
+
+    @Test
+    fun `the tape stop ends the whole song, a ringing bass note with it`() {
+        // A twelve-second bass note under the reprise rings far past the
+        // outro. The tape stop has to take it down with the drums at the
+        // outro's end, not leave it playing on at full speed.
+        val m = model("Tape")
+        val rate = 44_100
+        val note = Snip(FloatArray(12 * rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate)
+        WavWriter.write(File(m.kitDir, "bass.wav"), note)
+        AnswerStore.save(
+            m.kitDir,
+            AnswerStore.StoredAnswer(0, "Tape Answer", "bass.wav", Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))),
+        )
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM * com.snipsnap.kit.KitPreview.RATE * 4).toInt()
+        val past = mix.snip.frameCount - plan.totalBars * framesPerBar
+        assertTrue(past in 0 until com.snipsnap.kit.KitPreview.RATE, "the song ends at the outro's ring-out, bass and all: $past frames past")
+        val lastFrame = mix.snip.frameCount - 1
+        assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped by the last frame: ${mix.snip.samples[lastFrame * 2]}")
+        // And the bed really sounded: the reprise carries the bass.
+        val reprise = plan.sections.indexOfFirst { it.name == "reprise" }
+        assertTrue(energyAfter(mix.snip, mix.sectionStarts[reprise], 0, 500) > 1e-3, "the bed plays under the reprise")
     }
 }
