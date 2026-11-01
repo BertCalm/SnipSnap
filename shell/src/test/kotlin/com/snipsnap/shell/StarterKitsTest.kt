@@ -47,6 +47,10 @@ import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyPresets
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.MeridianPatch
+import com.snipsnap.synth.MeridianKits
+import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -267,6 +271,32 @@ class StarterKitsTest {
                 val lastAgain = RecipeReplay.apply(model, first.slot, last.recipe!!, first.displayName)
                 assertEquals(last.recipe, lastAgain.pad.recipe, "${starter.id}: the last pad's recipe survives replay")
                 assertTrue(lastBytes.contentEquals(File(dir, lastAgain.pad.sampleFile).readBytes()), "${starter.id}: the last pad regenerates exactly")
+            }
+            if (starter.id == "meridian") {
+                assertNull(kit.key, "the C-minor walk and authored A3 contrasts do not share one declared key")
+                val expected = MeridianKits.patches()
+                assertEquals(16, kit.pads.size)
+                for ((pad, patch) in kit.pads.zip(expected)) {
+                    val recipe = PadRecipe.fromJsonValue(assertNotNull(pad.recipe))
+                    assertEquals(patch, assertIs<MeridianPatch>(recipe.patch))
+                    assertEquals(MeridianKits.sourceRecipe(patch), recipe)
+                    assertEquals(Meridian.drumClassFor(patch.voice, patch.macros, patch.model), pad.drumClass)
+                    assertTrue(pad.oneShot, "held source material is a finite capture on the drum grid")
+                    assertEquals(patch.model.toString(), pad.source["model"])
+                    assertEquals(patch.seedContext.toString(), pad.source["seedContext"])
+                    assertEquals(patch.midi.toString(), pad.source["midi"])
+                    assertEquals(patch.velocity.toString(), pad.source["velocity"])
+                }
+                val model = KitBuilderModel.open(dir)
+                for (slot in listOf(1, 16)) {
+                    val pad = assertNotNull(model.kit.pad(slot))
+                    val before = File(dir, pad.sampleFile).readBytes()
+                    val recipe = assertNotNull(pad.recipe)
+                    val replayed = RecipeReplay.apply(model, slot, recipe, pad.displayName)
+                    assertEquals(recipe, replayed.pad.recipe)
+                    assertTrue(before.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()),
+                        "Meridian pad $slot must preserve native metadata and its explicit ending on replay")
+                }
             }
             if (starter.id == "cistern") {
                 // Reuse this rendered kit to exercise its saved recipes through
@@ -529,7 +559,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

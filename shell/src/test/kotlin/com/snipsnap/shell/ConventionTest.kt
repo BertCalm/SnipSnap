@@ -454,12 +454,14 @@ class ConventionTest {
     private val justifiedReads = listOf(
         ReadAllow(
             file = "MediaDecode.kt",
-            line = "return WavReader.read(bytes, DecodeLimits.MAX_FRAMES)",
-            justification = "`bytes` is gated a few lines up by " +
-                "`require(bytes.size <= MAX_WAV_BYTES)` (96 MB, MediaDecode.MAX_WAV_BYTES), and the call itself " +
-                "is the frame-capped ByteArray overload: the header's frame count is refused past " +
-                "DecodeLimits.MAX_FRAMES before the float buffer is allocated, because 96 MB of 8-bit mono " +
-                "is ~96M frames (~384 MB decoded) — the byte gate alone did not bound the allocation. " +
+            line = "val decoded = WavReader.read(bytes, maxFrames = frames)",
+            justification = "`bytes` is gated above by the default MAX_WAV_BYTES (96 MB), or a stricter " +
+                "32 MB byte limit for finite imports. The named maxFrames argument is DecodeLimits.MAX_FRAMES " +
+                "by default; finite imports use minOf that ceiling and maxDurationSeconds * 192000, computed " +
+                "in Long before conversion. My Voice's 30-second limit therefore permits at most 5760000 " +
+                "frames, and the following actual-rate duration check refuses overlong audio at lower rates. " +
+                "This ByteArray overload refuses a header above maxFrames BEFORE allocating its float buffer " +
+                "(it does not truncate), so even 8-bit input cannot evade the decoded allocation ceiling. " +
                 "WavReader.readCapped (audio/.../WavReader.kt) has only a File-based overload, so this " +
                 "capped in-memory call IS the correct shape for this input, not a gap the guardrail should chase.",
         ),

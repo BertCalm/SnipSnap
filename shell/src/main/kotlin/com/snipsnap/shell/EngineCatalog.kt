@@ -62,6 +62,7 @@ object EngineCatalog {
         "VOX" to EngineEntry(listOf(EngineCategory.VOICES, EngineCategory.PADS), "Choir, robot, speech, throat singing and beatbox"),
         "PLUCK" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.BASS), "Nylon, harp, koto, banjo, sitar and upright bass plucks"),
         "ORPHICA" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.PADS), "Plucked harp that breaks into stuttering grains as it rings"),
+        "OTIS" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.WINDS), "Organ, steam pipe, blues harmonica and shared reed chords"),
         "TONEWHEEL" to EngineEntry(listOf(EngineCategory.KEYS), "Drawbar organ: full, soul and stab registrations"),
         "REGISTERS" to EngineEntry(listOf(EngineCategory.KEYS), "Pipe organ, reed organ and transistor organ"),
         "FATHOM" to EngineEntry(listOf(EngineCategory.BASS), "Deep, grinding and glassy bass with glide"),
@@ -122,6 +123,7 @@ object EngineCatalog {
         "CHAMBER" to EngineEntry(listOf(EngineCategory.DRUMS, EngineCategory.BELLS), "Tuned drum, bar, cowbell and triangle hits in a room"),
         "RIME" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.KEYS), "Contour bass, bright keys and unfolding ringing textures"),
         "LIBRATION" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Wooden and glassy notes with moving, lingering overtones"),
+        "MERIDIAN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Swinging contacts leave wood, wire and glass ringing"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

@@ -1,0 +1,1121 @@
+{
+  "format": "published-otis-model5-replay",
+  "fixtures": [
+    {
+      "id": "steam_c4.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "STEAM",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "d27cdeaa7d61c41481f6874cc0ec040fab58927ce88584ac37799a457f76a9e7"
+    },
+    {
+      "id": "steam_c3.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "STEAM",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 48,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "b78ebf65ddbf9d2617d6638a44a699d6751c1205569a4f33fd6bb8c8453a4051"
+    },
+    {
+      "id": "steam_chord.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "STEAM",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 48,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          },
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "a99232d4305cc02222bc9c2438c8175abaf15f07e8e3b8bb58290e745828790c"
+    },
+    {
+      "id": "steam_chord.model5_independent",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "STEAM",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 48,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          },
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.699999988079071
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "705c3ac049d4c4f268a5e51756f8c1408c312a438ddb224fc26ff5e505381aac"
+    },
+    {
+      "id": "steam_pushed.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "STEAM",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 0.34,
+            "velocity": 0.8999999761581421
+          },
+          {
+            "midi": 63,
+            "startSeconds": 0.42,
+            "gateSeconds": 0.34,
+            "velocity": 0.8999999761581421
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0.84,
+            "gateSeconds": 0.34,
+            "velocity": 0.8999999761581421
+          },
+          {
+            "midi": 60,
+            "startSeconds": 1.26,
+            "gateSeconds": 0.34,
+            "velocity": 0.8999999761581421
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.6499999761581421,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.18000000715255737,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.949999988079071,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "e88ff985fe69c9722a2e0293412940be31d1bbef5533c11b2845aba44a33d2a3"
+    },
+    {
+      "id": "harp_blow_chord.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 64,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "0558fbc1ea7ea9e73bd33448832e9857f7feb862f51064449dae0f6a0c771668"
+    },
+    {
+      "id": "harp_draw_chord.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 71,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 74,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 77,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "ccd519ba49fe24891f570c435faffb78cfdc8a9983f71c6255530e34f77c2268"
+    },
+    {
+      "id": "harp_draw_chord.model5_independent",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 71,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 74,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          },
+          {
+            "midi": 77,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.7799999713897705
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "51ac24cf48af6f7c2df19b73adb2d1a829be1557b5ef8cf93d98f1f41e081dfe"
+    },
+    {
+      "id": "harp_single.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "58e41740c3dbcba5138b3f55b7acf1345b92a6addb4d4087fd76eb6f5fd26023"
+    },
+    {
+      "id": "harp_stabs.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 64,
+            "startSeconds": 0,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 60,
+            "startSeconds": 0.45,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 64,
+            "startSeconds": 0.45,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0.45,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 60,
+            "startSeconds": 0.9,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 64,
+            "startSeconds": 0.9,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0.9,
+            "gateSeconds": 0.19,
+            "velocity": 0.8199999928474426
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "dd93383d6e590cead6e6a9a9c2bcfaed8f7153a23b8eef6df639cc9be70d6ac6"
+    },
+    {
+      "id": "harp_blues.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "HARP",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 70,
+            "startSeconds": 0.3,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 72,
+            "startSeconds": 0.6,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 73,
+            "startSeconds": 0.8999999999999999,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 74,
+            "startSeconds": 1.2,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 77,
+            "startSeconds": 1.5,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          },
+          {
+            "midi": 67,
+            "startSeconds": 1.7999999999999998,
+            "gateSeconds": 0.25,
+            "velocity": 0.8399999737739563
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.800000011920929,
+          "breath": 0.5,
+          "harpVibrato": 0.44999998807907104,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.800000011920929,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "1b38e08a679a05e959b7d9233eff6709bb61fa5df7e5769e0045ed08edd6c697"
+    },
+    {
+      "id": "squeeze_dry.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "SQUEEZE",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0,
+          "bellowsPulse": 0.10000000149011612,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "202ceee4d11ac1fc9aaa17c2e0f827fc4b2448989f95ebae7fcf08b4de84212d"
+    },
+    {
+      "id": "squeeze_c4.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "SQUEEZE",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "28e9b669c3e0b6688f52f812465a7b9b89f69bee3ff2d9f5c444c6450e486da9"
+    },
+    {
+      "id": "squeeze_chord.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "SQUEEZE",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.6800000071525574
+          },
+          {
+            "midi": 63,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.6800000071525574
+          },
+          {
+            "midi": 67,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.6800000071525574
+          },
+          {
+            "midi": 70,
+            "startSeconds": 0,
+            "gateSeconds": 1.5,
+            "velocity": 0.6800000071525574
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "1bbb16d5cea78e8d340f4699d5554ec6fc8b868ca0c53f9f21bf5575bd514a3c"
+    },
+    {
+      "id": "squeeze_shared.model5_shared",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "SQUEEZE",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.8,
+            "velocity": 0.800000011920929
+          },
+          {
+            "midi": 63,
+            "startSeconds": 0.45,
+            "gateSeconds": 0.65,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0.8500000238418579
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "b389ee6bc6e4288e70d68ce0df5f5b9eac7700d4ce71a0de59b8476d1d61ca7c"
+    },
+    {
+      "id": "squeeze_shared.model5_independent",
+      "recipe": {
+        "format": "snipsnap-otis-prototype",
+        "model": 5,
+        "voice": "SQUEEZE",
+        "seed": 20261014,
+        "notes": [
+          {
+            "midi": 60,
+            "startSeconds": 0,
+            "gateSeconds": 1.8,
+            "velocity": 0.800000011920929
+          },
+          {
+            "midi": 63,
+            "startSeconds": 0.45,
+            "gateSeconds": 0.65,
+            "velocity": 0.800000011920929
+          }
+        ],
+        "organ": {
+          "drawbars": [
+            1,
+            0.8500000238418579,
+            1,
+            0.41999998688697815,
+            0.2199999988079071,
+            0.30000001192092896,
+            0.10000000149011612,
+            0.11999999731779099,
+            0.05999999865889549
+          ],
+          "click": 0.44999998807907104,
+          "percussionLevel": 0.3199999928474426,
+          "percussionHarmonic": "THIRD",
+          "percussionDecaySeconds": 0.3,
+          "leakage": 0.3799999952316284,
+          "drive": 0.20000000298023224,
+          "attackSeconds": 0.004,
+          "releaseSeconds": 0.15,
+          "cabinetHz": 5600,
+          "rotary": false,
+          "rotaryStart": "SLOW",
+          "rotaryTarget": "FAST",
+          "rotaryChangeSeconds": 0.75,
+          "rotaryDepth": 0.8199999928474426
+        },
+        "air": {
+          "steamInstability": 0.550000011920929,
+          "harpBend": 0.6499999761581421,
+          "breath": 0.3499999940395355,
+          "harpVibrato": 0.30000001192092896,
+          "musette": 0.6000000238418579,
+          "bellowsPulse": 0.5,
+          "pressure": 0.6000000238418579,
+          "release": 0.44999998807907104
+        },
+        "sharedPressure": 0
+      },
+      "rawPcmGain": 0.4328099191188812,
+      "wavSha256": "1bc5d44ca6686fced11de22496bcb4787b5b9f6c3432077893f7ab92e1601ca1"
+    }
+  ]
+}

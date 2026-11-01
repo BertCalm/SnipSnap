@@ -9,6 +9,7 @@ import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.TidalPatch
@@ -35,6 +36,7 @@ import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
@@ -434,6 +436,10 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "RimePatch.fromJsonText($recipe),"
         }
+        if (patch is OtisPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OtisPatch.fromJsonText($recipe),"
+        }
         if (patch is ApsisPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ApsisPatch.fromJsonText($recipe),"
@@ -566,6 +572,7 @@ object UserPresets {
             return "OhmPatch.fromJsonText($recipe),"
         }
         val state = when (patch) {
+            is MeridianPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, seedContext = ${patch.seedContext})"
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is FlotillaPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"

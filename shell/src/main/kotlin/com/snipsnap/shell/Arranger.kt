@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.SongBus
 import com.snipsnap.kit.AnswerStore
@@ -11,7 +12,11 @@ import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.mpc3.Mpc3Clip
+import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * The Arranger (KK1): songs, not loops. The kit already owns every
@@ -227,54 +232,104 @@ object Arranger {
     private const val BED_GAIN = 0.8f
 
     /**
+     * How far from its own note the bed's sample is asked to play: two
+     * octaves either way. The Answer's widest leap is the octave, so no
+     * line the app writes comes near it. The bound is for a hand-edited
+     * `answer.json`, whose note four octaves down would ask for a buffer
+     * sixteen times the sample's length; that note is left out instead.
+     */
+    internal const val BED_REACH_SEMITONES = 24
+
+    /**
      * The song as one WAV: every section rendered through [KitPreview]
-     * (its ring-out included — that's the room), a pull-up spinning into
+     * and laid on its own downbeat, a pull-up over the last beat before
      * the turn, a tape stop ending the outro — SIDE A's own transitions —
      * and the Answer's bass riding under the body sections when the kit
      * has one (its root re-detected from the stored note, the OneNote
      * way; an undetectable root skips the bed honestly).
+     *
+     * A section starts on the frame of its own first pulse, counted from
+     * the top of the song, so the bar count is the timing. Each section's
+     * ring-out (that's the room) is added under the next section's
+     * opening rather than played before it: laid end to end, every
+     * ring-out pushed the next downbeat 0.6 s late, 0.92 of a beat at the
+     * default tempo, and the song stumbled at every boundary
+     * (docs/plans/2026-10-30-song-making.md, phase 2).
      */
     fun mixdown(kit: Kit, kitDir: File, plan: Arrangement): Mix {
         val bpm = KitPreview.playedBpm(kit.tempoBpm)
+        val framesPerPulse = framesPerPulse(bpm)
+        fun frameAt(pulse: Long) = (pulse * framesPerPulse).roundToInt()
         val bed = answerBed(kitDir)
 
+        val clips = plan.sections.map { tiled(it.clip, it.repeats) }
+        // Counted in pulses and turned into a frame once per boundary, so
+        // rounding never accumulates across the song.
+        val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
+        val starts = plan.sections.indices.map { frameAt(startPulses[it]) }
+
         val segments = plan.sections.mapIndexed { i, s ->
-            val tiledClip = tiled(s.clip, s.repeats)
-            var seg = KitPreview.render(kit, kitDir, clip = tiledClip, tempoBpm = bpm)
+            var seg = KitPreview.render(kit, kitDir, clip = clips[i], tempoBpm = bpm)
             if (bed != null && s.name in BED_SECTIONS) {
-                seg = sum(seg, renderBed(bed, s.repeats, bpm))
+                seg = sum(seg, renderBed(bed, clips[i].lengthPulses, framesPerPulse))
             }
             when {
-                plan.sections.getOrNull(i + 1)?.name == "the turn" ->
-                    concatFrames(seg, BeatTape.pullUp(seg))
+                plan.sections.getOrNull(i + 1)?.name == "the turn" -> {
+                    val lastBeat = frameAt(startPulses[i + 1] - Mpc3Clip.PULSES_PER_BEAT) - starts[i]
+                    pullUpOver(seg, cut = lastBeat, end = starts[i + 1] - starts[i])
+                }
                 i == plan.sections.lastIndex -> BeatTape.tapeStop(seg)
                 else -> seg
             }
         }
 
-        val starts = ArrayList<Int>(segments.size)
-        var at = 0
-        for (seg in segments) {
-            starts += at
-            at += seg.frameCount
-        }
-        val out = FloatArray(at * 2)
+        val frames = segments.indices.maxOf { starts[it] + segments[it].frameCount }
+        val out = FloatArray(frames * 2)
         segments.forEachIndexed { i, seg ->
-            seg.samples.copyInto(out, starts[i] * 2)
+            val base = starts[i] * 2
+            for (j in seg.samples.indices) out[base + j] += seg.samples[j]
         }
         SongBus.ceiling(out)
         return Mix(Snip(out, 2, KitPreview.RATE), starts)
     }
 
-    private fun tiled(clip: Mpc3Clip, repeats: Int): Mpc3Clip {
+    /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
+    private fun framesPerPulse(bpm: Float): Double = 60.0 / bpm * KitPreview.RATE / Mpc3Clip.PULSES_PER_BEAT
+
+    /**
+     * [clip] played [repeats] times end to end. Each repeat starts one
+     * clip-length later, in the clip's own meter: a three-four bar is
+     * three beats, and tiling it by a four-four bar put every repeat a
+     * beat per bar late.
+     */
+    internal fun tiled(clip: Mpc3Clip, repeats: Int): Mpc3Clip {
         if (repeats == 1) return clip
-        val barPulses = clip.bars.toLong() * Mpc3Clip.PULSES_PER_BAR
+        val length = clip.lengthPulses
         return clip.copy(
             bars = clip.bars * repeats,
             notes = (0 until repeats).flatMap { r ->
-                clip.notes.map { it.copy(timePulses = it.timePulses + r * barPulses) }
+                clip.notes.map { it.copy(timePulses = it.timePulses + r * length) }
             },
         )
+    }
+
+    /**
+     * [seg] with its last beat, from [cut] to [end], replaced by the
+     * spinback built from what played before it: the record pulled back
+     * over the final beat, so the turn drops on its own downbeat (D1 in
+     * the plan). Nothing of [seg] sounds past [end]. A pulled-up record has
+     * stopped, so its ring-out does not play under the turn.
+     */
+    internal fun pullUpOver(seg: Snip, cut: Int, end: Int): Snip {
+        require(seg.channels == 2) { "the mixdown is stereo, got ${seg.channels} channel(s)" }
+        require(cut in 0..end) { "the pull-up starts inside the section: $cut of $end" }
+        val from = minOf(cut, seg.frameCount)
+        val head = Snip(seg.samples.copyOf(from * 2), 2, seg.sampleRate)
+        val spin = BeatTape.pullUp(head, (end - from).toFloat() / seg.sampleRate)
+        val out = FloatArray(end * 2)
+        head.samples.copyInto(out)
+        spin.samples.copyInto(out, from * 2, 0, minOf(spin.samples.size, (end - from) * 2))
+        return Snip(out, 2, seg.sampleRate)
     }
 
     private class Bed(val sample: Snip, val rootMidi: Int, val clip: Mpc3Clip)
@@ -292,33 +347,64 @@ object Arranger {
         return Bed(sample, rootMidi, answer.clip)
     }
 
-    /** The bass clip tiled across the section, each note repitched from the root. */
-    private fun renderBed(bed: Bed, repeats: Int, bpm: Float): Snip {
-        val framesPerPulse = 60.0 / bpm * KitPreview.RATE / 960.0
-        val tiledClip = tiled(bed.clip, repeats)
-        val total = (tiledClip.bars * Mpc3Clip.PULSES_PER_BAR * framesPerPulse).toInt() + bed.sample.frameCount
+    /**
+     * The bass under one section of [sectionPulses]: the Answer's clip
+     * laid end to end across the section ([bedNotes]), each note repitched
+     * from the sample's root to the note it names. Its last notes ring out
+     * past the section's end, as a played note does.
+     */
+    private fun renderBed(bed: Bed, sectionPulses: Long, framesPerPulse: Double): Snip {
+        val cache = HashMap<Int, Snip?>()
+        val voiced = bedNotes(bed.clip, sectionPulses).mapNotNull { note ->
+            val v = if (note.note in cache) cache[note.note] else repitched(bed.sample, note.note - bed.rootMidi).also { cache[note.note] = it }
+            v?.let { note to it }
+        }
+        val sectionFrames = (sectionPulses * framesPerPulse).roundToInt()
+        val total = maxOf(sectionFrames, voiced.maxOfOrNull { (n, v) -> (n.timePulses * framesPerPulse).roundToInt() + v.frameCount } ?: 0)
         val out = FloatArray(total * 2)
-        val cache = HashMap<Int, Snip>()
-        for (note in tiledClip.notes) {
-            val voiced = cache.getOrPut(note.note) {
-                val speed = Math.pow(2.0, (note.note - bed.rootMidi) / 12.0).toFloat()
-                if (speed in 0.51f..1.99f && Math.abs(speed - 1f) > 1e-4f) {
-                    com.snipsnap.audio.TempoFit.repitch(bed.sample, 1000f, 1000f * speed)
-                } else {
-                    bed.sample
-                }
-            }
-            val start = (note.timePulses * framesPerPulse).toInt()
+        for ((note, v) in voiced) {
+            val start = (note.timePulses * framesPerPulse).roundToInt()
             val gain = BED_GAIN * (0.35f + 0.65f * note.velocity)
-            for (f in 0 until voiced.frameCount) {
-                val at = start + f
-                if (at >= total) break
-                val s = mono(voiced, f) * gain
-                out[at * 2] += s * 0.7071f
-                out[at * 2 + 1] += s * 0.7071f
+            for (f in 0 until v.frameCount) {
+                val s = mono(v, f) * gain
+                out[(start + f) * 2] += s * 0.7071f
+                out[(start + f) * 2 + 1] += s * 0.7071f
             }
         }
         return Snip(out, 2, KitPreview.RATE)
+    }
+
+    /**
+     * The bed [clip]'s notes laid end to end from the section's first
+     * pulse, and none at or past [sectionPulses]. Cut to the section, not
+     * tiled by the section's repeat count: that count belongs to the drum
+     * clip, so a bass line of a different length used to run past the
+     * section or stop short of its end.
+     */
+    internal fun bedNotes(clip: Mpc3Clip, sectionPulses: Long): List<Mpc3Note> {
+        val loop = clip.lengthPulses
+        val laps = ((sectionPulses + loop - 1) / loop).toInt()
+        return (0 until laps)
+            .flatMap { r -> clip.notes.map { it.copy(timePulses = it.timePulses + r * loop) } }
+            .filter { it.timePulses < sectionPulses }
+    }
+
+    /**
+     * [sample] moved by [semitones] (D4 in the plan): resampled to a
+     * virtual rate and read back at its own, `TempoFit.repitch`'s
+     * arithmetic without that function's factor-of-two bound. The bound is
+     * right for a tempo fit and wrong for a bass line, whose octave is a
+     * speed of exactly 2. The old window (0.51..1.99) played every octave
+     * note at the sample's root, an octave low, and the Answer writes an
+     * octave about one note in eight (one in three in a scale without a
+     * fifth). Null past [BED_REACH_SEMITONES].
+     */
+    internal fun repitched(sample: Snip, semitones: Int): Snip? {
+        if (semitones == 0) return sample
+        if (abs(semitones) > BED_REACH_SEMITONES) return null
+        val speed = 2.0.pow(semitones / 12.0)
+        val moved = Resampler.resample(sample, (sample.sampleRate / speed).roundToInt())
+        return Snip(moved.samples, moved.channels, sample.sampleRate)
     }
 
     private fun mono(snip: Snip, frame: Int): Float =
@@ -336,14 +422,6 @@ object Arranger {
         val out = FloatArray(frames * 2)
         a.samples.copyInto(out)
         for (i in b.samples.indices) out[i] += b.samples[i]
-        return Snip(out, 2, KitPreview.RATE)
-    }
-
-    /** [b] appended after [a] — the pull-up's spinback tail. */
-    private fun concatFrames(a: Snip, b: Snip): Snip {
-        val out = FloatArray((a.frameCount + b.frameCount) * 2)
-        a.samples.copyInto(out)
-        b.samples.copyInto(out, a.frameCount * 2)
         return Snip(out, 2, KitPreview.RATE)
     }
 }

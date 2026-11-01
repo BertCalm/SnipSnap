@@ -160,14 +160,14 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = TrefoilPresets.all() + ApsisPresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
-            SkinPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
+            SkinPresets.all() + MeridianPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + BallastPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + LatticePresets.all() + TidalPresets.all() + ChamberPresets.all() + LibrationPresets.all() + RimePresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + LatticePresets.all() + TidalPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

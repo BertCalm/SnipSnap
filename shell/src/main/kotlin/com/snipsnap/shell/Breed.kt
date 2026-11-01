@@ -6,6 +6,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.ConfluencePersonalFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
@@ -65,9 +66,14 @@ object Breed {
         // kit. B's printed pads are never copied by this path: they only make
         // their A partner stay as A, so do not preflight unused B sources.
         a.pads.filter { PrintedPads.has(it.recipe) }.forEach { PrintedPads.requireImportable(aDir, it) }
+        // Every child slot retains A's source metadata, including a personal
+        // voice whose rendered audio is crossed through B's effects rack.
+        // Validate that immutable source closure before publishing the child.
+        ConfluencePersonalFiles.requireImportable(a, aDir)
 
         val rng = Random(seed.toLong())
         val model = KitBuilderModel.create(name, destDir)
+        ConfluencePersonalFiles.copyReferenced(a, aDir, destDir)
         model.setKey(a.key)
         model.setTempo(a.tempoBpm)
         val crossed = mutableListOf<Int>()
@@ -335,6 +341,19 @@ object Breed {
         model.update(pad.slot) { imported }
     }
 
+    /**
+     * A placed child is one sample, so a STRIKE FX bank the parent's recipe
+     * names does not come with it: the recipe is rewritten without `layers`.
+     * A recipe that was only the bank leaves nothing, and non-PadRecipe JSON
+     * is not ours to touch.
+     */
+    private fun withoutBank(recipe: JsonValue.Obj?): JsonValue.Obj? {
+        if (recipe == null || "layers" !in recipe.entries) return recipe
+        val parsed = try { PadRecipe.fromJsonValue(recipe) } catch (e: JsonException) { return recipe }
+        if (parsed.layers == null) return recipe
+        return try { parsed.copy(layers = null).toJsonValue() } catch (e: IllegalArgumentException) { null }
+    }
+
     private fun place(model: KitBuilderModel, pad: KitPad, snip: Snip, recipe: JsonValue.Obj?, stamp: Map<String, String>) {
         model.assign(pad.slot, snip, pad.drumClass, pad.displayName)
         model.update(pad.slot) {
@@ -347,7 +366,7 @@ object Breed {
                 muteGroup = pad.muteGroup,
                 oneShot = pad.oneShot,
                 loop = pad.loop,
-                recipe = recipe,
+                recipe = withoutBank(recipe),
                 source = pad.source + stamp,
             )
         }

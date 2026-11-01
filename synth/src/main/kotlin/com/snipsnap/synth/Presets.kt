@@ -16,9 +16,14 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        OtisPatch.ENGINE -> OtisVoice.entries.firstOrNull { it.name == voice }?.let(OtisPresets::forVoice) ?: emptyList()
         LibrationPatch.ENGINE -> {
             val v = LibrationVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             LibrationPresets.forVoice(v)
+        }
+        MeridianPatch.ENGINE -> {
+            val v = MeridianVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            MeridianPresets.forVoice(v)
         }
         TrefoilPatch.ENGINE -> {
             val v=TrefoilVoice.entries.firstOrNull { it.name==voice } ?: return emptyList()
@@ -288,6 +293,10 @@ object Presets {
             val v = ChamberVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ChamberPresets.forVoice(v)
         }
+        KeelPatch.ENGINE -> {
+            val v = KeelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            KeelPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -313,13 +322,14 @@ object Presets {
     }
 
     fun all(): List<Patch> =
+        OtisPresets.all() +
         TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
-            FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
+            FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() + MeridianPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() + BallastPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + ChamberPresets.all() + LibrationPresets.all() + RimePresets.all()
+            RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all()
 }
