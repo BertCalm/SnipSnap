@@ -67,6 +67,21 @@ class ArtCanvasTest {
     }
 
     @Test
+    fun `the cap ratio is the face's own`() {
+        // Mark sizes type so caps match the symbol's height; CAP_RATIO must
+        // be what the bundled face really draws, not a guess. H has flat
+        // top and bottom, so its lit rows are exactly the cap height.
+        val em = 400f
+        val img = render(600) {
+            it.fillRect(0, 0, 600, 600, 0x000000)
+            it.drawText("H", ArtFont.UNBOUNDED_EXTRABOLD, em, 100f, 500f, TextAnchor.START, 0xFFFFFF)
+        }
+        val rows = (0 until 600).filter { y -> (0 until 600).any { x -> img.getRGB(x, y) and 0xFFFFFF != 0 } }
+        val cap = (rows.last() - rows.first() + 1).toFloat()
+        assertTrue(kotlin.math.abs(cap / em - Mark.CAP_RATIO) < 0.02f, "drawn cap ${cap / em} of the em, CAP_RATIO ${Mark.CAP_RATIO}")
+    }
+
+    @Test
     fun `textWidth grows with size and matches drawn extent`() {
         var w20 = 0f
         var w40 = 0f

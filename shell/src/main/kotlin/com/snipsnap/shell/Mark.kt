@@ -40,8 +40,12 @@ object Mark {
     /** Below this the pads collapse into noise; [draw] refuses. */
     const val MIN_HEIGHT = 8f
 
-    /** Unbounded ExtraBold's cap height as a fraction of the em; the lockups size type so caps match the mark height. */
-    const val CAP_RATIO = 0.72f
+    /**
+     * Unbounded ExtraBold's cap height as a fraction of the em (the face's
+     * own OS/2 table: 750/1000); the lockups size type so caps match the
+     * mark height exactly. ArtCanvasTest measures a drawn H against it.
+     */
+    const val CAP_RATIO = 0.75f
 
     /** Gap between the wider word and the symbol in STACKED, as a fraction of height. */
     const val STACKED_GAP = 0.14f
