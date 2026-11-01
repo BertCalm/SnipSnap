@@ -27,8 +27,10 @@ Sample transposition between those roots changes playback speed and colour-cycle
 rate, as with the existing sampled keygroups.
 
 The existing pad and main-audition routes retain their settled-sustain contract.
-Main AUDITION and the MOTION panel's MOVING preview repeat an actual HOLD
-render until stopped. SOURCE, STATIC and OPEN previews remain finite.
+Main AUDITION and the MOTION panel's MOVING preview repeat an unprocessed HOLD
+render until stopped. SOURCE, STATIC and OPEN previews remain finite. A reopened
+pad with processing keeps its complete finite preview and effect tail; that
+processed file is not assumed to be periodic.
 The new instrument follows the established separation used by other held
 instruments: a keygroup carries the opening and an explicit internal loop start.
 It does not reinterpret a whole-file drum-pad loop as an internal sustain loop.

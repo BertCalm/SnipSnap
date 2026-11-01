@@ -119,10 +119,10 @@ internal fun rememberPrismMotionStudio(): PrismMotionStudioState = remember { Pr
 /** OPEN recipes stay finite; repeating motion may enter PRISM's verified loop region. */
 internal fun prismFiniteMotion(patch: PrismPatch?): Boolean = patch?.motion?.let { !it.repeat } == true
 
-/** Ordinary PRISM HOLD already renders the exact sustain region, without an opening. */
-internal fun prismAuditionPlayback(patch: PrismPatch, snip: Snip): HeldPreviewPlayback {
+/** Only unchanged PRISM HOLD PCM is a verified sustain region; processing may add a finite tail. */
+internal fun prismAuditionPlayback(patch: PrismPatch, dry: Snip, finished: Snip = dry): HeldPreviewPlayback {
     val hold = patch.macros["HOLD"] ?: Prism.defaults(patch.voice).getValue("HOLD")
-    return HeldPreviewPlayback(snip, if (Prism.isLoop(hold)) 0 until snip.frameCount else null)
+    return HeldPreviewPlayback(finished, if (finished === dry && Prism.isLoop(hold)) 0 until dry.frameCount else null)
 }
 
 /** Comparisons retain their own playback mode instead of inheriting the bench's current HOLD. */

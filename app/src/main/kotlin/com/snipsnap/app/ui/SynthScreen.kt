@@ -1667,7 +1667,7 @@ fun SynthScreen(
                 // native OPENSKY renderer above keeps its cancellation hook.
                 val finished = if (activeRecipe != null) activeRecipe.process(dry)
                 else Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
-                if (patch is PrismPatch) prismAuditionPlayback(patch, finished) else HeldPreviewPlayback(finished)
+                if (patch is PrismPatch) prismAuditionPlayback(patch, dry, finished) else HeldPreviewPlayback(finished)
             },
             publish = { rendered ->
                 if (engine != Engine.PRISM || !prismMotionStudio.ownsPreview) {
