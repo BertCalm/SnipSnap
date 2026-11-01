@@ -248,7 +248,11 @@ class KeelTest {
             // BELLY's detuned bite changes the short-lag correlation as it fades.
             // Read the house detector while the body is strong, then independently
             // check the late tail with overlap-normalized NSDF rather than dropping it.
-            val estimate = requireNotNull(Pitch.detect(snip, .15f, .25f)) { "$voice $midi has no early pitch" }
+            val from = .15f
+            val window = .25f
+            assertTrue((from + window) * snip.sampleRate <= snip.frameCount,
+                "$voice $midi needs a complete postattack pitch window")
+            val estimate = requireNotNull(Pitch.detect(snip, from, window)) { "$voice $midi has no early pitch" }
             val c = cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
             println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
             assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")

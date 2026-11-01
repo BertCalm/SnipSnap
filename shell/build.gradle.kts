@@ -274,6 +274,17 @@ tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
     args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
 }
 
+/** Export continuous LIBRATION keys and play their PCM24 samples through real note-on/note-off. */
+tasks.register<JavaExec>("generateLibrationHoldAudition") {
+    group = "distribution"
+    description = "Render three LIBRATION held instruments, playback comparisons and measured recurrence evidence."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationHoldAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("librationHoldOutput").orElse("${rootDir}/testkit/libration-sustain").get())
+}
+
 /** One opening before a separately marked sustain region, compared with unchanged PRISM pad renders. */
 tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     group = "distribution"
@@ -300,4 +311,24 @@ tasks.register<JavaExec>("generateRimeCompleteInstruments") {
     mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-complete-instruments", "--complete")
+}
+
+tasks.register<JavaExec>("generateScannedChainControlsAudition") {
+    group = "distribution"
+    description = "Render Scanned Chain editor sweeps, complete recipes and numerical evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScannedChainControlsAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("scannedChainControlsOutput").orElse("${rootDir}/testkit/scanned-chain-controls").get())
+}
+
+/** Reproduce the six factory performance recipes and four MPC-ready held instruments. */
+tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
+    group = "distribution"
+    description = "Render the ORIGAMI performance bank, native/matched takes, portable audition and MPC downloads."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
 }

@@ -548,10 +548,12 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
 long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
-whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
+whole note feeding them, HEAD off), `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
-peak).
+peak) and `roomed` (a drum room: ROOM at its defaults, a live room with the mic
+about 1.35 m back; AMT moves only the mic, closer in the same room as it falls,
+so AMT 70 keeps about half the room and AMT 0 none).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -566,7 +568,7 @@ re-rendered from the patch instead, the `pre` and `amp` picks in front of its
 own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
-fixed there), `delayed` (after the amp), and
+fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -587,8 +589,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`
-and `delayed`), of which the row draws five, the user's choice and the same
+DELAY · ROOM — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed` and `roomed`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);
@@ -912,6 +914,30 @@ verb, `keys`, MAKE INSTRUMENT or MAKE PAD carries a sidecar
 the phone reads, the shelf lists it under INSTRUMENTS, and KEYS plays
 it on the 4×4 — root on A01, chromatic or a scale, octaves either way,
 a looped pad holding while the finger does.
+
+### `kitfrom <wav>` — kit from anything
+
+One sound into sixteen pads in a key and a style. Purist: every pad is
+the source and only the source, transformed. `--key Am` (any spelling
+`chop --key` reads; A minor if unsaid), `--genre house | techno |
+boom-bap` (house if unsaid), `--out <dir>`, `--name <name>`,
+`--overwrite`. The layout is fixed: kick A01, snare A02, closed hat
+A03, open hat A04 (the two hats choke each other and nothing else
+does), clap A05, ride A06, crash A07, siren A08, four bass notes A09 to
+A12 and four tones A13 to A16 at the key's root, third, fifth and
+octave. Three tricks make every drum from any sound: the source read
+faster for the hats, the ride and the crash; its single cycle sung at a
+drum pitch for the kick's body, the snare's body, the siren and every
+note; its arrival whitened into noise for the snare and the clap. The
+tempo written to the kit is the genre's. The table it prints is the
+gate every pad was held to and what the gate measured: the five slots
+the classifier has a class for must classify as that class, the ride
+and crash by centroid and decay, the siren by its pitch trajectory read
+in order, the notes by their root. A pad that fails its gate stays in
+the kit and says so in its provenance (`gate = fail`), because the
+blend of round three is what acts on that, not silence; a pad the
+probe cannot read says `unmeasured`, never `fail`. Design and numbers:
+`docs/superpowers/specs/2026-11-01-kit-from-anything-design-brief.md`.
 
 ### `retune <kit-dir> <pad>` — the spectral retune
 
@@ -1405,3 +1431,7 @@ exports (copy the contents of snipsnap-out/card onto the card):
 
 The groove really is 92 BPM; the kick really does land on A01. Every
 number in that table is the classifier being auditable in public.
+
+### LORENTZ finite collisions
+
+`snipsnap synth LORENTZ FUSE --preset 1 --out <dir>` renders the rounded voice; use `LORENTZ LORENTZ` for the tearing voice. `--all` renders all six anchors for that voice. `--macros` accepts TUNE, CAPACITOR, GAP, IMPACT, WELD and HOLD. `--midi` sets TUNE over MIDI 24..48; it cannot be combined with a TUNE macro override. `--velocity` changes contact and level, and `.patch` sidecars retain every setting for `--patch` replay. HOLD extends a finite decay and does not export a held instrument. Only engine model 3 is currently supported by saved LORENTZ patches.

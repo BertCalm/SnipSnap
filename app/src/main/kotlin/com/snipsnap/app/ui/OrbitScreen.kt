@@ -64,6 +64,7 @@ import com.snipsnap.app.AndroidAudioSink
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.OrbitSampleSource
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.OrbitAquariumProcessor
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -99,8 +100,10 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.OrbitAquarium
 import com.snipsnap.xpm.WavInfo
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -319,22 +322,47 @@ fun OrbitScreen(
     var playing by remember(kitDir) { mutableStateOf(false) }
     var frame by remember(kitDir) { mutableLongStateOf(0L) }
     var preparing by remember(kitDir) { mutableStateOf(false) }
+    var aquarium by remember(kitDir) { mutableStateOf<OrbitAquariumProcessor?>(null) }
+    var aquariumFaulted by remember(kitDir) { mutableStateOf(false) }
+    var aquariumLimited by remember(kitDir) { mutableLongStateOf(0L) }
+    val transportFailure = remember(kitDir) { AtomicReference<Throwable?>(null) }
+    var playbackGeneration by remember(kitDir) { mutableIntStateOf(0) }
+    val aquariumRoute = remember(kit.aquariumPerformance, set?.aquariumFromKit, set?.aquariumTailSeconds, set?.sampleRate) {
+        set?.let { OrbitAquarium.route(kit, it) }
+    }
 
     // Audition: PLAY's engine, so a tapped pad sounds within the device's
     // round trip rather than after the transport's 150 ms buffer.
     val player = remember(kitDir) { PadEngine(rate) }
     var playerUp by remember(kitDir) { mutableStateOf(false) }
+    var auditionFaulted by remember(kitDir) { mutableStateOf(false) }
+    var auditionPending by remember(kitDir) { mutableStateOf(false) }
     var auditionId by remember(kitDir) { mutableIntStateOf(1) }
     DisposableEffect(kitDir) {
         playerUp = player.start()
         onDispose { player.close() }
     }
     LaunchedEffect(kit) { offMain { player.load(entry) } }
+    var aquariumWasOn by remember(kitDir) { mutableStateOf(false) }
+    LaunchedEffect(player, aquarium, aquariumRoute?.settings, set?.bpm, set?.aquariumFromKit) {
+        aquariumRoute?.let { route ->
+            val optedIn = set?.aquariumFromKit == true
+            val reset = optedIn && !aquariumWasOn
+            aquarium?.configure(route.settings, reset)
+            player.setAquariumTempo(set?.bpm?.toDouble() ?: 0.0)
+            player.configureAquarium(route.settings, reset)
+            auditionFaulted = player.aquariumFaulted()
+            auditionPending = player.hasPendingAquariumControls()
+            aquariumWasOn = optedIn
+        }
+    }
 
     fun audition(slot: Int) {
         val pad = kit.pad(slot) ?: return
-        if (player.needsRestart()) playerUp = player.start()
-        if (!playerUp || !player.isUp()) return
+        if (!playerUp || player.needsRestart()) playerUp = player.start()
+        auditionFaulted = player.aquariumFaulted()
+        auditionPending = player.hasPendingAquariumControls()
+        if (!playerUp || !player.isUp()) { onToast("ORBIT TAP STREAM UNAVAILABLE"); return }
         player.hit(pad, 0.9f, auditionId)
         auditionId = auditionId % 1_000_000 + 1
     }
@@ -475,12 +503,16 @@ fun OrbitScreen(
     }
 
     fun stopPlayback() {
+        playbackGeneration++
         engine?.stop()
         audioThread?.join(300)
         sink?.close()
         engine = null
         sink = null
         audioThread = null
+        // The worker releases its own native handle in finally. A timed
+        // join alone does not establish that processing has stopped.
+        aquarium = null
         playing = false
     }
 
@@ -555,16 +587,40 @@ fun OrbitScreen(
         val s = set ?: return
         if (playing || preparing) return
         preparing = true
+        val generation = playbackGeneration
         scope.launch {
             val prepared = offMain { OrbitBank.prepare(s, source, previous = bank) }
+            if (generation != playbackGeneration) { preparing = false; return@launch }
             bank = prepared
-            val audioSink = AndroidAudioSink(s.sampleRate)
-            val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
-            sink = audioSink
-            engine = e
-            audioThread = thread(name = "snipsnap-orbit", isDaemon = true) { e.run() }
-            playing = true
-            preparing = false
+            var fx: OrbitAquariumProcessor? = null
+            var output: AndroidAudioSink? = null
+            try {
+                val processor = OrbitAquariumProcessor(s.sampleRate, OrbitAquarium.route(kit, s).settings)
+                fx = processor
+                val audioSink = AndroidAudioSink(s.sampleRate)
+                output = audioSink
+                val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo, processor = processor)
+                transportFailure.set(null)
+                sink = audioSink
+                aquarium = processor
+                aquariumFaulted = false
+                aquariumLimited = 0L
+                engine = e
+                audioThread = thread(name = "snipsnap-orbit", isDaemon = true) {
+                    try { e.run() }
+                    catch (failure: Exception) { transportFailure.set(failure) }
+                    finally { processor.close(); audioSink.close() }
+                }
+                playing = true
+            } catch (failure: Exception) {
+                fx?.close()
+                output?.close()
+                aquarium = null
+                engine = null
+                sink = null
+                Log.e("OrbitScreen", "startPlayback: failed", failure)
+                onToast("ORBIT PLAY FAILED")
+            } finally { preparing = false }
         }
     }
 
@@ -589,6 +645,15 @@ fun OrbitScreen(
         while (isActive) {
             withFrameNanos { }
             frame = engine?.position() ?: 0L
+            aquariumFaulted = aquarium?.faulted ?: false
+            aquariumLimited = aquarium?.limitedFrames ?: 0L
+            auditionFaulted = player.aquariumFaulted()
+            auditionPending = player.hasPendingAquariumControls()
+            transportFailure.getAndSet(null)?.let { failure ->
+                Log.e("OrbitScreen", "playback: failed", failure)
+                stopPlayback()
+                onToast("ORBIT PLAY FAILED")
+            }
         }
     }
 
@@ -904,9 +969,13 @@ fun OrbitScreen(
         val s = set ?: return
         OrbitClip.refusal(s)?.let { onToast(it); return }
         if (bouncing) return
+        val what = heard(s)
+        val route = OrbitAquarium.route(kit, what)
+        val frames = runCatching {
+            OrbitAquarium.bounceFrames(OrbitClock.transportFrames(what), route.tailFrames, what.sampleRate)
+        }.getOrElse { onToast(it.message ?: Copy.ORBIT_BOUNCE_FAILED); return }
         bouncing = true
         outOpen = false
-        val what = heard(s)
         scope.launch {
             val result = offMain {
                 runCatching {
@@ -917,9 +986,12 @@ fun OrbitScreen(
                     // the cycle would bounce minutes of audio for a
                     // three-bar plan. `refusal` above caps this same
                     // number, so the Int conversion is inside a ceiling.
-                    val frames = OrbitClock.transportFrames(what).toInt()
-                    val rendered = OrbitEngine.render(what, prepared, frames)
-                    SnipStore.import(rendered, filesDir, System.currentTimeMillis())
+                    val rendered = OrbitAquariumProcessor(what.sampleRate, route.settings).use { processor ->
+                        OrbitEngine.render(what, prepared, frames, processor = processor, tailFrames = route.tailFrames).also {
+                            check(!processor.faulted) { "ORBIT Aquarium faulted; bounce was not saved" }
+                        }
+                    }
+                    SnipStore.import(rendered, filesDir, System.currentTimeMillis(), preserveStereo = true)
                 }
             }
             bouncing = false
@@ -1166,6 +1238,16 @@ fun OrbitScreen(
             )
 
             // The picked ring's panel — or, while + SNIP RING is choosing, the shelf.
+            if (setPanelOpen) aquariumRoute?.let { route ->
+                OrbitAquariumPanel(current, route, scheme, preparing || bouncing, playing,
+                    aquariumFaulted, aquariumLimited,
+                    auditionUp = playerUp, auditionFaulted = auditionFaulted, auditionPending = auditionPending,
+                    onChange = { next -> commit(next) },
+                    onReset = {
+                        aquarium?.resetTail()
+                        player.configureAquarium(route.settings, reset = true)
+                    })
+            }
             OrbitControlPanel(
                 current = current,
                 ring = ring,

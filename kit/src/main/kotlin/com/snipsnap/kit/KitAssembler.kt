@@ -53,6 +53,14 @@ data class ArrangedPad(
     val colorHex: String? = null,
     /** Optional names for every velocity zone, soft variants first and the main sample last. */
     val layerNames: List<String> = emptyList(),
+    /**
+     * An explicit choke group, overriding [AutoPlace.muteGroupFor]'s class
+     * default. Null (every other source) is the class rule: the two hats
+     * share a group and nothing else chokes. A ride or a crash that wears
+     * HAT_OPEN's tag for its colour and balance passes 0 here so the closed
+     * hat cannot cut it off (KIT FROM ANYTHING's A06 and A07).
+     */
+    val muteGroup: Int? = null,
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
@@ -161,7 +169,7 @@ object KitAssembler {
                 tuneCoarse = pad.tuneCoarse,
                 tuneFine = pad.tuneFine,
                 oneShot = pad.oneShot,
-                muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
+                muteGroup = pad.muteGroup ?: AutoPlace.muteGroupFor(pad.drumClass),
                 source = pad.source,
                 recipe = pad.recipe,
                 velocityLayers = layers,

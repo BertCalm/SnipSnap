@@ -184,14 +184,16 @@ auditions and original six-voice recordings remain available.
 Factory expansion, the remaining voices, phone/MPC timing and the Android picker
 remain deferred.
 
-APSIS's first listening prototype is a pitched center with independently
-orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
+APSIS is a pitched center with independently orbiting resonant bodies.
+PASSAGE, GRAIN and ANCHOR expose STRETCH, DISTANCE, BODIES, ALIGN,
 COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
 and internal exchange; held output uses a recurring reference-compatible
-orbital roster. Six provisional recipes, saved patches, CLI rendering and a
-dry sixteen-pad kit use the Kotlin renderer. APSIS is in the phone
+orbital roster. GRAIN ports the preferred grain-contact study; ANCHOR ports its
+pressure-release harmonic surge. Each has three presets, including HOLD;
+PASSAGE keeps its original six recipes and dry sixteen-pad bank. APSIS is in the phone
 picker; device acceptance is still pending. Run `./gradlew :synth:generateApsisAudition` for the
-dry comparison set, raw/matched WAVs, recipes and orbital traces. See
+original comparison set; `:synth:generateApsisPopulations` renders the new Kotlin
+voices and pre-output reference floats. See
 [implementation notes](docs/APSIS.md) for prototype scope and validation.
 The [private listening page](https://snipsnap-apsis-audition.bertcalm.chatgpt.site)
 now includes seven dry musical examples, a playable sixteen-pad map, and a
@@ -401,7 +403,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 61 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 63 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -571,8 +573,10 @@ musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBan
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Thirty-six dry presets and a sixteen-pad
-C minor pentatonic FRESH TAPE starter are included. Run
+remain saved with each patch. The original bank retains its 36 presets and
+sixteen-pad starter; six
+listening-selected KEY/CHOIR settings and the MURMUR SELECTED starter are also
+available. `./gradlew :synth:generateMurmurSelectedKit` exports the new MPC kit. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the approved six-voice sound, settled HOLD loops and the expanded bank's
@@ -682,11 +686,15 @@ glass and departing tonal gestures. GATHER, TWINS and DEPARTURE share REGION,
 WANDER, NUDGE, SWARM and RESONANCE, with independent ROOT, TOUCH and finite LENGTH
 in SYNTH. Twelve approved presets and a sixteen-pad starter preserve complete
 recipes and native soft/hard strikes. A bounded screen cache reuses trajectories
-and revisited audio; fresh rendering remains an offline operation. HOLD and
-sustained loops remain later DSP work. The
+and revisited audio; fresh rendering remains an offline operation. NOTE retains
+the finite sound. Explicit HOLD repeats a phase-fitted orbit, and MAKE INSTRUMENT
+keeps its attack before a verified sustain loop, with key-up amplitude release.
+Held recipes use a separate version; existing finite recipes retain their sound.
+The
 [published audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site)
 retains the musical bank and MPC download.
-[Implementation and device profiling](docs/LIBRATION.md) describe the contracts.
+[Implementation and device profiling](docs/LIBRATION.md) and the
+[held instrument design](docs/LIBRATION_HOLD.md) describe the contracts.
 
 OVEN is a struck keyboard instrument: velocity-sensitive
 stiff strings, restrained paired-string beating, dark fixed body coloration and
@@ -1194,7 +1202,8 @@ dark repeats with HEAD off, see
 [`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
 ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
-close lifting the bass and far dulling the top, 0 no room at all; see
+close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
+the `roomed` character, is its default room, AMT moving only the mic; see
 [`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
@@ -1227,6 +1236,12 @@ in its own order. On the pad sheet, AMT is staged until KEEP, original/result
 previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
 See [`docs/WIDE.md`](docs/WIDE.md).
 
+**OBLITERATE** adds an octave halo before fuzz, captured fragments and stereo chop.
+Its staged board saves SHIMMER, clock and pattern controls alongside AMT, retains
+the shared original across every velocity zone, and caches completed renders for
+repeated auditions. Existing WIDE/RUSH recipes keep their original version and sound.
+See [`docs/OBLITERATE.md`](docs/OBLITERATE.md) for controls, timing and device profiling.
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
@@ -1239,7 +1254,7 @@ SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVE
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+SCOUR, KEEL and LORENTZ have preset rosters, so `snipsnap synth` renders them.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. It remains outside the picker and factory presets.
@@ -1323,7 +1338,7 @@ and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
 phone/MPC checks.
 
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
-CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
+CRANE, FAN and STILL. Twelve presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
 SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
 and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
@@ -1334,7 +1349,10 @@ renderer has its own model 1, separate from finite model 4; the six controls
 remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
 once between the source and folded color; MOTION sets their duration. STEADY
 retains existing audio and JSON. The new gesture is saved with its own version,
-and held keys finish it before the sustain loop. See the
+and held keys finish it before the sustain loop. The six performance presets pair
+BLOOM/UNFOLD with velocity FOLD. The reference recipes and starter layout stay unchanged.
+The [performance bank](docs/ORIGAMI.md#performance-bank) includes four ready-made MPC
+keygroups and musical auditions. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 Optional `VELOCITY: FOLD` adds hit-dependent folded color without changing pitch
 or gesture timing. The preview offers soft/mid/full touches. MAKE INSTRUMENT

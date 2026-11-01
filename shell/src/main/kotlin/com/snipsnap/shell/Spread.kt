@@ -118,6 +118,7 @@ object Spread {
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is OtisPatch -> Otis.midiFor(patch).toFloat()
+        is com.snipsnap.synth.LorentzPatch -> com.snipsnap.synth.Lorentz.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is KeelPatch -> Keel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
@@ -235,7 +236,9 @@ object Spread {
             val recipe = sound.recipe?.takeIf(PrintedPads::has) ?: sound.like?.recipe
             Copy.boardRemoveBeforeSpread(PrintedPads.label(recipe))
         }
-        val tidal = sound.recipe?.let { runCatching { PadRecipe.fromJsonValue(it).patch }.getOrNull() } as? TidalPatch
+        val patch = sound.recipe?.let { runCatching { PadRecipe.fromJsonValue(it).patch }.getOrNull() }
+        val tidal = patch as? TidalPatch
+        val libration = patch as? LibrationPatch
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {
@@ -267,6 +270,7 @@ object Spread {
                 )
             }
             if (tidal != null) model.update(note.slot) { TidalPad.configure(it, tidal) }
+            if (libration != null) model.update(note.slot) { LibrationPad.configure(it, libration) }
         }
         return plan.notes
     }
