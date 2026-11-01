@@ -802,6 +802,10 @@ fun SynthScreen(
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
+                            .firstOrNull { it.voice == v }
+                        // PRISM's draft is its complete recipe (sound source, motion, TUNE, HOLD); without
+                        // it the sliders fall back to defaults and the first write-back replaces the draft.
+                        else if (e == Engine.PRISM) seededDrafts.filterIsInstance<PrismPatch>()
                             .firstOrNull { it.voice == v } else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
