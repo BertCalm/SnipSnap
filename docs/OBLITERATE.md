@@ -2,7 +2,7 @@
 
 OBLITERATE prints **octave room → octave fuzz → captured fragments → stereo chop** onto a pad. In TREATMENT, choose OBLITERATE, adjust AMT and SHIMMER, then compare HEAR ORIGINAL and HEAR OBLITERATE. Only KEEP saves the candidate. REMOVE restores the shared original, and UNDO reverses the last kept board edit or removal. Every velocity zone renders from its own immutable original; replacing WIDE or RUSH does not feed one board into another.
 
-The integration is based on upstream `12d85af05fbd2effc020cf49049cc5fd569db1d9`. The standalone processors approved in [edition 006](https://snipsnap-obliterate-kotlin.bertcalm.chatgpt.site/shimmer/kotlin/) remain unchanged. Josh's exact feedback, **“Port sounds good, proceed as recommended”**, is recorded in `experiments/obliterate-shimmer/listening-006-2026-11-01.json`. That approves the Kotlin port, without specifying a 15% versus 30% shimmer preference.
+The integration began at upstream `12d85af05fbd2effc020cf49049cc5fd569db1d9`; each downloadable build records its exact tested source commit in `OBLITERATE-build.json`. The standalone processors approved in [edition 006](https://snipsnap-obliterate-kotlin.bertcalm.chatgpt.site/shimmer/kotlin/) remain unchanged. Josh's exact feedback, **“Port sounds good, proceed as recommended”**, is recorded in `experiments/obliterate-shimmer/listening-006-2026-11-01.json`. That approves the Kotlin port, without specifying a 15% versus 30% shimmer preference.
 
 ## Controls and finite budget
 
