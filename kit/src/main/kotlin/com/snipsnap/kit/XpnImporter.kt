@@ -343,7 +343,7 @@ object XpnImporter {
                     }.toString(Charsets.UTF_8)
                 }
                 val restored = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
-                val kit = beforePublish?.invoke(restored, staging) ?: renderedPersonalSources(restored)
+                val kit = beforePublish?.invoke(restored, staging) ?: renderedBankSources(renderedPersonalSources(restored))
                 KitStore.save(kit, staging)
                 // Only now, with everything down safely, does destDir
                 // change: the pre-existing-kit check above already
@@ -403,6 +403,14 @@ object XpnImporter {
     }
 
     /** Ordinary XPNs carry rendered audio and provenance, never the private editing source bundle. */
+    private fun renderedBankSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
+        if (pad.source["engine"] != ConfluenceBankFiles.ENGINE && pad.source["engine"] != ConfluenceBankFiles.RENDERED_ENGINE) pad
+        else pad.copy(source = (pad.source - setOf("bankManifestSha256", "bankRecipe", "bankSettings", "sourceHashes", "usedVoiceIds")) + mapOf(
+            "engine" to ConfluenceBankFiles.RENDERED_ENGINE,
+            "sourceDependency" to "rendered audio only; source bank is not included in ordinary XPN",
+        ))
+    })
+
     private fun renderedPersonalSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
         if (pad.source["engine"] != "CONFLUENCE_PERSONAL" &&
             pad.source["engine"] != "CONFLUENCE_PERSONAL_RENDERED" &&

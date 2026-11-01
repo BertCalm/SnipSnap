@@ -1,0 +1,4993 @@
+{
+  "status": "Refined Python auditions, not Kotlin production implementation",
+  "default_voice": "BRUSH",
+  "output_rate": 44100,
+  "internal_rate": 176400,
+  "mechanics_preroll_seconds": 4.0,
+  "acoustic_preroll_seconds": 0,
+  "excitation_seconds": 8.0,
+  "release_seconds": 0.9,
+  "reference_velocity": 0.75,
+  "source_fingerprints": {
+    "events": "279ff02613210a60193ce6a2a1c6c996038f86730493a3c7abf1005e6f64486f",
+    "pressure": "ebb082ef2dd3d5a1496e31d3c20206c581565f3610d825d1083af5fa730bcf76",
+    "roughness": "ab6ed624a47cef1d8f2b5c5f0a02a499b0e6beb6d48b88704db5826c9cb489af",
+    "release_gate": "254d6945177063c235aeb652c9d03d5c1a85088b5c1b630b1557bd33f22fa02a"
+  },
+  "notes_midi": [
+    36,
+    48,
+    60,
+    72
+  ],
+  "velocities": [
+    0.3,
+    0.75,
+    1.0
+  ],
+  "gain_policy": "One reference-derived gain per voice/note, reused across all velocities; common static headroom if required",
+  "pitch_policy": "Unchanged root centers; TINE sixth upper mode 5.96 -> 6.00; no resampling or event retiming",
+  "limitations": [
+    "Python output filters and RMS leveling approximate the house stage",
+    "Register and velocity changes await owner listening",
+    "Short-window pitch excursions during active contact remain reported",
+    "One curated mechanical seed and trajectory; no HOLD or Kotlin gate"
+  ],
+  "calibrations": {
+    "BRUSH_C2": {
+      "gain": 2.0822258450049644,
+      "rms_reference_gain": 2.0822258450049644,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "BRUSH_C3": {
+      "gain": 2.4800365098540205,
+      "rms_reference_gain": 2.4800365098540205,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "BRUSH_C4": {
+      "gain": 2.3611245343751697,
+      "rms_reference_gain": 2.3611245343751697,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "BRUSH_C5": {
+      "gain": 2.657996631726658,
+      "rms_reference_gain": 2.657996631726658,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "WOOD_C2": {
+      "gain": 1.360448237838545,
+      "rms_reference_gain": 1.7193405237041537,
+      "shared_headroom_reduction_db": -2.0335975375812985
+    },
+    "WOOD_C3": {
+      "gain": 1.829912477068479,
+      "rms_reference_gain": 1.943586525609513,
+      "shared_headroom_reduction_db": -0.5234712240653712
+    },
+    "WOOD_C4": {
+      "gain": 1.4936348540645263,
+      "rms_reference_gain": 1.8388590200483699,
+      "shared_headroom_reduction_db": -1.8060799015178093
+    },
+    "WOOD_C5": {
+      "gain": 1.9276671028201002,
+      "rms_reference_gain": 1.9276671028201002,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "TINE_C2": {
+      "gain": 1.1574275444571802,
+      "rms_reference_gain": 1.2189712405624809,
+      "shared_headroom_reduction_db": -0.44999291703088723
+    },
+    "TINE_C3": {
+      "gain": 1.3318933447084234,
+      "rms_reference_gain": 1.3318933447084234,
+      "shared_headroom_reduction_db": 0.0
+    },
+    "TINE_C4": {
+      "gain": 1.0718138531332142,
+      "rms_reference_gain": 1.2427657155403078,
+      "shared_headroom_reduction_db": -1.2853979558483
+    },
+    "TINE_C5": {
+      "gain": 1.325164990817319,
+      "rms_reference_gain": 1.325164990817319,
+      "shared_headroom_reduction_db": 0.0
+    }
+  },
+  "renders": {
+    "BRUSH_C2_soft": {
+      "config": {
+        "width_ms": 5.739410252816058,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.0327673413807958
+          ],
+          [
+            2.0,
+            0.11460993008184409,
+            0.5114657309695371
+          ],
+          [
+            3.0,
+            0.020474302224672333,
+            0.2852405038099341
+          ],
+          [
+            4.0,
+            0.006995202642620515,
+            0.16720995050927173
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.327843724632452
+          ],
+          [
+            1.5,
+            0.0579306619739646,
+            0.5409733692947026
+          ],
+          [
+            2.25,
+            0.01677980798370874,
+            0.30491226269337784
+          ],
+          [
+            3.25,
+            0.008127051545471489,
+            0.18688170939271545
+          ]
+        ],
+        "body_gain": 0.5462234294788643,
+        "brush": 0.0057576407014059035,
+        "pulse_gain": 0.5087304345989466,
+        "amp_gain": 0.43838329055408687,
+        "midi": 36.0,
+        "velocity": 0.3,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 0.9835879441721865,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.2252263986715873,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -7.865838059256679,
+      "max_pole_radius": 0.9999705091150511,
+      "finite": true,
+      "peak": 0.1677747530176175,
+      "rms": 0.03966195224390809,
+      "dc": -3.3021410406719486e-06,
+      "active_spectral_centroid_hz": 64.99793258258273,
+      "active_root_band_energy_share": 0.8030696050050213,
+      "active_upper_energy_share": 0.007459467509912259,
+      "near_nyquist_energy_share": 1.727316369436987e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.0143453819011,
+          "cents": -10.408242542308573,
+          "confidence": 0.9425188912328409
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.54793440269668,
+          "cents": 3.742439042344066,
+          "confidence": 0.9305033047501997
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.65212937815741,
+          "cents": 6.4922231809243405,
+          "confidence": 0.8969580944832226
+        },
+        {
+          "start_s": 3.5,
+          "hz": 65.24046946247675,
+          "cents": -4.397346110697593,
+          "confidence": 0.9190159684815862
+        },
+        {
+          "start_s": 4.75,
+          "hz": 67.86650523458087,
+          "cents": 63.92172629974445,
+          "confidence": 0.6982472583285719
+        },
+        {
+          "start_s": 5.5,
+          "hz": 63.97376318824982,
+          "cents": -38.341521460489595,
+          "confidence": 0.8943400709526391
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.26076128394465,
+          "cents": -3.858962030716182,
+          "confidence": 0.955280483343172
+        },
+        {
+          "start_s": 7.25,
+          "hz": 66.05757911361022,
+          "cents": 17.150975864805073,
+          "confidence": 0.754499486073011
+        }
+      ],
+      "median_abs_short_window_cents": 8.450232861616456,
+      "min_pitch_confidence": 0.6982472583285719,
+      "last_100ms_rms": 0.0001578560738693289,
+      "calibration_gain": 2.0822258450049644,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C2_soft.wav"
+    },
+    "BRUSH_C2_normal": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.1098689425894492
+          ],
+          [
+            2.0,
+            0.13,
+            0.5496493810919177
+          ],
+          [
+            3.0,
+            0.025,
+            0.30653523176280023
+          ],
+          [
+            4.0,
+            0.009,
+            0.17969306689543466
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.4269743547578635
+          ],
+          [
+            1.5,
+            0.06,
+            0.5813599223087592
+          ],
+          [
+            2.25,
+            0.018,
+            0.3276755925740279
+          ],
+          [
+            3.25,
+            0.009,
+            0.20083342770666227
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.005168217183913024,
+        "pulse_gain": 0.55,
+        "amp_gain": 1.0,
+        "midi": 36.0,
+        "velocity": 0.75,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.0570180405613803,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.2581144703286955,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -9.748760949982843,
+      "max_pole_radius": 0.9999725577922994,
+      "finite": true,
+      "peak": 0.44200276992348014,
+      "rms": 0.10499986640085116,
+      "dc": -8.242053122034346e-06,
+      "active_spectral_centroid_hz": 65.112854433875,
+      "active_root_band_energy_share": 0.8223060079337239,
+      "active_upper_energy_share": 0.00829434494241547,
+      "near_nyquist_energy_share": 1.4018422401896972e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.12979442124278,
+          "cents": -7.336734895942364,
+          "confidence": 0.9565936006139404
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.50697151972672,
+          "cents": 2.6602004255475733,
+          "confidence": 0.9335092280523067
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.8737037918414,
+          "cents": 12.325260281147491,
+          "confidence": 0.897065573867966
+        },
+        {
+          "start_s": 3.5,
+          "hz": 65.13748635858457,
+          "cents": -7.132285340149828,
+          "confidence": 0.9192293859681403
+        },
+        {
+          "start_s": 4.75,
+          "hz": 67.515187313156,
+          "cents": 54.93653928607571,
+          "confidence": 0.708469738543765
+        },
+        {
+          "start_s": 5.5,
+          "hz": 64.07761702296477,
+          "cents": -35.53334658709617,
+          "confidence": 0.9046210161247968
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.15383444017009,
+          "cents": -6.697838049988257,
+          "confidence": 0.9587862246564531
+        },
+        {
+          "start_s": 7.25,
+          "hz": 66.8289935671982,
+          "cents": 37.25103477802654,
+          "confidence": 0.7713774960098219
+        }
+      ],
+      "median_abs_short_window_cents": 9.830997588544928,
+      "min_pitch_confidence": 0.708469738543765,
+      "last_100ms_rms": 0.0006700179665740575,
+      "calibration_gain": 2.0822258450049644,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C2_normal.wav"
+    },
+    "BRUSH_C2_hard": {
+      "config": {
+        "width_ms": 3.0,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.251373738435335
+          ],
+          [
+            2.0,
+            0.16037814779437662,
+            0.6197279466536897
+          ],
+          [
+            3.0,
+            0.03487317642967699,
+            0.3456175087107115
+          ],
+          [
+            4.0,
+            0.013697654000567702,
+            0.20260336717524471
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.6089090922740021
+          ],
+          [
+            1.5,
+            0.06361446059158893,
+            0.6554814820375564
+          ],
+          [
+            2.25,
+            0.02023399798179411,
+            0.3694531989666227
+          ],
+          [
+            3.25,
+            0.010668212752237857,
+            0.22643905743115586
+          ]
+        ],
+        "body_gain": 0.6409991324838756,
+        "brush": 0.0043168578598264005,
+        "pulse_gain": 0.6263556108285421,
+        "amp_gain": 1.2,
+        "midi": 36.0,
+        "velocity": 1.0,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.191784512795557,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.3210282316695402,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -12.619684540634928,
+      "max_pole_radius": 0.9999756609073975,
+      "finite": true,
+      "peak": 0.6874863706553487,
+      "rms": 0.1596550392403962,
+      "dc": -1.1463725130759766e-05,
+      "active_spectral_centroid_hz": 65.41104287107063,
+      "active_root_band_energy_share": 0.8433356279106161,
+      "active_upper_energy_share": 0.011097986466574622,
+      "near_nyquist_energy_share": 1.07070530440035e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.21128988500915,
+          "cents": -5.171834383519264,
+          "confidence": 0.9663073107246631
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.47008365599315,
+          "cents": 1.6850444748247484,
+          "confidence": 0.9352791306113735
+        },
+        {
+          "start_s": 2.75,
+          "hz": 66.11423062321045,
+          "cents": 18.635059778800564,
+          "confidence": 0.8940502534167658
+        },
+        {
+          "start_s": 3.5,
+          "hz": 65.0613364610277,
+          "cents": -9.15739290503884,
+          "confidence": 0.9218560009483391
+        },
+        {
+          "start_s": 4.75,
+          "hz": 67.12038562566077,
+          "cents": 44.783263027947555,
+          "confidence": 0.7280138587915722
+        },
+        {
+          "start_s": 5.5,
+          "hz": 64.19508509091774,
+          "cents": -32.36252734938965,
+          "confidence": 0.9130649296146324
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.07067552725678,
+          "cents": -8.908905092962259,
+          "confidence": 0.9633471637145173
+        },
+        {
+          "start_s": 7.25,
+          "hz": 67.61560225340911,
+          "cents": 57.50948059954912,
+          "confidence": 0.7907320820600063
+        }
+      ],
+      "median_abs_short_window_cents": 13.896226341919702,
+      "min_pitch_confidence": 0.7280138587915722,
+      "last_100ms_rms": 0.0020673059827973407,
+      "calibration_gain": 2.0822258450049644,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C2_hard.wav"
+    },
+    "BRUSH_C3_soft": {
+      "config": {
+        "width_ms": 5.739410252816058,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.977057440601766
+          ],
+          [
+            2.0,
+            0.11460993008184409,
+            0.483876065821827
+          ],
+          [
+            3.0,
+            0.020474302224672333,
+            0.2698539597852496
+          ],
+          [
+            4.0,
+            0.006995202642620515,
+            0.15819025228790498
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.2562167093451277
+          ],
+          [
+            1.5,
+            0.0579306619739646,
+            0.5117919926961632
+          ],
+          [
+            2.25,
+            0.01677980798370874,
+            0.28846457770147377
+          ],
+          [
+            3.25,
+            0.008127051545471489,
+            0.1768008702041291
+          ]
+        ],
+        "body_gain": 0.5462234294788643,
+        "brush": 0.002673714588927522,
+        "pulse_gain": 0.5087304345989466,
+        "amp_gain": 0.43838329055408687,
+        "midi": 48.0,
+        "velocity": 0.3,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 0.9305308958112057,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.16015920298081374,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -6.816994418207132,
+      "max_pole_radius": 0.9999688276287856,
+      "finite": true,
+      "peak": 0.17126635806504925,
+      "rms": 0.0370877618638764,
+      "dc": -1.963078663430744e-06,
+      "active_spectral_centroid_hz": 129.09623693716117,
+      "active_root_band_energy_share": 0.9120400321754171,
+      "active_upper_energy_share": 0.0014626831756578828,
+      "near_nyquist_energy_share": 5.446021784557376e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 127.20363510590047,
+          "cents": -48.436349467153,
+          "confidence": 0.852279641494241
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.3791483275292,
+          "cents": 7.479353510611322,
+          "confidence": 0.9192700825483364
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.98251974281723,
+          "cents": 2.2449193888980186,
+          "confidence": 0.9673253733702867
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.01862963535459,
+          "cents": -10.542204069945004,
+          "confidence": 0.9261531253515144
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.63262906174566,
+          "cents": -15.689553107503976,
+          "confidence": 0.955551004623184
+        },
+        {
+          "start_s": 5.5,
+          "hz": 128.1558988330746,
+          "cents": -35.52436607869645,
+          "confidence": 0.9144980579586958
+        },
+        {
+          "start_s": 6.75,
+          "hz": 131.89957255181693,
+          "cents": 14.323638590082345,
+          "confidence": 0.9425985116618532
+        },
+        {
+          "start_s": 7.25,
+          "hz": 135.5290748846291,
+          "cents": 61.31863273570148,
+          "confidence": 0.6261078504135924
+        }
+      ],
+      "median_abs_short_window_cents": 15.006595848793161,
+      "min_pitch_confidence": 0.6261078504135924,
+      "last_100ms_rms": 3.5688117016722234e-05,
+      "calibration_gain": 2.4800365098540205,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C3_soft.wav"
+    },
+    "BRUSH_C3_normal": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.05
+          ],
+          [
+            2.0,
+            0.13,
+            0.52
+          ],
+          [
+            3.0,
+            0.025,
+            0.29
+          ],
+          [
+            4.0,
+            0.009,
+            0.17
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.35
+          ],
+          [
+            1.5,
+            0.06,
+            0.55
+          ],
+          [
+            2.25,
+            0.018,
+            0.31
+          ],
+          [
+            3.25,
+            0.009,
+            0.19
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55,
+        "amp_gain": 1.0,
+        "midi": 48.0,
+        "velocity": 0.75,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.0,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.19993142773865621,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -9.783946826716395,
+      "max_pole_radius": 0.9999709931140814,
+      "finite": true,
+      "peak": 0.4958638359433055,
+      "rms": 0.10499994538750923,
+      "dc": -4.959077791191871e-06,
+      "active_spectral_centroid_hz": 129.48729401473605,
+      "active_root_band_energy_share": 0.9181553985440312,
+      "active_upper_energy_share": 0.002101319179840628,
+      "near_nyquist_energy_share": 3.4079244097817426e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 128.4252254539112,
+          "cents": -31.889900847824478,
+          "confidence": 0.8883152020021031
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.28767462904224,
+          "cents": 6.27354924470416,
+          "confidence": 0.9437867154651621
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.9484434869727,
+          "cents": 1.7944650097123012,
+          "confidence": 0.9751471126016753
+        },
+        {
+          "start_s": 3.5,
+          "hz": 129.9341969400459,
+          "cents": -11.666813977355712,
+          "confidence": 0.9317609495234602
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.9531437365281,
+          "cents": -11.414386605068579,
+          "confidence": 0.9650983163599967
+        },
+        {
+          "start_s": 5.5,
+          "hz": 128.45791444446195,
+          "cents": -31.449293544449553,
+          "confidence": 0.9290720599024452
+        },
+        {
+          "start_s": 6.75,
+          "hz": 132.2855987922948,
+          "cents": 19.382985741004774,
+          "confidence": 0.9142518156765842
+        },
+        {
+          "start_s": 7.25,
+          "hz": 136.67543806090544,
+          "cents": 75.90057096336332,
+          "confidence": 0.5786791171341463
+        }
+      ],
+      "median_abs_short_window_cents": 15.524899859180243,
+      "min_pitch_confidence": 0.5786791171341463,
+      "last_100ms_rms": 0.00010519401541655749,
+      "calibration_gain": 2.4800365098540205,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C3_normal.wav",
+      "approved_pcm_difference_rms": 1.9825167782395298e-05,
+      "approved_pcm_correlation": 0.9999999916916292
+    },
+    "BRUSH_C3_hard": {
+      "config": {
+        "width_ms": 3.0,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.1838716941583445
+          ],
+          [
+            2.0,
+            0.16037814779437662,
+            0.5862983628212755
+          ],
+          [
+            3.0,
+            0.03487317642967699,
+            0.32697408695801894
+          ],
+          [
+            4.0,
+            0.013697654000567702,
+            0.1916744647684939
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.5221207496321574
+          ],
+          [
+            1.5,
+            0.06361446059158893,
+            0.6201232683686567
+          ],
+          [
+            2.25,
+            0.02023399798179411,
+            0.34952402398960647
+          ],
+          [
+            3.25,
+            0.010668212752237857,
+            0.2142244018000814
+          ]
+        ],
+        "body_gain": 0.6409991324838756,
+        "brush": 0.0020046485073870524,
+        "pulse_gain": 0.6263556108285421,
+        "amp_gain": 1.2,
+        "midi": 48.0,
+        "velocity": 1.0,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.1274968515793757,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.2734557068130942,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -13.624832605567669,
+      "max_pole_radius": 0.9999742731578798,
+      "finite": true,
+      "peak": 0.7960152385161426,
+      "rms": 0.17014174038847268,
+      "dc": -7.078233366768329e-06,
+      "active_spectral_centroid_hz": 130.26967607456945,
+      "active_root_band_energy_share": 0.9230860084872564,
+      "active_upper_energy_share": 0.005692596622365106,
+      "near_nyquist_energy_share": 1.9736561871056598e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.61300856345719,
+          "cents": -15.95160322393162,
+          "confidence": 0.925669096520514
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.215096652568,
+          "cents": 5.316230076812436,
+          "confidence": 0.9593428688493844
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.87012408310645,
+          "cents": 0.7587155288519282,
+          "confidence": 0.9796792049225991
+        },
+        {
+          "start_s": 3.5,
+          "hz": 129.85997297369778,
+          "cents": -12.656051428970617,
+          "confidence": 0.9292237227133529
+        },
+        {
+          "start_s": 4.75,
+          "hz": 130.0683787533134,
+          "cents": -9.879907490770792,
+          "confidence": 0.9741721724365151
+        },
+        {
+          "start_s": 5.5,
+          "hz": 128.71603386036165,
+          "cents": -27.974094951989507,
+          "confidence": 0.929370400427455
+        },
+        {
+          "start_s": 6.75,
+          "hz": 132.70032212859314,
+          "cents": 24.802018906789385,
+          "confidence": 0.8598893533691493
+        },
+        {
+          "start_s": 7.25,
+          "hz": 135.84361604145136,
+          "cents": 65.33189289479944,
+          "confidence": 0.6217498163078347
+        }
+      ],
+      "median_abs_short_window_cents": 14.303827326451119,
+      "min_pitch_confidence": 0.6217498163078347,
+      "last_100ms_rms": 0.00042707593873032374,
+      "calibration_gain": 2.4800365098540205,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C3_hard.wav"
+    },
+    "BRUSH_C4_soft": {
+      "config": {
+        "width_ms": 2.869705126408029,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.9243526629714405
+          ],
+          [
+            2.0,
+            0.10902033783381963,
+            0.45777465213823715
+          ],
+          [
+            3.0,
+            0.01891437896749897,
+            0.25529740215401686
+          ],
+          [
+            4.0,
+            0.006329521097787068,
+            0.14965709781442368
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.1884534238204234
+          ],
+          [
+            1.5,
+            0.05626083738463242,
+            0.4841847282231355
+          ],
+          [
+            2.25,
+            0.015826409116100264,
+            0.27290411954394905
+          ],
+          [
+            3.25,
+            0.007464632561957568,
+            0.16726381520435588
+          ]
+        ],
+        "body_gain": 0.5462234294788643,
+        "brush": 0.0025254875775373572,
+        "pulse_gain": 0.5087304345989466,
+        "amp_gain": 0.43838329055408687,
+        "midi": 60.0,
+        "velocity": 0.3,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.8803358694966099,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.18463952102416117,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -6.735977934293123,
+      "max_pole_radius": 0.9999670502705418,
+      "finite": true,
+      "peak": 0.1989806033911081,
+      "rms": 0.03683538897914062,
+      "dc": -8.852508077143584e-07,
+      "active_spectral_centroid_hz": 260.08712388049895,
+      "active_root_band_energy_share": 0.9522934940595263,
+      "active_upper_energy_share": 0.001023779093140396,
+      "near_nyquist_energy_share": 3.0899498424883554e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 260.34820935697473,
+          "cents": -8.473247600453071,
+          "confidence": 0.9608752693091664
+        },
+        {
+          "start_s": 1.5,
+          "hz": 261.4269363259852,
+          "cents": -1.3148709142680224,
+          "confidence": 0.9596312224044063
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.46720754665796,
+          "cents": -1.0482054356773536,
+          "confidence": 0.9765698544431011
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.76675713361635,
+          "cents": 0.9340454730517396,
+          "confidence": 0.9772103789579352
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.5377531539083,
+          "cents": -0.581169873104676,
+          "confidence": 0.9635772268794737
+        },
+        {
+          "start_s": 5.5,
+          "hz": 260.8149247751261,
+          "cents": -5.3725146966619945,
+          "confidence": 0.9474670983321375
+        },
+        {
+          "start_s": 6.75,
+          "hz": 259.56020128811497,
+          "cents": -13.721200572450561,
+          "confidence": 0.6426618169427164
+        },
+        {
+          "start_s": 7.25,
+          "hz": 263.114505758512,
+          "cents": 9.824716952008691,
+          "confidence": 0.9608170984426467
+        }
+      ],
+      "median_abs_short_window_cents": 3.3436928054650084,
+      "min_pitch_confidence": 0.6426618169427164,
+      "last_100ms_rms": 6.182972206640459e-05,
+      "calibration_gain": 2.3611245343751697,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C4_soft.wav"
+    },
+    "BRUSH_C4_normal": {
+      "config": {
+        "width_ms": 2.25,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.9933605290618758
+          ],
+          [
+            2.0,
+            0.12365982518509283,
+            0.49194997629730985
+          ],
+          [
+            3.0,
+            0.02309526688619748,
+            0.2743567175504228
+          ],
+          [
+            4.0,
+            0.008143536762323635,
+            0.1608297999433513
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.2771778230795545
+          ],
+          [
+            1.5,
+            0.05827052769731928,
+            0.5203317056990778
+          ],
+          [
+            2.25,
+            0.01697727199062027,
+            0.2932778704849347
+          ],
+          [
+            3.25,
+            0.008266428812679638,
+            0.17975095287786322
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0022669473440397794,
+        "pulse_gain": 0.55,
+        "amp_gain": 1.0,
+        "midi": 60.0,
+        "velocity": 0.75,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.9460576467255959,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.2248723263305756,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -9.778677877387693,
+      "max_pole_radius": 0.9999693392236391,
+      "finite": true,
+      "peak": 0.5509661312713415,
+      "rms": 0.10499997720324301,
+      "dc": -2.253619449282627e-06,
+      "active_spectral_centroid_hz": 260.62555359056927,
+      "active_root_band_energy_share": 0.9563053131907316,
+      "active_upper_energy_share": 0.0013446065221292141,
+      "near_nyquist_energy_share": 1.633144216800493e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 260.6364493675946,
+          "cents": -6.557602050254536,
+          "confidence": 0.9644226783585789
+        },
+        {
+          "start_s": 1.5,
+          "hz": 261.86904256399043,
+          "cents": 1.6103935078558742,
+          "confidence": 0.9661098262419409
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.68630770406224,
+          "cents": 0.4018992229884188,
+          "confidence": 0.9800220347169142
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.8970005175659,
+          "cents": 1.795215574339206,
+          "confidence": 0.9818023993762616
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.8112238608319,
+          "cents": 1.2281079248185718,
+          "confidence": 0.9601593950891402
+        },
+        {
+          "start_s": 5.5,
+          "hz": 260.6527716014513,
+          "cents": -6.449187734814474,
+          "confidence": 0.9326014775187456
+        },
+        {
+          "start_s": 6.75,
+          "hz": 260.62224371306695,
+          "cents": -6.651963307496301,
+          "confidence": 0.9091992220328591
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.7612954257584,
+          "cents": 7.49911138080106,
+          "confidence": 0.9674434519757341
+        }
+      ],
+      "median_abs_short_window_cents": 4.12220165457684,
+      "min_pitch_confidence": 0.9091992220328591,
+      "last_100ms_rms": 0.00029798863062744594,
+      "calibration_gain": 2.3611245343751697,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C4_normal.wav"
+    },
+    "BRUSH_C4_hard": {
+      "config": {
+        "width_ms": 1.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.1200108690004877
+          ],
+          [
+            2.0,
+            0.15255641322893534,
+            0.5546720494097653
+          ],
+          [
+            3.0,
+            0.03221621267251365,
+            0.3093363352477537
+          ],
+          [
+            4.0,
+            0.012394149879023611,
+            0.18133509307626947
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.4400139744291987
+          ],
+          [
+            1.5,
+            0.06178080313087016,
+            0.5866723599526364
+          ],
+          [
+            2.25,
+            0.01908433817747668,
+            0.3306698756096678
+          ],
+          [
+            3.25,
+            0.009798669030543928,
+            0.2026686334381835
+          ]
+        ],
+        "body_gain": 0.6409991324838756,
+        "brush": 0.0018935135873143281,
+        "pulse_gain": 0.6263556108285421,
+        "amp_gain": 1.2,
+        "midi": 60.0,
+        "velocity": 1.0,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 1.0666770180957026,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.2889408690470509,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -13.73069695013317,
+      "max_pole_radius": 0.9999728062836977,
+      "finite": true,
+      "peak": 0.8502098399440174,
+      "rms": 0.173915568518995,
+      "dc": -3.2411662698362675e-06,
+      "active_spectral_centroid_hz": 261.6877381023805,
+      "active_root_band_energy_share": 0.9596371385356316,
+      "active_upper_energy_share": 0.0037893979020301284,
+      "near_nyquist_energy_share": 6.385870454167475e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.0131738902037,
+          "cents": -4.057079074816341,
+          "confidence": 0.968472922807134
+        },
+        {
+          "start_s": 1.5,
+          "hz": 262.2757396895602,
+          "cents": 4.297010170213459,
+          "confidence": 0.9681243896974188
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.81428758487266,
+          "cents": 1.2483667672945007,
+          "confidence": 0.9826916346373701
+        },
+        {
+          "start_s": 3.5,
+          "hz": 262.01206607909853,
+          "cents": 2.5556735770886174,
+          "confidence": 0.9850624031330932
+        },
+        {
+          "start_s": 4.75,
+          "hz": 262.1133675280512,
+          "cents": 3.2248894120215397,
+          "confidence": 0.9503915509096057
+        },
+        {
+          "start_s": 5.5,
+          "hz": 260.2233720390372,
+          "cents": -9.303575752331739,
+          "confidence": 0.9038900011200216
+        },
+        {
+          "start_s": 6.75,
+          "hz": 261.0765035564801,
+          "cents": -3.6370804429810786,
+          "confidence": 0.9650195692632081
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.48648396688856,
+          "cents": 5.687535904436485,
+          "confidence": 0.9727931298881353
+        }
+      ],
+      "median_abs_short_window_cents": 3.8470797588987096,
+      "min_pitch_confidence": 0.9038900011200216,
+      "last_100ms_rms": 0.0011183424333421961,
+      "calibration_gain": 2.3611245343751697,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C4_hard.wav"
+    },
+    "BRUSH_C5_soft": {
+      "config": {
+        "width_ms": 1.4348525632040146,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.8744909050752989
+          ],
+          [
+            2.0,
+            0.10370335321653766,
+            0.433081210132529
+          ],
+          [
+            3.0,
+            0.017473305209642756,
+            0.24152605949698727
+          ],
+          [
+            4.0,
+            0.005727187527525783,
+            0.141584241774096
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.1243454493825271
+          ],
+          [
+            1.5,
+            0.05463914471826,
+            0.4580666645632518
+          ],
+          [
+            2.25,
+            0.014927180677714796,
+            0.2581830291174692
+          ],
+          [
+            3.25,
+            0.006856205965136963,
+            0.1582412113945779
+          ]
+        ],
+        "body_gain": 0.5462234294788643,
+        "brush": 0.002452534050523793,
+        "pulse_gain": 0.5087304345989466,
+        "amp_gain": 0.43838329055408687,
+        "midi": 72.0,
+        "velocity": 0.3,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8328484810240941,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.15124742984962658,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -7.517616555146177,
+      "max_pole_radius": 0.999965171574248,
+      "finite": true,
+      "peak": 0.1704322383171144,
+      "rms": 0.03376204879079091,
+      "dc": -5.014508651743338e-07,
+      "active_spectral_centroid_hz": 520.5428906871971,
+      "active_root_band_energy_share": 0.9630280280812028,
+      "active_upper_energy_share": 0.0012871023428783972,
+      "near_nyquist_energy_share": 1.5242311627235657e-21,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.7013051615751,
+          "cents": 1.4888118091309157,
+          "confidence": 0.9822204952052437
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.8166766037095,
+          "cents": 1.8701608135346635,
+          "confidence": 0.9782641785909942
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.8680423502736,
+          "cents": -1.2679539207209511,
+          "confidence": 0.9796098351342124
+        },
+        {
+          "start_s": 3.5,
+          "hz": 523.4894577049027,
+          "cents": 0.7883519727614303,
+          "confidence": 0.9728645698298622
+        },
+        {
+          "start_s": 4.75,
+          "hz": 518.6977403090804,
+          "cents": -15.131326910318927,
+          "confidence": 0.900950195762641
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.5110400672625,
+          "cents": -2.4504044640036775,
+          "confidence": 0.9777165597761952
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.4850592651645,
+          "cents": -2.5364887072883957,
+          "confidence": 0.9691396144653296
+        },
+        {
+          "start_s": 7.25,
+          "hz": 521.4896161990208,
+          "cents": -5.837996862225195,
+          "confidence": 0.9716305184720713
+        }
+      ],
+      "median_abs_short_window_cents": 2.1602826387691705,
+      "min_pitch_confidence": 0.900950195762641,
+      "last_100ms_rms": 3.8562028060830245e-05,
+      "calibration_gain": 2.657996631726658,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C5_soft.wav"
+    },
+    "BRUSH_C5_normal": {
+      "config": {
+        "width_ms": 1.125,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.9397763244743711
+          ],
+          [
+            2.0,
+            0.11762886434467475,
+            0.4654130368825457
+          ],
+          [
+            3.0,
+            0.021335654101787588,
+            0.259557270569112
+          ],
+          [
+            4.0,
+            0.007368576777701836,
+            0.15215426205775534
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.208283845752763
+          ],
+          [
+            1.5,
+            0.0565909066354009,
+            0.49226378901038487
+          ],
+          [
+            2.25,
+            0.016012653569083306,
+            0.27745777198767146
+          ],
+          [
+            3.25,
+            0.007592649479455566,
+            0.17005476347631476
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0022014622449354707,
+        "pulse_gain": 0.55,
+        "amp_gain": 1.0,
+        "midi": 72.0,
+        "velocity": 0.75,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8950250709279725,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.18517594709087382,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -10.607296632269696,
+      "max_pole_radius": 0.9999675910345781,
+      "finite": true,
+      "peak": 0.4788019756660949,
+      "rms": 0.10499997408677236,
+      "dc": -1.2740250990957235e-06,
+      "active_spectral_centroid_hz": 521.722829490081,
+      "active_root_band_energy_share": 0.971334993103589,
+      "active_upper_energy_share": 0.0014639716214132437,
+      "near_nyquist_energy_share": 6.89949272548245e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.7660780953146,
+          "cents": 1.702922740474824,
+          "confidence": 0.986508854574496
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.6103022679621,
+          "cents": 1.1879513827492447,
+          "confidence": 0.9820059495103622
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.7282443300911,
+          "cents": -1.7308918577761323,
+          "confidence": 0.9790996392077254
+        },
+        {
+          "start_s": 3.5,
+          "hz": 524.0033711293465,
+          "cents": 2.4870833923240863,
+          "confidence": 0.978197586846908
+        },
+        {
+          "start_s": 4.75,
+          "hz": 520.0120778832896,
+          "cents": -10.750070210899056,
+          "confidence": 0.9421532335007488
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.5866855534139,
+          "cents": -2.19978667333825,
+          "confidence": 0.9849289452610912
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.0427104850995,
+          "cents": -4.002815094333438,
+          "confidence": 0.9772529787021274
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.3935618421634,
+          "cents": -2.8396884307900363,
+          "confidence": 0.9824093978413471
+        }
+      ],
+      "median_abs_short_window_cents": 2.3434350328311684,
+      "min_pitch_confidence": 0.9421532335007488,
+      "last_100ms_rms": 0.000186338942824785,
+      "calibration_gain": 2.657996631726658,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C5_normal.wav"
+    },
+    "BRUSH_C5_hard": {
+      "config": {
+        "width_ms": 0.75,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.0595948470336911
+          ],
+          [
+            2.0,
+            0.14511614915965326,
+            0.5247517337690661
+          ],
+          [
+            3.0,
+            0.029761681189368002,
+            0.2926500053712099
+          ],
+          [
+            4.0,
+            0.011214690575286426,
+            0.17155345142450237
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.3623362319004602
+          ],
+          [
+            1.5,
+            0.06,
+            0.5550258722557431
+          ],
+          [
+            2.25,
+            0.018,
+            0.3128327643623279
+          ],
+          [
+            3.25,
+            0.009,
+            0.1917362104156203
+          ]
+        ],
+        "body_gain": 0.6409991324838756,
+        "brush": 0.0018388158347411843,
+        "pulse_gain": 0.6263556108285421,
+        "amp_gain": 1.2,
+        "midi": 72.0,
+        "velocity": 1.0,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 1.0091379495558963,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.23870390739777306,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": -14.593995179681404,
+      "max_pole_radius": 0.9999712557735632,
+      "finite": true,
+      "peak": 0.7530323991880088,
+      "rms": 0.18556320455383182,
+      "dc": -1.8263300195409967e-06,
+      "active_spectral_centroid_hz": 523.6913248935788,
+      "active_root_band_energy_share": 0.9765645396648206,
+      "active_upper_energy_share": 0.0035126641702417495,
+      "near_nyquist_energy_share": 2.3695661608646443e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.7988899599652,
+          "cents": 1.8113742810421922,
+          "confidence": 0.9898249079480009
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.4498359248579,
+          "cents": 0.6573136687287867,
+          "confidence": 0.9851102581905856
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.5817515028913,
+          "cents": -2.216132356888836,
+          "confidence": 0.979435734930329
+        },
+        {
+          "start_s": 3.5,
+          "hz": 524.3034968605388,
+          "cents": 3.478373089840707,
+          "confidence": 0.983296668998524
+        },
+        {
+          "start_s": 4.75,
+          "hz": 520.9688646320109,
+          "cents": -7.567644489408847,
+          "confidence": 0.9640368718752558
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.6633942737021,
+          "cents": -1.9456833707415204,
+          "confidence": 0.9907460830391742
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.2354568690497,
+          "cents": -3.3637342115764013,
+          "confidence": 0.986053776469139
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.8678657187812,
+          "cents": -1.268538753758486,
+          "confidence": 0.9868291151609015
+        }
+      ],
+      "median_abs_short_window_cents": 2.0809078638151783,
+      "min_pitch_confidence": 0.9640368718752558,
+      "last_100ms_rms": 0.0006059384328146949,
+      "calibration_gain": 2.657996631726658,
+      "file": "/workspace/accord-refinement/samples/BRUSH_C5_hard.wav"
+    },
+    "WOOD_C2_soft": {
+      "config": {
+        "width_ms": 2.6783914513141607,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.4721222132026495
+          ],
+          [
+            2.0,
+            0.44080742339170803,
+            0.2852405038099341
+          ],
+          [
+            3.0,
+            0.19655330135685437,
+            0.16720995050927173
+          ],
+          [
+            4.04,
+            0.07772447380689462,
+            0.09835879441721866
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.7081833198039743
+          ],
+          [
+            1.51,
+            0.06754691064911406,
+            0.21638934771788104
+          ],
+          [
+            2.29,
+            0.03257767394975737,
+            0.15737407106754986
+          ],
+          [
+            3.41,
+            0.01618662774519467,
+            0.09835879441721866
+          ]
+        ],
+        "body_gain": 0.47088226679212436,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 36.0,
+        "velocity": 0.3,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 0.9835879441721865,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.4376571276154665,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999447053041576,
+      "finite": true,
+      "peak": 0.23379465186073756,
+      "rms": 0.031436539840102286,
+      "dc": -4.224127969566887e-06,
+      "active_spectral_centroid_hz": 69.63390382186644,
+      "active_root_band_energy_share": 0.6035940396698479,
+      "active_upper_energy_share": 0.09489094276987876,
+      "near_nyquist_energy_share": 2.734708586556588e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 64.90230473992945,
+          "cents": -13.394289706643221,
+          "confidence": 0.852616413636835
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.65144647639154,
+          "cents": 6.4742150987902525,
+          "confidence": 0.721331418987655
+        },
+        {
+          "start_s": 2.75,
+          "hz": 66.01495277854416,
+          "cents": 16.033466203130352,
+          "confidence": 0.7462348063577826
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.72456777700721,
+          "cents": -18.14183115149435,
+          "confidence": 0.8090982189265465
+        },
+        {
+          "start_s": 4.75,
+          "hz": 65.55417016684365,
+          "cents": 3.9071284995689535,
+          "confidence": 0.71947323735792
+        },
+        {
+          "start_s": 5.5,
+          "hz": 62.81297896295181,
+          "cents": -70.04271185457557,
+          "confidence": 0.8281774522926811
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.55352074130134,
+          "cents": 3.8899775970798522,
+          "confidence": 0.9249164156202512
+        },
+        {
+          "start_s": 7.25,
+          "hz": 67.03424950314715,
+          "cents": 42.560129872708636,
+          "confidence": 0.7468924898620377
+        }
+      ],
+      "median_abs_short_window_cents": 14.713877954886787,
+      "min_pitch_confidence": 0.71947323735792,
+      "last_100ms_rms": 7.605299104552924e-07,
+      "calibration_gain": 1.360448237838545,
+      "file": "/workspace/accord-refinement/samples/WOOD_C2_soft.wav"
+    },
+    "WOOD_C2_normal": {
+      "config": {
+        "width_ms": 2.1,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.5073686594694625
+          ],
+          [
+            2.0,
+            0.5,
+            0.30653523176280023
+          ],
+          [
+            3.0,
+            0.24,
+            0.17969306689543466
+          ],
+          [
+            4.04,
+            0.1,
+            0.10570180405613804
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.7610529892041937
+          ],
+          [
+            1.51,
+            0.07,
+            0.23254396892350365
+          ],
+          [
+            2.29,
+            0.035,
+            0.16912288648982085
+          ],
+          [
+            3.41,
+            0.018,
+            0.10570180405613804
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 36.0,
+        "velocity": 0.75,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.0570180405613803,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.5003657692570752,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999485464783189,
+      "finite": true,
+      "peak": 0.6154594528185606,
+      "rms": 0.08308225388146664,
+      "dc": -1.090037764813565e-05,
+      "active_spectral_centroid_hz": 72.3962126441405,
+      "active_root_band_energy_share": 0.5977302718697775,
+      "active_upper_energy_share": 0.12618676076858823,
+      "near_nyquist_energy_share": 2.5978229993166734e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 64.91427302351092,
+          "cents": -13.075071615074227,
+          "confidence": 0.8599117912450045
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.69380774146843,
+          "cents": 7.590924909771354,
+          "confidence": 0.7357689680596812
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.98265572657839,
+          "cents": 15.186272715359195,
+          "confidence": 0.7567550046547591
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.800622915726,
+          "cents": -16.10872453825878,
+          "confidence": 0.8138955300259347
+        },
+        {
+          "start_s": 4.75,
+          "hz": 65.25967362838811,
+          "cents": -3.887815540657978,
+          "confidence": 0.7366125491677865
+        },
+        {
+          "start_s": 5.5,
+          "hz": 63.0407616065611,
+          "cents": -63.77598514133822,
+          "confidence": 0.831650248590851
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.55316667176378,
+          "cents": 3.880626781324044,
+          "confidence": 0.9267343907839183
+        },
+        {
+          "start_s": 7.25,
+          "hz": 67.09878161376653,
+          "cents": 44.22594171415875,
+          "confidence": 0.7428604429058873
+        }
+      ],
+      "median_abs_short_window_cents": 14.130672165216712,
+      "min_pitch_confidence": 0.7357689680596812,
+      "last_100ms_rms": 4.043657897630552e-06,
+      "calibration_gain": 1.360448237838545,
+      "file": "/workspace/accord-refinement/samples/WOOD_C2_normal.wav"
+    },
+    "WOOD_C2_hard": {
+      "config": {
+        "width_ms": 1.4,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.5720565661418674
+          ],
+          [
+            2.0,
+            0.6168390299783716,
+            0.3456175087107115
+          ],
+          [
+            3.0,
+            0.3347824937248991,
+            0.20260336717524471
+          ],
+          [
+            4.04,
+            0.1521961555618634,
+            0.11917845127955572
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.858084849212801
+          ],
+          [
+            1.51,
+            0.07428804945553111,
+            0.26219259281502255
+          ],
+          [
+            2.29,
+            0.03944403458654782,
+            0.19068552204728914
+          ],
+          [
+            3.41,
+            0.021484869255453152,
+            0.11917845127955572
+          ]
+        ],
+        "body_gain": 0.5525854590378239,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 36.0,
+        "velocity": 1.0,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.191784512795557,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.6299979908030767,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999543646873169,
+      "finite": true,
+      "peak": 0.94,
+      "rms": 0.12787199552863449,
+      "dc": -1.6239658097531722e-05,
+      "active_spectral_centroid_hz": 78.2470040325337,
+      "active_root_band_energy_share": 0.5731985081636354,
+      "active_upper_energy_share": 0.19076625366348118,
+      "near_nyquist_energy_share": 2.4161447195912896e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 64.89618538693894,
+          "cents": -13.557527849905426,
+          "confidence": 0.8666077992315987
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.7283099602901,
+          "cents": 8.49992589696075,
+          "confidence": 0.752527885397676
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.92446769188992,
+          "cents": 13.658878124004813,
+          "confidence": 0.7695180673920242
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.91343735068986,
+          "cents": -13.097358771453184,
+          "confidence": 0.8190649515471529
+        },
+        {
+          "start_s": 4.75,
+          "hz": 64.91110417556939,
+          "cents": -13.159585406940458,
+          "confidence": 0.7625438373639548
+        },
+        {
+          "start_s": 5.5,
+          "hz": 63.471673033178384,
+          "cents": -51.98249747436968,
+          "confidence": 0.8321359254640899
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.55260609991295,
+          "cents": 3.8658222299366387,
+          "confidence": 0.928353467439393
+        },
+        {
+          "start_s": 7.25,
+          "hz": 67.12401203187177,
+          "cents": 44.876796285488254,
+          "confidence": 0.730656752848183
+        }
+      ],
+      "median_abs_short_window_cents": 13.358556628422942,
+      "min_pitch_confidence": 0.730656752848183,
+      "last_100ms_rms": 1.8027474480450686e-05,
+      "calibration_gain": 1.360448237838545,
+      "file": "/workspace/accord-refinement/samples/WOOD_C2_hard.wav"
+    },
+    "WOOD_C3_soft": {
+      "config": {
+        "width_ms": 2.6783914513141607,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.4466548299893787
+          ],
+          [
+            2.0,
+            0.44080742339170803,
+            0.2698539597852496
+          ],
+          [
+            3.0,
+            0.19655330135685437,
+            0.15819025228790498
+          ],
+          [
+            4.04,
+            0.07772447380689462,
+            0.09305308958112057
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.6699822449840681
+          ],
+          [
+            1.51,
+            0.06754691064911406,
+            0.20471679707846527
+          ],
+          [
+            2.29,
+            0.03257767394975737,
+            0.14888494332979293
+          ],
+          [
+            3.41,
+            0.01618662774519467,
+            0.09305308958112057
+          ]
+        ],
+        "body_gain": 0.47088226679212436,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 48.0,
+        "velocity": 0.3,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 0.9305308958112057,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.25681117538862436,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999415526010853,
+      "finite": true,
+      "peak": 0.20033903033588946,
+      "rms": 0.036202894794985424,
+      "dc": -2.8433883132335554e-06,
+      "active_spectral_centroid_hz": 136.11324380704568,
+      "active_root_band_energy_share": 0.7463723778990268,
+      "active_upper_energy_share": 0.07172780669580847,
+      "near_nyquist_energy_share": 8.306694503159192e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 128.67267751376085,
+          "cents": -28.557337191228868,
+          "confidence": 0.8008036697245638
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.3854818220029,
+          "cents": 7.562810414824963,
+          "confidence": 0.8361289140748799
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.66469948686102,
+          "cents": -1.96090799062961,
+          "confidence": 0.9005269065475436
+        },
+        {
+          "start_s": 3.5,
+          "hz": 129.75377363053582,
+          "cents": -14.07243196760213,
+          "confidence": 0.8691307067082796
+        },
+        {
+          "start_s": 4.75,
+          "hz": 128.56850033939838,
+          "cents": -29.959562781679736,
+          "confidence": 0.9135803784810235
+        },
+        {
+          "start_s": 5.5,
+          "hz": 127.46577041681758,
+          "cents": -44.8723741630683,
+          "confidence": 0.8299142493532957
+        },
+        {
+          "start_s": 6.75,
+          "hz": 132.1546505038164,
+          "cents": 17.668404433398436,
+          "confidence": 0.7932611443075104
+        },
+        {
+          "start_s": 7.25,
+          "hz": 132.92951626584173,
+          "cents": 27.789550692501255,
+          "confidence": 0.5876511463158168
+        }
+      ],
+      "median_abs_short_window_cents": 22.728977562949844,
+      "min_pitch_confidence": 0.5876511463158168,
+      "last_100ms_rms": 1.5841423576784724e-07,
+      "calibration_gain": 1.829912477068479,
+      "file": "/workspace/accord-refinement/samples/WOOD_C3_soft.wav"
+    },
+    "WOOD_C3_normal": {
+      "config": {
+        "width_ms": 2.1,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.48
+          ],
+          [
+            2.0,
+            0.5,
+            0.29
+          ],
+          [
+            3.0,
+            0.24,
+            0.17
+          ],
+          [
+            4.04,
+            0.1,
+            0.1
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.72
+          ],
+          [
+            1.51,
+            0.07,
+            0.22
+          ],
+          [
+            2.29,
+            0.035,
+            0.16
+          ],
+          [
+            3.41,
+            0.018,
+            0.1
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 48.0,
+        "velocity": 0.75,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.0,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.3146805198814756,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999456127791141,
+      "finite": true,
+      "peak": 0.5683086331844548,
+      "rms": 0.09885880789540727,
+      "dc": -7.336726324091891e-06,
+      "active_spectral_centroid_hz": 142.75250387253368,
+      "active_root_band_energy_share": 0.7251904548188476,
+      "active_upper_energy_share": 0.11264300696848364,
+      "near_nyquist_energy_share": 7.41853032653342e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.1113692553492,
+          "cents": -22.66497245597306,
+          "confidence": 0.8171195606297788
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.42474175913281,
+          "cents": 8.080051635527465,
+          "confidence": 0.8465143008667733
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.85393812402467,
+          "cents": 0.5445840250182231,
+          "confidence": 0.9070607971658153
+        },
+        {
+          "start_s": 3.5,
+          "hz": 129.9982392239803,
+          "cents": -10.813729334231542,
+          "confidence": 0.8764347878007102
+        },
+        {
+          "start_s": 4.75,
+          "hz": 128.88336700779416,
+          "cents": -25.72492137361232,
+          "confidence": 0.9182921696763741
+        },
+        {
+          "start_s": 5.5,
+          "hz": 128.04857936663456,
+          "cents": -36.97473202546573,
+          "confidence": 0.8337468984930686
+        },
+        {
+          "start_s": 6.75,
+          "hz": 131.84392755635847,
+          "cents": 13.593121916209817,
+          "confidence": 0.8082925440984018
+        },
+        {
+          "start_s": 7.25,
+          "hz": 133.16304972083466,
+          "cents": 30.828351654004187,
+          "confidence": 0.6308720549644595
+        }
+      ],
+      "median_abs_short_window_cents": 18.12904718609144,
+      "min_pitch_confidence": 0.6308720549644595,
+      "last_100ms_rms": 9.282954300593853e-07,
+      "calibration_gain": 1.829912477068479,
+      "file": "/workspace/accord-refinement/samples/WOOD_C3_normal.wav",
+      "approved_pcm_difference_rms": 0.00612733589947417,
+      "approved_pcm_correlation": 0.9999999914822502
+    },
+    "WOOD_C3_hard": {
+      "config": {
+        "width_ms": 1.4,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.5411984887581003
+          ],
+          [
+            2.0,
+            0.6168390299783716,
+            0.32697408695801894
+          ],
+          [
+            3.0,
+            0.3347824937248991,
+            0.1916744647684939
+          ],
+          [
+            4.04,
+            0.1521961555618634,
+            0.11274968515793758
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.8117977331371505
+          ],
+          [
+            1.51,
+            0.07428804945553111,
+            0.24804930734746267
+          ],
+          [
+            2.29,
+            0.03944403458654782,
+            0.18039949625270013
+          ],
+          [
+            3.41,
+            0.021484869255453152,
+            0.11274968515793758
+          ]
+        ],
+        "body_gain": 0.5525854590378239,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 48.0,
+        "velocity": 1.0,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.1274968515793757,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.44299455957568207,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999517627139658,
+      "finite": true,
+      "peak": 0.94,
+      "rms": 0.1582029847547476,
+      "dc": -1.092976582022912e-05,
+      "active_spectral_centroid_hz": 157.00530932944892,
+      "active_root_band_energy_share": 0.6710474023925552,
+      "active_upper_energy_share": 0.19567765034048748,
+      "near_nyquist_energy_share": 6.444978782617168e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.7007409260301,
+          "cents": -14.780163148845245,
+          "confidence": 0.8400805917976728
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.4298836917466,
+          "cents": 8.147784046968471,
+          "confidence": 0.8583803762445118
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.96217130885958,
+          "cents": 1.9759473273370527,
+          "confidence": 0.9146107334155795
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.2994309697731,
+          "cents": -6.8072882628168445,
+          "confidence": 0.8846036537506743
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.33936173123251,
+          "cents": -19.61055323990384,
+          "confidence": 0.9227566200472131
+        },
+        {
+          "start_s": 5.5,
+          "hz": 129.13262912269934,
+          "cents": -22.37992570522928,
+          "confidence": 0.8334476649474596
+        },
+        {
+          "start_s": 6.75,
+          "hz": 131.41087158056538,
+          "cents": 7.897332671991623,
+          "confidence": 0.8268169697711834
+        },
+        {
+          "start_s": 7.25,
+          "hz": 132.9581930468866,
+          "cents": 28.162988186722647,
+          "confidence": 0.6929105035481178
+        }
+      ],
+      "median_abs_short_window_cents": 11.463973597906858,
+      "min_pitch_confidence": 0.6929105035481178,
+      "last_100ms_rms": 4.695990817318527e-06,
+      "calibration_gain": 1.829912477068479,
+      "file": "/workspace/accord-refinement/samples/WOOD_C3_hard.wav"
+    },
+    "WOOD_C4_soft": {
+      "config": {
+        "width_ms": 1.3391957256570803,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.42256121735837276
+          ],
+          [
+            2.0,
+            0.419308991668537,
+            0.25529740215401686
+          ],
+          [
+            3.0,
+            0.18157803808799008,
+            0.14965709781442368
+          ],
+          [
+            4.04,
+            0.0703280121976341,
+            0.088033586949661
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.6338418260375591
+          ],
+          [
+            1.51,
+            0.06556846747149798,
+            0.1936738912892542
+          ],
+          [
+            2.29,
+            0.03068763564270866,
+            0.1408537391194576
+          ],
+          [
+            3.41,
+            0.014815839820273225,
+            0.088033586949661
+          ]
+        ],
+        "body_gain": 0.47088226679212436,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 60.0,
+        "velocity": 0.3,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.8803358694966099,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.33138664595777423,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999382201478678,
+      "finite": true,
+      "peak": 0.22681734832676806,
+      "rms": 0.031340249957358055,
+      "dc": -1.144025383734989e-06,
+      "active_spectral_centroid_hz": 274.3834283765466,
+      "active_root_band_energy_share": 0.8501470171434621,
+      "active_upper_energy_share": 0.06146554634998472,
+      "near_nyquist_energy_share": 1.9149928215094545e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 260.914219764437,
+          "cents": -4.713541088338914,
+          "confidence": 0.941441601086847
+        },
+        {
+          "start_s": 1.5,
+          "hz": 262.9119921774626,
+          "cents": 8.491710247562482,
+          "confidence": 0.9194814139132143
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.96956760756206,
+          "cents": 2.274843882349581,
+          "confidence": 0.93836258016264
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.4763216887538,
+          "cents": -0.9878596727266901,
+          "confidence": 0.9487679934839738
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.36315660992193,
+          "cents": -1.7372875519523459,
+          "confidence": 0.9042913360644845
+        },
+        {
+          "start_s": 5.5,
+          "hz": 259.44934697640457,
+          "cents": -14.46074288907648,
+          "confidence": 0.8376486227594638
+        },
+        {
+          "start_s": 6.75,
+          "hz": 260.7311532366545,
+          "cents": -5.928661687719148,
+          "confidence": 0.9362807747515418
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.8737852919994,
+          "cents": 8.24010564365944,
+          "confidence": 0.9316789000248199
+        }
+      ],
+      "median_abs_short_window_cents": 5.321101388029032,
+      "min_pitch_confidence": 0.8376486227594638,
+      "last_100ms_rms": 2.6361616657816043e-07,
+      "calibration_gain": 1.4936348540645263,
+      "file": "/workspace/accord-refinement/samples/WOOD_C4_soft.wav"
+    },
+    "WOOD_C4_normal": {
+      "config": {
+        "width_ms": 1.05,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.45410767042828604
+          ],
+          [
+            2.0,
+            0.475614712250357,
+            0.2743567175504228
+          ],
+          [
+            3.0,
+            0.22171456210749577,
+            0.1608297999433513
+          ],
+          [
+            4.04,
+            0.09048374180359596,
+            0.0946057646725596
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.681161505642429
+          ],
+          [
+            1.51,
+            0.06794970604721592,
+            0.2081326822796311
+          ],
+          [
+            2.29,
+            0.032969427134401125,
+            0.15136922347609535
+          ],
+          [
+            3.41,
+            0.01647564402931852,
+            0.0946057646725596
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 60.0,
+        "velocity": 0.75,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.9460576467255959,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.3916878450008755,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999425118154862,
+      "finite": true,
+      "peak": 0.6094649402259662,
+      "rms": 0.08528746854063549,
+      "dc": -2.946440912930405e-06,
+      "active_spectral_centroid_hz": 285.1055369805946,
+      "active_root_band_energy_share": 0.8241293093997405,
+      "active_upper_energy_share": 0.09673833507275703,
+      "near_nyquist_energy_share": 1.71916393363676e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.14448207265866,
+          "cents": -3.186364268347281,
+          "confidence": 0.9442473785661427
+        },
+        {
+          "start_s": 1.5,
+          "hz": 263.0714691848659,
+          "cents": 9.541522851955435,
+          "confidence": 0.9237432819289977
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.89111277065405,
+          "cents": 1.7562949968463142,
+          "confidence": 0.9423698971679744
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.6699999789577,
+          "cents": 0.2940090970516782,
+          "confidence": 0.9527517855921841
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.30600931076015,
+          "cents": -2.1158648890755947,
+          "confidence": 0.9096820238728136
+        },
+        {
+          "start_s": 5.5,
+          "hz": 260.13075573457803,
+          "cents": -9.919850296583428,
+          "confidence": 0.8594255291440072
+        },
+        {
+          "start_s": 6.75,
+          "hz": 260.78636065552115,
+          "cents": -5.5621276361711605,
+          "confidence": 0.9402176728419355
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.59411378869885,
+          "cents": 6.397264717952276,
+          "confidence": 0.9360919460069134
+        }
+      ],
+      "median_abs_short_window_cents": 4.374245952259221,
+      "min_pitch_confidence": 0.8594255291440072,
+      "last_100ms_rms": 1.488439183761053e-06,
+      "calibration_gain": 1.4936348540645263,
+      "file": "/workspace/accord-refinement/samples/WOOD_C4_normal.wav"
+    },
+    "WOOD_C4_hard": {
+      "config": {
+        "width_ms": 0.7,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.5120049686859373
+          ],
+          [
+            2.0,
+            0.5867554354959051,
+            0.3093363352477537
+          ],
+          [
+            3.0,
+            0.30927564165613103,
+            0.18133509307626947
+          ],
+          [
+            4.04,
+            0.1377127764335957,
+            0.10666770180957026
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.7680074530289058
+          ],
+          [
+            1.51,
+            0.07211215890463395,
+            0.23466894398105456
+          ],
+          [
+            2.29,
+            0.0371556349767996,
+            0.17066832289531242
+          ],
+          [
+            3.41,
+            0.019665392103849762,
+            0.10666770180957026
+          ]
+        ],
+        "body_gain": 0.5525854590378239,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 60.0,
+        "velocity": 1.0,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 1.0666770180957026,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.5050633068027024,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999490123885534,
+      "finite": true,
+      "peak": 0.94,
+      "rms": 0.13504770042452846,
+      "dc": -4.374347227335862e-06,
+      "active_spectral_centroid_hz": 307.9855636284098,
+      "active_root_band_energy_share": 0.7657770502229947,
+      "active_upper_energy_share": 0.1683199078667177,
+      "near_nyquist_energy_share": 1.549529020706843e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.47343741860504,
+          "cents": -1.0069565232416722,
+          "confidence": 0.9464178824192693
+        },
+        {
+          "start_s": 1.5,
+          "hz": 263.2492468960459,
+          "cents": 10.711056290640904,
+          "confidence": 0.9252351141976729
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.7778065621767,
+          "cents": 1.0071209981383866,
+          "confidence": 0.9467350106704617
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.9082809024462,
+          "cents": 1.8697813990344128,
+          "confidence": 0.957000978952827
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.25420343774624,
+          "cents": -2.4591290313086596,
+          "confidence": 0.91391852829211
+        },
+        {
+          "start_s": 5.5,
+          "hz": 260.75911686655775,
+          "cents": -5.742995373136386,
+          "confidence": 0.8894729426381979
+        },
+        {
+          "start_s": 6.75,
+          "hz": 260.86711451003237,
+          "cents": -5.026124981935588,
+          "confidence": 0.9436979331760644
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.17625947961886,
+          "cents": 3.6402349877481504,
+          "confidence": 0.9399738937430163
+        }
+      ],
+      "median_abs_short_window_cents": 3.049682009528405,
+      "min_pitch_confidence": 0.8894729426381979,
+      "last_100ms_rms": 7.187851237990968e-06,
+      "calibration_gain": 1.4936348540645263,
+      "file": "/workspace/accord-refinement/samples/WOOD_C4_hard.wav"
+    },
+    "WOOD_C5_soft": {
+      "config": {
+        "width_ms": 0.6695978628285402,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.39976727089156516
+          ],
+          [
+            2.0,
+            0.3988590508328371,
+            0.24152605949698727
+          ],
+          [
+            3.0,
+            0.16774373001257045,
+            0.141584241774096
+          ],
+          [
+            4.04,
+            0.06363541697250871,
+            0.08328484810240942
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.5996509063373477
+          ],
+          [
+            1.51,
+            0.06364797272363894,
+            0.1832266658253007
+          ],
+          [
+            2.29,
+            0.02890725049283811,
+            0.13325575696385505
+          ],
+          [
+            3.41,
+            0.013561139048568007,
+            0.08328484810240942
+          ]
+        ],
+        "body_gain": 0.47088226679212436,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 72.0,
+        "velocity": 0.3,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8328484810240941,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.2684120649954648,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999346976967712,
+      "finite": true,
+      "peak": 0.21923940575722395,
+      "rms": 0.03883049619420451,
+      "dc": -7.280806991075264e-07,
+      "active_spectral_centroid_hz": 545.1101767544035,
+      "active_root_band_energy_share": 0.9045455168102998,
+      "active_upper_energy_share": 0.0480673912281491,
+      "near_nyquist_energy_share": 5.5228168893954646e-24,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.6342180005698,
+          "cents": 1.2670231368710552,
+          "confidence": 0.9687824341053995
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.8951799800232,
+          "cents": 2.1295980193681303,
+          "confidence": 0.9477683931061233
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.1174618210803,
+          "cents": -3.754937303709964,
+          "confidence": 0.9615919918125827
+        },
+        {
+          "start_s": 3.5,
+          "hz": 524.2797292930074,
+          "cents": 3.399891532717699,
+          "confidence": 0.9746181754777327
+        },
+        {
+          "start_s": 4.75,
+          "hz": 521.3285355058892,
+          "cents": -6.372832935722204,
+          "confidence": 0.9299785479028143
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.2262644839132,
+          "cents": -3.3942076503162846,
+          "confidence": 0.9808639787334927
+        },
+        {
+          "start_s": 6.75,
+          "hz": 521.9202603783077,
+          "cents": -4.4089402176923365,
+          "confidence": 0.9607876080696691
+        },
+        {
+          "start_s": 7.25,
+          "hz": 520.996180453552,
+          "cents": -7.4768735358837946,
+          "confidence": 0.9534274015406924
+        }
+      ],
+      "median_abs_short_window_cents": 3.5774144182138317,
+      "min_pitch_confidence": 0.9299785479028143,
+      "last_100ms_rms": 1.0181796971597164e-07,
+      "calibration_gain": 1.9276671028201002,
+      "file": "/workspace/accord-refinement/samples/WOOD_C5_soft.wav"
+    },
+    "WOOD_C5_normal": {
+      "config": {
+        "width_ms": 0.525,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.42961203404542675
+          ],
+          [
+            2.0,
+            0.45241870901797976,
+            0.259557270569112
+          ],
+          [
+            3.0,
+            0.2048222793771608,
+            0.15215426205775534
+          ],
+          [
+            4.04,
+            0.0818730753077982,
+            0.08950250709279725
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.6444180510681401
+          ],
+          [
+            1.51,
+            0.06595946502718644,
+            0.19690551560415395
+          ],
+          [
+            2.29,
+            0.031056660730588142,
+            0.1432040113484756
+          ],
+          [
+            3.41,
+            0.015080380343378833,
+            0.08950250709279725
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 72.0,
+        "velocity": 0.75,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8950250709279725,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.31313901038996556,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.999939234051443,
+      "finite": true,
+      "peak": 0.5828469653466364,
+      "rms": 0.10499999485572284,
+      "dc": -1.8719095258762884e-06,
+      "active_spectral_centroid_hz": 562.1902828954799,
+      "active_root_band_energy_share": 0.8812051488190513,
+      "active_upper_energy_share": 0.07603521797418021,
+      "near_nyquist_energy_share": 6.693033573028376e-24,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.679624337605,
+          "cents": 1.4171385914560246,
+          "confidence": 0.9718636621224243
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.8667754342723,
+          "cents": 2.035731437345176,
+          "confidence": 0.9503807332684008
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.3848241175622,
+          "cents": -2.868645856680025,
+          "confidence": 0.9640952988513546
+        },
+        {
+          "start_s": 3.5,
+          "hz": 524.211411296647,
+          "cents": 3.174282680049779,
+          "confidence": 0.9754095545591053
+        },
+        {
+          "start_s": 4.75,
+          "hz": 522.09831501675,
+          "cents": -3.8184253304690725,
+          "confidence": 0.9357577466917026
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.3309725682597,
+          "cents": -3.0471243215904047,
+          "confidence": 0.9818566344713348
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.3742104365231,
+          "cents": -2.9038209839462286,
+          "confidence": 0.9642142924115563
+        },
+        {
+          "start_s": 7.25,
+          "hz": 521.475993638312,
+          "cents": -5.883221442428881,
+          "confidence": 0.9545618070636183
+        }
+      ],
+      "median_abs_short_window_cents": 2.9754726527683166,
+      "min_pitch_confidence": 0.9357577466917026,
+      "last_100ms_rms": 5.84205990344948e-07,
+      "calibration_gain": 1.9276671028201002,
+      "file": "/workspace/accord-refinement/samples/WOOD_C5_normal.wav"
+    },
+    "WOOD_C5_hard": {
+      "config": {
+        "width_ms": 0.35,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.4843862157868302
+          ],
+          [
+            2.0,
+            0.5581390352294356,
+            0.2926500053712099
+          ],
+          [
+            3.0,
+            0.2857121394179328,
+            0.17155345142450237
+          ],
+          [
+            4.04,
+            0.12460767305873809,
+            0.10091379495558964
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.7265793236802454
+          ],
+          [
+            1.51,
+            0.07,
+            0.22201034890229718
+          ],
+          [
+            2.29,
+            0.035,
+            0.1614620719289434
+          ],
+          [
+            3.41,
+            0.018,
+            0.10091379495558964
+          ]
+        ],
+        "body_gain": 0.5525854590378239,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 72.0,
+        "velocity": 1.0,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 1.0091379495558963,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.4023421199428174,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999461052531989,
+      "finite": true,
+      "peak": 0.897375767551549,
+      "rms": 0.1646663265443692,
+      "dc": -2.7700329369116973e-06,
+      "active_spectral_centroid_hz": 601.2325117774632,
+      "active_root_band_energy_share": 0.8277301307045187,
+      "active_upper_energy_share": 0.13617979599995603,
+      "near_nyquist_energy_share": 5.807277187246891e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.7588747945842,
+          "cents": 1.679113093829492,
+          "confidence": 0.975311676122274
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.7782188828048,
+          "cents": 1.743051916390699,
+          "confidence": 0.9532711040304744
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.7641489566751,
+          "cents": -1.6119826959596988,
+          "confidence": 0.9666821328168265
+        },
+        {
+          "start_s": 3.5,
+          "hz": 524.0666111873664,
+          "cents": 2.6960071162913497,
+          "confidence": 0.9754337683009049
+        },
+        {
+          "start_s": 4.75,
+          "hz": 522.8903788312845,
+          "cents": -1.1939986444642328,
+          "confidence": 0.9442380834852836
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.5314715251524,
+          "cents": -2.3827103076736784,
+          "confidence": 0.9826531153616305
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.9490918664754,
+          "cents": -0.9996169853254064,
+          "confidence": 0.9685133929916636
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.2523370633022,
+          "cents": -3.3077765120856206,
+          "confidence": 0.9548647008475071
+        }
+      ],
+      "median_abs_short_window_cents": 1.7110825051100955,
+      "min_pitch_confidence": 0.9442380834852836,
+      "last_100ms_rms": 2.9002302040500424e-06,
+      "calibration_gain": 1.9276671028201002,
+      "file": "/workspace/accord-refinement/samples/WOOD_C5_hard.wav"
+    },
+    "TINE_C2_soft": {
+      "config": {
+        "width_ms": 0.9183056404505693,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.8163779936629147
+          ],
+          [
+            2.0,
+            0.3350136417776981,
+            0.39343517766887465
+          ],
+          [
+            3.0,
+            0.16379441779737866,
+            0.23606110660132476
+          ],
+          [
+            6.0,
+            0.4663468428413676,
+            0.25573286548476853
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.6098245253867557
+          ],
+          [
+            1.5,
+            0.03379288615147935,
+            0.2754046243682123
+          ],
+          [
+            2.42,
+            0.02315881306451456,
+            0.16720995050927173
+          ],
+          [
+            3.24,
+            0.010838959680813704,
+            0.10819467385894052
+          ]
+        ],
+        "body_gain": 0.3013646507469596,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 36.0,
+        "velocity": 0.3,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 0.9835879441721865,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.5406996857482546,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999520333411016,
+      "finite": true,
+      "peak": 0.23834613773231839,
+      "rms": 0.037876653353382854,
+      "dc": -3.7735709564427287e-06,
+      "active_spectral_centroid_hz": 87.25615676860829,
+      "active_root_band_energy_share": 0.6991912892602711,
+      "active_upper_energy_share": 0.10673537158460601,
+      "near_nyquist_energy_share": 1.5106260274028773e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.29301200341695,
+          "cents": -3.003627965875612,
+          "confidence": 0.9257543278065294
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.31885860075175,
+          "cents": -2.3184450688597438,
+          "confidence": 0.8340504289358684
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.28398145019852,
+          "cents": -3.2430882387011573,
+          "confidence": 0.8306082701677764
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.93133356837316,
+          "cents": -12.620134446134012,
+          "confidence": 0.8648802319701198
+        },
+        {
+          "start_s": 4.75,
+          "hz": 65.69134963956056,
+          "cents": 7.526145146146295,
+          "confidence": 0.7585597570981091
+        },
+        {
+          "start_s": 5.5,
+          "hz": 64.94678953664167,
+          "cents": -12.208088167448235,
+          "confidence": 0.860791861606547
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.23929599850742,
+          "cents": -4.4284856635922285,
+          "confidence": 0.9463559398316169
+        },
+        {
+          "start_s": 7.25,
+          "hz": 66.20448741857908,
+          "cents": 20.996867145870727,
+          "confidence": 0.780004247707849
+        }
+      ],
+      "median_abs_short_window_cents": 5.977315404869262,
+      "min_pitch_confidence": 0.7585597570981091,
+      "last_100ms_rms": 2.2000825797819252e-05,
+      "calibration_gain": 1.1574275444571802,
+      "file": "/workspace/accord-refinement/samples/TINE_C2_soft.wav"
+    },
+    "TINE_C2_normal": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.8773249736659455
+          ],
+          [
+            2.0,
+            0.38,
+            0.42280721622455214
+          ],
+          [
+            3.0,
+            0.2,
+            0.25368432973473126
+          ],
+          [
+            6.0,
+            0.6,
+            0.27482469054595887
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.6553511851480558
+          ],
+          [
+            1.5,
+            0.035,
+            0.2959650513571865
+          ],
+          [
+            2.42,
+            0.025,
+            0.17969306689543466
+          ],
+          [
+            3.24,
+            0.012,
+            0.11627198446175183
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 36.0,
+        "velocity": 0.75,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.0570180405613803,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.6185526012985187,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999553654675595,
+      "finite": true,
+      "peak": 0.6196037813263799,
+      "rms": 0.09969858980651376,
+      "dc": -9.720729305011344e-06,
+      "active_spectral_centroid_hz": 101.831135454047,
+      "active_root_band_energy_share": 0.6670197137592667,
+      "active_upper_energy_share": 0.15941272941839107,
+      "near_nyquist_energy_share": 1.4404738877916673e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.3440029420091,
+          "cents": -1.65213882469148,
+          "confidence": 0.9263775567958666
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.26819953022328,
+          "cents": -3.661651868181597,
+          "confidence": 0.831164327521886
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.22458877787517,
+          "cents": -4.818810407902592,
+          "confidence": 0.8402078129083089
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.94293387322021,
+          "cents": -12.310868520253772,
+          "confidence": 0.8645231581656521
+        },
+        {
+          "start_s": 4.75,
+          "hz": 65.51101811422784,
+          "cents": 2.7671414983711675,
+          "confidence": 0.7595620511442663
+        },
+        {
+          "start_s": 5.5,
+          "hz": 65.26465345606294,
+          "cents": -3.7557137719546216,
+          "confidence": 0.8576551980725651
+        },
+        {
+          "start_s": 6.75,
+          "hz": 65.14700438440583,
+          "cents": -6.879332278476798,
+          "confidence": 0.9456899574612962
+        },
+        {
+          "start_s": 7.25,
+          "hz": 66.09280112520379,
+          "cents": 18.073826742436033,
+          "confidence": 0.7618971530343105
+        }
+      ],
+      "median_abs_short_window_cents": 4.287262089928607,
+      "min_pitch_confidence": 0.7595620511442663,
+      "last_100ms_rms": 9.878284224843661e-05,
+      "calibration_gain": 1.1574275444571802,
+      "file": "/workspace/accord-refinement/samples/TINE_C2_normal.wav"
+    },
+    "TINE_C2_hard": {
+      "config": {
+        "width_ms": 0.48,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.9891811456203123
+          ],
+          [
+            2.0,
+            0.4687976627835624,
+            0.47671380511822287
+          ],
+          [
+            3.0,
+            0.2789854114374159,
+            0.2860282830709337
+          ],
+          [
+            6.0,
+            0.9131769333711801,
+            0.30986397332684484
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.7389063979332454
+          ],
+          [
+            1.5,
+            0.03710843534509355,
+            0.333699663582756
+          ],
+          [
+            2.42,
+            0.02839964172066913,
+            0.20260336717524471
+          ],
+          [
+            3.24,
+            0.014217961093800009,
+            0.13109629640751128
+          ]
+        ],
+        "body_gain": 0.3536546937842073,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 36.0,
+        "velocity": 1.0,
+        "root_hz": 65.40639132514966,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 6.662590280187672,
+          "decay_scale": 1.191784512795557,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.787549403200428,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.99996041262109,
+      "finite": true,
+      "peak": 0.9399999999999998,
+      "rms": 0.15667687207070502,
+      "dc": -1.4490483244613144e-05,
+      "active_spectral_centroid_hz": 140.2009947031065,
+      "active_root_band_energy_share": 0.5730559985516617,
+      "active_upper_energy_share": 0.2909843563288507,
+      "near_nyquist_energy_share": 1.2824335899312422e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 65.40417109071316,
+          "cents": -0.05876812059751156,
+          "confidence": 0.921452653656247
+        },
+        {
+          "start_s": 1.5,
+          "hz": 65.22366605167966,
+          "cents": -4.84330218833673,
+          "confidence": 0.8189312358284451
+        },
+        {
+          "start_s": 2.75,
+          "hz": 65.17603994319488,
+          "cents": -6.107905412255783,
+          "confidence": 0.8560171160677558
+        },
+        {
+          "start_s": 3.5,
+          "hz": 64.96358310222817,
+          "cents": -11.76049353555019,
+          "confidence": 0.8568276300640745
+        },
+        {
+          "start_s": 4.75,
+          "hz": 65.36518371918068,
+          "cents": -1.0910629908844203,
+          "confidence": 0.7579174863224942
+        },
+        {
+          "start_s": 5.5,
+          "hz": 65.5520782174854,
+          "cents": 3.851880881658266,
+          "confidence": 0.8492949957100859
+        },
+        {
+          "start_s": 6.75,
+          "hz": 64.95535021229114,
+          "cents": -11.979908197241954,
+          "confidence": 0.9408829395874923
+        },
+        {
+          "start_s": 7.25,
+          "hz": 423.2978349873471,
+          "cents": 3233.003503285253,
+          "confidence": 0.6253493488781257
+        }
+      ],
+      "median_abs_short_window_cents": 5.475603800296256,
+      "min_pitch_confidence": 0.6253493488781257,
+      "last_100ms_rms": 0.0003373873199982433,
+      "calibration_gain": 1.1574275444571802,
+      "file": "/workspace/accord-refinement/samples/TINE_C2_hard.wav"
+    },
+    "TINE_C3_soft": {
+      "config": {
+        "width_ms": 0.9183056404505693,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.7723406435233007
+          ],
+          [
+            2.0,
+            0.3350136417776981,
+            0.3722123583244823
+          ],
+          [
+            3.0,
+            0.16379441779737866,
+            0.22332741499468936
+          ],
+          [
+            6.0,
+            0.4663468428413676,
+            0.2419380329109135
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.5769291554029475
+          ],
+          [
+            1.5,
+            0.03379288615147935,
+            0.26054865082713763
+          ],
+          [
+            2.42,
+            0.02315881306451456,
+            0.15819025228790498
+          ],
+          [
+            3.24,
+            0.010838959680813704,
+            0.10235839853923263
+          ]
+        ],
+        "body_gain": 0.3013646507469596,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 48.0,
+        "velocity": 0.3,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 0.9305308958112057,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.37087457865914564,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999492984455336,
+      "finite": true,
+      "peak": 0.208557086911472,
+      "rms": 0.03973744267222949,
+      "dc": -2.173336095161448e-06,
+      "active_spectral_centroid_hz": 154.88063734345417,
+      "active_root_band_energy_share": 0.8115532051927641,
+      "active_upper_energy_share": 0.0814345630605295,
+      "near_nyquist_energy_share": 3.991674856168005e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 130.0508073932324,
+          "cents": -10.113801325036333,
+          "confidence": 0.8737730133696414
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.57312759378914,
+          "cents": 10.033608424767793,
+          "confidence": 0.9079645657705472
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.86991508305093,
+          "cents": 0.755950739685343,
+          "confidence": 0.9490404003476938
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.5442385784011,
+          "cents": -3.5576836801308063,
+          "confidence": 0.9018032721783028
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.7707479036942,
+          "cents": -13.845968283028933,
+          "confidence": 0.9513530471630977
+        },
+        {
+          "start_s": 5.5,
+          "hz": 130.15839445056778,
+          "cents": -8.6821963995234,
+          "confidence": 0.8752709234733888
+        },
+        {
+          "start_s": 6.75,
+          "hz": 131.12046633582764,
+          "cents": 4.067240182690575,
+          "confidence": 0.8568753541693669
+        },
+        {
+          "start_s": 7.25,
+          "hz": 131.83082244802625,
+          "cents": 13.421031036975071,
+          "confidence": 0.6641807850916744
+        }
+      ],
+      "median_abs_short_window_cents": 9.357902412145597,
+      "min_pitch_confidence": 0.6641807850916744,
+      "last_100ms_rms": 5.031319927793668e-06,
+      "calibration_gain": 1.3318933447084234,
+      "file": "/workspace/accord-refinement/samples/TINE_C3_soft.wav"
+    },
+    "TINE_C3_normal": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            6.0,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 48.0,
+        "velocity": 0.75,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.0,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.43179720032284186,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999528205540145,
+      "finite": true,
+      "peak": 0.5510939548812751,
+      "rms": 0.10499995395647155,
+      "dc": -5.600862478108752e-06,
+      "active_spectral_centroid_hz": 177.8064664144462,
+      "active_root_band_energy_share": 0.776664665482401,
+      "active_upper_energy_share": 0.12739878365318602,
+      "near_nyquist_energy_share": 3.7977300464503175e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 130.38766700619814,
+          "cents": -5.63532971455499,
+          "confidence": 0.8792346652396291
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.52835659906708,
+          "cents": 9.444413183552765,
+          "confidence": 0.907832577266347
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.8753964251783,
+          "cents": 0.8284600509102361,
+          "confidence": 0.948951581000618
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.6753293282163,
+          "cents": -1.820074277677257,
+          "confidence": 0.9019539302564229
+        },
+        {
+          "start_s": 4.75,
+          "hz": 130.01651401307885,
+          "cents": -10.570374395443334,
+          "confidence": 0.951991025016848
+        },
+        {
+          "start_s": 5.5,
+          "hz": 130.48246275068158,
+          "cents": -4.377127957742945,
+          "confidence": 0.8787349248898529
+        },
+        {
+          "start_s": 6.75,
+          "hz": 130.66482096826192,
+          "cents": -1.959298430889177,
+          "confidence": 0.8563468960576182
+        },
+        {
+          "start_s": 7.25,
+          "hz": 131.17646544947308,
+          "cents": 4.806460219109748,
+          "confidence": 0.6786776540412206
+        }
+      ],
+      "median_abs_short_window_cents": 4.591794088426346,
+      "min_pitch_confidence": 0.6786776540412206,
+      "last_100ms_rms": 2.3919049408485664e-05,
+      "calibration_gain": 1.3318933447084234,
+      "file": "/workspace/accord-refinement/samples/TINE_C3_normal.wav",
+      "approved_pcm_difference_rms": 0.019362212720501246,
+      "approved_pcm_correlation": 0.9829956208929623
+    },
+    "TINE_C3_hard": {
+      "config": {
+        "width_ms": 0.48,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.9358223868108818
+          ],
+          [
+            2.0,
+            0.4687976627835624,
+            0.45099874063175033
+          ],
+          [
+            3.0,
+            0.2789854114374159,
+            0.27059924437905014
+          ],
+          [
+            6.0,
+            0.9131769333711801,
+            0.2931491814106377
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.6990480479792129
+          ],
+          [
+            1.5,
+            0.03710843534509355,
+            0.31569911844222526
+          ],
+          [
+            2.42,
+            0.02839964172066913,
+            0.1916744647684939
+          ],
+          [
+            3.24,
+            0.014217961093800009,
+            0.12402465367373133
+          ]
+        ],
+        "body_gain": 0.3536546937842073,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 48.0,
+        "velocity": 1.0,
+        "root_hz": 130.8127826502993,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": 0.0,
+          "decay_scale": 1.1274968515793757,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.5649804296965476,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999581554735398,
+      "finite": true,
+      "peak": 0.8592377021121179,
+      "rms": 0.16561147385865174,
+      "dc": -8.360006293034058e-06,
+      "active_spectral_centroid_hz": 243.2495901359467,
+      "active_root_band_energy_share": 0.6769854577576198,
+      "active_upper_energy_share": 0.24687785437582013,
+      "near_nyquist_energy_share": 3.451319798765548e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 130.73156745769074,
+          "cents": -1.0751714667630876,
+          "confidence": 0.8825916643255571
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.46520078265783,
+          "cents": 8.61292892245815,
+          "confidence": 0.8999655595673094
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.86582915863227,
+          "cents": 0.7018985772910875,
+          "confidence": 0.9437814841684612
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.7701064744519,
+          "cents": -0.5648874787928835,
+          "confidence": 0.9010808986319743
+        },
+        {
+          "start_s": 4.75,
+          "hz": 130.3048740711328,
+          "cents": -6.734969561817046,
+          "confidence": 0.9498842984078963
+        },
+        {
+          "start_s": 5.5,
+          "hz": 130.69044470065128,
+          "cents": -1.619831934928396,
+          "confidence": 0.8868551592634375
+        },
+        {
+          "start_s": 6.75,
+          "hz": 130.2515341441932,
+          "cents": -7.443790347420078,
+          "confidence": 0.8503124509233948
+        },
+        {
+          "start_s": 7.25,
+          "hz": 130.6688649933279,
+          "cents": -1.9057182438245284,
+          "confidence": 0.7044910303610307
+        }
+      ],
+      "median_abs_short_window_cents": 1.7627750893764622,
+      "min_pitch_confidence": 0.7044910303610307,
+      "last_100ms_rms": 8.935812762404657e-05,
+      "calibration_gain": 1.3318933447084234,
+      "file": "/workspace/accord-refinement/samples/TINE_C3_hard.wav"
+    },
+    "TINE_C4_soft": {
+      "config": {
+        "width_ms": 0.45915282022528464,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.7306787716821862
+          ],
+          [
+            2.0,
+            0.31867483366808813,
+            0.352134347798644
+          ],
+          [
+            3.0,
+            0.15131503173999175,
+            0.21128060867918638
+          ],
+          [
+            6.0,
+            0.42196807318580454,
+            0.22888732606911857
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.5458082390878981
+          ],
+          [
+            1.5,
+            0.03281882180770225,
+            0.2464940434590508
+          ],
+          [
+            2.42,
+            0.02172850623064097,
+            0.14965709781442368
+          ],
+          [
+            3.24,
+            0.00995771203997353,
+            0.0968369456446271
+          ]
+        ],
+        "body_gain": 0.3013646507469596,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 60.0,
+        "velocity": 0.3,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.8803358694966099,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.466215662195134,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999464076197111,
+      "finite": true,
+      "peak": 0.21946373412859696,
+      "rms": 0.03444370717735417,
+      "dc": -8.615024555033257e-07,
+      "active_spectral_centroid_hz": 303.32069929467303,
+      "active_root_band_energy_share": 0.8806043787723383,
+      "active_upper_energy_share": 0.06786810498052885,
+      "near_nyquist_energy_share": 1.3856087303127868e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.48452232979713,
+          "cents": -0.9335641010334935,
+          "confidence": 0.9619270642178988
+        },
+        {
+          "start_s": 1.5,
+          "hz": 262.0577359442526,
+          "cents": 2.85740905379779,
+          "confidence": 0.9456263239479835
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.9484342087735,
+          "cents": 2.135177524453124,
+          "confidence": 0.9641520489564991
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.8701603530215,
+          "cents": 1.6177832713851192,
+          "confidence": 0.9712365927273492
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.6482164378836,
+          "cents": 0.14988108141789186,
+          "confidence": 0.9364978783339898
+        },
+        {
+          "start_s": 5.5,
+          "hz": 261.2415015760083,
+          "cents": -2.5433015721374304,
+          "confidence": 0.8908983862086846
+        },
+        {
+          "start_s": 6.75,
+          "hz": 261.40472994222733,
+          "cents": -1.4619333443835179,
+          "confidence": 0.9618524626677101
+        },
+        {
+          "start_s": 7.25,
+          "hz": 262.3835719708951,
+          "cents": 5.00864499881569,
+          "confidence": 0.9571307212370178
+        }
+      ],
+      "median_abs_short_window_cents": 1.8764803979191216,
+      "min_pitch_confidence": 0.8908983862086846,
+      "last_100ms_rms": 7.4662063079942065e-06,
+      "calibration_gain": 1.0718138531332142,
+      "file": "/workspace/accord-refinement/samples/TINE_C4_soft.wav"
+    },
+    "TINE_C4_normal": {
+      "config": {
+        "width_ms": 0.36,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.7852278467822446
+          ],
+          [
+            2.0,
+            0.36146718131027133,
+            0.3784230586902384
+          ],
+          [
+            3.0,
+            0.18476213508957984,
+            0.22705383521414302
+          ],
+          [
+            6.0,
+            0.5429024508215757,
+            0.24597498814865493
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.5865557409698694
+          ],
+          [
+            1.5,
+            0.033991141156769586,
+            0.2648961410831669
+          ],
+          [
+            2.42,
+            0.023455979987090533,
+            0.1608297999433513
+          ],
+          [
+            3.24,
+            0.011024355473080956,
+            0.10406634113981555
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 60.0,
+        "velocity": 0.75,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 0.9460576467255959,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.5488891502513498,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999501305415271,
+      "finite": true,
+      "peak": 0.587008497871386,
+      "rms": 0.09055644422294411,
+      "dc": -2.2147975279102813e-06,
+      "active_spectral_centroid_hz": 342.2032874676777,
+      "active_root_band_energy_share": 0.8463041815427278,
+      "active_upper_energy_share": 0.10713242065790027,
+      "near_nyquist_energy_share": 3.9258272158665016e-23,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.62374347755264,
+          "cents": -0.012055446746711487,
+          "confidence": 0.9607136071813394
+        },
+        {
+          "start_s": 1.5,
+          "hz": 261.7439153478156,
+          "cents": 0.7829712756242672,
+          "confidence": 0.9445556994423331
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.86038369150805,
+          "cents": 1.5531481665862978,
+          "confidence": 0.9649115841556699
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.8469387736159,
+          "cents": 1.4642576789094672,
+          "confidence": 0.9714666589658844
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.60961522396445,
+          "cents": -0.10554839120402053,
+          "confidence": 0.935448963137179
+        },
+        {
+          "start_s": 5.5,
+          "hz": 261.4388106037256,
+          "cents": -1.2362382860780294,
+          "confidence": 0.9043471958743605
+        },
+        {
+          "start_s": 6.75,
+          "hz": 261.4709308556082,
+          "cents": -1.0235527329711034,
+          "confidence": 0.9620409539656359
+        },
+        {
+          "start_s": 7.25,
+          "hz": 261.9591009397846,
+          "cents": 2.205673200434934,
+          "confidence": 0.9569498483116767
+        }
+      ],
+      "median_abs_short_window_cents": 1.1298955095245664,
+      "min_pitch_confidence": 0.9043471958743605,
+      "last_100ms_rms": 3.4872717558336284e-05,
+      "calibration_gain": 1.0718138531332142,
+      "file": "/workspace/accord-refinement/samples/TINE_C4_normal.wav"
+    },
+    "TINE_C4_hard": {
+      "config": {
+        "width_ms": 0.24,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.8853419250194331
+          ],
+          [
+            2.0,
+            0.4459341309768879,
+            0.42667080723828105
+          ],
+          [
+            3.0,
+            0.2577297013801092,
+            0.25600248434296863
+          ],
+          [
+            6.0,
+            0.8262766586015742,
+            0.27733602470488267
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.6613397512193356
+          ],
+          [
+            1.5,
+            0.03603880182634093,
+            0.29866956506679676
+          ],
+          [
+            2.42,
+            0.026645657113622254,
+            0.18133509307626947
+          ],
+          [
+            3.24,
+            0.01306198810004052,
+            0.11733447199052728
+          ]
+        ],
+        "body_gain": 0.3536546937842073,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 60.0,
+        "velocity": 1.0,
+        "root_hz": 261.6255653005986,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.495396182549136,
+          "decay_scale": 1.0666770180957026,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.7297502941247604,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.999955769633398,
+      "finite": true,
+      "peak": 0.94,
+      "rms": 0.14075418992307948,
+      "dc": -3.2903382328439826e-06,
+      "active_spectral_centroid_hz": 458.4362001050676,
+      "active_root_band_energy_share": 0.7486538157824674,
+      "active_upper_energy_share": 0.2136336437981572,
+      "near_nyquist_energy_share": 2.628601295231815e-22,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 261.76441072061414,
+          "cents": 0.9185270461380729,
+          "confidence": 0.9558892886707879
+        },
+        {
+          "start_s": 1.5,
+          "hz": 261.5210704076398,
+          "cents": -0.6916038705089966,
+          "confidence": 0.9419284938180967
+        },
+        {
+          "start_s": 2.75,
+          "hz": 261.76697099565973,
+          "cents": 0.9354598814513467,
+          "confidence": 0.9633093915890125
+        },
+        {
+          "start_s": 3.5,
+          "hz": 261.7735345139038,
+          "cents": 0.9788681226354315,
+          "confidence": 0.9696532381344806
+        },
+        {
+          "start_s": 4.75,
+          "hz": 261.5962958081649,
+          "cents": -0.1936935197839832,
+          "confidence": 0.9308603279279964
+        },
+        {
+          "start_s": 5.5,
+          "hz": 261.5610903733391,
+          "cents": -0.426697388923561,
+          "confidence": 0.9259059249548451
+        },
+        {
+          "start_s": 6.75,
+          "hz": 261.5357003931116,
+          "cents": -0.5947580579446738,
+          "confidence": 0.9607073272624992
+        },
+        {
+          "start_s": 7.25,
+          "hz": 261.4430404220441,
+          "cents": -1.208228878292657,
+          "confidence": 0.9528674884824696
+        }
+      ],
+      "median_abs_short_window_cents": 0.8050654583235348,
+      "min_pitch_confidence": 0.9259059249548451,
+      "last_100ms_rms": 0.00012758470821235622,
+      "calibration_gain": 1.0718138531332142,
+      "file": "/workspace/accord-refinement/samples/TINE_C4_hard.wav"
+    },
+    "TINE_C5_soft": {
+      "config": {
+        "width_ms": 0.22957641011264232,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.6912642392499981
+          ],
+          [
+            2.0,
+            0.30313287863295624,
+            0.3331393924096377
+          ],
+          [
+            3.0,
+            0.13978644167714205,
+            0.19988363544578258
+          ],
+          [
+            6.0,
+            0.3818125018350522,
+            0.2165406050662645
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.5163660582349384
+          ],
+          [
+            1.5,
+            0.031872834418985,
+            0.23319757468674637
+          ],
+          [
+            2.42,
+            0.02038653629181146,
+            0.141584241774096
+          ],
+          [
+            3.24,
+            0.009148113102270528,
+            0.09161333291265035
+          ]
+        ],
+        "body_gain": 0.3013646507469596,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393,
+        "amp_gain": 0.43838329055408687,
+        "midi": 72.0,
+        "velocity": 0.3,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": -0.6,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8328484810240941,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.3690835172829652,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999433519737502,
+      "finite": true,
+      "peak": 0.20875101393382595,
+      "rms": 0.04021355334170666,
+      "dc": -5.25071484243674e-07,
+      "active_spectral_centroid_hz": 584.7770708929158,
+      "active_root_band_energy_share": 0.9200764158712681,
+      "active_upper_energy_share": 0.05195529812182666,
+      "near_nyquist_energy_share": 1.2305011460209613e-21,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.8686179807133,
+          "cents": 2.0418205303656296,
+          "confidence": 0.9834475579019234
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.8019821060392,
+          "cents": 1.82159425834599,
+          "confidence": 0.9689244512111606
+        },
+        {
+          "start_s": 2.75,
+          "hz": 522.928625995519,
+          "cents": -1.0673710105675793,
+          "confidence": 0.9760530765689837
+        },
+        {
+          "start_s": 3.5,
+          "hz": 523.9235580806089,
+          "cents": 2.2233721278267224,
+          "confidence": 0.9832357119759911
+        },
+        {
+          "start_s": 4.75,
+          "hz": 522.0385663035065,
+          "cents": -4.0165583697640646,
+          "confidence": 0.9502410797687502
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.613250943464,
+          "cents": -2.1117826347129136,
+          "confidence": 0.9885316229752494
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.5763175098994,
+          "cents": -2.2341344447433706,
+          "confidence": 0.9794538420531587
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.3352881219089,
+          "cents": -3.0328207421617104,
+          "confidence": 0.9715969716522199
+        }
+      ],
+      "median_abs_short_window_cents": 2.167577381269818,
+      "min_pitch_confidence": 0.9502410797687502,
+      "last_100ms_rms": 2.869251573949296e-06,
+      "calibration_gain": 1.325164990817319,
+      "file": "/workspace/accord-refinement/samples/TINE_C5_soft.wav"
+    },
+    "TINE_C5_normal": {
+      "config": {
+        "width_ms": 0.18,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.7428708088702171
+          ],
+          [
+            2.0,
+            0.3438382188536646,
+            0.358010028371189
+          ],
+          [
+            3.0,
+            0.1706852328143007,
+            0.21480601702271337
+          ],
+          [
+            6.0,
+            0.49123845184678905,
+            0.23270651844127285
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.5549155439753429
+          ],
+          [
+            1.5,
+            0.03301136220398387,
+            0.2506070198598323
+          ],
+          [
+            2.42,
+            0.02200731988619166,
+            0.15215426205775534
+          ],
+          [
+            3.24,
+            0.01012803446640417,
+            0.09845275780207698
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0,
+        "pulse_gain": 1.0,
+        "amp_gain": 1.0,
+        "midi": 72.0,
+        "velocity": 0.75,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 0.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 0.8950250709279725,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.43121619473205763,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999472871576658,
+      "finite": true,
+      "peak": 0.5563617821753595,
+      "rms": 0.10499999733699225,
+      "dc": -1.3468079557165557e-06,
+      "active_spectral_centroid_hz": 638.4333833230997,
+      "active_root_band_energy_share": 0.8938383183709908,
+      "active_upper_energy_share": 0.08060966256349215,
+      "near_nyquist_energy_share": 5.027922024988013e-21,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.8425173365534,
+          "cents": 1.9555633124008218,
+          "confidence": 0.983826631326981
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.6811274659732,
+          "cents": 1.422107780929065,
+          "confidence": 0.969583090163018
+        },
+        {
+          "start_s": 2.75,
+          "hz": 523.055703564,
+          "cents": -0.6467126731677144,
+          "confidence": 0.9763840480983369
+        },
+        {
+          "start_s": 3.5,
+          "hz": 523.6490752580498,
+          "cents": 1.3161433514154635,
+          "confidence": 0.9829163478587067
+        },
+        {
+          "start_s": 4.75,
+          "hz": 522.1876510823448,
+          "cents": -3.5222198006323273,
+          "confidence": 0.9510739878859943
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.689617204758,
+          "cents": -1.858826527892959,
+          "confidence": 0.9884595298212859
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.6516965057349,
+          "cents": -1.9844306812557742,
+          "confidence": 0.98051598802303
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.4147377055973,
+          "cents": -2.7695121586145,
+          "confidence": 0.9715283160021182
+        }
+      ],
+      "median_abs_short_window_cents": 1.9071949201468903,
+      "min_pitch_confidence": 0.9510739878859943,
+      "last_100ms_rms": 1.3695906317680796e-05,
+      "calibration_gain": 1.325164990817319,
+      "file": "/workspace/accord-refinement/samples/TINE_C5_normal.wav"
+    },
+    "TINE_C5_hard": {
+      "config": {
+        "width_ms": 0.12,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.8375844981313939
+          ],
+          [
+            2.0,
+            0.4241856667743711,
+            0.40365517982235855
+          ],
+          [
+            3.0,
+            0.23809344951494402,
+            0.2421931078934151
+          ],
+          [
+            6.0,
+            0.7476460383524285,
+            0.26237586688453307
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.6256655287246558
+          ],
+          [
+            1.5,
+            0.035,
+            0.282558625875651
+          ],
+          [
+            2.42,
+            0.025,
+            0.17155345142450237
+          ],
+          [
+            3.24,
+            0.012,
+            0.11100517445114859
+          ]
+        ],
+        "body_gain": 0.3536546937842073,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218,
+        "amp_gain": 1.2,
+        "midi": 72.0,
+        "velocity": 1.0,
+        "root_hz": 523.2511306011972,
+        "controls_meta": {
+          "reference_midi": 48.0,
+          "reference_velocity": 0.75,
+          "final_effective_width": true,
+          "velocity_delta": 1.0,
+          "brush_register_correction_db": -0.75,
+          "decay_scale": 1.0091379495558963,
+          "status": "Proposed continuous note/velocity shapes; no listening claim"
+        }
+      },
+      "root_hz": 523.2511306011972,
+      "events": 528,
+      "raw_peak": 0.5711641954076488,
+      "raw_finite": true,
+      "brushing_to_direct_rms_db": null,
+      "max_pole_radius": 0.9999532477635149,
+      "finite": true,
+      "peak": 0.8900095854195833,
+      "rms": 0.1608765735911374,
+      "dc": -1.991867784541757e-06,
+      "active_spectral_centroid_hz": 806.7184374607343,
+      "active_root_band_energy_share": 0.8172680586281218,
+      "active_upper_energy_share": 0.16142092185083654,
+      "near_nyquist_energy_share": 1.8300720237399706e-19,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 523.8069019711251,
+          "cents": 1.8378549794661603,
+          "confidence": 0.9831665359916004
+        },
+        {
+          "start_s": 1.5,
+          "hz": 523.5758929259564,
+          "cents": 1.074178636734901,
+          "confidence": 0.9687888598824135
+        },
+        {
+          "start_s": 2.75,
+          "hz": 523.1702969082029,
+          "cents": -0.26746784464279766,
+          "confidence": 0.9759981120106054
+        },
+        {
+          "start_s": 3.5,
+          "hz": 523.3284157277125,
+          "cents": 0.25568747874366554,
+          "confidence": 0.9815273461615098
+        },
+        {
+          "start_s": 4.75,
+          "hz": 522.3190346814619,
+          "cents": -3.0866921691101004,
+          "confidence": 0.9499423210047637
+        },
+        {
+          "start_s": 5.5,
+          "hz": 522.8404770078532,
+          "cents": -1.3592261222952702,
+          "confidence": 0.9871865338521371
+        },
+        {
+          "start_s": 6.75,
+          "hz": 522.7259653380161,
+          "cents": -1.7384397133233809,
+          "confidence": 0.980903925091616
+        },
+        {
+          "start_s": 7.25,
+          "hz": 522.4740434629418,
+          "cents": -2.572989526960004,
+          "confidence": 0.9692319730262825
+        }
+      ],
+      "median_abs_short_window_cents": 1.5488329178093254,
+      "min_pitch_confidence": 0.9499423210047637,
+      "last_100ms_rms": 5.1907492459098067e-05,
+      "calibration_gain": 1.325164990817319,
+      "file": "/workspace/accord-refinement/samples/TINE_C5_hard.wav"
+    }
+  },
+  "velocity_summary": {
+    "BRUSH": {
+      "soft": {
+        "rms": 0.0370877618638764,
+        "peak": 0.17126635806504925,
+        "active_spectral_centroid_hz": 129.09623693716117,
+        "active_upper_energy_share": 0.0014626831756578828
+      },
+      "normal": {
+        "rms": 0.10499994538750923,
+        "peak": 0.4958638359433055,
+        "active_spectral_centroid_hz": 129.48729401473605,
+        "active_upper_energy_share": 0.002101319179840628
+      },
+      "hard": {
+        "rms": 0.17014174038847268,
+        "peak": 0.7960152385161426,
+        "active_spectral_centroid_hz": 130.26967607456945,
+        "active_upper_energy_share": 0.005692596622365106
+      }
+    },
+    "WOOD": {
+      "soft": {
+        "rms": 0.036202894794985424,
+        "peak": 0.20033903033588946,
+        "active_spectral_centroid_hz": 136.11324380704568,
+        "active_upper_energy_share": 0.07172780669580847
+      },
+      "normal": {
+        "rms": 0.09885880789540727,
+        "peak": 0.5683086331844548,
+        "active_spectral_centroid_hz": 142.75250387253368,
+        "active_upper_energy_share": 0.11264300696848364
+      },
+      "hard": {
+        "rms": 0.1582029847547476,
+        "peak": 0.94,
+        "active_spectral_centroid_hz": 157.00530932944892,
+        "active_upper_energy_share": 0.19567765034048748
+      }
+    },
+    "TINE": {
+      "soft": {
+        "rms": 0.03973744267222949,
+        "peak": 0.208557086911472,
+        "active_spectral_centroid_hz": 154.88063734345417,
+        "active_upper_energy_share": 0.0814345630605295
+      },
+      "normal": {
+        "rms": 0.10499995395647155,
+        "peak": 0.5510939548812751,
+        "active_spectral_centroid_hz": 177.8064664144462,
+        "active_upper_energy_share": 0.12739878365318602
+      },
+      "hard": {
+        "rms": 0.16561147385865174,
+        "peak": 0.8592377021121179,
+        "active_spectral_centroid_hz": 243.2495901359467,
+        "active_upper_energy_share": 0.24687785437582013
+      }
+    }
+  },
+  "wall_seconds_full_python_matrix": 41.785223013
+}

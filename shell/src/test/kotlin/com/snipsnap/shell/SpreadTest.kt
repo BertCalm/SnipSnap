@@ -7,6 +7,10 @@ import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
+import com.snipsnap.synth.AccordVoice
+import com.snipsnap.synth.AccordAcousticProfile
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberVoice
@@ -52,6 +56,21 @@ class SpreadTest {
     }
 
     private fun kit(name: String) = KitBuilderModel.create(name, File(temp, name))
+
+    @Test
+    fun `Accord spreads retain the saved root across acoustic profiles instead of detecting the ringing partials`() {
+        val misleading = tone(220.0)
+        assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
+        for (voice in AccordVoice.entries) {
+            val profiles = if (voice == AccordVoice.TINE)
+                AccordAcousticProfile.entries.filter { it != AccordAcousticProfile.BASE }
+            else listOf(AccordAcousticProfile.BASE)
+            for (profile in profiles) for (midi in listOf(Accord.MIN_MIDI, 48, Accord.MAX_MIDI)) {
+                val patch = AccordPatch("Saved ensemble root", voice, midi = midi, acousticProfile = profile)
+                assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "$voice/$profile must retain MIDI $midi")
+            }
+        }
+    }
 
     @Test
     fun `Otis saved scores retain their relative authored root and complete voicing bounds`() {

@@ -55,6 +55,11 @@ android {
         }
     }
 
+    // The faces the art canvas sets (shell/src/main/resources/fonts) ship
+    // once: the JVM reads them as class-path resources, the phone as
+    // assets under the same relative path. One file, two loaders.
+    sourceSets["main"].assets.srcDir("../shell/src/main/resources")
+
     buildFeatures {
         compose = true
         // Oboe ships as a prefab package inside its AAR; this lets CMake
@@ -169,6 +174,13 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // The plain-JVM suite (src/test): resource files checked against the
+    // :shell code that defines what they draw. No device needed. It runs
+    // on the JUnit 4 the crease-study variant's suite already uses, so
+    // `:app:testDebugUnitTest` and `:app:testCreaseStudyUnitTest` share
+    // one runner.
+    testImplementation(kotlin("test-junit"))
 }
 
 // Audio binaries stay outside Git. An explicit measured input is mandatory for

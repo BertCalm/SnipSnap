@@ -31,6 +31,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ACCORD retains its accepted voices profiles and saved mechanical history`() {
+        for (reference in AccordPresets.all()) {
+            val patch = reference.copy(sourceSeconds = Accord.MIN_SOURCE_SECONDS)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, patch.name)
+        }
+    }
+
+    @Test
     fun `OTIS accepted chords retain source state after cold recipe replay`() {
         for (voice in OtisVoice.entries) {
             val patch = OtisPresets.forVoice(voice).first { "CHORD" in it.name }
@@ -38,6 +47,14 @@ class DeterminismTest {
             val original = patch.render()
             Otis.clearCache()
             assertContentEquals(original.samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
+    fun `LORENTZ collision recipes regenerate both voices and finite HOLD exactly`() {
+        for (voice in LorentzVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = LorentzPatch("Collision canary", voice, Lorentz.defaults(voice) + ("HOLD" to hold), velocity = .67f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
         }
     }
 
@@ -266,6 +283,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Held recall canary", voice,
+                Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
+                midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `MERIDIAN regenerates the saved note velocity and contact noise byte for byte`() {
         val patch = MeridianPatch("Swing canary", MeridianVoice.SWEEP,
             mapOf("LATITUDE" to .8f, "MEMORY" to .6f), midi = 51, velocity = .7f, seedContext = 41)
@@ -274,7 +302,7 @@ class DeterminismTest {
 
     @Test
     fun `RIME models preserve complete recipe determinism through velocity and body changes`() {
-        for (model in 1..Rime.MODEL_VERSION) for (voice in RimeVoice.entries) {
+        for (model in 1..Rime.MODEL_VERSION) for (voice in if (model < 6) Rime.LEGACY_VOICES else RimeVoice.entries) {
             val patch = RimePatch("Rime canary", voice, Rime.defaults(voice, model) + ("BODY" to .8f),
                 midi = 53, velocity = .6f, gateSeconds = .25f, seed = 2718, model = model)
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)

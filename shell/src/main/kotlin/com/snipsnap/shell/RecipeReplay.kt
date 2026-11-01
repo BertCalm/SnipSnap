@@ -6,6 +6,8 @@ import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.BoardRecipe
+import com.snipsnap.synth.ObliterateBoard
 import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.xpm.PadNoteMap
 
@@ -43,7 +45,10 @@ object RecipeReplay {
         data class Era(val era: String, val amount: Float) : Plan()
         data class Character(val name: String, val amount: Float) : Plan()
         /** Copy the board settings; the destination retains its own source and recipe. */
-        data class Board(val amount: Float, val type: BoardType = BoardType.WIDE) : Plan()
+        data class Board(val amount: Float, val type: BoardType = BoardType.WIDE,
+            val obliterate: ObliterateBoard.Settings? = if (type == BoardType.OBLITERATE) ObliterateBoard.Settings() else null) : Plan() {
+            val recipe: BoardRecipe get() = BoardRecipe(type, amount, obliterate)
+        }
         /** Copy complete Aquarium controls/context; the destination keeps its own immutable baseline. */
         data class Aquarium(val recipe: AquariumRenderRecipe) : Plan()
         /** The pedal library's board: every pick with its AMT and side, re-rendered on the destination's own audio. */
@@ -78,12 +83,12 @@ object RecipeReplay {
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("boardPad" in e) {
-            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type) }
+            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type, it.obliterate) }
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("board" in e && "recipe" in e) {
             return runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()
-                ?.let { Plan.Board(it.amount, it.type) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+                ?.let { Plan.Board(it.amount, it.type, it.obliterate) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("pedals" in e && "recipe" in e) {
             return PadSheet.readPedals(recipe)?.let { Plan.Pedals(it) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
@@ -178,7 +183,7 @@ object RecipeReplay {
             is Plan.Refused -> throw IllegalArgumentException(p.reason)
             is Plan.Era -> Done(model.eraPad(slot, p.era, p.amount), Copy.replayed(word, padName))
             is Plan.Character -> Done(model.characterPad(slot, p.name, p.amount), Copy.replayed(word, padName))
-            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.amount, p.type), Copy.replayedBoard(word, padName))
+            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.recipe), Copy.replayedBoard(word, padName))
             is Plan.Aquarium -> {
                 val renderer = requireNotNull(aquariumRenderer) { PrintedPads.AQUARIUM_RENDERER_REQUIRED }
                 Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard("AQUARIUM", padName))

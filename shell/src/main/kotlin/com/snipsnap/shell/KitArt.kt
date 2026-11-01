@@ -5,9 +5,11 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import java.awt.BasicStroke
 import java.awt.Color
+import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.geom.Arc2D
+import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -33,6 +35,18 @@ import kotlin.random.Random
 interface ArtCanvas {
     fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int)
     fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int)
+
+    /** Fill the closed polygon through the points ([xs][i], [ys][i]) in order. */
+    fun fillPolygon(xs: FloatArray, ys: FloatArray, colorRgb: Int)
+
+    /**
+     * Set [text] in a bundled [font] at [sizePx] (the em, in pixels) with
+     * its baseline on [baselineY] and [x] at the [anchor] edge.
+     */
+    fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int)
+
+    /** The advance width [drawText] would cover for [text] at [sizePx]. */
+    fun textWidth(text: String, font: ArtFont, sizePx: Float): Float
 }
 
 /**
@@ -170,10 +184,13 @@ object KitArt {
      */
     fun awtPng(kit: Kit, kitDir: File, style: Style): ByteArray = png(kit, kitDir, style)
 
-    // ---- the AWT adapter — the only place in this file java.awt appears ----
+    // ---- the AWT adapter — java.awt lives here and in the font cache below, nowhere else ----
 
-    /** Internal, not private: [JCard] reuses [waveform] against its own [Graphics2D]. */
-    internal class AwtCanvas(private val g: Graphics2D) : ArtCanvas {
+    /**
+     * Public, not private: [JCard] reuses [waveform] against its own
+     * [Graphics2D], and the CLI's `mark` verb draws [Mark] through it.
+     */
+    class AwtCanvas(private val g: Graphics2D) : ArtCanvas {
         override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
             g.color = Color(colorRgb)
             g.fillRect(x, y, w, h)
@@ -184,6 +201,32 @@ object KitArt {
             g.stroke = BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
             g.draw(Arc2D.Float(cx - r, cy - r, 2 * r, 2 * r, startDeg, sweepDeg, Arc2D.OPEN))
         }
+
+        override fun fillPolygon(xs: FloatArray, ys: FloatArray, colorRgb: Int) {
+            require(xs.size == ys.size && xs.size >= 3) { "a polygon needs matching xs/ys with at least three points" }
+            val path = Path2D.Float()
+            path.moveTo(xs[0], ys[0])
+            for (i in 1 until xs.size) path.lineTo(xs[i], ys[i])
+            path.closePath()
+            g.color = Color(colorRgb)
+            g.fill(path)
+        }
+
+        override fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int) {
+            val f = AwtFonts.font(font, sizePx)
+            val w = g.getFontMetrics(f).stringWidth(text)
+            val left = when (anchor) {
+                TextAnchor.START -> x
+                TextAnchor.MIDDLE -> x - w / 2f
+                TextAnchor.END -> x - w
+            }
+            g.font = f
+            g.color = Color(colorRgb)
+            g.drawString(text, left, baselineY)
+        }
+
+        override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float =
+            g.getFontMetrics(AwtFonts.font(font, sizePx)).stringWidth(text).toFloat()
     }
 
     // ---- styles ------------------------------------------------------------
@@ -329,4 +372,21 @@ object KitArt {
         val nb = (b * (1 - k)).toInt().coerceIn(0, 255)
         return (nr shl 16) or (ng shl 8) or nb
     }
+}
+
+/**
+ * JVM-side font cache: one base [java.awt.Font] per [ArtFont], created
+ * from the bundled bytes rather than the system font table so a headless
+ * CI box and a desk with the family installed draw the same glyphs. Here
+ * and not in `ArtFont.kt` because the phone loads that file's class and
+ * AWT does not exist there; this file is already the AWT adapter.
+ */
+internal object AwtFonts {
+    private val base = HashMap<ArtFont, Font>()
+
+    fun font(font: ArtFont): Font = synchronized(base) {
+        base.getOrPut(font) { Font.createFont(Font.TRUETYPE_FONT, font.bytes().inputStream()) }
+    }
+
+    fun font(font: ArtFont, sizePx: Float): Font = font(font).deriveFont(sizePx)
 }

@@ -11,11 +11,32 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
+    fun accord(): List<ArrangedPad> = AccordKits.arranged()
+
     /** The sixteen auditioned finite Otis performances, retaining their complete score recipes. */
     fun otis(): List<ArrangedPad> = OtisPresets.all().map { patch ->
         pad(patch, Otis.drumClassFor(patch)).copy(oneShot = true, displayName = patch.name,
             source = mapOf("engine" to patch.engine, "voice" to patch.voiceName,
                 "factoryPreset" to patch.name, "rootMidi" to patch.midi.toString()))
+    }
+
+    /** Audition-three finite collisions: eight scale notes followed by eight control anchors. */
+    fun lorentz(): List<ArrangedPad?> {
+        fun arranged(patch: LorentzPatch): ArrangedPad {
+            val recipe = PadRecipe(patch)
+            val audio = recipe.render()
+            // Classify the actual PCM once; bright/wide hits need not file as KICK.
+            return ArrangedPad(audio, com.snipsnap.audio.Classifier.classify(audio).drumClass, recipe.toJsonValue())
+                .copy(displayName = patch.name, oneShot = true)
+        }
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            arranged(LorentzPatch("Fuse Note ${i + 1}", LorentzVoice.FUSE,
+                Lorentz.defaults(LorentzVoice.FUSE) + ("TUNE" to semitone / 24f)))
+        }
+        val anchors = listOf("Fuse Contact", "Fuse Clean", "Fuse Hard", "Fuse Wide",
+            "Tear Contact", "Tear Clean", "Tear Hard", "Tear Wide")
+        return scale + anchors.map { name -> arranged(LorentzPresets.all().single { it.name == name }) }
     }
 
     /** Sixteen finite Libration notes; native touch zones retain their energy. */
@@ -912,6 +933,7 @@ object SynthKits {
 
     /** The nine finite RIME recipes plus a minor-pentatonic bass walk. */
     fun rime(): List<ArrangedPad?> = RimeKits.build()
+    fun rimeComplete(): List<ArrangedPad?> = RimeKits.buildComplete()
 
     /**
      * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
@@ -984,6 +1006,31 @@ object SynthKits {
                         }
                     }
             }
+    }
+
+    /**
+     * The selected KEY and lower-air CHOIR settings, alongside all six voice roles.
+     * Six C-minor key notes leave room for the four heard C4 MOTION settings, four
+     * original voice contrasts, and C2/C3 held sources delivered as faded one-shots.
+     * The original [murmur] starter remains unchanged.
+     */
+    fun murmurSelected(): List<ArrangedPad?> {
+        val selected = MurmurPresets.selected()
+        val key = selected.single { it.voice == MurmurVoice.KEY && it.macros.getValue("MOTION") == .5f }
+        val notes = PENTATONIC.take(6).mapIndexed { i, semitone ->
+            pad(key.copy(name = "Murmur Selected ${i + 1}", midi = 48 + semitone), DrumClass.TONAL)
+        }
+        val heardKeys = selected.filter { it.voice == MurmurVoice.KEY }.map { pad(it, DrumClass.TONAL) }
+        val contrasts = listOf("CLOSED CIRCUIT", "SHORT ANSWER", "OPEN THROAT", "COPPER HUM").map { name ->
+            val patch = MurmurPresets.original().single { it.name == name }
+            pad(patch, Murmur.drumClassFor(patch.voice, patch.macros))
+        }
+        val choir = selected.filter { it.voice == MurmurVoice.CHOIR }.map { patch ->
+            // Keep the seamless held source in the recipe; the MPC drum pad plays it once.
+            val recipe = PadRecipe(patch, terminalFadeMs = 8f)
+            ArrangedPad(recipe.render(), DrumClass.LOOP, recipe.toJsonValue())
+        }
+        return notes + heardKeys + contrasts + choir
     }
 
     /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
@@ -1069,7 +1116,7 @@ object SynthKits {
     }
 
     /**
-     * Eight CRANE notes climb C minor pentatonic, followed by the six model-4 presets and
+     * Eight CRANE notes climb C minor pentatonic, followed by the six accepted model-4 references and
      * the accepted FAN/STILL source tones. Every pad is a dry finite tonal note with its
      * complete editable recipe; TUNE chooses the note without an overriding MIDI field.
      */
@@ -1099,7 +1146,7 @@ object SynthKits {
                 macros = reference.macros + mapOf("FOLD" to 0f, "MOTION" to 0f),
             )
         }
-        return (notes + OrigamiPresets.all() + sources).map(::arranged)
+        return (notes + OrigamiPresets.references() + sources).map(::arranged)
     }
 
     /**
@@ -1348,40 +1395,67 @@ object SynthKits {
     }
 
     /**
-     * The SCOUR kit: impacts that build, cut for two tempos, over two banks. A01–A04 are PLATE builds for
-     * 120 BPM and A05–A08 PANE builds for 90 BPM, each one beat, two beats, one bar and two bars long, so a
-     * pad hit that far before a downbeat lands its slam on it; all at C3, every other control at its
-     * default. A09–A16 are PLATE's and PANE's eight presets. Bank B is SHEET, an octave lower: B01–B08 the
-     * same builds at C2 (120 BPM, then 90), B09–B12 its four presets, and B13–B16 short hits on C2, E♭2, F2
-     * and G2 for a low line. Each dry pad carries its recipe and its own name, and is filed by SCOUR's
-     * drumClassFor (every render passes 1.5 s, so all thirty-two are LOOP-class one-shots).
+     * The SCOUR kit: impacts that build, cut for two tempos, over three banks. Each bank's first row is
+     * builds cut for 120 BPM and its second for 90 BPM, each one beat, two beats, one bar and two bars long,
+     * so a pad hit that far before a downbeat lands its slam on it. The third row is a voice's presets.
+     * - Bank A: PLATE builds (120 BPM) and PANE builds (90 BPM), at C3 with every other control at its
+     *   default, then PLATE's and PANE's eight presets.
+     * - Bank B: SHEET, an octave lower. Its builds each have their own note between C2 and C3 and their own
+     *   roller, shot, hardening and ring (the owner heard the first, all-default bank B as "pretty similar").
+     *   Then its four presets, and short hits on E♭2, F2, G2 and B♭2, each struck its own way. Its first
+     *   preset, STEEL BOOM, is the bare slam on C2, so the third row's first pad and the top row play the
+     *   whole scale; a C2 hit beside it measured as a near-copy.
+     * - Bank C: BEAM, laid out as bank B and varied the same way, from C3 to C4, with GIRDER CLANG on C3
+     *   and hits on E♭3, F3, G3 and B♭3.
+     * Each dry pad carries its recipe and its own name, and is filed by SCOUR's drumClassFor (every render
+     * passes 1.5 s, so all forty-eight are LOOP-class one-shots).
      */
     fun scour(): List<ArrangedPad?> {
         fun named(patch: ScourPatch) = pad(patch, Scour.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
-        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String) = named(
+        fun tune(semitone: Int) = semitone / Scour.TUNE_SEMITONES.toFloat()
+        val prefix = mapOf(ScourVoice.SHEET to "SHEET", ScourVoice.BEAM to "BEAM")
+        /** A build cut for [beats] at [bpm]; a bank B or C build also sets its note and its character. */
+        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String, character: Map<String, Float> = emptyMap()) = named(
             ScourPatch(
-                (if (voice == ScourVoice.SHEET) "SHEET $bpm" else "$bpm BPM") + " $label", voice,
-                Scour.defaults(voice) + ("TUNE" to 0f) + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
+                (prefix[voice]?.let { "$it $bpm" } ?: "$bpm BPM") + " $label", voice,
+                Scour.defaults(voice) + ("TUNE" to 0f) + character + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
             ),
         )
+        fun c(semitone: Int, rpm: Float, shot: Float, harden: Float, hold: Float) =
+            mapOf("TUNE" to tune(semitone), "RPM" to rpm, "SHOT" to shot, "HARDEN" to harden, "HOLD" to hold)
         fun preset(name: String) = named(ScourPresets.all().first { it.name == name })
-        // The shortest build, a short ring, on a note of C minor pentatonic from C2.
-        fun hit(note: String, semitone: Int) = named(
-            ScourPatch(
-                "SHEET $note", ScourVoice.SHEET,
-                Scour.defaults(ScourVoice.SHEET) + ("TUNE" to semitone / Scour.TUNE_SEMITONES.toFloat()) + ("BUILD" to 0f) + ("HOLD" to .3f),
+        /** The shortest build on a note of C minor pentatonic from the voice's root, with its own roller, shot, hardening and ring. */
+        fun hit(voice: ScourVoice, note: String, semitone: Int, rpm: Float, shot: Float, harden: Float, hold: Float) = named(
+            ScourPatch("${prefix.getValue(voice)} $note", voice, Scour.defaults(voice) + c(semitone, rpm, shot, harden, hold) + ("BUILD" to 0f)),
+        )
+        val lengths = listOf(1 to "1 BEAT", 2 to "2 BEATS", 4 to "1 BAR", 8 to "2 BARS")
+        val bankA = lengths.map { (n, l) -> build(ScourVoice.PLATE, 120, n, l) } + lengths.map { (n, l) -> build(ScourVoice.PANE, 90, n, l) } +
+            ScourPresets.forVoice(ScourVoice.PLATE).map { preset(it.name) } + ScourPresets.forVoice(ScourVoice.PANE).map { preset(it.name) }
+        // A voice's eight builds, in pad order: note (semitones above its root), roller, shot, hardening, ring.
+        fun varied(voice: ScourVoice, characters: List<Map<String, Float>>) =
+            lengths.mapIndexed { i, (n, l) -> build(voice, 120, n, l, characters[i]) } +
+                lengths.mapIndexed { i, (n, l) -> build(voice, 90, n, l, characters[4 + i]) }
+        val bankB = varied(
+            ScourVoice.SHEET,
+            listOf(
+                c(10, .3f, .3f, .8f, .2f), c(5, .9f, .9f, .2f, .3f), c(7, .8f, .2f, .9f, .5f), c(10, .9f, .8f, .7f, .8f),
+                c(12, .2f, .4f, .1f, .2f), c(3, .4f, .9f, .4f, .8f), c(0, .1f, .4f, .9f, .7f), c(12, .6f, .5f, .3f, .4f),
             ),
+        ) + ScourPresets.forVoice(ScourVoice.SHEET).map { preset(it.name) } + listOf(
+            hit(ScourVoice.SHEET, "Eb2", 3, .9f, .8f, .9f, .3f), hit(ScourVoice.SHEET, "F2", 5, .9f, .3f, .1f, .3f),
+            hit(ScourVoice.SHEET, "G2", 7, .9f, .9f, .9f, .3f), hit(ScourVoice.SHEET, "Bb2", 10, .7f, .3f, .7f, .9f),
         )
-        fun builds(voice: ScourVoice, bpm: Int) = listOf(
-            build(voice, bpm, 1, "1 BEAT"), build(voice, bpm, 2, "2 BEATS"), build(voice, bpm, 4, "1 BAR"), build(voice, bpm, 8, "2 BARS"),
+        val bankC = varied(
+            ScourVoice.BEAM,
+            listOf(
+                c(10, .1f, .6f, .3f, .5f), c(0, .5f, .8f, .7f, .7f), c(3, .4f, .5f, .1f, .8f), c(10, .9f, .7f, .1f, .9f),
+                c(3, .1f, .2f, .1f, .1f), c(12, .6f, .9f, .3f, .4f), c(7, .7f, .2f, .9f, .8f), c(5, .9f, .8f, .9f, .9f),
+            ),
+        ) + ScourPresets.forVoice(ScourVoice.BEAM).map { preset(it.name) } + listOf(
+            hit(ScourVoice.BEAM, "Eb3", 3, .6f, .8f, .2f, .4f), hit(ScourVoice.BEAM, "F3", 5, .6f, .4f, .1f, .3f),
+            hit(ScourVoice.BEAM, "G3", 7, .8f, .8f, .8f, .3f), hit(ScourVoice.BEAM, "Bb3", 10, .7f, .4f, .1f, .6f),
         )
-        return builds(ScourVoice.PLATE, 120) + builds(ScourVoice.PANE, 90) + listOf(
-            preset("IRON SLAM"), preset("FORGE RISE"), preset("GRINDER RUN"), preset("PEENED BELL"),
-            preset("GLASS SNAP"), preset("FROST RISE"), preset("SHATTER RUN"), preset("PANE TOLL"),
-        ) + builds(ScourVoice.SHEET, 120) + builds(ScourVoice.SHEET, 90) + listOf(
-            preset("STEEL BOOM"), preset("SHEET RISE"), preset("THUNDER RUN"), preset("DISTANT STORM"),
-            hit("C2", 0), hit("Eb2", 3), hit("F2", 5), hit("G2", 7),
-        )
+        return bankA + bankB + bankC
     }
 
     /**

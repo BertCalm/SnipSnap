@@ -131,26 +131,25 @@ class MeridianKitsTest {
                 val heldProgram = Mpc3Project.read(File(destination, heldInstrument.getValue("programFile").str()))
                 assertEquals(1, heldProgram.programs().single().getValue("type").int())
                 val heldSlots = heldProgram.drumPrograms().single().getValue("instruments").arr()
-                assertEquals((0..127).toList(), heldSlots.take(zones.size).flatMap {
+                assertEquals((36..72).toList(), heldSlots.take(zones.size).flatMap {
                     val slot = it.obj()
                     (slot.getValue("lowNote").int()..slot.getValue("highNote").int()).toList()
-                }, "exported keygroups must cover every MIDI note exactly once")
+                }, "exported keygroups must cover the rendered C2-C5 range exactly once")
                 val heldXml = xml(File(destination, heldInstrument.getValue("mpc2ProgramFile").str()))
                 val heldXmlSlots = heldXml.getElementsByTagName("Instrument")
                 for ((zoneIndex, zoneValue) in zones.withIndex()) {
                     val zone = zoneValue.obj()
                     val midi = zone.getValue("midi").int()
-                    // The manifest preserves native capture spans; exported edge zones
-                    // extend to the full keyboard without changing roots, samples or loops.
+                    // Held loops are bounded: the written program, its MPC 2 twin and the
+                    // manifest all keep the native capture spans (the generator opts out of
+                    // keyboard spanning).
                     val nativeLowNote = if (zoneIndex == 0) 36 else midi - 1
                     val nativeHighNote = if (zoneIndex == zones.lastIndex) 72 else midi + 1
                     assertEquals(nativeLowNote, zone.getValue("lowNote").int())
                     assertEquals(nativeHighNote, zone.getValue("highNote").int())
-                    val lowNote = if (zoneIndex == 0) 0 else nativeLowNote
-                    val highNote = if (zoneIndex == zones.lastIndex) 127 else nativeHighNote
                     val slot = heldSlots[zoneIndex].obj()
-                    assertEquals(lowNote, slot.getValue("lowNote").int())
-                    assertEquals(highNote, slot.getValue("highNote").int())
+                    assertEquals(nativeLowNote, slot.getValue("lowNote").int())
+                    assertEquals(nativeHighNote, slot.getValue("highNote").int())
                     assertEquals(2, slot.getValue("triggerMode").int(), "held keygroup zones must obey note release")
                     val layers = slot.getValue("layersv").arr().map { it.obj() }
                         .filter { it.getValue("sampleName").str().isNotEmpty() }
@@ -158,8 +157,8 @@ class MeridianKitsTest {
                     assertEquals(listOf(85, 43, 0), layers.map { it.getValue("velocityStart").int() },
                         "MPC 3 velocity zones descend loudest first")
                     val xmlSlot = heldXmlSlots.item(zoneIndex) as Element
-                    assertEquals(lowNote.toString(), xmlSlot.text("LowNote"))
-                    assertEquals(highNote.toString(), xmlSlot.text("HighNote"))
+                    assertEquals(nativeLowNote.toString(), xmlSlot.text("LowNote"))
+                    assertEquals(nativeHighNote.toString(), xmlSlot.text("HighNote"))
                     val xmlNodes = xmlSlot.getElementsByTagName("Layer")
                     val xmlLayers = (0 until xmlNodes.length).map { xmlNodes.item(it) as Element }
                         .filter { it.text("SampleName").isNotEmpty() }.associateBy { it.text("SampleName") }

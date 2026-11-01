@@ -18,19 +18,19 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * Three bodies under the same blast: a round metal plate that keeps its hardening, a square glass pane
- * that gives it back, and a long thin steel sheet an octave lower, a thunder sheet. Each has its own
- * body: its own sourced overtone pattern.
+ * Four bodies under the same blast: a round metal plate that keeps its hardening, a square glass pane
+ * that gives it back, a long thin steel sheet an octave lower (a thunder sheet), and a steel beam that
+ * clangs. Each has its own body: its own sourced overtone pattern.
  */
-enum class ScourVoice { PLATE, PANE, SHEET }
+enum class ScourVoice { PLATE, PANE, SHEET, BEAM }
 
 /**
  * SCOUR: an impact that builds. A roller spins up against a free plate while shot rains on it faster and
  * harder; each shot dents the surface, the dented fraction (coverage) climbs, and the plate's upper
  * partials climb with it, so the build rises. Then one heavy slam lands and the hardened plate rings
  * out. The characteristic gesture is the roller spins up, the shot rain accelerates, the plate stiffens
- * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE, and
- * SHEET an octave down) or giving it back as it rings (PANE).
+ * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE, BEAM,
+ * and SHEET an octave down) or giving it back as it rings (PANE).
  *
  * Computed: the roller's spin-up, read against a fixed surface at its contact phase; a seeded Poisson
  * shot schedule whose rate rises twentyfold over the build; coverage by the random-dent recursion
@@ -58,7 +58,7 @@ enum class ScourVoice { PLATE, PANE, SHEET }
 object Scour {
     /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
     const val MODEL_VERSION = 1
-    /** PLATE's and PANE's lowest note, C3. */
+    /** PLATE's, PANE's and BEAM's lowest note, C3. */
     const val ROOT_MIDI = 48
     /** SHEET's lowest note, C2: an octave down for weight, and still above the house `Pitch.detect`'s 40 Hz floor. */
     const val SHEET_ROOT_MIDI = 36
@@ -109,7 +109,8 @@ object Scour {
      * RPM 1, the slam landing on a roller at full speed), and their defaults sit at 0.53 (PLATE) and 0.43
      * (PANE). SHEET, an octave lower and ringing longer, would peak at 1.26 (C2 after the longest build at
      * full roller and blast), so it takes [Shape.trim] .55 of the trim: 0.69 at that corner and 0.25 at its
-     * default, inside PCM range for the audition's unlevelled copies.
+     * default, inside PCM range for the audition's unlevelled copies. BEAM keeps the whole trim: 0.65 at the
+     * same corner at C3, 0.43 at its default.
      */
     private const val OUTPUT_TRIM = 36.0
     /** The roller runs on the rim. */
@@ -239,11 +240,44 @@ object Scour {
      */
     private val SHEET = Shape(RECT, .5, .7, SHEET_HEARD, 4.0, .88, .75, .02, .1, .3, .1, trim = .55)
 
+    /**
+     * BEAM's body: a free-free steel beam (a girder hung by its ends), heard in bending. Its modes are the
+     * roots of `cos βL · cosh βL = 1`, and `(βL)² = ωL²√(ρA/EI)` is listed root first; the first five are
+     * Leissa Table 4.72's beam row (22.373, 61.673, 120.903, 199.860, 298.556). Ratios 1, 2.757, 5.404,
+     * 8.933, 13.344, 18.638, 24.814, 31.872: few, wide apart and nearly evenly stretched, which is a
+     * struck bar's clang rather than a plate's crowd.
+     *
+     * The beam is heard .0509 of its length from one end, on the first node of its sixth mode, 18.638.
+     * That mode sits near 37/2, so heard it would split the house `Pitch.detect`'s autocorrelation peak
+     * at the root's period, as SHEET's 5.468 did. Its neighbour 13.344 (near 27/2) moves only .186 as much
+     * as the root there. The mode shapes are the closed form `cosh βx + cos βx − σ(sinh βx + sin βx)`,
+     * `σ = (cosh βL − cos βL)/(sinh βL − sin βL)`; the seven modes left are kept.
+     */
+    private val BAR = doubleArrayOf(22.373, 61.673, 120.903, 199.859, 298.556, 555.165, 713.079)
+
+    /** Each BAR mode's motion at BEAM's listening point, from the closed form, as a fraction of the root's. */
+    private val BEAM_HEARD = doubleArrayOf(1.0, .787, .582, .380, .186, .174, .333)
+
+    /**
+     * BEAM's pair (2.757 and 5.404) at .5 of the gain law and .7 of its ring, under a .85 gain law with each
+     * mode above .85 as long. At full level the pair pulls the period long: 28 of the 37 corners `ScourTest`
+     * asserts read at the onset, all flat. At .5 and .7 all 37 read at both windows for gain laws from .8 to
+     * .88. The roller is the quietest of the four (.04): at PLATE's .07, the ring a full-speed roller left
+     * partly cancelled the root at the slam, and a 243-corner grid at C3, E♭3 and F3 read 230 to 232 at the
+     * onset. At .04 it reads 243 and 243; a .9 gain law reads 242. The rest is shape: a 3 s root ring, steel
+     * that keeps its hardening (κ .015, ρ .12), and PLATE's stretch.
+     */
+    private val BEAM = Shape(BAR, .5, .7, BEAM_HEARD, 3.0, .85, .85, .015, .12, .3, .04)
+
     private fun shape(voice: ScourVoice) = when (voice) {
         ScourVoice.PLATE -> PLATE
         ScourVoice.PANE -> PANE
         ScourVoice.SHEET -> SHEET
+        ScourVoice.BEAM -> BEAM
     }
+
+    /** The voice's body as ratios to its root, every mode it can sound: what a probe of the body compares against. */
+    internal fun bodyRatios(voice: ScourVoice): List<Double> = shape(voice).body.let { b -> b.map { it / b[0] } }
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: ScourVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", .5f, neutral = .5f),

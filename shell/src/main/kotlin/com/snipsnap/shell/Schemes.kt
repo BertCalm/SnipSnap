@@ -424,6 +424,15 @@ object Layout {
     const val TITLEBAR_H = 34
 
     /**
+     * The title bar's lockup: the cap height of SNIP and SNAP, which is also
+     * the symbol's height. Twelve, not the old wordmark's fifteen-point
+     * type: Unbounded ExtraBold is a wide face, and at twelve the lockup
+     * (about 130 dp) still shares the bar with a clipped project name, the
+     * NOTE chip and the gear inside [FRAME_W]; at fifteen it would not.
+     */
+    const val MARK_CAP_H = 12
+
+    /**
      * The nav strip's height, and so the height of every tab in it.
      *
      * Was 26 — the handoff's figure, and September UAT finding 9: the row

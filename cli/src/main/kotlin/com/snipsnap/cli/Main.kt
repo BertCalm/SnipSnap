@@ -332,6 +332,9 @@ object Cli {
         |                        (--style waveform|grid|slices|rings, --scheme,
         |                        --seed N, --size PX, --out DIR; no --style
         |                        renders every style side by side)
+        |  mark                  the SnipSnap mark as PNGs: symbol, one-line
+        |                        lockup and stacked lockup (--scheme, --size PX
+        |                        16..1024, --out DIR)
         |  help                  this text
         |
         |chop options:
@@ -446,6 +449,7 @@ object Cli {
                 "split" -> SplitCommand.run(args.drop(1), out)
                 "retime" -> RetimeCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
+                "mark" -> MarkCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
                 "lineage" -> LineageCommand.run(args.drop(1), out)

@@ -12,6 +12,59 @@ tasks.register<JavaExec>("generateApsisPopulations") {
     args(providers.gradleProperty("apsisPopulationOutput").orNull ?: "${rootDir}/testkit/apsis-populations")
 }
 
+tasks.register<JavaExec>("generateAccordRateReference") {
+    group = "verification"
+    description = "Compare deterministic Accord contacts at 4x/8x and bound sampled-Hann folding separately from waveform error."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordRateReferenceGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("accordRateOutput").orNull ?: "${rootDir}/testkit/accord-rate-reference")
+}
+
+tasks.register<JavaExec>("generateAccordAudition") {
+    group = "distribution"
+    description = "Render native Accord voices, TINE profiles, note/touch/control comparisons, recipes and numerical diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("accordOutput").orNull ?: "${rootDir}/testkit/accord-audition")
+    if (providers.gradleProperty("accordQuick").orNull == "true") args("--quick")
+}
+
+tasks.register<JavaExec>("generateAccordKit") {
+    group = "distribution"
+    description = "Export sixteen dry Accord one-shots, complete recipes, MPC 3 track, MPC 2 twin and a downloadable ZIP."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordKitGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("accordKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateAccordValidation") {
+    group = "verification"
+    description = "Measure full-length Accord corner/seed headroom, native cache and render-time evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordValidationGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("accordValidationOutput").orNull ?: "${rootDir}/testkit/accord-validation")
+}
+
+tasks.register<JavaExec>("generateAccordCalibration") {
+    group = "verification"
+    description = "Generate or verify the frozen versioned native Accord note/profile calibration table."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordCalibrationGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    providers.gradleProperty("accordCalibrationArgs").orNull?.let {
+        args(it.split(Regex("\\s+")).filter(String::isNotBlank))
+    }
+}
+
 tasks.register<JavaExec>("generateFerryMatchAudition") {
     group = "distribution"
     description = "Render Ferry MATCH tuning comparisons, accepted aligned PCM checks and saved recipes."
@@ -1068,6 +1121,17 @@ tasks.register<JavaExec>("generateMurmurKit") {
     args("${rootDir}/testkit")
 }
 
+/** The listening-selected Murmur recipes in a separate, fully editable MPC 2 / MPC 3 kit. */
+tasks.register<JavaExec>("generateMurmurSelectedKit") {
+    group = "distribution"
+    description = "Export the selected KEY and lower-air CHOIR starter, both MPC formats and exact recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurSelectedKitGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("murmurSelectedKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Original BELLOWS source models, saved gestures and dry listening comparisons. */
 tasks.register<JavaExec>("generateBellowsAudition") {
     group = "distribution"
@@ -1692,17 +1756,17 @@ tasks.register<JavaExec>("generateThawAudition") {
 /** Render SCOUR's R2 listen (the impact into a drop, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
 tasks.register<JavaExec>("generateScourAudition") {
     group = "distribution"
-    description = "Render SCOUR's kit bank B, its three voices into a drop at 120 and 90 BPM, each build alone, the voices side by side, and SHEET's sweeps and edges with a listening page under testkit/scour-audition/."
+    description = "Render SCOUR's kit banks B and C, its four voices into a drop at 120 and 90 BPM, each build alone, the voices side by side, and BEAM's sweeps and edges with a listening page under testkit/scour-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/scour-audition")
 }
 
-/** Export SCOUR's thirty-two dry pads over two banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's) to testkit/SnipSnap Scour Kit/. */
+/** Export SCOUR's forty-eight dry pads over three banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's, bank C BEAM's) to testkit/SnipSnap Scour Kit/. */
 tasks.register<JavaExec>("generateScourKit") {
     group = "distribution"
-    description = "Export SCOUR's two banks (builds cut for 120 and 90 BPM, its twelve presets and SHEET's low hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
+    description = "Export SCOUR's three banks (builds cut for 120 and 90 BPM, its sixteen presets, and SHEET's and BEAM's short hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourKitGenerator")
     workingDir = projectDir
@@ -2750,4 +2814,33 @@ tasks.register<JavaExec>("generateRimeHoldAudition") {
     mainClass.set("com.snipsnap.synth.RimeHoldAuditionGenerator")
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+}
+
+tasks.register<JavaExec>("generateRimeCompleteAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeCompleteAuditionGenerator")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+}
+
+/** The approved collision source through the actual JVM output stage. */
+tasks.register<JavaExec>("generateLorentzAudition") {
+    group = "distribution"
+    description = "Render 26 LORENTZ Kotlin WAVs, replayable patches and collision/timing metrics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LorentzAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args("${rootDir}/testkit/lorentz-audition")
+}
+
+tasks.register<JavaExec>("generateLorentzKit") {
+    group = "distribution"
+    description = "Export sixteen LORENTZ dry pads, editable recipes and MPC 3/MPC 2 programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LorentzKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args("${rootDir}/testkit/lorentz-kit")
 }

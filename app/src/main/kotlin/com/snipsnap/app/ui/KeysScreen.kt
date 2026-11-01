@@ -189,6 +189,8 @@ fun KeysScreen(
             // midiKeys.allOff()): a local silence that is not mirrored leaves a
             // receiver holding a note whose off will name a different key.
             override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
+            // The wheel or strip bends every voice, MidiKeys' range.
+            override fun bend(ratio: Double) = player.setBend(ratio)
         })
     }
     fun silence() = midiKeys.allOff()
@@ -201,10 +203,11 @@ fun KeysScreen(
     var midiSupported by remember(player) { mutableStateOf(false) }
 
     // MIDI learn (the LEARN panel): a knob on the player's volume, keys or
-    // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
+    // pads on OCT − and OCT +. A bend learned to VOL is consumed and no
+    // longer bends. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
-    val learnState = rememberMidiLearn(KeysMidi.SCREEN, prefer = KeysMidi::prefer)
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, kinds = KeysMidi::kinds, prefer = KeysMidi::prefer)
     val learn = learnState.learn
     var showLearn by remember { mutableStateOf(false) }
     LaunchedEffect(showLearn) { learnState.showing = showLearn }
@@ -233,7 +236,11 @@ fun KeysScreen(
             }
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
-            override fun onDeviceRemoved() = midiKeys.allOff()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learn.releaseAll()
+                midiKeys.allOff()
+            }
         }
     }
 
@@ -267,6 +274,8 @@ fun KeysScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)

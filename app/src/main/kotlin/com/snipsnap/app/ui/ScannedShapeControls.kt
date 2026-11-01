@@ -38,7 +38,6 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
-import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
@@ -198,11 +197,6 @@ internal fun ScannedShapeControls(
             }
         }
         if (source == null) error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 4) }
-        MacroSlider(
-            label = "ROOT", value = patch.midi.toFloat(), valueRange = ScannedChain.MIDI_MIN.toFloat()..ScannedChain.MIDI_MAX.toFloat(),
-            fillColor = scheme.amber.tape, scheme = scheme, readout = Scales.nameOf(patch.midi),
-            onValueChange = { changePatch(edit.patch.copy(midi = it.roundToInt().coerceIn(ScannedChain.MIDI_MIN, ScannedChain.MIDI_MAX))) },
-        )
         MacroSlider(
             label = "VELOCITY", value = patch.velocity, fillColor = scheme.amber.tape, scheme = scheme,
             onValueChange = { changePatch(edit.patch.copy(velocity = it.coerceIn(0f, 1f))) },
