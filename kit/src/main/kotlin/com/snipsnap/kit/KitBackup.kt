@@ -10,6 +10,8 @@ import java.util.zip.ZipOutputStream
 /**
  * Everything on one file: every kit under a root packed as its own
  * `.xpn` inside a single archive, restored back through [XpnImporter].
+ * Personal-voice pads additionally carry a native source sidecar, checked
+ * in the same staging transaction. Ordinary XPN exports stay rendered-only.
  * Retention insurance, and the "new phone" story.
  *
  * A kit preflight refuses to pack isn't silently lost — it's skipped
@@ -99,8 +101,11 @@ object KitBackup {
                         continue
                     }
                     val xpn = File(temp, "${kit.name}.xpn")
+                    val native = File(temp, "${kit.name}.native.zip")
+                    val sources: File?
                     try {
                         XpnPackager.write(kit, dir, xpn, Exporters.defaultMeta(kit), overwrite = true)
+                        sources = KitBackupNative.write(kit, dir, xpn, native)
                     } catch (e: IllegalArgumentException) {
                         // Source metadata has a bounded portable form. An
                         // oversized kit must be named, not cost every other
@@ -111,6 +116,11 @@ object KitBackup {
                     zip.putNextEntry(ZipEntry("${kit.name}.xpn"))
                     xpn.inputStream().use { it.copyTo(zip) }
                     zip.closeEntry()
+                    sources?.let { source ->
+                        zip.putNextEntry(ZipEntry(KitBackupNative.entryName("${kit.name}.xpn")))
+                        source.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
                     packed += kit.name
                 }
                 for ((name, file) in extras) {
@@ -182,9 +192,19 @@ object KitBackup {
                 // One lazy pass keeping only the .xpn names, never every entry
                 // the archive declares: a backup may come from a stranger.
                 val names = LinkedHashSet<String>()
+                val nativeEntries = LinkedHashMap<String, java.util.zip.ZipEntry>()
                 val all = zip.entries()
+                var entryCount = 0
                 while (all.hasMoreElements()) {
                     val e = all.nextElement()
+                    require(++entryCount <= MAX_KITS * 2 + 256) { "${backupFile.name} declares too many backup entries - refused" }
+                    if (e.name.startsWith(KitBackupNative.PREFIX)) {
+                        val sibling = e.name.removePrefix(KitBackupNative.PREFIX).removeSuffix(".zip")
+                        require(!e.isDirectory && e.name.endsWith(".xpn.zip") && SafePath.isSafe(sibling)) { "unsafe native source backup entry: ${e.name}" }
+                        require(nativeEntries.put(sibling, e) == null) { "duplicate native source archive for $sibling" }
+                        require(nativeEntries.size <= MAX_KITS) { "too many native source backup entries" }
+                        continue
+                    }
                     if (e.isDirectory || !e.name.endsWith(".xpn", ignoreCase = true)) continue
                     // A name twice is a crafted archive, not a backup: which of
                     // the two would be the kit? Refuse rather than guess.
@@ -192,6 +212,7 @@ object KitBackup {
                     require(names.size <= MAX_KITS) { "${backupFile.name} declares more than $MAX_KITS kits - refused" }
                 }
                 require(names.isNotEmpty()) { "no .xpn kits inside ${backupFile.name} - not a SnipSnap backup?" }
+                require(nativeEntries.keys.all { it in names }) { "native source backup entry has no sibling XPN" }
                 for (name in names.sorted()) {
                     val entry = zip.getEntry(name) ?: throw IllegalArgumentException("${backupFile.name} lost '$name' between listing and reading")
                     val xpn = File(temp, File(entry.name).name)
@@ -221,7 +242,19 @@ object KitBackup {
                     }
                     budget.spend(xpn.length())
                     try {
-                        results += XpnImporter.import(xpn, destRoot, overwrite, budget)
+                        val native = nativeEntries[name]?.let { sourceEntry ->
+                            File.createTempFile("native-", ".zip", temp).also { file ->
+                                zip.getInputStream(sourceEntry).use { input -> file.outputStream().use { output ->
+                                    KitBackupNative.copyBudgeted(input, output, KitBackupNative.MAX_ARCHIVE_BYTES, "native source archive for $name", budget)
+                                } }
+                            }
+                        }
+                        results += XpnImporter.importWithNativeSources(xpn, destRoot, overwrite, budget) { imported, staging ->
+                            if (native == null) {
+                                require(ConfluencePersonalFiles.referencedIds(imported).isEmpty()) { "personal voice backup is missing its native source archive" }
+                                imported
+                            } else KitBackupNative.restore(native, xpn, imported, staging, budget)
+                        }
                     } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
                         // Same reasoning as the extraction catch above - a
                         // blown shared budget is a whole-restore condition,

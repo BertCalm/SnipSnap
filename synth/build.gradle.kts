@@ -112,7 +112,31 @@ tasks.register<JavaExec>("generateUprightKit") {
     args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
-/** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
+/** Continuing KNOCK/ANSWER gestures, preserved beside the first finite audition. */
+tasks.register<JavaExec>("generateCairnHoldAudition") {
+    group = "distribution"
+    description = "Compare CAIRN one-shots, powered HOLD, light-root correction and a dry musical example."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnHoldOutput").orNull ?: "${rootDir}/testkit/cairn-hold")
+    if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
+/** Three structurally different voices, including TUMBLE's real rebound cascade. */
+tasks.register<JavaExec>("generateCairnTumbleAudition") {
+    group = "distribution"
+    description = "Render KNOCK, ANSWER and TUMBLE with contact traces, true HOLD continuations and dry phrases."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnTumbleAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnTumbleOutput").orNull ?: "${rootDir}/testkit/cairn-tumble")
+    providers.gradleProperty("cairnLegacyHold").orNull?.let { args("--legacy-hold", it) }
+}
+
+/** Preserved first milestone; explicit model 1 recipes reproduce its finite audio. */
 tasks.register<JavaExec>("generateCairnAudition") {
     group = "distribution"
     description = "Render CAIRN KNOCK/ANSWER, common controls, sweeps, causes, recipes and render cost."
@@ -2473,4 +2497,14 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
+}
+
+/** Native EROSION one-shots, saved touch layers and diagnostic ledger. */
+tasks.register<JavaExec>("generateErosionAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ErosionAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("erosionOutput").orNull ?: "${rootDir}/testkit/erosion-native-audition")
 }

@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `EROSION native voices replay their saved touch`() {
+        for (voice in ErosionVoice.entries) {
+            val patch = ErosionPatch("Canary", voice, velocity = .6f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
@@ -41,12 +48,14 @@ class DeterminismTest {
     }
 
     @Test
-    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+    fun `CAIRN fresh uncached renders reproduce all voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
-            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
-            val a = patch.render().samples
-            Cairn.clearMotionCache()
-            assertContentEquals(a, patch.render().samples)
+            for (hold in listOf(0f, 1f)) {
+                val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice) + ("HOLD" to hold))
+                val a = patch.render().samples
+                Cairn.clearMotionCache()
+                assertContentEquals(a, patch.render().samples)
+            }
         }
     }
 

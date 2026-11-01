@@ -1,5 +1,12 @@
 # Synth roadmap — generate kits, not just capture them
 
+**EROSION native finite proof (2026-10-31).** The owner accepted the initial
+Python ARC/CRATER audition. The native port preserves its finite discharge and
+collapse laws, adds saved touch, exact event-age sampling, bounded charge
+accounting, patch/recipe registration and `generateErosionAudition`. Native
+listening and validation remain pending; HOLD, factory presets, picker and a
+starter kit are deferred. See [EROSION.md](EROSION.md).
+
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six
@@ -52,6 +59,18 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
+**Cairn three-voice listening gate (2026-10-31).** The owner approved the
+KNOCK/ANSWER HOLD direction. Model 3 adds TUMBLE: one launch becomes a tightening
+cascade through gravity, drag and energy-losing rebounds. It shares the modal
+readout and real preceding-cycle HOLD check, while KNOCK/ANSWER retain their
+versioned audio. The new three-voice audition compares punctuation, conversation
+and cascade at C3–C5, identical controls, TUMBLE endpoints and two dry phrases.
+The full nine-module JVM gate passes (7,450 tests). TUMBLE listening, phone/MPC
+checks, factory recipes and phone UI remain open. SING, GRIND and VESSEL are
+still historical references.
+See [CAIRN_TUMBLE.md](CAIRN_TUMBLE.md), the [two-voice foundation](CAIRN.md), and the
+[private three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/).
+
 **Keel R1 first-listen prototype (2026-10-24), held keygroup R2 (2026-10-26).** REDUCE and UPRIGHT are two bass
 voices that follow one settle clock: the upper spectrum distils away while the
 note's own body fills in (WEIGHT, rebuilt 2026-10-26). The finite prototype has
@@ -64,15 +83,6 @@ follows listening review. See [KEEL.md](KEEL.md)
 and the spec's "As built" section for the deviations. The keygroup's first listen
 (2026-10-27) found UPRIGHT's held keys pumping; its bow is now locked to the string,
 and the bow page (2026-10-28) heard it, with more hair, as no pump at C2 and A2. R3 (2026-10-29) files twelve presets in `Presets`, adds `SynthKits.keel()`, `:synth:generateKeelKit` and a KEEL starter, and puts BELLY to one listening question before any Kotlin; none of it is heard yet. BELLY was heard as its own sound (2026-10-31) and is now KEEL's third voice, with six presets and two pads and a loop in the kit; the Kotlin BELLY is measured against that clip, not heard.
-
-
-**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
-motion/contact core. Higher contacts survive the 243-point middle-control grid
-and disappear when mount coupling is removed. Saved model/note/velocity/cue
-recipes and 92 finite audition cases are available outside the factory roster
-and phone picker. Historical six-voice recordings remain separate references.
-HOLD loops, other voices, phone cost and sonic acceptance remain open. See
-[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
 
 **Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
@@ -1057,6 +1067,10 @@ adds sparse modal participation and reuses bass traces across structural edits
 within a 24 MiB, four-entry cache. ROOT warm desktop medians moved from 230 to
 165 ms for a one-shot and 491 to 283 ms for HOLD. Cold misses remain about
 228/517 ms; the tens-of-ms target and phone timing remain open.
+On 24 October BALLAST became the first bass with MAKE INSTRUMENT: thirteen
+held zones from C1 to C4, each the note's onset and settling in front of the
+existing HOLD loop, levelled where it is struck. `generateBallastKeys` writes
+four instruments and previews under `testkit/ballast-keys/`; not yet heard.
 
 THAW is the next material-state engine (S27), ported from
 `docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice

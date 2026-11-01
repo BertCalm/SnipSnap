@@ -568,6 +568,37 @@ object Keys {
         return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
     }
 
+    // ---------- BALLAST, held ----------
+    // docs/superpowers/specs/2026-10-04-ballast-bass-engine-design.md (the held loop)
+
+    /**
+     * The thirteen BALLAST pad zones: every minor third across TUNE's three
+     * octaves from [Ballast.ROOT_MIDI] (C1 to C4). Every voice shares the
+     * root and the range, so one layout serves all six, as [sirenPadMidis] does.
+     */
+    fun ballastPadMidis(): List<Int> = (0..Ballast.TUNE_SEMITONES step 3).map { Ballast.ROOT_MIDI + it }
+
+    /**
+     * BALLAST held - one keygroup zone at exact MIDI pitch: the note's own
+     * onset and the structure settling, then the held loop
+     * ([Ballast.renderHeldNote]), with the loop marker where the settling
+     * ends. TUNE is set by [midi]; HOLD plays no part (a held key sustains),
+     * and the other knobs play as they do in the one-shot. Rendered at full
+     * touch, the velocity a kit pad renders at. A zone whose loop does not
+     * close throws, naming the zone, rather than shipping a click.
+     */
+    fun ballastPad(voice: BallastVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        require(midi - Ballast.ROOT_MIDI in 0..Ballast.TUNE_SEMITONES) {
+            "BALLAST pads are MIDI ${Ballast.ROOT_MIDI}..${Ballast.ROOT_MIDI + Ballast.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Ballast.defaults(voice)
+        val tune = (midi - Ballast.ROOT_MIDI) / Ballast.TUNE_SEMITONES.toFloat()
+        val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to tune)
+        val held = Ballast.renderHeldNote(voice, m, cancelled = cancelled)
+        requireSeam("BALLAST $voice at MIDI $midi", held.audio, held.loopStart)
+        return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
+    }
+
     // ---------- ORPHICA ----------
 
     /**

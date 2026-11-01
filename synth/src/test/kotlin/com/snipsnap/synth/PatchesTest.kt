@@ -41,6 +41,7 @@ class PatchesTest {
      * note and velocity beside its first factory preset (the set of engines below ignores the repeat).
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
+        ErosionPatch("Door", ErosionVoice.ARC),
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
