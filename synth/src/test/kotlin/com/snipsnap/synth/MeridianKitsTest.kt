@@ -136,9 +136,12 @@ class MeridianKitsTest {
                     val highNote = if (zoneIndex == zones.lastIndex) 72 else midi + 1
                     assertEquals(lowNote, zone.getValue("lowNote").int())
                     assertEquals(highNote, zone.getValue("highNote").int())
+                    // The manifest records native sampling bounds; OneNote spans the packaged keyboard.
+                    val packagedLowNote = if (zoneIndex == 0) 0 else lowNote
+                    val packagedHighNote = if (zoneIndex == zones.lastIndex) 127 else highNote
                     val slot = heldSlots[zoneIndex].obj()
-                    assertEquals(lowNote, slot.getValue("lowNote").int())
-                    assertEquals(highNote, slot.getValue("highNote").int())
+                    assertEquals(packagedLowNote, slot.getValue("lowNote").int())
+                    assertEquals(packagedHighNote, slot.getValue("highNote").int())
                     assertEquals(2, slot.getValue("triggerMode").int(), "held keygroup zones must obey note release")
                     val layers = slot.getValue("layersv").arr().map { it.obj() }
                         .filter { it.getValue("sampleName").str().isNotEmpty() }
@@ -146,8 +149,8 @@ class MeridianKitsTest {
                     assertEquals(listOf(85, 43, 0), layers.map { it.getValue("velocityStart").int() },
                         "MPC 3 velocity zones descend loudest first")
                     val xmlSlot = heldXmlSlots.item(zoneIndex) as Element
-                    assertEquals(lowNote.toString(), xmlSlot.text("LowNote"))
-                    assertEquals(highNote.toString(), xmlSlot.text("HighNote"))
+                    assertEquals(packagedLowNote.toString(), xmlSlot.text("LowNote"))
+                    assertEquals(packagedHighNote.toString(), xmlSlot.text("HighNote"))
                     val xmlNodes = xmlSlot.getElementsByTagName("Layer")
                     val xmlLayers = (0 until xmlNodes.length).map { xmlNodes.item(it) as Element }
                         .filter { it.text("SampleName").isNotEmpty() }.associateBy { it.text("SampleName") }
