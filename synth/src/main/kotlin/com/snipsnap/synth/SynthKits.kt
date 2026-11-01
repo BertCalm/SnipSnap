@@ -88,6 +88,49 @@ object SynthKits {
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
     /**
+     * Sixteen dry finite NACRE notes for the MPC listening trial. A01–A08 play
+     * Pearl Close up C minor pentatonic from C3 at medium excitation. A09–A10
+     * compare Coral Reply and Kelp Passage at the same note and strike; A11–A16
+     * supply each starting sound's soft and hard strikes at C3.
+     * Native note and excitation are rendered into each full six-second sample.
+     * Hardware velocity then changes playback level, not the saved excitation.
+     * The source stays TONAL and plays once: a long finite tail is not a loop.
+     */
+    fun nacre(): List<ArrangedPad?> {
+        val presets = NacrePresets.all().associateBy { it.name }
+        fun note(name: String, midi: Int, velocity: Float): ArrangedPad {
+            val original = presets.getValue(name)
+            val strike = when (velocity) {
+                .30f -> "Soft"
+                .65f -> "Medium"
+                1f -> "Hard"
+                else -> error("NACRE starter strike is not authored: $velocity")
+            }
+            val displayName = "$name ${Scales.nameOf(midi)} $strike"
+            val patch = original.copy(name = displayName, midi = midi, velocity = velocity)
+            return pad(patch, Nacre.drumClassFor(patch.voice, patch.macros)).copy(
+                displayName = displayName,
+                oneShot = true,
+                source = mapOf(
+                    "engine" to patch.engine,
+                    "voice" to patch.voiceName,
+                    "preset" to original.name,
+                    "pitchMidi" to patch.midi.toString(),
+                    "velocity" to patch.velocity.toString(),
+                    "seed" to patch.seed.toString(),
+                    "model" to patch.model.toString(),
+                ),
+            )
+        }
+        return PENTATONIC.take(8).map { note("Pearl Close", 48 + it, .65f) } + listOf(
+            note("Coral Reply", 48, .65f), note("Kelp Passage", 48, .65f),
+            note("Pearl Close", 48, .30f), note("Pearl Close", 48, 1f),
+            note("Coral Reply", 48, .30f), note("Coral Reply", 48, 1f),
+            note("Kelp Passage", 48, .30f), note("Kelp Passage", 48, 1f),
+        )
+    }
+
+    /**
      * Sixteen dry OHM notes from the five accepted model-2 encounters. A01–A08
      * play Solo up C minor pentatonic from C3; the other pads compare the four
      * relationships at C4, three low answers at C3 and a Gather at C5.
