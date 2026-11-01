@@ -662,6 +662,33 @@ object SynthKits {
     }
 
     /**
+     * The FATHOM starter kit, the bass slot's own. A01-A08 walk DEEP's sine sub up the
+     * minor pentatonic from the bottom of its TUNE (E1), every other knob at its
+     * default, so the row is the instrument before anyone touches it. A09-A12 are
+     * four GRIND presets (the detuned saw pair, beating over its tail) and A13-A16
+     * four GLASS presets (low FM), chosen to be four different things each: a plain
+     * growl, a hollow one, the beat itself, a slide; a plain FM sub, a bell, the
+     * sub-octave ratio, a slide. Dry, because DRIVE is already in the engine before
+     * its filter, and filed by [Fathom.drumClassFor]. The presets were authored from
+     * the DSP, not by ear; this kit is where they are first heard on hardware.
+     */
+    fun fathom(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = FathomPatch(
+            "Deep $n", FathomVoice.DEEP,
+            Fathom.defaults(FathomVoice.DEEP) + ("TUNE" to semitone / Fathom.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Fathom.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: FathomVoice, name: String) = FathomPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Fathom.drumClassFor(it.voice, it.macros)) }
+
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(  // A01-A08
+            preset(FathomVoice.GRIND, "GRINDER"), preset(FathomVoice.GRIND, "HOLLOW GROWL"),          // A09 A10
+            preset(FathomVoice.GRIND, "BEATING SUB"), preset(FathomVoice.GRIND, "SLIDING GRIT"),      // A11 A12
+            preset(FathomVoice.GLASS, "METAL SUB"), preset(FathomVoice.GLASS, "BELL BASS"),           // A13 A14
+            preset(FathomVoice.GLASS, "SUBOCTAVE FM"), preset(FathomVoice.GLASS, "GLIDE BELL"),       // A15 A16
+        )
+    }
+
+    /**
      * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
      * every other knob at its default, so the row is the instrument before anyone
      * touches it. A09–A13 are the five factory presets. A14 and A15 climb two

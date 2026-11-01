@@ -1556,6 +1556,25 @@ tasks.register<JavaExec>("generateSirenKit") {
     args("${rootDir}/testkit")
 }
 
+tasks.register<JavaExec>("generateFathomKit") {
+    group = "distribution"
+    description = "Render the FATHOM bass starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FathomKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the FATHOM listening page through the shared RosterAudition under testkit/fathom-audition/. */
+tasks.register<JavaExec>("generateFathomAudition") {
+    group = "distribution"
+    description = "Render the FATHOM audition clips, manifest and listening page under testkit/fathom-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FathomAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fathom-audition")
+}
+
 tasks.register<JavaExec>("generateForkKit") {
     group = "distribution"
     description = "Render the FORK modal electric piano acceptance kit under testkit/."
