@@ -78,12 +78,15 @@ class KeelTest {
         return cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
     }
 
+    private data class NsdfEstimate(val hz: Double, val confidence: Double)
+
     /**
      * McLeod's normalised square-difference pitch, as the harness reads it (first local maximum over 0.8 of the best,
-     * parabolic refinement, 25 Hz floor). [Pitch.detect] is the house reader and is used wherever the pitch is steady;
-     * it has a 40 Hz floor and returns null on a gliding window, which the SLIDE probe needs to read.
+     * parabolic refinement, 25 Hz floor). Unlike [Pitch.detect]'s fixed-energy autocorrelation, it normalises the
+     * overlapping windows: a decaying low note's period can otherwise fall below the near-zero-lag threshold.
+     * SLIDE also needs this reader because the house detector can return null on a gliding window.
      */
-    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double {
+    private fun nsdfEstimate(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): NsdfEstimate {
         val first = (fromSeconds * rate).toInt()
         val n = minOf((seconds * rate).toInt(), x.size - first)
         val seg = DoubleArray(n) { x[first + it].toDouble() }
@@ -104,7 +107,17 @@ class KeelTest {
             ?: (minLag..maxLag).maxBy { nsdf[it] }
         val curve = nsdf[lag - 1] - 2 * nsdf[lag] + nsdf[lag + 1]
         val refined = lag + if (abs(curve) > 1e-12) 0.5 * (nsdf[lag - 1] - nsdf[lag + 1]) / curve else 0.0
-        return rate / refined
+        return NsdfEstimate(rate / refined, nsdf[lag])
+    }
+
+    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double =
+        nsdfEstimate(x, fromSeconds, seconds, loHz, hiHz).hz
+
+    private fun assertRootPitch(estimate: NsdfEstimate, midi: Int, label: String): Double {
+        assertTrue(estimate.confidence >= .3f, "$label confidence ${estimate.confidence}")
+        val c = cents(estimate.hz, Keys.midiHz(midi).toDouble())
+        assertTrue(abs(c) < 50.0, "$label reads ${f(c, 1)} cents from the root")
+        return c
     }
 
     // ---- measurement -----------------------------------------------------------------------------------------
@@ -242,14 +255,15 @@ class KeelTest {
     }
 
     @Test
-    fun `root pitch at WEIGHT 0 is within 50 cents for both voices at MIDI 30, 36 and 42`() {
+    fun `root pitch at WEIGHT 0 is within 50 cents for all voices at MIDI 30, 36 and 42`() {
         for (voice in voices) for (midi in listOf(30, 36, 42)) {
             val snip = render(voice, mapOf("WEIGHT" to 0f), midi)
-            val estimate = requireNotNull(Pitch.detect(snip, .35f, .25f)) { "$voice $midi has no pitch" }
-            val c = cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
-            println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
-            assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")
-            assertTrue(estimate.confidence >= .3f, "$voice midi $midi confidence ${estimate.confidence}")
+            // BELLY F#1 has a real period, but its .5 s T60 attenuates the house detector's
+            // fixed-energy ACF peak below its near-zero-lag threshold. Read the same window
+            // with the existing harness meter, retaining the pitch and confidence limits.
+            val estimate = nsdfEstimate(snip.samples, .35, .25)
+            val c = assertRootPitch(estimate, midi, "$voice midi $midi")
+            println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz)} Hz, confidence ${f(estimate.confidence)})")
         }
         // The default WEIGHT .4 at MIDI 36 is the harness's own row.
         for (voice in voices) println("KEEL root $voice midi 36 WEIGHT .4: ${f(rootCents(render(voice), 36) ?: Double.NaN, 1)} cents")
@@ -260,6 +274,20 @@ class KeelTest {
             }
             println("KEEL root with the body $voice midi 42, cents: $row")
         }
+    }
+
+    @Test
+    fun `the root pitch check rejects a semitone error and silent audio`() {
+        val wrongNote = render(KeelVoice.BELLY, mapOf("WEIGHT" to 0f), midi = 31)
+        val detuned = nsdfEstimate(wrongNote.samples, .35, .25)
+        assertTrue(detuned.confidence >= .3f, "the detuned source must have measurable pitch")
+        val pitchFailure = assertFailsWith<AssertionError> { assertRootPitch(detuned, 30, "detuned source") }
+        assertTrue(pitchFailure.message.orEmpty().contains("cents from the root"))
+
+        val silence = nsdfEstimate(FloatArray(rate), .35, .25)
+        assertEquals(0.0, silence.confidence)
+        val confidenceFailure = assertFailsWith<AssertionError> { assertRootPitch(silence, 30, "silence") }
+        assertTrue(confidenceFailure.message.orEmpty().contains("confidence"))
     }
 
     @Test
