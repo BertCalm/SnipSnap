@@ -742,6 +742,17 @@ tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
 }
 
+/** Compare octave registration while keeping the calmer ensemble movement fixed. */
+tasks.register<JavaExec>("generateRegistersOctaveBalanceAudition") {
+    group = "distribution"
+    description = "Compare COLOR .42 and .65 at fixed calmer SPREAD and MOTION settings at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-octave-balance", "--octave-balance")
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"
