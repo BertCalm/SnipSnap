@@ -87,15 +87,21 @@ class MeridianPadMakerTest {
         val (sidecar, instrument) = InstrumentStore.list(destination).single()
         assertEquals(spec.releaseSeconds, instrument.release)
         assertEquals(midis, instrument.zones.map { it.rootNote })
+        assertEquals((0..127).toList(), instrument.zones.flatMap { (it.lowNote..it.highNote).toList() })
         assertEquals(39, instrument.sampleFiles.size)
         val samples = linkedMapOf<String, FloatArray>()
         for ((zoneIndex, zone) in instrument.zones.withIndex()) {
-            assertEquals(program.keygroups[zoneIndex].lowNote, zone.lowNote)
-            assertEquals(program.keygroups[zoneIndex].highNote, zone.highNote)
-            assertTrue((zone.lowNote..zone.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 })
+            val captured = program.keygroups[zoneIndex]
+            val low = if (zoneIndex == 0) 0 else captured.lowNote
+            val high = if (zoneIndex == instrument.zones.lastIndex) 127 else captured.highNote
+            assertEquals(low, zone.lowNote)
+            assertEquals(high, zone.highNote)
+            assertTrue((captured.lowNote..captured.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 })
             assertEquals(listOf(0, 43, 85), zone.layers.map { it.velStart })
             assertEquals(listOf(42, 84, 127), zone.layers.map { it.velEnd })
             val native = instruments[zoneIndex].obj()
+            assertEquals(low, native.getValue("lowNote").int())
+            assertEquals(high, native.getValue("highNote").int())
             assertEquals(2, native.getValue("triggerMode").int())
             val nativeLayers = native.getValue("layersv").arr().map { it.obj() }
                 .filter { it.getValue("sampleName").str().isNotEmpty() }
@@ -130,8 +136,10 @@ class MeridianPadMakerTest {
             }
         }
         assertTrue("<SliceLoop>1</SliceLoop>" in xpm)
-        assertNull(KeyHit.resolve(instrument, 35, 1f) { samples[it]?.size?.toLong() })
-        assertNull(KeyHit.resolve(instrument, 73, 1f) { samples[it]?.size?.toLong() })
+        val below = assertNotNull(KeyHit.resolve(instrument, 35, 1f) { samples[it]?.size?.toLong() })
+        val above = assertNotNull(KeyHit.resolve(instrument, 73, 1f) { samples[it]?.size?.toLong() })
+        assertEquals(2.0.pow(-1.0 / 12), below.pitchRatio, 1e-12)
+        assertEquals(2.0.pow(1.0 / 12), above.pitchRatio, 1e-12)
         val neighbor = assertNotNull(KeyHit.resolve(instrument, 61, .65f) { samples[it]?.size?.toLong() })
         assertEquals(2.0.pow(1.0 / 12), neighbor.pitchRatio, 1e-12)
         val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, 44_100, samples), 44_100)
