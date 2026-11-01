@@ -118,7 +118,13 @@ clipping.
   - `Arranger.mixdown` counts each section's start in pulses and turns it into a frame once, with KitPreview's own arithmetic (`60 / bpm × RATE / PULSES_PER_BEAT`).
   - Segments are added into the song at those frames, so each ring-out sounds under the next section's opening.
   - `Mix.sectionStarts` now reports the grid, which is what ARRANGE's needle reads.
-- **Pull-up (D1):** `pullUpOver` keeps the outgoing section up to its last beat, plays `BeatTape.pullUp` built from that audio across the last beat, and stops at the turn's downbeat. A pulled-up record has stopped, so nothing of the outgoing section, bed included, sounds under the turn. The outro's tape stop is unchanged.
+- **Pull-up (D1):** `pullUpOver` keeps the outgoing section up to its last beat, plays `BeatTape.pullUp` built from that audio across the last beat, and stops at the turn's downbeat. A pulled-up record has stopped, so nothing of the outgoing section, bed included, sounds under the turn.
+- **One take per stretch, and the tape stop on the song (from review, #802).**
+  - Overlapping sections exposed two things that end-to-end placement had hidden behind its gaps.
+  - *Chokes across a boundary.* Each section rendered on its own, so an open hat on the theme's last 16th rang under the variation's closed hat on one instead of choking. The drums of each stretch the pull-up does not interrupt (before the turn, and from the turn on) now render as one take through a new `KitPreview.renderNotes`, the same engine as `render` without a clip's 64-bar limit. The bed still renders per section and is added at each section's start.
+  - *The tape stop.* It ran on the outro's buffer alone, so a long note from an earlier section played on at full speed past the ending. It now runs on the summed song at the outro's end (its drums plus ring-out), and anything past that point is gone with the tape.
+  - Both are measured. Against the previous commit's mixdown, `an open hat chokes on the next section's closed hat` reads 5.97 of energy where it now reads under 1e-6, and `the tape stop ends the whole song` runs 184,079 frames (4.2 s) past the last bar.
+  - *Where the song ends* (second review, #806). The stretch's render runs as long as its longest voice, so a long pad struck in the reprise held the tape stop back past the outro. The end is now the outro's own length, measured by rendering it alone; only the length is used, and the audio stays the stretch's. `a long pad struck before the outro does not hold back the tape stop` covers it. The bass test now compares against the same plan with no Answer, so it fails if the bed never renders instead of passing on the reprise's drums.
 - **Bed (D4):**
   - `repitched` resamples to a virtual rate at any ratio, which is `TempoFit.repitch`'s arithmetic without its factor-of-two bound.
   - The old `0.51..1.99` window refused a speed of exactly 2, so **every octave note in an Answer line played at the root, an octave low**. `Answer.pickOffset` picks the octave 12% of the time (34% in a scale without a fifth), so this was routine, not an edge case.
@@ -126,7 +132,7 @@ clipping.
 - **Found while building, fixed because they move section timing:**
   - `tiled` offset each repeat by a four-four bar (`PULSES_PER_BAR`) whatever the clip's meter. `Mpc3Clip` refuses a note past its own length, so for a three-four clip repeated more than once this did not play late: it threw. Every repeated section is tiled, so a waltz-time groove could not be mixed down at all. It now steps by `clip.lengthPulses`.
   - The bed was tiled by the drum section's repeat count, not by its own length. A two-bar line under a one-bar clip played 4 times ran 8 bars, past the section into the next; a one-bar line under a four-bar clip played once covered one bar of four. `bedNotes` lays the line end to end across the section and drops anything at or past its end.
-- **Measured:** `ArrangerTest`, 22 tests.
+- **Measured:** `ArrangerTest`, 24 tests.
   - Section starts equal the grid frame exactly at the default 92 BPM and at 140 BPM.
   - The song runs less than a second (the outro's ring-out) past its last bar.
   - `pullUpOver` leaves everything before the last beat untouched, fills the beat, and ends at the turn.
@@ -139,6 +145,7 @@ clipping.
 - **Disclosed, not fixed:**
   - A bed note that is still ringing when the next section's bed starts overlaps it. The bed is a sampler one-shot, not a monophonic voice, as it was before.
   - The spinback starts at 0.8 of the last sample before the cut, so the turn's pull-up opens with a small level step. This is unchanged from the appended version.
+  - A chained pad's hit count now runs on through a stretch instead of restarting at each section, so a section can open on a later slice than it did. That is closer to the hardware, which counts hits across a sequence.
   - `BeatTape.arrange` (SIDE A) also steps by `PULSES_PER_BAR` and is left alone here; its gaps between kits are a tape leader by design.
 - **Heard:** nothing. The boundary after the theme is the moment to listen to, before and after.
 
