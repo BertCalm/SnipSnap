@@ -35,7 +35,10 @@ network. An independent quiet root and full-network fundamental cap preserve
 the reference tuning design. Compiled block readouts retain actual state exchange
 while reducing per-sample work. Saved model/note/velocity/exact seed, recipe replay,
 velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
-Kotlin listening, production tail termination, MATCH/SPAN/LOSS/BODY, HOLD, further
+The owner approved the aligned Kotlin character on 2026-10-30. Model 2 adds MATCH
+with 0–6 cents of upper-B detuning while retaining every fundamental, the aligned
+output and model-1 recipes. `generateFerryMatchAudition` supplies its separate gate.
+MATCH listening, production tail termination, SPAN/LOSS/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
 
@@ -719,10 +722,15 @@ and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
 top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
 CLI routing and the Android picker. New presets and HOLD still await hearing.
 Native validation and physical phone/MPC checks remain separately recorded in
-[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
-engineering specification remain later work. `generateLatticeAudition` retains
-the accepted comparisons and adds R3 native/held examples plus patch and MPC
-starter downloads. The original R1 and accepted R2 evidence stays preserved.
+[LATTICE.md](LATTICE.md). The owner then accepted R4 B's moving pluck on
+2026-10-30: “B sounds cool”. TRACE brings that exact trajectory into saved native
+patches. SPEED changes its timing after the initial attack while leaving pitch
+and resonator damping fixed; TRACE HOLD extends finite excitation without a loop
+or another strike. The existing static voices and starter remain unchanged.
+R5 adds three TRACE factory positions, native speed comparisons and a separate
+MPC kit. The rest of the original engineering specification remains open.
+`generateLatticeAudition` preserves the earlier listening evidence and exports
+the native patches and MPC 3/XPM kits.
 
 ### PRISM — harmonics with different lifetimes
 
@@ -758,6 +766,11 @@ fitted cycle readouts and enough complete cycles for loop classification.
 Existing recipes keep their default finite rendering and JSON shape. A new
 bounded audition compares the actual editor/source results and repeated exports;
 phone response and physical MPC playback remain device checks.
+The [opening instrument](PRISM_OPENING_SUSTAIN.md) uses MAKE INSTRUMENT to keep
+one opening before a continuously moving sustain. Nine minor-third roots,
+explicit internal loop markers and note-off release use the shared keygroup
+writer for the phone and MPC 2/3. It retains the complete authored source and
+motion recipe in a versioned delivery companion.
 
 ### SHOAL — materials animated by moving energy
 

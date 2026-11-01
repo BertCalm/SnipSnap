@@ -196,7 +196,7 @@ object Velocity {
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
-        is FerryPatch -> Ferry.macrosFor(patch.voice)
+        is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
