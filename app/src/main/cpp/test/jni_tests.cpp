@@ -50,6 +50,8 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong, jdouble, jfloat);
+jboolean Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong, jfloat, jfloat);
 jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv*, jobject, jlong, jlongArray);
 jint Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong);
@@ -786,6 +788,26 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     CHECK(Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, h) == nullptr);
 
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_the_pads_bend_and_master_gain_cross_the_bridge) {
+    // A ramp i/1000, so the output is the read position: the bend shows as
+    // the read's speed and the master gain as its size.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 8);
+    CHECK(Java_com_snipsnap_app_NativePads_setPitch(e, nullptr, h, 2.0, 0.0f) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_setMasterGain(e, nullptr, h, 0.5f, 0.0f) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(
+              e, nullptr, h, 1, 0, 0, 1000, -1, 1.0f, 1.0f, 1.0, JNI_FALSE) == JNI_TRUE);
+    const auto out = pull(pads, 4);
+    // Frames 0, 2, 4, 6 at half size.
+    CHECK_NEAR(out[2 * 3], 0.5f * 6.0f / 1000.0f, 1e-5);
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 
 TEST(jni_the_pads_print_crosses_as_stereo_at_its_full_length) {

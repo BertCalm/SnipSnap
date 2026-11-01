@@ -20,6 +20,11 @@ import com.snipsnap.kit.MidiWire
  * because a stuck note that survives the panic is the one bug this
  * object exists to make impossible.
  *
+ * The bend wheel or strip bends every voice, held, releasing or struck
+ * later, by up to [BEND_RANGE_SEMITONES] either way, as a synth's channel
+ * bend does; the panic and the screen leaving put it back at rest, since a
+ * cable pulled mid-bend never sends the wheel's return.
+ *
  * Every channel is listened to: a phone with one instrument open has
  * nothing a channel could select between.
  */
@@ -30,6 +35,9 @@ class MidiKeys(private val voice: Voice) {
         fun noteOn(note: Int, velocity: Float)
         fun noteOff(note: Int)
         fun allOff()
+
+        /** Every voice at its own speed times [ratio]; 1 is at rest. */
+        fun bend(ratio: Double) {}
     }
 
     private val held = LinkedHashSet<Int>()
@@ -40,6 +48,16 @@ class MidiKeys(private val voice: Voice) {
 
     /** Notes whose key has risen under the pedal, waiting for it to lift. */
     val heldNotes: Set<Int> get() = held
+
+    /** The bend's speed ratio now, 1 at rest. */
+    var bend: Double = 1.0
+        private set
+
+    private fun bendTo(ratio: Double) {
+        if (ratio == bend) return
+        bend = ratio
+        voice.bend(ratio)
+    }
 
     fun handle(event: MidiWire.Event) {
         when (event) {
@@ -54,9 +72,10 @@ class MidiKeys(private val voice: Voice) {
                 MidiWire.CC_SUSTAIN -> pedal(event.value >= MidiWire.CC_SWITCH_ON)
                 MidiWire.CC_ALL_NOTES_OFF, MidiWire.CC_ALL_SOUND_OFF -> allOff()
             }
-            // Bend, pressure and program change are read off the wire but not
-            // played here yet: MIDI learn and a KEYS bend range are their users.
-            is MidiWire.Event.PitchBend, is MidiWire.Event.ChannelPressure,
+            is MidiWire.Event.PitchBend -> bendTo(bendRatio(event.value))
+            // Pressure and program change are read off the wire but not played
+            // here: MIDI learn is their user.
+            is MidiWire.Event.ChannelPressure,
             is MidiWire.Event.PolyPressure, is MidiWire.Event.ProgramChange -> {}
             // The transport's clock is not a key; nothing here plays it yet.
             is MidiWire.Event.RealTime -> {}
@@ -80,5 +99,23 @@ class MidiKeys(private val voice: Voice) {
         held.clear()
         sustaining = false
         voice.allOff()
+        bendTo(1.0)
+    }
+
+    companion object {
+        /** How far the wheel's ends bend, the General MIDI default and most keyboards' own. */
+        const val BEND_RANGE_SEMITONES = 2
+
+        /**
+         * A bend message's value (-8192..8191, 0 at rest) as a speed ratio: the
+         * top and the bottom each exactly [semitones] away, equal-tempered in
+         * between. The two halves are scaled apart because the wire has one
+         * more step below the centre than above it.
+         */
+        fun bendRatio(value: Int, semitones: Int = BEND_RANGE_SEMITONES): Double {
+            val v = value.coerceIn(-MidiWire.BEND_CENTRE, MidiWire.BEND_CENTRE - 1)
+            val amount = if (v >= 0) v / (MidiWire.BEND_CENTRE - 1).toDouble() else v / MidiWire.BEND_CENTRE.toDouble()
+            return Math.pow(2.0, amount * semitones / 12.0)
+        }
     }
 }

@@ -189,6 +189,8 @@ fun KeysScreen(
             // midiKeys.allOff()): a local silence that is not mirrored leaves a
             // receiver holding a note whose off will name a different key.
             override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
+            // The wheel or strip bends every voice, MidiKeys' range.
+            override fun bend(ratio: Double) = player.setBend(ratio)
         })
     }
     fun silence() = midiKeys.allOff()
@@ -201,7 +203,8 @@ fun KeysScreen(
     var midiSupported by remember(player) { mutableStateOf(false) }
 
     // MIDI learn (the LEARN panel): a knob on the player's volume, keys or
-    // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
+    // pads on OCT − and OCT +. A bend learned to VOL is consumed and no
+    // longer bends. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
     val learnState = rememberMidiLearn(KeysMidi.SCREEN, prefer = KeysMidi::prefer)

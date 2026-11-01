@@ -2,7 +2,9 @@ package com.snipsnap.shell
 
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.kit.MidiWire.Event
+import com.snipsnap.shell.MidiBinding.Kind
 import com.snipsnap.shell.MidiBinding.Mode
+import com.snipsnap.shell.MidiBinding.Source
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -79,5 +81,19 @@ class KitMidiTest {
 
     @Test fun `actions for another screen change nothing here`() {
         assertEquals(KitMidi.Change(0, false), KitMidi.changes(listOf(MidiLearn.Fire(KeysMidi.OCT_UP), MidiLearn.SetValue(SurfaceMidi.X, 1f))))
+    }
+    @Test fun `a knob on VOL sets the kit's volume and jumps from full rather than picks up`() {
+        val learn = MidiLearn()
+        learn.arm(KitMidi.VOLUME, KitMidi.prefer(KitMidi.VOLUME), KitMidi.kinds(KitMidi.VOLUME))
+        val learned = learn.handle(Event.Control(0, 7, 30), minilab) { 1f }.learned!!
+        assertEquals(Mode.ABSOLUTE, learned.mode)
+        val settled = KitMidi.settle(learned)
+        assertEquals(MidiBinding.Takeover.JUMP, settled.takeover)
+        val next = MidiLearn(listOf(settled))
+        val change = KitMidi.changes(next.handle(Event.Control(0, 7, 31), minilab) { if (it == KitMidi.VOLUME) 1f else null }.actions)
+        assertEquals(KitMidi.Change(0, false, 31 / 127f), change)
+        val panic = MidiBinding(Source(minilab, Kind.NOTE, 9, 45), KitMidi.PANIC, Mode.TRIGGER)
+        assertEquals(panic, KitMidi.settle(panic), "only VOL changes")
+        assertEquals(null, KitMidi.kinds(KitMidi.VOLUME), "a strip or pressure may drive it")
     }
 }

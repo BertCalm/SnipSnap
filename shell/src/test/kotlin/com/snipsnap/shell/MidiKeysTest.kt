@@ -113,4 +113,37 @@ class MidiKeysTest {
         keys.handle(Event.NoteOn(15, 48, 1f))
         assertEquals(listOf("on 36 1.000", "on 48 1.000"), log.calls)
     }
+    /** The bends the instrument was asked for, in order. */
+    private class Bends : MidiKeys.Voice {
+        val ratios = mutableListOf<Double>()
+        override fun noteOn(note: Int, velocity: Float) {}
+        override fun noteOff(note: Int) {}
+        override fun allOff() {}
+        override fun bend(ratio: Double) { ratios += ratio }
+    }
+
+    @Test
+    fun `the wheel's ends are exactly two semitones away and its centre is the note`() {
+        val up = Math.pow(2.0, 2.0 / 12.0)
+        assertEquals(up, MidiKeys.bendRatio(8191), 1e-12)
+        assertEquals(1 / up, MidiKeys.bendRatio(-8192), 1e-12)
+        assertEquals(1.0, MidiKeys.bendRatio(0))
+        assertEquals(Math.pow(2.0, 1.0 / 12.0), MidiKeys.bendRatio(8191 / 2, 2), 1e-4, "half way up is a semitone")
+        assertEquals(up, MidiKeys.bendRatio(100_000), 1e-12, "a value off the wire's range is its end")
+        assertEquals(Math.pow(2.0, 12.0 / 12.0), MidiKeys.bendRatio(8191, 12), 1e-12)
+    }
+
+    @Test
+    fun `bend reaches the instrument, a repeat is not sent twice, and the panic puts it back`() {
+        val bends = Bends()
+        val keys = MidiKeys(bends)
+        keys.handle(Event.PitchBend(0, 8191))
+        keys.handle(Event.PitchBend(0, 8191))
+        assertEquals(listOf(MidiKeys.bendRatio(8191)), bends.ratios, "a strip held still sends the same value again")
+        assertEquals(MidiKeys.bendRatio(8191), keys.bend)
+        keys.handle(Event.Control(0, MidiWire.CC_ALL_NOTES_OFF, 0))
+        assertEquals(listOf(MidiKeys.bendRatio(8191), 1.0), bends.ratios, "a cable pulled mid-bend never sends the return")
+        keys.allOff()
+        assertEquals(2, bends.ratios.size, "already at rest: nothing more to send")
+    }
 }
