@@ -18,6 +18,24 @@ object SynthKits {
                 "factoryPreset" to patch.name, "rootMidi" to patch.midi.toString()))
     }
 
+    /** Audition-three finite collisions: eight scale notes followed by eight control anchors. */
+    fun lorentz(): List<ArrangedPad?> {
+        fun arranged(patch: LorentzPatch): ArrangedPad {
+            val recipe = PadRecipe(patch)
+            val audio = recipe.render()
+            // Classify the actual PCM once; bright/wide hits need not file as KICK.
+            return ArrangedPad(audio, com.snipsnap.audio.Classifier.classify(audio).drumClass, recipe.toJsonValue())
+                .copy(displayName = patch.name, oneShot = true)
+        }
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            arranged(LorentzPatch("Fuse Note ${i + 1}", LorentzVoice.FUSE,
+                Lorentz.defaults(LorentzVoice.FUSE) + ("TUNE" to semitone / 24f)))
+        }
+        val anchors = listOf("Fuse Contact", "Fuse Clean", "Fuse Hard", "Fuse Wide",
+            "Tear Contact", "Tear Clean", "Tear Hard", "Tear Wide")
+        return scale + anchors.map { name -> arranged(LorentzPresets.all().single { it.name == name }) }
+    }
+
     /** Sixteen finite Libration notes; native touch zones retain their energy. */
     fun libration(): List<ArrangedPad> = LibrationKits.arranged()
 

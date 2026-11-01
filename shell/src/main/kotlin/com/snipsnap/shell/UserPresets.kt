@@ -440,6 +440,12 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OtisPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.LorentzPatch) {
+            // Complete JSON retains native touch/model even for sparse user macro maps.
+            val saved = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "LorentzPatch.fromJsonText($saved),"
+        }
+
         if (patch is ApsisPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ApsisPatch.fromJsonText($recipe),"

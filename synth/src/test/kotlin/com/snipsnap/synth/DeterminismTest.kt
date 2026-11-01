@@ -31,6 +31,14 @@ class DeterminismTest {
     }
 
     @Test
+    fun `LORENTZ collision recipes regenerate both voices and finite HOLD exactly`() {
+        for (voice in LorentzVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = LorentzPatch("Collision canary", voice, Lorentz.defaults(voice) + ("HOLD" to hold), velocity = .67f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
         assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)
