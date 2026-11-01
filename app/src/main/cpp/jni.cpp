@@ -1,9 +1,8 @@
-// The bridge: `NativeSurface` in Kotlin, one handle per engine. Every
-// function here runs on a caller's thread that is never the audio
-// thread (SurfaceEngine.kt serialises them); the only thing that
-// crosses to the audio thread is a ControlFrame through the ring, a
-// corner through its atomics, a sample through the pointer handshake.
-// Nothing in this file is called from the Oboe callback.
+// JNI bridge, one opaque handle per owner. Surface/Pad/LiveSnap controls
+// run on their serialized callers and hand audio-thread state across the
+// engines' rings/atomics/sample handshakes. The ORBIT array bus instead
+// processes on its one JVM mix worker, which also destroys its handle.
+// No entry point here is called from an Oboe callback.
 #include <jni.h>
 
 #include <chrono>

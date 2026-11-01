@@ -335,6 +335,8 @@ fun OrbitScreen(
     // round trip rather than after the transport's 150 ms buffer.
     val player = remember(kitDir) { PadEngine(rate) }
     var playerUp by remember(kitDir) { mutableStateOf(false) }
+    var auditionFaulted by remember(kitDir) { mutableStateOf(false) }
+    var auditionPending by remember(kitDir) { mutableStateOf(false) }
     var auditionId by remember(kitDir) { mutableIntStateOf(1) }
     DisposableEffect(kitDir) {
         playerUp = player.start()
@@ -349,14 +351,18 @@ fun OrbitScreen(
             aquarium?.configure(route.settings, reset)
             player.setAquariumTempo(set?.bpm?.toDouble() ?: 0.0)
             player.configureAquarium(route.settings, reset)
+            auditionFaulted = player.aquariumFaulted()
+            auditionPending = player.hasPendingAquariumControls()
             aquariumWasOn = optedIn
         }
     }
 
     fun audition(slot: Int) {
         val pad = kit.pad(slot) ?: return
-        if (player.needsRestart()) playerUp = player.start()
-        if (!playerUp || !player.isUp()) return
+        if (!playerUp || player.needsRestart()) playerUp = player.start()
+        auditionFaulted = player.aquariumFaulted()
+        auditionPending = player.hasPendingAquariumControls()
+        if (!playerUp || !player.isUp()) { onToast("ORBIT TAP STREAM UNAVAILABLE"); return }
         player.hit(pad, 0.9f, auditionId)
         auditionId = auditionId % 1_000_000 + 1
     }
@@ -641,6 +647,8 @@ fun OrbitScreen(
             frame = engine?.position() ?: 0L
             aquariumFaulted = aquarium?.faulted ?: false
             aquariumLimited = aquarium?.limitedFrames ?: 0L
+            auditionFaulted = player.aquariumFaulted()
+            auditionPending = player.hasPendingAquariumControls()
             transportFailure.getAndSet(null)?.let { failure ->
                 Log.e("OrbitScreen", "playback: failed", failure)
                 stopPlayback()
@@ -1233,6 +1241,7 @@ fun OrbitScreen(
             if (setPanelOpen) aquariumRoute?.let { route ->
                 OrbitAquariumPanel(current, route, scheme, preparing || bouncing, playing,
                     aquariumFaulted, aquariumLimited,
+                    auditionUp = playerUp, auditionFaulted = auditionFaulted, auditionPending = auditionPending,
                     onChange = { next -> commit(next) },
                     onReset = {
                         aquarium?.resetTail()

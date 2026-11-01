@@ -19,6 +19,7 @@ import com.snipsnap.shell.Scheme
 @Composable
 internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, scheme: Scheme,
     busy: Boolean, playing: Boolean, faulted: Boolean, limitedFrames: Long,
+    auditionUp: Boolean, auditionFaulted: Boolean, auditionPending: Boolean,
     onChange: (OrbitSet) -> Unit, onReset: () -> Unit,
 ) {
     val tails = listOf(0f, 1f, 3f, 5f, 10f, 30f)
@@ -42,6 +43,13 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
             else -> "KIT FX READY"
         }, TapeType.pixelSmall, if (faulted) scheme.warn.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
         route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+        TapeText(when {
+            !auditionUp -> "TAP STREAM UNAVAILABLE"
+            auditionFaulted -> "TAP FX FAULT · RESET TAIL OR RETRY A TAP"
+            auditionPending -> "TAP FX WAITING TO QUEUE SETTINGS…"
+            else -> "TAP STREAM READY"
+        }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warn.tape else scheme.ink2.tape,
+            maxLines = Int.MAX_VALUE)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("TAIL −", scheme, enabled = !busy && set.aquariumTailSeconds > 0,
                 modifier = Modifier.weight(1f), accessibilityLabel = "Shorten ORBIT FX bounce tail",
@@ -55,6 +63,6 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         TapeText("SNIPS keeps the stereo file; TAPE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        if (set.aquariumFromKit) TapeText("PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
+        if (set.aquariumFromKit) TapeText("MIX PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
