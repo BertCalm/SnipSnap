@@ -1148,20 +1148,31 @@ lands under `NAME 2`, and the bin rides minus what has expired.
 
 ### `art <kit-dir>` — procedural cover tiles
 
-Cover art drawn from the kit itself — its waveforms, its class colours,
-its name in the built-in 5×7 pixel face — on the scheme's dark LCD.
-Deterministic: same kit, same parameters, same bytes.
+The expansion browser's tile, drawn from the kit's own sound: a field
+from one pad's audio (or every pad's, for the per-pad styles), the kit
+name set in a bundled face inside the style's name zone, and the
+SnipSnap mark bottom-right. Deterministic per platform: same kit, same
+knobs, same bytes.
 
-Four styles: `waveform` (all the pads end to end, each in its class
-colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
-per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
-picks one of the eight TapeOS schemes (`vent`, the default, `dusk`,
-`phosphor`, `opensky`, `tide`, `memo`, `riso` or `sage`; the
-words come from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
-sets the square edge (default 600), `--out DIR` says where the PNGs
-land. **No `--style` renders every style side by side** — the
-prototyping loop is one command per look. The winning direction becomes
-the expansion/`.xpn` export default (Z6.3).
+Eight styles in one family. From the seed pad: `bloom` (its loudness
+wrapped round a six-petal flower, the name in the hole — the default),
+`ridges` (its windows stacked as ridge lines that fade back), `field` (a
+dot grid that swells with its loudness, the name on a band), `ribbon`
+(its attack as one glowing stroke). From every pad: `waveform` (the pads
+end to end as one river, class colours blending), `grid` (the 4×4 bank,
+each pad a small bloom of its own sound), `slices` (one wedge per pad
+round a wheel), `rings` (seeded glowing arcs — `--seed N` reshuffles).
+
+The knobs start from the kit's own `art.json` (what the phone's art
+picker saves) and each flag overrides one: `--palette` (`vent`, `dusk`,
+`phosphor`, `opensky`, `tide`, `memo`, `riso`, `sage` — one per scheme;
+`--scheme` picks a scheme's palette), `--seed-pad N` (which pad draws
+the field; the longest by default), `--mark symbol|lockup|stacked`
+(stacked by default). `--size PX` sets the square edge (default 600),
+`--out DIR` says where the PNGs land. **No `--style` renders all eight
+side by side** — the prototyping loop is one command per look. Exports
+(`export`, `chop --export`, `pack`, `sidea`, `album`) draw the same
+knobs; `--art STYLE` there overrides only the style.
 
 ### `doctor <kit-dir>` — the mix doctor
 
