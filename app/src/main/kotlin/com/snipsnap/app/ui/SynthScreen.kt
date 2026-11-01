@@ -1060,6 +1060,14 @@ fun SynthScreen(
             return current?.let { Patches.edited(it, name, controls) }
                 ?: TidalPatch(name, voice as TidalVoice, controls)
         }
+        if (engine == Engine.LATTICE) {
+            // A SPEED accessibility edit can share a frame with SAVE or SEND.
+            // Keep its newest controls together with the authored note and excitation.
+            val current = loadedPatchesByVoice[engine to voice] as? LatticePatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: LatticePatch(name, voice as LatticeVoice, controls)
+        }
         if (engine == Engine.TREMOR) {
             // A queued save or pad update can share the frame of a preset choice.
             // Read its live recipe so the renderer model cannot lag one frame behind.
@@ -1600,7 +1608,7 @@ fun SynthScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    fun audition(target: Snip, allowLoop: Boolean) {
+    fun audition(target: Snip, allowLoop: Boolean, previewLoop: IntRange? = null) {
         // Signal-only at the swap site: `stop()` is a non-blocking flag flip
         // — the old voice's own stream thread releases its own AudioTrack on
         // its way out (TapeVoice's per-thread-owns-its-track contract) — so
@@ -1613,7 +1621,7 @@ fun SynthScreen(
         val heard = if (engine == Engine.ORPHICA || engine == Engine.OPENSKY) target else Cleanup.toMono(target)
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
-        v.start(0, loop = if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
+        v.start(0, loop = previewLoop ?: if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
             (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f))))
             0 until heard.frameCount else null)
     }
@@ -1785,6 +1793,7 @@ fun SynthScreen(
                         28 + ((Pluck.defaults(patch.voice) + patch.macros).getValue("TUNE") * Pluck.TUNE_SEMITONES).roundToInt()
                         else null
                     is TidalPatch -> patch.midi
+                    is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi)
                     is OhmPatch -> patch.midi
                     is ChamberPatch -> patch.midi
                     is CausticPatch -> patch.midi
@@ -1955,12 +1964,14 @@ fun SynthScreen(
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
-        (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch))
+        (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
+        (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
         Engine.FILAMENT -> FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)
+        Engine.PRISM -> !prismMotionStudio.sourceBusy
         else -> true
     }
     val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
@@ -2038,30 +2049,38 @@ fun SynthScreen(
                 patch, heldSheet.holdRelease, heldSheet.holdFilamentTouchLayers,
             )) else null
         }
+        Engine.PRISM -> prismHeldSpec(heldSheet.prismPatch ?: buildCurrentPatch(
+            loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)), heldSheet.holdRelease)
         else -> null
     }
 
     fun previewHeld() {
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         val spec = heldSpec() ?: return
         sampleHeldPreview?.silence()
+        val prismPreview = if (spec is PrismHeldSpec) prismMotionStudio.startPreview() else null
+        if (prismPreview != null) { touched = false; voicePlayer?.stop() }
         heldSheet.holdPreviewing = true
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is PrismHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
-                        spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
+                        spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                     }
-                } else offMain(Dispatchers.Default) { spec.preview { !isActive } }
-                audition(heard, allowLoop = false)
+                } else offMain(Dispatchers.Default) { spec.previewPlayback { !isActive } }
+                coroutineContext.ensureActive()
+                if (prismPreview == null || prismMotionStudio.acceptsPreview(prismPreview))
+                    audition(heard.snip, allowLoop = false, previewLoop = heard.loop)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e("SynthScreen", "previewHeld: failed", e)
                 onToast(Copy.RENDER_FAILED)
             } finally {
+                prismPreview?.let(prismMotionStudio::finishPreview)
                 heldSheet.holdPreviewing = false
                 heldSheet.holdJob = null
             }
@@ -2070,9 +2089,11 @@ fun SynthScreen(
 
     fun makeHeld() {
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         // Captured now: the sheet's own sound, before anything can move it.
         val spec = heldSpec() ?: return
         sampleHeldPreview?.silence()
+        if (spec is PrismHeldSpec) { prismMotionStudio.cancelPreview(); touched = false; voicePlayer?.stop() }
         val base = holdBase
         val midis = spec.zoneMidis
         heldSheet.holdTotal = midis.size * spec.progressPerZone
@@ -2083,7 +2104,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2094,7 +2115,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2123,6 +2144,7 @@ fun SynthScreen(
                     name
                 }
                 makingInstrument = false
+                heldSheet.prismPatch = null
                 onShelfAssetWritten()
                 onToast(Copy.madeNamed("INSTRUMENT", made))
             } catch (e: CancellationException) {
@@ -2141,6 +2163,12 @@ fun SynthScreen(
         // Every zone rendered means the write is under way; let it land.
         if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal) return
         sampleHeldPreview?.silence()
+        if (heldSheet.prismPatch != null) {
+            prismMotionStudio.cancelPreview()
+            touched = false
+            voicePlayer?.stop()
+            heldSheet.prismPatch = null
+        }
         val job = heldSheet.holdJob
         if (job == null) {
             heldSheet.holdDone = -1
@@ -2164,6 +2192,11 @@ fun SynthScreen(
         // worker's cleanup could then overwrite.
         makingInstrument = false
     }
+
+    GuardPrismHeldInstrument(heldSheet.prismPatch,
+        if (engine == Engine.PRISM) buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+            ?: engine.patchDisplayName(voice)) as PrismPatch else null,
+        prismMotionStudio.sourceBusy, ::closeHeld)
 
     // ---- DRONE TO LOOP: RESIN and SIREN, droning ----
     // docs/superpowers/specs/2026-09-25-resin-drone-design.md (RESIN) and
@@ -3230,6 +3263,7 @@ fun SynthScreen(
                         onEdit = ::editPrismMotion,
                         onPreview = { target -> snip = target; audition(target, allowLoop = false) },
                         onStopPreview = { pause -> if (pause) touched = false; voicePlayer?.stop() },
+                        onBeforeEdit = ::closeHeld,
                     )
                 }
                 if (prismFiniteMotion(loadedPatch as? PrismPatch)) {
@@ -3423,6 +3457,7 @@ fun SynthScreen(
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
                 if (supportsHeldInstrument) {
+                    if (engine == Engine.PRISM) PrismInstrumentHint(scheme)
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -3430,6 +3465,15 @@ fun SynthScreen(
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
+                        if (engine == Engine.PRISM) {
+                            val current = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                                ?: engine.patchDisplayName(voice)) as PrismPatch
+                            if (prismMotionStudio.sourceBusy || !prismOpeningInstrumentSupported(current)) return@LabButton
+                            heldSheet.prismPatch = current
+                            prismMotionStudio.cancel()
+                            touched = false
+                            voicePlayer?.stop()
+                        }
                         makingInstrument = true
                     }
                     if (!heldInstrumentReady) {
@@ -3437,6 +3481,7 @@ fun SynthScreen(
                             when (engine) {
                                 Engine.CREASE -> "MAKE INSTRUMENT NEEDS MODEL 3. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
                                 Engine.BELLOWS -> "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
+                                Engine.PRISM -> "WAIT FOR THE SOURCE TONE TO FINISH LOADING."
                                 else -> "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
                             },
                             TapeType.pixelSmall,
@@ -3904,6 +3949,7 @@ private class HeldSheetState {
     var holdPreviewing by mutableStateOf(false)
     var holdJob by mutableStateOf<Job?>(null)
     var holdName by mutableStateOf("")
+    var prismPatch by mutableStateOf<PrismPatch?>(null)
 }
 
 /**
@@ -4027,7 +4073,7 @@ private fun macroReadout(
     engine == Engine.TANGLE && name == "HOLD" && Tangle.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.SHOAL && name == "HOLD" && Shoal.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CREASE && name == "HOLD" && Crease.isLoop(macros.getValue(name)) -> "LOOP"
-    engine == Engine.LATTICE && name == "HOLD" && Lattice.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.LATTICE && name == "HOLD" && Lattice.isLoop(voice as LatticeVoice, macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "HOLD" && Relay.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "TUNE" ->
         Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(name)))
@@ -4403,7 +4449,7 @@ private fun contourMacroGroup(name: String): String = when (name) {
  * CREASE keeps its first pressure attack before the repeating moving sustain.
  * CONTOUR begins at its settled tone, omitting the original finite attack.
  */
-private sealed interface HeldSpec {
+internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
@@ -4418,6 +4464,7 @@ private sealed interface HeldSpec {
     /** One entry per velocity layer, soft first; legacy instruments return one. */
     fun renderZone(midi: Int, cancelled: () -> Boolean): List<KeyNote>
     fun preview(cancelled: () -> Boolean): Snip
+    fun previewPlayback(cancelled: () -> Boolean): HeldPreviewPlayback = HeldPreviewPlayback(preview(cancelled))
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
     class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
