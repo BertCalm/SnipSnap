@@ -71,6 +71,60 @@ Generated files are ignored under `testkit/obliterate-shimmer-audition/`. The ma
 | Proposed | Shimmer amount, octave-input enhancement, four-line tank and shape values; later Kotlin extraction and phone render-budget work |
 | Heard | Josh kept the earlier destruction core at snare 70%, other sources 35%. Shimmer has no owner verdict yet. |
 
+## Kotlin port and complete-chain entry point (edition 006)
+
+Josh's 2026-10-31 feedback was **“Sounds cool, proceed”**. The exact quote and scope are retained in `listening-005-2026-10-31.json`. It authorizes continued implementation and records general positive feedback; no per-source verdict, 15%/30% preference, playback level or stereo/mono selection was supplied. The existing 15% prototype default remains provisional. Kotlin listening is still separate from that report.
+
+`ObliterateShimmer.render(snip, Settings(mix = .15, pitched = true), includeWet = false)` is the standalone pre-stage. Its result has audio, diagnostics and an optional isolated wet `Snip`. Zero mix returns the exact original `Snip`, original channels and no tail. Active processing emits stereo with exactly 66,150 appended frames. The optional return changes allocation only; the output samples are identical with it enabled or disabled. It accepts finite normalized mono/stereo floating-point PCM at `WavWriter.MPC_SAMPLE_RATE`, one frame through nine seconds.
+
+`Obliterate.render(snip, Settings(shimmer = ..., core = ...))` composes that public result with the unchanged `ObliterateCore.render`. Core settings retain AMT 0.35, BPM 120, division 16 and seed 20261023 by default. This is a standalone effect API, not a BoardRecipe or Android control. It exposes separate shimmer/core settings, not a newly invented single-board AMT mapping. Combined input remains capped at nine seconds. The tail is 0, 0.75, 1.5 or 2.25 seconds according to which stages are active; both controls at zero return the original `Snip` exactly.
+
+A direct call keeps all non-default state explicit:
+
+```kotlin
+val result = Obliterate.render(input, Obliterate.Settings(
+    shimmer = ObliterateShimmer.Settings(mix = .15, pitched = true),
+    core = ObliterateCore.Settings(amount = .35, bpm = 120.0, division = 16, seed = 20261023L),
+))
+val processed: Snip = result.audio
+```
+
+The port uses Double filter/tank state and the exact SciPy-generated highpass coefficients. Its two integer octave heads and complementary Hann weights retain the prototype's time geometry. Fixed delay rings replace the Python full-render histories: pitched mode stores **37,144 Double history samples (297,152 bytes)**, independently of source duration, plus small filter state and one immutable 4,410-value weight table. This figure excludes render audio buffers and JVM overhead. Audio/output buffers still scale with the explicit finite budget. No persistent audio cache or mutable cross-render tank is introduced.
+
+The new entry point has a public Float32 `Snip` between stages. The heard edition 005 Python chain used Float64 there. The parity pipeline therefore replays the actual Float32 intermediate boundary in Python and reports its difference from the historical Float64 chain separately. Across these examples that boundary alone changed a full-chain sample by at most **2.9802322387695312e-8**. No historical WAV is rewritten or described as a new Kotlin render.
+
+Measured port checks:
+
+- **14 new Kotlin tests** passed, including three independent Python fixtures, exact bypass/signed zeros, bounds, silence, fresh-call equality, dry attack, quiet/send scaling, stereo excitation/crossfeed, room/shimmer distinction, unforced release, linked peak protection, nine-second budget and constant delay-history storage. Composition tests pin all four tail budgets and exact core-only output.
+- **16 source/settings cases / 48 PCM comparisons** passed for public pre-stage, isolated wet and full-chain outputs. Maximum absolute Float32 sample error: **1.4901161193847656e-8**; maximum RMS error: **3.06436492881906e-11**. The predeclared limits stay 2e-6 maximum / 2e-7 RMS. Full geometry, deterministic rerenders and non-mutating input checks are also validated.
+- The new comparison contains **16 single-hit clips / 32 raw PCM24 stereo/mono WAVs**, **24,112,012 bytes**. Each includes its entire finite tail plus 200 ms silence. Each PCM24 export is independently checked against the retained raw Float32 renderer output, with fold rounding bounded by 1 LSB. This smaller port-only pack preserves the prior listening sets within the host's 256 MiB expanded archive limit.
+- Initial [warm host-JVM measurements](initial-host-benchmark.json) gave median pre-stage times of **40.8–62.4 ms**; complete-chain medians **261.8–438.2 ms** (three warmups, seven trials, four retained sources, JDK 17). Host load and GC are uncontrolled; these are not phone timings. The full chain still exceeds the desired tens-of-ms interaction budget. Before app exposure, profile on a named device and consider a bounded cache of pre-stage/fuzz audio keyed by input content, renderer version and the settings that affect that stage; tempo/seed edits need not recompute input conditioning. Such a cache must account for mutable Snip arrays and return copies, rather than keying on object identity.
+- The port was built on upstream snapshot `a5caac7fd6c8a2e6d09ec740c60fb995c6bef368`; the approved core and Python stage source are unchanged there. The complete JVM regression finished with **7,449 tests, zero failures, errors or skips, and exit code 0** across all nine JVM modules (JDK 17, no Android SDK in the graph). A task-local scheduling init ran LOOP alone after compilation to protect its existing 50 ms nonblocking check; no test was filtered or excluded. The port inputs stayed unchanged throughout the run. No APK, Android integration or phone-performance claim is made.
+
+The next integration surfaces were verified on the same upstream snapshot. `BoardRecipe` version 1 accepts exactly board/type/amount and dispatches only WIDE/RUSH; it cannot store this stage's clock, seed, wet send or model identity. `BoardSheet.preview/apply` already render from immutable pre-board sources and define AMT zero as an unchanged source. This standalone pair instead bypasses only when both stage controls are zero, so a board control law must be explicit before wiring it into that surface. `PadSheetScreen`'s board captions also have two-type WIDE/else-RUSH branches that must become explicit for another type. Preserve existing version-1 recipes and their audio; add complete versioned state, all-zone KEEP/REMOVE/UNDO checks and an SDK-backed build when implementing that later step. No such wiring is claimed here.
+
+Reproduce with the retained Float32 sources and pinned Python environment:
+
+```sh
+python3 experiments/obliterate-shimmer/kotlin_reference.py export
+./gradlew --no-daemon -I experiments/obliterate-shimmer/shimmer-port.init.gradle :synth:renderShimmerPort
+python3 experiments/obliterate-shimmer/kotlin_reference.py compare
+python3 experiments/obliterate-shimmer/generate_kotlin_audition.py
+python3 experiments/obliterate-shimmer/validate_kotlin_audition.py
+./gradlew --no-daemon test
+```
+
+A fresh checkout can download and extract the small input archive linked on edition 006, then use `kotlin_reference.py export --inputs /path/to/extracted/sources.json`. This restores the exact Float32 inputs without rerendering changed source engines. The complete retention validator additionally requires the older heard audition set.
+
+Fixtures are regenerated only by explicit `kotlin_reference.py fixtures`, not by ordinary tests. Generated evidence lives in ignored `testkit/obliterate-shimmer-kotlin/`; source hashes, clean/dirty state, the intermediate-boundary policy, settings, renderer hashes and benchmark trials are retained in its JSON files. The [complete-chain comparison](https://snipsnap-obliterate-kotlin.bertcalm.chatgpt.site/shimmer/kotlin/) retains its own edition-006 note bank. The [heard Python study](https://snipsnap-obliterate-kotlin.bertcalm.chatgpt.site/shimmer/) remains available.
+
+| Ledger | Status |
+| --- | --- |
+| Verified | Public Kotlin shimmer and whole-chain APIs, fixed finite budgets, unchanged core, bounded ring storage and separate settings |
+| Measured | 14 Kotlin tests, 16 settings cases / 48 PCM comparisons, 32 new WAVs and host-JVM timing |
+| Proposed | 15% default as a production choice, a board AMT law, caching/phone optimization and Android integration |
+| Heard | General positive feedback on edition 005; no amount preference or Kotlin listening verdict supplied |
+
 ## Why it is built this way
 
 - The dry branch keeps the original hit available while the new room supplies material for fuzz and fragments.

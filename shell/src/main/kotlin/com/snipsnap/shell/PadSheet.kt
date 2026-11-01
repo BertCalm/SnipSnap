@@ -391,7 +391,7 @@ object PadSheet {
     }
 
     /**
-     * The pedal board a pad carries (`{"recipe":2,"pedals":{...}}`, written by
+     * The pedal board a pad carries (`{"recipe":2,"pedals":{...}}`, or 3 when it also carries a bank, written by
      * `KitBuilderModel.pedalPad`), or null for any other recipe. [read] does
      * not see it on purpose: a board is several picks with their own AMTs,
      * and [Applied] names one; lighting one chip for many would be the

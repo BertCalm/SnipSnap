@@ -7,6 +7,7 @@ import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
@@ -230,9 +231,35 @@ class Mpc3TrackWriterTest {
         assertEquals(0, zones[0]["lowNote"]!!.int())
         assertEquals(35, zones[0]["highNote"]!!.int())
         assertEquals(2, zones[0]["triggerMode"]!!.int(), "every real zone sustains: Note On")
-        // Vestigial drum-level pair every real instrument track carries.
-        assertEquals(1, drum["poliphony"]!!.int())
-        assertEquals(true, drum["monophonic"]!!.bool())
+        assertEquals(0, drum["poliphony"]!!.int(), "a default (POLY) keygroup is unlimited")
+        assertEquals(false, drum["monophonic"]!!.bool())
+    }
+
+    @Test
+    fun `a keygroup's voice mode sets the drum-level pair`() {
+        fun drumOf(mode: VoiceMode): Map<String, JsonValue> {
+            val root = Json.parse(writer.keygroupPayloadText(keygroupProgram().copy(voiceMode = mode))) as JsonValue.Obj
+            val prog = ((root.entries["data"] as JsonValue.Obj).entries["program"] as JsonValue.Obj).entries
+            return (prog["drum"] as JsonValue.Obj).entries
+        }
+        fun check(mode: VoiceMode, mono: Boolean, poly: Int, time: Double, legato: Boolean, retrigger: Boolean) {
+            val drum = drumOf(mode)
+            assertEquals(mono, drum["monophonic"]!!.bool(), "$mode monophonic")
+            assertEquals(poly, drum["poliphony"]!!.int(), "$mode poliphony")
+            assertEquals(time, drum["portamentoTime"]!!.num(), "$mode portamentoTime")
+            assertEquals(legato, drum["portamentoLegato"]!!.bool(), "$mode portamentoLegato")
+            assertEquals(retrigger, drum["monoRetrigger"]!!.bool(), "$mode monoRetrigger")
+        }
+        check(VoiceMode.POLY, false, 0, 0.0, false, false)
+        check(VoiceMode.LEAD, true, 1, 0.0, false, true)
+        check(VoiceMode.GLIDE, true, 1, 0.1, true, false)
+    }
+
+    @Test
+    fun `a drum kit is always polyphonic`() {
+        val drum = ((data()["program"] as JsonValue.Obj).entries["drum"] as JsonValue.Obj).entries
+        assertEquals(false, drum["monophonic"]!!.bool())
+        assertEquals(0, drum["poliphony"]!!.int())
     }
 
     @Test

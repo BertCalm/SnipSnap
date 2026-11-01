@@ -1,19 +1,48 @@
 # OBBLIGATO: accepted duet and listening revisions
 
-The next Play, Fight and Protect audition adds remembered articulations and
-relationship-specific endings. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
-for its design, measurements and replayable listening pack.
+## Accepted sound
+
+On 2026-11-01 the owner approved the longer-overlap revision with “It's better,
+let's proceed.” Model 10 is the factory default for new patches, presets and the
+sixteen-pad kit. It combines gentler voicing, remembered articulations and
+290 ms player handoffs. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
+for the design, measured limits and earlier listening comparisons.
+
+Legacy JSON recipes with no `model` field continue to decode as model 5.
+Explicit renderer versions retain their saved sound. This separates the sound
+chosen for a new instrument from the interpretation of an older saved recipe.
+
+The kit covers Harmony, Play, Fight and Protect at C4, E-flat4, F4 and G4. Its
+three native velocity zones at .3, .6 and .8 produce 48 samples; the softer
+zones retain peak matching to the main strike. MPC 3 and MPC 2 exports, editable
+SnipSnap recipes, the pad map and the row-walk demo share those settings.
+
+The approved candidate's JVM, Android and native CI checks passed in
+[run 41213483185](https://github.com/BertCalm/SnipSnap/actions/runs/41213483185).
+Acceptance and regenerated-kit checks are reported separately from that result.
+
+Acceptance validation passed 67 focused checks across synthesis, kit export, CLI,
+saved-preset promotion and determinism. Fifty-three immutable recipes across
+models 1–10 retain their raw audio and PCM24 exports; omitted-model loading also
+retains legacy audio through patch and nested pad-recipe decoding. An independent
+audit of all 48 kit samples measured root errors below 3.4 cents and complete
+finite endings. MPC sample references, browser playback, downloads and mobile
+layout pass. The new kit ZIP is 24,582,424 bytes; broader testing is separate.
+
+## Earlier listening history
 
 Repository baseline: `91384fa189a68c4993c8e359af6b748412bf95c3`.
 
-Model 5 is the accepted sound and remains the default for presets, missing-model
-recipes and the sixteen-pad kit. Model 6 is an explicit listening experiment. Its
+At this baseline, model 5 was the accepted sound and the default for presets,
+missing-model recipes and the sixteen-pad kit. Model 6 was an explicit listening
+experiment. Its
 characteristic gesture is **air asserts → reed hears and readies → reed interrupts
 smoothly → air counters → both release**. Each note starts fresh.
 
 Model 7 is a separate gentler voicing in response to the owner's report of
 harshness and wish for more musicality. It retains the responsive controller.
-It remains opt-in and awaits a listening verdict.
+It remained opt-in during that comparison; its gentler voicing is carried into
+the accepted model 10.
 
 The air jet and reed are the existing independently seeded `Bore.Player` sources.
 The relationship is an invented behavioural analogy. It does not simulate two
@@ -242,11 +271,14 @@ does not mean the original timed phrase with only a pressure effect removed.
 
 ## Verified, measured, proposed and heard
 
+This evidence records the earlier responsive and gentler-voicing comparisons.
+The current acceptance is recorded above.
+
 The source APIs and bounds above are verified against the repository. Compatibility,
 causal and performance results are produced by Kotlin/JVM tests and probes.
 Controller thresholds and voicing choices remain proposed. Model 5 was previously
 heard and accepted. The owner reported harshness in the subsequent comparison;
-model 7 has no listening verdict yet.
+at that stage model 7 had no listening verdict.
 
 As built, the focused audio and OBBLIGATO run passed 475 tests in 64 suites,
 including the 30 original audio recipes, all six interaction tests and kit

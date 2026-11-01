@@ -35,7 +35,7 @@ object ObbligatoMoreOverlapAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Usage: ObbligatoMoreOverlapAuditionGenerator [output-directory]" }
-        require(Obbligato.MODEL == 5 && Obbligato.OVERLAP_MODEL == 9 && Obbligato.MORE_OVERLAP_MODEL == 10)
+        require(Obbligato.LEGACY_MODEL == 5 && Obbligato.OVERLAP_MODEL == 9 && Obbligato.MORE_OVERLAP_MODEL == 10)
         val root = File(args.firstOrNull() ?: "../testkit/obbligato-more-overlap-audition").absoluteFile
         check(root.isDirectory || root.mkdirs()) { "Could not create $root" }
         val takes = relationships.flatMap { relationship ->
@@ -105,8 +105,8 @@ object ObbligatoMoreOverlapAuditionGenerator {
         }
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "OBBLIGATO", "audition" to "A little more overlap",
-            "status" to "The slightly longer overlap awaits a listening verdict. The factory default and accepted kit remain model 5.",
-            "acceptedModel" to Obbligato.MODEL, "previousModel" to Obbligato.OVERLAP_MODEL,
+            "status" to "Historical comparison: model 5 was the factory default when models 9 and 10 were first compared. The owner subsequently approved model 10.",
+            "acceptedModel" to Obbligato.LEGACY_MODEL, "previousModel" to Obbligato.OVERLAP_MODEL,
             "candidateModel" to Obbligato.MORE_OVERLAP_MODEL, "relationships" to relationships,
             "sampleRate" to Dsp.RATE, "channels" to 1, "pcmBits" to 24,
             "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED,
@@ -135,7 +135,7 @@ object ObbligatoMoreOverlapAuditionGenerator {
                 "verified" to "Complete instrument and phrase recipes, actual additive source taps, recorded event summaries and written PCM24 hashes.",
                 "measured" to "Kotlin renders: level, finite output, headroom, DC and one-window pitch estimates.",
                 "proposed" to "The longer entrance prelude and outgoing tail are listening choices; measurements alone cannot establish a more connected musical phrase.",
-                "heard" to "The owner described the direction as better, heard the first overlap revision and requested a little more overlap. No listening verdict is claimed for this candidate."))
+                "heard" to "The owner described the direction as better, heard the first overlap revision and requested a little more overlap. The owner subsequently called the longer overlap better and approved proceeding with it."))
         val manifestText = Json.write(json(manifest))
         writeText("manifest.json", manifestText + "\n")
         writeText("README.txt", readme())
@@ -242,14 +242,14 @@ object ObbligatoMoreOverlapAuditionGenerator {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OBBLIGATO · a little more overlap</title><style>
 :root{color-scheme:dark;--bg:#101511;--panel:#19221b;--ink:#eaf2e9;--muted:#acbbaa;--accent:#ff8a7a;--line:#354738}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:40px 22px 64px}.eyebrow,.take-label,label,summary{font:12px/1.5 ui-monospace,monospace;letter-spacing:.05em}.eyebrow,.take-label{color:var(--accent)}h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.04em;margin:8px 0}h2{font-size:32px;margin:0}h3{font-size:22px;margin:0}p{color:var(--muted);margin:10px 0 18px}.intro{max-width:790px}a{color:var(--accent);text-underline-offset:3px}.tools{display:flex;gap:14px 22px;flex-wrap:wrap;margin:24px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:22px 0}.card,.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px}.relationship{margin:36px 0;padding-top:22px;border-top:1px solid var(--line)}.listen{margin:18px 0}.take-label{display:flex;gap:12px;justify-content:space-between;align-items:center}audio{display:block;width:100%;margin-top:8px}details{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}summary{cursor:pointer;min-height:36px}button,select,textarea{font:inherit;border:1px solid var(--line);border-radius:5px;padding:10px;background:#0f1711;color:var(--ink)}button{cursor:pointer;min-height:44px}select,textarea{width:100%;margin-top:8px}textarea{resize:vertical}label{display:block;color:var(--accent);margin-top:16px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.small{font-size:14px}.status{min-height:1.5em;margin:8px 0}footer{margin-top:32px}@media(max-width:680px){main{padding:25px 16px 45px}.grid{grid-template-columns:1fr}.card,.note{padding:18px}.take-label{font-size:11px}}
 </style></head><body><main>
-<div class="eyebrow">SNIPSNAP / OBBLIGATO / LISTENING COMPARISON</div><h1>A little more overlap</h1>
+<div class="eyebrow">SNIPSNAP / OBBLIGATO / HISTORICAL COMPARISON</div><h1>A little more overlap</h1>
 <p class="intro">The incoming phrase joins more fully, and the outgoing phrase lingers a little longer. Compare the current overlap with a little more overlap in Play, Fight and Protect, on one note and in the same short melody.</p>
 <div class="tools"><a href="#play">Play</a><a href="#fight">Fight</a><a href="#protect">Protect</a><a href="../overlap/index.html" id="previous-comparison-link">Earlier overlap comparison</a><a href="../index.html" id="home-link">All auditions</a><a href="manifest.json" id="manifest-download" download="manifest.json">Settings and measurements ↓</a></div>
-<p class="small">Complete duets and melodies are matched to the same loudness. The separate players keep their own duet's gain. Dry mono throughout. This variation awaits your listening verdict.</p>
+<p class="small">Complete duets and melodies are matched to the same loudness. The separate players keep their own duet's gain. Dry mono throughout. This archived comparison retains its original listening settings.</p>
 <p class="small">The melody is C4, E-flat4, G4, F4. Each new note begins as the previous one releases, preserving its whole tail. Each note starts a fresh duet.</p>
 $sections
 <section class="note" style="margin-top:30px"><h2>Your listening notes</h2><label for="verdict">THE LONGER OVERLAP</label><select id="verdict"><option value="">Choose a verdict</option><option>More connected and musical</option><option>Needs a little more overlap</option><option>Too much overlap</option><option>Prefer the current overlap</option></select><label for="notes">WHAT DID YOU HEAR?</label><textarea id="notes" rows="5" placeholder="Do the phrases connect more naturally? Can you still hear who is leading? Does a handoff dip or become crowded?"></textarea><p><button type="button" id="export-notes">Export listening notes ↓</button></p><p class="status small" id="status" aria-live="polite"></p></section>
-<footer><p class="small">The longer overlap is a separate saved instrument revision. Download each WAV or instrument patch beside its player. Settings include the complete recipes, melody onsets, event summaries and recording hashes. Whether the overlap feels right needs your listening verdict.</p></footer>
+<footer><p class="small">The longer overlap is a separate saved instrument revision. Download each WAV or instrument patch beside its player. Settings include the complete recipes, melody onsets, event summaries and recording hashes. The owner approved this longer overlap after this comparison.</p></footer>
 <script id="manifest" type="application/json">${manifest.replace("<", "\\u003c")}</script><script>
 const manifest = JSON.parse(document.getElementById('manifest').textContent);
 document.querySelectorAll('audio').forEach(a=>a.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==a)other.pause();})));
@@ -267,7 +267,7 @@ document.getElementById('export-notes').addEventListener('click',()=>{const reco
 
         Compare the current overlap and a little more overlap in Play, Fight and Protect.
         Single notes use C4, velocity 0.8, seed 0, BREATH 0.65, MISCHIEF 0.2 and HOLD
-        0.45. The candidate awaits a listening verdict. All 24 recordings are dry mono
+        0.45. This is the original comparison snapshot. All 24 recordings are dry mono
         PCM24 at 44.1 kHz. No rack effects or sustain loops are used.
 
         Open index.html beside audio/, patches/, recipes/, diagnostics/ and manifest.json.

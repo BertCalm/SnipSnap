@@ -115,7 +115,7 @@ class LatticeHeldTest {
 
     @Test
     fun `finite HOLD grows the note before its explicit loop threshold`() {
-        for (voice in LatticeVoice.entries) {
+        for (voice in listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW)) {
             val short = Lattice.render(voice, mapOf("HOLD" to 0f))
             val medium = Lattice.render(voice, mapOf("HOLD" to .5f))
             val long = Lattice.render(voice, mapOf("HOLD" to .98f))

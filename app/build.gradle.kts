@@ -12,6 +12,13 @@ repositories {
     mavenCentral()
 }
 
+// Compose instrumentation shares the app's Kotlin runtime. Use the normal
+// unshrunk test shape; verify the optimized listening APK separately.
+val creaseStudyDeviceTests = providers.gradleProperty("creaseStudyDeviceTests").getOrElse("false").toBooleanStrict()
+val creaseStudyEnabled = creaseStudyDeviceTests || providers.gradleProperty("creaseStudyCache").isPresent ||
+    providers.gradleProperty("creaseStudyBuild").getOrElse("false").toBooleanStrict()
+
+
 android {
     namespace = "com.snipsnap.app"
     compileSdk = 35
@@ -67,6 +74,16 @@ android {
             applicationIdSuffix = ".brassgrow"
             versionNameSuffix = "-development"
         }
+        if (creaseStudyEnabled) create("creaseStudy") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".creasestudy"
+            versionNameSuffix = "-crease-study"
+            isMinifyEnabled = !creaseStudyDeviceTests
+            isShrinkResources = !creaseStudyDeviceTests
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "crease-study-rules.pro")
+            matchingFallbacks += listOf("debug")
+            ndk { abiFilters += providers.gradleProperty("creaseStudyAbi").getOrElse("arm64-v8a") }
+        }
         create("strikeFx") {
             // A separately installable listening build. CI debug signing keys
             // are ephemeral, so replacing yesterday's audition can fail to
@@ -80,6 +97,10 @@ android {
             isMinifyEnabled = false
         }
     }
+
+    if (creaseStudyEnabled) sourceSets.getByName("creaseStudy").assets.srcDir(layout.buildDirectory.dir("generated/creaseStudyAssets"))
+
+    testBuildType = providers.gradleProperty("snipsnapTestBuildType").getOrElse(if (creaseStudyDeviceTests) "creaseStudy" else "debug")
 
     testOptions {
         // A UI test waits for the screen to settle; system animations would
@@ -142,9 +163,29 @@ dependencies {
     // The on-device suite: Compose's own test rule and finders, driving a
     // screen on an emulator the way a finger would. The manifest artifact
     // gives the debug build the plain activity the rule hosts content in.
+    testImplementation("junit:junit:4.13.2")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+// Audio binaries stay outside Git. An explicit measured input is mandatory for
+// assembling this study, while ordinary builds and study compiler/tests stay independent.
+val prepareCreaseStudyCache by tasks.registering(Exec::class) {
+    val source = providers.gradleProperty("creaseStudyCache")
+    val output = layout.buildDirectory.dir("generated/creaseStudyAssets/crease")
+    inputs.property("cachePath", source.getOrElse("missing"))
+    inputs.files(rootProject.file("scripts/crease-release/prepare_phone.py"), rootProject.file("scripts/crease-release/verify_phone.py"))
+    inputs.files(fileTree("src/main/cpp/crease"), file("src/main/cpp/OboeOutput.h"))
+    if (source.isPresent) inputs.files(fileTree(source.get()) {
+        include("manifest.json", "report.json", "reader-verification.json", "native-verification.json", "*.cpcb")
+    })
+    outputs.dir(output)
+    doFirst {
+        require(source.isPresent) { "Set -PcreaseStudyCache=/absolute/path/to/the/verified/study" }
+        commandLine("python3", rootProject.file("scripts/crease-release/prepare_phone.py"), source.get(), output.get().asFile)
+    }
+}
+tasks.matching { it.name == "mergeCreaseStudyAssets" }.configureEach { dependsOn(prepareCreaseStudyCache) }

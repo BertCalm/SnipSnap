@@ -1,9 +1,15 @@
 # THUMP SPARK and related hit families
 
-Status: revision 3 built; 119 focused tests, the final generator and the encoded
-asset audit passed. The full nine-module JVM suite is running on Temurin 17,
-without a final result. Useful control range still awaits the owner's listen.
-Repository baseline read: `df675d00` (2026-10-28).
+Status: revision 3 is the working sound-design baseline. The owner reported
+“Much better” on 2026-10-31 and requested the recommended sweet-spot refinement
+on 2026-11-01. R3's 119 focused tests and encoded asset audit passed; PR
+[#729](https://github.com/BertCalm/SnipSnap/pull/729) also passed full JVM,
+Android and native CI and was merged by the owner. The local full run ended
+without a terminal result; it is not counted as a pass.
+
+This round keeps the R3 source and control ranges intact and adds six proposed
+recipe neighborhoods for individual listening. Repository baseline for this
+round: `9c100267` (2026-11-01). Phone timing and MPC hardware loading remain pending.
 
 The characteristic gesture is soft contact or hard strike → metallic material
 → falling pitch → settled body. SPARK remains one provisional THUMP voice with
@@ -26,7 +32,8 @@ However, 90% of the energy in the default-context control clips arrived within
 16–54 ms, and the page emphasized R1/R2 comparisons at a fixed setting. R3
 extends the source changes through more of the hit and puts within-R3 repeated
 control sweeps first. Those are design responses to the report, not a listening
-verdict on R3.
+verdict on R3. The later “Much better” report supports keeping R3 as the working
+baseline; it does not approve every subsequently proposed recipe.
 
 ## Current source and signal flow
 
@@ -58,7 +65,7 @@ TUNE maps exponentially from 110 to 440 Hz; 0.5 is 220 Hz. DECAY maps
 exponentially from 0.16 to 1.0 seconds for the body's t60. Render duration is
 1.4 times body t60, approximately 0.224–1.4 seconds. There is no HOLD or seamless
 loop. The one-way oscillator model has no recursive feedback or event solver.
-All ranges below are bounded sound-design choices until the owner's listen.
+All ranges below are bounded sound-design choices in that working baseline.
 
 PUNCH owns source articulation. Its raised-cosine rise moves exponentially with
 `PUNCH²` from 60 ms at 0 to 0.60 ms at 1. Both branches receive that rise times
@@ -150,8 +157,9 @@ SPARK has no fixed drum-class promise across its full range.
 
 ## Audition and integration
 
-SPARK remains appended to `ThumpVoice`. It has no factory presets while its
-listening gate is open; defaults and SCRAMBLE provide editable starting points.
+SPARK remains appended to `ThumpVoice`. It has no factory presets while
+individual starting points are still being auditioned; defaults and SCRAMBLE
+provide editable starting points.
 DE-SAMPLE excludes this prototype from its candidate grid. No Android or native
 playback code changes are part of R3. Android compilation, phone timing and
 MPC hardware loading remain separate from synthesis tests.
@@ -212,6 +220,62 @@ benchmark. A family should render as a batch, not in the playback callback.
 MOVE remains deferred. An intra-hit trajectory would require its own time law,
 phase/envelope contract, deterministic recipe and listening comparisons.
 
+## R3 sweet-spot study
+
+The six centers below are proposed editable examples on the unchanged R3
+renderer. Each neighborhood varies only the named control; TUNE and every
+other setting stay fixed within that comparison. Lower, center and higher
+settings are separate hits, not a trajectory inside a hit.
+
+| Example | TUNE | DECAY | PUNCH | METAL | COLOR | Nearby comparison |
+|---|---:|---:|---:|---:|---:|---|
+| R3 START | 0.50 | 0.35 | 0.50 | 0.25 | 0.50 | PUNCH 0.40 / 0.50 / 0.60 |
+| WARM KNOCK | 0.25 | 0.25 | 0.60 | 0.08 | 0.28 | COLOR 0.18 / 0.28 / 0.38 |
+| SOFT MALLET | 0.45 | 0.60 | 0.25 | 0.12 | 0.48 | PUNCH 0.15 / 0.25 / 0.35 |
+| HOLLOW RING | 0.50 | 0.55 | 0.45 | 0.45 | 0.32 | METAL 0.35 / 0.45 / 0.55 |
+| BRIGHT CHIP | 0.80 | 0.12 | 0.78 | 0.25 | 0.72 | COLOR 0.62 / 0.72 / 0.82 |
+| OPEN CLANG | 0.60 | 0.70 | 0.62 | 0.75 | 0.78 | METAL 0.65 / 0.75 / 0.85 |
+
+R3 START anchors the study to the existing default. WARM KNOCK explores a
+shorter, lower body with little metallic material. SOFT MALLET opens the
+rounded-contact part of PUNCH over a longer body. HOLLOW RING tests material
+movement behind a darker filter; BRIGHT CHIP tests brightness on a shorter,
+higher hit. OPEN CLANG tests the more metallic, longer-decay territory without
+requiring either timbre control's maximum. These are intended roles, not heard
+descriptions or fixed classifier assignments.
+
+Generate this study separately from the preserved range audition:
+
+```sh
+./gradlew --no-daemon :synth:generateThumpSparkSweetSpots \
+  -PsparkSweetSpotOutput=/absolute/new-sweet-spots \
+  -PsparkSweetSpotBaseline=/absolute/preserved-r3-audition
+```
+
+The study contains 18 complete recipes with native and matched single hits.
+Six neighborhood trains play lower twice, center twice and higher twice; a
+separate playlist plays each of the six centers twice. Trains copy the encoded
+hits with silence between onsets and add no processing. Source hashes and an
+exact native/matched PCM comparison of R3 START against the preserved default
+guard the baseline. The existing range audition and historical assets remain
+available unchanged.
+
+The page allows a preference to be recorded for each neighborhood and exported
+with its complete macro map. Preferences are stored in the browser; they do
+not change SnipSnap's factory bank. Individual recipe choices still need the
+owner's listen. The study generator and all 13 `ThumpSparkTest` checks completed
+with exit code 0. Independent audits verified 18 recipes, 50 WAVs, all seven
+train pairs, 70 asset references and the 71-entry listening ZIP. Its size is
+6,891,678 bytes. Native and matched R3 START files are byte-identical to the
+preserved default, and all four renderer hashes match R3. Every train retains
+the exact source PCM with zero-filled gaps.
+
+The generated page's preference logic passed a Node DOM/storage harness:
+saved and undecided choices, unavailable storage, complete five-control JSON
+exports, and pausing other players. This is not a browser playback or listening
+test. The current source's full JVM regression run is in progress; R3's earlier
+completed CI result is recorded separately below.
+
 ## Revision 3 verification ledger
 
 The final focused Gradle run and generator exited 0 in 2 min 03 s. All 119 tests
@@ -249,8 +313,8 @@ and CRC checks passed.
 |---|---|---|
 | Source articulation, persistent material, broader spectrum and fixed pitch fall | Built; numerically checked | Current `Thump.spark`, SPARK-only shared-PUNCH amount 0 and final uniform loudness level. |
 | Focused regression checks, recipes and encoded audition integrity | Passed | Successful Gradle exit and the source/WAV/baseline/train/ZIP audit above. |
-| Full JVM regression suite | Running; no final result | Temurin 17 run must finish before a full-pass claim. |
-| Useful control range and musical character | Not heard | The owner's repeated sweeps and endpoint audition remain the deciding check. |
+| R3 full JVM, Android and native CI | Passed | PR #729 checks at `5704db39`; the local incomplete full run is not counted as a pass. |
+| R3 control-range improvement | Heard by owner | “Much better,” 2026-10-31; retained as the working baseline. Individual sweet-spot examples remain proposed. |
 | Phone performance and MPC loading | Pending | Local JVM and file checks do not establish these. |
 
 The convergence residual includes filter phase, integration and resampling

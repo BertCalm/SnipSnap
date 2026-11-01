@@ -128,13 +128,16 @@ object FilamentPadMaker {
 
     private fun write(name: String, spec: Spec, program: KeygroupProgram, samples: Map<String, Snip>,
                       destRoot: File, overwrite: Boolean): KeygroupProgram {
-        OneNote.writePackage(name, program, samples, destRoot, overwrite)
+        // The shared exporter spans the keyboard. Return and record those actual zones,
+        // while the capture roots remain bounded by the selected native sample range.
+        val written = program.fullKeyboard()
+        OneNote.writePackage(name, written, samples, destRoot, overwrite)
         // Existing patch JSON keeps source controls and saved model replayable beside the WAVs.
         // Release remains a program property, already recorded in the instrument sidecar.
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
         AtomicFile.writeText(File(dataDir, PATCH_FILE), spec.patch.toJsonText())
-        if (spec.touchLayers || spec.wideKeys) AtomicFile.writeText(File(dataDir, TOUCH_FILE), instrumentRecipe(spec, program))
-        return program
+        if (spec.touchLayers || spec.wideKeys) AtomicFile.writeText(File(dataDir, TOUCH_FILE), instrumentRecipe(spec, written))
+        return written
     }
 
     /** Capture settings are delivery metadata, separate from the unchanged source-patch schema. */

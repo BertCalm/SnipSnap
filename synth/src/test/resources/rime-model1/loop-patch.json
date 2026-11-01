@@ -1,0 +1,19 @@
+{
+  "engine": "RIME",
+  "version": 1,
+  "name": "Round Seed",
+  "voice": "LOOP",
+  "macros": {
+    "DETAIL": 0.2800000011920929,
+    "EDGE": 0.18000000715255737,
+    "ANGLE": 0.20000000298023224,
+    "UNFOLD": 0.10000000149011612,
+    "BODY": 0.25,
+    "HOLD": 0
+  },
+  "model": 1,
+  "midi": 36,
+  "velocity": 0.800000011920929,
+  "gateSeconds": 0.800000011920929,
+  "seed": 1729
+}

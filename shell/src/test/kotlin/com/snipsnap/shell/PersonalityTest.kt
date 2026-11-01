@@ -691,6 +691,11 @@ class PersonalityTest {
         // are read off disk: the same `…`-suffixed dock line as every other
         // *_BUSY constant above, for a load no control started.
         "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
+        // The dock's line while KEYS rewrites an instrument's descriptors for
+        // a new voice mode: the same `…`-suffixed dock line as the loads
+        // above. Its failure toast, KEYS_VOICE_FAILED, is a sentence and
+        // keeps its full stop.
+        "KEYS_VOICE_BUSY",
     )
 
     /**

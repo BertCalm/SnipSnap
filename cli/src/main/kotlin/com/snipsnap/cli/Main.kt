@@ -92,7 +92,8 @@ object Cli {
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
-        |                         --patch recipe.json --macros HANDOFF=.5; finite exchange, HOLD unavailable)
+        |                         --model 1|2 --patch recipe.json --macros HANDOFF=.5,MATCH=1;
+        |                         MATCH requires model 2; finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
@@ -114,6 +115,9 @@ object Cli {
         |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
+        |                        (OVERLAP: --patch recipe.json --midi 24..84 --velocity 0..1;
+        |                        saved HELD recipes support --instrument [--release .1..1.5];
+        |                        finite recipes retain their original playback)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
         |                        --velocity 0..1 --gate S --dry|--wet;
         |                        --patch recipe.json loads a complete sound;

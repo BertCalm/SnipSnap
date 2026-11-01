@@ -41,12 +41,14 @@ import com.snipsnap.shell.MidiLearnStore
  * was inlined there. Main thread only, like the screens that feed it.
  *
  * @param prefer the mode each target wants of a control learned for it.
+ * @param kinds the kinds of message each target may learn from, or null for any.
  */
 @Stable
 internal class MidiLearnState(
     private val prefs: SharedPreferences,
     private val screen: String,
     private val prefer: (String) -> MidiBinding.Mode?,
+    private val kinds: (String) -> Set<MidiBinding.Kind>? = { null },
 ) {
     val learn = MidiLearn(MidiLearnStore.load(prefs.getString(MidiLearnStore.PREFS_KEY, null), screen))
 
@@ -72,7 +74,7 @@ internal class MidiLearnState(
 
     /** Wait for a control for [target], or stop waiting with null. */
     fun arm(target: String?) {
-        if (target == null) learn.disarm() else learn.arm(target, prefer(target))
+        if (target == null) learn.disarm() else learn.arm(target, prefer(target), kinds(target))
         armed = target
     }
 
@@ -107,9 +109,13 @@ internal class MidiLearnState(
 
 /** [screen]'s [MidiLearnState], read from the app's preferences once. */
 @Composable
-internal fun rememberMidiLearn(screen: String, prefer: (String) -> MidiBinding.Mode?): MidiLearnState {
+internal fun rememberMidiLearn(
+    screen: String,
+    kinds: (String) -> Set<MidiBinding.Kind>? = { null },
+    prefer: (String) -> MidiBinding.Mode?,
+): MidiLearnState {
     val context = LocalContext.current
-    return remember(screen) { MidiLearnState(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE), screen, prefer) }
+    return remember(screen) { MidiLearnState(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE), screen, prefer, kinds) }
 }
 
 /**

@@ -4,10 +4,11 @@ import gzip
 import json
 from pathlib import Path
 import subprocess
+import sys
 import numpy as np
 import playable as b
 
-root=b.ROOT;out=root/'testkit/crease-playable-release';raw=out/'raw'
+root=b.ROOT;out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else root/'testkit/crease-playable-release';raw=out/'raw'
 m=json.loads((out/'manifest.json').read_text());meta=json.loads((raw/'capture.json').read_text())
 payload=(out/m['container']['file']).read_bytes()
 decoded=np.frombuffer(gzip.decompress(payload),dtype=np.uint8).reshape(2,-1).T.copy()

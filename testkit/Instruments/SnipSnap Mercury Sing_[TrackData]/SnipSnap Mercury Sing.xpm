@@ -9,6 +9,12 @@
   </Version>
   <Program type="Keygroup">
     <ProgramName>SnipSnap Mercury Sing</ProgramName>
+    <Mono>False</Mono>
+    <Program_Polyphony>0</Program_Polyphony>
+    <PortamentoTime>0.000000</PortamentoTime>
+    <PortamentoLegato>False</PortamentoLegato>
+    <PortamentoQuantized>False</PortamentoQuantized>
+    <MonoRetrigger>False</MonoRetrigger>
     <Instruments>
       <Instrument number="0">
         <Volume>1.000000</Volume>
@@ -24,7 +30,7 @@
         <VolumeRelease>0.600000</VolumeRelease>
         <TuneCoarse>0</TuneCoarse>
         <TuneFine>0</TuneFine>
-        <LowNote>46</LowNote>
+        <LowNote>0</LowNote>
         <HighNote>56</HighNote>
         <Layers>
           <Layer number="1">
@@ -1969,7 +1975,7 @@
         <TuneCoarse>0</TuneCoarse>
         <TuneFine>0</TuneFine>
         <LowNote>78</LowNote>
-        <HighNote>88</HighNote>
+        <HighNote>127</HighNote>
         <Layers>
           <Layer number="1">
             <Active>True</Active>

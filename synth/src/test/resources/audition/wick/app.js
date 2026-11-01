@@ -115,9 +115,23 @@
   function clipSource(clip) {
     return safePath(state.level === 'matched' ? clip.file : (clip.nativeFile || clip.rawFile || clip.file));
   }
+  function isSourceStudy(clip) {
+    return /^source_(current|warm_wire|hollow_reed|rubbed_glass)_/.test(String(clip?.id || ''));
+  }
+  function refreshLevelControls() {
+    const matchedOnly = isSourceStudy(state.current) && !state.current.nativeFile && !state.current.rawFile;
+    if (matchedOnly) state.level = 'matched';
+    $$('[data-level]').forEach(button => {
+      button.disabled = matchedOnly && button.dataset.level === 'native';
+      button.setAttribute('aria-pressed', String(button.dataset.level === state.level));
+    });
+    $('#level-note').textContent = matchedOnly ? 'Source-study previews use matched levels.' : state.level === 'matched' ? 'Matched files make differences easier to hear.' : !state.current || state.current.nativeFile ? 'Native files preserve the engine’s rendered level.' : 'Raw files use a shared −6 dB export gain.';
+  }
   function sectionFor(group, clips) {
     const id = String(group.id || '').toLowerCase();
     const text = `${id} ${group.title || ''}`.toLowerCase();
+    if (id === 'source-register' || id === 'source-phrases') return 'start';
+    if (id === 'source-held') return 'held';
     if (id === 'musical-patterns' || clips.some(clip => clip.kind === 'pattern')) return 'start';
     if (id === 'bubble-tone' || id === 'breath-sustain' || id === 'flicker-register' || id === 'rattle-register' || id === 'rattle-reserve' || id === 'rattle-cohesion') return 'start';
     if (id === 'defaults' || /^(default|start|reference)/.test(id)) return 'start';
@@ -173,6 +187,7 @@
 
   function setCurrent(clip) {
     state.current = clip;
+    refreshLevelControls();
     $('#transport').hidden = false;
     document.body.classList.add('has-player');
     $('#transport-title').textContent = clipAccessibleTitle(clip);
@@ -185,11 +200,11 @@
     if (!preserveSequence) { state.sequence = []; state.sequenceIndex = -1; }
     const token = ++loadToken;
     state.loadingToken = token;
-    const source = clipSource(clip);
-    if (source === '#') { tell('This render has no playable audio file.'); return; }
     stopHeld();
     audio.pause();
     setCurrent(clip);
+    const source = clipSource(clip);
+    if (source === '#') { tell('This render has no playable audio file.'); return; }
     const Context = window.AudioContext || window.webkitAudioContext;
     if (clip.loop && Context) {
       try {
@@ -291,7 +306,7 @@
     state.sequence = [];
     state.sequenceIndex = -1;
     updateCards();
-    tell('This audio file could not be loaded. You can try its WAV download.');
+    tell('This audio file could not be loaded. You can try its audio download.');
   });
   $('#transport-toggle').addEventListener('click', () => { if (state.current) toggleClip(state.current); });
   $('#transport-stop').addEventListener('click', () => {
@@ -304,6 +319,7 @@
     state.current = null;
     state.sequence = [];
     state.sequenceIndex = -1;
+    refreshLevelControls();
     $('#transport').hidden = true;
     document.body.classList.remove('has-player');
     updateCards();
@@ -319,9 +335,7 @@
     const position = playbackTime();
     const wasPlaying = state.current && (isPlaying() || Boolean(state.loadingToken));
     state.level = button.dataset.level;
-    $$('[data-level]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.level === state.level)));
-    const exact = !state.current || Boolean(state.current.nativeFile);
-    $('#level-note').textContent = state.level === 'matched' ? 'Matched files make differences easier to hear.' : exact ? 'Native files preserve the engine’s rendered level.' : 'Raw files use a shared −6 dB export gain.';
+    refreshLevelControls();
     if (state.current) {
       if (wasPlaying) playClip(state.current, Boolean(state.sequence.length), position);
       else if (held) {
@@ -353,6 +367,11 @@
     return clip?.groupId === 'rattle-cohesion' || /^rattle_cohesion_\d+_(reference|candidate)$/.test(String(clip?.id || ''));
   }
   function clipTitle(clip) {
+    if (isSourceStudy(clip)) {
+      const names = { current: 'Current body', warm_wire: 'Warm wire', hollow_reed: 'Hollow reed', rubbed_glass: 'Rubbed glass' };
+      const family = /^source_(current|warm_wire|hollow_reed|rubbed_glass)_/.exec(clip.id)[1];
+      return `${names[family]}${clip.kind === 'pattern' ? ' · phrase' : clip.loop ? ' · held' : ''}`;
+    }
     if (isBubbleTone(clip)) {
       if (/_reference$/.test(clip.id)) return 'Earlier pops';
       if (/_candidate$/.test(clip.id)) return 'Longer pitched tone';
@@ -364,6 +383,7 @@
     return clip?.title || clip?.id || 'Wick clip';
   }
   function clipAccessibleTitle(clip) {
+    if (isSourceStudy(clip) && finite(clip.midi) && clip.kind !== 'pattern') return `${clipTitle(clip)} at ${noteName(clip.midi)} (MIDI ${clip.midi})`;
     return `${clipTitle(clip)}${(isBubbleTone(clip) || isRattleCohesion(clip)) && finite(clip.midi) ? ` at MIDI ${clip.midi}` : ''}`;
   }
 
@@ -373,6 +393,7 @@
     card.dataset.clip = String(clip.id);
     const top = el('div', 'clip-top');
     top.append(el('span', 'voice-tag', clip.voice || 'WICK'));
+    if (isSourceStudy(clip)) top.append(el('span', 'source-tag', 'Source study'));
     if (clip.loop) top.append(el('span', 'hold-tag', 'HOLD'));
     top.append(el('span', 'clip-id', clip.id));
     const main = el('div', 'clip-main');
@@ -405,7 +426,7 @@
     progress.setAttribute('aria-hidden', 'true');
     progress.append(el('span'));
     const footer = el('div', 'clip-footer');
-    if (clip.file) footer.append(link('WAV ↓', clip.file));
+    if (clip.file) footer.append(link(/\.flac$/i.test(clip.file) ? 'FLAC ↓' : 'WAV ↓', clip.file));
     if (pattern) {
       const sequenceRecipe = clip.sequenceRecipeFile || clip.recipeFile;
       if (sequenceRecipe) footer.append(link('Sequence recipe ↓', sequenceRecipe));
@@ -434,7 +455,11 @@
     const bubbleTone = group.id === 'bubble-tone';
     const rattleCohesion = group.id === 'rattle-cohesion';
     const prioritizeRattle = group.id === 'defaults' || group.id === 'musical-patterns';
-    const clips = rattleCohesion ? group.clips.slice().sort((a, b) => ([60, 48, 72].indexOf(a.midi) - [60, 48, 72].indexOf(b.midi)) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : prioritizeRattle ? group.clips.slice().sort((a, b) => Number(b.voice === 'RATTLE') - Number(a.voice === 'RATTLE')) : group.clips;
+    const clips = rattleCohesion ? group.clips.slice().sort((a, b) => ([60, 48, 72].indexOf(a.midi) - [60, 48, 72].indexOf(b.midi)) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : prioritizeRattle ? group.clips.slice().sort((a, b) => Number(b.voice === 'RATTLE') - Number(a.voice === 'RATTLE')) : group.clips.slice();
+    if (group.id === 'source-register') {
+      const familyOrder = clip => ['current', 'warm_wire', 'hollow_reed', 'rubbed_glass'].findIndex(family => String(clip.id).startsWith(`source_${family}_`));
+      clips.sort((a, b) => ([60, 48, 72].indexOf(a.midi) - [60, 48, 72].indexOf(b.midi)) || familyOrder(a) - familyOrder(b));
+    }
     const sweep = group.clips.some(clip => clip.kind === 'sweep' || clip.kind === 'held-sweep');
     const section = el('section', `clip-group${sweep ? ' sweep-group' : ''}`);
     section.dataset.group = String(group.id);
@@ -444,7 +469,7 @@
     const heading = el('div', 'group-heading');
     const headingId = `group-${String(group.id).replace(/[^\w-]/g, '-')}`;
     const musicalPatterns = group.id === 'musical-patterns';
-    const title = el('h4', '', rattleCohesion ? 'RATTLE · Earlier separate hits / Connected body' : musicalPatterns ? 'Six voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
+    const title = el('h4', '', group.id === 'source-register' ? 'RATTLE · Same movement, four bodies' : rattleCohesion ? 'RATTLE · Earlier separate hits / Connected body' : musicalPatterns ? 'Six voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
     title.id = headingId;
     section.setAttribute('aria-labelledby', headingId);
     heading.append(title);
@@ -553,6 +578,7 @@
       [clip.kind === 'pattern' ? 'MIDI note range' : 'MIDI note', clip.kind === 'pattern' ? clip.noteRange ? `${clip.noteRange.minMidi}–${clip.noteRange.maxMidi}` : 'Varies by sequence event' : finite(clip.midi) ? `${clip.midi} (${noteName(clip.midi)})` : undefined],
       [clip.kind === 'pattern' ? 'Velocity range' : 'Velocity', clip.kind === 'pattern' ? clip.velocityRange ? `${numeric(clip.velocityRange.min)}–${numeric(clip.velocityRange.max)}` : 'Varies by sequence event' : clip.velocity],
       ['Render status', clip.status],
+      ['Underlying source', clip.sourceFamily || clip.rattleSource],
       ['Raw peak', metrics.rawPeak],
       ['Event count', diagnosticData.eventCount ?? clip.diagnostics?.eventCount ?? (Array.isArray(diagnosticData.events) ? diagnosticData.events.length : undefined)],
       ['Matched loudness', clip.metrics?.matchedLoudness],
@@ -569,7 +595,7 @@
       showValueList(parent, Object.entries(clip.macros));
     }
     if (metrics.onsetClassifier) parent.append(el('p', '', 'The onset classification uses the short window shown above. Long full-file renders may be classified as LOOP by duration.'));
-    const options = Object.entries(clip.options || {}).filter(([key, value]) => value === true || (key === 'oversample' && value !== undefined));
+    const options = Object.entries(clip.options || {}).filter(([key, value]) => value === true || ((key === 'oversample' || key === 'rattleSource') && value !== undefined));
     if (options.length) { parent.append(el('h5', '', 'Diagnostic render options')); showValueList(parent, options); }
     addEventLane(parent, data);
     if (clip.diagnosticsFile) parent.append(link('Download full trace JSON ↓', clip.diagnosticsFile));
@@ -655,8 +681,34 @@
       const response = await fetch('manifest.json');
       if (!response.ok) throw new Error(`Manifest ${response.status}`);
       const manifest = await response.json();
-      const entries = Array.isArray(manifest.entries) ? manifest.entries : Array.isArray(manifest.clips) ? manifest.clips : [];
+      let entries = Array.isArray(manifest.entries) ? manifest.entries : Array.isArray(manifest.clips) ? manifest.clips : [];
       if (!entries.length) throw new Error('No clips found');
+      let sourceStudy = null;
+      if (manifest.sourceStudyFile) {
+        try {
+          const studyResponse = await fetch(safePath(manifest.sourceStudyFile));
+          if (!studyResponse.ok) throw new Error(`Source study ${studyResponse.status}`);
+          const study = await studyResponse.json();
+          if (study.format !== 'wick-source-study-v1' || !Array.isArray(study.entries) || !study.entries.length || !Array.isArray(study.groups)) throw new Error('Invalid source study');
+          const ids = new Set(entries.map(clip => String(clip.id)));
+          for (const clip of study.entries) {
+            if (!isSourceStudy(clip) || ids.has(String(clip.id))) throw new Error('Invalid source-study clip ID');
+            ids.add(String(clip.id));
+          }
+          entries = [...study.entries, ...entries];
+          manifest.entries = entries;
+          manifest.groups = [...study.groups, ...(Array.isArray(manifest.groups) ? manifest.groups : [])];
+          sourceStudy = study;
+        } catch (_) { tell('The source study is unavailable. The earlier listening comparisons are still here.'); }
+      }
+      if (sourceStudy) {
+        $('#source-study-intro').hidden = false;
+        $('#standard-intro').hidden = true;
+        $('#first-play-label').textContent = 'Hear Warm wire at C4';
+        $('#source-study-download').hidden = false;
+        $('#source-study-download').href = safePath(manifest.sourceStudyFile);
+        $('#audition-scope').textContent = 'This audition applies RATTLE’s connected movement to three alternate sources: Warm wire, Hollow reed, and Rubbed glass. Compare them with the current body at the same settings, then try the same phrase or a held cycle. The names describe tonal directions, not physical models. These are diagnostic candidates; the normal RATTLE patch and the five accepted voices are preserved.';
+      }
       state.manifest = manifest;
       entries.forEach((clip, index) => { clip.id = String(clip.id ?? `clip-${index + 1}`); state.clips.set(clip.id, clip); });
       state.groups = normalizeGroups(manifest, entries);
@@ -664,7 +716,7 @@
         const host = $(`[data-host="${name}"]`);
         const groups = state.groups.filter(group => group.section === name);
         if (name === 'start') {
-          const priority = group => group.id === 'rattle-cohesion' ? 0 : group.id === 'defaults' ? 1 : group.id === 'rattle-register' ? 2 : group.id === 'rattle-reserve' ? 3 : group.id === 'musical-patterns' ? 4 : group.id === 'flicker-register' ? 5 : group.id === 'breath-sustain' ? 6 : group.id === 'bubble-tone' ? 8 : 7;
+          const priority = group => group.id === 'source-register' ? -2 : group.id === 'source-phrases' ? -1 : group.id === 'rattle-cohesion' ? 0 : group.id === 'defaults' ? 1 : group.id === 'rattle-register' ? 2 : group.id === 'rattle-reserve' ? 3 : group.id === 'musical-patterns' ? 4 : group.id === 'flicker-register' ? 5 : group.id === 'breath-sustain' ? 6 : group.id === 'bubble-tone' ? 8 : 7;
           groups.sort((a, b) => priority(a) - priority(b));
         }
         groups.forEach(group => host.append(createGroup(group)));
@@ -672,7 +724,7 @@
       }
       const macros = [...new Set(state.groups.filter(group => group.section === 'controls').flatMap(group => group.clips.map(clip => clip.macro).filter(Boolean)))];
       macros.forEach(macro => { const option = el('option', '', macro); option.value = String(macro).toUpperCase(); $('#macro-filter').append(option); });
-      const first = entries.find(clip => clip.id === 'rattle_cohesion_60_candidate' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && clip.voice === 'RATTLE' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
+      const first = entries.find(clip => clip.id === 'source_warm_wire_60' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.id === 'rattle_cohesion_60_candidate' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && clip.voice === 'RATTLE' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
       if (first) {
         $('#first-play').disabled = false;
         $('#first-play').addEventListener('click', () => { switchTab('start'); playClip(first); });
@@ -684,12 +736,22 @@
       if (failed) tell(`${failed} render${failed === 1 ? ' is' : 's are'} flagged for review. Diagnostics include the details.`);
       const hash = location.hash.replace('#', '');
       if (sections.includes(hash)) switchTab(hash);
+      else {
+        const group = state.groups.find(item => `group-${item.id}` === hash);
+        if (group) { switchTab(group.section); requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView()); }
+      }
     } catch (error) {
       $('#load-state').textContent = 'The audio manifest could not be loaded. Please refresh the page to try again.';
       $('#load-state').classList.add('error');
       $$('[data-panel]').forEach(panel => { panel.hidden = true; });
     }
   }
+  $$('[data-tab-link]').forEach(anchor => anchor.addEventListener('click', event => {
+    event.preventDefault();
+    switchTab(anchor.dataset.tabLink);
+    const target = document.getElementById(anchor.hash.slice(1));
+    if (target) { history.replaceState(null, '', anchor.hash); target.scrollIntoView(); }
+  }));
   init();
   loadBuildInfo();
 })();

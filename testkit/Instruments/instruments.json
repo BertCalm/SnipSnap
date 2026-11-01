@@ -14,7 +14,7 @@
         {
           "rootMidi": 41,
           "note": "F2",
-          "lowNote": 32,
+          "lowNote": 0,
           "highNote": 42,
           "samples": [
             {
@@ -191,7 +191,7 @@
           "rootMidi": 65,
           "note": "F4",
           "lowNote": 64,
-          "highNote": 74,
+          "highNote": 127,
           "samples": [
             {
               "sample": "EP_F4_soft",
@@ -222,7 +222,7 @@
         {
           "rootMidi": 45,
           "note": "A2",
-          "lowNote": 36,
+          "lowNote": 0,
           "highNote": 46,
           "samples": [
             {
@@ -343,7 +343,7 @@
           "rootMidi": 69,
           "note": "A4",
           "lowNote": 68,
-          "highNote": 78,
+          "highNote": 127,
           "samples": [
             {
               "sample": "Organ_A4",
@@ -368,7 +368,7 @@
         {
           "rootMidi": 52,
           "note": "E3",
-          "lowNote": 43,
+          "lowNote": 0,
           "highNote": 53,
           "samples": [
             {
@@ -545,7 +545,7 @@
           "rootMidi": 76,
           "note": "E5",
           "lowNote": 75,
-          "highNote": 85,
+          "highNote": 127,
           "samples": [
             {
               "sample": "Harp_E5_soft",
@@ -576,7 +576,7 @@
         {
           "rootMidi": 60,
           "note": "C4",
-          "lowNote": 51,
+          "lowNote": 0,
           "highNote": 61,
           "samples": [
             {
@@ -697,7 +697,7 @@
           "rootMidi": 84,
           "note": "C6",
           "lowNote": 83,
-          "highNote": 93,
+          "highNote": 127,
           "samples": [
             {
               "sample": "MusicBox_C6",
@@ -721,7 +721,7 @@
         {
           "rootMidi": 45,
           "note": "A2",
-          "lowNote": 36,
+          "lowNote": 0,
           "highNote": 46,
           "samples": [
             {
@@ -842,7 +842,7 @@
           "rootMidi": 69,
           "note": "A4",
           "lowNote": 68,
-          "highNote": 78,
+          "highNote": 127,
           "samples": [
             {
               "sample": "ResinPad_A4",
@@ -867,7 +867,7 @@
         {
           "rootMidi": 48,
           "note": "C3",
-          "lowNote": 39,
+          "lowNote": 0,
           "highNote": 49,
           "samples": [
             {
@@ -1044,7 +1044,7 @@
           "rootMidi": 72,
           "note": "C5",
           "lowNote": 71,
-          "highNote": 81,
+          "highNote": 127,
           "samples": [
             {
               "sample": "Fork_C5_soft",
@@ -1075,7 +1075,7 @@
         {
           "rootMidi": 60,
           "note": "C4",
-          "lowNote": 51,
+          "lowNote": 0,
           "highNote": 61,
           "samples": [
             {
@@ -1196,7 +1196,7 @@
           "rootMidi": 84,
           "note": "C6",
           "lowNote": 83,
-          "highNote": 93,
+          "highNote": 127,
           "samples": [
             {
               "sample": "MercuryPing_C6",
@@ -1220,7 +1220,7 @@
         {
           "rootMidi": 55,
           "note": "G3",
-          "lowNote": 46,
+          "lowNote": 0,
           "highNote": 56,
           "samples": [
             {
@@ -1341,7 +1341,7 @@
           "rootMidi": 79,
           "note": "G5",
           "lowNote": 78,
-          "highNote": 88,
+          "highNote": 127,
           "samples": [
             {
               "sample": "MercurySing_G5",
@@ -1365,7 +1365,7 @@
         {
           "rootMidi": 55,
           "note": "G3",
-          "lowNote": 46,
+          "lowNote": 0,
           "highNote": 56,
           "samples": [
             {
@@ -1486,7 +1486,7 @@
           "rootMidi": 79,
           "note": "G5",
           "lowNote": 78,
-          "highNote": 88,
+          "highNote": 127,
           "samples": [
             {
               "sample": "MercuryBlade_G5",

@@ -456,6 +456,81 @@ TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
     CHECK_EQ(static_cast<int>(ended(e).size()), 0);
 }
 
+TEST(pad_engine_note_off_fades_a_positive_sustain_loop_without_repeating_its_opening) {
+    // PRISM's exported instrument plays an opening once, then loops to EOF.
+    // InstrumentPlayer sends note-off through JNI as Stop(releaseSeconds * 1000).
+    // A flat sustain isolates that release envelope from oscillator zero crossings.
+    for (const int32_t sourceRate : {44100, 48000}) {
+        for (const float releaseMs : {600.0f, 1000.0f}) {
+            PadEngine e(kRate);
+            // No stream is opened in this harness. The callback rate remains
+            // 48 kHz; a 44.1 kHz exported sample is resampled into that clock.
+            const int32_t outputRate = e.sampleRate();
+            CHECK_EQ(outputRate, kRate);
+            const int32_t openingFrames = sourceRate * 4 / 5;  // the accepted 0.8-second opening
+            const int32_t loopFrames = sourceRate / 100;
+            const int32_t sampleFrames = openingFrames + loopFrames;
+            constexpr float opening = 0.8f;
+            constexpr float sustain = 0.2f;
+            std::vector<float> sample(static_cast<size_t>(sampleFrames), sustain);
+            // The prefix already joins the kept sustain before the marker,
+            // so the cubic's neighboring taps agree even at fractional reads.
+            std::fill(sample.begin(), sample.begin() + openingFrames - 4, opening);
+            e.beginBank();
+            e.addSample(std::move(sample), 1, sourceRate);
+            e.commitBank();
+            callback(e, 8);
+            ended(e);
+
+            // Drive realistic callback blocks so the release must survive both
+            // callback boundaries and many crossings of the stored sample's EOF.
+            auto renderFrames = [&](int32_t frames) {
+                std::vector<float> out;
+                out.reserve(static_cast<size_t>(frames) * 2);
+                while (frames > 0) {
+                    const int32_t count = std::min(frames, int32_t{128});
+                    const auto block = callback(e, count);
+                    out.insert(out.end(), block.begin(), block.end());
+                    frames -= count;
+                }
+                return out;
+            };
+
+            constexpr int32_t voice = 63;
+            CHECK(e.pushCommand(looping(voice, 0, sampleFrames, openingFrames)));
+            const double outputPerSource = static_cast<double>(outputRate) / sourceRate;
+            const int32_t openingOutputFrames = static_cast<int32_t>(std::lround(openingFrames * outputPerSource));
+            const int32_t sampleOutputFrames = static_cast<int32_t>(std::lround(sampleFrames * outputPerSource));
+            const auto held = renderFrames(static_cast<int32_t>(std::lround((sampleFrames + 3 * loopFrames) * outputPerSource)));
+            CHECK_NEAR(held[0], opening, 1e-6);
+            CHECK_NEAR(held[2 * (openingOutputFrames / 2)], opening, 1e-6);
+            CHECK_NEAR(held[2 * openingOutputFrames], sustain, 1e-6);
+            for (size_t i = static_cast<size_t>(sampleOutputFrames) * 2; i < held.size(); ++i) {
+                CHECK_NEAR(held[i], sustain, 1e-6);  // no return to the louder opening
+            }
+            CHECK(ended(e).empty());
+
+            CHECK(e.pushCommand(stop(voice, releaseMs)));
+            const int32_t releaseFrames = static_cast<int32_t>(std::lround(releaseMs * 0.001f * outputRate));
+            const int32_t halfFrames = releaseFrames / 2;
+            const auto firstHalf = renderFrames(halfFrames);
+            CHECK(std::all_of(firstHalf.begin(), firstHalf.end(), [](float x) { return std::isfinite(x); }));
+            CHECK(firstHalf[0] > sustain * 0.99f);  // note-off does not hard-stop the voice
+            CHECK_NEAR(firstHalf[firstHalf.size() - 2], sustain * 0.5f, 0.002f);
+            CHECK_NEAR(firstHalf.back(), sustain * 0.5f, 0.002f);
+            CHECK(ended(e).empty());  // still audible halfway through the requested release
+
+            const auto tail = renderFrames(releaseFrames - halfFrames + outputRate / 50);
+            CHECK(std::all_of(tail.end() - outputRate / 100 * 2, tail.end(), [](float x) { return x == 0.0f; }));
+            const auto ids = ended(e);
+            CHECK_EQ(static_cast<int>(ids.size()), 1);
+            if (!ids.empty()) CHECK_EQ(ids[0], voice);
+            CHECK_NEAR(peak(renderFrames(128)), 0.0f, 1e-7);
+            CHECK(ended(e).empty());
+        }
+    }
+}
+
 TEST(pad_engine_the_seam_of_a_loop_is_interpolated_into_the_loop_start) {
     // Half a frame per output frame (pitch 0.5): position 9.5 sits between
     // the last frame (9) and the loop's first (4), and reads their mean.

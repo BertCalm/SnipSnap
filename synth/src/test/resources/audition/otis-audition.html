@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Otis · more steam</title>
+<style>
+:root{--bg:#171714;--panel:#22221e;--line:#494537;--ink:#f0ebdd;--muted:#bcb7a7;--gold:#eac56a;--focus:#8cdbdb;color-scheme:dark;font:16px/1.5 system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:1120px;margin:auto;padding:32px 20px 80px}h1,h2,h3,p{margin-top:0}h1{font:600 clamp(2.2rem,6vw,4rem)/1.1 Georgia,serif;letter-spacing:-.03em;margin-bottom:16px}h2{font:500 2rem Georgia,serif;color:var(--gold);margin:40px 0 16px}h3{font-size:1rem;margin-bottom:10px}.eyebrow{text-transform:uppercase;letter-spacing:.15em;color:var(--gold);font-size:.75rem}.intro{max-width:760px;color:var(--muted)}a{color:var(--gold)}button,select{font:inherit;border:1px solid var(--line);border-radius:6px;background:#303028;color:var(--ink);padding:8px 12px;min-height:44px;cursor:pointer}button:hover,select:hover{border-color:var(--gold)}:focus-visible{outline:3px solid var(--focus);outline-offset:3px}.toolbar{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;flex-wrap:wrap;align-items:center;gap:16px;border-block:1px solid var(--line);padding:16px 0;margin-top:24px}fieldset{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:16px}legend{font-size:.8rem;color:var(--muted);margin-bottom:6px}fieldset label{cursor:pointer}input{accent-color:var(--gold);width:18px;height:18px;vertical-align:middle;margin-right:6px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:14px}.clip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}.clip p{font-size:.87rem;color:var(--muted)}.badge{font:500 .7rem/1.2 system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:8px}audio{display:block;width:100%;margin:16px 0 10px;min-height:44px}.measure{font:12px/1.5 ui-monospace,monospace;color:var(--muted);margin-bottom:12px}.download{font-size:.8rem}details{margin-top:16px}summary{cursor:pointer;color:var(--muted);font-size:.8rem;padding-block:6px}pre{font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;color:var(--muted)}.note{border-left:3px solid var(--gold);padding-left:14px;margin-block:24px;color:var(--muted);font-size:.9rem}footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:.85rem}[hidden]{display:none!important}#status{color:var(--muted);font-size:.8rem;margin-top:12px}@media(prefers-reduced-motion:no-preference){button{transition:border-color .15s}}
+</style>
+<main>
+  <header>
+    <p class="eyebrow">SnipSnap · finite sound study</p>
+    <h1 id="page-title">Otis, more steam.</h1>
+    <p class="intro" id="page-intro">Steam has a fuller sustained body, with pressure feeding a stronger pipe tone. Only Steam was revised in this pass. Blues harmonica is the breath-driven reed voice, with bends and rasp.</p>
+    <p class="intro" id="page-context">Defaults and velocity pairs play C4. Each family also plays C–E♭–G–F.</p>
+    <p id="character-navigation" hidden><a id="character-link">Compare the character revisions</a><span id="range-navigation" hidden> · <a id="range-link">Explore the musical range</a></span></p>
+  </header>
+  <div class="toolbar">
+    <fieldset id="version-control">
+      <legend>Sound version</legend>
+      <label><input type="radio" name="version" value="original"><span id="original-label">Previous</span></label>
+      <label><input type="radio" name="version" value="revised" checked><span id="revised-label">Revised</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Playback level</legend>
+      <label><input type="radio" name="level" value="matched" checked>Matched</label>
+      <label><input type="radio" name="level" value="raw">Raw</label>
+    </fieldset>
+    <label>Family <select id="family"><option value="all">All four</option><option value="ORGAN">Organ</option><option value="STEAM">Steam</option><option value="HARP">Blues harmonica</option><option value="SQUEEZE">Squeeze</option></select></label>
+    <label id="register-control" hidden>Register <select id="register"><option value="all">All registers</option><option value="low">Low · C3</option><option value="middle" selected>Middle · C4</option><option value="high">High · C5</option></select></label>
+    <label id="gesture-control" hidden>Gesture <select id="gesture"><option value="all">All gestures</option><option value="note">Notes · soft / hard</option><option value="phrase">Phrases</option><option value="chord">Chords</option></select></label>
+    <button id="stop" type="button">Stop all</button>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
+  <p class="note" id="listening-instructions">Use Matched to compare character at equal loudness. Switching versions restarts the attack. The existing-engine references stay unchanged.</p>
+  <noscript><p>This local listening page needs JavaScript to connect the included WAVs to the controls. All audio and settings also appear in manifest.json.</p></noscript>
+  <div id="families"></div>
+  <footer>
+    <p>This is an isolated finite-note prototype. It does not alter TONEWHEEL or STOOP, add phone controls, or export held loops. Settings and reproducible recipes are included; a listening decision is still open.</p>
+    <a id="manifest-download" download="otis-audition-manifest.json">Download manifest</a>
+    <details><summary>Render and matching details</summary><pre id="render-details"></pre></details>
+  </footer>
+</main>
+<script id="otis-manifest" type="application/json">__OTIS_MANIFEST__</script>
+<script>
+"use strict";
+const manifest=JSON.parse(document.getElementById("otis-manifest").textContent);
+const isRange=manifest.study==="range";
+const isPresets=manifest.study==="presets";
+const familyLabels={ORGAN:"Organ",STEAM:"Steam",HARP:"Blues harmonica",SQUEEZE:"Squeeze"};
+const familyDescriptions={ORGAN:"Upper drawbars, contact clack and harmonic percussion. The slow-to-fast cabinet adds rotary motion.",STEAM:"Fuller sustained pipe body and pressure-fed harmonics. The familiar wobble, drift and opening chuff remain.",HARP:"A blues-harmonica single-reed sketch: a scooped entrance, breath rasp and delayed vibrato. No plucked strings are intended.",SQUEEZE:"Unequal reed ranks, musette beating, bellows pulses and an opening snap."};
+if(isRange){
+  document.title="Otis · across the keys";
+  document.getElementById("page-title").textContent="Otis, across the keys.";
+  document.getElementById("page-intro").textContent="The current voices, including the fuller Steam, stay fixed. Hear how they play across C3, C4 and C5.";
+  document.getElementById("page-context").textContent="Start in the middle register: soft and hard notes, short phrases, and compact chords for Organ and Squeeze. Change register to hear the lower and upper voices.";
+  document.getElementById("listening-instructions").textContent="Matched compares tone and articulation. Raw preserves the dynamic range between soft and hard playing. Soft and hard change the playing energy, not just playback volume.";
+  document.getElementById("version-control").hidden=true;
+  document.getElementById("register-control").hidden=false;
+  document.getElementById("gesture-control").hidden=false;
+  document.getElementById("character-navigation").hidden=false;
+  document.getElementById("character-link").href="../otis-audition/index.html";
+  familyDescriptions.ORGAN="Drawbars, key contact and harmonic percussion, with compact chords across three registers.";
+}
+if(isPresets){
+  document.title="Otis · twelve ways";
+  document.getElementById("page-title").textContent="Otis, twelve ways.";
+  document.getElementById("page-intro").textContent="Twelve presets, three for each current voice. Compare each setting with its unchanged default; the underlying sounds stay fixed.";
+  document.getElementById("page-context").textContent="Start with phrases. Choose notes to hear the attacks, or chords for Organ and Squeeze.";
+  document.getElementById("listening-instructions").textContent="Matched compares tone at equal loudness. Raw preserves the level differences. Switching between Default and Preset restarts the attack.";
+  document.getElementById("original-label").textContent="Default";
+  document.getElementById("revised-label").textContent="Preset";
+  document.getElementById("gesture-control").hidden=false;
+  document.getElementById("gesture").value="phrase";
+  document.querySelector('#gesture option[value="note"]').textContent="Notes";
+  document.getElementById("character-navigation").hidden=false;
+  document.getElementById("character-link").href="../otis-audition/index.html";
+  document.getElementById("range-navigation").hidden=false;
+  document.getElementById("range-link").href="../otis-range-audition/index.html";
+  familyDescriptions.ORGAN="Three registrations of the same organ, with note, phrase and chord comparisons.";
+  familyDescriptions.STEAM="Three shades of the current Steam voice, each paired with its default.";
+  familyDescriptions.HARP="Three blues-harmonica settings, keeping the same breath-driven reed model.";
+  familyDescriptions.SQUEEZE="Three reed and bellows settings, with notes, phrases and chords.";
+}
+const players=[];
+const cards=[];
+const jsonUrl=value=>"data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(value,null,2));
+const make=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
+function stopAll(except){for(const player of players)if(player!==except)player.pause();}
+function level(){return document.querySelector('input[name="level"]:checked').value;}
+function version(){return document.querySelector('input[name="version"]:checked').value;}
+function gestureFor(clip){return clip.group==="Phrase"?"phrase":clip.group==="Chord"?"chord":"note";}
+function selected(clip){
+  const original=!isRange&&version()==="original"&&clip.hasOriginal;
+  const prefix=original?"original":"";
+  const get=field=>clip[prefix?prefix+field[0].toUpperCase()+field.slice(1):field];
+  return {label:isPresets?(original?"Default":"Preset"):isRange?"Current":clip.group==="Comparators"?"Reference · unchanged":original?"Previous":"Revised",
+    name:isPresets?(original?"default":"preset"):isRange?"current":original?"original":"revised",src:get(level()),provenance:get("provenance"),source:get("sourceMeasurements"),
+    raw:get("rawMeasurements"),matched:get("matchedMeasurements"),rawSha256:get("rawSha256"),matchedSha256:get("matchedSha256"),
+    model:original?clip.originalModel:clip.model,rawPcmGain:original?clip.originalRawPcmGain:clip.rawPcmGain,sourceRevision:original?clip.originalRevision:clip.sourceRevision};
+}
+function updateCard(card){
+  const chosen=selected(card.clip);
+  card.badge.textContent=(isPresets?card.clip.presetName+" · ":isRange?card.clip.register+" · ":"")+card.clip.group+" · "+chosen.label;
+  card.measure.textContent=chosen.matched.seconds.toFixed(2)+" s · mono · 44.1 kHz · 24-bit";
+  card.download.download=card.clip.id+"."+chosen.name+".json";card.download.href=jsonUrl(chosen.provenance);
+  card.settings.textContent=JSON.stringify({version:chosen.label,model:chosen.model,changes:card.clip.changes,sourceRevision:chosen.sourceRevision,rawPcmGain:chosen.rawPcmGain,provenance:chosen.provenance,source:chosen.source,raw:chosen.raw,matched:chosen.matched,rawSha256:chosen.rawSha256,matchedSha256:chosen.matchedSha256},null,2);
+  if(card.audio.getAttribute("src")!==chosen.src){card.audio.pause();card.audio.src=chosen.src;card.audio.load();}
+}
+for(const family of ["ORGAN","STEAM","HARP","SQUEEZE"]){
+  const section=make("section");section.dataset.family=family;
+  const heading=make("h2",null,familyLabels[family]);heading.id="family-"+family;section.setAttribute("aria-labelledby",heading.id);section.append(heading,make("p","intro",familyDescriptions[family]));
+  const grid=make("div","grid");
+  const clips=manifest.clips.filter(clip=>clip.family===family);
+  if(isRange){
+    const registers={low:0,middle:1,high:2};const groups={"Soft note":0,"Hard note":1,Phrase:2,Chord:3};
+    clips.sort((a,b)=>(registers[a.register]-registers[b.register])||(groups[a.group]-groups[b.group]));
+  }
+  for(const clip of clips){
+    const card=make("article","clip");const badge=make("span","badge");card.append(badge,make("h3",null,clip.title),make("p",null,clip.description));
+    const audio=make("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label",clip.title+" audio");audio.dataset.id=clip.id;
+    audio.addEventListener("play",()=>stopAll(audio));players.push(audio);card.append(audio);
+    const measure=make("div","measure");card.append(measure);
+    const download=make("a","download","Download selected settings");card.append(download);
+    const settings=make("pre");const details=make("details");details.append(make("summary",null,"Settings, measurements and provenance"),settings);card.append(details);grid.append(card);
+    const entry={clip,audio,badge,measure,download,settings,card,section};cards.push(entry);updateCard(entry);
+  }
+  section.append(grid);document.getElementById("families").append(section);
+}
+function updateStatus(){
+  const visible=cards.filter(card=>!card.card.hidden).length;
+  const count=visible+" of "+manifest.caseCount+" clips";
+  const playback=level()==="matched"?"matched playback":"raw playback";
+  document.getElementById("status").textContent=isPresets?manifest.presetCount+" presets · "+count+" · "+(version()==="original"?"default":"preset")+" · "+playback:isRange?count+" · "+(document.getElementById("register").value==="all"?"all registers":document.getElementById("register").value+" register")+" · "+playback:count+" · "+(version()==="original"?"previous":"revised")+" · "+playback+" · "+(manifest.comparisonCount?manifest.comparisonCount+" previous/revised pairs; references unchanged":"previous pack unavailable; revised voices only");
+}
+function filterCards(){
+  const family=document.getElementById("family").value;
+  const register=document.getElementById("register").value;
+  const gesture=document.getElementById("gesture").value;
+  for(const entry of cards){
+    entry.card.hidden=(family!=="all"&&entry.clip.family!==family)||(isRange&&register!=="all"&&entry.clip.register!==register)||((isRange||isPresets)&&gesture!=="all"&&gestureFor(entry.clip)!==gesture);
+    if(entry.card.hidden)entry.audio.pause();
+  }
+  for(const section of document.querySelectorAll("section[data-family]"))section.hidden=!cards.some(entry=>entry.section===section&&!entry.card.hidden);
+  updateStatus();
+}
+for(const radio of document.querySelectorAll('input[name="level"],input[name="version"]'))radio.addEventListener("change",()=>{
+  const playing=players.find(audio=>!audio.paused&&!audio.ended);
+  for(const card of cards)updateCard(card);
+  if(playing&&playing.paused)playing.play().catch(()=>{});
+  updateStatus();
+});
+document.querySelector('input[name="version"][value="original"]').disabled=!manifest.comparisonCount;
+for(const id of ["family","register","gesture"])document.getElementById(id).addEventListener("change",filterCards);
+document.getElementById("stop").addEventListener("click",()=>{stopAll();for(const audio of players)if(audio.readyState)audio.currentTime=0;});
+document.getElementById("manifest-download").href=jsonUrl({...manifest,clips:manifest.clips.map(clip=>Object.fromEntries(Object.entries(clip).map(([key,value])=>[key,["raw","matched","originalRaw","originalMatched"].includes(key)&&value.startsWith("data:")?"embedded WAV":value])))});
+document.getElementById("render-details").textContent=JSON.stringify({sourceRevision:manifest.sourceRevision,sourceDirty:manifest.sourceDirty,model:manifest.model,matching:manifest.matching,rawPcmGain:manifest.rawPcmGain,rawHeadroomPolicy:manifest.rawHeadroomPolicy,baseline:manifest.baseline,improvements:manifest.improvements,limitations:manifest.limitations,sourceHashes:manifest.sourceHashes},null,2);
+filterCards();
+</script>
+</html>

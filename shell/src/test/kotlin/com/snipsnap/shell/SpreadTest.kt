@@ -14,7 +14,13 @@ import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyVoice
+import com.snipsnap.synth.OtisPatch
+import com.snipsnap.synth.OtisPresets
+import com.snipsnap.synth.Patches
 import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.PluckPatch
@@ -48,6 +54,24 @@ class SpreadTest {
     private fun kit(name: String) = KitBuilderModel.create(name, File(temp, name))
 
     @Test
+    fun `Otis saved scores retain their relative authored root and complete voicing bounds`() {
+        val misleading = tone(220.0)
+        assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
+        val draw = OtisPresets.all().first { it.name == "SQUEEZE DRAW" }
+        val steam = OtisPresets.all().first { it.name == "STEAM CHORD" }
+        for ((patch, expected) in listOf(
+            draw.copy(midi = 57, macros = draw.macros + ("TUNE" to .5f)) to 57f,
+            draw.copy(midi = 72, macros = draw.macros + ("TUNE" to 1f)) to 74f,
+            draw.copy(midi = 48, macros = draw.macros + ("TUNE" to 0f)) to 36f,
+            steam.copy(midi = 48, macros = steam.macros + ("TUNE" to 0f)) to 48f,
+        )) {
+            val saved = Patches.fromJsonText(patch.toJsonText()) as OtisPatch
+            assertEquals(expected, Spread.detect(misleading, saved))
+            assertEquals(patch.profile.events, saved.profile.events)
+        }
+    }
+
+    @Test
     fun `Chamber spreads keep the authored root across voices models and surface balances`() {
         // A loud A3 contradicts the saved note. Upper bar and triangle modes,
         // or sympathetic room pitches, must not retune the four-source root.
@@ -73,6 +97,21 @@ class SpreadTest {
                 midi = midi, velocity = .35f, model = 1)
             assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "$voice BODY $body must retain MIDI $midi")
         }
+    }
+
+    @Test
+    fun `keel spreads use the saved root and relative tune, under the detector's floor too`() {
+        // KEEL's C1 (32.7 Hz) and D#1 (38.9 Hz) lie under Pitch.detect's 40 Hz floor, so the recipe has to say.
+        val snip = tone(220.0)
+        for (voice in KeelVoice.entries) {
+            for (midi in listOf(24, 36, 48)) {
+                for (tune in listOf(0f, .5f, 1f)) {
+                    val patch = KeelPatch("Keel", voice, mapOf("TUNE" to tune), midi = midi)
+                    assertEquals(Keel.midiFor(voice, tune, midi).toFloat(), Spread.detect(snip, patch), "$voice root $midi, TUNE $tune")
+                }
+            }
+        }
+        assertEquals(24f, Spread.detect(snip, KeelPatch("Low", KeelVoice.REDUCE, mapOf("TUNE" to 0f), midi = 36)))
     }
 
     @Test

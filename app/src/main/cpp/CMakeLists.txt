@@ -19,6 +19,8 @@ add_library(snipsnap_surface SHARED
     aquarium/OfflineRender.cpp
     aquarium/AquariumJni.cpp
     jni.cpp
+    crease/CreaseStudyEngine.cpp
+    crease/CreaseStudyJni.cpp
 )
 
 target_compile_features(snipsnap_surface PRIVATE cxx_std_17)

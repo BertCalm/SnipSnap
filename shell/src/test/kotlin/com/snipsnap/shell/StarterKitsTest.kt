@@ -1,5 +1,8 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Rime
+import com.snipsnap.synth.RimePatch
+import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberVoice
@@ -44,6 +47,10 @@ import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyPresets
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.MeridianPatch
+import com.snipsnap.synth.MeridianKits
+import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -87,6 +94,7 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
@@ -142,6 +150,9 @@ class StarterKitsTest {
         },
         "alloy" to OneEngine(AlloyPatch::class.java, AlloyVoice.entries.map { it.name }.toSet()) {
             (it as AlloyPatch).let { p -> Alloy.drumClassFor(p.voice, p.macros) }
+        },
+        "rime" to OneEngine(RimePatch::class.java, RimeVoice.entries.map { it.name }.toSet()) {
+            (it as RimePatch).let { p -> Rime.drumClassFor(p.voice, p.macros, p.gateSeconds, p.model) }
         },
         "contour" to OneEngine(ContourPatch::class.java, ContourVoice.entries.map { it.name }.toSet()) {
             (it as ContourPatch).let { p -> ContourEngine.drumClassFor(p.voice, p.macros) }
@@ -237,12 +248,52 @@ class StarterKitsTest {
                 val last = model.kit.pads.last()
                 val firstBytes = File(dir, first.sampleFile).readBytes()
                 val lastBytes = File(dir, last.sampleFile).readBytes()
+                // RIME lands native soft layers. Single-hit replay follows
+                // the same explicit clear-layers step as the editing door.
+                for (pad in listOf(first, last)) {
+                    if (pad.velocityLayers.isNotEmpty()) {
+                        val original = File(dir, pad.sampleFile).readBytes()
+                        assertFailsWith<IllegalArgumentException>("${starter.id}: replay must preserve the layered pad") {
+                            RecipeReplay.apply(model, pad.slot, pad.recipe!!, pad.displayName)
+                        }
+                        assertEquals(pad, model.kit.pad(pad.slot), "${starter.id}: refused replay leaves the layers intact")
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()))
+                        assertTrue(model.clearGhostLayers(pad.slot).velocityLayers.isEmpty())
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()), "clearing layers preserves the main hit")
+                    }
+                }
                 val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
                 assertEquals(first.recipe, firstAgain.pad.recipe, "${starter.id}: the first pad's recipe survives replay")
                 assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "${starter.id}: the first pad regenerates exactly")
                 val lastAgain = RecipeReplay.apply(model, first.slot, last.recipe!!, first.displayName)
                 assertEquals(last.recipe, lastAgain.pad.recipe, "${starter.id}: the last pad's recipe survives replay")
                 assertTrue(lastBytes.contentEquals(File(dir, lastAgain.pad.sampleFile).readBytes()), "${starter.id}: the last pad regenerates exactly")
+            }
+            if (starter.id == "meridian") {
+                assertNull(kit.key, "the C-minor walk and authored A3 contrasts do not share one declared key")
+                val expected = MeridianKits.patches()
+                assertEquals(16, kit.pads.size)
+                for ((pad, patch) in kit.pads.zip(expected)) {
+                    val recipe = PadRecipe.fromJsonValue(assertNotNull(pad.recipe))
+                    assertEquals(patch, assertIs<MeridianPatch>(recipe.patch))
+                    assertEquals(MeridianKits.sourceRecipe(patch), recipe)
+                    assertEquals(Meridian.drumClassFor(patch.voice, patch.macros, patch.model), pad.drumClass)
+                    assertTrue(pad.oneShot, "held source material is a finite capture on the drum grid")
+                    assertEquals(patch.model.toString(), pad.source["model"])
+                    assertEquals(patch.seedContext.toString(), pad.source["seedContext"])
+                    assertEquals(patch.midi.toString(), pad.source["midi"])
+                    assertEquals(patch.velocity.toString(), pad.source["velocity"])
+                }
+                val model = KitBuilderModel.open(dir)
+                for (slot in listOf(1, 16)) {
+                    val pad = assertNotNull(model.kit.pad(slot))
+                    val before = File(dir, pad.sampleFile).readBytes()
+                    val recipe = assertNotNull(pad.recipe)
+                    val replayed = RecipeReplay.apply(model, slot, recipe, pad.displayName)
+                    assertEquals(recipe, replayed.pad.recipe)
+                    assertTrue(before.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()),
+                        "Meridian pad $slot must preserve native metadata and its explicit ending on replay")
+                }
             }
             if (starter.id == "cistern") {
                 // Reuse this rendered kit to exercise its saved recipes through
@@ -505,7 +556,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

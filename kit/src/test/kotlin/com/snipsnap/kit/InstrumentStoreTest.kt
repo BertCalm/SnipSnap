@@ -9,6 +9,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -146,6 +147,57 @@ class InstrumentStoreTest {
             val file = File(temp, "bad-$index$SUFFIX").apply { writeText(Json.write(json)) }
             assertFailsWith<JsonException>("case $index") { InstrumentStore.read(file) }
         }
+    }
+
+    @Test
+    fun `voice mode round-trips through the sidecar`() {
+        val root = File(temp, "Voiced").apply { mkdirs() }
+        val program = KeygroupProgram("Glider", listOf(Keygroup(0, 127, 60, listOf(VelocityLayer("g", 100, 0, 127)))),
+            voiceMode = VoiceMode.GLIDE, explicitNoteOn = true)
+        InstrumentStore.write(root, "Glider", program, "Glider_[TrackData]")
+        val sidecar = InstrumentStore.sidecar(root, "Glider")
+        assertEquals("GLIDE", Json.parse(sidecar.readText()).obj().getValue("voiceMode").str())
+        assertEquals(true, Json.parse(sidecar.readText()).obj().getValue("explicitNoteOn").bool())
+        assertEquals(2, Json.parse(sidecar.readText()).obj().getValue("version").int())
+        val loaded = InstrumentStore.read(sidecar)
+        assertEquals(VoiceMode.GLIDE, loaded.voiceMode)
+        assertTrue(loaded.explicitNoteOn)
+        assertTrue(loaded.toProgram().explicitNoteOn)
+    }
+
+    @Test
+    fun `a sidecar without a voice mode or with a stranger's value reads as POLY`() {
+        fun text(extra: String) = """{"version":2,"name":"V","release":0.5,$extra"zones":[{"low":0,"high":127,"root":60,"sample":"d/h.wav","frames":100,"loopStart":0,"layers":[{"sample":"d/h.wav","frames":100,"loopStart":0,"velStart":0,"velEnd":127}]}]}"""
+        val plain = File(temp, "Plain$SUFFIX").apply { writeText(text("")) }
+        assertEquals(VoiceMode.POLY, InstrumentStore.read(plain).voiceMode)
+        val stranger = File(temp, "Stranger$SUFFIX").apply { writeText(text("\"voiceMode\":\"WIBBLE\",")) }
+        assertEquals(VoiceMode.POLY, InstrumentStore.read(stranger).voiceMode)
+        val wrongType = File(temp, "WrongType$SUFFIX").apply { writeText(text("\"voiceMode\":3,")) }
+        assertFailsWith<JsonException> { InstrumentStore.read(wrongType) }
+    }
+
+    @Test
+    fun `an instrument becomes the program that wrote it`() {
+        val root = File(temp, "Round").apply { mkdirs() }
+        val program = KeygroupProgram(
+            "Two Zones",
+            listOf(
+                Keygroup(0, 59, 48, listOf(VelocityLayer("lo_soft", 100, 0, 63, loopStartFrame = 10), VelocityLayer("lo_hard", 120, 64, 127, loopStartFrame = 20))),
+                Keygroup(60, 127, 72, listOf(VelocityLayer("hi_soft", 200, 0, 63), VelocityLayer("hi_hard", 220, 64, 127, loopStartFrame = 30))),
+            ),
+            volumeRelease = 0.35f,
+            voiceMode = VoiceMode.LEAD,
+        )
+        InstrumentStore.write(root, "Two Zones", program, "Two Zones_[TrackData]")
+        val back = InstrumentStore.read(InstrumentStore.sidecar(root, "Two Zones")).toProgram()
+        assertEquals(program.copy(), back)
+    }
+
+    @Test
+    fun `a v1 instrument becomes a program with one full velocity layer`() {
+        val file = File(temp, "Old$SUFFIX").apply { writeText("""{"version":1,"name":"Old","release":0.25,"zones":[{"low":48,"high":72,"root":60,"sample":"Old_[TrackData]/Old_A.wav","frames":100,"loopStart":40}]}""") }
+        val program = InstrumentStore.read(file).toProgram()
+        assertEquals(KeygroupProgram("Old", listOf(Keygroup(48, 72, 60, listOf(VelocityLayer("Old_A", 100, 0, 127, loopStartFrame = 40)))), volumeRelease = 0.25f), program)
     }
 
     private companion object {

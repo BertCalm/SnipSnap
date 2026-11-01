@@ -32,6 +32,7 @@ class PadRecipeBoardTest {
         val read = PadRecipe.fromJsonText(oldJson)
         assertNull(read.board)
         assertEquals(oldJson, read.toJsonText())
-        assertEquals(2, PadRecipe.VERSION)
+        assertEquals(3, PadRecipe.VERSION)
+        assertEquals(2, read.toJsonValue().entries["recipe"]!!.int(), "an unbanked recipe still writes version 2")
     }
 }

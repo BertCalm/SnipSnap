@@ -72,8 +72,9 @@ the cache. Cache hits improve repeated previews; a newly edited patch still
 requires synthesis. Benchmark cold edits separately from cache hits.
 
 Model-3 THREAD, PULSE and CURL expose MAKE INSTRUMENT. Each renders native C3,
-C4 and C5 roots covering MIDI 48–72, or adds native C2/C6 for MIDI 36–84,
-with one or three velocity layers. The phone defaults to the wider range. It retains
+C4 and C5 roots, or adds native C2/C6 for MIDI 36–84,
+with one or three velocity layers. The phone defaults to the wider sampled range;
+programs retain whole-keyboard playback by transposing the outer samples. It retains
 the actual zero-state onset of the periodically driven network and marks
 its settled final cycle for repetition. Independently advanced preceding
 and following cycles check recurrence. It does not splice a finite pluck
@@ -225,10 +226,11 @@ these new touch instruments remain open. Independent halo release remains later 
 
 ## Wider playable keyboard (2026-11-01)
 
-KEY RANGE in the phone's MAKE INSTRUMENT sheet opens at C2–C6 (MIDI 36–84).
-Five native roots, C2/C3/C4/C5/C6, cover the range at octave midpoints:
-36–42, 43–54, 55–66, 67–78 and 79–84. Tap KEY RANGE for the original
-C3–C5 instrument. This choice and TOUCH LAYERS are independent and stay
+SAMPLED RANGE in the phone's MAKE INSTRUMENT sheet opens at C2–C6 (MIDI 36–84).
+Five native roots, C2/C3/C4/C5/C6, meet at octave midpoints. The shared
+exporter extends the outer zones across the MIDI keyboard: 0–42, 43–54,
+55–66, 67–78 and 79–127. Tap SAMPLED RANGE for the original three C3/C4/C5
+source roots. Both choices retain MIDI 0–127 playback through sampler transposition. This choice and TOUCH LAYERS are independent and stay
 outside saved synth patches. The sheet shows the resulting 15, 5, 9 or 3
 sample count. PREVIEW still plays C4, at all three strengths when touch is on;
 it does not render the entire keyboard before playing.
@@ -236,8 +238,9 @@ it does not render the entire keyboard before playing.
 The wider keyboard adds independently synthesized bass and upper-register
 sources. It uses the same excitation, geometry, onset, convergence rule and
 velocity-gain compensation. Existing C3/C4/C5 captures, saved models and the
-twelve factory recipes keep their previous PCM. Within the instrument's range,
-the sampler transposes by at most six semitones from a native root. Transposition
+twelve factory recipes keep their previous PCM. Within the native C2–C6 band,
+the sampler transposes by at most six semitones from a native root. Outside that
+band it continues from the nearest outer root. Transposition
 also shifts the recorded halo and timing; these remain sampled performances.
 
 A wide instrument needs five captures per strength instead of three. With
@@ -269,7 +272,7 @@ The Kotlin edge-register probe checks all three voices at C2 and C6 with all
 three touch strengths, saved velocity 0.72 and explicit LATE geometry. It checks
 pitch within 25 cents, fundamental tone share above 0.025, actual quiet startup,
 finite bounded output and independently synthesized neighboring cycles after
-PCM16/PCM24 encoding. Export tests exercise all 49 MIDI notes at all six velocity
+PCM16/PCM24 encoding. Export tests exercise all 128 MIDI notes at all six velocity
 window boundaries and play native C2/C4/C6 through two wraps and note-off.
 The focused Kotlin run completed all 18 voice/root/touch captures. Measured
 pitch error ranged from −0.089 to +1.723 cents, tone share from 0.4555 to 0.8944,

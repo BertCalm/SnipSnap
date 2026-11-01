@@ -296,12 +296,14 @@ Why it is built this way:
 
 The existing model-3 THREAD/PULSE/CURL held network now supports native C2–C6
 captures. The phone opens with five octave roots and offers the original
-three-root C3–C5 range independently of TOUCH LAYERS. A wide touch instrument
+three-root C3–C5 sampled range independently of TOUCH LAYERS. A wide touch instrument
 has 15 samples, keeping the previous nine middle captures and adding six
 native edge captures. Saved models, ordinary rendering, excitation and the
 approved factory recipes are unchanged.
 
-Zones meet at root midpoints and cover MIDI 36–84 without gaps or overlap.
+Zones meet at root midpoints. Following the shared exporter, all descriptors
+span MIDI 0–127 by extending the outer zones; C2–C6 is the native sampled
+band. The delivery recipe and export result record those actual written zones.
 The host still owns playback velocity gain and whole-note release. The halo
 does not gain an independent post-note-off tail in this round. Five captures
 per strength replace three; the render remains serial and cancellable, and

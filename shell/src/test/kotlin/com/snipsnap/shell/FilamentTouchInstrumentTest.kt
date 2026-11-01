@@ -54,7 +54,7 @@ class FilamentTouchInstrumentTest {
                 val (sidecar, instrument) = InstrumentStore.list(folder).single()
                 assertEquals(15, instrument.sampleFiles.size)
                 assertEquals(listOf(36, 48, 60, 72, 84), instrument.zones.map { it.rootNote })
-                assertEquals(listOf(36..42, 43..54, 55..66, 67..78, 79..84), instrument.zones.map { it.lowNote..it.highNote })
+                assertEquals(listOf(0..42, 43..54, 55..66, 67..78, 79..127), instrument.zones.map { it.lowNote..it.highNote })
                 assertEquals(.37f, instrument.release)
                 assertEquals(patch, FilamentPatch.fromJsonText(File(data, FilamentPadMaker.PATCH_FILE).readText()))
                 val recipe = Json.parse(File(data, FilamentPadMaker.TOUCH_FILE).readText()).obj()
@@ -136,7 +136,7 @@ class FilamentTouchInstrumentTest {
                 val samples = instrument.sampleFiles.associateWith { WavReader.read(File(sidecar.parentFile, it)).samples }
                 // Every note and switch point must select exactly one exported zone/layer,
                 // including the semitones on both sides of all four midpoint joins.
-                for (midi in 36..84) for ((velocity, index) in velocityEdges) {
+                for (midi in 0..127) for ((velocity, index) in velocityEdges) {
                     val zone = instrument.zones.single { midi in it.lowNote..it.highNote }
                     val layer = zone.playableLayers[index]
                     val hit = requireNotNull(KeyHit.resolve(instrument, midi, velocity / 127f) { samples[it]?.size?.toLong() })
@@ -145,7 +145,7 @@ class FilamentTouchInstrumentTest {
                     assertEquals(layer.loopStartFrame, hit.loopStartFrame)
                     assertEquals(velocity / 127f * InstrumentEngine.VOICE_LEVEL, hit.gain)
                 }
-                for (midi in listOf(35, 85)) assertEquals(null,
+                for (midi in listOf(-1, 128)) assertEquals(null,
                     KeyHit.resolve(instrument, midi, 1f) { samples[it]?.size?.toLong() })
                 for (midi in listOf(36, 60, 84)) for ((velocity, index) in velocityEdges) {
                     val touch = velocity / 127f

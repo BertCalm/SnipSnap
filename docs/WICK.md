@@ -12,6 +12,11 @@ provisional recipes and a dry sixteen-pad kit. RATTLE
 and the proposed 36-preset library await the owner's listening verdict.
 Numerical checks do not establish that the cascade is musically convincing.
 
+The current [RATTLE source study](WICK_RATTLE_SOURCES.md) compares Warm wire,
+Hollow reed and Rubbed glass with the connected-body reference. It keeps the
+gate movement fixed while choosing a different underlying tone. These explicit
+diagnostic recipes do not replace ordinary RATTLE patches or accepted voices.
+
 ## Controls and recipes
 
 SPARK changes initial and recurrent excitation hardness. FEED supplies bounded

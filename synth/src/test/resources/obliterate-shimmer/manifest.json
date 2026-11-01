@@ -1,0 +1,29 @@
+{
+  "referenceCommit": "0c00ad0c743e89d99c820d4ab5da587c9410bddc",
+  "referenceProcessorSha256": "48063d2a692c659ae652e21d1f1efcff35c1ba9bf0708b27d00d195defd77539",
+  "inputSha256": "f51ced234f18c68e1299e2b24f611a948523a21de1f040dcfcb6c922b1634f59",
+  "inputFrames": 6000,
+  "rows": [
+    {
+      "file": "room.f32",
+      "sha256": "90c92a359666ef9858f84d47756cb24c972f00dfdf174fb3fcfb7828b603e160",
+      "mix": 0.3,
+      "pitched": false,
+      "frames": 72150
+    },
+    {
+      "file": "shimmer15.f32",
+      "sha256": "20804511649de214e0806d08972382597caf97e68bb50eb1b49b8d4c5835fdcd",
+      "mix": 0.15,
+      "pitched": true,
+      "frames": 72150
+    },
+    {
+      "file": "shimmer30.f32",
+      "sha256": "9a3def8dd3a381bf6026e55fb354044a173446770ec9b8bd62dc00d010f88ac1",
+      "mix": 0.3,
+      "pitched": true,
+      "frames": 72150
+    }
+  ]
+}

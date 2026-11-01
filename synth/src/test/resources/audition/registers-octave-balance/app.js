@@ -5,7 +5,7 @@
   const pitch = document.getElementById('note');
   const status = document.getElementById('status');
   const buttons = [...document.querySelectorAll('[data-direction]')];
-  const names = {calm: 'Current balance', octave: 'More octave'};
+  const names = {calm: 'Earlier balance', octave: 'Octave Keys'};
   let manifest;
   let direction = 'octave';
   let playToken = 0;

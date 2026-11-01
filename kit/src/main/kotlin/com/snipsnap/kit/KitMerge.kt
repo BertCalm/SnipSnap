@@ -57,8 +57,16 @@ object KitMerge {
 
         aKept.forEach { preflightPad?.invoke(aDir, it) }
         bBank.forEach { preflightPad?.invoke(bDir, it) }
+        val keptPersonal = a.copy(pads = aKept)
+        val movedPersonal = b.copy(pads = bBank)
+        // A new kit must carry the actual immutable voice sources, not only a recipe/hash that
+        // still points back at one donor's private folder. Combined preflight catches collisions
+        // and capacity before the destination or any rendered sample is created.
+        ConfluencePersonalTransfer.requireTogether(listOf(keptPersonal to aDir, movedPersonal to bDir))
 
         destDir.mkdirs()
+        ConfluencePersonalFiles.copyReferenced(keptPersonal, aDir, destDir)
+        ConfluencePersonalFiles.copyReferenced(movedPersonal, bDir, destDir)
 
         // Kit A's pads (minus a replaced bank B) come over verbatim - plus
         // a provenance stamp naming the parent, so the lineage can walk it.
@@ -99,6 +107,7 @@ object KitMerge {
             key = a.key,
             tempoBpm = a.tempoBpm,
         )
+        ConfluencePersonalFiles.requireImportable(merged, destDir)
         KitStore.save(merged, destDir)
         // A's grooves are the kit's grooves; they follow the folder.
         File(aDir, GrooveStore.FILE_NAME).takeIf { it.isFile }

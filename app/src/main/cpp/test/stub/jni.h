@@ -13,6 +13,7 @@
 #include <cstdint>
 
 typedef unsigned char jboolean;
+typedef int16_t jshort;
 typedef int32_t jint;
 typedef int64_t jlong;
 typedef float jfloat;
@@ -29,6 +30,7 @@ class _jbooleanArray : public _jarray {};
 class _jintArray : public _jarray {};
 class _jfloatArray : public _jarray {};
 class _jlongArray : public _jarray {};
+class _jshortArray : public _jarray {};
 
 typedef _jobject* jobject;
 typedef _jclass* jclass;
@@ -37,6 +39,7 @@ typedef _jbooleanArray* jbooleanArray;
 typedef _jintArray* jintArray;
 typedef _jfloatArray* jfloatArray;
 typedef _jlongArray* jlongArray;
+typedef _jshortArray* jshortArray;
 
 #define JNI_FALSE 0
 #define JNI_TRUE 1
@@ -61,6 +64,7 @@ struct JNINativeInterface_ {
     jboolean (*ExceptionCheck)(JNIEnv*) = nullptr;
     void (*DeleteLocalRef)(JNIEnv*, jobject) = nullptr;
     void (*SetLongArrayRegion)(JNIEnv*, jlongArray, jsize, jsize, const jlong*) = nullptr;
+    void (*GetShortArrayRegion)(JNIEnv*, jshortArray, jsize, jsize, jshort*) = nullptr;
 };
 
 // C++ callers reach the table through member functions, exactly as they do
@@ -68,6 +72,7 @@ struct JNINativeInterface_ {
 struct JNIEnv_ {
     const JNINativeInterface_* functions;
 
+    void GetShortArrayRegion(jshortArray a, jsize s, jsize n, jshort* b) { functions->GetShortArrayRegion(this,a,s,n,b); }
     jsize GetArrayLength(jarray a) { return functions->GetArrayLength(this, a); }
     void GetFloatArrayRegion(jfloatArray a, jsize s, jsize n, jfloat* b) { functions->GetFloatArrayRegion(this, a, s, n, b); }
     void GetIntArrayRegion(jintArray a, jsize s, jsize n, jint* b) { functions->GetIntArrayRegion(this, a, s, n, b); }

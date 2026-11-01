@@ -35,7 +35,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Check the actual dual-generation package and the same key map used by the phone. */
@@ -105,9 +104,12 @@ class CreasePadMakerTest {
         val (sidecar, instrument) = InstrumentStore.list(dest).single()
         assertEquals(spec.releaseSeconds, instrument.release)
         assertEquals(CreasePadMaker.zoneMidis(spec), instrument.zones.map { it.rootNote })
+        assertEquals(0, instrument.zones.first().lowNote)
+        assertEquals(127, instrument.zones.last().highNote)
+        val spanned = program.fullKeyboard()
         instrument.zones.forEachIndexed { index, zone ->
-            assertEquals(program.keygroups[index].lowNote, zone.lowNote)
-            assertEquals(program.keygroups[index].highNote, zone.highNote)
+            assertEquals(spanned.keygroups[index].lowNote, zone.lowNote)
+            assertEquals(spanned.keygroups[index].highNote, zone.highNote)
             assertEquals(notes[index].loopStartFrame, zone.loopStartFrame)
             val wav = File(sidecar.parentFile, zone.sample)
             val audio = WavReader.read(wav)
@@ -128,8 +130,9 @@ class CreasePadMakerTest {
         }
         assertEquals(before, patch.toJsonText(), "making an instrument leaves the complete saved recipe intact")
         assertEquals(0f, patch.macros.getValue("HOLD"))
-        assertNull(instrument.zoneFor(35))
-        assertNull(instrument.zoneFor(61))
+        // The outer zones stretch to the keyboard's ends, so keys past the authored span land in them.
+        assertEquals(instrument.zones.first(), instrument.zoneFor(35))
+        assertEquals(instrument.zones.last(), instrument.zoneFor(61))
     }
 
     @Test
@@ -221,11 +224,15 @@ class CreasePadMakerTest {
 
     @Test
     fun `default single layer retains the approved package audio names and all metadata bytes`() {
-        // SHA256s from the published 3fb2c43c Paper Keys instrument, not this implementation.
+        // SHA256s from the published 3fb2c43c Paper Keys instrument, not this implementation. The nine WAVs are
+        // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
+        // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
+        // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
+        // pair, the .xpm's program-level voice tags).
         val expected = mapOf(
-            "Crease Paper Keys.instrument.json" to "27c7c2e15c9c2dddb233d82a7a03c2c46a6d00a3b1b30865651bc4c0a64b326d",
-            "Crease Paper Keys.xty" to "b006a0ec2da53fabafbd250addd809e98fa3a1403f890bc1c2c01d7552a46788",
-            "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "911765091dd9ab48ccb871827a0e142f2fccb5b21dcee42f23f7440c438749ad",
+            "Crease Paper Keys.instrument.json" to "cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
+            "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
+            "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "7a46aac454783287fbcd92e38f8368b0b45ac8844599abe9b4795b80bdb28391",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A3.wav" to "973f4979c6dba53b72e8de565aba6717cebc64d79e957d155cb65d0ac888f680",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A4.wav" to "bd9a81541cea931a6052954a891236bd86e6e7a6209144d8bb40d4d15fe17103",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_C3.wav" to "a22d0f9005f0b45feff46f87a4d5b4ffc00b7cc4cf9a72aa1df455624c7de90e",

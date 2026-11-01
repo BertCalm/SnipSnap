@@ -46,7 +46,7 @@ object FerryAuditionGenerator {
         val speeds = linkedMapOf("slow" to .25f, "standard" to .5f, "fast" to 1f)
         for ((register, midi) in registers) for ((speed, handoff) in speeds) {
             val id = "$register-$speed"
-            val patch = FerryPatch("Passage $register $speed", macros = Ferry.defaults() + ("HANDOFF" to handoff), midi = midi)
+            val patch = FerryPatch("Passage $register $speed", macros = Ferry.defaults(model = 1) + ("HANDOFF" to handoff), midi = midi, model = 1)
             Ferry.clearCache()
             val coldStart = System.nanoTime()
             val native = patch.render()
@@ -85,9 +85,9 @@ object FerryAuditionGenerator {
             println("FERRY $id: cold %.1f ms, warm %.1f ms".format(coldMs, warmTimes.sorted()[1]))
         }
         File(output, "manifest.json").writeText(Json.write(json(linkedMapOf(
-            "title" to "Ferry: Kotlin port", "model" to Ferry.MODEL_VERSION, "sample_rate" to Dsp.RATE,
-            "entries" to entries, "heard" to listOf("Python first listen: Yes, clearly.", "Python second listen: Clear throughout."),
-            "pending" to listOf("Kotlin listening approval", "Phone render timings", "MATCH/SPAN/LOSS/BODY", "HOLD", "Production tail cutoff"),
+            "title" to "Ferry: Kotlin port", "model" to 1, "sample_rate" to Dsp.RATE,
+            "entries" to entries, "heard" to listOf("Python first listen: Yes, clearly.", "Python second listen: Clear throughout.", "Kotlin listen: Same character. (2026-10-30)"),
+            "pending" to listOf("Phone render timings", "MATCH listening", "SPAN/LOSS/BODY", "HOLD", "Production tail cutoff"),
             "timing_scope" to "Complete render including house output conditioning; warmed desktop JVM, not phone timing.",
         ))))
         val template = File(repository, "design/ferry-audition/index.html")

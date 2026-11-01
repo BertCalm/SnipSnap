@@ -138,6 +138,14 @@ object Confluence {
         recipe: ConfluenceRecipe,
         resolvedSources: Map<String, ConfluenceSource>,
         options: ConfluenceOptions = ConfluenceOptions(),
+    ): ConfluenceReport = renderWithAnalysis(recipe, resolvedSources, options, emptyMap())
+
+    /** Personal voices retain analysis outside recipes; ordinary factory renders take the unchanged path. */
+    internal fun renderWithAnalysis(
+        recipe: ConfluenceRecipe,
+        resolvedSources: Map<String, ConfluenceSource>,
+        options: ConfluenceOptions,
+        preparedAnalyses: Map<ConfluenceAnalysisKey, ConfluenceVoice.Analysis>,
     ): ConfluenceReport {
         // Freeze caller-owned collection state once, before either analysis or scheduling.
         val regions = recipe.regions.toList()
@@ -169,7 +177,8 @@ object Confluence {
             if (recipe.midi != null && region.mode == ConfluenceSourceMode.PITCHED) {
                 require(abs(recipe.midi - region.referenceMidi!!) <= 3f) { "prototype requested transposition must be within three semitones of the confirmed source reference" }
             }
-            ConfluenceVoice.analyze(samples, region.referenceMidi)
+            preparedAnalyses[ConfluenceAnalysisKey(source.hash, start, end, region.referenceMidi)]
+                ?: ConfluenceVoice.analyze(samples, region.referenceMidi)
         }
         val frames = (recipe.seconds * RATE).roundToInt()
         val dry = FloatArray(frames)

@@ -1,0 +1,19 @@
+{
+  "engine": "RIME",
+  "version": 1,
+  "name": "Fine Frost",
+  "voice": "GLINT",
+  "macros": {
+    "DETAIL": 0.8199999928474426,
+    "EDGE": 0.7200000286102295,
+    "ANGLE": 0.6499999761581421,
+    "UNFOLD": 0.3499999940395355,
+    "BODY": 0.550000011920929,
+    "HOLD": 0
+  },
+  "model": 1,
+  "midi": 60,
+  "velocity": 0.800000011920929,
+  "gateSeconds": 1.2000000476837158,
+  "seed": 1729
+}
