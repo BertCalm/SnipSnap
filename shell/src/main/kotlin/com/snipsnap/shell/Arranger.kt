@@ -280,7 +280,6 @@ object Arranger {
         val turn = plan.sections.indexOfFirst { it.name == "the turn" }
         val stretches = if (turn > 0) listOf(0 until turn, turn until plan.sections.size) else listOf(plan.sections.indices)
 
-        var songEnd = 0
         val pieces = stretches.map { range ->
             val first = range.first
             val notes = range.flatMap { i ->
@@ -288,8 +287,6 @@ object Arranger {
                 clips[i].notes.map { it.copy(timePulses = it.timePulses + offset) }
             }
             val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm)
-            // The last stretch's drums, ring-out included, are where the song ends.
-            songEnd = starts[first] + drums.frameCount
             var audio = drums
             if (bed != null) {
                 for (i in range) {
@@ -310,6 +307,13 @@ object Arranger {
         for ((at, audio) in pieces) {
             for (j in audio.samples.indices) out[at * 2 + j] += audio.samples[j]
         }
+        // The song ends where the outro would end on its own: its bars and
+        // its own ring-out, measured by rendering it alone (only its length
+        // is used; the audio is the stretch's, chokes and all). The stretch's
+        // own length is no guide: a long pad struck earlier in it rings on
+        // inside the take, and would hold the tape stop back.
+        val last = plan.sections.lastIndex
+        val songEnd = starts[last] + KitPreview.render(kit, kitDir, clip = clips[last], tempoBpm = bpm).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
         return Mix(song, starts)

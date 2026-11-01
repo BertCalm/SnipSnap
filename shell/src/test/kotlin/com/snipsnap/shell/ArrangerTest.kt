@@ -728,8 +728,40 @@ class ArrangerTest {
         assertTrue(past in 0 until com.snipsnap.kit.KitPreview.RATE, "the song ends at the outro's ring-out, bass and all: $past frames past")
         val lastFrame = mix.snip.frameCount - 1
         assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped by the last frame: ${mix.snip.samples[lastFrame * 2]}")
-        // And the bed really sounded: the reprise carries the bass.
-        val reprise = plan.sections.indexOfFirst { it.name == "reprise" }
-        assertTrue(energyAfter(mix.snip, mix.sectionStarts[reprise], 0, 500) > 1e-3, "the bed plays under the reprise")
+        // And the bass really rang into the outro, or the checks above would
+        // pass with no bass at all: against the same plan with no Answer, the
+        // outro's first second carries the reprise's last note on top.
+        File(m.kitDir, AnswerStore.FILE_NAME).delete()
+        val bare = Arranger.mixdown(m.kit, m.kitDir, plan)
+        val outro = plan.sections.lastIndex
+        val withBass = energyAfter(mix.snip, mix.sectionStarts[outro], 0, 1000)
+        val without = energyAfter(bare.snip, bare.sectionStarts[outro], 0, 1000)
+        assertTrue(withBass - without > 100.0, "the reprise's bass rings into the outro: $withBass with it, $without without")
+    }
+
+    @Test
+    fun `a long pad struck before the outro does not hold back the tape stop`() {
+        // A twelve-second pad on the reprise's last off-beat rings far past the
+        // outro inside the same take. The song still ends where the outro does:
+        // its bars and its own ring-out.
+        val m = model("Long Pad")
+        val rate = 44_100
+        m.assign(5, Snip(FloatArray(12 * rate) { 0.3f * sin(2 * PI * 220.0 * it / rate).toFloat() }, 1, rate), DrumClass.PERC)
+        m.save()
+        val bar = Mpc3Clip.PULSES_PER_BAR
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val reprise = Mpc3Clip("Reprise", 1, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(40, 12 * s16, 0.9f)))
+        val outro = Mpc3Clip("Outro", 2, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(36, bar, 0.9f)))
+        val plan = Arranger.Arrangement(
+            "Long Song", 0,
+            listOf(Arranger.Section("reprise", reprise, 1, "a long pad late"), Arranger.Section("outro", outro, 1, "kicks")),
+        )
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM * com.snipsnap.kit.KitPreview.RATE * 4).toInt()
+        val past = mix.snip.frameCount - 3 * framesPerBar
+        assertTrue(past in 0 until com.snipsnap.kit.KitPreview.RATE, "the song ends at the outro's ring-out, not the long pad's: $past frames past")
+        val lastFrame = mix.snip.frameCount - 1
+        assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped the long pad: ${mix.snip.samples[lastFrame * 2]}")
     }
 }
