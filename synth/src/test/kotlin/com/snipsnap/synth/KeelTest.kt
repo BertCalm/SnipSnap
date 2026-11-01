@@ -242,14 +242,20 @@ class KeelTest {
     }
 
     @Test
-    fun `root pitch at WEIGHT 0 is within 50 cents for both voices at MIDI 30, 36 and 42`() {
+    fun `root pitch at WEIGHT 0 is within 50 cents early and late for every voice at MIDI 30, 36 and 42`() {
         for (voice in voices) for (midi in listOf(30, 36, 42)) {
             val snip = render(voice, mapOf("WEIGHT" to 0f), midi)
-            val estimate = requireNotNull(Pitch.detect(snip, .35f, .25f)) { "$voice $midi has no pitch" }
+            // BELLY's detuned bite changes the short-lag correlation as it fades.
+            // Read the house detector while the body is strong, then independently
+            // check the late tail with overlap-normalized NSDF rather than dropping it.
+            val estimate = requireNotNull(Pitch.detect(snip, .15f, .25f)) { "$voice $midi has no early pitch" }
             val c = cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
             println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
             assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")
             assertTrue(estimate.confidence >= .3f, "$voice midi $midi confidence ${estimate.confidence}")
+            val late = cents(nsdfHz(snip.samples, .35, .20), Keys.midiHz(midi).toDouble())
+            println("KEEL late root $voice midi $midi WEIGHT 0: ${f(late, 1)} cents (NSDF)")
+            assertTrue(abs(late) < 50.0, "$voice midi $midi late tail reads ${f(late, 1)} cents from the root")
         }
         // The default WEIGHT .4 at MIDI 36 is the harness's own row.
         for (voice in voices) println("KEEL root $voice midi 36 WEIGHT .4: ${f(rootCents(render(voice), 36) ?: Double.NaN, 1)} cents")
