@@ -1069,7 +1069,7 @@ object SynthKits {
     }
 
     /**
-     * Eight CRANE notes climb C minor pentatonic, followed by the six model-4 presets and
+     * Eight CRANE notes climb C minor pentatonic, followed by the six accepted model-4 references and
      * the accepted FAN/STILL source tones. Every pad is a dry finite tonal note with its
      * complete editable recipe; TUNE chooses the note without an overriding MIDI field.
      */
@@ -1099,7 +1099,7 @@ object SynthKits {
                 macros = reference.macros + mapOf("FOLD" to 0f, "MOTION" to 0f),
             )
         }
-        return (notes + OrigamiPresets.all() + sources).map(::arranged)
+        return (notes + OrigamiPresets.references() + sources).map(::arranged)
     }
 
     /**

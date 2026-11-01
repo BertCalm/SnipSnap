@@ -491,13 +491,18 @@ shared value; `deliveryRecipe(patch)` supplies SPREAD's rendered and saved
 Those pad-only fades do not change the native exported sustain body.
 `Spread.detect` uses the authored reference MIDI for held OVERLAP while finite
 OVERLAP retains its existing detector behavior. For a default reference of
-MIDI `48`, an instrument
-uses sampled references `36`, `48`, `60` with inclusive zones `30–42`, `43–54`,
-`55–66`. Other saved references shift the three-note layout while retaining
-the saved reference itself. Below `36`, the sources are `[m, m+12, m+24]`;
-above `72`, they are `[m-24, m-12, m]`; otherwise they are `[m-12, m, m+12]`.
-This keeps synthesis references within MIDI `24` to `84`. Midpoint zone splits
-and six-semitone end extensions keep each source's resampling span bounded.
+MIDI `48`, an instrument uses sampled references `36`, `48`, `60`. Other saved
+references shift the three-note layout while retaining the saved reference
+itself. Below `36`, the sources are `[m, m+12, m+24]`; above `72`, they are
+`[m-24, m-12, m]`; otherwise they are `[m-12, m, m+12]`. This keeps native
+synthesis references within MIDI `24` to `84`.
+
+The assembled zones use midpoint splits and six-semitone end extensions.
+Packaging follows the shared full-keyboard export policy: it extends the
+outer zones to MIDI `0` and `127` in the phone sidecar and both MPC programs.
+For reference MIDI `48`, the exported inclusive zones are `0–42`, `43–54`,
+`55–127`. Keys beyond the native reference range play the outer samples by
+resampling; they do not request new synthesis outside MIDI `24` to `84`.
 The reference remains a geometry request rather than a guaranteed strongest
 perceived root. The earlier owner acceptance covers the fixed MPC trial; it
 does not supply a hardware measurement for every new reference or control edit.
