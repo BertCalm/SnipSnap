@@ -108,10 +108,10 @@ class ObbligatoConversationTest {
 
     @Test
     fun `the new conversation is an explicit reproducible recipe with actual audition taps`() {
-        assertEquals(5, Obbligato.MODEL)
+        assertEquals(10, Obbligato.MODEL)
         assertEquals(7, Obbligato.MUSICAL_MODEL)
-        assertTrue(ObbligatoPresets.all().all { it.model == 5 })
-        assertTrue(ObbligatoKits.patches().all { it.model == 5 })
+        assertTrue(ObbligatoPresets.all().all { it.model == 10 })
+        assertTrue(ObbligatoKits.patches().all { it.model == 10 })
         val patch = ObbligatoPatch("Remembered Play", controls(ObbligatoRelationship.PLAY),
             midi = 67, velocity = .51f, seed = -819, model = Obbligato.CONVERSATION_MODEL)
         assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))

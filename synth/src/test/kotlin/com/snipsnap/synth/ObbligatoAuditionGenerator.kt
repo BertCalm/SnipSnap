@@ -16,7 +16,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-/** Four dry relationship candidates, actual model taps, and an explicitly named response ablation. */
+/** Historical revision-five candidates, actual model taps and a response ablation. */
 object ObbligatoAuditionGenerator {
     private const val MIDI = 60
     private const val VELOCITY = .8f
@@ -46,12 +46,13 @@ object ObbligatoAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Usage: ObbligatoAuditionGenerator [output-directory]" }
+        require(Obbligato.LEGACY_MODEL == 5) { "This audition preserves the original revision-five recipes" }
         val root = File(args.firstOrNull() ?: "../testkit/obbligato-audition")
         root.mkdirs()
         val takes = ObbligatoPresets.all().map { original ->
-            val patch = original.copy(midi = MIDI, velocity = VELOCITY, seed = SEED)
-            val full = Obbligato.probe(patch.macros, MIDI, VELOCITY, SEED)
-            val off = Obbligato.probe(patch.macros, MIDI, VELOCITY, SEED, responses = false)
+            val patch = original.copy(midi = MIDI, velocity = VELOCITY, seed = SEED, model = Obbligato.LEGACY_MODEL)
+            val full = Obbligato.probe(patch.macros, MIDI, VELOCITY, SEED, model = patch.model)
+            val off = Obbligato.probe(patch.macros, MIDI, VELOCITY, SEED, responses = false, model = patch.model)
             validate(full.snip)
             validate(off.snip)
             require(full.air.size == full.snip.samples.size && full.reed.size == full.air.size)
@@ -129,7 +130,7 @@ object ObbligatoAuditionGenerator {
         }
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "OBBLIGATO", "auditionRevision" to 5,
-            "status" to "Revision 5 prototype; Fight's unequal challenges await a listening verdict",
+            "status" to "Historical revision 5 comparison; all rendering recipes remain pinned to that revision",
             "revisionNotes" to listOf("Fight now uses irregular, unequal challenges and interruptions with brief, smooth crossovers, contrasting prominence and small independent pitch pushes.",
                 "Harmony, Play and Protect are unchanged from revision 4."),
             "sampleRate" to Dsp.RATE, "channels" to 1, "pcmBits" to 24,
@@ -166,7 +167,7 @@ object ObbligatoAuditionGenerator {
 
     /** A declared independent-event phrase until a persistent phrase API is part of the engine. */
     private fun phrase(patch: ObbligatoPatch): Snip {
-        val notes = phraseMidi.map { Obbligato.probe(patch.macros, it, VELOCITY, SEED).snip }
+        val notes = phraseMidi.map { Obbligato.probe(patch.macros, it, VELOCITY, SEED, model = patch.model).snip }
         val gap = (PHRASE_GAP_SECONDS * Dsp.RATE).toInt()
         val samples = FloatArray(notes.sumOf { it.frameCount } + gap * (notes.size - 1))
         var offset = 0
@@ -281,7 +282,7 @@ object ObbligatoAuditionGenerator {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OBBLIGATO · first listen</title>
 <style>
 :root{color-scheme:dark;--bg:#101511;--panel:#19221b;--ink:#eaf2e9;--muted:#acbbaa;--accent:#ff8a7a;--line:#354738}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:40px 22px 64px}.eyebrow,.take-label,.review-label,.number{font:12px/1.4 ui-monospace,monospace;letter-spacing:.1em}.eyebrow{color:var(--accent)}h1{font-size:clamp(36px,6vw,66px);letter-spacing:-.04em;margin:8px 0}h2{font-size:24px;margin:0}p{color:var(--muted);margin:10px 0 18px}.intro{max-width:680px}a{color:var(--accent);text-underline-offset:3px}button,select,textarea{font:inherit;border:1px solid var(--line);background:#0f1711;color:var(--ink);border-radius:5px;padding:10px}button{cursor:pointer;min-height:44px}button:disabled{cursor:default;opacity:.55}button.active{background:var(--accent);color:#172017;border-color:var(--accent)}.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:24px 0 14px}.tools a{font-size:14px}.mode-hint{font-size:14px;max-width:750px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:28px}.card{border:1px solid var(--line);border-radius:10px;padding:22px;background:var(--panel)}.card-title{display:flex;align-items:center;gap:12px}.number{color:var(--accent);border:1px solid var(--line);padding:7px 10px}.patch{margin-left:auto;font-size:12px;white-space:nowrap}.listen{margin:16px 0}.main-take{background:#0f1711;border:1px solid var(--line);padding:12px;border-radius:6px}.take-label{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);margin-bottom:6px}.main-take .take-label{color:var(--accent)}.wav{font-size:11px}audio{display:block;width:100%;height:40px}details{font-size:13px;border-top:1px solid var(--line);padding-top:14px;margin:18px 0}summary{cursor:pointer;color:var(--muted);min-height:30px}.review-label{display:block;color:var(--accent);margin:22px 0 8px}select,textarea{width:100%;margin-bottom:8px}textarea{resize:vertical}footer{border-top:1px solid var(--line);margin-top:32px;padding-top:20px;font-size:14px}.status{color:var(--accent);font-size:13px;min-height:22px}@media(max-width:710px){main{padding:24px 14px}.grid{grid-template-columns:1fr}.card{padding:18px}}
-</style></head><body><main><div class="eyebrow">SNIPSNAP / DRY AUDITION / REVISION 5</div><h1>OBBLIGATO</h1><p class="intro">A flute and a reed, sharing one played note. Revision 5 gives Fight unequal challenges and interruptions; Harmony, Play and Protect remain unchanged. Start with the duet, then hear the players inside it.</p><p class="eyebrow">MONO · C4 · VELOCITY 0.80 · NO RACK EFFECTS</p><div class="tools"><button type="button" class="active" data-mode="matched">Matched level</button><button type="button" data-mode="raw">Raw energy</button><a href="obbligato-audition.zip" id="pack-link" download>Full listening pack ↓</a><a href="manifest.json" id="manifest-link" download>Settings & measurements ↓</a></div><p class="mode-hint" id="mode-hint">Duets, responses-disabled comparisons and phrases share one measured loudness target. Each stem uses its duet's exact gain, so its balance remains intact.</p><div class="grid">$cards</div><footer><button type="button" id="export-review">Export listening notes ↓</button><p class="status" id="review-status" aria-live="polite"></p><p>These are listening candidates. The labels do not establish acoustic realism or emotional meaning. Each note begins fresh. There are no rack effects, stereo-width gestures or sustain loops.</p><p>Notes are kept in this browser when local storage is available. Export them to share your verdict.</p><p id="portable-note">The separate portable <strong>standalone.html</strong> embeds the 20 matched WAVs. The full ZIP contains the local page, settings, patches and all 40 raw/matched WAVs.</p></footer></main>
+</style></head><body><main><div class="eyebrow">SNIPSNAP / HISTORICAL AUDITION / REVISION 5</div><h1>OBBLIGATO</h1><p class="intro">A flute and a reed, sharing one played note. Revision 5 gives Fight unequal challenges and interruptions; Harmony, Play and Protect remain unchanged. Start with the duet, then hear the players inside it.</p><p class="eyebrow">MONO · C4 · VELOCITY 0.80 · NO RACK EFFECTS</p><div class="tools"><button type="button" class="active" data-mode="matched">Matched level</button><button type="button" data-mode="raw">Raw energy</button><a href="obbligato-audition.zip" id="pack-link" download>Full listening pack ↓</a><a href="manifest.json" id="manifest-link" download>Settings & measurements ↓</a></div><p class="mode-hint" id="mode-hint">Duets, responses-disabled comparisons and phrases share one measured loudness target. Each stem uses its duet's exact gain, so its balance remains intact.</p><div class="grid">$cards</div><footer><button type="button" id="export-review">Export listening notes ↓</button><p class="status" id="review-status" aria-live="polite"></p><p>These are listening candidates. The labels do not establish acoustic realism or emotional meaning. Each note begins fresh. There are no rack effects, stereo-width gestures or sustain loops.</p><p>Notes are kept in this browser when local storage is available. Export them to share your verdict.</p><p id="portable-note">The separate portable <strong>standalone.html</strong> embeds the 20 matched WAVs. The full ZIP contains the local page, settings, patches and all 40 raw/matched WAVs.</p></footer></main>
 <script id="manifest-data" type="application/json">${manifest.replace("<", "\\u003c")}</script>
 <script>
 const AUDIO = {};
