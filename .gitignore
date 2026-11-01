@@ -440,6 +440,7 @@ testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
 testkit/trio-touch/
+testkit/trio-contact/
 
 # LATTICE's generated finite listening proof and downloadable archives.
 testkit/lattice-audition/

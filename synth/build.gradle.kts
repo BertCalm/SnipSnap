@@ -427,6 +427,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** Compare the approved TRIO contact profile with the preceding saved sound. */
+tasks.register<JavaExec>("generateTrioContactAudition") {
+    group = "distribution"
+    description = "Render TRIO Previous/Approved contact comparisons with native saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioContactAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioContactOutput").orNull ?: "${rootDir}/testkit/trio-contact")
+}
+
 /** Accepted versus revised upper-TOUCH character with identical seeded scores. */
 tasks.register<JavaExec>("generateTrioTouchAudition") {
     group = "distribution"
