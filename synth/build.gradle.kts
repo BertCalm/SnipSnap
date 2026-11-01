@@ -1671,6 +1671,9 @@ tasks.register<JavaExec>("scanRenderTimes") {
     workingDir = projectDir
     maxHeapSize = "3g"
     args(listOf("${rootDir}/testkit/render-times") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+    // -Pjfr=<file> records a Java Flight Recorder profile of the same renders, for finding
+    // which functions the time is spent in (read it with `jfr print --events ExecutionSample`).
+    providers.gradleProperty("jfr").orNull?.let { jvmArgs("-XX:StartFlightRecording=filename=$it,settings=profile") }
 }
 
 tasks.register<JavaExec>("generateForkKit") {

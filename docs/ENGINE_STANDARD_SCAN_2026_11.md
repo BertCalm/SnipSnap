@@ -37,6 +37,101 @@ still the scan as first run, so a reader can see what was found.
   at merge time. Any change that adds an exhaustive `when` over `Patch` should be
   merged with the base brought up to date first.
 
+## Render speed, 2026-11-01
+
+The house rule is "the instant loop": a knob turn re-renders and retriggers, and
+one-shots render in tens of milliseconds (`docs/SYNTH_ROADMAP.md`). The SYNTH
+screen does exactly that: every knob turn re-renders the whole patch after a
+100 ms debounce. This section measures how far each engine is from that rule and
+names where the time goes.
+
+### How it was measured
+
+`./gradlew :synth:scanRenderTimes` renders each voice's first factory preset once to
+warm the JVM, then three more times, each with one knob nudged by a different
+thousandth so a render cache cannot answer from a hit. It reports the median.
+`-Pengines=A,B` limits the run and `-Pjfr=<file>` records a Java Flight Recorder
+profile of the same renders. Numbers come from this cloud machine's JVM, not a
+phone; run-to-run noise was about plus or minus 15 percent. A phone is likely
+slower, by an amount nobody has measured.
+
+### What it found
+
+325 voices across 74 engines with factory presets, no failures:
+
+| Median knob-turn render | Voices |
+|---|---|
+| under 50 ms | 84 |
+| 50 to 100 ms | 50 |
+| 100 to 250 ms | 77 |
+| 250 to 500 ms | 36 |
+| 500 ms to 1 s | 39 |
+| over 1 s | 39 |
+
+The slowest engines, by their worst voice:
+
+| Engine | Worst voice ms | Median voice ms | Where the time goes (profile) |
+|---|---|---|---|
+| FILAMENT | 10,663 | 8,965 | route allpass and junction step: denormals, see below |
+| NIMBUS | 1,932 | 1,155 | the plate bank's velocity update at 176.4 kHz |
+| CIRCUIT | 1,914 | 1,765 | `observe`, the tube simulation loop (77%); `tanh` 15% |
+| TIDAL | 1,518 | 1,418 | state-variable filters and oscillators, 9.8 s clips |
+| COROLLA | 1,430 | 778 | `tanh` on every spring every sample (48%), plus `log1p` |
+| SPOOL | 1,410 | 1,148 | the Gaussian read kernel (51%) |
+| REVEL | 1,371 | 830 | `perform` and the ensemble tick |
+| CHAMBER | 1,219 | 1,194 | the room probe and mode bank |
+| PITCHWHEEL | 1,196 | 993 | `Wood.tick` and geometry; `tanh` 9% |
+| TESSERA | 1,181 | 1,093 | `Engine.step`; a full energy sum every sample (15%) |
+| UNDERTOW | 1,086 | 494 | `Simulation.step` (96%) |
+| MURK | 883 | 796 | the shared `Modes.Bank.step`, 8 s clips |
+
+Under 100 ms at worst: TIDE, KEEL, OSPREY, ARCO, PLUCK, ONSET, FLOTILLA, SIREN,
+RESIN, VENT, AEROSTAT, SKIN, TONEWHEEL, FATHOM, ORPHICA, THUMP, BORE, TINES,
+VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run.
+
+### What to do, ranked by gain per risk
+
+1. **FILAMENT's denormals (measured, large, safe).** Its filter states decay into
+   denormal numbers, which the processor handles through a slow path. Flushing
+   states below 1e-30 to zero in `Filament.Allpass` and the junction's
+   `RouteFilter` alone took THREAD from 6.0 s to 1.0 s, PULSE from 9.0 s to 1.2 s
+   and CURL from 10.8 s to 1.3 s. The experiment was reverted: the fix changes
+   output bytes at levels far below hearing, so it needs its own change that also
+   covers `HaloMode` and `Dc`, re-runs FILAMENT's goldens and says so. The same flush
+   in the shared `Modes.Bank` made no measurable difference to MURK, MERCURY,
+   MERIDIAN, BALLAST, LIBRATION or SCOUR, so this is not a toolkit-wide fix. Other
+   engines with long double-precision tails are worth the same 10-minute test.
+2. **Cancellation (read from code, not measured on a phone).** Only FILAMENT,
+   TIDAL, CHAMBER and OPENSKY are handed the screen's cancel check. For every other
+   engine, a render started by an earlier knob position runs to the end on a
+   background thread while the next one starts, so dragging a knob on a 1 s engine
+   can stack several renders. The pattern to copy exists (`Filament.requireActive`,
+   checked every 1,024 frames). Gain: no wasted renders during a drag. Risk: none to
+   the sound. Proof needs a phone.
+3. **Fast `tanh` (measured share, sound change).** `kotlin.math.tanh` goes through
+   `StrictMath.expm1`, which has no fast hardware path. It is 48% of COROLLA, 15% of
+   CIRCUIT, 13% of TREFOIL and 9% of PITCHWHEEL, and `tanh(` appears about 120
+   times across the synth sources. One shared `Dsp.tanh` with a stated maximum error would serve all of
+   them. It changes bytes, so each engine needs an A/B before it moves.
+4. **Diagnostics on the render path (measured share, safe).** TESSERA sums its whole
+   energy every sample only to guard against a non-finite value and record a
+   maximum (15% of its time). Checking every 64th sample keeps the guard. The same
+   look is worth taking in CHAMBER's `renderProbe` and TREFOIL's model-two probe,
+   which is its render.
+5. **Mechanics at audio rate (design work, the largest gains).** CIRCUIT, UNDERTOW,
+   NIMBUS, TESSERA, PITCHWHEEL and REVEL step their whole physical simulation at
+   176.4 kHz, four times the output rate. Parts that move slowly (geometry, contact
+   planning, energy budgets) could run at a control rate with the resonators left
+   at audio rate. This is the Luthier render-budget rule applied after the fact: each
+   engine needs a spec, a measured before and after, and a listen.
+6. **Clip length (product decision).** Most voices over 1 s are 5 to 10 s clips. The
+   median cost is about 100 to 400 ms per second of audio. A knob-turn preview that
+   renders only the first second or two and plays it while the rest renders would
+   bring most of them under the rule without touching DSP. It needs engine support
+   for a partial render, and it changes what a knob turn lets you hear.
+7. **Measure on a phone.** Every number here is from a cloud JVM. A device run of
+   the same scan, or the app timing its own previews, would set the real targets.
+
 ## Ledger
 
 - **Verified:** every row of the table, by grep, on the commit above.
