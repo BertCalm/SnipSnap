@@ -14,6 +14,13 @@ object SynthKits {
     /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
     fun accord(): List<ArrangedPad> = AccordKits.arranged()
 
+    /** The sixteen auditioned finite Otis performances, retaining their complete score recipes. */
+    fun otis(): List<ArrangedPad> = OtisPresets.all().map { patch ->
+        pad(patch, Otis.drumClassFor(patch)).copy(oneShot = true, displayName = patch.name,
+            source = mapOf("engine" to patch.engine, "voice" to patch.voiceName,
+                "factoryPreset" to patch.name, "rootMidi" to patch.midi.toString()))
+    }
+
     /** Sixteen finite Libration notes; native touch zones retain their energy. */
     fun libration(): List<ArrangedPad> = LibrationKits.arranged()
 

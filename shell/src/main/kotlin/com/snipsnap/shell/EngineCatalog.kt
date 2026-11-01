@@ -63,6 +63,7 @@ object EngineCatalog {
         "VOX" to EngineEntry(listOf(EngineCategory.VOICES, EngineCategory.PADS), "Choir, robot, speech, throat singing and beatbox"),
         "PLUCK" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.BASS), "Nylon, harp, koto, banjo, sitar and upright bass plucks"),
         "ORPHICA" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.PADS), "Plucked harp that breaks into stuttering grains as it rings"),
+        "OTIS" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.WINDS), "Organ, steam pipe, blues harmonica and shared reed chords"),
         "TONEWHEEL" to EngineEntry(listOf(EngineCategory.KEYS), "Drawbar organ: full, soul and stab registrations"),
         "REGISTERS" to EngineEntry(listOf(EngineCategory.KEYS), "Pipe organ, reed organ and transistor organ"),
         "FATHOM" to EngineEntry(listOf(EngineCategory.BASS), "Deep, grinding and glassy bass with glide"),

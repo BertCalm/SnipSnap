@@ -127,6 +127,11 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.accord() },
         Starter(
+            "otis", "OTIS",
+            "Organ, steam pipe, blues harmonica and shared Squeeze chords. Sixteen finite performances.",
+            seeded = false,
+        ) { SynthKits.otis() },
+        Starter(
             "libration", "LIBRATION",
             "Wood, glass and departing orbits. Sixteen finite notes with soft and hard touch.",
             seeded = false,

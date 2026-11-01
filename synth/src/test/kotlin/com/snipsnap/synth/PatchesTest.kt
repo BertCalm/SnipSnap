@@ -68,7 +68,7 @@ class PatchesTest {
             val fields = patch.toJsonValue().entries
             assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
                 "${patch.engine}: complete saved controls survive the dispatcher")
-            if (patch is OpenSkyPatch || patch is OnsetPatch) {
+            if (patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch) {
                 // These formats pin complete control snapshots instead of
                 // inheriting newer voice defaults when a field is missing.
                 for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {

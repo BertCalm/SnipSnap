@@ -47,6 +47,7 @@ import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Pitchwheel
@@ -366,6 +367,11 @@ class UserPresetsTest {
             } else if (preset is FilamentPatch) {
                 val promoted = filamentFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, velocity, geometry and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is OtisPatch) {
+                val promoted = otisFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete score, source profile and playing strength promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is TidalPatch) {
@@ -904,6 +910,14 @@ class UserPresetsTest {
         return FilamentPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
     }
 
+    private fun otisFromRosterLine(line: String): OtisPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        assertEquals("OtisPatch", (call.receiver as KotlinLiteral.Call).name)
+        assertTrue(call.named.isEmpty())
+        return OtisPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
     @Test
     fun `a custom held Rime promotion retains its full recipe and escaped name`() {
         val patch = com.snipsnap.synth.RimePatch("Contour \"$\"\n\\", com.snipsnap.synth.RimeVoice.VESSEL,
@@ -956,6 +970,10 @@ class UserPresetsTest {
                 val decoder = ChamberPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ChamberPatch::class.java, decoder.returnType,
                     "CHAMBER promotion names its public complete-JSON constructor")
+            } else if (engine == OtisPatch.ENGINE) {
+                val decoder = OtisPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(OtisPatch::class.java, decoder.returnType,
+                    "OTIS promotion names its complete finite-score constructor")
             } else if (engine == FilamentPatch.ENGINE) {
                 val decoder = FilamentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(FilamentPatch::class.java, decoder.returnType,
