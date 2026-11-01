@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.PREFS
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
@@ -191,9 +193,16 @@ fun KeysScreen(
             override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
             // The wheel or strip bends every voice, MidiKeys' range.
             override fun bend(ratio: Double) = player.setBend(ratio)
+            // The mod wheel, a vibrato.
+            override fun vibrato(semitones: Float) = player.setVibrato(semitones)
         })
     }
     fun silence() = midiKeys.allOff()
+    // How far the bend wheel bends, remembered between visits: a player who
+    // sets it to a fifth for a lead wants it there next time.
+    val keysPrefs = remember(context) { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+    var bendRange by remember(player) { mutableIntStateOf(keysPrefs.getInt(BEND_RANGE_KEY, MidiKeys.BEND_RANGE_SEMITONES)) }
+    LaunchedEffect(midiKeys, bendRange) { midiKeys.bendRange = bendRange }
     // The LCD's readout: what is plugged in, by name. Empty when nothing
     // is, and never shown at all on a phone that cannot do MIDI. The
     // keyboard is opened and closed with the lifecycle, below, beside the
@@ -367,6 +376,15 @@ fun KeysScreen(
         }
 
         if (midiSupported && showLearn) {
+            ActionButton(
+                "BEND ±$bendRange",
+                scheme,
+                enabled = true,
+                onClick = {
+                    bendRange = MidiKeys.nextBendRange(bendRange)
+                    keysPrefs.edit().putInt(BEND_RANGE_KEY, bendRange).apply()
+                },
+            )
             MidiLearnPanel(
                 learnState,
                 KeysMidi.TARGETS,
@@ -404,6 +422,9 @@ internal const val NO_MIDI_DEVICE = "NO MIDI KEYBOARD · PLUG ONE IN OVER USB"
  * loud.
  */
 private const val MIN_VELOCITY = PadHit.SOFTEST
+
+/** The preference holding the bend wheel's range in semitones. */
+private const val BEND_RANGE_KEY = "keys.bendRange"
 
 /** The velocity a synthesized TalkBack click uses — see PlayScreen.kt's own CENTER_VELOCITY. */
 private val CENTER_VELOCITY = PadHit.CENTER

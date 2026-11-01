@@ -573,6 +573,16 @@ Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong handle, jdoubl
     return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 
+/** The mod wheel: every voice wobbles [semitones] either way, gliding to that depth over [glideMs]; false when dropped, as setPitch. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_setVibrato(JNIEnv*, jobject, jlong handle, jfloat semitones, jfloat glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetVibrato;
+    c.pitch = semitones;
+    c.fadeMs = glideMs;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
 /** The whole mix times [gain] (0..1), gliding over [glideMs]; false when dropped, as setPitch. */
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong handle, jfloat gain, jfloat glideMs) {
