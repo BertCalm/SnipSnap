@@ -90,8 +90,43 @@ SnipSnap sidecars; the names are not new MPC parameters. The generated main
 recipe reproduces the ECHO sample. Rebuilding that recipe alone does not
 recreate all three layers; recreate the starter for the full demo.
 
-General FX-layer authoring for arbitrary pads and continuous modulation of
-a ringing note remain separate work.
+STRIKE FX on an ordinary pad is described in the next section. Continuous
+modulation of a ringing note remains separate work.
+
+## STRIKE FX on your own pad
+
+The pad sheet has a STRIKE FX section that turns one sample into the same
+three-layer bank the starter uses, so STRIKE has something to select
+on a pad you made yourself. Design:
+[the spec](superpowers/specs/2026-10-31-strike-fx-layers-design.md); build
+order: [the plan](superpowers/plans/2026-10-31-strike-fx-layers.md).
+
+- **Two knobs.** ROOM is the spring's SIZE (default 0.42) and SLAP is the
+  echo's TIME (default 0.9). The spring's TONE (0.7) and MIX (1) and the
+  echo's REPEAT (0.55), TONE (0.8) and MIX (0.9) are fixed.
+- **AUDITION** plays DRY, ROOM and ECHO one second apart and writes nothing.
+  Move the knobs and audition again as often as you like.
+- **KEEP** writes three files: the source bytes copied to `_v1.wav` as DRY,
+  ROOM in `_v2.wav`, and ECHO over the pad's main file. The layers are named
+  DRY, ROOM and ECHO and take the three windows 1 to 41, 42 to 84 and 85 to
+  127 (the split a stacked pad with two soft zones gets). Each rendered layer
+  ends with a 4 ms fade. The pad's recipe keeps every field it had and adds
+  `layers`, which makes it a version 3 recipe. A printed board is refused,
+  and a pad with a treatment keeps its treatment.
+- **CLEAR** restores the single sample from the DRY bytes and removes
+  `layers` from the recipe.
+- **Confirm dialogs.** KEEP on a pad that already has SOFT HITS asks first,
+  and SOFT HITS on a pad that holds a STRIKE FX bank asks first; each
+  replaces the other.
+- **PASTE** carries the bank: pasting a banked recipe applies the bank to the
+  target pad's own sample, not to the source pad's.
+- **Export and import** keep the layer names, the windows and the version 3
+  recipe.
+- **Not done: bank-B twins.** A twin copies the recipe as before and does not
+  re-render its own three files. That is its own follow-up.
+
+Heard: no one has heard a user-pad bank yet. The owner's snare is the
+audition gate.
 
 ## Why it is built this way
 

@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.isBanked
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -1303,6 +1304,31 @@ class ConventionTest {
             problems += "EngineCatalog has entries for engines the picker does not have: ${orphaned.joinToString()}"
         }
         return problems
+    }
+
+    /**
+     * Law: a banked recipe (version 3, `layers` present) lists exactly one layer per
+     * velocity layer of its pad. The bank is what STRIKE FX writes beside the sample
+     * windows; a recipe whose list and windows disagree would replay into the wrong
+     * number of files. No starter is banked today, so this is armed for the day one
+     * moves to version 3.
+     */
+    @Test
+    fun `law - a banked recipe lists exactly one layer per velocity layer`() {
+        for (starter in StarterKits.ALL) {
+            val dir = java.nio.file.Files.createTempDirectory("conv-bank-${starter.id}").toFile()
+            try {
+                val kit = starter.render("Starter ${starter.id}", dir, seed = 1)
+                for (pad in kit.pads) {
+                    val r = Breed.recipeOf(pad) ?: continue
+                    if (r.isBanked) {
+                        assertEquals(pad.velocityLayers.size, r.layers!!.size, "${starter.id} slot ${pad.slot}")
+                    }
+                }
+            } finally {
+                dir.deleteRecursively()
+            }
+        }
     }
 
     /**

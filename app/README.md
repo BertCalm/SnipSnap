@@ -327,7 +327,9 @@ logcat tag to grab when something is wrong.
 - **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
   covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
   optional volume link in PADS and FULL. Check the interaction on a phone;
-  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers;
+  an ordinary pad's PAD SHEET has a STRIKE FX section (ROOM, SLAP, AUDITION,
+  KEEP, CLEAR) that builds DRY, ROOM and ECHO layers from its own sample.
   The LAST row highlights the layer actually triggered; moving the strip
   changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
