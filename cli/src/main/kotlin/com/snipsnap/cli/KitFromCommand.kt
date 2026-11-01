@@ -3,6 +3,7 @@ package com.snipsnap.cli
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Scale
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Balance
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
@@ -15,8 +16,12 @@ import java.io.PrintStream
  * — KIT FROM ANYTHING: one sound into sixteen pads in a key and a style.
  * Purist: every pad is the source, transformed. The table it prints is the
  * gate every pad was held to and what the gate said; a pad that failed its
- * gate is still in the kit and says so in its provenance, because round
- * three's blend is what acts on that, not silence.
+ * gate is blended with a synth partner at half and says so, in the table
+ * and in its provenance, never silence. The kit folder keeps the source
+ * (`kitfrom-source.wav`) and every pad carries a recipe that rebuilds it
+ * from that file and the sidecar alone; `kitfrom --check <kit-dir>`
+ * rebuilds every such pad and says, pad by pad, whether the WAV on disk
+ * is the rebuild bit for bit.
  */
 object KitFromCommand {
 
@@ -24,8 +29,9 @@ object KitFromCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--key", "--genre", "--out", "--name"),
-            boolean = setOf("--overwrite"),
+            boolean = setOf("--overwrite", "--check"),
         )
+        if (opts.has("--check")) return check(opts, out)
         val path = opts.positional.getOrNull(0)
             ?: throw CliError("kitfrom wants a source: snipsnap kitfrom <wav> [--key Am] [--genre house|techno|boom-bap] [--out <dir>] [--name <name>]")
         if (opts.positional.size > 1) throw CliError("kitfrom takes one source")
@@ -47,10 +53,16 @@ object KitFromCommand {
         // not by analyse after the heap has already paid for it
         val capped = WavReader.readCapped(file, maxDurationSec = KitFromAnything.MAX_SOURCE_SECONDS + 0.5f)
         if (capped.truncated) throw CliError("${file.name} is over ${KitFromAnything.MAX_SOURCE_SECONDS.toInt()} s: a recording, not a hit; chop it first")
-        val source = capped.snip
+        // the kit keeps its source, and the kit is made from THAT copy read back, so the recipe's hash
+        // is the hash of the file in the folder and a rebuild later starts from the same samples
+        dir.mkdirs()
+        val kept = File(dir, KitFromAnything.SOURCE_FILE)
+        WavWriter.write(kept, capped.snip)
+        val source = WavReader.read(kept)
         val result = try {
-            KitFromAnything.assemble(source, key, genre)
+            KitFromAnything.assemble(source, key, genre, sourceFile = KitFromAnything.SOURCE_FILE)
         } catch (e: IllegalArgumentException) {
+            kept.delete()
             throw CliError(e.message ?: "can't make a kit of that")
         }
         val kit = KitAssembler.assembleArranged(name, Balance.apply(result.pads), dir, key = key, tempoBpm = genre.style.bpm)
@@ -66,16 +78,39 @@ object KitFromCommand {
             // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
             out.println("%-4s %-11s %-10s %s".format("A%02d".format(java.util.Locale.ROOT, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail))
         }
+        for (b in result.blends) {
+            out.println(
+                "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(java.util.Locale.ROOT,
+                    b.slot.name, b.synth, b.share,
+                    if (b.distance != null) ", distance %.3f%s".format(java.util.Locale.ROOT, b.distance, if (b.far) " (far)" else "") else "",
+                    b.after.gate.name.lowercase(), b.after.detail),
+            )
+        }
         val failed = result.fallbackSet
         val unread = result.unmeasured
         out.println(
             when {
                 failed.isEmpty() && unread.isEmpty() -> "every pad cleared its gate"
-                else -> "${failed.size} pad(s) failed a gate (kept, marked for the blend): ${failed.joinToString { it.slot.name }}" +
-                    if (unread.isNotEmpty()) "; ${unread.size} unmeasured: ${unread.joinToString { it.slot.name }}" else ""
+                else -> "${failed.size} pad(s) failed a gate and were blended, the source never under half: ${failed.joinToString { it.slot.name }}" +
+                    if (unread.isNotEmpty()) "; ${unread.size} unmeasured, left purist: ${unread.joinToString { it.slot.name }}" else ""
             },
         )
-        out.println("wrote $dir")
+        out.println("wrote $dir, the source kept as ${KitFromAnything.SOURCE_FILE}; every pad carries a recipe (kitfrom --check <dir> rebuilds them)")
         return 0
+    }
+
+    /** `kitfrom --check <kit-dir>`: rebuild every KIT FROM ANYTHING pad from the sidecar and the kept source, byte for byte against the WAV on disk. */
+    private fun check(opts: Options, out: PrintStream): Int {
+        val path = opts.positional.getOrNull(0) ?: throw CliError("kitfrom --check wants a kit folder: snipsnap kitfrom --check <kit-dir>")
+        val dir = File(path)
+        if (!File(dir, "kit.json").isFile) throw CliError("no kit.json in $path")
+        val checks = KitFromAnything.check(dir)
+        if (checks.isEmpty()) throw CliError("no KIT FROM ANYTHING pads in ${dir.name}: nothing carries a kitFromAnything recipe")
+        for (c in checks) {
+            out.println("%-4s %-11s %-9s %s".format("A%02d".format(java.util.Locale.ROOT, c.pad), c.slot.name, if (c.identical) "identical" else "DIFFERS", c.detail))
+        }
+        val same = checks.count { it.identical }
+        out.println("$same of ${checks.size} pad(s) rebuilt bit for bit from the sidecar and ${KitFromAnything.SOURCE_FILE}")
+        return if (same == checks.size) 0 else 1
     }
 }

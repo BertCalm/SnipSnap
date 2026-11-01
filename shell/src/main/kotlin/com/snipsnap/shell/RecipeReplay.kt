@@ -97,6 +97,7 @@ object RecipeReplay {
             return Plan.Refused(Copy.replayNeedsPartner(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
         }
         OutsideSheet.read(recipe)?.let { return Plan.Refused(Copy.REPLAY_OUTSIDE) }
+        if (com.snipsnap.synth.KitFromAnything.Recipe.KEY in e) return Plan.Refused(Copy.REPLAY_KITFROM)
         if ("splice" in e) return Plan.Refused(Copy.REPLAY_SPLICE)
         if ("clean" in e) return Plan.Refused(Copy.replayMeasured("CLEAN"))
         if ("doctor" in e) return Plan.Refused(Copy.replayMeasured("THE DOCTOR"))

@@ -1720,6 +1720,7 @@ object Copy {
         "MUTATE ($move WITH ${partners.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARTNER - NOT CARRIED."
     const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
     const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
+    const val REPLAY_KITFROM = "KIT FROM ANYTHING BELONGS TO ITS OWN SOURCE - MAKE A KIT FROM THE SOUND INSTEAD."
     /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
     fun replayMeasured(what: String): String = "$what WAS A MEASUREMENT OF THAT SOUND, NOT A SETTING - NOT REPLAYABLE."
     const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
