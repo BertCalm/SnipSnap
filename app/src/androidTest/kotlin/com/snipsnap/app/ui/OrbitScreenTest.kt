@@ -1,10 +1,13 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -18,6 +21,8 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitStore
+import com.snipsnap.synth.AquariumPerformanceSettings
+import com.snipsnap.synth.AquariumRecipe
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -40,6 +45,37 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @RunWith(AndroidJUnit4::class)
 class OrbitScreenTest : ComposeScreenTest() {
+
+    @Test fun the_set_routes_saved_kit_FX_for_play_and_keeps_its_bounce_tail_without_rewriting_sources() {
+        val original = kit()
+        val sound = AquariumPerformanceSettings(AquariumRecipe(mapOf("aqua_tide_mix" to 1f)), true, .125f)
+        val entry = original.copy(kit = original.kit.copy(aquariumPerformance = sound.toJsonValue()))
+        val metadata = KitStore.save(entry.kit, entry.dir)
+        val metadataBytes = metadata.readBytes()
+        val wave = File(entry.dir, "kick.wav").readBytes()
+        show(entry)
+        invokeClick("OPEN THE SET")
+        val toggle = compose.onNodeWithTag("orbit-aquarium-route")
+        fun route(on: Boolean) {
+            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+            waitFor("ORBIT route $on saved, drawn and ready") {
+                runCatching { OrbitStore.load(entry.dir).aquariumFromKit }.getOrNull() == on &&
+                    toggle.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected) == on &&
+                    toggle.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Disabled) == null
+            }
+        }
+        route(true)
+        invokeClick("Lengthen ORBIT FX bounce tail")
+        waitFor("the bounce tail saved") { runCatching { OrbitStore.load(entry.dir).aquariumTailSeconds }.getOrNull() == 5f }
+        waitFor("PLAY ready") { runCatching { button("PLAY").assertIsEnabled() }.isSuccess }
+        invokeClick("PLAY")
+        waitFor("ORBIT playing") { present("STOP") }
+        invokeClick("STOP")
+        route(false)
+        assertEquals(5f, OrbitStore.load(entry.dir).aquariumTailSeconds)
+        org.junit.Assert.assertArrayEquals(metadataBytes, metadata.readBytes())
+        org.junit.Assert.assertArrayEquals(wave, File(entry.dir, "kick.wav").readBytes())
+    }
 
     private val folders = mutableListOf<File>()
     // Written by the screen on the main thread, read by the test's own.

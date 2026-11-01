@@ -436,8 +436,13 @@ data class OrbitSet(
      * and the clip written from it is the clip that was written before.
      */
     val sections: List<OrbitSection> = emptyList(),
+    /** Explicit ORBIT-only routing to the containing kit's saved Aquarium sound. */
+    val aquariumFromKit: Boolean = false,
+    /** Zero-input time after one finite bounce turn; does not make a seamless loop. */
+    val aquariumTailSeconds: Float = 3f,
 ) {
     init {
+        require(aquariumTailSeconds.isFinite() && aquariumTailSeconds in 0f..30f) { "Aquarium tail must be in 0..30 seconds" }
         require(orbits.size <= MAX_ORBITS) { "at most $MAX_ORBITS rings, got ${orbits.size}" }
         require(sections.size <= OrbitSection.MAX_SECTIONS) {
             "at most ${OrbitSection.MAX_SECTIONS} sections, got ${sections.size}"
