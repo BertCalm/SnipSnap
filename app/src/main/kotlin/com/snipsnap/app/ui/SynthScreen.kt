@@ -5643,15 +5643,15 @@ private enum class Engine {
         SKIN -> (voice as SkinVoice).drumClass
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
-        VELVET -> (voice as VelvetVoice).drumClass
+        VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
         VOX -> Vox.drumClassFor(voice as VoxVoice, macros)
         PLUCK -> (voice as PluckVoice).drumClass
         ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
-        TONEWHEEL -> (voice as TonewheelVoice).drumClass
+        TONEWHEEL -> Tonewheel.drumClassFor(voice as TonewheelVoice, macros)
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> Fathom.drumClassFor(voice as FathomVoice, macros)
-        RESIN -> (voice as ResinVoice).drumClass
+        RESIN -> Resin.drumClassFor(voice as ResinVoice, macros)
         TIDE -> (voice as TideVoice).drumClass
         GLINT -> (voice as GlintVoice).drumClass
         // SIREN: a LOOP by name when HOLD is at its top, a pitched note otherwise - the one knob that picks the class, like VOX's HIT.
@@ -5889,15 +5889,7 @@ private val TinesVoice.drumClass: DrumClass
         TinesVoice.BLOCK, TinesVoice.ZAP, TinesVoice.TOY -> DrumClass.PERC
     }
 
-private val VelvetVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val PluckVoice.drumClass: DrumClass get() = DrumClass.TONAL
-private val TonewheelVoice.drumClass: DrumClass get() = DrumClass.TONAL
-
-// RESIN's three voices are pitched notes through a filter — the same
-// "tonal-pitched voices -> TONAL" fallback VELVET/VOX/PLUCK/TONEWHEEL
-// take above, never judged from a render (ResinPresetsTest says why).
-private val ResinVoice.drumClass: DrumClass
-    get() = DrumClass.TONAL
 
 // TIDE splits. BONGO and DRIP are FATHOM's rule, a real classifier
 // judgment: `TidePresetsTest` holds their defaults to PERC and at least 8

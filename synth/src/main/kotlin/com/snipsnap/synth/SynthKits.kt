@@ -689,6 +689,72 @@ object SynthKits {
     }
 
     /**
+     * The VELVET starter kit. A01-A08 walk BASS up the minor pentatonic from the bottom of
+     * its TUNE (A1), every other knob at its default. A09-A16 are two presets from each
+     * voice: a growl and a rubber bass, a brass stab and a horn section, a squelch and a
+     * screamer, an arcade chip and a square lead. Dry and TONAL ([Velvet.drumClassFor]).
+     */
+    fun velvet(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = VelvetPatch(
+            "Bass $n", VelvetVoice.BASS,
+            Velvet.defaults(VelvetVoice.BASS) + ("TUNE" to semitone / Velvet.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Velvet.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: VelvetVoice, name: String) = VelvetPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Velvet.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(  // A01-A08
+            preset(VelvetVoice.BASS, "GROWL BASS"), preset(VelvetVoice.BASS, "RUBBER BASS"),          // A09 A10
+            preset(VelvetVoice.BRASS, "BRASS STAB"), preset(VelvetVoice.BRASS, "HORN SECTION"),       // A11 A12
+            preset(VelvetVoice.SQUELCH, "WET SQUELCH"), preset(VelvetVoice.SQUELCH, "SCREAMER"),      // A13 A14
+            preset(VelvetVoice.CHIP, "ARCADE"), preset(VelvetVoice.CHIP, "SQUARE LEAD"),              // A15 A16
+        )
+    }
+
+    /**
+     * The TONEWHEEL starter kit. A01-A08 walk FULL up the minor pentatonic from the bottom
+     * of its TUNE (A2), every other knob at its default, so the row is a playable organ
+     * line. A09-A16: three FULL, three SOUL and two STAB presets, chosen to differ: all
+     * drawbars, percussion, a dirty one; a ballad bed, gospel, a slow beat; a horn stab
+     * and a funky one. Dry and TONAL ([Tonewheel.drumClassFor]).
+     */
+    fun tonewheel(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = TonewheelPatch(
+            "Organ $n", TonewheelVoice.FULL,
+            Tonewheel.defaults(TonewheelVoice.FULL) + ("TUNE" to semitone / Tonewheel.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Tonewheel.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: TonewheelVoice, name: String) = TonewheelPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Tonewheel.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(   // A01-A08
+            preset(TonewheelVoice.FULL, "ALL DRAWBARS"), preset(TonewheelVoice.FULL, "FULL PERC"),     // A09 A10
+            preset(TonewheelVoice.FULL, "DIRTY FULL"), preset(TonewheelVoice.SOUL, "BALLAD BED"),      // A11 A12
+            preset(TonewheelVoice.SOUL, "GOSPEL BED"), preset(TonewheelVoice.SOUL, "SLOW BEAT"),       // A13 A14
+            preset(TonewheelVoice.STAB, "HORN STAB"), preset(TonewheelVoice.STAB, "FUNKY STAB"),       // A15 A16
+        )
+    }
+
+    /**
+     * The RESIN starter kit. A01-A08 walk BASS up the minor pentatonic from the bottom of
+     * its TUNE (A1) through the transistor ladder, every other knob at its default.
+     * A09-A16 are three BASS, three LEAD and two BRASS presets chosen to differ: a creamy
+     * sub, a tight knock, a singing low; a solo lead, a scream, a soft whistle; a big
+     * brass and a wah stab. Dry and TONAL ([Resin.drumClassFor]). RESIN's held pads and
+     * drones are made from the phone and are not part of this kit.
+     */
+    fun resin(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ResinPatch(
+            "Bass $n", ResinVoice.BASS,
+            Resin.defaults(ResinVoice.BASS) + ("TUNE" to semitone / Resin.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Resin.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: ResinVoice, name: String) = ResinPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Resin.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(  // A01-A08
+            preset(ResinVoice.BASS, "DEEP CREAM"), preset(ResinVoice.BASS, "TIGHT KNOCK"),            // A09 A10
+            preset(ResinVoice.BASS, "SINGING LOW"), preset(ResinVoice.LEAD, "SOLO CREAM"),            // A11 A12
+            preset(ResinVoice.LEAD, "SCREAM LEAD"), preset(ResinVoice.LEAD, "SOFT WHISTLE"),          // A13 A14
+            preset(ResinVoice.BRASS, "BIG BRASS"), preset(ResinVoice.BRASS, "WAH STAB"),              // A15 A16
+        )
+    }
+
+    /**
      * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
      * every other knob at its default, so the row is the instrument before anyone
      * touches it. A09–A13 are the five factory presets. A14 and A15 climb two

@@ -1575,6 +1575,33 @@ tasks.register<JavaExec>("generateFathomAudition") {
     args("${rootDir}/testkit/fathom-audition")
 }
 
+tasks.register<JavaExec>("generateVelvetKit") {
+    group = "distribution"
+    description = "Render the VELVET starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelvetKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateTonewheelKit") {
+    group = "distribution"
+    description = "Render the TONEWHEEL starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TonewheelKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateResinKit") {
+    group = "distribution"
+    description = "Render the RESIN starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ResinKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 tasks.register<JavaExec>("generateForkKit") {
     group = "distribution"
     description = "Render the FORK modal electric piano acceptance kit under testkit/."
