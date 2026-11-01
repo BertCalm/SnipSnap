@@ -48,6 +48,11 @@ android {
         }
     }
 
+    // The faces the art canvas sets (shell/src/main/resources/fonts) ship
+    // once: the JVM reads them as class-path resources, the phone as
+    // assets under the same relative path. One file, two loaders.
+    sourceSets["main"].assets.srcDir("../shell/src/main/resources")
+
     buildFeatures {
         compose = true
         // Oboe ships as a prefab package inside its AAR; this lets CMake
