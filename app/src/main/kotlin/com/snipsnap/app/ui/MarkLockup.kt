@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
@@ -33,8 +34,9 @@ import com.snipsnap.shell.Mark
  * The words are sized in density pixels, not scaled pixels: the lockup
  * is a drawing with words in it, and the symbol would not follow a font
  * scale. TalkBack hears the one word "SNIPSNAP", as it did when the bar
- * carried a wordmark. The row measures itself unbounded so a crowded bar
- * never ellipsises it; the project name yields first.
+ * carried a wordmark. The row measures itself unbounded and start-aligned,
+ * so a bar too narrow for it never ellipsises or centre-clips it; the
+ * title bar's project name is what yields.
  */
 @Composable
 fun MarkLockup(height: Dp, modifier: Modifier = Modifier) {
@@ -46,7 +48,7 @@ fun MarkLockup(height: Dp, modifier: Modifier = Modifier) {
     val gap = height * Mark.LOCKUP_GAP
     Row(
         modifier
-            .wrapContentWidth(unbounded = true)
+            .wrapContentWidth(Alignment.Start, unbounded = true)
             .semantics(mergeDescendants = true) { contentDescription = "SNIPSNAP" },
     ) {
         val style = TextStyle(fontFamily = family, fontSize = fontSize)

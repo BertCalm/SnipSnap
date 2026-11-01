@@ -37,11 +37,14 @@ class TitleBarTest {
 
     @Test
     fun aLongProjectNameDoesNotSqueezeTheLockup() {
-        // One composition, two bars: the rule allows setContent once per test.
+        // 320 dp: narrower than the design frame, so the bar really is
+        // crowded and the project name has to give. One composition, two
+        // bars: the rule allows setContent once per test.
+        val name = "A".repeat(80)
         rule.setContent {
             TapeTheme(Schemes.DEFAULT) {
                 Column(Modifier.width(320.dp)) {
-                    TitleBar(projectName = "A".repeat(80), onNote = {}, onGear = {})
+                    TitleBar(projectName = name, onNote = {}, onGear = {})
                     TitleBar(onGear = {})
                 }
             }
@@ -51,6 +54,12 @@ class TitleBarTest {
         val (crowded, alone) = lockups.sortedBy { it.positionInRoot.y }
         assertEquals("the lockup's width is its own, project name or not", alone.size.width, crowded.size.width)
         assertTrue("the lockup has width", alone.size.width > 0)
+        assertTrue("the lockup starts inside the bar, not clipped at its left edge", crowded.boundsInRoot.left >= 0f)
+        val projectName = rule.onNodeWithContentDescription(name).fetchSemanticsNode()
+        assertTrue(
+            "the project name (left ${projectName.boundsInRoot.left}) yields to the lockup (right ${crowded.boundsInRoot.right})",
+            crowded.boundsInRoot.right <= projectName.boundsInRoot.left,
+        )
         rule.onAllNodesWithText("SNIP", useUnmergedTree = true).assertCountEquals(2)
         rule.onAllNodesWithText("SNAP", useUnmergedTree = true).assertCountEquals(2)
     }
