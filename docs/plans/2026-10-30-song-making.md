@@ -112,6 +112,36 @@ clipping.
 - a bed note 19 semitones over the root renders within 50 cents of its written pitch (`Pitch.detect`)
 - `ArrangerTest.kt:281` ("ring-outs and transitions on top") is rewritten to the new rule in the same commit, saying why
 
+#### Phase 2, as built (2026-11-01)
+
+- **Sections on the grid.**
+  - `Arranger.mixdown` counts each section's start in pulses and turns it into a frame once, with KitPreview's own arithmetic (`60 / bpm × RATE / PULSES_PER_BEAT`).
+  - Segments are added into the song at those frames, so each ring-out sounds under the next section's opening.
+  - `Mix.sectionStarts` now reports the grid, which is what ARRANGE's needle reads.
+- **Pull-up (D1):** `pullUpOver` keeps the outgoing section up to its last beat, plays `BeatTape.pullUp` built from that audio across the last beat, and stops at the turn's downbeat. A pulled-up record has stopped, so nothing of the outgoing section, bed included, sounds under the turn. The outro's tape stop is unchanged.
+- **Bed (D4):**
+  - `repitched` resamples to a virtual rate at any ratio, which is `TempoFit.repitch`'s arithmetic without its factor-of-two bound.
+  - The old `0.51..1.99` window refused a speed of exactly 2, so **every octave note in an Answer line played at the root, an octave low**. `Answer.pickOffset` picks the octave 12% of the time (34% in a scale without a fifth), so this was routine, not an edge case.
+  - A note past `BED_REACH_SEMITONES = 24` is left out. No line the app writes reaches it (the Answer's widest leap is the octave), so it is not plumbed into a section's `reason` as the plan suggested; only a hand-edited `answer.json` could get there.
+- **Found while building, fixed because they move section timing:**
+  - `tiled` offset each repeat by a four-four bar (`PULSES_PER_BAR`) whatever the clip's meter. `Mpc3Clip` refuses a note past its own length, so for a three-four clip repeated more than once this did not play late: it threw. Every repeated section is tiled, so a waltz-time groove could not be mixed down at all. It now steps by `clip.lengthPulses`.
+  - The bed was tiled by the drum section's repeat count, not by its own length. A two-bar line under a one-bar clip played 4 times ran 8 bars, past the section into the next; a one-bar line under a four-bar clip played once covered one bar of four. `bedNotes` lays the line end to end across the section and drops anything at or past its end.
+- **Measured:** `ArrangerTest`, 22 tests.
+  - Section starts equal the grid frame exactly at the default 92 BPM and at 140 BPM.
+  - The song runs less than a second (the outro's ring-out) past its last bar.
+  - `pullUpOver` leaves everything before the last beat untouched, fills the beat, and ends at the turn.
+  - Bed notes 12, 19 and −12 semitones from a 110 Hz sine land within 50 cents.
+  - A three-four clip tiled 3 times is nine beats with no gaps, and the bed covers a section exactly in both directions.
+- **Each guard is proven by reverting it alone:**
+  - End-to-end placement fails the grid test and the length test ("158770 frames" past the last bar, 3.6 s, the review's stumble summed).
+  - The four-four tiling fails the three-four test ("note at 8640 falls outside 3 bars").
+  - The old window fails the pitch test ("12 semitones: wanted 220.0 Hz, heard 110.0").
+- **Disclosed, not fixed:**
+  - A bed note that is still ringing when the next section's bed starts overlaps it. The bed is a sampler one-shot, not a monophonic voice, as it was before.
+  - The spinback starts at 0.8 of the last sample before the cut, so the turn's pull-up opens with a small level step. This is unchanged from the appended version.
+  - `BeatTape.arrange` (SIDE A) also steps by `PULSES_PER_BAR` and is left alone here; its gaps between kits are a tape leader by design.
+- **Heard:** nothing. The boundary after the theme is the moment to listen to, before and after.
+
 ### Phase 3. Grid patterns: no click, real tails, chokes (M)
 
 **Goal:** a pattern on the grid sounds like the same pattern on ORBIT.
