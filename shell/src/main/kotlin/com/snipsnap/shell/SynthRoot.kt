@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Aerostat
 import com.snipsnap.synth.AerostatPatch
 import com.snipsnap.synth.Accord
@@ -61,6 +63,8 @@ import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.Libration
 import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.Lorentz
+import com.snipsnap.synth.LorentzPatch
 import com.snipsnap.synth.Magnet
 import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.Mercury
