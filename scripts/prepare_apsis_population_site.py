@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import wave
 
 
 def main():
@@ -42,18 +43,27 @@ def main():
                          title=voice.title() + ' / Kotlin / ' + kind, modelVersion=3,
                          midi=clip.get('midi'), velocity=clip.get('velocity'),
                          description='The port in SnipSnap’s Kotlin engine, with the house output filters. '
-                         + ('Two genuine settled cycles; Repeat continues the return.' if kind == 'held' else
+                         + ('One settled cycle; Repeat continues the return.' if kind == 'held' else
                             'The same three-note score and complete tails as the study.' if kind == 'phrase' else
                             'The same C4 encounter at native velocity .65.'),
                          loop=kind == 'held', kind='score' if kind == 'phrase' else 'note',
-                         scoreSummary=source.get('scoreSummary'), durationSeconds=clip['frames'] / 44100,
+                         scoreSummary=source.get('scoreSummary'), durationSeconds=clip['frames'] / 44100 / (2 if kind == 'held' else 1),
                          gainPolicy='Whole-take loudest-200ms RMS match at .12, peak cap .85; '
                          'raw uses the study’s original shared monitor gain. No individual attack matching.',
                          metrics={k:clip[k] for k in ('rawPeak','rawRms','rawDc','stateError','seamError') if k in clip})
             for key in ('rawFile', 'matchedFile'):
                 target = Path('populations') / clip[key]
                 (dist / target).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(args.renders / clip[key], dist / target)
+                if kind == 'held':
+                    # The render bundle stores two copies for offline listening.
+                    # Hosting needs only the native cycle; Web Audio repeats it.
+                    with wave.open(str(args.renders / clip[key]), 'rb') as wav:
+                        params, frames = wav.getparams(), wav.readframes(wav.getnframes() // 2)
+                    with wave.open(str(dist / target), 'wb') as wav:
+                        wav.setparams(params)
+                        wav.writeframes(frames)
+                else:
+                    shutil.copyfile(args.renders / clip[key], dist / target)
                 after[key] = target.as_posix()
                 after['rawSha256' if key == 'rawFile' else 'matchedSha256'] = hashlib.sha256((dist / target).read_bytes()).hexdigest()
             if 'recipe' in clip:
@@ -103,7 +113,8 @@ def main():
     text = text.replace('Compare original and revised Vessel and Corona: varied contacts and resonance that carries into the next attack. Grain and Anchor remain preferred references.', 'Compare GRAIN and ANCHOR in SnipSnap’s Kotlin engine against the preferred Python studies. Earlier voices and attack revisions remain available.')
     html.write_text(text)
     expanded = sum(p.stat().st_size for p in dist.rglob('*') if p.is_file())
-    assert expanded < 256 * 1024 * 1024, expanded
+    # Leave room for tar entry headers and its extended attributes as well.
+    assert expanded < 254 * 1024 * 1024, expanded
     print(json.dumps(dict(clips=len(manifest['clips']), newCards=len(new), expandedBytes=expanded)))
 
 
