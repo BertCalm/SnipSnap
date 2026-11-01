@@ -114,6 +114,13 @@ object Treatments {
         // toward their neutrals, YIELD's being 1 (nothing flows), so a lower AMT is a softer die over less shock
         // and less fold. docs/superpowers/specs/2026-10-25-forge-section-design-brief.md, "Heard".
         "forged" to FxChain(forge = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1.0f)),
+        // A drum room (the ROOM chip): ROOM at its defaults (SIZE 0.3, WALLS 0.5, DISTANCE 0.6: a live room, the mic about
+        // 1.35 m back), the room the owner heard as a good starting point at the Kotlin gate (2026-11-01). Only DISTANCE
+        // is set: SIZE and WALLS are left out so they stay at ROOM's defaults and AMT moves the mic alone, closer in the
+        // same room as AMT falls and dry at 0 (DISTANCE 0 is ROOM's bypass). Fading all three shrank, softened and closed
+        // the room at once: at the sheet's AMT 0.7 the snare's room fell 160-fold, a tap next to dry.
+        // docs/superpowers/specs/2026-10-31-room-section-design-brief.md, "Heard at the Kotlin gate".
+        "roomed" to FxChain(room = mapOf("DISTANCE" to 0.6f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

@@ -228,8 +228,8 @@ class CreasePadMakerTest {
         // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
         // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
         // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
-        // pair, the .xpm's program-level voice tags).
-        // The sidecar also records explicitNoteOn=false so rewriting a package preserves its trigger mode.
+        // pair, the .xpm's program-level voice tags). The sidecar was re-pinned once more when it began carrying
+        // explicitNoteOn.
         val expected = mapOf(
             "Crease Paper Keys.instrument.json" to "4123f312c6f2ef3376e86bd30252aed2634b87ea87c414da37162d2da88d30d1",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",

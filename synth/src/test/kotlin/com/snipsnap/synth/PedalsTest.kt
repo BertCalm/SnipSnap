@@ -62,10 +62,11 @@ class PedalsTest {
     }
 
     @Test
-    fun `DRIVE, SUSTAIN, the wah's three moves, FORGE and DELAY are on the slate, RIG waits for its gate`() {
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), Pedals.gated().map { it.word })
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "RIG", "DELAY"), Pedals.entries.map { it.word })
+    fun `DRIVE, SUSTAIN, the wah's three moves, FORGE, DELAY and ROOM are on the slate, RIG waits for its gate`() {
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM"), Pedals.gated().map { it.word })
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "RIG", "DELAY", "ROOM"), Pedals.entries.map { it.word })
         assertEquals(listOf(PedalSide.PRE), Pedals.byKey("forged").sides, "FORGE moved off the side the owner chose")
+        assertEquals(listOf(PedalSide.POST), Pedals.byKey("roomed").sides, "ROOM is the room everything is heard in, after the amp")
         assertTrue(Pedals.byKey("rig").isBoard)
         assertEquals(listOf("compressor", "valve", "echo"), Pedals.byKey("rig").sections, "RIG is a compressor into the amp into a slapback, in rack order")
     }

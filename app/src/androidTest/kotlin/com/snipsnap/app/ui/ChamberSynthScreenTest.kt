@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -254,8 +255,6 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
     @Test
     fun same_frame_note_response_and_save_keep_the_latest_complete_room() {
         val root = shelf()
-        val savedName = "QUEUED ROOM"
-        assertTrue(UserPresets.check(savedName, "CHAMBER", "HYBRID", emptyList()) is UserPresets.Check.Fresh)
         val original = ChamberPatch("Queued room", ChamberVoice.HYBRID,
             Chamber.defaults(ChamberVoice.HYBRID) + ("MATERIAL" to 1f),
             midi = 76, velocity = .41f, seed = Long.MAX_VALUE - 19, model = 3,
@@ -264,7 +263,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         SynthDrafts.write(settings, listOf(original))
         show(root, settings)
         press("SAVE PRESET")
-        compose.onNode(hasSetTextAction()).performTextReplacement(savedName)
+        compose.onNode(hasSetTextAction()).performTextReplacement("QUEUED ROOM")
         pump()
         val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
@@ -272,6 +271,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val response = requireNotNull(compose.onNodeWithContentDescription("USE WIDER RESPONSE", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        // The semantics action fires whether or not the button is enabled, so a name the
+        // sheet refuses (over the 14-letter limit) would otherwise fail 30 seconds later
+        // with "save never came" instead of here.
+        compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true).assertIsEnabled()
         val save = requireNotNull(compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         val expected = original.copy(midi = 84, velocity = .63f, model = 5)
@@ -286,10 +289,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertTrue(save())
         }
         waitFor("same-frame complete CHAMBER save", timeoutMillis = 30_000) {
-            UserPresets.read(root).any { it.name == savedName }
+            UserPresets.read(root).any { it.name == "QUEUED ROOM" }
         }
-        val saved = UserPresets.read(root).single { it.name == savedName }.patch as ChamberPatch
-        assertEquals(expected.copy(name = savedName), saved)
+        val saved = UserPresets.read(root).single { it.name == "QUEUED ROOM" }.patch as ChamberPatch
+        assertEquals(expected.copy(name = "QUEUED ROOM"), saved)
 
         val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)

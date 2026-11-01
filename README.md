@@ -184,14 +184,16 @@ auditions and original six-voice recordings remain available.
 Factory expansion, the remaining voices, phone/MPC timing and the Android picker
 remain deferred.
 
-APSIS's first listening prototype is a pitched center with independently
-orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
+APSIS is a pitched center with independently orbiting resonant bodies.
+PASSAGE, GRAIN and ANCHOR expose STRETCH, DISTANCE, BODIES, ALIGN,
 COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
 and internal exchange; held output uses a recurring reference-compatible
-orbital roster. Six provisional recipes, saved patches, CLI rendering and a
-dry sixteen-pad kit use the Kotlin renderer. APSIS is in the phone
+orbital roster. GRAIN ports the preferred grain-contact study; ANCHOR ports its
+pressure-release harmonic surge. Each has three presets, including HOLD;
+PASSAGE keeps its original six recipes and dry sixteen-pad bank. APSIS is in the phone
 picker; device acceptance is still pending. Run `./gradlew :synth:generateApsisAudition` for the
-dry comparison set, raw/matched WAVs, recipes and orbital traces. See
+original comparison set; `:synth:generateApsisPopulations` renders the new Kotlin
+voices and pre-output reference floats. See
 [implementation notes](docs/APSIS.md) for prototype scope and validation.
 The [private listening page](https://snipsnap-apsis-audition.bertcalm.chatgpt.site)
 now includes seven dry musical examples, a playable sixteen-pad map, and a
@@ -1196,7 +1198,8 @@ dark repeats with HEAD off, see
 [`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
 ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
-close lifting the bass and far dulling the top, 0 no room at all; see
+close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
+the `roomed` character, is its default room, AMT moving only the mic; see
 [`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
