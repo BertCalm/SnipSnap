@@ -16,7 +16,11 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import java.util.Locale
 
-/** [KitBuilderModel.nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+/**
+ * [KitBuilderModel.nextStem]'s bound, past the names THE BIN holds, which it adds on. A kit holds
+ * 128 pads, so this is ample headroom over the live pads; the bin's names are counted separately,
+ * because a slot replaced again and again leaves one there each time for as long as the bin keeps it.
+ */
 private const val MAX_STEM_ATTEMPTS = 999
 
 /**
@@ -1408,8 +1412,9 @@ class KitBuilderModel private constructor(
      * before it: when the entry a claimant would read is an eject record, it keeps nothing rather
      * than falling back to the entry underneath. Every eject writes a tombstone ([moveToBin]) and
      * every treatment bins without, so such an entry is a record of an ejected pad, and a new pad on
-     * a reused file name (an EVIL TWINS reroll) must not pin a stranger's sound, nor the sound under
-     * it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
+     * a reused file name (an EVIL TWINS reroll handed one out before 2026-11-01, and bins and kits
+     * from then still hold such names; [nextStem] no longer does) must not pin a stranger's sound,
+     * nor the sound under it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
      * VERSIONS ([restoreTake]) copies an eject record back without consuming it, so a pad it makes
      * live again can be reading its own eject record, and its original then leaves with that
      * tombstone. Every other entry keeps the clock: [keepDays] after it went in.
@@ -1483,11 +1488,14 @@ class KitBuilderModel private constructor(
      * by hash (`PrintedPadStore.requireRestoreSafe`), so BACK on a bin row under one of these names
      * would overwrite a file the print then refuses to restore, for good. THE BIN shows no BACK on
      * such a row (the owner's call, 2026-11-01); once the print is removed, the name leaves this set
-     * and BACK comes back. Throws when a saved source will not read, as [unprinted] does.
+     * and BACK comes back. Throws when a saved source will not read, as [unprinted] does, with
+     * [binHolds]' one exception: an ejected print whose tombstone the sweep at [nowMillis] takes
+     * anyway is skipped when its source will not read, so it cannot drop THE BIN to its fallback
+     * when the kept set itself built.
      */
-    fun filesUnderPrints(): Set<String> {
+    fun filesUnderPrints(keepDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Set<String> {
         val names = HashSet<String>()
-        for (top in kit.pads + binContents().mapNotNull { it.padSnapshot }) {
+        fun walk(top: KitPad) {
             var under = top
             val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
             while (PrintedPads.has(under.recipe)) {
@@ -1496,6 +1504,15 @@ class KitBuilderModel private constructor(
                 names += under.sampleFile
                 under.velocityLayers.mapTo(names) { it.sampleFile }
             }
+        }
+        kit.pads.forEach(::walk)
+        val keepMs = (keepDays * DAY_MS).toLong()
+        for (entry in binContents()) {
+            val snapshot = entry.padSnapshot ?: continue
+            // binHolds' saturating clock, and its rule: a tombstone leaving at nowMillis anyway
+            // holds nothing past it, so a print in it that will not read is skipped, not thrown.
+            val purgeAt = if (keepMs > 0 && entry.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else entry.binnedAtMillis + keepMs
+            if (purgeAt < nowMillis) runCatching { walk(snapshot) } else walk(snapshot)
         }
         return names
     }
@@ -1588,11 +1605,14 @@ class KitBuilderModel private constructor(
         // Bounded, not `while (true)`: the loop only terminates because the
         // formatted counter varies from n to n, an invariant Locale.ROOT
         // restores today but does not itself guarantee. A kit holds 128
-        // pads, so 999 candidates is ample headroom; if every one of them
-        // still collides — the invariant broken again, or genuinely 999
-        // takers of one stem — this fails loudly instead of hanging the
-        // caller (an onClick, in production) forever.
-        for (n in 1..MAX_STEM_ATTEMPTS) {
+        // pads, so 999 candidates is ample headroom over the live pads, and
+        // every name the bin holds is added on top: a pad replaced on one
+        // slot a thousand times inside the bin's days still finds a name.
+        // If every candidate still collides (the invariant broken again),
+        // this fails loudly instead of hanging the caller (an onClick, in
+        // production) forever.
+        val attempts = MAX_STEM_ATTEMPTS + binned.size
+        for (n in 1..attempts) {
             val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists() ||
@@ -1600,8 +1620,8 @@ class KitBuilderModel private constructor(
             if (!taken) return stem
         }
         throw IllegalStateException(
-            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
-                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+            "couldn't find a free stem for '$base' after $attempts attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, attempts))}')",
         )
     }
 

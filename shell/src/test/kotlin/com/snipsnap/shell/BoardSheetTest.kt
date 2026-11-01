@@ -197,6 +197,18 @@ class BoardSheetTest {
         ejected.emptyBin()
         assertEquals(emptySet(), ejected.filesUnderPrints(), "with its tombstone gone, nothing can bring it back")
 
+        // binHolds' one exception holds here too: an ejected board past its tombstone's days whose
+        // saved source will not read is skipped, so it cannot drop THE BIN to its fallback.
+        val overdue = model("UnderOverdueBoard")
+        overdue.eraPad(1, "tape", 1f)
+        val source = (BoardSheet.apply(overdue, 1, .7f).recipe!!.entries.getValue("source") as JsonValue.Str).value
+        overdue.clear(1)
+        overdue.save()
+        File(overdue.kitDir, ".boards/states/$source.json").appendText(" ")
+        val now = System.currentTimeMillis()
+        assertFailsWith<IllegalArgumentException>("while BACK can bring it back, a source that will not read stops it") { overdue.filesUnderPrints(nowMillis = now) }
+        assertEquals(emptySet(), overdue.filesUnderPrints(nowMillis = now + 31L * 24 * 60 * 60 * 1000), "past its days, the damaged board is skipped")
+
         // What the guard prevents: BACK on the era's row, under the board, and REMOVE refuses.
         val stuck = model("BackUnderBoard")
         stuck.eraPad(1, "tape", 1f)

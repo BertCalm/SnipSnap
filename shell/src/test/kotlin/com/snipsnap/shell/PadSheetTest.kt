@@ -402,10 +402,11 @@ class PadSheetTest {
     }
 
     /**
-     * THE BIN hides BACK on a kept row only where the pad's own sheet can give that entry back
-     * (the owner's call, 2026-10-31): NONE over a card treatment, MUTATE's or OUTSIDE's UNDO for the
-     * main file. A SPLICE, a DE-SAMPLE or anything else with no door on the sheet keeps BACK,
-     * because BACK is then its only way back in the app.
+     * The pad-sheet half of when THE BIN hides BACK on a kept row (the owner's call, 2026-10-31):
+     * where the pad's own sheet can give that entry back, through NONE over a card treatment or
+     * MUTATE's or OUTSIDE's UNDO for the main file. A SPLICE, a DE-SAMPLE or anything else with no
+     * door on the sheet answers false here, because BACK is then its only way back in the app. Rows
+     * under a print lose BACK by the other half (`KitBuilderModel.filesUnderPrints`, BoardSheetTest).
      */
     @Test
     fun `a pad has its own way back only through a door its sheet really has`() {

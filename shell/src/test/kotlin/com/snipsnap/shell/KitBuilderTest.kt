@@ -1181,7 +1181,6 @@ class KitBuilderTest {
     private fun sweepEverythingOld(dir: File): Int =
         KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
 
-    /** Re-stamps one bin entry, tombstone and all, for a test where two entries need different ages. */
     /**
      * The kit in [dir] as a build from before 2026-11-01 left it, when a new pad could take a name
      * the bin still held: each slot in [names] is moved onto that name, its file with it. Saved and
@@ -1220,6 +1219,25 @@ class KitBuilderTest {
         assertEquals(first, m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile, "once the bin lets the first kick go, its name is free again")
     }
 
+    /**
+     * A slot replaced again and again leaves one name in the bin each time, for as long as the bin
+     * keeps it, so nextStem's bound counts those names on top of its own: a thousand replacements
+     * inside the bin's days still find a name rather than throwing.
+     */
+    @Test
+    fun `a slot replaced a thousand times inside the bin's days still finds a name`() {
+        val dir = File(temp, "StemBound")
+        val m = KitBuilderModel.create("StemBound", dir)
+        val first = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        val base = first.removeSuffix("_01.wav")
+        assertTrue(first.endsWith("_01.wav"), "test setup: the first name is $first")
+        m.clear(1)
+        val bin = File(dir, KitBuilderModel.BIN_DIR)
+        for (n in 2..999) File(bin, String.format(java.util.Locale.ROOT, "%d_%s_%02d.wav", n, base, n)).writeBytes(ByteArray(0))
+        assertEquals("${base}_1000.wav", m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile, "past all 999 names the bin holds")
+    }
+
+    /** Re-stamps one bin entry, tombstone and all, for a test where two entries need different ages. */
     private fun restamp(entry: KitBuilderModel.BinEntry, millis: Long) {
         val bin = entry.file.parentFile
         val tombstone = File(bin, "${entry.file.name}.json")
