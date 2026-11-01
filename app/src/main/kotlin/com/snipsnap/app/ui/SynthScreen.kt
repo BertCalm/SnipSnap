@@ -107,6 +107,7 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
+import com.snipsnap.shell.BallastPadMaker
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.FlockPadMaker
@@ -1936,7 +1937,7 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
+    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -1977,6 +1978,7 @@ fun SynthScreen(
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, heldSheet.holdAttack, heldSheet.holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, heldSheet.holdRelease))
+        Engine.BALLAST -> HeldSpec.Ballast(BallastPadMaker.spec(voice as BallastVoice, macros, heldSheet.holdRelease))
         Engine.ORPHICA -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
             HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, heldSheet.holdRelease))
@@ -2077,13 +2079,15 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
                         // and ORIGAMI keeps its oversampled attack and sustain
                         // work to one zone at a time.
                         // FILAMENT similarly bounds its network history to one root.
+                        // BALLAST simulates a frame, six strings and six tiles at 4x for
+                        // each of its thirteen zones.
                         // Render serially so phones never hold nine
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
@@ -3443,6 +3447,7 @@ fun SynthScreen(
                 // CREASE keeps its pressure attack before continuous held motion.
                 // ORPHICA holds a captured sustain behind its own plucked onset.
                 // CONTOUR starts from its settled repeating tone.
+                // BALLAST keeps its onset and the structure settling, then holds.
                 // ORIGAMI offers held keys for current FAN/STILL sounds; CRANE
                 // and saved earlier models retain their finite-only path.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
@@ -4438,6 +4443,7 @@ private fun contourMacroGroup(name: String): String = when (name) {
  * ORPHICA keeps its plucked onset, with the captured grain cycle supplying sustain.
  * CREASE keeps its first pressure attack before the repeating moving sustain.
  * CONTOUR begins at its settled tone, omitting the original finite attack.
+ * BALLAST keeps its onset and the structure settling before its held loop.
  */
 internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -4475,6 +4481,17 @@ internal sealed interface HeldSpec {
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(SirenPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = SirenPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Ballast(private val spec: BallastPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = BallastPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${BallastPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "KEEPS THE NOTE'S ONSET AND THE STRUCTURE SETTLING, THEN HOLDS THE SETTLED BASS."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(BallastPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = BallastPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BallastPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Glint(private val spec: GlintPadMaker.Spec) : HeldSpec {
@@ -4628,7 +4645,7 @@ internal sealed interface HeldSpec {
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,

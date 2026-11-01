@@ -1054,6 +1054,10 @@ adds sparse modal participation and reuses bass traces across structural edits
 within a 24 MiB, four-entry cache. ROOT warm desktop medians moved from 230 to
 165 ms for a one-shot and 491 to 283 ms for HOLD. Cold misses remain about
 228/517 ms; the tens-of-ms target and phone timing remain open.
+On 24 October BALLAST became the first bass with MAKE INSTRUMENT: thirteen
+held zones from C1 to C4, each the note's onset and settling in front of the
+existing HOLD loop, levelled where it is struck. `generateBallastKeys` writes
+four instruments and previews under `testkit/ballast-keys/`; not yet heard.
 
 THAW is the next material-state engine (S27), ported from
 `docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice
