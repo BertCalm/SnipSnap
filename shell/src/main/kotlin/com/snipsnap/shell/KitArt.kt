@@ -5,6 +5,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import java.awt.BasicStroke
 import java.awt.Color
+import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.geom.Arc2D
@@ -183,7 +184,7 @@ object KitArt {
      */
     fun awtPng(kit: Kit, kitDir: File, style: Style): ByteArray = png(kit, kitDir, style)
 
-    // ---- the AWT adapter — the only place in this file java.awt appears ----
+    // ---- the AWT adapter — java.awt lives here and in the font cache below, nowhere else ----
 
     /**
      * Public, not private: [JCard] reuses [waveform] against its own
@@ -371,4 +372,21 @@ object KitArt {
         val nb = (b * (1 - k)).toInt().coerceIn(0, 255)
         return (nr shl 16) or (ng shl 8) or nb
     }
+}
+
+/**
+ * JVM-side font cache: one base [java.awt.Font] per [ArtFont], created
+ * from the bundled bytes rather than the system font table so a headless
+ * CI box and a desk with the family installed draw the same glyphs. Here
+ * and not in `ArtFont.kt` because the phone loads that file's class and
+ * AWT does not exist there; this file is already the AWT adapter.
+ */
+internal object AwtFonts {
+    private val base = HashMap<ArtFont, Font>()
+
+    fun font(font: ArtFont): Font = synchronized(base) {
+        base.getOrPut(font) { Font.createFont(Font.TRUETYPE_FONT, font.bytes().inputStream()) }
+    }
+
+    fun font(font: ArtFont, sizePx: Float): Font = font(font).deriveFont(sizePx)
 }
