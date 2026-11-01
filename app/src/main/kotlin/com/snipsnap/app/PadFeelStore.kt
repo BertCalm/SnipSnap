@@ -42,12 +42,12 @@ object PadFeelStore {
         curve = PadVelocity.parseCurve(saved.getString(KEY_CURVE, null))
     }
 
-    fun setMode(next: PadVelocity.Mode) {
+    fun chooseMode(next: PadVelocity.Mode) {
         mode = next
         prefs?.edit()?.putString(KEY_MODE, next.name)?.apply()
     }
 
-    fun setCurve(next: PadVelocity.Curve) {
+    fun chooseCurve(next: PadVelocity.Curve) {
         curve = next
         prefs?.edit()?.putString(KEY_CURVE, next.name)?.apply()
     }

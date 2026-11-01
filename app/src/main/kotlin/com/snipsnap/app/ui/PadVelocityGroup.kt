@@ -46,9 +46,9 @@ internal fun PadVelocityGroup(scheme: Scheme) {
         onToggle = { open = !open },
         scheme = scheme,
     ) {
-        VelocityChips("MODE", PadVelocity.Mode.entries, mode, { it.chip }, PadFeelStore::setMode, scheme)
+        VelocityChips("MODE", PadVelocity.Mode.entries, mode, { it.chip }, PadFeelStore::chooseMode, scheme)
         TapeText(Copy.SETUP_PAD_VELOCITY_MODE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
-        VelocityChips("CURVE", PadVelocity.Curve.entries, curve, { it.chip }, PadFeelStore::setCurve, scheme)
+        VelocityChips("CURVE", PadVelocity.Curve.entries, curve, { it.chip }, PadFeelStore::chooseCurve, scheme)
         TapeText(Copy.SETUP_PAD_VELOCITY_CURVE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     }
 }
