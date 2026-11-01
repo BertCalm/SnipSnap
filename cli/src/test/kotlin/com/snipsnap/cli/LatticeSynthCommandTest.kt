@@ -97,6 +97,42 @@ class LatticeSynthCommandTest {
     }
 
     @Test
+    fun `saved TRACE motion survives speed and finite HOLD edits with its authored note`() {
+        val root = createTempDirectory("lattice-cli-trace").toFile()
+        try {
+            val patch = LatticePatch("Saved moving trace", LatticeVoice.TRACE,
+                Lattice.defaults(LatticeVoice.TRACE) + mapOf("TUNE" to .625f, "SPEED" to .23f),
+                midi = 61, velocity = .42f)
+            val input = File(root, "trace.patch").also { it.writeText(patch.toJsonText()) }
+            val exact = File(root, "exact")
+            assertEquals(0, SynthCommand.run(
+                listOf("LATTICE", "TRACE", "--patch", input.path, "--out", exact.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            assertSavedRender(patch, exact)
+
+            val edited = File(root, "edited")
+            val output = ByteArrayOutputStream()
+            assertEquals(0, SynthCommand.run(
+                listOf("LATTICE", "TRACE", "--patch", input.path, "--velocity", ".3",
+                    "--macros", "SPEED=.78,HOLD=1", "--out", edited.path),
+                PrintStream(output),
+            ))
+            val expected = patch.copy(velocity = .3f,
+                macros = patch.macros + mapOf("SPEED" to .78f, "HOLD" to 1f))
+            val saved = assertSavedRender(expected, edited)
+            assertEquals(61, saved.midi)
+            assertEquals(.625f, saved.macros.getValue("TUNE"))
+            assertFalse(Lattice.isLoop(saved.voice, saved.macros.getValue("HOLD")))
+            assertFalse("held loop" in output.toString(), "finite TRACE HOLD must not be advertised as a loop")
+            assertFalse(patch.render().samples.contentEquals(expected.render().samples),
+                "SPEED and HOLD edits must reach the emitted motion")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `Lattice range macro and patch selection errors refuse before creating output`() {
         val root = createTempDirectory("lattice-cli-errors").toFile()
         val dir = File(root, "not-created")

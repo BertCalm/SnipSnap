@@ -325,7 +325,7 @@ object SynthCommand {
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
-                else -> throw CliError("--macros is only supported by OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM FERRY and PLUCK UPRIGHT, got $engine")
+                else -> throw CliError("--macros is only supported by OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -340,7 +340,7 @@ object SynthCommand {
                     throw CliError("--macros HOLD is reserved for CAUSTIC; only 0 is supported")
                 }
                 if (engine == FerryPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() != 0.0) {
-                    throw CliError("FERRY model 1 is finite; HOLD must be 0")
+                    throw CliError("FERRY is finite; HOLD must be 0")
                 }
                 if (engine == TidalPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() !in listOf(0.0, 1.0)) {
                     throw CliError("TIDAL HOLD is a NOTE/HOLD switch; choose 0 or 1")
@@ -686,8 +686,16 @@ object SynthCommand {
                 macros = withNote.macros + macroOverrides)
             else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
-            else if (withNote is FerryPatch) withNote.copy(seed = longSeedOverride ?: withNote.seed,
-                macros = withNote.macros + macroOverrides, model = modelOverride ?: withNote.model)
+            else if (withNote is FerryPatch) {
+                val model = modelOverride ?: withNote.model
+                var controls = withNote.macros + macroOverrides
+                if (model == 1 && "MATCH" in controls) {
+                    if (controls.getValue("MATCH") != 1f || "MATCH" in macroOverrides)
+                        throw CliError("FERRY MATCH requires --model 2; a detuned recipe cannot be downgraded")
+                    controls = controls - "MATCH"
+                }
+                withNote.copy(seed = longSeedOverride ?: withNote.seed, macros = controls, model = model)
+            }
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is OhmPatch) {
