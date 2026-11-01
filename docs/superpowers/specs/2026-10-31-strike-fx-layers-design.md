@@ -246,7 +246,7 @@ shows DRY, ROOM or ECHO after a hit. No change to `app/.../StrikeStrip.kt`.
 ## 7. Tests the milestone owes
 
 - `:synth` `PadRecipeTest` (or the existing recipe test class): version 2
-  reads with `layers = null` and re-saves as version 3 with identical fields;
+  reads with `layers = null` and re-saves as version 2 with identical fields (a banked recipe writes 3);
   version 3 round-trips `layers`; a bank's rebuild equals KEEP's files
   byte-for-byte for a fixed source (determinism is already a house law for
   renders).

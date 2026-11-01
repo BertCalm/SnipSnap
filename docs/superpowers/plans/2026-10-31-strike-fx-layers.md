@@ -14,7 +14,7 @@
 
 - No DSP on the performance path: `shell/.../StrikeStrip.kt`, `PadHit.kt` and `app/.../PadEngine.kt` are not modified.
 - `Kit.kt` invariants stand: 1..4 layers, ascending windows, `velocityLayers.last().sampleFile == sampleFile`.
-- Recipe JSON written by today's app (version 2) must still read; the version bump is lazy (written as 3 only on re-save).
+- Recipe JSON written by today's app (version 2) must still read; an unbanked recipe is still written as 2 and only a banked one as 3.
 - Knob values are the macro values: ROOM is spring `SIZE` (default `0.42f`), SLAP is echo `TIME` (default `0.9f`). Fixed macros: spring `TONE 0.7f, MIX 1f`; echo `REPEAT 0.55f, TONE 0.8f, MIX 0.9f`. Terminal fade `4f` ms.
 - Layer names, bottom to top: `DRY`, `ROOM`, `ECHO`. Windows from `StackTakes.windows(2)` (1..41, 42..84, 85..127). File names from `freeLayerNames`.
 - Copy is facts in the house voice, upper case, in `object Copy` (`shell/.../Personality.kt`). No model identifier anywhere.
