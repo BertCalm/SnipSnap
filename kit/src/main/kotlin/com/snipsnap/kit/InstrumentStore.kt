@@ -119,8 +119,12 @@ object InstrumentStore {
         AtomicFile.writeText(sidecar(destRoot, name), render(program, dataDirName))
     }
 
-    /** The sidecar's JSON text for [program], without touching the disk. */
-    fun render(program: KeygroupProgram, dataDirName: String): String {
+    /**
+     * The sidecar's JSON text for [program], without touching the disk.
+     * Only a writer replacing the matching XPM may [omitDefaultNoteOn] to retain
+     * legacy bytes: otherwise explicit false must override an older NoteOn XPM.
+     */
+    fun render(program: KeygroupProgram, dataDirName: String, omitDefaultNoteOn: Boolean = false): String {
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
             JsonValue.Obj(
@@ -149,9 +153,12 @@ object InstrumentStore {
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
-                "explicitNoteOn" to JsonValue.Bool(program.explicitNoteOn),
-                "zones" to JsonValue.Arr(zones),
-            ),
+            ).apply {
+                if (program.explicitNoteOn || !omitDefaultNoteOn) {
+                    put("explicitNoteOn", JsonValue.Bool(program.explicitNoteOn))
+                }
+                put("zones", JsonValue.Arr(zones))
+            },
         )
         return Json.write(obj)
     }

@@ -339,6 +339,23 @@ class OneNoteTest {
     }
 
     @Test
+    fun `a full descriptor rewrite can clear a previous NoteOn trigger`() {
+        val program = KeygroupProgram("Trigger Change",
+            listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("note", 2_000, 0, 127)))),
+            explicitNoteOn = true)
+        val samples = mapOf("note" to Snip(FloatArray(2_000) { .1f }, 1, rate))
+        OneNote.writePackage(program.name, program, samples, temp, overwrite = false, spanKeyboard = false)
+        val sidecar = InstrumentStore.sidecar(temp, program.name)
+        assertTrue(InstrumentStore.read(sidecar).explicitNoteOn)
+
+        OneNote.rewriteDescriptors(temp, program.name, program.copy(explicitNoteOn = false))
+
+        assertEquals(false, InstrumentStore.read(sidecar).explicitNoteOn)
+        val xpm = File(temp, "${program.name}_[TrackData]/${program.name}.xpm").readText()
+        assertEquals(false, "<TriggerMode>2</TriggerMode>" in xpm)
+    }
+
+    @Test
     fun `a failure on the second descriptor restores the first`() {
         val (program, samples) = twoZoneProgram()
         OneNote.writePackage("Span", program, samples, temp, overwrite = false)
