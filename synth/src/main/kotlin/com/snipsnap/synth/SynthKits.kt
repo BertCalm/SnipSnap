@@ -1225,16 +1225,17 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD, BUBBLE, BREATH, FLICKER and RATTLE each speak at C3 and C4.
-     * The remaining four pads compare held BUBBLE, BREATH, FLICKER and RATTLE.
+     * PLUCK, WOOD, BUBBLE, BREATH and FLICKER retain their C3/C4 pairs.
+     * RATTLE's Warm Wire, Hollow Reed and Rubbed Glass each speak at C4,
+     * followed by held BUBBLE, BREATH and warm-wire RATTLE.
      * Each voice's native-root default is its exact library patch. This
-     * sixteen-pad selection samples the twenty-five-recipe library with ten
-     * exact library recipes and six transposed default variations;
+     * sixteen-pad selection samples the twenty-seven-recipe library with eleven
+     * exact library recipes and five transposed default variations;
      * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1245,10 +1246,13 @@ object SynthKits {
             }
         }
         val recipeNames = listOf(
-            "Held Bubbles", "Held Breath", "Held Flicker", "Held Rattle",
+            "Warm Wire", "Hollow Reed", "Rubbed Glass",
+            "Held Bubbles", "Held Breath", "Held Rattle",
         )
         val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
-        return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        return (notes + recipes).map { patch ->
+            pad(patch, Wick.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+        }
     }
 
     /**
