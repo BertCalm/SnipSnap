@@ -18,6 +18,19 @@ function button(clip, label, className='play-button', context='') {
   if (!clip) return '';
   return `<button type="button" class="${className}" data-play="${escape(clip.id)}" aria-label="Play ${escape((context?context+' ':'')+clip.voice+' '+clip.title)}" aria-pressed="false"><span>${escape(label || clip.title)}</span><span class="triangle" aria-hidden="true">▶</span></button>`;
 }
+const completeVoices = {REED:'Nasal contour and a hollow body with odd modes.',FILIGREE:'Fine scales enter successively, then weave through the resonating body.',CRUST:'Dense crystalline edge with bounded rough contact and a persistent root.',LOOP:'Rounded basses and leads, from dry silhouettes to held low contours.',GLINT:'Fine bright keys, soft onsets and ringing high detail.',VESSEL:'Slower unfolding through deep cavities and lingering upper modes.'};
+function renderComplete(voice='REED') {
+  const voices=Object.keys(completeVoices);
+  $('complete-tabs').innerHTML=voices.map(v=>`<button type="button" role="tab" id="bank-tab-${v.toLowerCase()}" data-bank-voice="${v}" aria-selected="${v===voice}" tabindex="${v===voice?0:-1}" aria-controls="complete-presets">${v}</button>`).join('');
+  $('complete-character').textContent=completeVoices[voice];
+  $('complete-presets').setAttribute('aria-labelledby',`bank-tab-${voice.toLowerCase()}`);
+  $('complete-presets').innerHTML=library.filter(c=>['bank','complete-bank'].includes(c.section)&&c.voice===voice).map(c=>`<article class="bank-card"><span class="bank-role">${escape(c.role)}</span><h3>${escape(c.title)}</h3><p>${escape(c.description)}</p>${wave(c)}<div class="clip-info">${note(c.midi)} · ${seconds(c)}${c.macros.HOLD>=.85?' · held':''}</div><div class="bank-actions">${button(c,c.macros.HOLD>=.85?'Play held note':'Play note','play-button','complete bank')}</div><a class="recipe-link" href="${escape(c.files.patch||c.files.recipe)}" download>Saved patch ↓</a></article>`).join('');
+  updateButtons();
+}
+function renderMotion() {
+  $('motion-voices').innerHTML=Object.keys(completeVoices).map(voice=>`<article class="starter"><div><span class="voice-name">${voice}</span><h3>${escape(completeVoices[voice])}</h3></div><div class="starter-actions">${['static','moving'].map(kind=>button(byId.get(`r6-hold-${voice.toLowerCase()}-${kind}`),kind==='static'?'Steady detail':'Moving detail','play-button','model 6 held')).join('')}</div><div><a class="recipe-link" href="downloads/rime-${voice.toLowerCase()}-model6-instrument.zip" download>MPC 3 + MPC 2 instrument ↓</a><p class="small muted">9 native roots · opening + loop · full saved recipe</p></div></article>`).join('');
+}
+
 function renderBank() {
   const presets=library.filter(c=>c.section==='bank');
   if(!presets.length){$('bank').hidden=true;document.querySelector('.hero .primary').href='#listen';return;}
@@ -100,13 +113,20 @@ function updateButtons(){
 document.addEventListener('click',event=>{
   const play=event.target.closest('[data-play]'); if(play){playClip(play.dataset.play);return;}
   const sequence=event.target.closest('[data-sequence]'); if(sequence){clearQueue();queue=sequence.dataset.sequence.split(',');const first=queue.shift();playClip(first,true);return;}
-  const tab=event.target.closest('[data-voice]'); if(tab)renderSweeps(tab.dataset.voice);
+  const tab=event.target.closest('[data-voice]'); if(tab){clearQueue();renderSweeps(tab.dataset.voice);}
+  const bankTab=event.target.closest('[data-bank-voice]');if(bankTab){const voice=bankTab.dataset.bankVoice;clearQueue();renderComplete(voice);document.querySelector(`[data-bank-voice="${voice}"]`).focus();}
 });
 $('voice-tabs').addEventListener('keydown',event=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
   const tabs=[...document.querySelectorAll('[data-voice]')], i=tabs.indexOf(document.activeElement);if(i<0)return;
-  event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?2:(i+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
   renderSweeps(tabs[next].dataset.voice);tabs[next].focus();
+});
+$('complete-tabs').addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const tabs=[...document.querySelectorAll('[data-bank-voice]')],i=tabs.indexOf(document.activeElement);if(i<0)return;
+  event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  const voice=tabs[next].dataset.bankVoice;clearQueue();renderComplete(voice);document.querySelector(`[data-bank-voice="${voice}"]`).focus();
 });
 player.addEventListener('ended',()=>{updateButtons();if(queue.length)nextTimer=setTimeout(()=>{nextTimer=null;playClip(queue.shift(),true);},180);});
 ['play','pause'].forEach(name=>player.addEventListener(name,updateButtons));
@@ -136,7 +156,7 @@ async function load(){
     const fetchJson=async(url)=>{const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${url}: ${response.status}`);return response.json();};
     const [manifest,contour]=await Promise.all([fetchJson('manifest.json'),fetchJson('geometry.json')]);
     library=manifest.clips;byId=new Map(library.map(c=>[c.id,c]));geometry=contour;buildId=manifest.sourceRevision;model=manifest.model;
-    renderBank();renderHold();renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();renderRevision();
+    renderComplete();renderMotion();renderBank();renderHold();renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();renderRevision();
     document.querySelectorAll('a[download][href]').forEach(link=>{link.href=assetURL(link.getAttribute('href'));});
     $('bench-count').textContent=`${library.filter(c=>['register','interactions','stress'].includes(c.section)).length} tests`;
     $('build-info').textContent=`${library.length} rendered clips · ${manifest.sampleRate.toLocaleString()} Hz · ${manifest.oversample}× internal DSP · ${new Date(manifest.generatedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}`;

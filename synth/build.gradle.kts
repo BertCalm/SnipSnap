@@ -2441,3 +2441,11 @@ tasks.register<JavaExec>("generateRimeHoldAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
 }
+
+tasks.register<JavaExec>("generateRimeCompleteAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeCompleteAuditionGenerator")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+}

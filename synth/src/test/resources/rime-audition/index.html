@@ -7,15 +7,15 @@
   <meta name="description" content="Listen to Rime, a contour synthesis prototype for SnipSnap. Three dry starter sounds, musical phrases and controlled listening comparisons.">
   <title>Rime — SnipSnap listening room</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=hold5">
-  <script src="app.js?v=hold5" defer></script>
+  <link rel="stylesheet" href="style.css?v=complete6">
+  <script src="app.js?v=complete6" defer></script>
 </head>
 <body>
-  <a class="skip" href="#bank">Skip to the sounds</a>
+  <a class="skip" href="#complete">Skip to the sounds</a>
   <header class="masthead wrap">
     <a class="wordmark" href="#top" aria-label="Rime listening room home"><span class="mark">✳</span> SNIPSNAP <span class="divider">/</span> RIME</a>
-    <nav aria-label="Page sections"><a href="#bank">The bank</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
-    <span class="edition">MUSICAL BANK <i></i> 01</span>
+    <nav aria-label="Page sections"><a href="#complete">The bank</a><a href="#motion">Held detail</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
+    <span class="edition">SIX VOICES <i></i> 36 RECIPES</span>
   </header>
   <main id="top">
     <section class="hero wrap">
@@ -23,8 +23,8 @@
         <p class="eyebrow">A contour instrument for SnipSnap</p>
         <h1>Rime<span class="period">.</span></h1>
         <p class="hero-line">One silhouette.<br>Increasingly elaborate edges.</p>
-        <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. Nine finite presets turn that contour into basses, keys and textures.</p>
-        <a class="primary" href="#bank">Play the musical bank <span aria-hidden="true">↘</span></a>
+        <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. Six voices and 36 recipes turn that contour into basses, reeds, keys and crystalline textures.</p>
+        <a class="primary" href="#complete">Play the complete bank <span aria-hidden="true">↘</span></a>
         <p class="small muted">Finite notes + held keys · No external samples or rack effects</p>
       </div>
       <figure class="contour-study">
@@ -40,21 +40,34 @@
         <figcaption><div class="figure-label"><label for="geometry-detail">Reconstruction</label><output id="geometry-value" for="geometry-detail">|n| ≤ 128</output></div>
           <input id="geometry-detail" type="range" min="0" max="4" step="1" value="3" aria-describedby="geometry-caption">
           <div class="range-labels" aria-hidden="true"><span>Pure loop</span><span>Fine contour</span></div>
-          <p id="geometry-caption">A geometric study. The audio also includes pickup, contact and body responses.</p>
+          <p id="geometry-caption">The reference Koch contour. The new voices use mild shape variants; pickup, contact and body also shape the audio.</p>
         </figcaption>
       </figure>
     </section>
-    <div class="facts wrap"><span><b>03</b> contour voices</span><span><b>09</b> musical presets</span><span><b>16</b> MPC pads</span><span><b>Dry</b> source → body</span></div>
+    <div class="facts wrap"><span><b>06</b> contour voices</span><span><b>36</b> musical presets</span><span><b>16</b> MPC pads</span><span><b>Dry</b> source → body</span></div>
     <p id="load-status" class="wrap status" role="status">Loading the rendered library…</p>
+    <section id="complete" class="section wrap bank-section" aria-labelledby="complete-heading">
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">The complete voice roster</p><h2 id="complete-heading">Six voices. Thirty-six recipes.</h2><p>Meet REED, FILIGREE and CRUST, then explore the expanded LOOP, GLINT and VESSEL banks. Each voice has six recipes. The original nine remain available in their accepted versions.</p></div></div>
+      <div id="complete-tabs" class="voice-tabs complete-tabs" role="tablist" aria-label="Voice for the complete bank"></div>
+      <p id="complete-character" class="complete-character"></p>
+      <div id="complete-presets" class="bank-grid" role="tabpanel"></div>
+      <div class="bank-downloads"><a href="downloads/rime-complete-bank.zip" download><strong>All 36 saved patches</strong><span>Complete recipes · ZIP ↓</span></a><a href="downloads/rime-complete-mpc-kit.zip" download><strong>Six-voice MPC kit</strong><span>16 pads · 3 velocity layers · ZIP ↓</span></a><a href="downloads/rime-complete-pad-map.json" download><strong>Complete kit pad map</strong><span>Native layer recipes · JSON ↓</span></a></div>
+      <p class="footnote">The new kit uses compact gates for a playable bank of finite strikes. Held keyboard instruments are below. The new voices and presets await your listening verdict; device and MPC hardware checks remain open.</p>
+    </section>
+    <section id="motion" class="section wrap" aria-labelledby="motion-heading">
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">Two ways to hold a contour</p><h2 id="motion-heading">Steady note. Moving detail.</h2><p>Compare a developing opening with steady sustain against repeating scale motion. The root keeps playing while fine detail reveals and recedes. In the new build, UNFOLD 60–100 selects moving detail during HOLD; lower settings unfold once.</p></div></div>
+      <div id="motion-voices" class="starters"></div>
+      <p class="footnote">Each keyboard instrument has nine native roots, its real opening, loop markers and a release. The comparisons use whole sustain cycles, with independently measured loop closure. Earlier saved held recipes keep their original steady-sustain behavior.</p>
+    </section>
     <section id="bank" class="section wrap bank-section" aria-labelledby="bank-heading">
-      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">A small playable bank</p><h2 id="bank-heading">Nine ways to play the contour.</h2><p>Try a single note, its musical phrase, then three strikes from soft to hard. Touch clips keep their relative dynamics in both playback modes. The accepted starter sounds remain in the bank.</p></div></div>
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">The original accepted direction</p><h2 id="bank-heading">The first nine recipes.</h2><p>Try a single note, its musical phrase, then three strikes from soft to hard. Touch clips keep their relative dynamics in both playback modes. The accepted starter sounds remain in the bank.</p></div></div>
       <div class="bank-kit-study"><div><strong>The full kit / 104 BPM</strong><p>An original four-bar study of the same recipes used in the MPC kit.</p></div><div id="bank-demo"></div></div>
       <div id="bank-presets"></div>
       <div class="bank-downloads"><a href="downloads/rime-musical-bank.zip" download><strong>9 native notes + patches</strong><span>WAV + JSON · ZIP ↓</span></a><a href="downloads/rime-mpc-kit.zip" download><strong>16-pad MPC kit</strong><span>MPC 3 + MPC 2 · ZIP ↓</span></a><a href="downloads/rime-pad-map.json" download><strong>Pad map & layer recipes</strong><span>JSON ↓</span></a></div>
       <p class="footnote">The kit has an eight-note bass walk plus the other eight presets, with three velocity layers per pad. Downloads contain native one-shots. These nine saved recipes remain finite. Try their new held instrument versions below. Hardware loading and musical acceptance still need your check.</p>
     </section>
     <section id="hold" class="section wrap" aria-labelledby="hold-heading">
-      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">Hold the contour</p><h2 id="hold-heading">Let the opening become a sustain.</h2><p>Compare immediate detail with an unfolding opening. Each clip continues through eight sustain cycles. UNFOLD develops the opening once; the resolved contour then repeats.</p></div></div>
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">The original held comparisons</p><h2 id="hold-heading">Let the opening become a sustain.</h2><p>Compare immediate detail with an unfolding opening. Each clip continues through eight sustain cycles. UNFOLD develops the opening once; the resolved contour then repeats.</p></div></div>
       <div id="hold-voices" class="starters"></div>
       <p class="footnote">The instruments keep the opening, nine sampled roots, the sustain loop and a player-controlled release. The drum-pad HOLD sound starts directly from the resolved cycle. HOLD below 85% extends the finite gate; 85–100% selects periodic sustain. Original level retains native velocity for these clips; matched playback adjusts the whole clip. SnipSnap picker, note controls and MAKE INSTRUMENT are included in the source build. Device and MPC hardware checks remain open.</p>
     </section>
@@ -75,6 +88,9 @@
           <button type="button" role="tab" aria-selected="false" data-voice="LOOP" id="tab-loop" aria-controls="sweep-panel">LOOP <small>Round Seed</small></button>
           <button type="button" role="tab" aria-selected="true" data-voice="GLINT" id="tab-glint" aria-controls="sweep-panel">GLINT <small>Fine Frost</small></button>
           <button type="button" role="tab" aria-selected="false" data-voice="VESSEL" id="tab-vessel" aria-controls="sweep-panel">VESSEL <small>Open Vessel</small></button>
+          <button type="button" role="tab" aria-selected="false" tabindex="-1" data-voice="REED" id="tab-reed" aria-controls="sweep-panel">REED <small>Glass Reed</small></button>
+          <button type="button" role="tab" aria-selected="false" tabindex="-1" data-voice="FILIGREE" id="tab-filigree" aria-controls="sweep-panel">FILIGREE <small>Slow Filigree</small></button>
+          <button type="button" role="tab" aria-selected="false" tabindex="-1" data-voice="CRUST" id="tab-crust" aria-controls="sweep-panel">CRUST <small>Crystal Husk</small></button>
         </div>
         <div id="sweep-panel" role="tabpanel" aria-labelledby="tab-glint"><div id="sweeps"></div></div>
         <p class="footnote">ANGLE 0° and 360° coincide. At DETAIL 0%, there is no fine structure for UNFOLD to reveal. Higher notes use fewer safe harmonics.</p>
@@ -91,14 +107,14 @@
       </details>
     </section>
     <section id="notes" class="section notes-section"><div class="wrap notes-grid">
-      <div><p class="eyebrow">The listening question</p><h2>Does the edge feel<br>part of the note?</h2><p>Listen for a stable pitch as detail arrives. Does ANGLE offer a useful change? Does the body add a convincing ring? Which of the three sounds deserves more work?</p><p class="small muted">Your notes stay in this browser. Download them to bring them back to the conversation.</p></div>
-      <div class="notes-form"><label for="listening-notes">Listening notes</label><textarea id="listening-notes" rows="7" placeholder="Round Seed…&#10;Fine Frost…&#10;Open Vessel…"></textarea><div class="notes-actions"><span id="notes-status" class="small muted" role="status"></span><button type="button" id="download-notes">Download notes ↓</button></div></div>
+      <div><p class="eyebrow">The listening question</p><h2>Does the edge feel<br>part of the note?</h2><p>Listen for a stable pitch as detail arrives. Does ANGLE offer a useful change? Does the body add a convincing ring? Which voice feels most useful, and which needs more work?</p><p class="small muted">Your notes stay in this browser. Download them to bring them back to the conversation.</p></div>
+      <div class="notes-form"><label for="listening-notes">Listening notes</label><textarea id="listening-notes" rows="7" placeholder="Glass Reed…&#10;Slow Filigree…&#10;Crystal Husk…"></textarea><div class="notes-actions"><span id="notes-status" class="small muted" role="status"></span><button type="button" id="download-notes">Download notes ↓</button></div></div>
     </div></section>
     <section class="section wrap evidence">
       <div><p class="eyebrow">Keep the work</p><h2>Every sound has a recipe.</h2><p>The downloads retain the controls and performance. Causal recipes also record which internal path was removed. The source bundle includes the Kotlin renderer, tests and replay instructions.</p></div>
-      <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Prototype source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
+      <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Engine source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
     </section>
-    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 5 / HOLD BUILD</span></span><p>Nine finite musical presets. Accepted controls and starters are unchanged; earlier recipes remain replayable. HOLD and phone integration are included in this build. Remaining voices depend on the original spec. Musical-bank and hardware acceptance are pending.</p><span id="build-info" class="small muted"></span></footer>
+    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 6 / COMPLETE ROSTER</span></span><p>Six voices and 36 authored presets, static and moving HOLD, and both original and complete MPC kits. The original 195 clips and saved models remain replayable. New-voice listening and hardware acceptance remain pending.</p><span id="build-info" class="small muted"></span></footer>
   </main>
   <aside class="transport" aria-label="Audition player"><div class="transport-inner wrap">
     <div class="now-playing"><span class="playing-dot" id="playing-dot"></span><div><span class="eyebrow">Listening room</span><p id="now-title" aria-live="polite">Choose a sound above</p></div></div>

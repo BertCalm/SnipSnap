@@ -1,7 +1,94 @@
 # Rime — contour instrument
 
+## Complete six-voice build / model 6
 
-## HOLD and application integration build
+The restored [original engineering handoff](superpowers/specs/2026-10-18-rime-engine-design.md)
+defines REED, FILIGREE and CRUST as the remaining voices. Model 6 implements those
+voices, expands the factory roster to six recipes per voice (36 total), and adds
+periodic scale motion to HOLD. The original nine finite presets stay on model 4;
+saved models 1–5 keep their sound, including the six published model-5 held clips.
+The original sixteen-pad kit and all 195 earlier audition clips remain available.
+
+| Voice | Mechanism / character | Six factory recipes |
+| --- | --- | --- |
+| LOOP | Rounded contour bass and lead | Round Seed, Firm Step, Edged Root, Warm Silhouette, Long Arc, Orbit Root |
+| GLINT | Bright fine keys | Soft Snow, Hollow Frost, Fine Frost, Low Facet, Quiet Facets, Suspended Frost |
+| VESSEL | Slower contour through a large body | Pebble Knock, Ringing Stone, Open Vessel, Cavity Root, Shell Keys, Breathing Vessel |
+| REED | Elliptic asymmetric contour and odd body modes | Hollow Tooth, Glass Reed, Narrow Air, Quiet Reed, Serrated Air, Held Reed |
+| FILIGREE | Mild five-/nine-fold shape variation and interleaved scales | Low Filigree, Fine Lattice, Slow Filigree, Quiet Threads, Lit Filigree, Turning Filigree |
+| CRUST | Denser seven-/eleven-fold variation and restrained rough contact | Husk Root, Crystal Husk, Cold Grain, Melting Edge, Bright Rind, Held Crust |
+
+The three new shapes are deformations applied before coefficient extraction,
+resampled at equal distance, centered and normalized. They are explicitly
+instrument variants, not the exact Koch reference. The mathematical fixture and
+its signed Fourier convention are unchanged. Each voice uses the same contour,
+pickup, bounded derivative/contact and feedforward eight-mode body architecture.
+The new body tables emphasize odd modes (REED), uneven fine spacing (FILIGREE),
+and dense upper modes (CRUST). Friction remains subordinate to the pitched source.
+Defaults are calibrated starting points rather than the handoff's proposed
+values: the accepted pickup aperture makes some of its near-rounded defaults
+poor demonstrations of a fine contour.
+
+At HOLD .85 and above, model 6 derives its adaptation from saved UNFOLD. Below
+.60 it retains a single opening followed by static sustain. At .60–1.00, staggered
+periodic scale envelopes reveal and recede during sustain. Their period spans
+approximately 1.44–2 seconds, fitted to integer carrier periods with a tiny,
+measured root error. Band interpolation, periodic friction, body and output
+filters all settle before two independently simulated cycles are compared.
+The moving adaptation retains a real opening and handoff before one complete
+steady loop; the independently checked preceding cycle is retained in diagnostics.
+Model 5 remains static at every UNFOLD setting. DETAIL zero introduces no unrelated
+fine-band modulation. Gate extension below the HOLD threshold is unchanged.
+
+The render cache holds at most eight completed notes and 32 MiB of retained PCM,
+with owned output copies. The contour-table cache holds twelve immutable banks.
+Cold simulation still has a playability cost; device timing and listening remain
+separate acceptance checks. Numerical probes measured new-profile spectral
+separation of .188–.896 at identical note and controls. Moving-HOLD cases changed
+fine-band power by .182–.437 across the cycle with measured seam error 0.0; those
+are Kotlin measurements, not listening claims.
+
+FRESH TAPE now also offers **RIME COMPLETE**, a separate sixteen-pad, six-voice
+bank with three native velocity layers per pad. Its compact gates cap excitation
+at .8 seconds; the full factory recipes retain their authored longer gates.
+The original **RIME** starter keeps its accepted bank. Both banks use native
+strikes, retain complete editable recipes, and export XTD/XPM programs with the
+same root and velocity conventions. Six new keyboard instruments provide nine
+native roots each, using each voice's authored held preset. Player release and
+velocity behavior follow the model-5 contract below.
+
+```sh
+synth RIME REED --all --out /absolute/reed-bank
+synth RIME FILIGREE --model 6 --macros HOLD=1,UNFOLD=.85 --instrument --out /absolute/keys
+# Start with the preserved finite + model-5 pack, then append all model-6 evidence:
+./gradlew :synth:generateRimeCompleteAudition -PrimeOutput=/absolute/audition
+./gradlew :shell:generateRimeCompleteInstruments -PrimeInstrumentOutput=/absolute/instruments
+```
+
+The expanded audition supplies all 36 recipes, five-step controls for the new
+voices, low/middle/high notes, velocity cases, all four required macro-pair
+interactions, all-high extremes and static/moving HOLD for every voice. The
+original clips, comparisons, recipes and note-storage key are retained.
+`RimeCompleteTest` checks shape identity, version boundaries, published held PCM,
+profile separation and both held adaptations. Existing root, endpoint, body,
+macro, extreme, alias and recipe probes now exercise the complete roster.
+`RimeBankTest` checks all 36 factory patches over three registers and tests every
+same-voice pair at a fixed pitch/gate/velocity with HOLD off, so register, level,
+duration and playback mode cannot disguise duplicated timbres.
+
+**Acceptance still open:** owner listening to the new voices and presets,
+physical Android playback/performance, and MPC hardware loading. The completed
+implementation does not turn numerical checks into a sonic approval.
+
+### Why it is built this way
+
+- A saved model separates new behavior from the accepted finite and held sounds.
+- Shape variants and body-mode spacing make the new voices distinct within one contour mechanism.
+- Periodic scale envelopes keep the root playing while fine detail moves without restarting the note.
+- Independently simulated cycles can expose a real seam mismatch before any samples are repeated.
+- Separate complete and original kits keep the accepted bank usable while making all six voices reachable.
+
+## Earlier model-5 HOLD and application integration build
 
 Model 5 preserves every finite model-4 recipe sample for sample when HOLD is zero.
 Models 1–4 keep their original rendering laws and refuse nonzero HOLD. The nine
@@ -57,12 +144,9 @@ with the opening and eight sustain repetitions. Their original-level files retai
 native velocity; whole-clip matching is available separately. Only the preview
 gets a terminal fade. The downloaded instrument's sustain remains unfaded.
 
-**Scope still open:** the uploaded original specification is absent from this
-workspace. The other three voice identities and their roles are awaiting owner
-clarification; they have not been guessed or replaced by variants of these three.
-The planned six-voice, 36-preset library is therefore incomplete. Device and MPC
-hardware acceptance are also open. Build and numerical checks do not establish
-sonic acceptance.
+The original specification was restored for the model-6 completion above.
+Device and MPC hardware acceptance remain open; build and numerical checks do
+not establish sonic acceptance.
 
 ### Why it is built this way
 

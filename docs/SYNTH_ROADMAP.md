@@ -1,5 +1,16 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIME — complete six-voice build (2026-11-01).** The restored engineering handoff
+supplies REED, FILIGREE and CRUST. Model 6 adds their contour/body profiles, six
+presets per voice (36 total), and periodic scale-motion HOLD derived from saved
+UNFOLD. Models 1–5, the nine accepted finite recipes, original sixteen-pad kit
+and 195 earlier audition clips remain reproducible. RIME COMPLETE adds a separate
+six-voice starter; six native held instruments sample nine roots each. The
+expanded listening page and numerical probes cover all voices and both held
+adaptations. New-voice sonic acceptance, physical device performance and MPC
+hardware loading remain open. See [RIME.md](RIME.md).
+
+
 **RIME — HOLD and integration build (2026-10-31).** The nine finite model-4 recipes
 remain exact. Model 5 adds finite gate extension and independently measured
 periodic sustain. Nine-root XTY/XPM instruments retain UNFOLD's opening; the

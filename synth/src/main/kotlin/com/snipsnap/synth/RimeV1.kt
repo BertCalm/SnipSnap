@@ -13,13 +13,14 @@ internal object RimeV1 {
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
-    fun rootMidi(voice: RimeVoice): Int = when (voice) { RimeVoice.LOOP -> 36; RimeVoice.GLINT -> 60; RimeVoice.VESSEL -> 48 }
-    fun gateSeconds(voice: RimeVoice): Float = when (voice) { RimeVoice.LOOP -> .8f; RimeVoice.GLINT -> 1.2f; RimeVoice.VESSEL -> 2.6f }
+    fun rootMidi(voice: RimeVoice): Int = when (voice) { RimeVoice.LOOP -> 36; RimeVoice.GLINT -> 60; RimeVoice.VESSEL -> 48; RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6") }
+    fun gateSeconds(voice: RimeVoice): Float = when (voice) { RimeVoice.LOOP -> .8f; RimeVoice.GLINT -> 1.2f; RimeVoice.VESSEL -> 2.6f; RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6") }
     fun defaults(voice: RimeVoice): Map<String, Float> {
         val values = when (voice) {
             RimeVoice.LOOP -> listOf(.28f, .18f, .20f, .10f, .25f)
             RimeVoice.GLINT -> listOf(.82f, .72f, .65f, .35f, .55f)
             RimeVoice.VESSEL -> listOf(.85f, .48f, .25f, .85f, .85f)
+            RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6")
         }
         return (TIMBRAL.zip(values) + ("HOLD" to 0f)).toMap()
     }
@@ -92,9 +93,9 @@ internal object RimeV1 {
         val gains = DoubleArray(source.bands.size)
         val increments = DoubleArray(gains.size)
         val block = (rate / 1000).coerceAtLeast(1)
-        val attack = when (voice) { RimeVoice.LOOP -> .006; RimeVoice.GLINT -> .003; RimeVoice.VESSEL -> .025 } +
+        val attack = when (voice) { RimeVoice.LOOP -> .006; RimeVoice.GLINT -> .003; RimeVoice.VESSEL -> .025; RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6") } +
             (if (source.bands.size > 1) unfold * .008 else 0.0)
-        val decay = when (voice) { RimeVoice.LOOP -> 1.0; RimeVoice.GLINT -> 2.1; RimeVoice.VESSEL -> .3 }
+        val decay = when (voice) { RimeVoice.LOOP -> 1.0; RimeVoice.GLINT -> 2.1; RimeVoice.VESSEL -> .3; RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6") }
         val step = hz / rate
         for (i in raw.indices) {
             if (i % 4096 == 0 && Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("RIME render cancelled")
@@ -176,7 +177,7 @@ internal class RimeBodyV1(voice: RimeVoice, hz: Double, body: Double, rate: Int)
     val t60: Double = decaySeconds(voice, body)
     companion object {
         fun decaySeconds(voice: RimeVoice, body: Double): Double = (.09 + 1.20 * body.pow(1.5)) *
-            when (voice) { RimeVoice.LOOP -> .65; RimeVoice.GLINT -> .8; RimeVoice.VESSEL -> 1.35 }
+            when (voice) { RimeVoice.LOOP -> .65; RimeVoice.GLINT -> .8; RimeVoice.VESSEL -> 1.35; RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST -> error("RIME voice requires model 6") }
     }
     init {
         val ratios = doubleArrayOf(1.0, 2.03, 3.16, 5.01, 7.02, 11.03, 13.08, 17.11)

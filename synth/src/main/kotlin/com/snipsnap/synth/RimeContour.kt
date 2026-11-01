@@ -7,6 +7,11 @@ import kotlin.math.*
  * Samples exclude the endpoint, use equal polygon arc length, perimeter centroid,
  * and unit maximum sampled radius. The exact reference is never asymmetrized. */
 internal object RimeContour {
+    enum class Variant { REFERENCE, REED, FILIGREE, CRUST }
+    fun variantFor(voice: RimeVoice): Variant = when (voice) {
+        RimeVoice.REED -> Variant.REED; RimeVoice.FILIGREE -> Variant.FILIGREE; RimeVoice.CRUST -> Variant.CRUST
+        else -> Variant.REFERENCE
+    }
     data class Path(val x: DoubleArray, val y: DoubleArray, val iteration: Int, val edges: Int, val radius: Double)
     data class Coefficient(val n: Int, val re: Double, val im: Double) {
         val energy get() = re * re + im * im
@@ -86,20 +91,61 @@ internal object RimeContour {
 
     class Prepared(val bands: List<Band>, val cutoff: Double, val safeMaximum: Int, val coefficients: List<Coefficient>)
     val reference: List<Coefficient> by lazy { extract(generate()) }
+    private val variants: Map<Variant, List<Coefficient>> by lazy {
+        Variant.entries.filter { it != Variant.REFERENCE }.associateWith { extract(instrumentPath(it)) }
+    }
+
+    /** Smooth, phase-aligned instrument variants applied BEFORE coefficient extraction.
+     * These are altered finite polygons, not the exact Koch mathematical fixture. */
+    internal fun instrumentPath(variant: Variant): Path {
+        val path = generate()
+        if (variant == Variant.REFERENCE) return path
+        val x = DoubleArray(path.x.size); val y = DoubleArray(path.y.size)
+        for (i in x.indices) {
+            val px = path.x[i]; val py = path.y[i]
+            val theta = atan2(py, px)
+            val radial = when (variant) {
+                Variant.FILIGREE -> 1 + .065 * cos(5 * theta) + .025 * sin(9 * theta)
+                Variant.CRUST -> 1 + .09 * cos(7 * theta) + .04 * sin(11 * theta)
+                else -> 1.0
+            }
+            x[i] = radial * px * if (variant == Variant.REED) 1.12 else 1.0
+            y[i] = radial * (if (variant == Variant.REED) .83 * py + .08 * px * px else py)
+        }
+        // Re-establish equal distance after deformation, without changing the
+        // fixed starting point or traversal. The variant mesh has M finite edges.
+        val cumulative = DoubleArray(x.size + 1)
+        for (i in x.indices) cumulative[i + 1] = cumulative[i] + hypot(x[(i + 1) % x.size] - x[i], y[(i + 1) % y.size] - y[i])
+        val sx = x.copyOf(); val sy = y.copyOf()
+        var edge = 0
+        for (i in x.indices) {
+            val distance = cumulative.last() * i / x.size
+            while (edge + 1 < x.size && cumulative[edge + 1] <= distance) edge++
+            val mix = (distance - cumulative[edge]) / (cumulative[edge + 1] - cumulative[edge])
+            x[i] = sx[edge] + mix * (sx[(edge + 1) % x.size] - sx[edge])
+            y[i] = sy[edge] + mix * (sy[(edge + 1) % y.size] - sy[edge])
+        }
+        val mx = x.average(); val my = y.average()
+        var radius = 0.0
+        for (i in x.indices) { x[i] -= mx; y[i] -= my; radius = max(radius, hypot(x[i], y[i])) }
+        for (i in x.indices) { x[i] /= radius; y[i] /= radius }
+        return Path(x, y, path.iteration, x.size, radius)
+    }
     const val TABLE_SIZE = 8192
     const val BANDWIDTH = 18000.0
 
-    private data class TableKey(val hz: Double, val detail: Double, val edge: Double, val apertureAngle: Double?, val apertureLaw: Int)
+    private data class TableKey(val hz: Double, val detail: Double, val edge: Double, val apertureAngle: Double?, val apertureLaw: Int, val variant: Variant)
     private val preparedCache = object : LinkedHashMap<TableKey, Prepared>(12, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<TableKey, Prepared>?): Boolean = size > 12
     }
 
     /** At most twelve immutable banks, about 14 MiB at the maximum band count. */
-    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null, apertureLaw: Int = 3): Prepared {
-        val key = TableKey(hz, detail, edge, apertureAngle, if (apertureAngle == null) 0 else apertureLaw)
+    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null, apertureLaw: Int = 3,
+        variant: Variant = Variant.REFERENCE): Prepared {
+        val key = TableKey(hz, detail, edge, apertureAngle, if (apertureAngle == null) 0 else apertureLaw, variant)
         return preparedCache.getOrPut(key) {
-            if (apertureAngle == null) build(hz, detail, edge)
-            else aperture(prepare(hz, detail, edge), apertureAngle, apertureLaw)
+            if (apertureAngle == null) build(hz, detail, edge, variant)
+            else aperture(prepare(hz, detail, edge, variant = variant), apertureAngle, apertureLaw)
         }
     }
 
@@ -138,7 +184,7 @@ internal object RimeContour {
         return Prepared(bands, source.cutoff, source.safeMaximum, coefficients)
     }
 
-    private fun build(hz: Double, detail: Double, edge: Double): Prepared {
+    private fun build(hz: Double, detail: Double, edge: Double, variant: Variant): Prepared {
         val maximum = min(512, floor(BANDWIDTH / hz).toInt()).coerceAtLeast(1)
         // Compress the proposed 1/8/32/128/512 scale onto this note's safe range.
         val segment = min(3, floor(detail * 4).toInt())
@@ -147,7 +193,8 @@ internal object RimeContour {
         val exponent = (anchors[segment] + fraction * (anchors[segment + 1] - anchors[segment])) / 9
         val cutoff = maximum.toDouble().pow(exponent)
         val transition = smooth(detail / .12)
-        val selected = reference.filter { it.n != 0 && abs(it.n) <= maximum }.map { c ->
+        val coefficients = if (variant == Variant.REFERENCE) reference else variants.getValue(variant)
+        val selected = coefficients.filter { it.n != 0 && abs(it.n) <= maximum }.map { c ->
             val n = abs(c.n)
             val admission = if (n == 1) 1.0 else smooth((cutoff * 1.12 - n) / max(1.0, cutoff * .24))
             val bandwidth = smooth((BANDWIDTH - n * hz) / 2000)

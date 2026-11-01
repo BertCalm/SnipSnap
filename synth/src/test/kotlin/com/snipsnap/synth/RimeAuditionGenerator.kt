@@ -29,7 +29,7 @@ object RimeAuditionGenerator {
         }
         val quick="--quick" in args
         val entries=mutableListOf<Map<String,Any?>>()
-        val bankRoles=RimePresets.entries().associate { it.id to it.role }
+        val bankRoles=RimePresets.legacyEntries().associate { it.id to it.role }
         val cases=cases(quick)
         check(cases.map{it.id}.distinct().size==cases.size)
         val started=System.nanoTime()
@@ -66,9 +66,9 @@ object RimeAuditionGenerator {
                 "files" to (files+mapOf("recipe" to recipeFile)),"metrics" to metrics,"waveform" to waveform(matched))
             println("RIME ${index+1}/${cases.size}: ${case.id}; ${"%.0f".format(elapsed)} ms; peak=${probe.internalPeak}; tail=${probe.tailDb}")
         }
-        if(!quick) for(patch in RimePresets.starters()) entries+=phrase(root,patch)
+        if(!quick) for(patch in Rime.LEGACY_VOICES.map { RimePresets.starter(it) }) entries+=phrase(root,patch)
         if(!quick) {
-            for (entry in RimePresets.entries()) entries += bankPerformances(root, entry)
+            for (entry in RimePresets.legacyEntries()) entries += bankPerformances(root, entry)
             val temporary = Files.createTempDirectory("rime-musical-kit").toFile()
             try {
                 val kit = RimeKitGenerator.generate(temporary)
@@ -106,12 +106,13 @@ object RimeAuditionGenerator {
     }
 
     private fun cases(quick:Boolean):List<Case> = buildList {
-        for(p in RimePresets.starters()) {
+        for(p in Rime.LEGACY_VOICES.map { RimePresets.starter(it) }) {
             val voice=p.voice.name.lowercase()
             add(Case("$voice-start","start",p.name,when(p.voice){
                 RimeVoice.LOOP->"A rounded bass silhouette with a small, dry body."
                 RimeVoice.GLINT->"A bright key whose fine contour pressure adds a serrated edge."
                 RimeVoice.VESSEL->"A slower reveal through a larger, longer-ringing body."
+                else -> error("Historical starters use the three accepted voices")
             },p))
             for(macro in Rime.TIMBRAL) for(value in if(quick)listOf(0f,1f)else if(macro=="ANGLE")angleSteps else steps) {
                 val id="$voice-${macro.lowercase()}-${(value*100).roundToInt()}"
@@ -132,23 +133,23 @@ object RimeAuditionGenerator {
             }
         }
         if(!quick) {
-            for (entry in RimePresets.entries()) add(Case("bank-${entry.id}","bank",entry.patch.name,
+            for (entry in RimePresets.legacyEntries()) add(Case("bank-${entry.id}","bank",entry.patch.name,
                 "${entry.role}. ${entry.description}",entry.patch,group=entry.id))
-            for (voice in RimeVoice.entries) for (value in listOf(.625f, .75f, .875f)) {
+            for (voice in Rime.LEGACY_VOICES) for (value in listOf(.625f, .75f, .875f)) {
                 val p = RimePatch("Previous ${voice.name} return", voice,
                     Rime.defaults(voice, 3) + ("ANGLE" to value), model = 3)
                 add(Case("model3-${voice.name.lowercase()}-angle-${(value*100).roundToInt()}","revision",
                     "Previous return ${(value*360).roundToInt()}°",
                     "The preferred model-3 pickup before its return travel was redistributed.",p))
             }
-            for (voice in RimeVoice.entries) for (value in listOf(0f, .5f)) {
+            for (voice in Rime.LEGACY_VOICES) for (value in listOf(0f, .5f)) {
                 val p = RimePatch("Previous ${voice.name} ANGLE", voice,
                     Rime.defaults(voice, 2) + ("ANGLE" to value), model = 2)
                 add(Case("previous-${voice.name.lowercase()}-angle-${(value*100).roundToInt()}","revision",
                     "Previous ANGLE ${(value*360).roundToInt()}°",
                     "The model-2 point pickup before finite contact spacing was added.",p))
             }
-            for (voice in RimeVoice.entries) {
+            for (voice in Rime.LEGACY_VOICES) {
                 val p = RimePatch("Previous ${voice.name} BODY 100", voice,
                     Rime.defaults(voice, 1) + ("BODY" to 1f), model = 1)
                 add(Case("legacy-${voice.name.lowercase()}-body-100","revision","Previous BODY 100%",
@@ -174,6 +175,7 @@ object RimeAuditionGenerator {
             RimeVoice.LOOP -> listOf(0.0,2.0,4.0,6.0) to listOf(0,3,7,0)
             RimeVoice.GLINT -> listOf(0.0,1.0,1.5,3.0,4.0,5.5) to listOf(0,3,7,10,7,3)
             RimeVoice.VESSEL -> listOf(0.0,3.0,6.0) to listOf(0,7,3)
+            else -> error("Historical score uses the three accepted voices")
         }
         val velocities = listOf(.55f,.8f,.65f,.75f,.5f,.8f)
         val phrase = beats.mapIndexed { i, beat -> beat * 60.0 / RimeKitGenerator.BPM to
@@ -221,7 +223,7 @@ object RimeAuditionGenerator {
             fun put(path: String, bytes: ByteArray) {
                 zip.putNextEntry(ZipEntry("Rime Musical Bank/$path").also { it.time=0 });zip.write(bytes);zip.closeEntry()
             }
-            for (entry in RimePresets.entries()) {
+            for (entry in RimePresets.legacyEntries()) {
                 val pad = kit.kit.pads.single { it.displayName == entry.patch.name }
                 put("${entry.id}.wav",File(kit.data,pad.sampleFile).readBytes())
                 put("${entry.id}.json",entry.patch.toJsonText().toByteArray())

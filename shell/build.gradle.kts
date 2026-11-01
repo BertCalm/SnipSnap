@@ -260,3 +260,11 @@ tasks.register<JavaExec>("generateRimeInstruments") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
 }
+
+tasks.register<JavaExec>("generateRimeCompleteInstruments") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-complete-instruments", "--complete")
+}
