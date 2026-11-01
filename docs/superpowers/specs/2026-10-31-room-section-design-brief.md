@@ -1,6 +1,6 @@
 # ROOM: a drum-room rack section. Design brief
 
-**Status:** built in Kotlin (`Room.kt`, a rack section after SPRING). The Python prototype's gate passed on 2026-10-31 ("Heard at the prototype gate" below); the Kotlin gate (`./gradlew :synth:generateRoomAudition`) is open. Prototyped first in `2026-10-31-room-section-prototype.py`, beside this file, which now holds round 2.
+**Status:** built in Kotlin (`Room.kt`, a rack section after SPRING). The Python prototype's gate passed on 2026-10-31 ("Heard at the prototype gate" below); the Kotlin gate (`./gradlew :synth:generateRoomAudition`) passed on 2026-11-01 ("Heard at the Kotlin gate" below), and ROOM is a pedal, the `roomed` character. Prototyped first in `2026-10-31-room-section-prototype.py`, beside this file, which now holds round 2.
 **Source:** the owner picked ROOM from a Luthier gap scan on 2026-10-30. The scan found that the rack's only synthetic space is SPRING, a 1962 Schroeder network. No reference sound was named, so this brief aims at a versatile drum room, tight to medium.
 **Repository truth:** commit `bb19dc0f` (2026-10-30). Grepped and read:
 - `Spring.kt`: four combs, two all-passes, `MAX_TAIL_SECONDS = 1.2`.
@@ -222,5 +222,24 @@ Two of these were proven able to fail. Flipping the decay's sign (lines that gro
 - Halls decay at about 0.7 s against 0.9.
 - SIZE 0 and soft walls are nearly dry: tails of 0.02 s at SIZE 0 and with WALLS 0.
 - At the same peak, the hall plays 7.0 dB louder over the hit on a snare and 6.4 dB on a clap. The gate's same-loudness section exists for this.
-- ROOM has no character and no chip yet. The gate asks.
+- ROOM had no character and no chip. The gate asked, and the owner said yes (below).
 
+## Heard at the Kotlin gate (2026-11-01)
+
+The owner answered all five questions "yes", read against each question's first option:
+
+| Question | Answer | What it decided |
+|---|---|---|
+| SIZE now reaches a hall. Big enough? | Big enough | SIZE stays as built. The rack's 1 s tail cap stays; nothing asks for a longer fade. |
+| Does far DISTANCE sound like the mic moved back? | Yes | Round 2's log walk of the mic did what "just more reverb" asked. DISTANCE stays. |
+| At the same loudness, does the hall still sound bigger? | Bigger | The hall is the room, not the level. The 7 dB the hall gains at the same peak is a disclosure, not a fault. |
+| The default room on the kit: a good starting point? | Good | The defaults stay: SIZE 0.3, WALLS 0.5, DISTANCE 0.6 (1.35 m). |
+| A one-tap character on the pad sheet? | Yes | ROOM becomes a pedal (below). |
+
+**The chip.** `roomed` joins `Treatments.EXTRA`, and `Pedals` gains ROOM: after the amp, last, not movable (a room in front of an amp is not a place), gated. The slate draws it with no shell code; it sits behind MORE, because the default row is the owner's five (DRIVE, SUSTAIN, WAH, FORGE, DELAY), and any user can put it on their row.
+
+**One departure from FORGE's pattern.** FORGE's chip sets every macro at its default. ROOM's first did too, and its test caught the sheet's tap (AMT 0.7) fading all three macros at once: a smaller room, softer walls and a closer mic, which multiply. The snare's room share fell from 0.0013 at AMT 1 to 0.000008 at AMT 0.7, a tap next to dry. So `roomed` sets only DISTANCE, at its default, and leaves SIZE and WALLS to ROOM's defaults, as `ensembled` leaves out RATE. AMT 1 is the default room exactly; lower AMT moves the mic closer in the same room (share 0.0006 at AMT 0.7, about half); AMT 0 is ROOM's bypass.
+
+**Tests.** `RoomTest` pins the chip at AMT 1 to `Room.process` at its defaults, sample for sample, on a kick and a snare; the one restated number (DISTANCE) to ROOM's own default; and the AMT 0.7 tap as less room than full but over 0.3 of it. `PedalsTest` and `TreatmentsTest` pin the new lists, and ROOM's side as POST only.
+
+**Not heard yet.** Nobody has heard the chip at AMT 0.7, the sound a first tap gives. It is the default room with the mic about 0.94 m back (DISTANCE 0.42), against 1.35 m at full.
