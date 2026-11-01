@@ -1495,24 +1495,28 @@ class KitBuilderModel private constructor(
      */
     fun filesUnderPrints(keepDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Set<String> {
         val names = HashSet<String>()
-        fun walk(top: KitPad) {
+        // One print's names, whole or not at all: a walk that fails partway (a print over a print
+        // whose inner source will not read) must not leave the levels it did read behind.
+        fun walk(top: KitPad): Set<String> {
+            val found = HashSet<String>()
             var under = top
             val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
             while (PrintedPads.has(under.recipe)) {
                 require(seen.add(under.recipe!!)) { "pad ${top.slot}'s prints loop back on themselves" }
                 under = PrintedPads.sourcePad(kitDir, under)
-                names += under.sampleFile
-                under.velocityLayers.mapTo(names) { it.sampleFile }
+                found += under.sampleFile
+                under.velocityLayers.mapTo(found) { it.sampleFile }
             }
+            return found
         }
-        kit.pads.forEach(::walk)
+        kit.pads.forEach { names += walk(it) }
         val keepMs = (keepDays * DAY_MS).toLong()
         for (entry in binContents()) {
             val snapshot = entry.padSnapshot ?: continue
             // binHolds' saturating clock, and its rule: a tombstone leaving at nowMillis anyway
             // holds nothing past it, so a print in it that will not read is skipped, not thrown.
             val purgeAt = if (keepMs > 0 && entry.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else entry.binnedAtMillis + keepMs
-            if (purgeAt < nowMillis) runCatching { walk(snapshot) } else walk(snapshot)
+            names += if (purgeAt < nowMillis) runCatching { walk(snapshot) }.getOrDefault(emptySet()) else walk(snapshot)
         }
         return names
     }

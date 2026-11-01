@@ -346,6 +346,25 @@ class AquariumPadSheetTest {
         assertTrue(original.contentEquals(bytes(m)), "undo after both REMOVEs gives the original back")
     }
 
+    /**
+     * An ejected aquarium over a board, past its tombstone's days, whose inner board source will not
+     * read: the whole print is skipped, as binHolds skips it, and the level that did read (the board's
+     * own file) is not left behind to take BACK off a row it has no claim on.
+     */
+    @Test fun `an overdue print over a print with a damaged inner source names nothing, not the level it read`() {
+        val m = model(name = "UnderOverdueNested", recipe = null)
+        m.treatPad(1, "crushed")
+        val board = BoardSheet.apply(m, 1, .35f)
+        val source = (board.recipe!!.entries.getValue("source") as JsonValue.Str).value
+        AquariumPadSheet.apply(m, 1, context(), renderer)
+        m.clear(1) // the tombstone holds the aquarium, over the board, over the treated pad
+        m.save()
+        val now = System.currentTimeMillis()
+        assertEquals(setOf(board.sampleFile, "main.wav"), m.filesUnderPrints(nowMillis = now), "test setup: both levels while BACK can bring it back")
+        File(m.kitDir, ".boards/states/$source.json").appendText(" ")
+        assertEquals(emptySet(), m.filesUnderPrints(nowMillis = now + 31L * 24 * 60 * 60 * 1000), "past its days, nothing of it, not even the aquarium level that read")
+    }
+
     @Test fun `nested board source can remove locally but standalone import refuses before destination writes`() {
         val source = model(name = "Nested")
         val board = BoardSheet.apply(source, 1, .35f)
