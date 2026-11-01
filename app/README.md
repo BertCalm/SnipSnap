@@ -105,6 +105,12 @@ existing sixteen-pad bank and its authored roots without assigning a global
 kit key. Physical phone timing, listening and MPC loading remain separate checks.
 See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
+CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware
+response. Saved sounds, including its six original factory recipes, retain
+their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
+response without changing the authored room, controls, ROOT, VELOCITY or seed.
+See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
 OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
 performances. Complete scores survive preset saves, navigation and SEND TO PAD.
 LENGTH changes finite timing; all Otis kit pads play once. Shared pressure applies

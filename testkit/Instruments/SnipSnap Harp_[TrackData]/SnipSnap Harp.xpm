@@ -14,6 +14,7 @@
     <PortamentoTime>0.000000</PortamentoTime>
     <PortamentoLegato>False</PortamentoLegato>
     <PortamentoQuantized>False</PortamentoQuantized>
+    <MonoRetrigger>False</MonoRetrigger>
     <Instruments>
       <Instrument number="0">
         <Volume>1.000000</Volume>

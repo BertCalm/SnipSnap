@@ -206,14 +206,18 @@ HYBRID and AQUARIUM share geometric reflections, a late field and passive delaye
 returns into the instruments. Six factory recipes and complete saved rooms work
 through the CLI, phone SYNTH controls and FRESH TAPE starter. Preview supports
 cancellation and bounded reuse of completed recordings.
+New sounds use the heard wider response, including its improved upper-register
+body. Saved sounds keep their renderer until USE WIDER RESPONSE is selected;
+the six original factory recipes and MPC bank retain their original rendering.
 Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics, or `./gradlew :synth:generateChamberKit` for the dry
 sixteen-pad MPC 3 track, MPC 2 twin and editable recipes.
 [Implementation notes](docs/CHAMBER.md) record the finite controls, performance
 limits and proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-provides the current-model control study, kit-sample phrases and downloadable
-recipes; earlier timpani comparisons remain archived there. Physical phone/MPC
+provides the original control study, kit-sample phrases, downloadable recipes
+and [higher-note comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/register/index.html);
+earlier timpani comparisons remain archived there. Physical phone/MPC
 acceptance and the broader listening verdict remain open.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
@@ -624,14 +628,14 @@ ranks, immediate keying, electronic key-click, vibrato and transistor drive.
 Its fuller body adds a rounded same-pitch foundation while retaining the opening
 click. The sustain revision keeps subtle ensemble movement in short held loops
 and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
-Ten starting settings, saved recipes, native velocity and CLI rendering share
+Eleven starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
-opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
-preset with stronger bank motion and vibrato and a nine-zone MPC download. The
-earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
-phone/MPC listening of Rich Ensemble is pending;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/harmonics/)
+opens with the owner's selected Octave Keys preset: stronger octave registration
+with calmer ensemble motion, plus a matching nine-zone MPC download. The earlier
+Rich Ensemble, R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of the Octave Keys instrument is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
