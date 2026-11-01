@@ -3,7 +3,6 @@ package com.snipsnap.app.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemGestureExclusion
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,7 +25,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -346,7 +345,7 @@ fun KeysScreen(
             }
         }
 
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
+        Column(Modifier.fillMaxWidth().systemGestureExclusion(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
             for (row in GRID_ROWS) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
                     for (slot in row) {
@@ -442,24 +441,17 @@ private fun KeyPad(
                 }
             }
             .let { m ->
-                if (!enabled) m else m.pointerInput(label) {
-                    while (true) {
-                        val first = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                        val height = size.height.toFloat().coerceAtLeast(1f)
-                        val t = (first.position.y / height).coerceIn(0f, 1f)
+                if (!enabled) m else m.pressTracking(
+                    label,
+                    onPress = { y, height, _ ->
                         down = true
-                        onPress(PadHit.velocityAt(t, 1f))
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == first.id } ?: break
-                                if (!change.pressed) break
-                            }
-                        }
+                        onPress(PadHit.velocityAt((y / height).coerceIn(0f, 1f), 1f))
+                    },
+                    onRelease = {
                         down = false
                         onRelease()
-                    }
-                }
+                    },
+                )
             }
             .padding(5.dp),
         contentAlignment = Alignment.BottomStart,
