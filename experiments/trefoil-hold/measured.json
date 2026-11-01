@@ -98,5 +98,187 @@
     "expanded_limit_mib": 256,
     "fixed_pcm24_derivation": "all 18 browser-generated files match Python bytes",
     "zip_integrity": "both generated 21-file ZIPs pass CRC"
+  },
+  "transport": {
+    "checks": [
+      "ordered: original 44100 Hz PCM frames at 44100",
+      "ordered: no silent gap at wraps / 44100",
+      "ordered: wrap steps remain within independent interior steps / 44100",
+      "ordered: real preceding/continuing PCM is preserved",
+      "still: original 44100 Hz PCM frames at 44100",
+      "still: no silent gap at wraps / 44100",
+      "still: wrap steps remain within independent interior steps / 44100",
+      "still: real preceding/continuing PCM is preserved",
+      "no-exchange: original 44100 Hz PCM frames at 44100",
+      "no-exchange: no silent gap at wraps / 44100",
+      "no-exchange: wrap steps remain within independent interior steps / 44100",
+      "no-exchange: real preceding/continuing PCM is preserved",
+      "memory: original 44100 Hz PCM frames at 44100",
+      "memory: no silent gap at wraps / 44100",
+      "memory: wrap steps remain within independent interior steps / 44100",
+      "memory: real preceding/continuing PCM is preserved",
+      "bass: original 44100 Hz PCM frames at 44100",
+      "bass: no silent gap at wraps / 44100",
+      "bass: wrap steps remain within independent interior steps / 44100",
+      "bass: real preceding/continuing PCM is preserved",
+      "bright: original 44100 Hz PCM frames at 44100",
+      "bright: no silent gap at wraps / 44100",
+      "bright: wrap steps remain within independent interior steps / 44100",
+      "bright: real preceding/continuing PCM is preserved",
+      "ordered: original 44100 Hz PCM frames at 48000",
+      "ordered: no silent gap at wraps / 48000",
+      "ordered: wrap steps remain within independent interior steps / 48000",
+      "still: original 44100 Hz PCM frames at 48000",
+      "still: no silent gap at wraps / 48000",
+      "still: wrap steps remain within independent interior steps / 48000",
+      "no-exchange: original 44100 Hz PCM frames at 48000",
+      "no-exchange: no silent gap at wraps / 48000",
+      "no-exchange: wrap steps remain within independent interior steps / 48000",
+      "memory: original 44100 Hz PCM frames at 48000",
+      "memory: no silent gap at wraps / 48000",
+      "memory: wrap steps remain within independent interior steps / 48000",
+      "bass: original 44100 Hz PCM frames at 48000",
+      "bass: no silent gap at wraps / 48000",
+      "bass: wrap steps remain within independent interior steps / 48000",
+      "bright: original 44100 Hz PCM frames at 48000",
+      "bright: no silent gap at wraps / 48000",
+      "bright: wrap steps remain within independent interior steps / 48000",
+      "hard-edge mutation reproduces full-scale-relative step",
+      "ramps bound start/stop and rapid opposite-polarity switching",
+      "rapid switches do not sum above source headroom",
+      "Section 2 body and natural tail retain original samples",
+      "actual loop wraps on the same AudioBufferSource",
+      "visible Play/Pause controls operate the audio graph",
+      "visible seek control changes the playing phase",
+      "Stop cancels queued playback"
+    ],
+    "rates": [
+      {
+        "name": "ordered",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.014117717742919922,
+        "bodyMaxStep": 0.016985058784484863,
+        "continuationMaxError": 0
+      },
+      {
+        "name": "still",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.016384005546569824,
+        "bodyMaxStep": 0.016471385955810547,
+        "continuationMaxError": 0
+      },
+      {
+        "name": "no-exchange",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.015275835990905762,
+        "bodyMaxStep": 0.01782548427581787,
+        "continuationMaxError": 0
+      },
+      {
+        "name": "memory",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.015311598777770996,
+        "bodyMaxStep": 0.01623094081878662,
+        "continuationMaxError": 0
+      },
+      {
+        "name": "bass",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.007276773452758789,
+        "bodyMaxStep": 0.007969379425048828,
+        "continuationMaxError": 0
+      },
+      {
+        "name": "bright",
+        "outputRate": 44100,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.02887284755706787,
+        "bodyMaxStep": 0.035970211029052734,
+        "continuationMaxError": 9.094947017729282e-13
+      },
+      {
+        "name": "ordered",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.012966219335794449,
+        "bodyMaxStep": 0.01560501754283905,
+        "continuationMaxError": null
+      },
+      {
+        "name": "still",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.015051260590553284,
+        "bodyMaxStep": 0.015133082866668701,
+        "continuationMaxError": null
+      },
+      {
+        "name": "no-exchange",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.014032553881406784,
+        "bodyMaxStep": 0.016370370984077454,
+        "continuationMaxError": null
+      },
+      {
+        "name": "memory",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.01405804231762886,
+        "bodyMaxStep": 0.01491217315196991,
+        "continuationMaxError": null
+      },
+      {
+        "name": "bass",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.006685167551040649,
+        "bodyMaxStep": 0.007319413125514984,
+        "continuationMaxError": null
+      },
+      {
+        "name": "bright",
+        "outputRate": 48000,
+        "bufferRate": 44100,
+        "maxSilentGapSamples": 0,
+        "wrapMaxStep": 0.02649201825261116,
+        "bodyMaxStep": 0.03303755447268486,
+        "continuationMaxError": null
+      }
+    ],
+    "transitions": {
+      "hard": {
+        "maxStep": 0.25,
+        "peak": 0.25
+      },
+      "smoothed": {
+        "maxStep": 0.0009448230266571045,
+        "peak": 0.25
+      }
+    },
+    "section2BodyMaxError": 0,
+    "count": 50
+  },
+  "owner_listening": {
+    "section_2": "positive owner feedback",
+    "other_sections": "clicking or clipping reported, including at repeats",
+    "revision": "scheduled playback and 12ms transport transitions; owner recheck pending",
+    "wav_files_preserved": 364
   }
 }

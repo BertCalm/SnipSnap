@@ -1,7 +1,9 @@
 # Trefoil: held-state proof
 
 Status: rendered experimental **Python harness, not Kotlin**. Owner listening
-pending. Finite Trefoil hardware listening was accepted by Josh on 2026-11-01
+feedback: Section 2 note-off recordings sound good; other sections had clipping
+or repeat clicks. A separate [playback revision](PLAYBACK-FIX.md) adds scheduled
+loops and transport ramps, with every WAV preserved. Finite Trefoil hardware listening was accepted by Josh on 2026-11-01
 ("Hardware is fine proceed as recommended"). Device models, firmware and
 instrumented phone render times were not supplied.
 

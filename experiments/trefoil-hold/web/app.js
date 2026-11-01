@@ -1,5 +1,5 @@
 'use strict';
-const $=s=>document.querySelector(s), audio=$('#audio');
+const $=s=>document.querySelector(s), audio=window.trefoilPlayer=new HeldTransport.Player();
 const names={ordered:'Ordered motion',still:'Stationary geometry','no-exchange':'Exchange off',memory:'More memory',bass:'Bass / C3',bright:'Bright / C5',finite:'Finite First Weave'};
 const storeKey='trefoil-held-v1-notes';
 let manifest,selection={name:'ordered',kind:'returns'},epoch=0,notes={};
@@ -10,20 +10,23 @@ async function recording(name,kind,mode){if(name==='finite')return{url:manifest.
 function mark(){document.querySelectorAll('[data-case]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.case===selection.name&&b.dataset.kind===selection.kind)));}
 function event(){if(selection.name==='finite'){$('#event').textContent='Approved finite reference · original recording';return}const c=manifest.cases[selection.name],time=audio.currentTime;if(selection.kind==='release'){$('#event').textContent=time<c.off?`Contact is powering the bodies · note-off at ${c.off.toFixed(2)} s`:time<c.stop?'Power is being withdrawn over 25 ms':`Power stopped at ${c.stop.toFixed(2)} s · stored energy is decaying`;}else{$('#event').textContent=`Cycle ${Math.min(c.returns,Math.floor(time/c.period)+1)} · ${c.period.toFixed(3)} s per cycle${selection.kind==='loop'?' · repeating loop':''}`}}
 async function choose(name,kind,{aligned=false,autoplay=true,position=null}={}){
- if(!manifest)return; const previous=audio.currentTime,token=++epoch;audio.pause();selection={name,kind};
+ if(!manifest)return; const previous=audio.currentTime,token=++epoch;if(!autoplay)audio.pause();selection={name,kind};
  const c=manifest.cases[name];
  const target=position??(aligned&&c?previous%c.period:0);
  $('#title').textContent=names[name]+' · '+(kind==='loop'?'loop':kind==='release'?'note-off':name==='finite'?'reference':`${c.returns} returns`);
  $('#description').textContent=name==='finite'?'The exact approved medium-touch finite sample.':kind==='release'?'Starts from silence; power stops between cycle boundaries.':kind==='loop'?'Switch A and B to compare the same point in the cycle.':'Continuous, independently evolved resonator states through every return.';
- loadNote();mark();event();
- try{const file=await recording(name,kind,$('#level').value);if(token!==epoch)return;audio.loop=kind==='loop';audio.src=file.url;audio.load();$('#download').href=file.url;$('#download').download=file.filename;if(audio.readyState<1)await new Promise((resolve,reject)=>{audio.addEventListener('loadedmetadata',resolve,{once:true});audio.addEventListener('error',reject,{once:true})});if(token!==epoch)return;audio.currentTime=Math.min(target,Math.max(0,audio.duration-.01));if(autoplay)await audio.play()}catch(e){if(token===epoch&&e.name!=='AbortError')$('#event').textContent='Playback unavailable. Try the equal-level WAV download.'}
+ $('#toggle').disabled=true;$('#seek').disabled=true;loadNote();mark();event();
+ try{const file=await recording(name,kind,$('#level').value),buffer=await audio.prepare(file.url);if(token!==epoch)return;const offset=Math.min(position??(aligned?audio.currentTime%buffer.duration:target),Math.max(0,buffer.duration-.01));if(!await audio.use(buffer,{src:file.url,loop:kind==='loop',offset,autoplay})||token!==epoch)return;$('#download').href=file.url;$('#download').download=file.filename;$('#toggle').disabled=false;$('#seek').disabled=false;refresh()}catch(e){if(token===epoch&&e.name!=='AbortError')$('#event').textContent='Playback unavailable. Try the equal-level WAV download.'}
 }
 $('#start').onclick=()=>choose('ordered','returns');
 $('#stop').onclick=()=>{epoch++;audio.pause();audio.currentTime=0;event()};
 $('#finite').onclick=()=>choose('finite','reference');
 document.addEventListener('click',e=>{const b=e.target.closest('button[data-case]');if(b)choose(b.dataset.case,b.dataset.kind,{aligned:b.dataset.kind==='loop'})});
 $('#level').onchange=()=>{const position=audio.currentTime,playing=!audio.paused;$('#level-help').textContent=$('#level').value==='matched'?"Each candidate's loop has the same RMS level. Its release keeps that candidate's gain.":'One fixed gain across all six candidates, their loops and releases. Differences in power remain audible.';if(selection.name!=='finite')choose(selection.name,selection.kind,{position,autoplay:playing})};
-audio.addEventListener('timeupdate',event);audio.addEventListener('ended',event);
+function refresh(){const time=audio.currentTime,duration=audio.duration||0;$('#toggle').textContent=audio.paused?'Play':'Pause';$('#toggle').setAttribute('aria-label',audio.paused?'Play selected recording':'Pause selected recording');$('#seek').max=duration;$('#seek').value=time;$('#clock').textContent=`${time.toFixed(2)} / ${duration.toFixed(2)} s`;event()}
+$('#toggle').onclick=()=>{if(audio.paused)audio.play().catch(()=>{$('#event').textContent='Tap Play again to enable audio.'});else audio.pause()};$('#seek').oninput=()=>{audio.currentTime=Number($('#seek').value)};
+for(const name of ['timeupdate','ended','play','pause'])audio.addEventListener(name,refresh);
+document.addEventListener('pointerdown',()=>audio.unlock().catch(()=>{}),{capture:true});document.addEventListener('keydown',()=>audio.unlock().catch(()=>{}),{capture:true});
 document.addEventListener('keydown',e=>{if(e.code==='Escape'){$('#stop').click()}});
 $('#note').oninput=save;$('#verdict').onchange=save;
 $('#export').onclick=()=>{const blob=new Blob([JSON.stringify({model:manifest.model,notes},null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='trefoil-hold-notes.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)};

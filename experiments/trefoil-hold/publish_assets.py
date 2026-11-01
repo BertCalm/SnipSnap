@@ -15,6 +15,10 @@ def main(audio,site):
     for file in (Path(__file__).parent/'web').iterdir(): shutil.copy2(file,destination/file.name)
     report=json.loads((audio/'report.json').read_text())
     if not report['all_checks_pass']: raise ValueError('Numerical gates did not pass')
+    measured=json.loads((Path(__file__).parent/'measured.json').read_text())
+    report['browser']=measured['browser']
+    if 'transport' in measured:report['transport']=measured['transport']
+    if 'owner_listening' in measured:report['owner_listening']=measured['owner_listening']
     records=report['cases']; common=min(r['gain'] for r in records.values())
     manifest={'model':t.MODEL,'common_gain':common,'cases':{},'checks':report['check_count']}
     for name,r in records.items():
@@ -41,6 +45,7 @@ def main(audio,site):
     (destination/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     (destination/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     shutil.copy2(Path(__file__).parent/'README.md',destination/'DESIGN.md')
+    shutil.copy2(Path(__file__).parent/'PLAYBACK-FIX.md',destination/'PLAYBACK-FIX.md')
     # Include source under its original paths so ROOT resolution works after unzip.
     with zipfile.ZipFile(destination/'trefoil-hold-source.zip','w',zipfile.ZIP_DEFLATED) as z:
         for f in sorted(Path(__file__).parent.rglob('*')):
