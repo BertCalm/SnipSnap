@@ -204,6 +204,36 @@ class KitArtTest {
     }
 
     @Test
+    fun `bloom sets a two-word name on two lines, untrimmed`() {
+        val dir = File(temp, "twolines")
+        buildKit(dir)
+        for (name in listOf("Vesper Bells", "Vesper_Bells", "Vesper-Bells")) {
+        val kit = Kit(name, KitStore.load(dir).pads)
+        KitStore.save(kit, dir)
+        val palette = Palettes.VENT
+        val size = 600
+        val img = decode(KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, palette), size = size))
+        val bare = decode(KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, palette), size = size, label = ""))
+        val zone = KitArt.nameZone(KitArt.Style.BLOOM, Mark.Variant.STACKED, size)
+        // Rows inside the zone that the name touched, as runs: two lines are two runs with a gap between.
+        val rows = (zone.y until zone.y + zone.h).filter { y ->
+            (zone.x until zone.x + zone.w).any { x -> rgb(img, x, y) != rgb(bare, x, y) }
+        }
+        var runs = 0
+        var prev = -2
+        for (y in rows) {
+            if (y != prev + 1) runs++
+            prev = y
+        }
+        assertEquals(2, runs, "$name: two lines of type (touched rows: ${rows.size})")
+        // Untrimmed: the second line's ink spans most of the zone's width, which "VESPE…" on one line never does low in the hole.
+        val lower = rows.filter { it > zone.y + zone.h / 2 }
+        val litCols = (zone.x until zone.x + zone.w).filter { x -> lower.any { y -> rgb(img, x, y) != rgb(bare, x, y) } }
+        assertTrue(litCols.isNotEmpty() && litCols.last() - litCols.first() > zone.w * 0.35, "$name: the second line is a word, not a dot")
+        }
+    }
+
+    @Test
     fun `the seed pad changes the field and the rings seed changes only rings`() {
         val dir = File(temp, "seeded")
         val kit = buildKit(dir)

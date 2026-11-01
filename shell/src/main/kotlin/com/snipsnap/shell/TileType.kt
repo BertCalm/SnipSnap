@@ -20,12 +20,12 @@ internal object TileType {
 
     /**
      * The text and size that fit [maxWidthPx]: shrink from [maxSizePx] no
-     * further than half of it (a name a third the size of its zone reads
-     * as a smudge), then drop characters for an ellipsis until it fits.
-     * A name never leaves its zone, whatever its length.
+     * further than [floorShare] of it (type a tenth the size of its zone
+     * reads as a smudge), then drop characters for an ellipsis until it
+     * fits. A name never leaves its zone, whatever its length.
      */
-    fun fitText(canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float): Pair<String, Float> {
-        val floor = maxOf(MIN_SIZE, maxSizePx * 0.5f)
+    fun fitText(canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float, floorShare: Float = 0.3f): Pair<String, Float> {
+        val floor = maxOf(MIN_SIZE, maxSizePx * floorShare)
         var size = maxSizePx
         while (size > floor && canvas.textWidth(text, font, size) > maxWidthPx) size -= 1f
         if (canvas.textWidth(text, font, size) <= maxWidthPx) return text to size
