@@ -284,6 +284,16 @@ agreements above on a pluck preset, a THUMP snare and a formant burst in every g
 crash on four sources, the notes and the siren on the pitched source, and that a pure sine
 sweep keeps every pad and names what it failed.
 
+**After the review of PR 826** (each verified before being taken): the fast read is band-limited
+through the repository's windowed-sinc `Resampler`, so nothing folds into a drum's band; the
+whitening runs once per source and every slot freezes its noise from that one window; thirds
+are chosen by semitone interval, not scale index (a pentatonic's third entry is its fourth;
+CHROMATIC takes the minor third); every pad ends in the house 4 ms fade before it is measured
+or written; non-finite samples are refused in words; the pitch gates read a pad faster or
+slower by a power of two so C1 and a 1760 Hz siren both sit inside `Pitch.detect`'s 40 to
+1200 Hz, with a low-key and a high-siren test; and the CLI bounds the read to the 30 s limit
+before decoding, through `WavReader.readCapped`.
+
 **Still owed, as the brief's rounds list:** the blend with `Desample` and QUARRY (R3), the
 recipe that re-renders a derived pad (R0, shared with QUARRY; today these pads are like
 captured pads, their WAV the truth, with full provenance in `source`), real capture fixtures,

@@ -7,6 +7,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Fft
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Spectral
@@ -20,6 +21,7 @@ import kotlin.math.log2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tanh
@@ -95,6 +97,9 @@ object KitFromAnything {
 
     /** Half-width, in Spectral bins (43 Hz each), of the colour envelope's smoothing: about a kilohertz across. */
     private const val COLOUR_SMOOTH = 12
+
+    /** The frozen noise's analysis window: 1024 samples at the arrival, Spectral's own frame length. */
+    private const val NOISE_WINDOW = 1024
 
     /** The whitening floor: what the source cannot be flattened into within −50 dB is not forced. */
     private const val WHITEN_FLOOR = 0.00316f
@@ -177,13 +182,19 @@ object KitFromAnything {
         val isBass: Boolean get() = pad in 9..12
         val isTone: Boolean get() = pad in 13..16
 
-        /** Root, third, fifth, octave as scale degrees: the scale's own third (minor or major). */
+        /**
+         * Root, third, fifth, octave by semitone interval, never by array index: a pentatonic's
+         * third entry is its fourth. The third is whichever of 3 or 4 semitones the scale holds;
+         * CHROMATIC holds both and takes the minor third (the kit's home register is a dark one).
+         * A scale with neither (none shipped) falls back to the minor third; the fifth is 7 when the
+         * scale has it and 7 anyway when it does not, because a bass without a fifth is not a bass.
+         */
         fun degreeSemitones(key: KeySpec): Int {
             val iv = key.scale.intervals
             return when (pad) {
                 9, 13 -> 0
-                10, 14 -> iv.getOrElse(2) { 4 }
-                11, 15 -> iv.firstOrNull { it == 7 } ?: iv.getOrElse(4) { 7 }
+                10, 14 -> if (3 in iv) 3 else if (4 in iv) 4 else 3
+                11, 15 -> 7
                 12, 16 -> 12
                 else -> 0
             }
@@ -210,6 +221,8 @@ object KitFromAnything {
         val colour: FloatArray,
         val hash: Int,
         val sourceClass: DrumClass,
+        /** The whitened source's 1024 samples at the arrival, computed once: every slot's noise is frozen from this. */
+        val whiteArrival: FloatArray,
     ) {
         /** The siren's base: where the source sounds, or A4 when it has no note. */
         val baseHz: Float get() = if (pitched) hz else UNPITCHED_BASE_HZ
@@ -249,6 +262,9 @@ object KitFromAnything {
                 Slot.SIREN -> siren(a, s)
                 else -> note(a, s, midiFor(slot, key), slot.isBass)
             }
+            // the house tail fade before anything measures or writes the pad: a pad cut at the LOOP
+            // line still carries an envelope 30 dB down, which clicks without it
+            Dsp.fadeTail(samples, 4f, RATE)
             val snip = Snip(samples, 1, RATE)
             val gate = gate(slot, snip, a, s, key)
             gates += gate
@@ -291,6 +307,7 @@ object KitFromAnything {
         val seconds = mono.size.toFloat() / RATE
         require(seconds >= MIN_SOURCE_SECONDS) { "a source under ${(MIN_SOURCE_SECONDS * 1000).toInt()} ms has nothing to quarry (got %.0f ms)".format(java.util.Locale.ROOT, seconds * 1000) }
         require(seconds <= MAX_SOURCE_SECONDS) { "a source over ${MAX_SOURCE_SECONDS.toInt()} s is a recording, not a hit; chop it first (got %.1f s)".format(java.util.Locale.ROOT, seconds) }
+        require(mono.all { it.isFinite() }) { "the source holds samples that are not numbers (NaN or infinity)" }
         require(mono.any { it != 0f }) { "the source is silent" }
 
         // the arrival: the loudest 5 ms block, where everything that reads the source starts
@@ -346,7 +363,12 @@ object KitFromAnything {
         }
         for (b in 0 until Spectral.BINS) colour[b] = max(colour[b] / max(peak, 1e-9f), 0.01f)
 
-        return Analysis(mono, bestAt, pitched, hz, cycle, colour, mono.contentHashCode(), sourceClass)
+        // whitening is two full-source spectral passes; it depends on the source alone, so it runs once
+        // here and not once per slot (six slots freeze their noise from this window)
+        val white = whiten(mono)
+        val whiteArrival = FloatArray(NOISE_WINDOW) { i -> if (bestAt + i < white.size) white[bestAt + i] else 0f }
+
+        return Analysis(mono, bestAt, pitched, hz, cycle, colour, mono.contentHashCode(), sourceClass, whiteArrival)
     }
 
     /** Eight consecutive periods from the arrival, each resampled to [TABLE] points, averaged: one clean cycle that wraps by construction. */
@@ -453,10 +475,7 @@ object KitFromAnything {
      * gates a snare (0.25) and a clap (0.35) must clear are met.
      */
     internal fun noiseOf(a: Analysis, n: Int, seed: Int): FloatArray {
-        val white = whiten(a.mono)
-        val window = 1024
-        val seg = FloatArray(window) { i -> if (a.arrival + i < white.size) white[a.arrival + i] else 0f }
-        var noise = freeze(seg, 2 * n, seed)
+        var noise = freeze(a.whiteArrival, 2 * n, seed)
         repeat(4) {
             if (highShare(noise) >= 0.5f) return@repeat
             noise = speed(noise, 2f)
@@ -550,10 +569,17 @@ object KitFromAnything {
         return src[i] * (1 - f) + src[i + 1] * f
     }
 
-    /** The sampler's trick: read faster, it gets higher and shorter. */
+    /**
+     * The sampler's trick: read faster, it gets higher and shorter. Band-limited through the
+     * repository's windowed-sinc [Resampler] (the samples are converted to RATE / ratio and then
+     * played back at RATE), so a 10 kHz component read 4× faster leaves instead of folding to
+     * 4 kHz inside the ride's band, which a plain interpolated read did. A ratio under 1 reads
+     * slower and lower, the same way.
+     */
     internal fun speed(src: FloatArray, ratio: Float): FloatArray {
-        val n = max(1, (src.size / ratio).toInt())
-        return FloatArray(n) { i -> readAt(src, i.toDouble() * ratio) }
+        if (ratio == 1f || src.size < 2) return src.copyOf()
+        val targetRate = (RATE / ratio).roundToInt().coerceAtLeast(1000)
+        return Resampler.resample(Snip(src, 1, RATE), targetRate).samples
     }
 
     private fun tile(src: FloatArray, n: Int): FloatArray = FloatArray(n) { i -> src[i % src.size] }
@@ -823,13 +849,13 @@ object KitFromAnything {
             Slot.SIREN -> sirenGate(pad, a, s)
             else -> {
                 val target = Scales.midiToHz(midiFor(slot, key))
-                val est = Pitch.detect(pad, fromSec = 0.03f, windowSec = 0.3f)
+                val est = readPitch(pad, target, fromSec = 0.03f, windowSec = 0.3f)
                 if (est == null) GateResult(slot, Gate.UNMEASURED, "no pitch read")
                 else {
-                    val cents = 1200f * log2(est.hz / target)
-                    val ok = abs(cents) <= 20f && est.confidence >= 0.3f
+                    val cents = 1200f * log2(est.first / target)
+                    val ok = abs(cents) <= 20f && est.second >= 0.3f
                     GateResult(slot, if (ok) Gate.PASS else Gate.FAIL,
-                        "%.1f Hz, %+.0f cents of ${Scales.nameOf(midiFor(slot, key))}, confidence %.2f".format(java.util.Locale.ROOT, est.hz, cents, est.confidence))
+                        "%.1f Hz, %+.0f cents of ${Scales.nameOf(midiFor(slot, key))}, confidence %.2f".format(java.util.Locale.ROOT, est.first, cents, est.second))
                 }
             }
         }
@@ -844,16 +870,32 @@ object KitFromAnything {
             val t0 = 0.02f + k * (s.sirenSec - 0.1f - win) / 7
             val tc = (t0 + win / 2) / s.sirenSec
             val expected = a.baseHz * 2f.pow(sirenSemitones(s, tc) / 12f)
-            val est = Pitch.detect(pad, fromSec = t0, windowSec = win) ?: continue
-            if (est.confidence < 0.3f) continue
+            val est = readPitch(pad, expected, fromSec = t0, windowSec = win) ?: continue
+            if (est.second < 0.3f) continue
             reads++
-            worst = max(worst, abs(1200f * log2(est.hz / expected)))
+            worst = max(worst, abs(1200f * log2(est.first / expected)))
         }
         return when {
             reads < 6 -> GateResult(Slot.SIREN, Gate.UNMEASURED, "$reads of 8 windows read; a sweep needs a short-window tracker")
             worst <= 150f -> GateResult(Slot.SIREN, Gate.PASS, "$reads of 8 windows on the trajectory, worst %.0f cents".format(java.util.Locale.ROOT, worst))
             else -> GateResult(Slot.SIREN, Gate.FAIL, "$reads of 8 windows read, worst %.0f cents off the trajectory".format(java.util.Locale.ROOT, worst))
         }
+    }
+
+    /**
+     * `Pitch.detect` reads 40 to 1200 Hz, and the kit's notes run from C1 (32.7 Hz) to a siren's
+     * 1760 Hz. The pad is read faster or slower by a power of two (band-limited, [speed]) until
+     * the expected pitch sits in 80 to 600 Hz, detected there, and the reading scaled back; the
+     * window and offset scale with it. Returns (hz, confidence) in the pad's own time, or null.
+     */
+    internal fun readPitch(pad: Snip, expectedHz: Float, fromSec: Float, windowSec: Float): Pair<Float, Float>? {
+        var ratio = 1f
+        var expect = expectedHz
+        while (expect < 80f && ratio < 8f) { ratio *= 2f; expect *= 2f }
+        while (expect > 600f && ratio > 0.125f) { ratio /= 2f; expect /= 2f }
+        val read = if (ratio == 1f) pad else Snip(speed(pad.samples, ratio), 1, RATE)
+        val est = Pitch.detect(read, fromSec = fromSec / ratio, windowSec = windowSec / ratio) ?: return null
+        return est.hz / ratio to est.confidence
     }
 
     @Suppress("unused")

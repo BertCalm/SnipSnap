@@ -43,7 +43,11 @@ object KitFromCommand {
         val dir = File(opts["--out"] ?: "snipsnap-out", name)
         if (dir.exists() && !opts.has("--overwrite")) throw CliError("$dir exists; pass --overwrite to replace it")
 
-        val source = WavReader.read(file)
+        // bounded: the 30 s limit is enforced by the reader before a long recording is decoded whole,
+        // not by analyse after the heap has already paid for it
+        val capped = WavReader.readCapped(file, maxDurationSec = KitFromAnything.MAX_SOURCE_SECONDS + 0.5f)
+        if (capped.truncated) throw CliError("${file.name} is over ${KitFromAnything.MAX_SOURCE_SECONDS.toInt()} s: a recording, not a hit; chop it first")
+        val source = capped.snip
         val result = try {
             KitFromAnything.assemble(source, key, genre)
         } catch (e: IllegalArgumentException) {

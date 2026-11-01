@@ -166,6 +166,45 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `thirds are chosen by interval, not by scale index`() {
+        val minorPent = KeySpec(9, Scale.MINOR_PENTATONIC)
+        assertEquals(3, Slot.BASS_THIRD.degreeSemitones(minorPent), "a minor pentatonic's third is three semitones, not its third entry (the fourth)")
+        assertEquals(4, Slot.TONE_THIRD.degreeSemitones(KeySpec(0, Scale.MAJOR_PENTATONIC)))
+        assertEquals(4, Slot.BASS_THIRD.degreeSemitones(KeySpec(0, Scale.MAJOR)))
+        assertEquals(3, Slot.BASS_THIRD.degreeSemitones(KeySpec(0, Scale.CHROMATIC)), "chromatic takes the minor third")
+        assertEquals(7, Slot.BASS_FIFTH.degreeSemitones(minorPent))
+        val r = KitFromAnything.assemble(pluck, minorPent, Genre.HOUSE)
+        assertEquals("C2", r.pads[9]!!.source["rootNote"])
+    }
+
+    @Test
+    fun `a low key's bass sits under the pitch detector's floor and still reads`() {
+        val cMinor = KeySpec(0, Scale.MINOR)                       // BASS_ROOT is C1, 32.7 Hz
+        val r = KitFromAnything.assemble(pluck, cMinor, Genre.BOOM_BAP)
+        assertEquals("C1", r.pads[8]!!.source["rootNote"])
+        for (g in r.gates.filter { it.slot.isBass }) assertEquals(Gate.PASS, g.gate, "${g.slot.name}: ${g.detail}")
+    }
+
+    @Test
+    fun `a high source's climbing siren passes the detector's ceiling and still reads`() {
+        val n = (0.6f * rate).toInt()
+        val high = Snip(FloatArray(n) { i -> (sin(2.0 * PI * 880 * i / rate) * exp(-i / (0.25 * rate))).toFloat() }, 1, rate)
+        val r = KitFromAnything.assemble(high, key, Genre.TECHNO)   // a climb of 12 semitones: 880 to 1760 Hz
+        assertTrue(r.analysis.pitched, "an 880 Hz sine is a note")
+        val g = r.gates.first { it.slot == Slot.SIREN }
+        assertEquals(Gate.PASS, g.gate, g.detail)
+    }
+
+    @Test
+    fun `every pad ends faded, never cut`() {
+        val r = KitFromAnything.assemble(pluck, key, Genre.HOUSE)
+        for ((i, pad) in r.pads.withIndex()) {
+            val x = pad!!.snip.samples
+            assertTrue(kotlin.math.abs(x[x.size - 1]) < 1e-3f, "${Slot.entries[i].name} ends at ${x[x.size - 1]}")
+        }
+    }
+
+    @Test
     fun `refusals come in words`() {
         val short = Snip(FloatArray((0.02f * rate).toInt()) { 0.5f }, 1, rate)
         val e1 = assertFailsWith<IllegalArgumentException> { KitFromAnything.assemble(short, key, Genre.HOUSE) }
@@ -175,6 +214,9 @@ class KitFromAnythingTest {
         assertTrue(e2.message!!.contains("44100"), e2.message)
         val silent = Snip(FloatArray(rate), 1, rate)
         assertFailsWith<IllegalArgumentException> { KitFromAnything.assemble(silent, key, Genre.HOUSE) }
+        val nan = Snip(FloatArray(rate) { if (it == 100) Float.NaN else 0.1f }, 1, rate)
+        val e3 = assertFailsWith<IllegalArgumentException> { KitFromAnything.assemble(nan, key, Genre.HOUSE) }
+        assertTrue(e3.message!!.contains("NaN"), e3.message)
     }
 
     @Test
