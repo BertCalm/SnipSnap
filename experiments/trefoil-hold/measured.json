@@ -14,9 +14,10 @@
       "persistent local notes and JSON export",
       "selected WAV download is mono PCM24 44.1k",
       "design, source, reports and listening pack links",
+      "both generated ZIPs pass CRC; all 18 fixed WAVs match Python bytes",
       "390px layout without overflow and actual playback"
     ],
-    "count": 11,
+    "count": 12,
     "errors": [],
     "failed_http": [],
     "desktop": [
@@ -92,5 +93,10 @@
       "release_last_second_rms": 6.104497791326002e-09,
       "total_ms": 3296.0387980000405
     }
+  },
+  "packaging": {
+    "expanded_limit_mib": 256,
+    "fixed_pcm24_derivation": "all 18 browser-generated files match Python bytes",
+    "zip_integrity": "both generated 21-file ZIPs pass CRC"
   }
 }

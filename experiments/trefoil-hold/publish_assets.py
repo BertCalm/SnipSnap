@@ -22,16 +22,16 @@ def main(audio,site):
                    recipe=r['recipe'],gain=r['gain'],returns=r['returns'],audio={})
         for kind in ('loop','returns','release'):
             src=audio/f'{name}-{kind}.wav'; shutil.copy2(src,destination/src.name)
-            x,rate=t.sk.read_wav(str(src)); filename=f'{name}-{kind}-fixed.wav'
-            t.write(destination/filename,x*(common/r['gain']))
-            entry['audio'][kind]={'matched':src.name,'fixed':filename}
+            entry['audio'][kind]={'matched':src.name,'fixed_scale':common/r['gain']}
+            (destination/f'{name}-{kind}-fixed.wav').unlink(missing_ok=True)
         manifest['cases'][name]=entry
     # Preserve and link the exact approved finite reference.
     finite=site/'dist/playable/audio/weave-2.wav'
     manifest['finite']={'url':'../playable/audio/weave-2.wav',
                         'sha256':hashlib.sha256(finite.read_bytes()).hexdigest()}
     report['packaging']={'fixed_gain':common,'fixed_gain_applies_to':'all six candidates, loops and releases',
-                         'fixed_wavs_derived_from':'conditioned PCM24 matched files, one scalar; no per-event processing'}
+                         'fixed_wavs_derived_from':'browser derives PCM24 fixed-gain copies with one scalar; no per-event processing',
+                         'listening_packs':'browser generates both ZIPs on demand to avoid hosting duplicate audio'}
     report['source']={'base_commit':'2f909395feee9962e15fcf60ea0feee0c16f1615',
                       'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=t.ROOT,text=True).strip(),
                       'branch':'claude/trefoil-held-proof','distribution':'local source commit; complete replay source in download',
@@ -48,11 +48,10 @@ def main(audio,site):
                 z.write(f,f.relative_to(t.ROOT))
         for name in ('snipkit.py','probes.py'):
             f=t.ROOT/'.claude/skills/luthier/scripts'/name; z.write(f,f.relative_to(t.ROOT))
-    for archive,fixed in [('trefoil-hold-listening.zip',False),('trefoil-hold-fixed-gain.zip',True)]:
-        with zipfile.ZipFile(destination/archive,'w',zipfile.ZIP_DEFLATED) as z:
-            for f in sorted(destination.glob('*.wav')):
-                if f.name.endswith('-fixed.wav')==fixed: z.write(f,f.name)
-            for name in ('manifest.json','report.json','DESIGN.md'): z.write(destination/name,name)
+    for archive in ('trefoil-hold-listening.zip','trefoil-hold-fixed-gain.zip'):
+        (destination/archive).unlink(missing_ok=True)
+    expanded=sum(f.stat().st_size for f in (site/'dist').rglob('*') if f.is_file())
+    if expanded>256*1024**2: raise ValueError('Site exceeds 256 MiB expanded archive budget')
     print(json.dumps({'destination':str(destination),'wav_count':len(report['published_wav_sha256']),
                       'common_gain':common,'checks':report['check_count']}))
 

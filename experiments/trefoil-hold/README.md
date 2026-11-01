@@ -145,8 +145,9 @@ python3 experiments/trefoil-hold/verify.py testkit/trefoil-held-proof
 ```
 
 The standalone source download includes this directory and the repository's
-`snipkit.py`/`probes.py` under their original paths. The page's packaging script
-adds fixed-gain copies from the same conditioned audio. Existing finite WAVs and
+`snipkit.py`/`probes.py` under their original paths. The browser derives fixed-gain
+PCM24 copies and listening ZIPs on demand from the same conditioned audio. This
+keeps duplicate audio out of the host's 256 MiB expanded archive limit. Existing finite WAVs and
 both MPC programs are preserved byte-for-byte. This round is a listening proof,
 with no changes to the production synth or app and no new Kotlin test claims.
 

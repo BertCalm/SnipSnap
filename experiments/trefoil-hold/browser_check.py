@@ -3,6 +3,9 @@ import argparse
 import json
 from pathlib import Path
 import wave
+import hashlib
+import zipfile
+import prototype as t
 
 from playwright.sync_api import sync_playwright
 
@@ -29,15 +32,15 @@ def main(url,output):
         checks.append('aligned A/B playback')
         page.evaluate('document.querySelector("#audio").pause();document.querySelector("#audio").currentTime=.8')
         page.locator('#level').select_option('fixed')
-        page.wait_for_function('document.querySelector("#audio").src.endsWith("still-loop-fixed.wav") && document.querySelector("#audio").readyState>=1 && document.querySelector("#audio").currentTime>.79')
+        page.wait_for_function('document.querySelector("#download").download==="still-loop-fixed.wav" && document.querySelector("#audio").src.startsWith("blob:") && document.querySelector("#audio").readyState>=1 && document.querySelector("#audio").currentTime>.79')
         assert page.locator('#audio').evaluate('(a)=>a.paused')
         checks.append('level switch preserves paused position')
         for name in ('no-exchange','memory'):
             page.locator(f'[data-case="{name}"][data-kind="loop"]').click()
-            page.wait_for_function('(name)=>document.querySelector("#audio").src.endsWith(name+"-loop-fixed.wav") && !document.querySelector("#audio").paused',arg=name)
+            page.wait_for_function('(name)=>document.querySelector("#download").download===name+"-loop-fixed.wav" && !document.querySelector("#audio").paused',arg=name)
         checks.append('exchange and memory comparisons')
         page.locator('[data-case="memory"][data-kind="release"]').click()
-        page.wait_for_function('document.querySelector("#audio").src.endsWith("memory-release-fixed.wav") && !document.querySelector("#audio").paused')
+        page.wait_for_function('document.querySelector("#download").download==="memory-release-fixed.wav" && !document.querySelector("#audio").paused')
         page.evaluate('document.querySelector("#audio").currentTime=6.5')
         page.wait_for_function('document.querySelector("#event").textContent.includes("stored energy is decaying")')
         checks.append('actual note-off playback and power-stop marker')
@@ -45,7 +48,7 @@ def main(url,output):
         assert page.locator('#audio').evaluate('(a)=>a.paused && a.currentTime===0')
         for name in ('bass','bright'):
             page.locator(f'[data-case="{name}"][data-kind="returns"]').click()
-            page.wait_for_function('(name)=>document.querySelector("#audio").src.endsWith(name+"-returns-fixed.wav") && !document.querySelector("#audio").paused',arg=name)
+            page.wait_for_function('(name)=>document.querySelector("#download").download===name+"-returns-fixed.wav" && !document.querySelector("#audio").paused',arg=name)
         checks.append('low and high register playback')
         page.locator('#finite').click()
         page.wait_for_function('document.querySelector("#audio").src.includes("playable/audio/weave-2.wav") && !document.querySelector("#audio").paused')
@@ -64,9 +67,23 @@ def main(url,output):
             assert (f.getnchannels(),f.getsampwidth(),f.getframerate())==(1,3,44100)
         checks.append('selected WAV download is mono PCM24 44.1k')
         page.locator('#evidence').evaluate('(d)=>d.open=true')
-        for href in ('DESIGN.md','report.json','manifest.json','trefoil-hold-source.zip','trefoil-hold-listening.zip','trefoil-hold-fixed-gain.zip'):
+        for href in ('DESIGN.md','report.json','manifest.json','trefoil-hold-source.zip'):
             response=context.request.head(url+href);assert response.status==200,(href,response.status)
         checks.append('design, source, reports and listening pack links')
+        for mode in ('matched','fixed'):
+            with page.expect_download(timeout=60000) as dl: page.locator('#pack-'+mode).click()
+            dl.value.save_as(str(output/(mode+'.zip')))
+        with zipfile.ZipFile(output/'matched.zip') as matched,zipfile.ZipFile(output/'fixed.zip') as fixed:
+            assert matched.testzip() is None and fixed.testzip() is None
+            assert len(matched.namelist())==len(fixed.namelist())==21
+            manifest=json.loads(matched.read('manifest.json'))
+            for name,c in manifest['cases'].items():
+                for kind,a in c['audio'].items():
+                    path=output/'expected-input.wav';path.write_bytes(matched.read(a['matched']))
+                    x,rate=t.sk.read_wav(str(path));expected=output/'expected-fixed.wav'
+                    t.write(expected,x*a['fixed_scale'])
+                    assert expected.read_bytes()==fixed.read(f'{name}-{kind}-fixed.wav')
+        checks.append('both generated ZIPs pass CRC; all 18 fixed WAVs match Python bytes')
         mobile=browser.new_context(viewport={'width':390,'height':844}).new_page()
         mobile.goto(url);mobile.wait_for_function('document.querySelector("#audio").readyState>=1')
         assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth')
