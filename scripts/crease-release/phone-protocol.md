@@ -69,3 +69,31 @@ separate host/emulator observations from physical phone/MPC evidence.
 4. Shared PCM16 keeps residency bounded and simulation out of live playing.
 5. A distinct study package preserves existing instrument/export contracts
    while giving the owner an installable, testable next build.
+
+## Second layout, fixed before its measurements
+
+The first layout remains a failed experiment: 717/721 cases passed; four
+fresh release positions at 290–293 ms exceeded the unchanged .025 peak limit
+(max .02873924). No old test failed. The first raw data and report remain in
+`testkit/crease-phone-release`.
+
+Round two uses the original N32 grid plus 2 ms captures from 0–64 ms and
+4 ms captures from 64–512 ms. This general interval rule covers a longer
+onset instead of adding captures at individual failed positions. It predicts
+309 tails / 33,547,698 PCM bytes, within 32 MiB. A diagnostic removal of every
+other first-round early capture exposed a 37.96 ms miss, so the denser spacing
+is retained across the whole first 64 ms. This is development evidence, not
+independent validation.
+
+Keep every previous 721 release position, now known development cases. Add
+200 fresh prefix and 200 fresh steady positions from seed 0x50484f4e, plus
+512 early positions at (i+.73) ms. Report their distinct membership explicitly.
+No retuning after these measurements; any failure blocks phone promotion.
+Sound, gain, reader, fade and all limits stay fixed.
+
+For the first phone proof, bundle this one immutable accepted cache in a
+separately installable study APK. Its own activity and native transport reuse
+the app's Oboe output-opening policy without changing normal pad banks or
+imports. This removes a premature file-format/import commitment while proving
+the actual touch-to-native release gesture. The cache is generated into the
+build, never a checked-in audio binary. A failed candidate cannot enter it.
