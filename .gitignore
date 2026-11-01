@@ -296,6 +296,7 @@ testkit/registers-audition-r5/
 testkit/registers-audition-r6/
 testkit/registers-depth-directions/
 testkit/registers-ensemble-refinement/
+testkit/registers-octave-balance/
 testkit/SnipSnap Skitter Kit/
 
 # OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
