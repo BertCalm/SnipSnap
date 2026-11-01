@@ -241,3 +241,50 @@ SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 Two real captures of yours (a tonal one and a drum-like one, a second or less, 44.1 kHz), the
 one genre to build first, and whether the four bass notes should be root-third-fifth-octave as
 here or a walking shape (root, flat seventh, octave, fifth) for boom bap.
+
+## As built (R0 and R1, 2026-11-01)
+
+`KitFromAnything` (`synth/src/main/kotlin/com/snipsnap/synth/KitFromAnything.kt`), its test,
+`ArrangedPad.muteGroup`, and the CLI verb `kitfrom <wav> [--key] [--genre] [--out] [--name]`.
+Python prototype numbers above; what follows was measured in Kotlin against the real
+classifier, on the same four stand-in sources (the Python prototype's WAVs) × three genres.
+
+**What changed against the design, and why (each one a number the Kotlin run gave):**
+
+1. *Which cycle a source yields is no longer the classifier's TONAL verdict.* `classifyBright`
+   has no TONAL arm, so a nylon pluck at A3 is PERC to the classifier and was forced into a
+   46 ms excerpt holding ten periods; sung at A1 it read 550 Hz (ten times the note). Now the
+   classifier vetoes only the noise classes (hats, clap) and the pitch detector decides: a
+   period at confidence 0.5 or better is a note (the siren's base, the provenance says
+   "pitched"); one at 0.3 or better still shapes the cycle, because any excerpt with a period
+   in it (a snare's 180 Hz body) reads as a harmonic of whatever it is sung at.
+2. *The source's noise is frozen, not stretched.* A short-window stretch walking along the
+   arrival followed its decay; every tile of that noise started loud and died, the open hat
+   read as a 70 ms closed hat and the ride decayed in 110 ms. The noise is now one 1024-point
+   window at the arrival with new seeded phases every frame (`Stretch.freeze`'s idea),
+   stationary by construction, then read faster until half its power is above 2 kHz.
+3. *The colour pressed back onto a note is the envelope, smoothed over a kilohertz.* Five-bin
+   smoothing kept a pitched source's harmonic lines, which carved the new note's own
+   harmonics out: a tone at A3 read 440 Hz. Formants survive the wider smoothing; lines do not.
+4. *The snare has a gentle 7 kHz shelf and more body* (0.8 noise, 0.5 body): the frozen noise
+   is brighter than the Python one, and the techno snare read as an open hat without it.
+
+**Measured, Kotlin, twelve kits, 192 pads, every pad gated:** 183 pass, 8 fail, 1 unmeasured.
+
+| Source | Gates failed |
+|---|---|
+| pluck (pitched 219.8 Hz) | none, in all three genres |
+| bark (forced) | none, in all three genres |
+| snare (forced) | TONE_ROOT and TONE_THIRD in every genre (read 116 to 118 cents sharp at confidence 0.83: the noise-dominated cycle's fundamental is weak, the case the tonal blend exists for); BASS_ROOT unmeasured in techno (no pitch read on a 160 ms note) |
+| sine-sweep kick (forced) | HAT_CLOSED and HAT_OPEN in boom bap only (PERC: at that genre's 5× read speed the sweep's noise does not reach 12 kHz; house and techno read faster and pass) |
+
+The sine sweep's snare and claps, the Python prototype's fallback set, pass in Kotlin: the
+frozen noise is brighter and flatter than the walked stretch was. The test suite asserts the
+agreements above on a pluck preset, a THUMP snare and a formant burst in every genre, ride and
+crash on four sources, the notes and the siren on the pitched source, and that a pure sine
+sweep keeps every pad and names what it failed.
+
+**Still owed, as the brief's rounds list:** the blend with `Desample` and QUARRY (R3), the
+recipe that re-renders a derived pad (R0, shared with QUARRY; today these pads are like
+captured pads, their WAV the truth, with full provenance in `source`), real capture fixtures,
+the pad sheet door (R4), and the listen. Nothing has been heard.
