@@ -153,12 +153,16 @@ class InstrumentStoreTest {
     fun `voice mode round-trips through the sidecar`() {
         val root = File(temp, "Voiced").apply { mkdirs() }
         val program = KeygroupProgram("Glider", listOf(Keygroup(0, 127, 60, listOf(VelocityLayer("g", 100, 0, 127)))),
-            voiceMode = VoiceMode.GLIDE)
+            voiceMode = VoiceMode.GLIDE, explicitNoteOn = true)
         InstrumentStore.write(root, "Glider", program, "Glider_[TrackData]")
         val sidecar = InstrumentStore.sidecar(root, "Glider")
         assertEquals("GLIDE", Json.parse(sidecar.readText()).obj().getValue("voiceMode").str())
+        assertEquals(true, Json.parse(sidecar.readText()).obj().getValue("explicitNoteOn").bool())
         assertEquals(2, Json.parse(sidecar.readText()).obj().getValue("version").int())
-        assertEquals(VoiceMode.GLIDE, InstrumentStore.read(sidecar).voiceMode)
+        val loaded = InstrumentStore.read(sidecar)
+        assertEquals(VoiceMode.GLIDE, loaded.voiceMode)
+        assertTrue(loaded.explicitNoteOn)
+        assertTrue(loaded.toProgram().explicitNoteOn)
     }
 
     @Test

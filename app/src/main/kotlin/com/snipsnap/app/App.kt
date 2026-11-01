@@ -4558,7 +4558,7 @@ fun App(shelf: KitShelf) {
                                     onToast = { dock.say(it) },
                                     onSaved = { saved ->
                                         val fresh = inst.copy(instrument = saved)
-                                        openInstrument = fresh
+                                        if (openInstrument?.sidecar == inst.sidecar) openInstrument = fresh
                                         instruments = instruments.map { if (it.sidecar == inst.sidecar) fresh else it }
                                     },
                                 )

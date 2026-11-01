@@ -68,6 +68,8 @@ object InstrumentStore {
         val zones: List<Zone>,
         /** How the keys share the voice; a sidecar that does not say is polyphonic. */
         val voiceMode: VoiceMode = VoiceMode.POLY,
+        /** Whether the XPM declares an explicit NoteOn trigger. */
+        val explicitNoteOn: Boolean = false,
     ) {
         /**
          * [release] as a player may use it: finite, not negative, at most
@@ -89,8 +91,7 @@ object InstrumentStore {
 
         /**
          * The program this instrument was written from: one keygroup per zone, one layer per playable layer.
-         * It carries no `pitchBendRange` or `explicitNoteOn` because no package today sets either; add them
-         * to the sidecar before any maker does.
+         * It carries no `pitchBendRange`; trigger mode is preserved because some packages require an explicit NoteOn.
          */
         fun toProgram(): KeygroupProgram = KeygroupProgram(
             name = name,
@@ -106,6 +107,7 @@ object InstrumentStore {
                 )
             },
             volumeRelease = playableRelease,
+            explicitNoteOn = explicitNoteOn,
             voiceMode = voiceMode,
         )
     }
@@ -147,6 +149,7 @@ object InstrumentStore {
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
+                "explicitNoteOn" to JsonValue.Bool(program.explicitNoteOn),
                 "zones" to JsonValue.Arr(zones),
             ),
         )
@@ -223,7 +226,14 @@ object InstrumentStore {
             zone
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")
-        return Instrument(name, release, zones, voiceMode)
+        val explicitNoteOn = obj["explicitNoteOn"]?.bool() ?: legacyExplicitNoteOn(file, name, zones)
+        return Instrument(name, release, zones, voiceMode, explicitNoteOn)
+    }
+
+    private fun legacyExplicitNoteOn(file: File, name: String, zones: List<Zone>): Boolean {
+        val dataDirName = zones.first().sample.split('/', '\\').firstOrNull() ?: return false
+        val xpm = File(File(file.absoluteFile.parentFile, dataDirName), "$name.xpm")
+        return xpm.isFile && runCatching { "<TriggerMode>2</TriggerMode>" in xpm.readText() }.getOrDefault(false)
     }
 
     private val MIDI = 0..127

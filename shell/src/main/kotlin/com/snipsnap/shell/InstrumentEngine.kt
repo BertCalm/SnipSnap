@@ -71,6 +71,8 @@ class InstrumentEngine(
         var pos = 0.0
         var releasing = false
         var level = 1f
+        var choking = false
+        var chokeLevel = 1f
         var dead = false
     }
 
@@ -92,10 +94,10 @@ class InstrumentEngine(
         // LEAD and GLIDE are monophonic: a note that sounds chokes every voice still sounding, released ones included,
         // the way the steal below takes a voice. GLIDE's pitch slide is the hardware's; the player does not slide.
         if (instrument.instrument.voiceMode.mono) {
-            for (v in voices) v.dead = true
-        } else if (voices.count { !it.dead } >= maxVoices) {
+            for (v in voices) v.choking = true
+        } else if (voices.count { !it.dead && !it.choking } >= maxVoices) {
             // Steal the oldest.
-            voices.filter { !it.dead }.minByOrNull { it.born }?.dead = true
+            voices.filter { !it.dead && !it.choking }.minByOrNull { it.born }?.choking = true
         }
         voices.add(Voice(note, zoneIndex, sample, hit.loopStartFrame.toInt(), step, hit.gain, clock++))
         return true
@@ -119,6 +121,7 @@ class InstrumentEngine(
         java.util.Arrays.fill(out, 0, frames * 2, 0f)
         val releaseFrames = (instrument.instrument.playableRelease * outRate).coerceAtLeast(1f)
         val releaseStep = 1f / releaseFrames
+        val chokeStep = 1f / (CHOKE_FADE_SECONDS * outRate)
         for (v in voices) {
             if (v.dead) continue
             val s = v.sample
@@ -163,7 +166,14 @@ class InstrumentEngine(
                         break
                     }
                 }
-                val y = x * v.gain * v.level
+                if (v.choking) {
+                    v.chokeLevel -= chokeStep
+                    if (v.chokeLevel <= 0f) {
+                        v.dead = true
+                        break
+                    }
+                }
+                val y = x * v.gain * v.level * v.chokeLevel
                 out[i * 2] += y
                 out[i * 2 + 1] += y
                 v.pos += v.step
@@ -185,6 +195,7 @@ class InstrumentEngine(
 
     companion object {
         const val MAX_VOICES = 8
+        private const val CHOKE_FADE_SECONDS = 0.005f
 
         /**
          * Per-voice level: eight full-scale notes sum inside this engine's soft clip. [KeyHit]

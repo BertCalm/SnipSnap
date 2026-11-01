@@ -48,7 +48,7 @@ object InstrumentSuiteGenerator {
             val spanned = program.fullKeyboard()
             Mpc3TrackWriter().writeKeygroupTo(out, spanned)
             KeygroupWriter().writeTo(dataDir, spanned)
-            programs += program
+            programs += spanned
             samples += program.keygroups.sumOf { it.layers.size }
             println("wrote ${File(out, "$name.xty").absolutePath} (${program.keygroups.size} zones)")
         }

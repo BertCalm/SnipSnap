@@ -113,8 +113,6 @@ fun KeysScreen(
     // the player, so a superseded open's `finally` lowers the flag of the
     // player it was opening and never the new one's.
     var opening by remember(player) { mutableStateOf(true) }
-    // The screen's one report to the dock (the sink is a single slot).
-    ReportBusy(remember(opening) { if (opening) Busy(Copy.KEYS_LOADING_BUSY) else null })
     LaunchedEffect(player) {
         try {
             withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
@@ -133,7 +131,13 @@ fun KeysScreen(
     // reports through ReportBusy.
     var voiceMode by remember(sidecar, loadKey) { mutableStateOf(instrument.voiceMode) }
     var savingVoice by remember(sidecar, loadKey) { mutableStateOf(false) }
-    ReportBusy(remember(savingVoice) { if (savingVoice) Busy(Copy.KEYS_VOICE_BUSY) else null })
+    ReportBusy(remember(opening, savingVoice) {
+        when {
+            opening -> Busy(Copy.KEYS_LOADING_BUSY)
+            savingVoice -> Busy(Copy.KEYS_VOICE_BUSY)
+            else -> null
+        }
+    })
     val scope = rememberCoroutineScope()
     fun cycleVoiceMode() {
         // Not while the zones load: the player has no instrument to change yet, and the load would overwrite the choice.

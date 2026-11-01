@@ -309,17 +309,16 @@ object OneNote {
     fun rewriteDescriptors(destRoot: File, name: String, program: KeygroupProgram) {
         val (_, dataDir) = occupies(destRoot, name)
         check(dataDir.isDirectory) { "no package to rewrite: ${dataDir.name} is not in ${destRoot.path}" }
-        writeDescriptors(destRoot, dataDir, name, program)
+        writeDescriptors(destRoot, dataDir, name, program, spanKeyboard = false)
     }
 
     /**
      * All three descriptors carry the keyboard-spanning program (unless [spanKeyboard] is false); the
      * samples keep their own roots.
      *
-     * All-or-nothing: every descriptor is rendered before any is written, so a program that cannot render
-     * leaves the package as it was, and each file lands through [AtomicFile] so a failed write never leaves
-     * a torn one. The `.xpm` goes first, the sidecar last - it is the file the phone's shelf lists the
-     * package by.
+     * Every descriptor is rendered and its previous contents staged before any is written. Each replacement
+     * is atomic, and a failed replacement rolls back descriptors already written. The `.xpm` goes first,
+     * the sidecar last - it is the file the phone's shelf lists the package by.
      */
     private fun writeDescriptors(
         destRoot: File,
@@ -332,8 +331,33 @@ object OneNote {
         val xty = Mpc3TrackWriter().writeKeygroup(written)
         val xpm = KeygroupWriter().write(written)
         val sidecar = InstrumentStore.render(written, dataDir.name)
-        AtomicFile.writeText(File(dataDir, "${written.name}.xpm"), xpm)
-        AtomicFile.writeBytes(File(destRoot, "${written.name}.xty"), xty)
-        AtomicFile.writeText(InstrumentStore.sidecar(destRoot, name), sidecar)
+        replaceDescriptors(
+            listOf(
+                File(dataDir, "${written.name}.xpm") to xpm.toByteArray(Charsets.UTF_8),
+                File(destRoot, "${written.name}.xty") to xty,
+                InstrumentStore.sidecar(destRoot, name) to sidecar.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
+    private fun replaceDescriptors(updates: List<Pair<File, ByteArray>>) {
+        val previous = updates.associate { (file, _) -> file to file.takeIf { it.isFile }?.readBytes() }
+        val replaced = mutableListOf<File>()
+        try {
+            for ((file, bytes) in updates) {
+                AtomicFile.writeBytes(file, bytes)
+                replaced += file
+            }
+        } catch (failure: Throwable) {
+            for (file in replaced.asReversed()) {
+                try {
+                    val bytes = previous.getValue(file)
+                    if (bytes == null) file.delete() else AtomicFile.writeBytes(file, bytes)
+                } catch (rollbackFailure: Throwable) {
+                    failure.addSuppressed(rollbackFailure)
+                }
+            }
+            throw failure
+        }
     }
 }
