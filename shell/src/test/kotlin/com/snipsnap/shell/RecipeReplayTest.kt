@@ -220,4 +220,14 @@ class RecipeReplayTest {
         assertTrue(before.contentEquals(bytes(m, 2)))
         assertNull(m.pad(2)!!.recipe)
     }
+
+    @Test
+    fun `a KIT FROM ANYTHING recipe is refused by name - it belongs to its own source`() {
+        val recipe = com.snipsnap.synth.KitFromAnything.Recipe(
+            com.snipsnap.synth.KitFromAnything.Slot.SNARE, com.snipsnap.synth.KitFromAnything.Genre.HOUSE,
+            com.snipsnap.audio.KeySpec(9, com.snipsnap.audio.Scale.MINOR), com.snipsnap.synth.KitFromAnything.SOURCE_FILE, 42,
+        ).toJsonValue()
+        assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_KITFROM), RecipeReplay.plan(recipe))
+        assertEquals("KIT FROM ANYTHING SNARE (HOUSE, A MINOR)", KitDiff.recipeName(recipe))
+    }
 }

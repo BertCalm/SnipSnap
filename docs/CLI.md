@@ -942,7 +942,15 @@ head for a bass or tone, a band-limited pulse along the same trajectory
 for the siren. The blend is gated again and the table says what joined
 and what the gate said afterwards; the pad's provenance keeps the purist
 verdict on record beside it. A pad the probe cannot read says
-`unmeasured`, never `fail`, and stays purist. Design and numbers:
+`unmeasured`, never `fail`, and stays purist. The kit folder keeps the
+source as `kitfrom-source.wav` beside `kit.json`, the kit is made from
+that copy read back, and every pad carries a recipe (`kitFromAnything`:
+slot, genre, key, the source file and its hash) that rebuilds it from the
+folder alone; `kitfrom --check <kit-dir>` rebuilds every such pad and
+says, pad by pad, whether the WAV on disk is the rebuild byte for byte
+(exit 1 on a difference, and a swapped source is refused in words). The
+recipe cannot be pasted onto another pad: it belongs to its own source,
+and COPY LAST TREATMENT says so. Design and numbers:
 `docs/superpowers/specs/2026-11-01-kit-from-anything-design-brief.md`.
 
 ### `retune <kit-dir> <pad>` — the spectral retune

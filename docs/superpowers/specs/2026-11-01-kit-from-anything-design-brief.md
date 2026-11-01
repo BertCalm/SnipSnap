@@ -312,6 +312,21 @@ deterministic. Measured and kept as a limit: the sine sweep's blended hats still
 the classifier with the sweep's own noise held at half, and the pad says so in
 `gateAfterBlend`; the cap is the rule, and a louder partner would have been a replacement.
 
-**Still owed:** the recipe that re-renders a derived pad (R0, shared with QUARRY; today these
-pads are like captured pads, their WAV the truth, with full provenance in `source`), real
-capture fixtures, the pad sheet door (R4), and the listen. Nothing has been heard.
+**R0, the recipe (built 2026-11-01).** A derived pad is neither a synth patch nor a captured
+pad's chain; its recipe is the third shape: `{"kitFromAnything": {version, slot, genre, root,
+scale, sourceFile, sourceHash}}`. The kit folder keeps the source as `kitfrom-source.wav`
+beside `kit.json`, and the kit is made from that copy read back, so the recipe's hash is the
+hash of the file in the folder. `KitFromAnything.rerender(recipe, source)` rebuilds the pad,
+blend included, bit for bit (the assembler is deterministic from these alone), and refuses in
+words a source whose hash is not the recipe's. `KitFromAnything.check(dir)` rebuilds every such
+pad in a kit and compares the bytes the house writer would produce with the WAV on disk;
+`kitfrom --check <kit-dir>` prints it pad by pad and exits 1 on a difference. The shell's
+replay door refuses the recipe by name (it belongs to its own source) and `KitDiff` names it.
+QUARRY, when it ships as an engine, will need the same kept-source arrangement; the decision
+is made here once. Tests: JSON round-trip and a wrong shape named; every pad of a sweep kit
+and a pluck kit rebuilt bit for bit, blends included, and no recipe without a kept source; a
+swapped source refused; the CLI keeps the source, gives every pad a recipe, `--check` reports
+sixteen of sixteen identical, and a halved source is caught.
+
+**Still owed:** real capture fixtures, the pad sheet door (R4), and the listen. Nothing has been
+heard.

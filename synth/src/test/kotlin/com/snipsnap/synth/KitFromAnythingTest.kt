@@ -273,6 +273,44 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `a recipe round-trips through JSON and names a wrong shape in words`() {
+        val r = KitFromAnything.Recipe(Slot.CLAP, Genre.TECHNO, KeySpec(3, Scale.MAJOR_PENTATONIC), "kitfrom-source.wav", 123456)
+        val back = KitFromAnything.Recipe.fromJsonValue(r.toJsonValue())
+        assertEquals(r, back)
+        assertNull(KitFromAnything.Recipe.fromJsonValue(com.snipsnap.json.JsonValue.Obj(linkedMapOf("recipe" to com.snipsnap.json.JsonValue.Num(2.0)))), "another recipe shape is not ours")
+        assertNull(KitFromAnything.Recipe.fromJsonValue(null))
+        val e = assertFailsWith<com.snipsnap.json.JsonException> {
+            KitFromAnything.Recipe.fromJsonValue(com.snipsnap.json.JsonValue.Obj(linkedMapOf(
+                KitFromAnything.Recipe.KEY to com.snipsnap.json.JsonValue.Obj(linkedMapOf("version" to com.snipsnap.json.JsonValue.Num(1.0))),
+            )))
+        }
+        assertTrue(e.message!!.contains("slot"), e.message)
+    }
+
+    @Test
+    fun `every pad rebuilds bit for bit from its recipe and the source, blends included`() {
+        for ((label, src, genre) in listOf(Triple("sweep", sweep, Genre.BOOM_BAP), Triple("pluck", pluck, Genre.HOUSE))) {
+            val r = KitFromAnything.assemble(src, key, genre, sourceFile = KitFromAnything.SOURCE_FILE)
+            for ((i, pad) in r.pads.withIndex()) {
+                val recipe = assertNotNull(KitFromAnything.Recipe.fromJsonValue(pad!!.recipe), "$label ${Slot.entries[i].name} carries a recipe")
+                assertEquals(Slot.entries[i], recipe.slot)
+                assertEquals(KitFromAnything.SOURCE_FILE, pad.source["sourceFile"])
+                val rebuilt = KitFromAnything.rerender(recipe, src)
+                assertContentEquals(pad.snip.samples, rebuilt.samples, "$label ${Slot.entries[i].name} rebuilt")
+            }
+        }
+        assertNull(KitFromAnything.assemble(pluck, key, Genre.HOUSE).pads[0]!!.recipe, "without a kept source there is no recipe to make a promise with")
+    }
+
+    @Test
+    fun `a swapped source is refused in words, never rendered into a different kit`() {
+        val r = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP, sourceFile = KitFromAnything.SOURCE_FILE)
+        val recipe = KitFromAnything.Recipe.fromJsonValue(r.pads[0]!!.recipe)!!
+        val e = assertFailsWith<IllegalArgumentException> { KitFromAnything.rerender(recipe, pluck) }
+        assertTrue(e.message!!.contains("not the one this pad was made from"), e.message)
+    }
+
+    @Test
     fun `refusals come in words`() {
         val short = Snip(FloatArray((0.02f * rate).toInt()) { 0.5f }, 1, rate)
         val e1 = assertFailsWith<IllegalArgumentException> { KitFromAnything.assemble(short, key, Genre.HOUSE) }

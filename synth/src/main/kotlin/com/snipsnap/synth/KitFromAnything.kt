@@ -278,35 +278,20 @@ object KitFromAnything {
     /**
      * One source into sixteen pads. [source] is any capture at the MPC rate;
      * stereo is folded to mono. Throws [IllegalArgumentException] in words
-     * for a source too short or too long to quarry.
+     * for a source too short or too long to quarry. With [sourceFile], the
+     * name the kit folder keeps the source under, every pad also carries a
+     * [Recipe] that rebuilds it from that file and the sidecar alone.
      */
-    fun assemble(source: Snip, key: KeySpec, genre: Genre): Result {
+    fun assemble(source: Snip, key: KeySpec, genre: Genre, sourceFile: String? = null): Result {
         val a = analyse(source)
         val s = genre.style
         val pads = ArrayList<ArrangedPad?>(16)
         val gates = ArrayList<GateResult>(16)
         val blends = ArrayList<Blend>()
         for (slot in Slot.entries) {
-            val samples = when (slot) {
-                Slot.KICK -> kick(a, s, seed(a, slot, genre))
-                Slot.SNARE -> snare(a, s, seed(a, slot, genre))
-                Slot.HAT_CLOSED -> hat(a, s, s.hatClosedMs, seed(a, slot, genre))
-                Slot.HAT_OPEN -> hat(a, s, s.hatOpenMs, seed(a, slot, genre))
-                Slot.CLAP -> clap(a, s, seed(a, slot, genre))
-                Slot.RIDE -> ride(a, s, seed(a, slot, genre))
-                Slot.CRASH -> crash(a, s, seed(a, slot, genre))
-                Slot.SIREN -> siren(a, s)
-                else -> note(a, s, midiFor(slot, key), slot.isBass)
-            }
-            // the house tail fade before anything measures or writes the pad: a pad cut at the LOOP
-            // line still carries an envelope 30 dB down, which clicks without it
-            Dsp.fadeTail(samples, 4f, RATE)
-            val purist = Snip(samples, 1, RATE)
-            val gate = gate(slot, purist, a, s, key)
-            gates += gate
-            val blend = if (gate.gate == Gate.FAIL) blend(slot, purist, a, s, key, genre) else null
-            val snip = blend?.first ?: purist
-            if (blend != null) blends += blend.second
+            val made = renderSlot(slot, a, s, key, genre)
+            gates += made.gate
+            made.blend?.let { blends += it }
             val provenance = linkedMapOf(
                 "madeBy" to "KIT FROM ANYTHING v$VERSION",
                 "slot" to slot.name,
@@ -318,12 +303,11 @@ object KitFromAnything {
                     a.periodic -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), a period at %.1f Hz shaped the cycle".format(java.util.Locale.ROOT, a.hz)
                     else -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), the cycle forced"
                 },
-                "made" to if (blend == null) "purist" else "blend",
-                "gate" to gate.gate.name.lowercase(),
-                "gateDetail" to gate.detail,
+                "made" to if (made.blend == null) "purist" else "blend",
+                "gate" to made.gate.gate.name.lowercase(),
+                "gateDetail" to made.gate.detail,
             )
-            if (blend != null) {
-                val b = blend.second
+            made.blend?.let { b ->
                 provenance["synth"] = b.synth
                 provenance["synthShare"] = "%.2f".format(java.util.Locale.ROOT, b.share)
                 if (b.distance != null) provenance["synthDistance"] = "%.3f".format(java.util.Locale.ROOT, b.distance) + if (b.far) " (far: the nearest patch is a stranger)" else ""
@@ -334,15 +318,140 @@ object KitFromAnything {
                 provenance["rootMidi"] = midiFor(slot, key).toString()
                 provenance["rootNote"] = Scales.nameOf(midiFor(slot, key))
             }
+            if (sourceFile != null) provenance["sourceFile"] = sourceFile
             pads += ArrangedPad(
-                snip = snip,
+                snip = made.snip,
                 drumClass = slot.tag,
                 muteGroup = slot.muteGroup,
                 displayName = slot.label,
                 source = provenance,
+                recipe = sourceFile?.let { Recipe(slot, genre, key, it, a.hash).toJsonValue() },
             )
         }
         return Result(pads, gates, a, blends)
+    }
+
+    /** One slot's pad as the kit gets it: the purist render, its gate, and the blend when the gate failed. */
+    private class Made(val snip: Snip, val gate: GateResult, val blend: Blend?)
+
+    private fun renderSlot(slot: Slot, a: Analysis, s: Style, key: KeySpec, genre: Genre): Made {
+        val samples = when (slot) {
+            Slot.KICK -> kick(a, s, seed(a, slot, genre))
+            Slot.SNARE -> snare(a, s, seed(a, slot, genre))
+            Slot.HAT_CLOSED -> hat(a, s, s.hatClosedMs, seed(a, slot, genre))
+            Slot.HAT_OPEN -> hat(a, s, s.hatOpenMs, seed(a, slot, genre))
+            Slot.CLAP -> clap(a, s, seed(a, slot, genre))
+            Slot.RIDE -> ride(a, s, seed(a, slot, genre))
+            Slot.CRASH -> crash(a, s, seed(a, slot, genre))
+            Slot.SIREN -> siren(a, s)
+            else -> note(a, s, midiFor(slot, key), slot.isBass)
+        }
+        // the house tail fade before anything measures or writes the pad: a pad cut at the LOOP
+        // line still carries an envelope 30 dB down, which clicks without it
+        Dsp.fadeTail(samples, 4f, RATE)
+        val purist = Snip(samples, 1, RATE)
+        val gate = gate(slot, purist, a, s, key)
+        if (gate.gate != Gate.FAIL) return Made(purist, gate, null)
+        val (blended, blend) = blend(slot, purist, a, s, key, genre)
+        return Made(blended, gate, blend)
+    }
+
+    // ---------------------------------------------------------------- the recipe (round zero)
+
+    /** The file name a kit folder keeps its source under, beside `kit.json`. */
+    const val SOURCE_FILE = "kitfrom-source.wav"
+
+    /**
+     * A derived pad's recipe: not a synth patch (nothing renders from nothing) and not a captured
+     * pad's chain (the WAV is not the truth, the source is), but the third shape the brief's R0
+     * named: which slot, which genre, which key, and which file in the kit folder is the source,
+     * with the hash the assembler read it under so a swapped file is refused in words rather than
+     * rendered into a different kit. Everything the assembler does is deterministic from these, so
+     * [rerender] rebuilds the pad bit for bit. Serialized under the top-level key [KEY], which
+     * the shell's replay door recognises and refuses by name: this recipe belongs to its own
+     * kit's source and cannot be pasted onto another pad.
+     */
+    data class Recipe(
+        val slot: Slot,
+        val genre: Genre,
+        val key: KeySpec,
+        val sourceFile: String,
+        val sourceHash: Int,
+        val version: Int = VERSION,
+    ) {
+        fun toJsonValue(): com.snipsnap.json.JsonValue.Obj = com.snipsnap.json.JsonValue.Obj(linkedMapOf(
+            KEY to com.snipsnap.json.JsonValue.Obj(linkedMapOf(
+                "version" to com.snipsnap.json.JsonValue.Num(version.toDouble()),
+                "slot" to com.snipsnap.json.JsonValue.Str(slot.name),
+                "genre" to com.snipsnap.json.JsonValue.Str(genre.name),
+                "root" to com.snipsnap.json.JsonValue.Num(key.rootSemitone.toDouble()),
+                "scale" to com.snipsnap.json.JsonValue.Str(key.scale.name),
+                "sourceFile" to com.snipsnap.json.JsonValue.Str(sourceFile),
+                "sourceHash" to com.snipsnap.json.JsonValue.Num(sourceHash.toDouble()),
+            )),
+        ))
+
+        companion object {
+            const val KEY = "kitFromAnything"
+
+            /** The recipe under [KEY], or null when [value] is some other recipe. Throws in words when the shape is wrong. */
+            fun fromJsonValue(value: com.snipsnap.json.JsonValue?): Recipe? {
+                val obj = (value as? com.snipsnap.json.JsonValue.Obj) ?: return null
+                val r = (obj.entries[KEY] as? com.snipsnap.json.JsonValue.Obj) ?: return null
+                val e = r.entries
+                fun str(k: String) = (e[k] as? com.snipsnap.json.JsonValue.Str)?.value ?: throw com.snipsnap.json.JsonException("a $KEY recipe wants '$k'")
+                fun num(k: String) = (e[k] as? com.snipsnap.json.JsonValue.Num)?.value ?: throw com.snipsnap.json.JsonException("a $KEY recipe wants '$k'")
+                val version = num("version").toInt()
+                if (version != VERSION) throw com.snipsnap.json.JsonException("a $KEY recipe of version $version; this build renders version $VERSION")
+                val slot = Slot.entries.firstOrNull { it.name == str("slot") } ?: throw com.snipsnap.json.JsonException("unknown slot '${str("slot")}'")
+                val genre = Genre.entries.firstOrNull { it.name == str("genre") } ?: throw com.snipsnap.json.JsonException("unknown genre '${str("genre")}'")
+                val scale = com.snipsnap.audio.Scale.entries.firstOrNull { it.name == str("scale") } ?: throw com.snipsnap.json.JsonException("unknown scale '${str("scale")}'")
+                return Recipe(slot, genre, KeySpec(num("root").toInt(), scale), str("sourceFile"), num("sourceHash").toInt(), version)
+            }
+        }
+    }
+
+    /**
+     * The pad [recipe] describes, rebuilt from [source], which must be the file the recipe names
+     * read back from the kit folder: its hash is checked and a different file is refused in words.
+     * Deterministic, so the result is the pad the assembler wrote, bit for bit.
+     */
+    fun rerender(recipe: Recipe, source: Snip): Snip {
+        val a = analyse(source)
+        require(a.hash == recipe.sourceHash) {
+            "the source in the kit folder (${recipe.sourceFile}) is not the one this pad was made from: hash ${a.hash}, recipe says ${recipe.sourceHash}"
+        }
+        return renderSlot(recipe.slot, a, recipe.genre.style, recipe.key, recipe.genre).snip
+    }
+
+    /** One pad's rebuild checked against the WAV in its kit folder. */
+    data class Check(val slot: Slot, val pad: Int, val identical: Boolean, val detail: String)
+
+    /**
+     * Every KIT FROM ANYTHING pad in the kit at [dir], rebuilt from the sidecar and the source file
+     * and compared byte for byte with the WAV on disk, through the same writer the assembler used.
+     * Pads without a [Recipe] are not listed: they are someone else's promise.
+     */
+    fun check(dir: java.io.File): List<Check> {
+        val kit = com.snipsnap.kit.KitStore.load(dir)
+        val sources = HashMap<String, Snip>()
+        val out = ArrayList<Check>()
+        for (pad in kit.pads) {
+            val recipe = try { Recipe.fromJsonValue(pad.recipe) } catch (e: com.snipsnap.json.JsonException) {
+                out += Check(Slot.entries.firstOrNull { it.pad == pad.slot } ?: Slot.KICK, pad.slot, false, e.message ?: "unreadable recipe"); continue
+            } ?: continue
+            val file = java.io.File(dir, recipe.sourceFile)
+            if (!file.isFile) { out += Check(recipe.slot, pad.slot, false, "source ${recipe.sourceFile} is missing from the kit folder"); continue }
+            val source = sources.getOrPut(recipe.sourceFile) { com.snipsnap.audio.WavReader.read(file) }
+            val rebuilt = try { rerender(recipe, source) } catch (e: IllegalArgumentException) {
+                out += Check(recipe.slot, pad.slot, false, e.message ?: "cannot rebuild"); continue
+            }
+            val bytes = java.io.ByteArrayOutputStream().also { com.snipsnap.audio.WavWriter.write(it, rebuilt) }.toByteArray()
+            val onDisk = java.io.File(dir, pad.sampleFile).readBytes()
+            val same = bytes.contentEquals(onDisk)
+            out += Check(recipe.slot, pad.slot, same, if (same) "rebuilt bit for bit (${bytes.size} bytes)" else "rebuilt ${bytes.size} bytes, on disk ${onDisk.size}: differs")
+        }
+        return out
     }
 
     // ---------------------------------------------------------------- the blend (round three)
