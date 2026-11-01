@@ -11,7 +11,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextReplacement
@@ -19,7 +18,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
@@ -91,32 +89,6 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             ?: error("No slider action for $label")
         compose.runOnIdle { assertTrue("Slider refused for $label", action.invoke(value)) }
         pump()
-    }
-
-    /**
-     * The root shows only as the stepper row's readout ("ROOT C#4"), so the test reads it
-     * there and walks it with the ROOT buttons, an octave or a semitone a press.
-     */
-    private fun currentRoot(): Int = (0..127).first {
-        compose.onAllNodesWithText("ROOT ${Scales.nameOf(it)}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-    }
-
-    private fun rootTo(target: Int) {
-        var presses = 0
-        while (currentRoot() != target) {
-            check(presses++ < 40) { "ROOT never reached $target from ${currentRoot()}" }
-            val gap = target - currentRoot()
-            press(when {
-                gap >= 12 -> "ROOT OCTAVE UP"
-                gap > 0 -> "ROOT UP"
-                gap <= -12 -> "ROOT OCTAVE DOWN"
-                else -> "ROOT DOWN"
-            })
-        }
-    }
-
-    private fun assertRoot(midi: Int) {
-        compose.onNodeWithText("ROOT ${Scales.nameOf(midi)}", useUnmergedTree = true).assertExists()
     }
 
     private fun progress(label: String): Float = compose
