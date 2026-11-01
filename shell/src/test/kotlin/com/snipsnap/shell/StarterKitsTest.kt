@@ -1,5 +1,8 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Rime
+import com.snipsnap.synth.RimePatch
+import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberVoice
@@ -91,6 +94,7 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
@@ -146,6 +150,9 @@ class StarterKitsTest {
         },
         "alloy" to OneEngine(AlloyPatch::class.java, AlloyVoice.entries.map { it.name }.toSet()) {
             (it as AlloyPatch).let { p -> Alloy.drumClassFor(p.voice, p.macros) }
+        },
+        "rime" to OneEngine(RimePatch::class.java, RimeVoice.entries.map { it.name }.toSet()) {
+            (it as RimePatch).let { p -> Rime.drumClassFor(p.voice, p.macros, p.gateSeconds, p.model) }
         },
         "contour" to OneEngine(ContourPatch::class.java, ContourVoice.entries.map { it.name }.toSet()) {
             (it as ContourPatch).let { p -> ContourEngine.drumClassFor(p.voice, p.macros) }
@@ -241,6 +248,20 @@ class StarterKitsTest {
                 val last = model.kit.pads.last()
                 val firstBytes = File(dir, first.sampleFile).readBytes()
                 val lastBytes = File(dir, last.sampleFile).readBytes()
+                // RIME lands native soft layers. Single-hit replay follows
+                // the same explicit clear-layers step as the editing door.
+                for (pad in listOf(first, last)) {
+                    if (pad.velocityLayers.isNotEmpty()) {
+                        val original = File(dir, pad.sampleFile).readBytes()
+                        assertFailsWith<IllegalArgumentException>("${starter.id}: replay must preserve the layered pad") {
+                            RecipeReplay.apply(model, pad.slot, pad.recipe!!, pad.displayName)
+                        }
+                        assertEquals(pad, model.kit.pad(pad.slot), "${starter.id}: refused replay leaves the layers intact")
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()))
+                        assertTrue(model.clearGhostLayers(pad.slot).velocityLayers.isEmpty())
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()), "clearing layers preserves the main hit")
+                    }
+                }
                 val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
                 assertEquals(first.recipe, firstAgain.pad.recipe, "${starter.id}: the first pad's recipe survives replay")
                 assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "${starter.id}: the first pad regenerates exactly")
@@ -535,7 +556,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

@@ -195,6 +195,7 @@ object Velocity {
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
         is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
@@ -388,6 +389,7 @@ object Velocity {
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
         is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
+        is RimePatch -> patch.copy(velocity = v).render()
         is LibrationPatch -> patch.copy(velocity = v).render()
         is ApsisPatch -> patch.copy(velocity = v).render()
         // UPRIGHT changes its released-string excitation. The existing five

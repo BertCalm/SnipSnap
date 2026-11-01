@@ -7,6 +7,29 @@ accounting, patch/recipe registration and `generateErosionAudition`. Native
 listening and validation remain pending; HOLD, factory presets, picker and a
 starter kit are deferred. See [EROSION.md](EROSION.md).
 
+**RIME — HOLD and integration build (2026-10-31).** The nine finite model-4 recipes
+remain exact. Model 5 adds finite gate extension and independently measured
+periodic sustain. Nine-root XTY/XPM instruments retain UNFOLD's opening; the
+phone picker exposes saved root, excitation velocity, gate and complete-patch
+recall. Additional voices and the planned expanded library await the missing
+original specification. Device, MPC hardware and new HOLD sonic acceptance
+remain open. See [RIME.md](RIME.md).
+
+Earlier finite-bank milestone:
+
+**RIME — nine-preset musical bank (2026-10-31).** LOOP, GLINT and VESSEL
+project the same finite Koch contour through two pickups into an eight-mode body.
+DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,
+gate, seed and model round-trip in the patch. Model 4 refines ANGLE's return travel,
+retaining the preferred model-3 anchors and all three starters sample-exact.
+Models 1 through 3 remain replayable.
+`RimePresets` now supplies three finite recipes per voice, with the three accepted
+starters kept explicit. `generateRimeAudition` supplies 189 clips, musical phrases,
+touch studies and the retained control bench. `generateRimeKit` exports sixteen
+editable, three-zone pads as MPC 3 XTD and MPC 2 XPM, with a four-bar pattern and
+complete layer provenance. Native one-shots and patches are separate downloads.
+HOLD is explicitly refused; phone integration and the full library follow listening.
+See [RIME.md](RIME.md). Owner sonic acceptance is pending.
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six

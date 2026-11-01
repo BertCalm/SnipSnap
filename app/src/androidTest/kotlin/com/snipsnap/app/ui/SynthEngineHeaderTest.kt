@@ -144,9 +144,13 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     fun theArrowsStepOneEngineEitherWayAndWrap() {
         show("LATTICE")
         isOn("LATTICE")
-        // LATTICE is the first engine in the enum and MERIDIAN the last.
+        // LATTICE is the first engine in the enum and RIME the last (MERIDIAN is second to last).
+        tap("PREVIOUS ENGINE")
+        isOn("RIME")
         tap("PREVIOUS ENGINE")
         isOn("MERIDIAN")
+        tap("NEXT ENGINE")
+        isOn("RIME")
         tap("NEXT ENGINE")
         isOn("LATTICE")
         tap("NEXT ENGINE")

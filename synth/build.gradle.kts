@@ -12,6 +12,30 @@ tasks.register<JavaExec>("generateFerryMatchAudition") {
     args(providers.gradleProperty("ferryMatchOutput").orNull ?: "${rootDir}/testkit/ferry-match-audition")
 }
 
+/** Nine finite RIME recipes as a sixteen-pad, three-zone MPC 3 / MPC 2 kit. */
+tasks.register<JavaExec>("generateRimeKit") {
+    group = "distribution"
+    description = "Export the RIME musical bank with native velocity zones, recipes and MPC programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("rimeKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** RIME finite first-listen bench; diagnostic recipes are replayable with -PrimeReplay. */
+tasks.register<JavaExec>("generateRimeAudition") {
+    group = "distribution"
+    description = "Render RIME's nine-preset musical bank, MPC kit, retained listening bench and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+    if (project.hasProperty("rimeQuick")) args("--quick")
+    providers.gradleProperty("rimeReplay").orNull?.let { args("--replay", it) }
+}
+
 tasks.register<JavaExec>("generateLibrationMusicalBank") {
     group = "distribution"
     description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."
@@ -2564,4 +2588,13 @@ tasks.register<JavaExec>("generateMeridianKit") {
     workingDir = projectDir
     maxHeapSize = "1536m"
     args(providers.gradleProperty("meridianKitOutput").orNull ?: "${rootDir}/testkit/meridian-kit")
+}
+
+/** Extend an existing finite listening pack with measured periodic HOLD comparisons. */
+tasks.register<JavaExec>("generateRimeHoldAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
 }

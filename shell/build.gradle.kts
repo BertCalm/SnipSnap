@@ -284,3 +284,12 @@ tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
 }
+
+/** Three native Rime keyboard instruments, each with nine attack-plus-loop zones. */
+tasks.register<JavaExec>("generateRimeInstruments") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
+}

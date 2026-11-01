@@ -221,6 +221,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.origami() },
         Starter(
+            "rime", "RIME",
+            "Contour bass, bright keys and unfolding bodies, with three native velocity layers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.rime() },
+        Starter(
             "filament", "FILAMENT",
             "Glass threads, pulsing routes and blooming curls in C minor pentatonic.",
             seeded = false,

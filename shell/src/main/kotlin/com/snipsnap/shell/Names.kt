@@ -35,7 +35,7 @@ object Names {
     val WORDS: List<String> = listOf(
         // weather
         "SLEET", "HAIL", "SQUALL", "GALE", "DRIZZLE", "MIST", "HAZE", "FROST", "GUST", "BREEZE",
-        "MONSOON", "FLURRY", "RIME", "DEW", "SMOG", "CYCLONE", "TYPHOON", "SLUSH", "THUNDER",
+        "MONSOON", "FLURRY", "DEW", "SMOG", "CYCLONE", "TYPHOON", "SLUSH", "THUNDER",
         "TORNADO", "BLIZZARD", "DOWNPOUR", "DROUGHT",
         // metal
         "ZINC", "IRON", "COPPER", "STEEL", "PEWTER", "SOLDER", "NICKEL", "TITANIUM", "BRONZE",

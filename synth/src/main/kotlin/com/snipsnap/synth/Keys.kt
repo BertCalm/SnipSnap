@@ -127,6 +127,18 @@ object Keys {
 
     const val HARP_LOW_MIDI = 52
 
+    /** Nine absolute roots centred on the saved note, within Rime's supported range. */
+    fun rimePadMidis(patch: RimePatch): List<Int> {
+        var low = patch.midi - 12
+        while (low < Rime.MIN_MIDI) low += 3
+        while (low + 24 > Rime.MAX_MIDI) low -= 3
+        return (low..low + 24 step 3).toList()
+    }
+
+    /** Retain the contour opening before the independently validated periodic sustain. */
+    fun rimePad(patch: RimePatch, midi: Int = patch.midi): KeyNote =
+        RimeHeld.render(patch.copy(midi = midi, macros = patch.macros + ("HOLD" to 1f))).note
+
     // ---------- RESIN, held ----------
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md
 
