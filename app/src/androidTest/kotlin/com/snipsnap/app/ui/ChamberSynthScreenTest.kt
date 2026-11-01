@@ -21,6 +21,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.EngineCatalog
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
@@ -145,16 +146,13 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
             assertFiniteControls()
         }
-        // The cycle continues through LIBRATION, MERIDIAN and RIME before wrapping to LATTICE.
+        // The cycle continues through whatever follows CHAMBER in the catalogue, then wraps to its first.
+        val ring = EngineCatalog.ENTRIES.keys.map { it.replace('_', ' ') }
         compose.onNodeWithContentDescription("ENGINE CHAMBER. CHOOSE ENGINE").assertExists()
-        press("NEXT ENGINE")
-        compose.onNodeWithContentDescription("ENGINE LIBRATION. CHOOSE ENGINE").assertExists()
-        press("NEXT ENGINE")
-        compose.onNodeWithContentDescription("ENGINE MERIDIAN. CHOOSE ENGINE").assertExists()
-        press("NEXT ENGINE")
-        compose.onNodeWithContentDescription("ENGINE RIME. CHOOSE ENGINE").assertExists()
-        press("NEXT ENGINE")
-        compose.onNodeWithContentDescription("ENGINE LATTICE. CHOOSE ENGINE").assertExists()
+        for (name in ring.drop(ring.indexOf("CHAMBER") + 1) + ring.first()) {
+            press("NEXT ENGINE")
+            compose.onNodeWithContentDescription("ENGINE $name. CHOOSE ENGINE").assertExists()
+        }
     }
 
     @Test
