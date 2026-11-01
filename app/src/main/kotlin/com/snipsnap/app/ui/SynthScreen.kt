@@ -2286,7 +2286,11 @@ fun SynthScreen(
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
         spreadOpening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
-        val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
+        val cls = when (patch) {
+            is OtisPatch -> Otis.drumClassFor(patch)
+            is OhmPatch -> Ohm.drumClassFor(patch)
+            else -> engine.drumClass(voice, macros)
+        }
         scope.launch {
             try {
                 val spreadJob = coroutineContext[Job]
@@ -2302,7 +2306,6 @@ fun SynthScreen(
                     // Authored roots survive chords, octave layers and upper
                     // shimmer that can outweigh the fundamental in detection.
                     val midi = when (patch) {
-                        is OtisPatch -> Otis.midiFor(patch).toFloat()
                         is OrphicaPatch -> Orphica.configWithMacros(patch.config, patch.macros).midi.toFloat()
                         else -> Spread.detect(rendered, patch)
                     }

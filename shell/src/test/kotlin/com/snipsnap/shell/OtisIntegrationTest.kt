@@ -2,6 +2,9 @@ package com.snipsnap.shell
 
 import com.snipsnap.synth.*
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.AutoPlace
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Scale
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.json.Json
@@ -10,6 +13,36 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.*
 
 class OtisIntegrationTest {
+    @Test fun `a short custom score spreads with its own duration class and complete recipe`() {
+        val source = OtisPresets.all().first { it.name == "SQUEEZE DRAW" }
+        val patch = source.copy(midi = 57, macros = source.macros + ("LENGTH" to 0f),
+            profile = source.profile.copy(events = source.profile.events.map { it.copy(gateSeconds = .04) }))
+        val audio = patch.render()
+        assertTrue(audio.durationSeconds < 1.5f)
+        val cls = Otis.drumClassFor(patch)
+        assertEquals(DrumClass.PERC, cls)
+        assertEquals(DrumClass.LOOP, Otis.drumClassFor(patch.voice, patch.macros),
+            "voice defaults cannot classify a saved custom score")
+        val directory = createTempDirectory("otis-spread").toFile()
+        try {
+            val model = KitBuilderModel.create("Otis spread", directory)
+            val root = assertNotNull(Spread.detect(audio, patch))
+            assertEquals(57f, root)
+            val plan = Spread.plan(model.kit, root, Spread.Options(57, Scale.MINOR, padCount = 4))
+            Spread.apply(model, audio, plan, Spread.Sound(patch.name, cls, AutoPlace.colorFor(cls),
+                recipe = PadRecipe(patch).toJsonValue()))
+            model.save()
+            val saved = KitBuilderModel.open(directory).kit.pads
+            assertEquals(listOf(0, 2, 3, 5), saved.map { it.tuneCoarse })
+            for (pad in saved) {
+                assertEquals(cls, pad.drumClass)
+                assertTrue(pad.oneShot && !pad.loop)
+                assertEquals(patch, PadRecipe.fromJsonValue(assertNotNull(pad.recipe)).patch)
+                assertEquals(audio.frameCount, WavReader.read(File(directory, pad.sampleFile)).frameCount)
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun `starter kit keeps all sixteen accepted performances finite and editable`() {
         val starter = assertNotNull(StarterKits.byId("otis"))
         val directory = createTempDirectory("otis-starter").toFile()

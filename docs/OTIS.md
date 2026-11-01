@@ -24,7 +24,8 @@ The finite sources are original SnipSnap implementations.
 - Full score, source details, MIDI anchor, authoring strength, seed and renderer
   version in every `OtisPatch`. Editing macros or renaming preserves that state.
 - Native source velocity, MAKE draft restoration, user-preset replay, CLI overrides,
-  a starter kit and a rebuildable MPC program. Pads play once.
+  SPREAD with the authored score root, a starter kit and a rebuildable MPC program.
+  Pads play once.
 
 The landing stays a finite performance collection. The accepted chords need one
 player-pressure trace for the whole score; they are not a stack of independent
@@ -47,10 +48,12 @@ preserve the sound even if a later factory preset changes.
 TUNE is centered at .5 and transposes the entire score, retaining chord intervals.
 The saved MIDI anchor spans 48..72; relative TUNE can reach wider notes, bounded so
 every event remains within 36..84. LENGTH defaults to .5 and scales finite onsets
-and gates from half to twice their saved timing. It never turns a chord into a loop.
+and gates from half to twice their saved timing, with a 40 ms gate floor. It never
+turns a chord into a loop.
 The readout shows the finite gesture duration. Shared defaults to .85; Harp keeps
 its Shared setting in the complete profile while its six controls expose bend and
-vibrato.
+vibrato. Use a CHORD or SHARED KEYS preset to hear Shared draw: a single
+reference-strength key leaves the player budget unloaded.
 
 Playing strength scales each event's saved velocity before the source, including
 the shared demand. Native velocity layers retain the authored strength ceiling and
