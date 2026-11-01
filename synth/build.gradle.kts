@@ -2476,3 +2476,13 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
 }
+
+/** Native EROSION one-shots, saved touch layers and diagnostic ledger. */
+tasks.register<JavaExec>("generateErosionAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ErosionAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("erosionOutput").orNull ?: "${rootDir}/testkit/erosion-native-audition")
+}
