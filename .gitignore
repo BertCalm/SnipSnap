@@ -295,6 +295,7 @@ testkit/registers-audition-r5/
 testkit/registers-audition-r6/
 testkit/registers-depth-directions/
 testkit/registers-ensemble-refinement/
+testkit/registers-octave-balance/
 testkit/SnipSnap Skitter Kit/
 
 # OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
@@ -347,6 +348,7 @@ testkit/SnipSnap-Flock-Kit.zip.sha256
 
 # WICK's listening audio, diagnostic evidence and MPC/source kit are regenerated.
 testkit/wick-audition/
+testkit/wick-source-study/
 testkit/.wick-work/
 testkit/SnipSnap Wick Prototype Kit/
 testkit/SnipSnap-Wick-Prototype-Kit.zip

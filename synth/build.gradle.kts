@@ -613,6 +613,17 @@ tasks.register<JavaExec>("generateWickAudition") {
     if (providers.gradleProperty("wickQuick").orNull == "true") args("--quick")
 }
 
+/** Same RATTLE movement with diagnostic alternate tonal bodies; normal patches stay fixed. */
+tasks.register<JavaExec>("generateWickSourceStudy") {
+    group = "distribution"
+    description = "Render four RATTLE source families at three notes, held notes and an identical phrase."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickSourceStudyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickSourceOutput").orNull ?: "${rootDir}/testkit/wick-source-study")
+}
+
 tasks.register<JavaExec>("generateWickKit") {
     group = "distribution"
     description = "Export the dry provisional WICK MPC 3 kit, MPC 2 program twin and regenerable recipes."
@@ -740,6 +751,17 @@ tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
     mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
+}
+
+/** Compare octave registration while keeping the calmer ensemble movement fixed. */
+tasks.register<JavaExec>("generateRegistersOctaveBalanceAudition") {
+    group = "distribution"
+    description = "Compare COLOR .42 and .65 at fixed calmer SPREAD and MOTION settings at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-octave-balance", "--octave-balance")
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
