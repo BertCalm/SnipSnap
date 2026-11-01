@@ -548,10 +548,12 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
 long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
-whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
+whole note feeding them, HEAD off), `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
-peak).
+peak) and `roomed` (a drum room: ROOM at its defaults, a live room with the mic
+about 1.35 m back; AMT moves only the mic, closer in the same room as it falls,
+so AMT 70 keeps about half the room and AMT 0 none).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -566,7 +568,7 @@ re-rendered from the patch instead, the `pre` and `amp` picks in front of its
 own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
-fixed there), `delayed` (after the amp), and
+fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -587,8 +589,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`
-and `delayed`), of which the row draws five, the user's choice and the same
+DELAY · ROOM — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed` and `roomed`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);

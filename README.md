@@ -1192,7 +1192,8 @@ dark repeats with HEAD off, see
 [`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
 ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
-close lifting the bass and far dulling the top, 0 no room at all; see
+close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
+the `roomed` character, is its default room, AMT moving only the mic; see
 [`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
