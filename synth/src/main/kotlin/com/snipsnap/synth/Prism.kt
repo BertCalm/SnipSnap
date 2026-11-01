@@ -108,6 +108,8 @@ class PrismTemplate(
  */
 object Prism {
     const val MODEL_VERSION = 1
+    /** Version of the opt-in held-instrument performance, independent of saved pad timbres. */
+    const val OPENING_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
     const val PARTIALS = 32
@@ -789,4 +791,213 @@ object Prism {
         cancelled: () -> Boolean = { false },
         motion: PrismMotion,
     ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false, motion = motion).samples
+
+    /** One body opening followed by powered, repeating sustain for MAKE INSTRUMENT.
+     * The loop runs from [KeyNote.loopStartFrame] to EOF. Existing pad renders and pure
+     * HOLD exports keep their own renderers; choosing this performance never rewrites a patch. */
+    fun openingNote(
+        voice: PrismVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f,
+        template: PrismTemplate = templateFor(voice),
+        motion: PrismMotion,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = openingProbe(voice, macros, velocity, template, motion, cancelled, keepRaw = false).note
+
+    /** Measurement evidence for the opt-in instrument performance. The preceding loop is
+     * a separately simulated stretch of the audible prefix, after exactly the same
+     * conditioning, DC correction and output gain as the kept loop. [raw] is the
+     * preconditioned 4x sum when requested, or an empty array for lighter diagnostics. */
+    data class OpeningProbe(
+        val note: KeyNote,
+        val precedingLoop: FloatArray,
+        val seamError: Double,
+        val rawPeak: Float,
+        val effectiveHz: Double,
+        val partialHz: DoubleArray,
+        val partialWeights: FloatArray,
+        val groupIndices: IntArray,
+        val openingFrames: Int,
+        val bridgeFrames: Int,
+        val motionCycleFrames: Int,
+        val loopFrames: Int,
+        val raw: FloatArray,
+    ) {
+        val loopStartFrames: Int get() = note.loopStartFrame.toInt()
+        val actualPeriodSeconds: Double get() = motionCycleFrames.toDouble() / RATE
+    }
+
+    private data class OpeningPlan(val openingFrames: Int, val loop: LoopPlan) {
+        val bridgeFrames: Int get() = loop.motionFrames
+        val sustainOrigin: Int get() = openingFrames + bridgeFrames
+        val loopStart: Int get() = sustainOrigin + 2 * loop.frames
+        val end: Int get() = loopStart + loop.frames
+    }
+
+    /** Render the instrument performance with its genuine preceding-cycle measurements.
+     * [keepRaw] retains the preconditioned 4x sum for numerical probes; ordinary renders
+     * and audition manifests should pass false to avoid that additional buffer copy. */
+    fun openingProbe(
+        voice: PrismVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f,
+        template: PrismTemplate = templateFor(voice),
+        motion: PrismMotion,
+        cancelled: () -> Boolean = { false },
+        keepRaw: Boolean = true,
+    ): OpeningProbe {
+        require(motion.repeat) { "PRISM opening sustain requires repeating motion" }
+        val m = settled(voice, macros)
+        require(isLoop(m.getValue("HOLD"))) { "PRISM opening sustain requires HOLD in its loop region" }
+        require(velocity.isFinite() && velocity in 0f..1f) { "PRISM opening sustain velocity must be 0..1" }
+        stopIfUnwanted(cancelled)
+        val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
+        val loop = planMotionLoop(hz, motion.seconds, template)
+        val c = contours(template, m)
+        // The last lagged colour and last attack gate must both arrive before periodic travel.
+        val openingSeconds = max(motion.seconds * (1.0 + motion.groupLag),
+            (0 until GROUPS).maxOf { c.delay[it] + c.attack[it] })
+        val plan = OpeningPlan(kotlin.math.ceil(openingSeconds * RATE).toInt(), loop)
+        val startingTemplate = motion.amplitudesA?.let { template.copy(amplitudeOverrides = it) } ?: template
+        val originalBank = bank(startingTemplate, loop.baseHz, m, velocity, loop)
+        val moving = motionBank(originalBank, template, loop.baseHz, m, velocity, motion, loop)
+        val synthesized = synthesizeOpening(voice, m, template, motion, moving, c, plan, cancelled)
+        stopIfUnwanted(cancelled)
+        val conditioned = if (keepRaw) synthesized.samples.copyOf() else synthesized.samples
+        Tide.bandLimit(conditioned, RATE * Dsp.OVERSAMPLE)
+        stopIfUnwanted(cancelled)
+        val down = Dsp.decimate(conditioned, RATE)
+        stopIfUnwanted(cancelled)
+        // Keep the entire opening and continuous settling/evidence prefix. No tail fade or
+        // end-to-start blend is allowed: the player wraps the final period to its real start.
+        val samples = down.copyOf(plan.end)
+        var loopMean = 0.0
+        for (i in plan.loopStart until plan.end) loopMean += samples[i]
+        loopMean /= loop.frames
+        for (i in samples.indices) {
+            if (i % 8192 == 0) stopIfUnwanted(cancelled)
+            samples[i] = (samples[i] - loopMean).toFloat()
+        }
+        stopIfUnwanted(cancelled)
+        if (velocity > 0f) Dsp.levelTo(samples, RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity.pow(.65f))
+        stopIfUnwanted(cancelled)
+        val preceding = samples.copyOfRange(plan.loopStart - loop.frames, plan.loopStart)
+        val seam = if (velocity == 0f) 0.0 else Keys.seamError(samples, plan.loopStart)
+        require(velocity == 0f || seam < Keys.MAX_SEAM_ERROR) {
+            "PRISM $voice opening sustain: actual preceding-loop seam $seam exceeds ${Keys.MAX_SEAM_ERROR}"
+        }
+        val initialWeights = FloatArray(moving.a.weights.size) { p ->
+            mix(moving.a.weights[p].toDouble(), moving.weightsB[p].toDouble(), motion.morph.toDouble()).toFloat()
+        }
+        return OpeningProbe(KeyNote(Snip(samples, 1, RATE), plan.loopStart.toLong()), preceding, seam,
+            synthesized.peak, loop.baseHz, moving.a.hz, initialWeights, moving.a.groups,
+            plan.openingFrames, plan.bridgeFrames, loop.motionFrames, loop.frames,
+            if (keepRaw) synthesized.samples else FloatArray(0))
+    }
+
+    private data class OpeningRaw(val samples: FloatArray, val peak: Float)
+
+    private fun synthesizeOpening(
+        voice: PrismVoice,
+        m: Map<String, Float>,
+        template: PrismTemplate,
+        motion: PrismMotion,
+        moving: MotionBank,
+        c: Contours,
+        plan: OpeningPlan,
+        cancelled: () -> Boolean,
+    ): OpeningRaw {
+        val rate = RATE * Dsp.OVERSAMPLE
+        val raw = FloatArray((plan.end + 512) * Dsp.OVERSAMPLE)
+        val opening = plan.openingFrames * Dsp.OVERSAMPLE
+        val origin = plan.sustainOrigin * Dsp.OVERSAMPLE
+        val period = plan.loop.frames * Dsp.OVERSAMPLE
+        val colourPeriod = plan.loop.motionFrames * Dsp.OVERSAMPLE
+        val partials = moving.a
+        val seed = Dsp.seedFor("PRISM", MODEL_VERSION, voice.name, midiFor(voice, m.getValue("TUNE")), template)
+        val phases = Dsp.phases(partials.hz.size, seed)
+        // Retain the phase reached through the opening. Rephasing the periodic region uses
+        // that offset, never a fresh oscillator seed at the loop marker.
+        val sustainPhases = DoubleArray(phases.size) { phases[it] + partials.hz[it] * plan.sustainOrigin / RATE }
+        val oscillatorSin = DoubleArray(phases.size)
+        val oscillatorCos = DoubleArray(phases.size)
+        val stepSin = DoubleArray(phases.size) { sin(TWO_PI * partials.hz[it] / rate) }
+        val stepCos = DoubleArray(phases.size) { cos(TWO_PI * partials.hz[it] / rate) }
+        val envelopeStart = DoubleArray(GROUPS)
+        val envelopeIncrement = DoubleArray(GROUPS)
+        val positionStart = DoubleArray(GROUPS)
+        val positionEnd = DoubleArray(GROUPS)
+        val weights = DoubleArray(partials.hz.size)
+        val increments = DoubleArray(partials.hz.size)
+        val oneWay = motion.copy(repeat = false)
+
+        fun position(frame: Int, group: Int): Double {
+            if (frame <= opening) return oneWay.positionAt(frame.toDouble() / rate, group)
+            val phase: Double
+            if (frame < origin) {
+                val u = (frame - opening).toDouble() / colourPeriod
+                // A fully lagged cosine cannot meet an all-B opening. Introduce the lag
+                // over the first cycle, with zero endpoint slope, then keep it constant.
+                phase = u - motion.groupLag.toDouble() * group / (GROUPS - 1) * smooth(u)
+            } else {
+                val local = (frame - origin) % period
+                phase = local.toDouble() / colourPeriod - motion.groupLag.toDouble() * group / (GROUPS - 1)
+            }
+            val wrapped = phase - kotlin.math.floor(phase)
+            return motion.morph + (1.0 - motion.morph) * motion.evolve * (.5 + .5 * cos(TWO_PI * wrapped))
+        }
+
+        fun groupEnvelope(frame: Int, group: Int): Double {
+            val periodicTime = if (frame < origin) (frame - origin).toDouble() / rate
+                else ((frame - origin) % period).toDouble() / rate
+            val gate = if (frame >= opening) 1.0 else smooth((frame.toDouble() / rate - c.delay[group]) / c.attack[group])
+            // This opt-in performance is powered sustain under a single attack. A finite
+            // note's exponential release cannot be switched to a held contour without a step.
+            return gate * envelope(periodicTime, group, c, m, plan.loop)
+        }
+
+        var peak = 0f
+        var i = 0
+        while (i < raw.size) {
+            stopIfUnwanted(cancelled)
+            val boundary = when {
+                i < opening -> opening - i
+                i < origin -> origin - i
+                else -> colourPeriod - (i - origin) % colourPeriod
+            }
+            val block = minOf(BLOCK, boundary, raw.size - i)
+            for (g in 0 until GROUPS) {
+                envelopeStart[g] = groupEnvelope(i, g)
+                envelopeIncrement[g] = (groupEnvelope(i + block, g) - envelopeStart[g]) / block
+                positionStart[g] = position(i, g)
+                positionEnd[g] = position(i + block, g)
+            }
+            val time = if (i < origin) i.toDouble() / rate else ((i - origin) % period).toDouble() / rate
+            for (p in phases.indices) {
+                val a = partials.weights[p].toDouble()
+                val difference = moving.weightsB[p] - a
+                val group = partials.groups[p]
+                weights[p] = a + difference * positionStart[group]
+                increments[p] = difference * (positionEnd[group] - positionStart[group]) / block
+                val phase = TWO_PI * ((if (i < origin) phases[p] else sustainPhases[p]) + partials.hz[p] * time)
+                oscillatorSin[p] = sin(phase)
+                oscillatorCos[p] = cos(phase)
+            }
+            for (j in 0 until block) {
+                var sample = 0.0
+                for (p in phases.indices) {
+                    sample += weights[p] * envelopeStart[partials.groups[p]] * oscillatorSin[p]
+                    weights[p] += increments[p]
+                    val s = oscillatorSin[p] * stepCos[p] + oscillatorCos[p] * stepSin[p]
+                    oscillatorCos[p] = oscillatorCos[p] * stepCos[p] - oscillatorSin[p] * stepSin[p]
+                    oscillatorSin[p] = s
+                }
+                raw[i + j] = sample.toFloat()
+                peak = max(peak, abs(raw[i + j]))
+                for (g in 0 until GROUPS) envelopeStart[g] += envelopeIncrement[g]
+            }
+            i += block
+        }
+        return OpeningRaw(raw, peak)
+    }
 }

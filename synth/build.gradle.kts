@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFerryMatchAudition") {
+    group = "distribution"
+    description = "Render Ferry MATCH tuning comparisons, accepted aligned PCM checks and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryMatchAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryMatchOutput").orNull ?: "${rootDir}/testkit/ferry-match-audition")
+}
+
 tasks.register<JavaExec>("generateLibrationMusicalBank") {
     group = "distribution"
     description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."
@@ -624,6 +634,17 @@ tasks.register<JavaExec>("generateWickAudition") {
     if (providers.gradleProperty("wickQuick").orNull == "true") args("--quick")
 }
 
+/** Same RATTLE movement with diagnostic alternate tonal bodies; normal patches stay fixed. */
+tasks.register<JavaExec>("generateWickSourceStudy") {
+    group = "distribution"
+    description = "Render four RATTLE source families at three notes, held notes and an identical phrase."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickSourceStudyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickSourceOutput").orNull ?: "${rootDir}/testkit/wick-source-study")
+}
+
 tasks.register<JavaExec>("generateWickKit") {
     group = "distribution"
     description = "Export the dry provisional WICK MPC 3 kit, MPC 2 program twin and regenerable recipes."
@@ -751,6 +772,17 @@ tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
     mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
+}
+
+/** Compare octave registration while keeping the calmer ensemble movement fixed. */
+tasks.register<JavaExec>("generateRegistersOctaveBalanceAudition") {
+    group = "distribution"
+    description = "Compare COLOR .42 and .65 at fixed calmer SPREAD and MOTION settings at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-octave-balance", "--octave-balance")
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
@@ -2327,7 +2359,7 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** SPARK revision-two control comparisons and ordered expression families. */
+/** SPARK revision-three control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
     description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
@@ -2337,6 +2369,18 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
     providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
+}
+
+/** Local recipe neighborhoods on the unchanged, heard SPARK revision-three source. */
+tasks.register<JavaExec>("generateThumpSparkSweetSpots") {
+    group = "distribution"
+    description = "Render six SPARK starting points and nearby one-control variants, with editable recipes and matched comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThumpSparkSweetSpotAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args(providers.gradleProperty("sparkSweetSpotOutput").orNull ?: "${rootDir}/testkit/thump-spark-sweet-spots")
+    providers.gradleProperty("sparkSweetSpotBaseline").orNull?.let { args(it) }
 }
 
 /** Retained model-one/model-two Apsis listening history. */
