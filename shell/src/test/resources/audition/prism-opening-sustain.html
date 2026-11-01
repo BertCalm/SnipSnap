@@ -8,6 +8,8 @@
   <style>
     :root{color-scheme:light;--paper:#f3f1e9;--card:#fcfbf6;--ink:#242d2b;--muted:#666f68;--line:#d3d5c9;--accent:#a34e30;--soft:#eee0d5;--violet:#6d6285}
     *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,sans-serif}button,input,select{font:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}button{cursor:pointer;color:inherit}button:disabled{cursor:default;opacity:.5}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--violet);outline-offset:3px}a{color:var(--accent);text-underline-offset:3px}.shell{max-width:1200px;margin:auto;padding:0 28px}.masthead{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}.brand{font-size:19px;font-weight:800;letter-spacing:-.04em}.caption,.eyebrow{font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}.muted{color:var(--muted)}.hero{padding:44px 0 28px;max-width:840px}.eyebrow{color:var(--accent);margin:0 0 13px}h1{font-size:clamp(36px,6vw,64px);line-height:1.06;letter-spacing:-.05em;margin:0 0 20px}p{margin:0 0 12px}.hero-copy{font-size:17px;color:var(--muted);max-width:740px}.explain{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px;padding:16px 0 26px;border-bottom:1px solid var(--line);margin-bottom:27px}.explain strong{display:block;font-size:13px;margin-bottom:5px}.explain p{font-size:13px;color:var(--muted);margin:0}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:20px}.level{display:inline-flex;border:1px solid var(--line);background:#eae9e0;border-radius:5px;padding:3px;gap:3px}.level button{border:0;background:none;padding:8px 14px;border-radius:3px;font-size:13px}.level button[aria-pressed=true]{background:var(--card);box-shadow:0 1px 3px #0001;color:var(--accent)}.level-note{font-size:12px;color:var(--muted);max-width:430px;margin:0}.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:18px}.filter-field{display:flex;min-width:0;flex-direction:column;gap:5px}.filter-field label{font-size:11px;color:var(--muted)}select{width:100%;min-width:0;height:42px;border:1px solid var(--line);border-radius:4px;background:var(--card);padding:7px 10px;color:var(--ink)}.collection-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;font-size:12px;color:var(--muted)}.family-group{margin-bottom:30px;min-width:0}.family-title{font-size:22px;letter-spacing:-.03em;margin:0 0 12px}.family-clips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.clip-card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:18px;transition:border-color .15s}.clip-card.is-current{border-color:var(--accent);box-shadow:inset 3px 0 var(--accent)}.clip-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:11px}.clip-heading{min-width:0;flex:1}.clip-heading h3{font-size:16px;letter-spacing:-.02em;line-height:1.3;margin:6px 0 0;overflow-wrap:anywhere}.variant{font-size:10px;color:var(--accent);letter-spacing:.07em;text-transform:uppercase}.clip-play{border:1px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--card);padding:8px 9px;min-width:67px;font-size:12px;flex-shrink:0}.clip-card.is-current .clip-play{background:var(--accent);border-color:var(--accent)}.clip-description{font-size:13px;color:var(--muted);margin-bottom:14px}.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:13px}.tag{font:10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid var(--line);border-radius:3px;padding:3px 6px;color:var(--muted)}.timeline{display:flex;min-width:0;gap:3px;margin:0 0 7px;height:9px}.timeline span{display:block;border-radius:2px;min-width:9px}.timeline .prefix{background:#bc795a}.timeline .sustain{background:var(--violet)}.timeline .finite{background:#9aa490;width:100%}.marker-note{font-size:11px;line-height:1.4;color:var(--muted);margin:0 0 13px;overflow-wrap:anywhere}.clip-links{display:flex;justify-content:space-between;gap:10px;font-size:12px;border-top:1px solid var(--line);padding-top:11px}.clip-details{margin-top:12px;font-size:11px;color:var(--muted)}.clip-details summary{cursor:pointer}.metrics{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;margin:10px 0 0}.metrics dt,.metrics dd{margin:0}.metrics dd{font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}.empty,.error{padding:24px;border:1px solid var(--line);border-radius:6px;color:var(--muted)}.error{border-color:#c08d77;background:#f6e8df;color:#743a23;margin-bottom:16px}.error button{margin-top:10px;border:1px solid currentColor;background:transparent;border-radius:3px;padding:6px 10px}.footer{margin-top:34px;border-top:1px solid var(--line);padding:22px 0 285px;font-size:12px;color:var(--muted)}.footer p{max-width:830px}.provenance{font-size:11px;overflow-wrap:anywhere}.player-wrap{position:fixed;bottom:0;left:0;right:0;z-index:4;border-top:1px solid #b9bdad;background:#f3f1e9f5;backdrop-filter:blur(12px);box-shadow:0 -4px 20px #26302a08}.player{padding-top:13px;padding-bottom:13px}.player-top{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:8px}.player-copy{min-width:0}.player-title{font-size:14px;font-weight:650;margin:0;overflow-wrap:anywhere}.player-status{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);margin-top:3px}.player-options{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:8px}.eight-label{display:flex;gap:7px;align-items:center;font-size:12px;min-width:0}.eight-label input{accent-color:var(--accent);width:17px;height:17px;flex-shrink:0}.eight-label span{overflow-wrap:anywhere}.player audio{display:block;width:100%;height:46px;min-width:0}.player-links{display:flex;gap:15px;flex-shrink:0;font-size:11px}.player-links a[aria-disabled=true]{pointer-events:none;color:var(--muted)}.eight-help{font-size:11px;color:var(--muted);margin:8px 0 0;max-width:1000px}.audio-error{font-size:12px;color:#8c351f;margin:8px 0 0}[hidden]{display:none!important}
+    .transport{display:grid;grid-template-columns:auto minmax(50px,1fr) auto;gap:12px;align-items:center}.transport-buttons{display:flex;gap:7px}.transport button{padding:9px 13px;min-height:42px;border:1px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--card)}.transport button:disabled{opacity:.45}.transport progress{display:block;width:100%;height:12px;accent-color:var(--accent)}.transport output{font-size:11px;font-variant-numeric:tabular-nums;min-width:110px;text-align:right}.player-options{flex-wrap:wrap}
+    @media(max-width:700px){.transport{grid-template-columns:auto minmax(0,1fr);gap:8px}.transport output{grid-column:1/-1;text-align:left;min-width:0}.transport-buttons button{padding:8px 12px}.footer{padding-bottom:370px}}
     @media(max-width:1000px){.family-clips{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:700px){.shell{padding:0 18px}.masthead{padding:17px 0;gap:10px}.masthead .caption{font-size:9px}.hero{padding:30px 0 22px}.hero-copy{font-size:15px}.explain{grid-template-columns:1fr;gap:14px;padding:12px 0 22px;margin-bottom:22px}.explain strong{margin-bottom:2px}.toolbar{align-items:flex-start;flex-direction:column;gap:10px}.level-note{max-width:none}.filters{gap:10px}.family-title{font-size:20px}.family-clips{grid-template-columns:1fr}.clip-card{padding:16px}.clip-heading h3{font-size:17px}.collection-meta{font-size:11px}.dry-note{display:none}.footer{padding-bottom:305px}.player-title{font-size:12px}.player-status{font-size:9px}.player-options{align-items:flex-start;flex-direction:column;gap:6px}.eight-label{font-size:11px}.player-links{font-size:10px}.eight-help{font-size:10px}.metrics{font-size:12px}}
   </style>
@@ -23,91 +25,294 @@
       <div class="error" id="manifest-error" role="alert" hidden><p id="manifest-error-message"></p><button type="button" id="retry-manifest">Try loading again</button></div>
       <div id="clip-grid" aria-label="Opening and sustain comparisons" aria-busy="true"><div class="empty">Opening the listening room…</div></div>
     </main>
-    <footer class="footer"><p>These are actual Kotlin renders with complete saved recipes. Replay checks, hashes and measured seams support listening; they do not establish human approval.</p><p>The WAV carries the opening and sustain loop markers. A note-off release is playback behavior in the sampler; it is not a separate release recorded into these files.</p><p>The browser plays each file linearly. The long proof file contains the opening once, followed by eight sustain regions. It never repeats the whole opening file in a live browser loop.</p><p class="provenance" id="provenance"></p><a href="manifest.json" download>Download manifest and measurements</a></footer>
+    <footer class="footer"><p>These are actual Kotlin renders with complete saved recipes. Replay checks, hashes and measured seams support listening; they do not establish human approval.</p><p>The WAV carries the opening and sustain loop markers. A note-off release is playback behavior in the sampler; it is not a separate release recorded into these files.</p><p>The browser repeats only the marked sustain region until Release. Eight-loop preview adds a live release after eight regions. Downloaded WAVs and linear proof files keep their original bytes and contain no recorded note-off release.</p><p class="provenance" id="provenance"></p><a href="manifest.json" download>Download manifest and measurements</a></footer>
   </div>
-  <aside class="player-wrap" aria-label="Shared audio player"><div class="shell player"><div class="player-top"><div class="player-copy"><p class="player-title" id="player-title">Choose a comparison</p><div class="player-status" id="player-status" role="status" aria-live="polite">READY / MATCHED</div></div></div><div class="player-options"><label class="eight-label"><input id="eight-cycles" type="checkbox" disabled><span id="eight-label">Opening once + 8 sustain loops</span></label><div class="player-links"><a id="download-audio" aria-disabled="true" tabindex="-1">Audio ↓</a><a id="download-recipe" aria-disabled="true" tabindex="-1">Complete recipe ↓</a></div></div><audio id="audio" controls preload="none" aria-label="Selected PRISM comparison"></audio><p class="eight-help" id="eight-help">Choose a looped case to audition eight sustain regions.</p><p class="audio-error" id="audio-error" role="alert" hidden></p></div></aside>
+  <aside class="player-wrap" aria-label="Shared audio player"><div class="shell player"><div class="player-top"><div class="player-copy"><p class="player-title" id="player-title">Choose a comparison</p><div class="player-status" id="player-status" role="status" aria-live="polite">READY / MATCHED</div></div></div><div class="player-options"><label class="eight-label"><input id="eight-cycles" type="checkbox" disabled><span id="eight-label">Opening once + 8 sustain loops</span></label><div class="player-links"><a id="download-audio" aria-disabled="true" tabindex="-1">Audio ↓</a><a id="download-recipe" aria-disabled="true" tabindex="-1">Complete recipe ↓</a></div></div><div class="transport" role="group" aria-label="Selected comparison playback"><div class="transport-buttons"><button id="play-selected" type="button" disabled>Play</button><button id="release-selected" type="button" disabled>Release</button></div><progress id="playback-progress" value="0" max="1" aria-label="Playback progress"></progress><output id="playback-time" aria-live="off">0.0 s</output></div><p class="eight-help" id="eight-help">Choose a looped case to audition eight sustain regions.</p><p class="audio-error" id="audio-error" role="alert" hidden></p></div></aside>
   <script>
   (() => {
     'use strict';
     const $ = selector => document.querySelector(selector);
-    const audio = $('#audio');
-    const state = {clips:[],current:null,mode:'matched',family:'all',variant:'all',eight:false,request:0,load:0,rate:44100};
+    const state = {clips:[],current:null,mode:'matched',family:'all',variant:'all',eight:false,load:0,rate:44100};
     const escape = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const title = clip => clip.title || clip.id;
     const family = clip => clip.family || 'Other comparisons';
     const shape = clip => ({open:'OPEN · finite note',hold:'HOLD · sustain only','opening-sustain':'Opening + sustain'}[clip.variant] || clip.variant || 'Comparison');
     const number = value => Number.isFinite(value) ? value.toPrecision(4).replace(/\.0+(?=e|$)/,'') : '—';
-    const markers = clip => !!clip && Number.isInteger(clip.loopStartFrame) && Number.isInteger(clip.loopEndFrameExclusive) && clip.loopStartFrame >= 0 && clip.loopEndFrameExclusive > clip.loopStartFrame && clip.loopEndFrameExclusive <= clip.frames;
+    const markers = clip => !!clip && Number.isInteger(clip.loopStartFrame) &&
+      Number.isInteger(clip.loopEndFrameExclusive) && clip.loopStartFrame >= 0 &&
+      clip.loopEndFrameExclusive > clip.loopStartFrame && clip.loopEndFrameExclusive <= clip.frames;
     const hasOpening = clip => markers(clip) && clip.loopStartFrame > 0;
     const canEight = clip => markers(clip) && typeof clip.eightNative === 'string' && typeof clip.eightMatched === 'string';
+    const releaseSeconds = clip => Number.isFinite(clip?.releaseSeconds) && clip.releaseSeconds > 0 ?
+      Math.min(clip.releaseSeconds,10) : .6;
     const sameOriginPath = value => {
       if (typeof value !== 'string' || !value.trim()) throw Error('This comparison has no audio or recipe file.');
       const url = new URL(value,document.baseURI);
       if (url.origin !== location.origin || !['http:','https:','file:'].includes(url.protocol)) throw Error('This comparison points outside this listening pack.');
       return url.href;
     };
-    const pathFor = clip => sameOriginPath(state.eight && canEight(clip) ? (state.mode === 'native' ? clip.eightNative : clip.eightMatched) : clip[state.mode]);
+    const downloadPath = clip => state.eight && canEight(clip) ?
+      clip[state.mode === 'native' ? 'eightNative' : 'eightMatched'] : clip[state.mode];
     const setLink = (element,path,name) => {
       try {
         if (!path) throw Error('No download');
-        element.href = sameOriginPath(path); element.download = name;
-        element.setAttribute('aria-disabled','false'); element.removeAttribute('tabindex');
-      } catch { element.removeAttribute('href'); element.setAttribute('aria-disabled','true'); element.tabIndex = -1; }
+        element.href = sameOriginPath(path);
+        element.download = name;
+        element.setAttribute('aria-disabled','false');
+        element.removeAttribute('tabindex');
+      } catch {
+        element.removeAttribute('href');
+        element.setAttribute('aria-disabled','true');
+        element.tabIndex = -1;
+      }
     };
+
+    // Only the selected normal WAV is decoded. Long proof WAVs remain linear downloads.
+    // The audio clock owns wrap and note-off; animation frames only redraw the display.
+    class SustainPlayer {
+      constructor(changed,failed) {
+        this.changed = changed;
+        this.failed = failed;
+        this.context = null;
+        this.gain = null;
+        this.source = null;
+        this.controller = null;
+        this.cache = new Map();
+        this.generation = 0;
+        this.status = 'idle';
+        this.clip = null;
+        this.startedAt = 0;
+        this.offset = 0;
+        this.position = 0;
+        this.releaseAt = null;
+        this.releaseDuration = 0;
+        this.frame = null;
+      }
+      get phase() {
+        if (this.status === 'loading') return 'loading';
+        if (this.source) return this.releaseAt !== null && this.context.currentTime >= this.releaseAt ?
+          'releasing' : 'playing';
+        return this.status;
+      }
+      get elapsed() {
+        return this.source ? this.offset + Math.max(0,this.context.currentTime - this.startedAt) : this.position;
+      }
+      cancel() {
+        ++this.generation;
+        this.controller?.abort();
+        this.controller = null;
+        cancelAnimationFrame(this.frame);
+        this.frame = null;
+        if (this.source) {
+          this.source.onended = null;
+          this.source.stop();
+          this.source.disconnect();
+          this.source = null;
+        }
+        if (this.gain) {
+          this.gain.gain.cancelScheduledValues(this.context.currentTime);
+          this.gain.gain.setValueAtTime(0,this.context.currentTime);
+        }
+        this.releaseAt = null;
+        this.position = 0;
+        this.status = 'idle';
+        this.changed();
+        return this.generation;
+      }
+      ensureContext() {
+        if (this.context) return this.context;
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) throw Error('This browser does not support Web Audio.');
+        // Marker seconds always use the manifest rate, even if a browser resamples decoding.
+        this.context = new Context({sampleRate:state.rate});
+        this.gain = this.context.createGain();
+        this.gain.connect(this.context.destination);
+        return this.context;
+      }
+      async decoded(url,signal,generation) {
+        if (this.cache.has(url)) {
+          const buffer = this.cache.get(url);
+          this.cache.delete(url);
+          this.cache.set(url,buffer);
+          return buffer;
+        }
+        const response = await fetch(url,{signal});
+        if (!response.ok) throw Error('Audio returned HTTP ' + response.status + '.');
+        const bytes = await response.arrayBuffer();
+        if (signal.aborted || generation !== this.generation) return null;
+        const buffer = await this.context.decodeAudioData(bytes);
+        if (signal.aborted || generation !== this.generation) return null;
+        this.cache.set(url,buffer);
+        if (this.cache.size > 12) this.cache.delete(this.cache.keys().next().value);
+        return buffer;
+      }
+      async play(clip,mode,eight,position=0) {
+        const generation = this.cancel();
+        this.clip = clip;
+        this.position = position;
+        this.status = 'loading';
+        this.changed();
+        const controller = new AbortController();
+        this.controller = controller;
+        try {
+          const context = this.ensureContext();
+          await context.resume();
+          if (generation !== this.generation) return;
+          const buffer = await this.decoded(sameOriginPath(clip[mode]),controller.signal,generation);
+          if (!buffer || generation !== this.generation) return;
+          const looped = markers(clip);
+          const start = looped ? clip.loopStartFrame / state.rate : 0;
+          const end = looped ? clip.loopEndFrameExclusive / state.rate : buffer.duration;
+          if (end > buffer.duration + 2 / state.rate || start >= end) throw Error('Audio and loop markers do not agree.');
+          const source = context.createBufferSource();
+          source.buffer = buffer;
+          source.loop = looped;
+          if (looped) {
+            source.loopStart = start;
+            source.loopEnd = end; // Manifest end is exclusive; no frame is subtracted.
+          }
+          const local = looped && position >= end ? start + (position - start) % (end - start) : position;
+          this.source = source;
+          this.offset = position;
+          this.startedAt = context.currentTime;
+          this.status = 'playing';
+          this.releaseAt = null;
+          this.gain.gain.cancelScheduledValues(this.startedAt);
+          this.gain.gain.setValueAtTime(1,this.startedAt);
+          source.connect(this.gain);
+          source.onended = () => {
+            if (generation !== this.generation || this.source !== source) return;
+            this.position = this.elapsed;
+            this.source = null;
+            source.disconnect();
+            this.status = looped ? 'released' : 'finished';
+            cancelAnimationFrame(this.frame);
+            this.changed();
+          };
+          source.start(this.startedAt,Math.min(local,buffer.duration));
+          if (looped && eight) {
+            // Keep looping during release after exactly one prefix and eight sustain regions.
+            const noteOff = start + 8 * (end - start);
+            this.scheduleRelease(this.startedAt + Math.max(0,noteOff - position),releaseSeconds(clip));
+          }
+          this.tick();
+        } catch (error) {
+          if (generation !== this.generation || error.name === 'AbortError') return;
+          this.cancel();
+          this.status = 'error';
+          this.failed('Could not play this comparison. ' +
+            (error.name === 'NotAllowedError' ? 'Press Play to allow browser audio.' : error.message));
+        }
+      }
+      scheduleRelease(at,duration) {
+        this.releaseAt = at;
+        this.releaseDuration = duration;
+        const gain = this.gain.gain;
+        gain.cancelScheduledValues(at);
+        gain.setValueAtTime(1,at);
+        gain.linearRampToValueAtTime(0,at + duration);
+        // Do not disable looping at note-off: the powered cycle must continue under the fade.
+        this.source.stop(at + duration);
+      }
+      release() {
+        if (this.status === 'loading') {
+          this.cancel();
+          this.status = 'released';
+          this.changed();
+          return;
+        }
+        if (!this.source || this.phase === 'releasing') return;
+        this.scheduleRelease(this.context.currentTime,markers(this.clip) ? releaseSeconds(this.clip) : .015);
+        this.changed();
+      }
+      tick() {
+        this.changed();
+        if (this.source) this.frame = requestAnimationFrame(() => this.tick());
+      }
+    }
+
+    const player = new SustainPlayer(() => updatePlayback(),message => {
+      $('#audio-error').textContent = message;
+      $('#audio-error').hidden = false;
+      updatePlayback();
+    });
+    const time = value => Math.max(0,value).toFixed(1) + ' s';
     const updatePlayback = () => {
-      const playing = state.current && !audio.paused && !audio.ended;
-      const status = !state.current ? 'READY' : audio.error ? 'AUDIO ERROR' : audio.ended ? 'FINISHED' : playing ? 'PLAYING' : 'PAUSED';
-      $('#player-status').textContent = status + ' / ' + state.mode.toUpperCase() + (state.eight ? ' / 8 SUSTAIN REGIONS' : '');
-      for (const card of document.querySelectorAll('.clip-card')) {
-        const current = card.dataset.id === state.current?.id;
-        card.classList.toggle('is-current',current);
-        const clip = state.clips.find(item => item.id === card.dataset.id);
-        const button = card.querySelector('.clip-play');
-        button.textContent = current && playing ? 'Ⅱ Pause' : '▶ Play';
-        button.setAttribute('aria-label',(current && playing ? 'Pause ' : 'Play ') + title(clip));
-      }
-    };
-    const showAudioError = message => { $('#audio-error').textContent = message; $('#audio-error').hidden = false; updatePlayback(); };
-    const playerExplanation = clip => {
-      if (!markers(clip)) return 'Finite OPEN note. There is no sustain loop; the eight-loop proof is unavailable.';
-      if (!canEight(clip)) return 'This WAV has sustain loop markers, but this pack has no long proof file for it.';
-      if (state.eight) return hasOpening(clip) ? 'Opening and bridge once, then eight sustain regions in one rendered proof file. Playback stops at the end; the browser never loops the whole file.' : 'Eight adjacent sustain regions in one rendered proof file. No opening is added, and playback stops at the end.';
-      return hasOpening(clip) ? 'The MPC plays the opening once, then repeats from ' + number(clip.loopStartFrame / state.rate) + ' s. The browser plays this marked WAV once; enable the long proof to hear repeated sustain.' : 'The sustain loop starts at frame zero. The browser plays one region once; enable the long proof to hear eight adjacent regions.';
-    };
-    const loadSelected = async (autoplay=false,position=0) => {
-      const request = ++state.request;
-      audio.pause(); audio.loop = false;
-      $('#audio-error').hidden = true;
       const clip = state.current;
-      if (!clip) { updatePlayback(); return; }
-      state.eight = state.eight && canEight(clip);
-      $('#eight-cycles').checked = state.eight;
-      $('#eight-cycles').disabled = !canEight(clip);
-      $('#eight-label').textContent = hasOpening(clip) ? 'Opening once + 8 sustain loops' : markers(clip) ? 'Play 8 sustain loops' : '8 sustain loops unavailable';
-      $('#eight-help').textContent = playerExplanation(clip);
-      $('#player-title').textContent = title(clip);
-      audio.setAttribute('aria-label',title(clip) + ', ' + state.mode + (state.eight ? ', eight sustain regions' : ''));
-      try {
-        const path = pathFor(clip);
-        audio.src = path;
-        setLink($('#download-audio'),path,clip.id + '-' + state.mode + (state.eight ? '-8-sustain-loops' : '') + '.wav');
-        setLink($('#download-recipe'),clip.recipe,clip.id + '.json');
-        if (position > 0) audio.addEventListener('loadedmetadata',() => {
-          if (request === state.request && Number.isFinite(audio.duration)) audio.currentTime = Math.min(position,Math.max(0,audio.duration-.01));
-        },{once:true});
-        audio.load(); updatePlayback();
-        if (autoplay) { await audio.play(); if (request === state.request) updatePlayback(); }
-      } catch(error) {
-        if (request !== state.request || error.name === 'AbortError') return;
-        showAudioError('Could not play this comparison. Check that the complete pack was extracted, then press Play again. ' + (error.name === 'NotAllowedError' ? 'Your browser requires a direct playback click.' : error.message));
+      const phase = player.phase;
+      const active = ['loading','playing','releasing'].includes(phase);
+      $('#player-status').textContent = phase.toUpperCase() + ' / ' + state.mode.toUpperCase() +
+        (state.eight ? ' / 8 LOOPS + RELEASE' : clip && markers(clip) ? ' / SUSTAIN UNTIL RELEASE' : '');
+      $('#play-selected').disabled = !clip || active;
+      $('#release-selected').disabled = !active || phase === 'releasing';
+      $('#release-selected').textContent = clip && markers(clip) ? 'Release' : 'Stop';
+      $('#matched-mode').disabled = $('#native-mode').disabled = phase === 'releasing';
+      $('#eight-cycles').disabled = !canEight(clip) || phase === 'releasing';
+      const elapsed = player.elapsed;
+      let maximum = clip ? clip.frames / state.rate : 1;
+      let progress = elapsed;
+      let caption = time(elapsed);
+      if (clip && markers(clip)) {
+        const start = clip.loopStartFrame / state.rate;
+        const length = (clip.loopEndFrameExclusive - clip.loopStartFrame) / state.rate;
+        if (state.eight) {
+          maximum = start + 8 * length + releaseSeconds(clip);
+          caption += ' / ' + time(maximum);
+        } else {
+          if (elapsed >= maximum) progress = start + (elapsed - start) % length;
+          caption += elapsed < start ? ' · opening' : ' · sustain loop ' + (Math.floor((elapsed - start) / length) + 1);
+        }
+      } else if (clip) caption += ' / ' + time(maximum);
+      $('#playback-progress').max = maximum;
+      $('#playback-progress').value = Math.min(progress,maximum);
+      $('#playback-progress').setAttribute('aria-valuetext',caption);
+      $('#playback-time').textContent = caption;
+      for (const card of document.querySelectorAll('.clip-card')) {
+        const current = card.dataset.id === clip?.id;
+        const button = card.querySelector('.clip-play');
+        const item = state.clips.find(candidate => candidate.id === card.dataset.id);
+        if (!item) continue;
+        const action = current && active ? markers(item) ? 'Release' : 'Stop' : 'Play';
+        card.classList.toggle('is-current',current);
+        button.disabled = current && ['loading','releasing'].includes(phase);
+        button.textContent = action;
+        button.setAttribute('aria-label',action + ' ' + title(item));
       }
+    };
+    const playerExplanation = clip => {
+      if (!markers(clip)) return 'Finite OPEN plays its recorded decay unchanged. Stop ends this preview early.';
+      const release = time(releaseSeconds(clip));
+      const setting = Number.isFinite(clip.releaseSeconds) ? 'saved instrument release' : 'preview-only release for pure HOLD';
+      const playback = state.eight ? 'One prefix, eight sustain regions, then an automatic release.' :
+        hasOpening(clip) ? 'The opening plays once, then the marked sustain repeats until Release.' : 'The marked sustain repeats until Release.';
+      return playback + ' Release: ' + release + ' (' + setting + '). Downloads keep the original WAV bytes; the eight-region proof download has no recorded release.';
+    };
+    const updateSelection = () => {
+      const clip = state.current;
+      $('#eight-cycles').checked = state.eight;
+      $('#eight-label').textContent = hasOpening(clip) ? 'Opening once + 8 loops + release' : '8 sustain loops + release';
+      $('#player-title').textContent = clip ? title(clip) : 'Choose a comparison';
+      $('#eight-help').textContent = clip ? playerExplanation(clip) : 'Choose a looped comparison.';
+      setLink($('#download-audio'),clip ? downloadPath(clip) : null,
+        clip ? clip.id + '-' + state.mode + (state.eight ? '-8-sustain-proof' : '') + '.wav' : '');
+      setLink($('#download-recipe'),clip?.recipe,clip ? clip.id + '.json' : '');
+      updatePlayback();
+    };
+    const playSelected = position => {
+      if (!state.current) return;
+      $('#audio-error').hidden = true;
+      player.play(state.current,state.mode,state.eight,position || 0);
     };
     const selectClip = clip => {
-      if (state.current?.id === clip.id && !audio.paused && !audio.ended) { ++state.request; audio.pause(); updatePlayback(); return; }
-      const position = state.current?.id === clip.id && !audio.ended ? audio.currentTime : 0;
-      audio.pause(); state.current = clip;
+      if (state.current?.id === clip.id && player.phase === 'playing') {
+        player.release();
+        return;
+      }
+      player.cancel();
+      state.current = clip;
       if (!canEight(clip)) state.eight = false;
-      loadSelected(true,position);
+      updateSelection();
+      playSelected(0);
     };
     const markerHtml = clip => {
       if (!markers(clip)) return '<div class="timeline" aria-hidden="true"><span class="finite"></span></div><p class="marker-note">Finite note · no loop markers</p>';
@@ -140,48 +345,79 @@
       updatePlayback();
     };
     const setMode = mode => {
-      if(state.mode===mode) return;
-      const playing=!audio.paused&&!audio.ended,position=audio.currentTime||0;
-      audio.pause(); state.mode=mode;
-      $('#matched-mode').setAttribute('aria-pressed',String(mode==='matched'));
-      $('#native-mode').setAttribute('aria-pressed',String(mode==='native'));
-      render(); loadSelected(playing,position);
+      if (state.mode === mode) return;
+      const playing = ['loading','playing'].includes(player.phase);
+      const position = player.elapsed;
+      player.cancel();
+      state.mode = mode;
+      $('#matched-mode').setAttribute('aria-pressed',String(mode === 'matched'));
+      $('#native-mode').setAttribute('aria-pressed',String(mode === 'native'));
+      render();
+      updateSelection();
+      if (playing) playSelected(position);
     };
     const loadManifest = async () => {
-      const load=++state.load; ++state.request; audio.pause();
-      $('#manifest-error').hidden=true; $('#clip-grid').setAttribute('aria-busy','true');
+      const load = ++state.load;
+      player.cancel();
+      $('#manifest-error').hidden = true;
+      $('#clip-grid').setAttribute('aria-busy','true');
       try {
-        const response=await fetch('manifest.json',{cache:'no-store'});
-        if(!response.ok) throw Error('Manifest returned HTTP '+response.status+'.');
-        const manifest=await response.json();
-        if(load!==state.load) return;
-        if(manifest.schemaVersion!==1||!Array.isArray(manifest.clips)||!manifest.clips.length||manifest.clips.some(clip=>!clip||typeof clip.id!=='string')) throw Error('This manifest is incomplete or unsupported.');
-        if(new Set(manifest.clips.map(clip=>clip.id)).size!==manifest.clips.length) throw Error('The manifest contains duplicate comparison IDs.');
-        state.clips=manifest.clips; state.current=state.clips.find(clip=>clip.variant==='opening-sustain')||state.clips[0]; state.eight=false; state.family='all'; state.variant='all'; state.rate=manifest.sampleRate||44100;
-        const families=[...new Set(state.clips.map(family))];
-        $('#family-filter').innerHTML='<option value="all">All families</option>'+families.map(name=>'<option value="'+escape(name)+'">'+escape(name)+'</option>').join('');
-        $('#variant-filter').value='all';
-        $('#provenance').textContent='Source '+(manifest.sourceRevision||'unrecorded')+(manifest.sourceDirty?' · working tree':'')+' · '+state.rate.toLocaleString()+' Hz · '+state.clips.length+' actual renders';
-        render(); loadSelected(false);
-      } catch(error) {
-        if(load!==state.load) return;
-        state.clips=[]; state.current=null; state.eight=false; audio.removeAttribute('src'); audio.load();
-        $('#eight-cycles').checked=false; $('#eight-cycles').disabled=true;
-        setLink($('#download-audio'),null); setLink($('#download-recipe'),null);
-        $('#clip-grid').setAttribute('aria-busy','false'); $('#clip-grid').innerHTML=''; $('#clip-count').textContent='The listening pack could not be opened.';
-        $('#manifest-error-message').textContent='Could not load manifest.json. Serve the extracted pack through a local web server or open its hosted page. '+error.message;
-        $('#manifest-error').hidden=false; updatePlayback();
+        const response = await fetch('manifest.json',{cache:'no-store'});
+        if (!response.ok) throw Error('Manifest returned HTTP ' + response.status + '.');
+        const manifest = await response.json();
+        if (load !== state.load) return;
+        if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.clips) || !manifest.clips.length ||
+            manifest.clips.some(clip => !clip || typeof clip.id !== 'string')) throw Error('This manifest is incomplete or unsupported.');
+        if (new Set(manifest.clips.map(clip => clip.id)).size !== manifest.clips.length) throw Error('Duplicate comparison IDs.');
+        state.clips = manifest.clips;
+        state.current = state.clips.find(clip => clip.variant === 'opening-sustain') || state.clips[0];
+        state.eight = false;
+        state.family = 'all';
+        state.variant = 'all';
+        state.rate = manifest.sampleRate || 44100;
+        const families = [...new Set(state.clips.map(family))];
+        $('#family-filter').innerHTML = '<option value="all">All families</option>' +
+          families.map(name => '<option value="' + escape(name) + '">' + escape(name) + '</option>').join('');
+        $('#variant-filter').value = 'all';
+        $('#provenance').textContent = 'Render source ' + (manifest.sourceRevision || 'unrecorded') +
+          (manifest.sourceDirty ? ' · working tree' : '') + ' · ' + state.rate.toLocaleString() + ' Hz · ' + state.clips.length + ' actual renders';
+        render();
+        updateSelection();
+      } catch (error) {
+        if (load !== state.load) return;
+        player.cancel();
+        state.clips = [];
+        state.current = null;
+        state.eight = false;
+        updateSelection();
+        $('#clip-grid').setAttribute('aria-busy','false');
+        $('#clip-grid').innerHTML = '';
+        $('#clip-count').textContent = 'The listening pack could not be opened.';
+        $('#manifest-error-message').textContent = 'Could not load manifest.json. Open the hosted page or serve the extracted pack through a local web server. ' + error.message;
+        $('#manifest-error').hidden = false;
       }
     };
-    $('#clip-grid').addEventListener('click',event=>{const button=event.target.closest('.clip-play'); if(!button)return; const clip=state.clips.find(item=>item.id===button.closest('.clip-card').dataset.id); if(clip)selectClip(clip);});
-    $('#family-filter').addEventListener('change',event=>{state.family=event.target.value;render();});
-    $('#variant-filter').addEventListener('change',event=>{state.variant=event.target.value;render();});
-    $('#matched-mode').addEventListener('click',()=>setMode('matched')); $('#native-mode').addEventListener('click',()=>setMode('native'));
-    $('#eight-cycles').addEventListener('change',event=>{const playing=!audio.paused&&!audio.ended;audio.pause();state.eight=event.target.checked&&canEight(state.current);loadSelected(playing);});
+    $('#clip-grid').addEventListener('click',event => {
+      const button = event.target.closest('.clip-play');
+      if (!button) return;
+      const clip = state.clips.find(item => item.id === button.closest('.clip-card').dataset.id);
+      if (clip) selectClip(clip);
+    });
+    $('#play-selected').addEventListener('click',() => playSelected(0));
+    $('#release-selected').addEventListener('click',() => player.release());
+    $('#family-filter').addEventListener('change',event => { state.family = event.target.value; render(); });
+    $('#variant-filter').addEventListener('change',event => { state.variant = event.target.value; render(); });
+    $('#matched-mode').addEventListener('click',() => setMode('matched'));
+    $('#native-mode').addEventListener('click',() => setMode('native'));
+    $('#eight-cycles').addEventListener('change',event => {
+      const playing = ['loading','playing'].includes(player.phase);
+      player.cancel();
+      state.eight = event.target.checked && canEight(state.current);
+      updateSelection();
+      if (playing) playSelected(0);
+    });
     $('#retry-manifest').addEventListener('click',loadManifest);
-    for(const event of ['play','pause','ended','loadedmetadata']) audio.addEventListener(event,updatePlayback);
-    audio.addEventListener('error',()=>{if(audio.getAttribute('src'))showAudioError('This audio file could not be decoded or loaded. Check that every file was extracted, then select the comparison again.');});
-    window.addEventListener('pagehide',()=>{++state.request;audio.pause();});
+    window.addEventListener('pagehide',() => player.cancel());
     loadManifest();
   })();
   </script>
