@@ -64,12 +64,12 @@ All three voices have the same six knobs (`Resin.macrosFor`).
   loops close, and a loop-grid drone (`--drone`, or DRONE TO LOOP). Their designs
   are in the [held](superpowers/specs/2026-09-25-resin-held-pad-design.md) and
   [drone](superpowers/specs/2026-09-25-resin-drone-design.md) specs.
-- **Audition page:** `./gradlew :synth:generateResinRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateResinAudition` runs
   `ResinRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/resin-audition/` with each voice's default, every knob at both ends,
   TUNE at three notes, and every preset, at one loudness, as one-shots. The two
-  string-machine presets play dry there. It has no kit section until
-  `SynthKits.resin()` is wired into the spec.
+  string-machine presets play dry there. The starter kit
+  opens the page.
 
 ## Ledger
 
@@ -82,4 +82,4 @@ All three voices have the same six knobs (`Resin.macrosFor`).
   listened to".
 - **Open:** the per-voice loudness offsets are zero, and the key-tracking amount,
   STACK's curve and CONTOUR's shape are placeholders, all awaiting that listen.
-  The kit and its task are written separately and are not checked here.
+  The starter kit is checked by `FirstGenKitsTest`.

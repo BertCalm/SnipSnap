@@ -59,12 +59,12 @@ All four voices have the same six knobs; only their defaults differ
   with `./gradlew :synth:generateVelvetKit`. VELVET also plays in
   `SynthKits.chip()` (CHIP squares through CRUNCH) and is one GRAINS source in
   `SynthKits.cloud()`.
-- **Audition page:** `./gradlew :synth:generateVelvetRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateVelvetAudition` runs
   `VelvetRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/velvet-audition/` with each voice's default, every knob at both ends,
   TUNE at three notes, and every preset, at one loudness. The two string-machine
-  presets play dry there, without their chain. It has no kit section until
-  `SynthKits.velvet()` is wired into the spec.
+  presets play dry there, without their chain. The starter kit
+  opens the page.
 
 ## Ledger
 
@@ -74,5 +74,5 @@ All four voices have the same six knobs; only their defaults differ
 - **Not heard:** no VELVET preset, knob end or audition clip has had the owner's
   listen on record.
 - **Open:** the per-voice loudness offsets are zero awaiting that listen, and so
-  is CUTOFF's key-tracking amount. The kit and its task are written separately
-  and are not checked here.
+  is CUTOFF's key-tracking amount. The starter kit is checked by
+  `FirstGenKitsTest`.

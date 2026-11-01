@@ -61,7 +61,7 @@ BONGO and DRIP and 4 s on GONG and FLARE, however far WANDER stretches it.
   pentatonic; A09-A12 are DRIP presets, A13-A14 GONG and A15-A16 FLARE. BONGO and
   DRIP pads are PERC, GONG and FLARE TONAL. Render it with
   `./gradlew :synth:generateTideKit`.
-- **Audition page:** `./gradlew :synth:generateTideRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateTideAudition` runs
   `TideRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/tide-audition/` with the kit, then each voice's default, every knob at
   both ends, TUNE at three notes, and every preset, at one loudness. Every clip is

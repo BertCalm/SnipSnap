@@ -72,7 +72,7 @@ continuous here, not snapped: it tunes a drum, it does not pick a note.
 - **Starter kit:** `SkinKits.classic()`, all eight voices on sixteen pads, every
   pad named by a preset so the values have one home. It is the SKIN starter kit
   in the app (`StarterKits.kt`). No gradle task renders it to `testkit/`.
-- **Audition page:** `./gradlew :synth:generateSkinRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateSkinAudition` runs
   `SkinRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/skin-audition/` with the classic kit, then each voice's default, every
   knob at both ends, TUNE at three tunings, and every preset, at one loudness.

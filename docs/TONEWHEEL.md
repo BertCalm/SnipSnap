@@ -56,12 +56,11 @@ with PERC and DIRT defaults per voice. All three have the same twelve knobs.
   A13-A16 of `SynthKits.melodic()` (`./gradlew :synth:generateMelodicKit`), and
   the Organ keys instrument in `Keys` renders it with motion off so its sustain
   loop closes.
-- **Audition page:** `./gradlew :synth:generateTonewheelRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateTonewheelAudition` runs
   `TonewheelRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/tonewheel-audition/` with each voice's default, every knob at both
   ends (each drawbar alone among them), TUNE at three notes, and every preset, at
-  one loudness. It has no kit section until `SynthKits.tonewheel()` is wired into
-  the spec.
+  one loudness. The starter kit opens the page.
 
 ## Ledger
 
@@ -73,5 +72,5 @@ with PERC and DIRT defaults per voice. All three have the same twelve knobs.
   was set by ear.
 - **Open:** the per-voice loudness offsets are zero awaiting that listen. Twelve
   knobs is past the house's three to six; whether eight single drawbars earn
-  their place is a question the audition page asks. The kit and its task are
-  written separately and are not checked here.
+  their place is a question the audition page asks. The starter kit is
+  checked by `FirstGenKitsTest`.

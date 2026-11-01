@@ -36,6 +36,8 @@ object ResinRosterAuditionGenerator {
             "CONTOUR" to ("no filter sweep" to "a four-octave sweep that snaps shut fast"),
             "DECAY" to ("the shortest note, about 0.15 s to silence" to "the longest note, about 1.2 s"),
         ),
+        kit = { SynthKits.resin() },
+        kitNote = "the starter kit as the MPC gets it: the first voice's pentatonic walk, then eight presets",
     )
 
     @JvmStatic

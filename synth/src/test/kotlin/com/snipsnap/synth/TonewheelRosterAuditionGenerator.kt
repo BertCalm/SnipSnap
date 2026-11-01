@@ -43,6 +43,8 @@ object TonewheelRosterAuditionGenerator {
             "BAR7" to ("the bar two octaves and a fifth up in" to "the bar two octaves and a fifth up all the way out"),
             "BAR8" to ("the top bar, three octaves up, in" to "the top bar all the way out: the most sparkle"),
         ),
+        kit = { SynthKits.tonewheel() },
+        kitNote = "the starter kit as the MPC gets it: the first voice's pentatonic walk, then eight presets",
     )
 
     @JvmStatic

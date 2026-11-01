@@ -80,7 +80,7 @@ is TONAL.
   (CHOIR root, fourth and fifth, ROBOT, two GHOSTs), with recipes; A07-A16 are
   GRAINS clouds made from TINES, PLUCK, VELVET and a CHOIR render, without recipes.
   Render it with `./gradlew :synth:generateCloudKit`.
-- **Audition page:** `./gradlew :synth:generateVoxRosterAudition` runs
+- **Audition page:** `./gradlew :synth:generateVoxAudition` runs
   `VoxRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/vox-audition/` with the cloud kit, then each voice's default, every
   knob at both ends, TUNE at three notes, and every preset, at one loudness. The

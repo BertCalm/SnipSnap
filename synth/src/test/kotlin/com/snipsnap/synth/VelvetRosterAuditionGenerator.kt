@@ -37,6 +37,8 @@ object VelvetRosterAuditionGenerator {
             "SQUEEZE" to ("little resonance and a small sweep: a soft, plain stab" to "the filter ringing and swept hardest: the squelch"),
             "DECAY" to ("the shortest note, about 0.15 s to silence" to "the longest note, about 0.9 s"),
         ),
+        kit = { SynthKits.velvet() },
+        kitNote = "the starter kit as the MPC gets it: the first voice's pentatonic walk, then eight presets",
     )
 
     @JvmStatic
