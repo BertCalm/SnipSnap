@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -650,6 +651,24 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
  */
 private fun editableMacros(editable: Patch): Map<String, Float> =
     if (editable is OrigamiPatch) origamiEditingMacros(editable) else editable.macros
+
+/**
+ * The scrolling column of engine controls, behind a seam that is not inline.
+ *
+ * `Column` is an inline composable, so everything written inside it compiles into the
+ * caller's method. [SynthScreen] carries one arm per engine in that column, and once
+ * the method passed 256 registers the dex compiler began emitting a spill move the
+ * Android verifier rejects (`copy1 v0<-v263 type=Reference`), which fails every screen
+ * test at class load. Taking the content as a real lambda gives those arms a method of
+ * their own; the next engine grows this one, not [SynthScreen]'s. Measured with dexdump on
+ * the merged tree: 263 to 267 registers before, varying build to build, and 191 after.
+ */
+@Composable
+private fun ControlsColumn(
+    modifier: Modifier,
+    verticalArrangement: Arrangement.Vertical,
+    content: @Composable ColumnScope.() -> Unit,
+) = Column(modifier, verticalArrangement, content = content)
 
 /**
  * SYNTH — the drum/tonal-synthesis lab: pick an engine, pick a
@@ -2573,7 +2592,7 @@ fun SynthScreen(
                 onNext = { arrive(engine.next()) },
             )
 
-            Column(
+            ControlsColumn(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
