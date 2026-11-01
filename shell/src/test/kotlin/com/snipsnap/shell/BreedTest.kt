@@ -31,6 +31,10 @@ class BreedTest {
     fun `every child pad keeps its parent's class, and the same seed breeds the same kit`() {
         val a = starter("factory", "Mother", 0)
         val b = starter("lucky-dip", "Father", 3)
+        val source = KitStore.load(a)
+        KitStore.save(source.copy(pads = source.pads.mapIndexed { index, pad ->
+            if (index == 0) pad.copy(oneShot = false, loop = true) else pad
+        }), a)
         val child = File(temp, "Child")
         val report = Breed.breed(a, b, child, seed = 1)
 
@@ -42,6 +46,8 @@ class BreedTest {
             val childClass = Classifier.classify(WavReader.read(File(child, pad.sampleFile))).drumClass
             assertEquals(parentClass, childClass, "slot ${pad.slot} (${parent.displayName}) keeps its parent's class")
             assertEquals(parent.drumClass, pad.drumClass)
+            assertEquals(parent.oneShot, pad.oneShot, "slot ${pad.slot} keeps its trigger mode")
+            assertEquals(parent.loop, pad.loop, "slot ${pad.slot} keeps its loop flag")
             assertEquals("Mother x Father", pad.source["bredFrom"])
         }
         // Something actually changed for the crossed pads.

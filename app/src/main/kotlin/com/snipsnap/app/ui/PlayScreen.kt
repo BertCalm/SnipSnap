@@ -89,6 +89,7 @@ internal fun FullscreenPlayGrid(
             }
         }
 
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         StrikePadArea(strike, Modifier.weight(1f).fillMaxWidth()) {
             BankRow(kit, glow, onHit, onRelease, Modifier.fillMaxSize())
         }

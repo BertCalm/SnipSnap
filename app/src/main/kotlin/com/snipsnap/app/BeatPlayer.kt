@@ -18,6 +18,8 @@ import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.BeatClock
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.MidiGate
+import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.VoiceAllocator
 import java.io.File
@@ -372,7 +374,15 @@ class BeatPlayer(
         // never inside it: `hit`'s own KDoc is explicit that the lambda runs
         // while its monitor is held and must not call back into the engine.
         val swap = if (auditionPos != null) tap?.swapFor(slot, auditionPos, auditionBarSteps) else null
-        if (!host.engine.hit(pad, velocity, allocation.started.id, swap = swap)) allocator.voiceEnded(allocation.started.id)
+        if (!host.engine.hit(pad, velocity, allocation.started.id, swap = swap)) {
+            allocator.voiceEnded(allocation.started.id)
+            return
+        }
+        // Out over MIDI. The frame time is not in scope here, so this stamps
+        // System.nanoTime() at the call; the clock batch will stamp the frame.
+        // No release exists, so MidiOut schedules the note-off one step later.
+        val note = MidiPads.noteForSlot(slot, MidiPads.Map.MPC) ?: return
+        MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(entry.kit.tempoBpm)))
     }
 
     private fun noteBar() {

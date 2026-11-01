@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,9 +35,10 @@ import java.io.File
 /**
  * BIN: the plan's bench for everything that has been deleted and can still be
  * taken back (`docs/SCREEN_PLAN_2026_10.md` §3.1 and §3.8) — reached from the
- * shelf, with a ◄ SHELF chip back. It holds two headed lists, DELETED KITS
- * above DELETED SNIPS, each with its own RESTORE rows and its own EMPTY THE BIN
- * NOW.
+ * shelf, and from SNIPS' own BIN door, with a back chip that names where it was
+ * opened from ([backLabel], the model's words: SHELF over the shelf, SNIPS over SNIPS). It
+ * holds two headed lists, DELETED KITS above DELETED SNIPS, each with its own
+ * RESTORE rows and its own EMPTY THE BIN NOW.
  *
  * It is one screen rather than two because the two it replaces
  * (`DeletedKitsScreen`, reached from the kit shelf, and `DeletedSnipsScreen`,
@@ -58,6 +60,8 @@ import java.io.File
 fun BinScreen(
     shelf: KitShelf,
     snipsRoot: File,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitRestored: (KitShelf.Entry) -> Unit,
@@ -82,7 +86,7 @@ fun BinScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), enabled = !busy, onClick = onBack)
             Spacer(Modifier.weight(1f))
             TapeText("BIN", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))

@@ -32,6 +32,7 @@ object StoopAuditionGenerator {
         "velocity" to ("Gesture and level" to "The same quiet, medium and strong excitation twice: raw preserves energy, matched exposes articulation. A common raw-group gain prevents PCM clipping without normalizing each note."),
         "chords" to ("Know the voicing" to "Explicit interval recipes transpose with the root. No inferred key, scale or automatic progression."),
         "hold" to ("Let it run" to "Settled loop-only exports: stress WAVs contain four exact wraps, while focused held-articulation clips contain one cycle with Repeat on. Compare main TOUCH and isolated companion articulation across all six families; attack and delayed onset are absent."),
+        "hold_length" to ("Bright held LENGTH" to "Model 2 within-model checks at each family's intended upper register. LENGTH 0, .5, .75 and 1; TOUCH/COLOR 1, SHADOW/WEAR 0. Compare .75 to 1 for the upper quarter; these cases were not in the previous publication."),
         "edges" to ("At the edges" to "All five timbral controls at maximum, HOLD off, one render per family. These are stress cases rather than factory defaults."),
     )
     private val familyCopy = mapOf(
@@ -56,10 +57,11 @@ object StoopAuditionGenerator {
     fun main(args: Array<String>) {
         val positional = args.filterNot { it.startsWith("--") }
         val baselineArgs = args.filter { it.startsWith("--baseline-dir=") }
-        require(positional.size <= 1 && baselineArgs.size <= 1 && args.filter { it.startsWith("--") }.all {
-            it in listOf("--quick", "--refresh-page") || it.startsWith("--baseline-dir=")
+        val originalArgs = args.filter { it.startsWith("--original-baseline-dir=") }
+        require(positional.size <= 1 && baselineArgs.size <= 1 && originalArgs.size <= 1 && args.filter { it.startsWith("--") }.all {
+            it in listOf("--quick", "--refresh-page") || (it.startsWith("--baseline-dir=") || it.startsWith("--original-baseline-dir="))
         }) {
-            "supply one output directory, optionally --quick, --refresh-page or --baseline-dir=<directory>"
+            "supply one output directory, optionally --quick, --refresh-page or --baseline-dir=<previous-directory> and --original-baseline-dir=<first-directory>"
         }
         require(!(("--quick" in args) && ("--refresh-page" in args)))
         val root = File(positional.firstOrNull() ?: "../testkit/stoop-audition")
@@ -76,19 +78,27 @@ object StoopAuditionGenerator {
             return
         }
         val quick = "--quick" in args
-        require(!quick || baselineArgs.isEmpty()) { "--quick and --baseline-dir are separate modes" }
+        require(!quick || (baselineArgs.isEmpty() && originalArgs.isEmpty())) { "--quick and reference banks are separate modes" }
+        require(originalArgs.isEmpty() || baselineArgs.isNotEmpty()) { "a first-publication reference requires the previous-publication bank" }
         val reference = baselineArgs.singleOrNull()?.substringAfter('=')?.also { require(it.isNotBlank()) }
             ?.let { readReferenceBank(File(it), root) }
+        val firstReference = if (reference == null) null else {
+            val explicit = originalArgs.singleOrNull()?.substringAfter('=')?.also { require(it.isNotBlank()) }?.let { File(it) }
+            val nested = (reference.manifest["originalBank"]?.takeUnless { it is JsonValue.Null }
+                ?: reference.manifest["referenceBank"]?.takeUnless { it is JsonValue.Null })?.obj()?.get("manifestPath")?.str()
+                ?.let { safeAsset(reference.root, it).parentFile }
+            readReferenceBank(explicit ?: nested ?: error("supply --original-baseline-dir to preserve the first publication"), root)
+        }
         root.mkdirs()
         val clips = mutableListOf<Map<String, Any?>>()
         val started = System.nanoTime()
         val initialProvenance = provenance()
         val factory = StoopPresets.all()
         require(factory.isNotEmpty())
-        if (reference != null) {
+        for (bank in listOfNotNull(reference, firstReference)) {
             require(factory.size == 48)
             for (patch in factory) {
-                val saved = reference.example(patch.voice.name, patch.name, false)
+                val saved = bank.example(patch.voice.name, patch.name, false)
                 val recipe = StoopPatch.fromJsonValue(json(saved.getValue("patchRecipe"))) as StoopPatch
                 require(patch.midi == recipe.midi && patch.velocity == recipe.velocity) {
                     "${patch.name}: before/after requires the same saved root and velocity"
@@ -96,6 +106,8 @@ object StoopAuditionGenerator {
             }
         }
         val representatives = StoopVoice.entries.associateWith { voice -> StoopPresets.forVoice(voice).first() }
+        // Factory anchors remain their saved model; diagnostics must exercise the current renderer.
+        val diagnosticRepresentatives = representatives.mapValues { (_, patch) -> patch.copy(model = Stoop.MODEL_VERSION) }
         var renderNanos = 0L
         val loopEvidence = mutableMapOf<StoopPatch, Map<String, Any?>>()
 
@@ -128,7 +140,7 @@ object StoopAuditionGenerator {
             val evidence = linkedMapOf<String, Any?>(
                 "id" to id, "title" to title, "description" to description, "category" to category,
                 "group" to group, "voice" to patch.voice.name, "preset" to patch.name, "path" to path,
-                "midi" to patch.midi, "note" to noteName(patch.midi), "velocity" to patch.velocity,
+                "model" to patch.model, "midi" to patch.midi, "note" to noteName(patch.midi), "velocity" to patch.velocity,
                 "macros" to patch.macros, "patchRecipe" to patch.toJsonValue(), "source" to patch.toJsonValue().obj()["source"],
                 "shadowInterval" to patch.shadowInterval, "shadowDelayMs" to patch.shadowDelayMs,
                 "shadowArticulation" to patch.shadowArticulation, "shadowReplies" to patch.shadowReplies,
@@ -180,12 +192,12 @@ object StoopAuditionGenerator {
             }
         }
 
-        for ((voice, preset) in representatives) {
+        for ((voice, preset) in diagnosticRepresentatives) {
             val base = preset.copy(macros = preset.macros + ("HOLD" to 0f))
             val tag = voice.name.lowercase()
             if (!quick) for (offset in listOf(-12, 0, 12)) {
                 val patch = base.copy(midi = (base.midi + offset).coerceIn(24, 96))
-                save("${tag}_note_${patch.midi}", "${voice.name} · ${noteName(patch.midi)}", "Saved default at full velocity; compare register without adding effects.", "register", voice.name, patch)
+                save("${tag}_note_${patch.midi}", "${voice.name} · ${noteName(patch.midi)}", "Saved source settings in model 2 at full velocity; compare register without adding effects.", "register", voice.name, patch)
             }
             if (!quick) for (velocity in listOf(.25f, .6f)) {
                 save("${tag}_gesture_${percent(velocity)}", "${voice.name} · velocity ${fmt(velocity)}", "Same root and articulation; matched listening level exposes the gesture's spectrum.", "register", voice.name, base.copy(velocity = velocity))
@@ -204,7 +216,19 @@ object StoopAuditionGenerator {
         }
 
         if (!quick) {
-            for ((voice, preset) in representatives) {
+            val upperMidi = mapOf(StoopVoice.BASS to 55, StoopVoice.TINE to 84, StoopVoice.CLAV to 76,
+                StoopVoice.ORGAN to 84, StoopVoice.LEAD to 84, StoopVoice.CHORD to 72)
+            for ((voice, preset) in diagnosticRepresentatives) for (length in listOf(0f, .5f, .75f, 1f)) {
+                val patch = preset.copy(midi = upperMidi.getValue(voice), model = Stoop.MODEL_VERSION,
+                    macros = preset.macros + mapOf("HOLD" to 1f, "TOUCH" to 1f, "COLOR" to 1f,
+                        "SHADOW" to 0f, "WEAR" to 0f, "LENGTH" to length))
+                save("${voice.name.lowercase()}_hold_bright_length_${percent(length)}",
+                    "${voice.name} · bright held LENGTH ${fmt(length)}",
+                    "Model 2 within-model control check at ${noteName(patch.midi)}. TOUCH/COLOR 1, SHADOW/WEAR 0; LENGTH ${fmt(length)}. One settled cycle, Repeat on. Compare .75 to 1; this is not a previously published reference.",
+                    "hold_length", "${voice.name} · upper bright LENGTH", patch,
+                    extra = mapOf("loop" to true, "cyclesInFile" to 1, "comparisonScope" to "model-2 control sweep"))
+            }
+            for ((voice, preset) in diagnosticRepresentatives) {
                 val tag = voice.name.lowercase()
                 val held = preset.copy(shadowInterval = 0, shadowReplies = 1, macros = preset.macros + mapOf(
                     "HOLD" to 1f, "TOUCH" to .5f, "COLOR" to .5f, "LENGTH" to .5f, "SHADOW" to 0f, "WEAR" to 0f))
@@ -242,7 +266,7 @@ object StoopAuditionGenerator {
                 }
             }
             for (voice in listOf(StoopVoice.BASS, StoopVoice.TINE)) {
-                val base = representatives.getValue(voice).copy(macros = representatives.getValue(voice).macros + ("HOLD" to 0f))
+                val base = diagnosticRepresentatives.getValue(voice).copy(macros = diagnosticRepresentatives.getValue(voice).macros + ("HOLD" to 0f))
                 val tag = voice.name.lowercase()
                 for (macro in timbral) for (value in steps) {
                     save("${tag}_sweep_${macro.lowercase()}_${percent(value)}", "$macro ${fmt(value)}", "${voice.name}: only $macro changes; all companions use ${base.name}'s saved defaults.",
@@ -264,7 +288,7 @@ object StoopAuditionGenerator {
                 }
             }
             for (voice in listOf(StoopVoice.BASS, StoopVoice.TINE, StoopVoice.CLAV)) {
-                val patch = representatives.getValue(voice).let { it.copy(macros = it.macros + mapOf("WEAR" to 0f, "SHADOW" to 1f, "HOLD" to 0f)) }
+                val patch = diagnosticRepresentatives.getValue(voice).let { it.copy(macros = it.macros + mapOf("WEAR" to 0f, "SHADOW" to 1f, "HOLD" to 0f)) }
                 val t = System.nanoTime()
                 val probe = Stoop.renderProbe(patch, normalize = false)
                 renderNanos += System.nanoTime() - t
@@ -281,7 +305,7 @@ object StoopAuditionGenerator {
                         extra = mapOf("branch" to branch, "commonReferenceGain" to commonGain) + shadowEvidence(probe))
                 }
             }
-            val answering = representatives.getValue(StoopVoice.BASS)
+            val answering = diagnosticRepresentatives.getValue(StoopVoice.BASS)
             for (interval in listOf(0, 7, 12)) for (delay in listOf(25f, 250f)) {
                 val patch = answering.copy(shadowInterval = interval, shadowDelayMs = delay,
                     macros = answering.macros + mapOf("SHADOW" to 1f, "LENGTH" to 0f, "WEAR" to 0f, "HOLD" to 0f))
@@ -292,7 +316,7 @@ object StoopAuditionGenerator {
                 save("shadow_interval_${interval}_delay_${delay.roundToInt()}", "Answer +$interval st · ${delay.roundToInt()} ms", "Root, fifth or octave answer at the delay endpoints. LENGTH 0; the actual reply and its decay are retained.",
                     "shadow", "Intervals / timing", patch, Snip(probe.samples, 1, 44_100), extra = shadowEvidence(probe))
             }
-            val double = representatives.getValue(StoopVoice.CLAV).let { it.copy(shadowReplies = 2, shadowDelayMs = 250f,
+            val double = diagnosticRepresentatives.getValue(StoopVoice.CLAV).let { it.copy(shadowReplies = 2, shadowDelayMs = 250f,
                 macros = it.macros + mapOf("SHADOW" to 1f, "LENGTH" to 0f, "WEAR" to 0f, "HOLD" to 0f)) }
             val doubleStarted = System.nanoTime()
             val doubleProbe = Stoop.renderProbe(double, normalize = false)
@@ -300,7 +324,7 @@ object StoopAuditionGenerator {
             require(doubleProbe.events.size == 2 && doubleProbe.events.all { it.frame + it.durationFrames <= doubleProbe.samples.size }) { "second answer was truncated" }
             save("shadow_two_late_replies", "Short clav · two late replies", "Main LENGTH 0, deliberate replies at 250 and 500 ms. The short main ends before the second answer; both finite reply tails remain in the sample.",
                 "shadow", "Intervals / timing", double, Snip(doubleProbe.samples, 1, 44_100), extra = shadowEvidence(doubleProbe))
-            val chord = representatives.getValue(StoopVoice.CHORD)
+            val chord = diagnosticRepresentatives.getValue(StoopVoice.CHORD)
             for ((name, intervals) in listOf("Root only" to listOf(0), "Root / fifth / octave" to listOf(0, 7, 12), "Major" to listOf(0, 4, 7), "Minor" to listOf(0, 3, 7))) {
                 save("chord_${slug(name)}", "$name · ${noteName(chord.midi)}", "Semitone recipe [${intervals.joinToString(", ")}], transposed from the requested root.", "chords", "Explicit recipes",
                     chord.copy(chordIntervals = intervals, macros = chord.macros + ("HOLD" to 0f)))
@@ -308,71 +332,108 @@ object StoopAuditionGenerator {
         }
 
         val factoryComparisons = linkedMapOf<String, Any?>()
+        val diagnosticComparisons = linkedMapOf<String, Any?>()
         var referenceMetadata: Map<String, Any?>? = null
-        if (reference != null) {
-            val originalRoot = File(root, "original")
-            originalRoot.mkdirs()
-            File(originalRoot, "published-manifest.json").writeBytes(reference.publishedBytes)
-            val originalRows = mutableMapOf<String, Map<String, Any?>>()
-            for (saved in reference.factory) {
+        var originalMetadata: Map<String, Any?>? = null
+        fun copyBank(bank: ReferenceBank, rows: List<Map<String, Any?>>, directory: String,
+            category: String, version: String, label: String, manifestName: String = "manifest.json",
+        ): Map<String, Map<String, Any?>> {
+            val target = File(root, directory).also { it.mkdirs() }
+            File(target, "published-manifest.json").writeBytes(bank.publishedBytes)
+            val copied = linkedMapOf<String, Map<String, Any?>>()
+            for (saved in rows) {
                 val oldId = saved.getValue("id") as String
                 val relative = saved.getValue("path") as String
-                val bytes = safeAsset(reference.root, relative).readBytes()
-                require(sha256(bytes) == saved.getValue("sha256")) { "$oldId reference changed during rendering" }
-                val destination = safeAsset(originalRoot, relative)
+                val bytes = safeAsset(bank.root, relative).readBytes()
+                require(sha256(bytes) == saved.getValue("sha256") && bytes.size.toLong() == (saved.getValue("bytes") as Number).toLong()) {
+                    "$oldId reference changed during rendering"
+                }
+                val destination = safeAsset(target, relative)
                 destination.parentFile.mkdirs()
                 destination.writeBytes(bytes)
-                val id = "original_$oldId"
+                val id = "${directory}_$oldId"
+                val recipe = saved.getValue("patchRecipe") as Map<*, *>
                 val evidence = LinkedHashMap(saved).also { row -> row.putAll(mapOf(
-                    "id" to id, "title" to "${saved.getValue("title")} · original", "category" to "original",
-                    "path" to "original/$relative", "bankVersion" to "published-original",
-                    "feedbackId" to "published-original:${saved.getValue("sha256")}",
+                    "id" to id, "title" to "${saved.getValue("title")} · $label", "category" to category,
+                    "path" to "$directory/$relative", "bankVersion" to version,
+                    // Reuse existing feedback only for the exact immutable WAV identity.
+                    "feedbackId" to (saved["feedbackId"] ?: "$version:${saved.getValue("sha256")}"),
+                    "model" to ((recipe["model"] as? Number)?.toInt() ?: 1),
                     "legacyFeedbackId" to oldId, "legacyAudioSha256" to saved.getValue("sha256"),
-                    "description" to "Published original. ${saved.getValue("description")}",
+                    "description" to "$label, copied unchanged. ${saved.getValue("description")}",
                 )) }
                 require(clips.none { it["id"] == id })
                 clips += evidence
-                originalRows[oldId] = evidence
+                copied[oldId] = evidence
             }
-            val filtered = LinkedHashMap(reference.manifest).also { m ->
-                m["clips"] = json(reference.factory)
-                m["clipCount"] = json(reference.factory.size)
-                m["totalAudioBytes"] = json(reference.factory.sumOf { (it.getValue("bytes") as Number).toLong() })
-                m["mode"] = json("published original factory reference")
-                m["sections"] = json(listOf(mapOf("id" to "presets", "title" to "Published original factory bank")))
+            val filtered = LinkedHashMap(bank.manifest).also { m ->
+                for (key in listOf("factoryComparisons", "diagnosticComparisons", "referenceBank", "originalBank", "focuses")) m.remove(key)
+                m["clips"] = json(rows)
+                m["clipCount"] = json(rows.size)
+                m["totalAudioBytes"] = json(rows.sumOf { (it.getValue("bytes") as Number).toLong() })
+                m["mode"] = json("$label reference")
+                m["sections"] = json(listOf(mapOf("id" to if (category == "previous_hold") "hold" else "presets", "title" to label)))
                 m["publishedManifestPath"] = json("published-manifest.json")
-                m["publishedManifestSha256"] = json(sha256(reference.publishedBytes))
+                m["publishedManifestSha256"] = json(sha256(bank.publishedBytes))
+                if (directory == "previous" && manifestName == "manifest.json") m["heldReferenceManifestPath"] = json("hold-manifest.json")
             }
-            File(originalRoot, "manifest.json").writeText(Json.write(JsonValue.Obj(filtered)) + "\n")
+            File(target, manifestName).writeText(Json.write(JsonValue.Obj(filtered)) + "\n")
+            return copied
+        }
+        fun bankMetadata(bank: ReferenceBank, directory: String, label: String): Map<String, Any?> = mapOf(
+            "label" to label, "manifestPath" to "$directory/manifest.json", "clipCount" to 96,
+            "inputManifestSha256" to sha256(bank.inputBytes),
+            "publishedManifestPath" to "$directory/published-manifest.json", "publishedManifestSha256" to sha256(bank.publishedBytes),
+            "provenance" to bank.manifest["provenance"], "audioPolicy" to "Published WAVs copied byte-for-byte; reference audio is never regenerated",
+            "comparisonRule" to "Identical saved root, velocity and phrase events. Factory pairs share loudest-200-ms RMS 0.03; isolated held parts retain their recorded combined-reference gain.",
+        )
+        if (reference != null && firstReference != null) {
+            val previousRows = copyBank(reference, reference.factory, "previous", "previous", "published-previous", "previous publication")
+            val originalRows = copyBank(firstReference, firstReference.factory, "original", "original", "published-original", "first publication")
+            val savedHolds = referenceRows(reference, "hold")
+            require(savedHolds.size == 42) { "the previous publication needs all 42 held-control references" }
+            val previousHolds = copyBank(reference, savedHolds, "previous", "previous_hold", "published-previous", "previous HOLD", "hold-manifest.json")
             for (patch in factory) {
                 val examples = listOf(false to "note", true to "phrase").associate { (phrase, kind) ->
                     val old = reference.example(patch.voice.name, patch.name, phrase)
+                    val first = firstReference.example(patch.voice.name, patch.name, phrase)
                     val candidate = clips.single { it["category"] == "presets" && it["voice"] == patch.voice.name &&
                         it["preset"] == patch.name && (it["phrase"] != null) == phrase }
-                    require(candidate["midi"] == (old.getValue("midi") as Number).toInt() &&
-                        candidate["velocity"] == (old.getValue("velocity") as Number).toFloat())
-                    if (phrase) require(json(candidate.getValue("phrase")) == json(old.getValue("phrase"))) { "phrase events must match the original" }
-                    kind to mapOf("publishedOriginalId" to originalRows.getValue(old.getValue("id") as String).getValue("id"),
-                        "revisedCandidateId" to candidate.getValue("id"), "audioChanged" to (candidate.getValue("sha256") != old.getValue("sha256")))
+                    for (saved in listOf(old, first)) {
+                        require(candidate["midi"] == (saved.getValue("midi") as Number).toInt() &&
+                            candidate["velocity"] == (saved.getValue("velocity") as Number).toFloat())
+                        if (phrase) require(json(candidate.getValue("phrase")) == json(saved.getValue("phrase"))) { "phrase events must match both publications" }
+                    }
+                    kind to mapOf("publishedPreviousId" to previousRows.getValue(old.getValue("id") as String).getValue("id"),
+                        "publishedOriginalId" to originalRows.getValue(first.getValue("id") as String).getValue("id"),
+                        "revisedCandidateId" to candidate.getValue("id"), "audioChanged" to (candidate.getValue("sha256") != old.getValue("sha256")),
+                        "originalAudioChanged" to (candidate.getValue("sha256") != first.getValue("sha256")))
                 }
                 factoryComparisons["${patch.voice.name}:${patch.name}"] = mapOf(
                     "voice" to patch.voice.name, "preset" to patch.name, "midi" to patch.midi, "velocity" to patch.velocity,
-                    "publishedOriginalDescription" to reference.example(patch.voice.name, patch.name, false)["presetDescription"],
+                    "publishedPreviousDescription" to reference.example(patch.voice.name, patch.name, false)["presetDescription"],
+                    "publishedOriginalDescription" to firstReference.example(patch.voice.name, patch.name, false)["presetDescription"],
                     "revisedDescription" to StoopPresets.metadataFor(patch)?.description, "examples" to examples,
                 )
             }
-            referenceMetadata = mapOf(
-                "label" to "Published original", "manifestPath" to "original/manifest.json", "clipCount" to 96,
-                "inputManifestSha256" to sha256(reference.inputBytes),
-                "publishedManifestPath" to "original/published-manifest.json", "publishedManifestSha256" to sha256(reference.publishedBytes),
-                "provenance" to reference.manifest["provenance"], "audioPolicy" to "96 original factory WAVs copied byte-for-byte; original audio is never regenerated",
-                "comparisonRule" to "Identical saved root, velocity and phrase events. Both versions use the shared loudest-200-ms RMS 0.03 listening target.",
-            )
+            for (saved in savedHolds) {
+                val id = saved.getValue("id") as String
+                val candidate = clips.single { it["id"] == id && it["category"] == "hold" }
+                for (key in listOf("midi", "velocity", "macros", "source", "shadowInterval", "shadowDelayMs", "shadowArticulation", "shadowReplies", "chordIntervals")) {
+                    require(json(candidate[key]) == json(saved[key])) { "$id held comparison changed $key as well as model" }
+                }
+                diagnosticComparisons[id] = mapOf("publishedPreviousId" to previousHolds.getValue(id).getValue("id"),
+                    "revisedCandidateId" to id, "audioChanged" to (candidate.getValue("sha256") != saved.getValue("sha256")),
+                    "comparisonScope" to "same held patch controls, published model 1 versus model 2")
+            }
+            referenceMetadata = bankMetadata(reference, "previous", "Previous publication") + mapOf(
+                "heldManifestPath" to "previous/hold-manifest.json", "heldClipCount" to 42)
+            originalMetadata = bankMetadata(firstReference, "original", "First publication")
         }
-        require(clips.size == if (quick) 18 else if (reference == null) 300 else 396) { "unexpected audition roster size ${clips.size}" }
+        require(clips.size == if (quick) 18 else if (reference == null) 324 else 558) { "unexpected audition roster size ${clips.size}" }
         require(initialProvenance["sourceSha256"] == provenance()["sourceSha256"]) { "STOOP source changed during generation; rerun after compiling the final source" }
         val manifest = linkedMapOf<String, Any?>(
-            "schemaVersion" to 2, "engine" to "STOOP", "title" to "Stoop · dry audition", "mode" to if (quick) "quick smoke pack" else "complete audition",
+            "schemaVersion" to 3, "engine" to "STOOP", "title" to "Stoop · dry audition", "mode" to if (quick) "quick smoke pack" else "complete audition",
             "status" to "Candidate implementation. Awaiting the owner's listening verdict; presets and numeric settings remain provisional.",
             "sampleRate" to 44_100, "channels" to 1, "bitDepth" to 16, "effects" to "none",
             "levelRule" to "Shared AuditionLevel: loudest 200-ms RMS 0.03, peak guard 0.99. Raw groups and decomposed parts explicitly identify a common reference gain.",
@@ -381,11 +442,17 @@ object StoopAuditionGenerator {
             "clipCount" to clips.size, "totalAudioBytes" to clips.sumOf { (it.getValue("bytes") as Number).toLong() },
             "renderSeconds" to renderNanos / 1e9, "generationSeconds" to (System.nanoTime() - started) / 1e9,
             "provenance" to initialProvenance,
-            "referenceBank" to referenceMetadata, "factoryComparisons" to factoryComparisons,
+            "referenceBank" to referenceMetadata, "originalBank" to originalMetadata,
+            "factoryComparisons" to factoryComparisons, "diagnosticComparisons" to diagnosticComparisons,
+            "focuses" to listOf(mapOf("id" to "clav", "label" to "CLAV body", "voice" to "CLAV", "section" to "presets"),
+                mapOf("id" to "hold", "label" to "Held comparisons", "voice" to "ALL", "section" to "hold"),
+                mapOf("id" to "hold_length", "label" to "Bright held LENGTH", "voice" to "ALL", "section" to "hold_length")),
             "voices" to StoopVoice.entries.map { mapOf("id" to it.name, "description" to familyCopy.getValue(it)) },
             "sections" to sections.map { (id, copy) -> mapOf("id" to id, "title" to copy.first, "description" to copy.second) } +
-                if (reference == null) emptyList() else listOf(mapOf("id" to "original", "title" to "Original bank", "description" to
-                    "The 96 published original factory notes and phrases, preserved byte-for-byte. Compare original on a revised factory row fills A with this reference and B with the candidate.")),
+                if (reference == null) emptyList() else listOf(
+                    mapOf("id" to "previous", "title" to "Previous publication", "description" to "The 96 live published factory examples, copied unchanged. Compare previous loads these into A and the candidate into B."),
+                    mapOf("id" to "previous_hold", "title" to "Previous held controls", "description" to "All 42 published held-control examples, copied unchanged including their original listening gains."),
+                    mapOf("id" to "original", "title" to "First publication", "description" to "The first 96 factory examples remain available, with their original WAV bytes and feedback identity.")),
             "clips" to clips,
         )
         val text = Json.write(json(manifest)) + "\n"
@@ -436,6 +503,10 @@ object StoopAuditionGenerator {
         } ?: inputBytes
         return ReferenceBank(root, manifest, inputBytes, publishedBytes, rows)
     }
+
+    private fun referenceRows(bank: ReferenceBank, category: String): List<Map<String, Any?>> =
+        bank.manifest.getValue("clips").arr().filter { it.obj().getValue("category").str() == category }
+            .map { it.obj().mapValues { (_, value) -> fromJson(value) } }
 
     private fun provenance(): Map<String, Any?> {
         val project = generateSequence(File(".").canonicalFile) { it.parentFile }.firstOrNull { File(it, "settings.gradle.kts").isFile }

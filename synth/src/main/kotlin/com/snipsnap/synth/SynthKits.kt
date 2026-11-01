@@ -11,6 +11,11 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Sixteen finite Libration notes; native touch zones retain their energy. */
+    fun libration(): List<ArrangedPad> = LibrationKits.arranged()
+
+    /** Finite model-two colors with three native velocity zones per pad. */
+    fun trefoil(): List<ArrangedPad?> = TrefoilKits.build()
 
     /**
      * Eight WARM notes in C minor pentatonic from C3, followed by all three source profiles
@@ -40,14 +45,19 @@ object SynthKits {
         return melody + (sourceChoices + alternatives + held).map { arranged(it) }
     }
 
-    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    /** Sixteen dry, finite encounters; long samples play once despite LOOP classification. */
     fun tidal(): List<ArrangedPad?> {
+        fun arranged(patch: TidalPatch) = pad(patch, Tidal.drumClassFor(patch.voice, patch.macros)).copy(
+            oneShot = true,
+            displayName = patch.name,
+            source = mapOf("engine" to patch.engine, "voice" to patch.voiceName,
+                "preset" to patch.name, "authoredMidi" to patch.midi.toString()),
+        )
         val notes = intArrayOf(48, 51, 53, 55, 58)
         return TidalVoice.entries.flatMap { voice ->
             notes.map { midi ->
-                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
-                pad(patch, Tidal.drumClassFor(voice, patch.macros))
-            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+                arranged(TidalPatch("${voice.name} ${Scales.nameOf(midi)}", voice, Tidal.defaults(voice), midi = midi))
+            } + TidalPresets.forVoice(voice).map(::arranged)
         }
     }
 
@@ -56,7 +66,8 @@ object SynthKits {
         val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }
         return voices.mapIndexed { index, voice ->
             val scaleIndex = when { index < 8 -> index; index < 12 -> index - 8; else -> index - 12 }
-            val patch = ScannedChainPresets.forVoice(voice).single().copy(name = "Chain ${index + 1}", midi = 48 + PENTATONIC[scaleIndex])
+            // Keep the starter's original default sounds as the editable preset bank grows.
+            val patch = ScannedChainPatch("Chain ${index + 1}", voice, midi = 48 + PENTATONIC[scaleIndex])
             pad(patch, DrumClass.TONAL)
         }
     }
@@ -145,6 +156,9 @@ object SynthKits {
         val recipe = PadRecipe(patch, fx)
         return ArrangedPad(recipe.render(), drumClass, recipe.toJsonValue())
     }
+
+    /** The authoritative dry orbital performance bank, with native velocity zones. */
+    fun apsis(): List<ArrangedPad?> = ApsisKitBank.arrangedPads()
 
     private fun pluck(name: String, voice: PluckVoice, semitone: Int, vararg extra: Pair<String, Float>) =
         pad(
@@ -866,7 +880,7 @@ object SynthKits {
     fun murmur(): List<ArrangedPad?> {
         fun note(n: Int, semitone: Int) = MurmurPatch(
             "Murmur $n", MurmurVoice.KEY, Murmur.defaults(MurmurVoice.KEY),
-            midi = 48 + semitone,
+            midi = 48 + semitone, config = Murmur.configurationFor(MurmurVoice.KEY, model = 2),
         ).let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
         val contrasts = listOf(
             "CLOSED CIRCUIT", "ROUND HUM", "DUST VOWEL", "POCKET VOICE",
@@ -947,20 +961,23 @@ object SynthKits {
     }
 
     /**
-     * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
-     * preset from each voice, and the original settled held STRING/SOFT presets.
+     * Sixteen dry hybrid pads: eight Long Prism KEY notes in C minor pentatonic,
+     * six distinct finite factory roles, and the original settled held STRING/SOFT presets.
      * Every pad saves the generated attack, PM routing, envelopes, root and energy.
      */
     fun alloy(): List<ArrangedPad?> {
-        val key = AlloyPresets.forVoice(AlloyVoice.KEY).first()
+        val presets = AlloyPresets.all()
+        val key = AlloyPresets.forVoice(AlloyVoice.KEY).single { it.name == "Long Prism" }
         fun landed(patch: AlloyPatch) = pad(patch, Alloy.drumClassFor(patch.voice, patch.macros))
         val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
             landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
         }
-        val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
-        // Keep the starter's two held pads stable as the factory roster grows.
+        val finite = listOf("Hollow Rail", "Reed Switch", "Open Chime", "Bright Stamp",
+            "Beating Glass", "Velvet Rise").map { name -> landed(presets.single { it.name == name }) }
+        // These settled-loop references stay stable while the finite factory roles change.
+        val heldReferences = AlloyPresets.heldReferences()
         val held = listOf("Held Filament", "Endless Ember").map { name ->
-            landed(AlloyPresets.all().single { it.name == name })
+            landed(heldReferences.single { it.name == name })
         }
         return scale + finite + held
 
@@ -1091,8 +1108,9 @@ object SynthKits {
     fun chamber(): List<ArrangedPad?> = ChamberKits.build()
 
     /**
-     * Eight fuller Alloy notes in C minor pentatonic from C3, then eight starting
-     * positions. Every pad is finite and dry; a duration-based LOOP class is a
+     * Eight fuller Alloy notes in C minor pentatonic from C3, then the two heard
+     * Alloy anchors, three character voices, and sparse, short and low positions.
+     * Every pad is finite and dry; a duration-based LOOP class is a
      * filename/category, not a seamless sustain claim. All sixteen save their patch.
      */
     fun caustic(): List<ArrangedPad?> {
@@ -1102,7 +1120,9 @@ object SynthKits {
         val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
             arranged(fuller.copy(name = "Caustic Key ${index + 1}", midi = 48 + semitone))
         }
-        return scale + CausticPresets.all().map(::arranged)
+        val positions = listOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring",
+            "Travelling Catches", "Sparse Alloy", "Short Glint", "Low Vessel")
+        return scale + positions.map { name -> arranged(CausticPresets.all().single { it.name == name }) }
     }
 
     /**
@@ -1163,15 +1183,16 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD, BUBBLE, BREATH and FLICKER each speak at C3 and C4. The
-     * remaining six pads compare one held buffer per voice and an isolated
-     * FLICKER glint. Each voice's native-root default is its exact library patch.
-     * This sixteen-pad selection samples the twenty-one-recipe library;
+     * PLUCK, WOOD, BUBBLE, BREATH, FLICKER and RATTLE each speak at C3 and C4.
+     * The remaining four pads compare held BUBBLE, BREATH, FLICKER and RATTLE.
+     * Each voice's native-root default is its exact library patch. This
+     * sixteen-pad selection samples the twenty-five-recipe library with ten
+     * exact library recipes and six transposed default variations;
      * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1182,7 +1203,7 @@ object SynthKits {
             }
         }
         val recipeNames = listOf(
-            "Held Glow", "Held Wood", "Held Bubbles", "Held Breath", "Held Flicker", "Single Glint",
+            "Held Bubbles", "Held Breath", "Held Flicker", "Held Rattle",
         )
         val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
         return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
@@ -1234,6 +1255,43 @@ object SynthKits {
             note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
             preset("OPENING BELL"), preset("FOLDED CHAMBER"), preset("MAGNETIC CHOIR"), preset("QUIET CHATTER"),
             preset("FAST ORBIT"), preset("HOLLOW HUSK"), preset("PETAL CLOUD"), preset("CLOSED CIRCUIT"),
+        )
+    }
+
+    /**
+     * The SCOUR kit: impacts that build, cut for two tempos, over two banks. A01–A04 are PLATE builds for
+     * 120 BPM and A05–A08 PANE builds for 90 BPM, each one beat, two beats, one bar and two bars long, so a
+     * pad hit that far before a downbeat lands its slam on it; all at C3, every other control at its
+     * default. A09–A16 are PLATE's and PANE's eight presets. Bank B is SHEET, an octave lower: B01–B08 the
+     * same builds at C2 (120 BPM, then 90), B09–B12 its four presets, and B13–B16 short hits on C2, E♭2, F2
+     * and G2 for a low line. Each dry pad carries its recipe and its own name, and is filed by SCOUR's
+     * drumClassFor (every render passes 1.5 s, so all thirty-two are LOOP-class one-shots).
+     */
+    fun scour(): List<ArrangedPad?> {
+        fun named(patch: ScourPatch) = pad(patch, Scour.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String) = named(
+            ScourPatch(
+                (if (voice == ScourVoice.SHEET) "SHEET $bpm" else "$bpm BPM") + " $label", voice,
+                Scour.defaults(voice) + ("TUNE" to 0f) + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
+            ),
+        )
+        fun preset(name: String) = named(ScourPresets.all().first { it.name == name })
+        // The shortest build, a short ring, on a note of C minor pentatonic from C2.
+        fun hit(note: String, semitone: Int) = named(
+            ScourPatch(
+                "SHEET $note", ScourVoice.SHEET,
+                Scour.defaults(ScourVoice.SHEET) + ("TUNE" to semitone / Scour.TUNE_SEMITONES.toFloat()) + ("BUILD" to 0f) + ("HOLD" to .3f),
+            ),
+        )
+        fun builds(voice: ScourVoice, bpm: Int) = listOf(
+            build(voice, bpm, 1, "1 BEAT"), build(voice, bpm, 2, "2 BEATS"), build(voice, bpm, 4, "1 BAR"), build(voice, bpm, 8, "2 BARS"),
+        )
+        return builds(ScourVoice.PLATE, 120) + builds(ScourVoice.PANE, 90) + listOf(
+            preset("IRON SLAM"), preset("FORGE RISE"), preset("GRINDER RUN"), preset("PEENED BELL"),
+            preset("GLASS SNAP"), preset("FROST RISE"), preset("SHATTER RUN"), preset("PANE TOLL"),
+        ) + builds(ScourVoice.SHEET, 120) + builds(ScourVoice.SHEET, 90) + listOf(
+            preset("STEEL BOOM"), preset("SHEET RISE"), preset("THUNDER RUN"), preset("DISTANT STORM"),
+            hit("C2", 0), hit("Eb2", 3), hit("F2", 5), hit("G2", 7),
         )
     }
 
@@ -1356,7 +1414,8 @@ object SynthKits {
 
     /**
      * Sixteen dry tonal pads: seven KEY notes in C minor pentatonic, followed by
-     * all nine first-listen recipes. HOLD contains the settled sustain alone.
+     * the nine original recipes. The expanded preset browser stays independent
+     * of this sixteen-pad layout. HOLD contains the settled sustain alone.
      */
     fun contour(): List<ArrangedPad?> {
         fun note(n: Int, semitone: Int) = ContourPatch(
@@ -1365,7 +1424,7 @@ object SynthKits {
                 ("TUNE" to (.5f + semitone / (2f * ContourEngine.TUNE_SEMITONES))),
         ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+            ContourPresets.original().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 
     /** Four notes from the approved THREAD recipe followed by all twelve dry factory recipes. */

@@ -75,6 +75,23 @@ class OutsideSheetTest {
     }
 
     @Test
+    fun `an outside pad's original outlives the bin's sweep, and UNDO still gives it back`() {
+        val m = model("Swept")
+        val padFile = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val send = OutsideSheet.send(m, 1, OutsideSheet.Move.REAMP)
+        val preRoll = OutsideSheet.preRollFrames(rate)
+        val back = heard(send, OutsideSheet.listenFrames(send), preRoll, trip = 900, gain = 0.3f)
+        OutsideSheet.apply(m, 1, OutsideSheet.Move.REAMP, back, fraction = 1f, preRollFrames = preRoll)
+        m.save()
+
+        val swept = KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(0, swept, "the sweep took the outside pad's original")
+        OutsideSheet.undo(m, 1)
+        assertTrue(padFile.readBytes().contentEquals(before), "UNDO is the original, byte for byte")
+    }
+
+    @Test
     fun `two moves, each with one knob - MIX opens wet, WET opens halfway`() {
         assertEquals(listOf("REAMP", "ROOM"), OutsideSheet.MOVES)
         val mix = OutsideSheet.knobFor(OutsideSheet.Move.REAMP)

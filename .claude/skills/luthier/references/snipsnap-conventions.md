@@ -101,7 +101,7 @@ green by the exit code, never by grepping output.
 | Loop cut | `Siren.bestCut`, `Keys.seamError`, `Keys.requireSeam` | `LOOP_PAD_FRAMES = 2048` and `wrapCrossfade` are private per engine (Mercury, Arco, Tremor, Corolla), not in Keys |
 | Pitch detection | `Pitch.detect(...).confidence` (autocorrelation) | tests use confidence ≥ 0.3, Skitter ≥ 0.75 |
 | True peak | `TruePeak` (`:audio`) | exists; deliberately not wired into export |
-| FX rack | `FxChain`: 20 sections in a fixed order (SPEED, SWELL, reverse, SMEAR, GHOST, SPIKE, EQ, CONTOUR, WAH, SQUASH, VALVE, CRUNCH, RING, DUB, VINYL, TAPE, ENSEMBLE, PHASE, ECHO, SPRING, MOTION), 1.0 s tail cap, no routing by design | pedals are recipes over sections or new sections in the slot a real board would use |
+| FX rack | `FxChain`: 23 sections and the reverse flag in a fixed order (SPEED, SWELL, reverse, SMEAR, GHOST, SPIKE, EQ, CONTOUR, WAH, COMPRESSOR, SQUASH, FORGE, VALVE, CRUNCH, RING, DUB, VINYL, TAPE, ENSEMBLE, PHASE, ECHO, SPRING, ROOM, MOTION; re-read `FxChain.SECTIONS` at `ad2439e` plus FORGE and ROOM), 1.0 s tail cap, no routing by design. VALVE and FORGE are the oversampled sections (`Valve.upsample` → stage → `Tide.bandLimit` → `Dsp.decimate`) | pedals are recipes over sections or new sections in the slot a real board would use |
 | Aquarium | six-stage C++ processor (Fathom, Drift, Tide, Reef, Surface, Biolume) from Omnibus commit a9bdc78; foundation only, not routed yet | `app/src/main/cpp/aquarium` |
 
 ## 5. The house probe set (what a test file covers)

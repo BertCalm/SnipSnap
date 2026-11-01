@@ -11,6 +11,26 @@ import kotlin.test.assertEquals
 
 class CausticSynthDraftsTest {
     @Test
+    fun `character voice drafts retain independent roots strikes and sparse controls`() {
+        val voices = CausticVoice.entries.filter { it != CausticVoice.ALLOY }
+        val patches = voices.mapIndexed { index, voice ->
+            CausticPatch("Saved direction", voice, mapOf("FOCUS" to (.2f + index * .1f)),
+                midi = 48 + index * 7, velocity = .3f + index * .1f, model = 1)
+        }
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to voices.last().name)
+        SynthDrafts.write(settings, patches)
+        val restored = SynthDrafts.read(settings).map { it as CausticPatch }.associateBy { it.voice }
+        assertEquals(patches.associateBy { it.voice }, restored)
+        val edited = patches.map { patch -> Patches.edited(restored.getValue(patch.voice),
+            "Moved direction", patch.macros + ("BODY" to .61f)) }
+        SynthDrafts.write(settings, edited)
+        assertEquals(edited.toSet(), SynthDrafts.read(settings).toSet())
+        settings["recipe.CAUSTIC.${voices.last().name}"] = patches.first().toJsonText()
+        assertEquals(edited.filter { it.voiceName != voices.last().name }.toSet(), SynthDrafts.read(settings).toSet(),
+            "a valid patch stored under another known voice must not replace that voice's draft")
+    }
+
+    @Test
     fun `an edited Caustic draft keeps its root velocity and native model after its highlight clears`() {
         val source = CausticPatch("Saved metal", CausticVoice.ALLOY,
             mapOf("BODY" to .81f), midi = 48, velocity = .37f, model = 1)

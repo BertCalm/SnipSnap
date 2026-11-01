@@ -106,6 +106,10 @@ class ReversalTest {
         // that passes by accident is a line the law is not really holding.
         "RETRIM_TAPE_GONE" to "RE-TRIM refused; the pad was never changed",
         "KIT_DELETE_FAILED" to "the delete failed; nothing was destroyed",
+        // PAD CAPTURE refused: `writeCaptureToPad` found the pad already filled
+        // and returned before `assign`, so no sample was replaced. It says
+        // REPLACED only to say it did not happen.
+        "PAD_CAPTURE_SLOT_TAKEN" to "GRAB/HOLD refused; the filled pad was never changed",
         // App.kt's forgetRoom catch block: the forget THREW, so the room is
         // still on the shelf. It reads "FORGET FAILED. TRY AGAIN." and this
         // law only sees it because the same change that classified it removed

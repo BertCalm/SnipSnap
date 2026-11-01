@@ -6,9 +6,11 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.CreasePatch
@@ -19,6 +21,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockHeld
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -49,6 +52,7 @@ import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
@@ -425,6 +429,10 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is ApsisPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ApsisPatch.fromJsonText($recipe),"
+        }
         if (patch is FilamentPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "FilamentPatch.fromJsonText($recipe),"
@@ -440,6 +448,10 @@ object UserPresets {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OrigamiPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is TidalPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TidalPatch.fromJsonText($recipe),"
         }
         if (patch is ChamberPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -476,10 +488,10 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch || patch is TrioPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch || patch is TrefoilPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            val constructor = when (patch) { is TrioPatch -> "TrioPatch"; is TrefoilPatch -> "TrefoilPatch"; else -> "LacquerPatch" }
             return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -503,6 +515,10 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is LibrationPatch) {
+            return "LibrationPatch(\"$name\", LibrationVoice.${patch.voice}, mapOf($macros), " +
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}),"
+        }
         if (patch is OnsetPatch) {
             return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
         }
@@ -536,6 +552,13 @@ object UserPresets {
             val routes = m.routes.joinToString(", ") { "SpoolRoute(${it.source}, ${it.destination}, ${it.gain}f)" }
             val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
             return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
+        if (patch is OhmPatch && patch.model >= 3) {
+            // The legacy factory helper constructs model 2 before a following copy/let.
+            // Decode the complete expanded recipe directly so HOLD and embedded capture
+            // never pass through that helper or lose source/release fields.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OhmPatch.fromJsonText($recipe),"
         }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
@@ -617,6 +640,7 @@ object UserPresets {
         "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
         "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
         "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+        "edgeResponse = ContourEdgeResponse.${c.edgeResponse.name}",
     ).joinToString(", ") + ")"
 
     private fun murmurConfigLiteral(config: MurmurConfig): String {

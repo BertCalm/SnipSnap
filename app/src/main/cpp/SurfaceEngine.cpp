@@ -154,6 +154,18 @@ bool SurfaceEngine::start() {
     configureEcho(fs);
     configureSpring(fs);
 
+    // Prepare at the device's actual rate, before any audio callback.
+    // Default dry playback survives an unavailable optional effect; a
+    // requested wet route must never silently start dry.
+    if (!aquarium_.prepare(sampleRate_)) {
+        aquarium_.release();
+        if (aquarium_.controlSettings().enabled) {
+            stream_->close();
+            stream_.reset();
+            return false;
+        }
+    }
+
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
         LOGW("requestStart failed: %s", oboe::convertToText(started));
@@ -169,10 +181,20 @@ double SurfaceEngine::latencyMillis() const {
 }
 
 void SurfaceEngine::stop() {
-    if (!stream_) return;
-    stream_->stop();
-    stream_->close();
-    stream_.reset();
+    if (stream_) {
+        stream_->stop();
+        stream_->close();
+        stream_.reset();
+    }
+    aquarium_.release();
+    panicRequested_.store(false, std::memory_order_release);
+}
+
+bool SurfaceEngine::configureAquarium(const aquarium::PerformanceSettings& settings, bool reset) {
+    if (!aquarium::validPerformanceSettings(settings)) return false;
+    if (stream_ && !aquarium_.isPrepared() && settings.enabled) return false;
+    if (!stream_ && !aquarium_.isPrepared() && !aquarium_.prepare(sampleRate_)) return false;
+    return aquarium_.publish(settings, reset);
 }
 
 void SurfaceEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
@@ -416,6 +438,9 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     // regardless of gain), so the next touch would land wherever the loop
     // happened to drift to, not at its head.
     if (f.gate && !gated_) {
+        // Ordinary touches share effect history. Only a priority panic
+        // suspends it, and a fresh touch resumes from the cleared state.
+        aquarium_.resumeAfterPanic();
         for (int32_t i = 0; i < kMaxSources; ++i) {
             for (int32_t v = 0; v < kMaxSwarm; ++v) phase_[i][v] = 0.0;
         }
@@ -775,18 +800,16 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             springApWrite_[a] = (idx + 1) % springApBuf_[a].size();
         }
 
-        // No clamp here, unlike PadEngine's bus: a hot source with the echo
-        // and spring both up can pass full scale. The float stream hands
-        // those overs to the platform, which clips them on the way to the
-        // speaker, while the print tap keeps them as they are (WavWriter
-        // clamps whatever is still over when the print is saved). Clamping
-        // or softening here would change the sound, so it is the owner's
-        // call, not a fix.
+        // Preserve the legacy mono chain's floating overs. With Aquarium
+        // unpatched/bypassed the platform/PCM writer keeps its old clipping
+        // policy. The opted-in wet branch separately clamps its input and
+        // protects its output in PerformanceBus; no clamp is added here.
         out[i] = (gated + wet * echo + springWet * spring) * 0.8f;
     }
 }
 
 oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
+    aquarium_.beginCallback();
     for (int32_t slot = 0; slot < kMaxSources; ++slot) adoptPendingSample(slot);
 
     // Drain the ring, applying every frame in the order it arrived: the
@@ -802,9 +825,19 @@ oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* a
     // the retrigger entirely.
     ControlFrame frame;
     bool any = false;
-    while (controls_.pop(frame)) {
-        any = true;
-        applyControl(frame);
+    if (panicRequested_.exchange(false, std::memory_order_acq_rel)) {
+        // A focus/background release cannot wait behind a full touch
+        // ring. Bound the discard even if the producer is still sending;
+        // the next callback accepts a fresh frame from the current UI.
+        for (int i = 0; i < kControlCapacity - 1 && controls_.pop(frame); ++i) latest_ = frame;
+        latest_.gate = false;
+        applyControl(latest_);
+        aquarium_.panic();
+    } else {
+        while (controls_.pop(frame)) {
+            any = true;
+            applyControl(frame);
+        }
     }
     if (any) latest_ = frame;
 
@@ -814,13 +847,15 @@ oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* a
         const int32_t chunk = std::min<int32_t>(numFrames - done, static_cast<int32_t>(kScratchFrames));
         float* mono = scratch_.data();
         renderMono(mono, chunk);
-        // The master bus is mono to both channels; the print tap takes the
-        // mono copy before it is duplicated.
-        print_.record(mono, static_cast<size_t>(chunk));
+        // The source/legacy chain remains mono. Aquarium receives its
+        // duplicated stereo bus and can create width; PRINT must take the
+        // identical processed interleaved buffer, never fold it back down.
         for (int32_t i = 0; i < chunk; ++i) {
             out[(done + i) * 2] = mono[i];
             out[(done + i) * 2 + 1] = mono[i];
         }
+        aquarium_.process(out + 2 * done, chunk);
+        print_.record(out + 2 * done, static_cast<size_t>(chunk));
         done += chunk;
     }
     return oboe::DataCallbackResult::Continue;

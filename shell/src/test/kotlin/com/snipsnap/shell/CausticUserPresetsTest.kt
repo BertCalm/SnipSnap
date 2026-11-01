@@ -14,6 +14,32 @@ class CausticUserPresetsTest {
         linkedMapOf("BODY" to .33333334f, "LENGTH" to .27f), midi = 57, velocity = .43f, model = 1)
 
     @Test
+    fun `approved character directions stay distinct on the shelf and through backup`() {
+        val shelf = createTempDirectory("caustic-voice-shelf").toFile()
+        val destination = createTempDirectory("caustic-voice-backup").toFile()
+        try {
+            val voices = CausticVoice.entries.filter { it != CausticVoice.ALLOY }
+            val patches = voices.map { voice -> sound("MY DIRECTION").copy(voice = voice) }
+            for (patch in patches) UserPresets.save(shelf, patch, nowMillis = 10L)
+            assertEquals(patches.associateBy { it.voice }, UserPresets.read(shelf)
+                .map { it.patch as CausticPatch }.associateBy { it.voice })
+            for (patch in patches) {
+                val line = UserPresets.rosterLine(patch)
+                assertTrue(line.startsWith("p(CausticVoice.${patch.voice.name}, "), line)
+                assertTrue(line.endsWith(".copy(midi = 57, velocity = 0.43f, model = 1),"), line)
+            }
+            val backup = UserPresets.file(shelf).readText()
+            val merged = UserPresets.merge(destination, backup, nowMillis = 11L)
+            assertEquals(patches.toSet(), merged.landed.map { it.patch }.toSet())
+            assertEquals(patches.size, UserPresets.merge(destination, backup, nowMillis = 12L).identical)
+            val original = patches.first()
+            val binned = requireNotNull(UserPresets.forget(destination, original.engine,
+                original.voiceName, original.name, nowMillis = 13L))
+            assertEquals(original, requireNotNull(UserPresets.unforget(destination, binned)).patch)
+        } finally { shelf.deleteRecursively(); destination.deleteRecursively() }
+    }
+
+    @Test
     fun `native Caustic shelf and JSON retain sparse macros root strike and model`() {
         val shelf = createTempDirectory("caustic-presets").toFile()
         try {

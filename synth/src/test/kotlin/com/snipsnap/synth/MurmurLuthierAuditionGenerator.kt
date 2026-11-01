@@ -144,7 +144,7 @@ object MurmurLuthierAuditionGenerator {
     }
 
     private fun cases(): List<Case> = buildList {
-        val key = Murmur.configurationFor(MurmurVoice.KEY)
+        val key = Murmur.configurationFor(MurmurVoice.KEY, model = 2)
         val stronger = key.copy(targets = key.targets.map { target ->
             target.copy(gains = target.gains.map { (it * 3.0).coerceAtMost(3.0) })
         })
@@ -167,7 +167,8 @@ object MurmurLuthierAuditionGenerator {
                 if (candidate) "Experimental loop plan preserves the requested mild detune more closely. Repeat several wraps and compare the slow beating and moving mouth."
                 else "Approved short-loop policy rounds every operator to a whole cycle. At C2, operator 4 becomes unison.",
                 MurmurPatch("CHOIR HOLD STUDY", MurmurVoice.CHOIR,
-                    Murmur.defaults(MurmurVoice.CHOIR) + ("HOLD" to 1f), midi), candidate))
+                    Murmur.defaults(MurmurVoice.CHOIR) + ("HOLD" to 1f), midi,
+                    config = Murmur.configurationFor(MurmurVoice.CHOIR, model = 2)), candidate))
         }
     }
 
@@ -192,7 +193,8 @@ object MurmurLuthierAuditionGenerator {
     }
 
     private fun verifyReflectedFinish(midi: Int) {
-        val patch = MurmurPatch("REFERENCE", MurmurVoice.CHOIR, Murmur.defaults(MurmurVoice.CHOIR) + ("HOLD" to 1f), midi)
+        val patch = MurmurPatch("REFERENCE", MurmurVoice.CHOIR, Murmur.defaults(MurmurVoice.CHOIR) + ("HOLD" to 1f), midi,
+            config = Murmur.configurationFor(MurmurVoice.CHOIR, model = 2))
         val standard = Murmur.probe(patch.voice, patch.macros, patch.midi, patch.velocity, patch.config)
         val reflected = renderWithPlan(patch, defaultPlan(patch))
         check(standard.samples.contentEquals(reflected.samples) && standard.previousCycle.contentEquals(reflected.previousCycle) &&

@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import com.snipsnap.kit.KitPad
+
 /** The thumb strip supplies touch velocity; MIDI keeps the controller's own velocity. */
 object StrikeStrip {
     const val DEFAULT_STRENGTH = 0.5f
@@ -7,6 +9,16 @@ object StrikeStrip {
 
     /** A note-on snapshot. Moving the strip never changes a voice already playing. */
     data class Hit(val velocity: Float, val gainVelocity: Float)
+
+    /** An actual note-on snapshot; moving or returning the fader must not relabel an old hit. */
+    data class LayerHit(val slot: Int, val labels: List<String>, val selected: Int)
+
+    fun layerHit(pad: KitPad, velocity: Float): LayerHit {
+        val index = PadHit.layerIndex(pad, velocity)
+        val labels = if (index == null) listOf(if (pad.chain == null) "SINGLE" else "CHAIN")
+        else pad.velocityLayers.mapIndexed { i, layer -> layer.displayName ?: "LAYER ${i + 1}" }
+        return LayerHit(pad.slot, labels, index ?: 0)
+    }
 
     /** A fader rises toward hard. The pad-position gesture retains its existing opposite axis. */
     fun strengthAt(y: Float, height: Float): Float =

@@ -14,9 +14,10 @@ package com.snipsnap.shell
  */
 object Copy {
 
-    const val BOOT_READY = "SNIPSNAP.EXE — READY."
+    /** HELP's banner heading. The app no longer boots behind a start-up overlay; this is HELP's alone (its wording is a later copy pass's to settle). */
+    const val BOOT_READY = "SNIPSNAP — READY."
 
-    /** Boot screen progress lines, in order. */
+    /** The lines of HELP's banner, in order. They were the start-up overlay's, which is gone. */
     val BOOT_LINES = listOf(
         "CHECKING HEADS…",
         "DEMAGNETIZING…",
@@ -152,6 +153,12 @@ object Copy {
      * they give way to [NO_PROJECT_OPEN].
      */
     const val NO_KIT_FOR_ORBIT = "ADD A KIT TO THIS PROJECT FIRST. ORBIT PUTS IT ON RINGS."
+    /**
+     * SONG with no kit open: reached by Back, to a SONG whose kit has since gone
+     * (SONG is drawn only for the kit it was opened for). Same shape as
+     * [NO_KIT_FOR_ORBIT].
+     */
+    const val NO_KIT_FOR_SONG = "ADD A KIT TO THIS PROJECT FIRST. SONG LAYS ITS GROOVE OUT AS A TRACK."
     /**
      * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
@@ -873,6 +880,13 @@ object Copy {
     /** TAKE PHOTO asks the system camera; a phone with no camera app to answer says so instead of crashing. */
     const val SNAP_NO_CAMERA = "NO CAMERA APP ANSWERED. NOTHING WAS TAKEN."
     /**
+     * TAKE PHOTO without the CAMERA grant: the player said no to the system
+     * dialog (or said no for good, and the system answered for them), or
+     * the grant went away between the tap and the launch. The camera is not
+     * opened. Names the way back, since a second refusal gets no dialog.
+     */
+    const val SNAP_CAMERA_OFF = "CAMERA ACCESS IS OFF. ALLOW IT IN SETTINGS TO TAKE A PHOTO."
+    /**
      * The camera app handed back more pixels than the phone had memory
      * to read (an `OutOfMemoryError`, which is not an `Exception` and
      * would otherwise take the process down). The photo is dropped and
@@ -925,6 +939,22 @@ object Copy {
     fun inKey(n: Int, key: String): String = "$n ${if (n == 1) "PAD" else "PADS"} RETUNED INTO $key. THE KICK IS UNTOUCHED."
     const val IN_KEY_NONE = "NOTHING MOVED. NO TONAL PAD HOLDS A NOTE THE TUNER IS SURE OF."
     const val IN_KEY_NEEDS_KEY = "SET A KEY FIRST."
+    /** The dock's line while the kit's key is written (KEY, from the KIT panel). It shows only if the write is slow. */
+    const val KEY_BUSY = "SETTING THE KEY…"
+    /** The dock's line while IN KEY reads and retunes every tonal pad of the kit. */
+    const val IN_KEY_BUSY = "TUNING THE PADS TO THE KEY…"
+    /**
+     * The dock's line while NEW PROJECT ▸ makes the project. It comes down
+     * before the project opens, not after, so the open is not refused by the
+     * job that made the project.
+     */
+    const val NEW_PROJECT_BUSY = "STARTING THE PROJECT…"
+    /** The dock's line while a kit row on the shelf finds or makes the project that holds it, before the kit opens. */
+    const val OPENING_KIT_BUSY = "OPENING THE KIT…"
+    /** The dock's line while `+ FROM SHELF`'s pick joins the kit to the open project and makes it the active kit. */
+    const val ADDING_KIT_BUSY = "ADDING THE KIT…"
+    /** The dock's line while the kit switcher saves the project's active kit. */
+    const val SWITCHING_KIT_BUSY = "SWITCHING KITS…"
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
@@ -936,6 +966,24 @@ object Copy {
     // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
+
+    // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
+    /** The heading of the MIDI OUT section of SETUP. */
+    const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"
+    /** Under the MIDI OUT heading: where the notes go, and the port other apps can always open. */
+    const val SETUP_MIDI_OUT_NOTE = "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN ALWAYS OPEN SNIPSNAP OUT."
+    /** In place of the device list when nothing is plugged in. */
+    const val SETUP_MIDI_OUT_NONE = "NOTHING PLUGGED IN. SNIPSNAP OUT IS STILL PUBLISHED."
+    /** In place of the whole section on a phone with no MIDI service. */
+    const val SETUP_MIDI_OUT_UNSUPPORTED = "THIS PHONE HAS NO MIDI."
+    /** The name SETUP lists, and the LCD prints, for SnipSnap's own published output port. */
+    const val MIDI_PORT_OUT_NAME = "SNIPSNAP OUT"
+    /** The name the LCD prints for SnipSnap's own published input port, while another app holds it. */
+    const val MIDI_PORT_IN_NAME = "SNIPSNAP IN"
+    /** Beside a device whose port opened: it is being sent to. */
+    const val SETUP_MIDI_OUT_PORT_OK = "OUT"
+    /** Beside a device whose port another app already holds. */
+    const val SETUP_MIDI_OUT_PORT_BUSY = "BUSY"
 
     // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
     /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
@@ -1133,6 +1181,8 @@ object Copy {
     const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
     const val BIN_ITEM_GONE = "ALREADY GONE."
+    /** THE BIN's row for an original a pad still needs, in place of its day count; [pad] is the pad that keeps it. */
+    fun binKeptFor(pad: String): String = "KEPT FOR $pad"
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
@@ -1467,6 +1517,57 @@ object Copy {
         "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
+
+    // ---- PAD SHEET: the pedal slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md) ----
+    /** MORE's chip, with the pad's pedals the row does not show counted ("MORE · 2"); plain MORE when there are none. */
+    fun pedalMore(count: Int): String = if (count <= 0) PadSheet.MORE else "${PadSheet.MORE} · $count"
+    /** The AMT stepper's label while it moves a pedal: which one ("AMT · TOUCH"), so a pedal behind MORE is named too. */
+    fun pedalAmt(pedal: String): String = "AMT · $pedal"
+    /** MORE's list heading: what a tap on a pedal's line does. */
+    const val PEDAL_MORE_HEADING = "EVERY PEDAL. TAP ONE TO PUT IT ON OR TAKE IT OFF."
+    /** The slate's button on a pedal row seven does not draw: a label, not a landing. */
+    const val PUT_ON_ROW = "PUT ON ROW"
+    /** After PUT ON ROW on [pedal]: the next row-seven tap picks the chip it swaps with; any other tap cancels. */
+    fun putOnRowPrompt(pedal: String): String = "NOW TAP THE ROW CHIP TO SWAP FOR $pedal."
+    /** PUT ON ROW, landed: [incoming] in [outgoing]'s place, and where [outgoing] went. The row is every kit's. */
+    fun rowSwapped(incoming: String, outgoing: String): String =
+        "$incoming ON THE ROW IN EVERY KIT. $outgoing MOVES BEHIND MORE."
+    /** A lit pedal tapped off a pad that keeps others (or AMT taken to 0), and the pedal AMT moves now; the last one off lands as [unTreated]. */
+    fun pedalOff(pedal: String, pad: String, next: String): String = "$pedal OFF $pad. AMT NOW MOVES $next."
+    /** A pedal on in place of the ones it silenced: the same wah section (WAH, TOUCH, ROCK) or the same amp on one side. */
+    fun pedalReplaced(pedal: String, replaced: List<String>, pad: String): String =
+        "$pedal ON $pad IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN."
+    /** A movable pedal flipped to the other side of the amp, in place of any pedal it silenced there. */
+    fun pedalSide(pedal: String, beforeAmp: Boolean, pad: String, replaced: List<String> = emptyList()): String =
+        "$pedal NOW ${if (beforeAmp) "BEFORE" else "AFTER"} THE AMP ON $pad" +
+            (if (replaced.isEmpty()) "." else ", IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN.")
+    /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
+    const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
+    /**
+     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a pad's original
+     * as long as the pad needs it, so, for example, the bin was emptied by hand or the recipe came
+     * from another pad): the board
+     * re-renders whole from the original, so it would play every pedal already in the audio twice.
+     * Refused; the pedals are part of the sound now.
+     */
+    const val PEDALS_NOT_BINNED =
+        "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
+    /** A printed board pad ([PrintedPads]: WIDE, RUSH, AQUARIUM) takes no pedals; [label] names it. */
+    fun pedalsPrinted(label: String): String = "REMOVE $label BEFORE ADDING PEDALS."
+
+    // ---- PAD SHEET: the PEDALS card (docs/superpowers/specs/2026-10-30-pad-pedalboard-card-design.md) ----
+    /** The PEDALS card's summary with no pedals on the pad. */
+    const val PEDALS_NONE = "NO PEDALS ON THIS PAD"
+    /**
+     * The PEDALS card's summary line and its accessible name: the chain in the order the sound
+     * meets it, the pad's amp named where it sits ("WAH → SUSTAIN → AMP → DELAY").
+     */
+    fun pedalChain(chain: PedalSlate.Chain): String {
+        if (chain.isEmpty) return PEDALS_NONE
+        val (pre, amp, post) = chain.passes.map { pass -> pass.links.map { it.word } }
+        val words = pre + amp + (if (chain.aroundTheAmp) listOf("AMP") else emptyList()) + post
+        return words.joinToString(" → ")
+    }
 
     // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
     /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
@@ -2450,6 +2551,8 @@ object Copy {
     const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
     /** HOLD's own empty snapshot - released before a single frame landed. */
     const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
+    /** GRAB/HOLD found the pad filled when the write took its turn (another capture landed, or a snip was placed, while the user was away), so nothing was written. */
+    const val PAD_CAPTURE_SLOT_TAKEN = "THAT PAD WAS FILLED WHILE YOU WERE AWAY. NOTHING WAS REPLACED."
     /** GRAB/HOLD's own landing toast: [verb] the gesture's own past-tense word ("GRABBED"/"RECORDED"), [pad] the pad it landed on. */
     fun padGestureLanded(verb: String, pad: String): String = "$verb → PAD $pad."
     /**
@@ -2759,11 +2862,117 @@ object Copy {
     /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
     fun xrayUnlabeledFields(count: Int): String =
         "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
-    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
-    fun dubbingBusy(name: String): String = "DUBBING $name…"
     /** EVIL TWINS' own busy overlay while every twin renders offline. */
     const val EVIL_TWINS_BUSY = "TWINNING…"
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
+    /**
+     * The dock's busy line while a kit loads, named so the wait is attributable
+     * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
+     * starter renders, and the loading card over the pad grid (`LoadingCard`)
+     * carries the same line, so the dock and the card never word the one job
+     * two ways.
+     */
+    fun loadingBusy(name: String): String = "LOADING $name…"
+    /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
+    fun busyCount(done: Int, total: Int): String = "$done OF $total"
+    /** The dock's busy line while something loads and there is no name to give it. */
+    const val LOADING_BUSY = "LOADING…"
+    /** The dock's line while KIT reads the kit's pads off disk into the engine's bank (on opening it and after an edit, so it shows only if the read is slow). */
+    const val KIT_LOADING_BUSY = "LOADING THE KIT…"
+    /** The dock's line while KEYS reads the instrument's zones off disk into its player; until it ends a key plays nothing. */
+    const val KEYS_LOADING_BUSY = "LOADING THE KEYS…"
+    /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
+    const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
+    /**
+     * WORKING…, said in two places. On a button it is what TalkBack hears as
+     * the state while the job the button started is running: its
+     * `stateDescription`, beside the label it keeps and the ring drawn at its
+     * edge. On the dock it is the fallback line for a job that has no name of
+     * its own, whether a screen reports it (`ReportBusy`) or it is begun on
+     * the app's job board (`LocalJobs`). It is never a visible label on a
+     * button: the button keeps its own words.
+     */
+    const val WORKING_BUSY = "WORKING…"
+    // The dock's line for the jobs the pad editor and SPLIT start, each said
+    // in the word of the control that started it. A treatment says its own
+    // name through `treatmentBusy`. SAVING_PAD_BUSY is what `commitPadEditNow`
+    // says when its caller gives it no word (PASTE, SOFT HITS, EJECT, and
+    // both UNDOs) and what the flush the editor hands on when it closes says.
+    // Every other job the editor starts falls back to WORKING_BUSY, and that
+    // includes some writes (a board or AQUARIUM KEEP, NONE, KEEP ROOM, MAKE
+    // A GATHERING, the debounced save) as well as decodes, the mic trip and
+    // previews.
+    /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
+    const val MUTATE_BUSY = "MUTATING…"
+    /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
+    const val DESAMPLE_BUSY = "DE-SAMPLING…"
+    /** The dock's line while MAKE PAD renders a new pad out of one hit. */
+    const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
+    const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
+    /** The dock's line while SPREAD writes the pad's sound across a bank. */
+    const val SPREAD_BUSY = "SPREADING…"
+    /** The dock's line while SPLIT takes a pad apart into its three parts. */
+    const val SPLIT_BUSY = "SPLITTING…"
+    /**
+     * The dock's line for two kinds of write in the pad editor: the ones
+     * `commitPadEditNow` runs for a caller that gives it no word of its own
+     * (PASTE, SOFT HITS, EJECT, and both UNDOs), and the flush the editor
+     * hands on when it closes with an edit the debounce had not written. That
+     * last one is why the line exists: the write outlives the editor, and the
+     * job board keeps it on the dock until it lands. Other writes the editor
+     * starts say [WORKING_BUSY].
+     */
+    const val SAVING_PAD_BUSY = "SAVING THE PAD…"
+    /** The KITS screen's placeholder line while the library is read from disk. */
+    const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */
+    const val READING_RECORDING = "READING THE RECORDING…"
+    /** The dock's button to stop a job that can be stopped part-way. */
+    const val CANCEL_JOB = "CANCEL"
 
+
+    // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----
+    /** The MIDI screen's button that runs the six-second clock check (bench S1). */
+    const val MIDI_CLOCK_CHECK = "CLOCK CHECK"
+    /** The same button while the check runs; a tap does nothing. */
+    const val MIDI_CLOCK_RUNNING = "CHECKING…"
+    /** The pad engine's stream would not start, so there is nothing to check. */
+    const val MIDI_CLOCK_NO_STREAM = "NO AUDIO STREAM. THE CLOCK CHECK CANNOT RUN."
+    /** Headphones went in or out, or the device restarted the stream, mid-check. */
+    const val MIDI_CLOCK_ROUTE_CHANGED = "THE AUDIO ROUTE CHANGED. RUN IT AGAIN."
+    /** The stream fell back to shared mode; it may not be what clock out would get. */
+    const val MIDI_CLOCK_SHARED = "SHARED STREAM: ANOTHER STREAM WAS PLAYING, MAYBE SNIPSNAP'S OWN BEAT. STOP EVERYTHING AND RUN IT AGAIN."
+
+    // ---- gear · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
+    /** The clock check found a position that tracks. Rate and lag follow it. */
+    const val CLOCK_TRACKED = "POSITION TRACKED."
+    /** Every read of the playback position failed. */
+    const val CLOCK_UNAVAILABLE = "THIS PHONE REPORTS NO POSITION FOR THIS STREAM."
+    /** Not enough run after the position first moved to judge it. */
+    const val CLOCK_TOO_SHORT = "TOO SHORT. RUN IT AGAIN."
+    /** The position sat still at the start for [ms], then moved. */
+    fun clockStoodStill(ms: Long): String = "POSITION STOOD STILL $ms MS AT THE START, THEN TRACKED."
+    /** The position stopped for [ms], starting [atSeconds] into the run. */
+    fun clockStopped(ms: Long, atSeconds: Double, slowStartMs: Long? = null): String =
+        "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN" +
+            (if (slowStartMs != null) ", AFTER A SLOW START OF $slowStartMs MS." else ".")
+    /** The position never moved in [seconds] of playing: the clock cannot be trusted. */
+    fun clockNeverMoved(seconds: Double): String = "POSITION NEVER MOVED IN ${"%.1f".format(java.util.Locale.ROOT, seconds)} S. THIS PHONE'S CLOCK CANNOT BE TRUSTED ON THIS STREAM."
+    /** The position's clock runs [ppm] from the stream's rate (signed: negative is slow), far more than drift. */
+    fun clockRateWrong(ppm: Long): String =
+        "POSITION RUNS AT THE WRONG RATE: ${Math.abs(ppm)} PPM ${if (ppm < 0) "SLOW" else "FAST"}. DON'T TRUST THIS CLOCK."
+    /** The phone's position timestamps never advanced, or spanned too little to fit a rate. */
+    const val CLOCK_TIMESTAMPS_STUCK = "THE PHONE'S TIMESTAMPS DID NOT ADVANCE. DON'T TRUST THIS CLOCK."
+    /** How far the position's clock runs from the stream's rate. */
+    fun clockRate(ppm: Long): String = when {
+        ppm > 0 -> "RATE $ppm PPM FAST."
+        ppm < 0 -> "RATE ${-ppm} PPM SLOW."
+        else -> "RATE 0 PPM OFF."
+    }
+    /** Coarse: the position trails the frames written by about [ms]. */
+    fun clockBehind(ms: Long): String = "ABOUT $ms MS BEHIND."
+    /** Coarse: the position is ahead of the frames written by about [ms] (the two reads skew). */
+    fun clockAhead(ms: Long): String = "ABOUT $ms MS AHEAD."
 }

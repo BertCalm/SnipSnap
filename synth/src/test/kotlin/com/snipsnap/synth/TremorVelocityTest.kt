@@ -15,12 +15,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Touch must survive sample levelling while the established full-strength instrument stays fixed. */
+/** Model 1 velocity and full-touch sound remain fixed for saved legacy recipes. Model 2 has its own character probes. */
 class TremorVelocityTest {
     @Test
     fun `soft middle and hard contact retain distinct spectral articulation after levelling`() {
         for (voice in listOf(TremorVoice.HIDE, TremorVoice.WIRE)) {
-            val clips = listOf(0.20f, 0.55f, 1f).map { Tremor.render(voice, velocity = it).samples }
+            val clips = listOf(0.20f, 0.55f, 1f).map { legacyRender(voice, velocity = it).samples }
             val upper = clips.map { upperShare(it, Tremor.frequencyFor(voice, 0.5f) * 1.5) }
             // A gain-only velocity law cannot pass a power-share test. The old implementation
             // put effectively the same fraction in the upper modes at all three touches.
@@ -34,7 +34,7 @@ class TremorVelocityTest {
     @Test
     fun `a longer soft contact cannot notch away the high register root`() {
         for (voice in TremorVoice.entries) for (velocity in listOf(0.20f, 0.55f)) {
-            val r = Tremor.play(voice, mapOf("TUNE" to 1f), velocity)
+            val r = legacyPlay(voice, mapOf("TUNE" to 1f), velocity)
             val pitch = assertNotNull(Pitch.detect(r.snip), "$voice at $velocity lost its note")
             val wanted = Tremor.frequencyFor(voice, 1f)
             val cents = 1200.0 * ln(pitch.hz / wanted) / ln(2.0)
@@ -49,7 +49,7 @@ class TremorVelocityTest {
     @Test
     fun `soft and middle contacts keep the global spectral anchor across the register`() {
         for (voice in TremorVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for (velocity in listOf(0.20f, 0.55f)) {
-            val snip = Tremor.render(voice, mapOf("TUNE" to tune), velocity)
+            val snip = legacyRender(voice, mapOf("TUNE" to tune), velocity)
             val got = globalPeakHz(snip.samples)
             val wanted = Tremor.frequencyFor(voice, tune)
             val cents = 1200.0 * ln(got / wanted) / ln(2.0)
@@ -59,9 +59,9 @@ class TremorVelocityTest {
 
     @Test
     fun `touch changes contact without rerolling the coordinated strikers`() {
-        val hard = Tremor.play(TremorVoice.UNISON, mapOf("ENSEMBLE" to 1f))
+        val hard = legacyPlay(TremorVoice.UNISON, mapOf("ENSEMBLE" to 1f))
         for (velocity in listOf(0.20f, 0.55f)) {
-            val soft = Tremor.play(TremorVoice.UNISON, mapOf("ENSEMBLE" to 1f), velocity)
+            val soft = legacyPlay(TremorVoice.UNISON, mapOf("ENSEMBLE" to 1f), velocity)
             assertEquals(hard.strikes.map { it.sample }, soft.strikes.map { it.sample })
             assertEquals(hard.strikes.map { it.index }, soft.strikes.map { it.index })
         }
@@ -71,8 +71,8 @@ class TremorVelocityTest {
     fun `soft held contacts stay deterministic and retain the constructed join`() {
         for (voice in listOf(TremorVoice.HIDE, TremorVoice.ROLL, TremorVoice.WIRE, TremorVoice.CHARGE)) {
             val m = mapOf("HOLD" to 1f)
-            val a = Tremor.play(voice, m, 0.20f)
-            val b = Tremor.play(voice, m, 0.20f)
+            val a = legacyPlay(voice, m, 0.20f)
+            val b = legacyPlay(voice, m, 0.20f)
             assertContentEquals(a.snip.samples, b.snip.samples)
             // This checks the production crossfade's join, not natural periodic convergence.
             assertTrue(Keys.seamError(a.snip.samples, a.loopStart) < Keys.MAX_SEAM_ERROR)
@@ -94,10 +94,16 @@ class TremorVelocityTest {
             "5b9e48bb614f476a05d2311c782f1af286bbb02e1903d0019a69db7cd43db112" to "87f925f8bec730f02e28b89ed12c8b36ec1ab15dc7aa37375e919d6a2d8fbc0c",
         )
         for ((i, voice) in TremorVoice.entries.withIndex()) {
-            assertEquals(expected[i].first, hash(Tremor.render(voice).samples), "$voice one-shot changed")
-            assertEquals(expected[i].second, hash(Tremor.render(voice, mapOf("HOLD" to 1f)).samples), "$voice held changed")
+            assertEquals(expected[i].first, hash(legacyRender(voice).samples), "$voice one-shot changed")
+            assertEquals(expected[i].second, hash(legacyRender(voice, mapOf("HOLD" to 1f)).samples), "$voice held changed")
         }
     }
+
+    private fun legacyRender(voice: TremorVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f) =
+        Tremor.render(voice, macros, velocity, model = Tremor.LEGACY_MODEL)
+
+    private fun legacyPlay(voice: TremorVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f) =
+        Tremor.play(voice, macros, velocity, model = Tremor.LEGACY_MODEL)
 
     private fun hash(samples: FloatArray): String {
         val bytes = ByteBuffer.allocate(samples.size * 4)

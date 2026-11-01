@@ -10,11 +10,23 @@ import kotlin.test.assertTrue
 /** The release evidence must describe the same selected recipe that makes its audio. */
 class AlloyAuditionGeneratorTest {
     @Test
-    fun `every release case resolves the selected voice before rendering or export`() {
+    fun `release studies resolve selected defaults while presets keep their complete configurations`() {
         val cases = AlloyAuditionGenerator.cases(full = false)
-        assertEquals(310, cases.size)
-        assertEquals(310, cases.map { it.id }.distinct().size)
-        assertEquals(36, cases.count { it.section == "PRESETS" })
+        assertEquals(299, cases.size)
+        assertEquals(299, cases.map { it.id }.distinct().size)
+        assertEquals(24, cases.count { it.section == "PRESETS" })
+        assertEquals(24, cases.count { it.canonicalPresetPatch != null })
+        val pickedFibre = AlloyPresets.forVoice(AlloyVoice.STRING).single { it.name == "Picked Fibre" }
+        val pickedCorner = cases.single { it.id == "picked_fibre_c2" }
+        assertEquals("EXTREMES", pickedCorner.section)
+        assertEquals(36, pickedCorner.baseMidi)
+        assertEquals(pickedFibre.copy(midi = 36), pickedCorner.recipe)
+        assertEquals(pickedFibre.config, pickedCorner.recipe.config)
+        assertEquals(pickedFibre.macros, pickedCorner.recipe.macros)
+        assertTrue(pickedCorner.raw)
+        assertNull(pickedCorner.canonicalPresetPatch,
+            "A transposed diagnostic must not overwrite the canonical C3 factory patch")
+        assertEquals(48, cases.single { it.section == "PRESETS" && it.patch?.name == "Picked Fibre" }.canonicalPresetPatch?.midi)
         val shortCorner = cases.single { it.id == "pluck_all_low_c2" }
         assertEquals("EXTREMES", shortCorner.section)
         assertEquals(36, shortCorner.baseMidi)
@@ -27,7 +39,8 @@ class AlloyAuditionGeneratorTest {
             AlloyAuditionGenerator.selectedVoices())
         for (c in cases) {
             val record = AlloyAuditionGenerator.recipeRecord(c)
-            assertEquals(Alloy.defaultConfigFor(c.voice), c.recipe.config, c.id)
+            assertEquals(c.patch?.config ?: Alloy.defaultConfigFor(c.voice), c.recipe.config, c.id)
+            if (c.section == "PRESETS") assertEquals(c.patch, c.recipe, c.id)
             assertEquals(c.baseMidi, c.recipe.midi, c.id)
             assertEquals(c.midi, Alloy.midiFor(c.voice, c.recipe.macros.getValue("TUNE"), c.recipe.midi), c.id)
             assertEquals(c.macros, c.recipe.macros, c.id)

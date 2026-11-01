@@ -116,8 +116,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "COMP", "WAH", "TOUCH", "ROCK"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(36, PadSheet.ALL_SEGMENTS.size, "the card should draw 36 chips")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "the card should hold 38 segments")
     }
 
     /**
@@ -128,7 +128,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three and the wah's three thirty-six`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven and DELAY thirty-eight`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -148,34 +148,43 @@ class PadSheetTest {
             // the same section as six independent players
             "SECTION",
             // the pedal board's Stage 0
-            "DRIVE", "COMP",
+            "DRIVE", "SUSTAIN", // COMP until its section passed its gate (2026-10-24)
             // the WAH section's gate (its three moves)
             "WAH", "TOUCH", "ROCK",
+            // the FORGE section's gate (2026-10-26)
+            "FORGE",
+            // DELAY's gate (2026-10-28): on the slate, drawn on the default row and behind MORE
+            "DELAY",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(36, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
-    fun `row seven is the library's gated pedals, word for word and key for key`() {
+    fun `the slate is the library's gated pedals, word for word and key for key`() {
         val gated = com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }
-        assertEquals(gated.map { it.word }, PadSheet.PEDAL_SEGMENTS, "the row is not the library's gated pedals")
+        assertEquals(gated.map { it.word }, PadSheet.PEDAL_SEGMENTS, "the slate is not the library's gated pedals")
         for (e in gated) {
             assertEquals(PadSheet.Treatment.Character(e.key), PadSheet.treatmentFor(e.word), "${e.word} does not tap its own key")
         }
         for (e in com.snipsnap.synth.Pedals.entries.filter { !it.gated }) {
-            assertFalse(e.word in PadSheet.ALL_SEGMENTS, "${e.word} draws a chip before its gate")
+            assertFalse(e.word in PadSheet.ALL_SEGMENTS, "${e.word} is on the slate before its gate")
         }
     }
 
     @Test
-    fun `the pedals are the last row, and each chip draws a rack character`() {
-        assertEquals(PadSheet.PEDAL_SEGMENTS, PadSheet.ROWS.last())
+    fun `the pedals are the last row, and each slate pedal draws a rack character`() {
+        // Until the app draws the slate (its app round), row seven is the six it drew before DELAY:
+        // the slate's first six in library order, so no pedal leaves the phone before MORE exists.
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE"), PadSheet.ROWS.last())
+        assertEquals(PadSheet.PEDAL_SEGMENTS.take(PadSheet.MAX_ROW_CHIPS), PadSheet.ROWS.last())
         assertEquals(PadSheet.Treatment.Character("driven"), PadSheet.treatmentFor("DRIVE"))
-        assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("COMP"))
+        assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("SUSTAIN"))
         assertEquals(PadSheet.Treatment.Character("wahed"), PadSheet.treatmentFor("WAH"))
         assertEquals(PadSheet.Treatment.Character("touchwahed"), PadSheet.treatmentFor("TOUCH"))
         assertEquals(PadSheet.Treatment.Character("rockwahed"), PadSheet.treatmentFor("ROCK"))
+        assertEquals(PadSheet.Treatment.Character("forged"), PadSheet.treatmentFor("FORGE"))
+        assertEquals(PadSheet.Treatment.Character("delayed"), PadSheet.treatmentFor("DELAY"), "DELAY dispatches though today's row does not draw it")
         for (segment in PadSheet.PEDAL_SEGMENTS) {
             val t = PadSheet.treatmentFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
@@ -221,6 +230,42 @@ class PadSheetTest {
         // Row one earned a sixth chip (DUST) from the merged branch, so the
         // ceiling moved from 5 to 6 rather than the regroup's rows growing.
         assertTrue(PadSheet.ROWS.maxOf { it.size } <= 6, "a row wider than 6 makes every chip narrower")
+        assertEquals(6, PadSheet.MAX_ROW_CHIPS)
+        // The slate's card holds the same ceiling: five pedals and MORE.
+        assertTrue(PedalSlate.ROW_SIZE + 1 <= 6, "five pedals and MORE must fit one row")
+        val slateCard = PadSheet.rows(PedalSlate.DEFAULT.words)
+        assertTrue(slateCard.maxOf { it.size } <= 6, "the slate's row seven is wider than 6: ${slateCard.last()}")
+        assertEquals(slateCard.flatten().size, slateCard.flatten().toSet().size, "the slate's card draws a word twice")
+    }
+
+    // ---- the slate's card (docs/superpowers/specs/2026-10-28-pedal-slate-design.md) ----
+
+    @Test
+    fun `the slate's card keeps rows one to six and draws the row's five then MORE`() {
+        val card = PadSheet.rows(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY"))
+        assertEquals(PadSheet.ROWS.dropLast(1), card.dropLast(1), "rows one to six moved")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY", "MORE"), card.last())
+        assertEquals(listOf("TOUCH", "MORE"), PadSheet.rows(listOf("TOUCH")).last(), "a short slate still ends in MORE")
+    }
+
+    @Test
+    fun `the slate's card refuses a word off the slate, a duplicate and a row with no room for MORE`() {
+        assertEquals(listOf("MORE"), PadSheet.rows(emptyList()).last(), "a library with no gated pedals draws MORE alone")
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "PUNCH")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "RIG")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "MORE")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "DRIVE")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE")) }
+    }
+
+    @Test
+    fun `MORE is a sheet affordance, never a segment`() {
+        assertFalse(PadSheet.MORE in PadSheet.ALL_SEGMENTS, "MORE would dispatch as a treatment")
+        assertFalse(PadSheet.ROWS.flatten().contains(PadSheet.MORE), "today's card has no MORE to route")
+        assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor(PadSheet.MORE) }
+        assertFalse(com.snipsnap.synth.Pedals.entries.any { it.word == PadSheet.MORE }, "a pedal is called MORE")
+        assertEquals("MORE", PadSheet.displayLabel(PadSheet.MORE))
+        assertTrue(PadSheet.tappable(PadSheet.MORE, isNoneState = true), "MORE opens the slate on any pad")
     }
 
     @Test
@@ -354,5 +399,49 @@ class PadSheetTest {
             PadSheet.UnTreat.NOT_BINNED,
             PadSheet.unTreatState(layered, setOf("a1_kick_soft.wav")),
         )
+    }
+
+    /**
+     * THE BIN hides BACK on a kept row only where the pad's own sheet can give that entry back
+     * (the owner's call, 2026-10-31): NONE over a card treatment, MUTATE's or OUTSIDE's UNDO for the
+     * main file. A SPLICE, a DE-SAMPLE or anything else with no door on the sheet keeps BACK,
+     * because BACK is then its only way back in the app.
+     */
+    @Test
+    fun `a pad has its own way back only through a door its sheet really has`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        val main = "a1_kick.wav"
+        val soft = "a1_kick_soft.wav"
+        val both = setOf(main, soft)
+
+        assertTrue(PadSheet.hasOwnWayBack(treated(ERA), main, both), "an era: NONE")
+        val layered = treated(ERA, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertTrue(PadSheet.hasOwnWayBack(layered, soft, both), "NONE restores every file the pad plays, a layer too")
+        assertFalse(PadSheet.hasOwnWayBack(layered, soft, setOf(soft)), "NONE refuses while the main file is not binned")
+        // Soft hits added after the treatment: NONE refuses until SOFT HITS goes off, then gives the
+        // main file back. Clearing the soft hits drops every layer, so a layer's entry is not given back.
+        val ghosted = treated(ERA, listOf(KitLayer(soft, 1, 40), KitLayer("a1_kick_softer.wav", 41, 80), KitLayer(main, 81, 127)))
+        assertEquals(PadSheet.UnTreat.GHOSTS_POSTDATE, PadSheet.unTreatState(ghosted, both), "test setup: one soft hit never went in")
+        assertTrue(PadSheet.hasOwnWayBack(ghosted, main, both), "soft hits after the treatment: SOFT HITS off, then NONE")
+        assertFalse(PadSheet.hasOwnWayBack(ghosted, soft, both), "SOFT HITS off drops the layers, so NONE never gives a layer back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), main, setOf(soft)), "nothing in the bin under the file, nothing to give back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), "someone_else.wav", both + "someone_else.wav"), "not one of the pad's files")
+
+        val mutate = obj("""{"mutate":{"mode":"morph","with":["B02"]}}""")
+        assertTrue(MutateSheet.read(mutate) != null, "test setup: a MUTATE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a MUTATE: its UNDO")
+        val mutatedLayers = treated(mutate, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "MUTATE's UNDO restores the main file only, never a layer")
+
+        val outside = obj("""{"outside":{"move":"reamp"}}""")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an OUTSIDE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
+
+        val splice = obj("""{"splice":{"crossfaded":true}}""")
+        assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE has no door on the sheet: BACK stays")
+        val patch = obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}}}""")
+        val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
+        assertFalse(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE has no door on the sheet: BACK stays")
+        assertFalse(PadSheet.hasOwnWayBack(treated(null), main, both), "an untreated pad has nothing to undo")
     }
 }

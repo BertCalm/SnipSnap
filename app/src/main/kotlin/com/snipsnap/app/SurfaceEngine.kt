@@ -5,12 +5,16 @@ import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
+import com.snipsnap.synth.AquariumPerformanceSettings
+import com.snipsnap.synth.AquariumRecipe
 
 /**
  * The Kotlin owner of one native surface engine: a looping sample under
  * pitch, filter and drive macros, played through Oboe's low-latency
  * callback, with the resample tap that turns a gesture into a new
- * sample. See `app/src/main/cpp/SurfaceEngine.h` for the threading rules;
+ * sample. Optional Aquarium follows the mono source/legacy chain and can
+ * create stereo width; PRINT always retains both output channels.
+ * See `app/src/main/cpp/SurfaceEngine.h` for the threading rules;
  * this class keeps to the UI thread and never touches audio memory.
  *
  * Close it. A [SurfaceEngine] holds a native stream; [close] is idempotent
@@ -34,9 +38,45 @@ class SurfaceEngine(preferredSampleRate: Int) {
     val sampleRate: Int get() = if (open) NativeSurface.sampleRate(handle) else preferredRate
 
     private val preferredRate = preferredSampleRate
+    private var aquariumWanted = AquariumPerformanceSettings()
+    private var aquariumBpm = 0.0
+    private var aquariumPending = false
+    private var aquariumResetPending = false
 
     @Synchronized
-    fun start(): Boolean = open && NativeSurface.start(handle)
+    fun start(): Boolean {
+        val started = open && NativeSurface.start(handle)
+        if (started) flushAquarium()
+        return started
+    }
+
+    /** Complete live settings. A full native queue retains the latest request for frame-rate retry. */
+    @Synchronized
+    fun configureAquarium(settings: AquariumPerformanceSettings, bpm: Double = 0.0, reset: Boolean = false): Boolean {
+        require(bpm.isFinite() && bpm in 0.0..1000.0) { "Aquarium host BPM must be finite and in 0..1000: $bpm" }
+        if (!open) return false
+        aquariumWanted = settings
+        aquariumBpm = bpm
+        aquariumPending = true
+        aquariumResetPending = aquariumResetPending || reset
+        return flushAquarium()
+    }
+
+    @Synchronized fun aquariumSettings(): AquariumPerformanceSettings = aquariumWanted
+    @Synchronized fun hasPendingAquariumControls(): Boolean = aquariumPending
+    @Synchronized fun aquariumFaulted(): Boolean = open && NativeSurface.aquariumFaulted(handle)
+    @Synchronized fun aquariumLimitedFrames(): Long = if (open) NativeSurface.aquariumLimitedFrames(handle) else 0L
+    @Synchronized fun panic() { if (open) NativeSurface.panic(handle) }
+
+    private fun flushAquarium(): Boolean {
+        if (!open) return false
+        if (!aquariumPending) return true
+        val values = FloatArray(AquariumRecipe.PARAMETERS.size) { aquariumWanted.settings.parameters.getValue(AquariumRecipe.PARAMETERS[it].id) }
+        val accepted = NativeSurface.configureAquarium(handle, values, aquariumWanted.settings.seed,
+            aquariumWanted.settings.model, aquariumBpm, aquariumWanted.outputGain, aquariumWanted.enabled, aquariumResetPending)
+        if (accepted) { aquariumPending = false; aquariumResetPending = false }
+        return accepted
+    }
 
     @Synchronized
     fun stop() {
@@ -117,6 +157,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
         gate: Boolean,
     ) {
         if (!open) return
+        flushAquarium()
         NativeSurface.control(
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
@@ -209,7 +250,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) PrintState.entries[NativeSurface.printState(handle)] else PrintState.IDLE
 
     /**
-     * Stop and take the print as a mono snip at the engine's rate; null when
+     * Stop and take the print as a stereo snip at the engine's rate; null when
      * nothing was captured, or when the callback has not finished it within
      * half a second (the print is left alone then, not freed). Waits, so
      * call it off the main thread.
@@ -231,8 +272,8 @@ class SurfaceEngine(preferredSampleRate: Int) {
         awaitPrintStopped { printState() == PrintState.STOPPING }
         return synchronized(this) {
             if (!open || printState() != PrintState.DONE) return null
-            val frames = NativeSurface.stopPrint(handle) ?: return null
-            Snip(frames, 1, sampleRate)
+            val samples = NativeSurface.stopPrint(handle) ?: return null
+            Snip(samples, 2, sampleRate)
         }
     }
 
@@ -245,7 +286,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
     }
 
     companion object {
-        /** The print ceiling: a minute at 48 kHz is 11.5 MB of floats, reserved up front. */
+        /** A minute at 48 kHz reserves 23 MB of stereo floats on the caller thread. */
         const val MAX_PRINT_SECONDS = 60f
 
         /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */

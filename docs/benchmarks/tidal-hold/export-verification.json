@@ -1,0 +1,26 @@
+{
+  "instruments": [
+    {
+      "voice": "PAIR",
+      "zones": 17,
+      "mpc2": true,
+      "mpc3": true,
+      "wavSamplerMarkers": 17,
+      "phoneZones": 17,
+      "maxPcm24SeamError": 4.537404071546624e-14,
+      "archive": "SnipSnap-Tidal-HOLD-PAIR.zip",
+      "sha256": "d4e656813d368af0ea4e8b7a143e3c44fcc98fc2a1ceb893a1fe1874a6e7833a"
+    },
+    {
+      "voice": "STREAM",
+      "zones": 17,
+      "mpc2": true,
+      "mpc3": true,
+      "wavSamplerMarkers": 17,
+      "phoneZones": 17,
+      "maxPcm24SeamError": 3.069528583596523e-14,
+      "archive": "SnipSnap-Tidal-HOLD-STREAM.zip",
+      "sha256": "8f072bf5d4bf0df9fea6bbc7fde06caaeb7f555f904f3ef340c2a76e37d6abf0"
+    }
+  ]
+}

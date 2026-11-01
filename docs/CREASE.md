@@ -230,3 +230,16 @@ SDK. CI builds Android separately; JVM checks cannot validate future phone UI
 wiring. Native integration is checked through engine replay, registry/serialization,
 velocity, CLI, shelf import and app build validation. Device interaction still
 requires a phone or emulator.
+
+
+## Release motion experiment
+
+An isolated [release experiment](superpowers/specs/2026-10-26-crease-release-experiment.md) compares continued held pressure with pressure withdrawal at key-up, using the actual circuit and the same volume fade. Its fixed recordings and numerical gates pass; no live release-aware player mode or new instrument export is enabled. The production renderer, presets and existing instruments are unchanged.
+
+The subsequent [playable release study](superpowers/specs/2026-10-31-crease-playable-release.md)
+adds an interactive browser key for Reed Mark C4. Its PCM cache includes the real
+onset and picks an approximate ending at arbitrary key-up. The displayed candidate
+passes 198 of 201 accuracy cases; three short-release peak errors still exceed
+the preregistered limit. Decoder, streaming-reader and browser interaction checks
+pass, but the phone-integration gate remains failed. Existing instruments,
+production playback and MPC exports retain their previous behaviour.

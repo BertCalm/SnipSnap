@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitLayer
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.StrikeStrip
 import org.junit.Assert.assertEquals
@@ -29,7 +31,9 @@ import org.junit.Test
 class StrikeStripTest : ComposeScreenTest() {
     private val state = StrikeState()
     private val owner = mutableStateOf(state)
-    private val kit = Kit("STRIKE TEST", listOf(KitPad(1, "snare.wav", displayName = "SNARE")))
+    private val kit = Kit("STRIKE TEST", listOf(KitPad(1, "snare.wav", displayName = "SNARE", velocityLayers = listOf(
+        KitLayer("dry.wav", 1, 41, "DRY"), KitLayer("room.wav", 42, 84, "REVERB"), KitLayer("snare.wav", 85, 127, "ECHO"),
+    ))))
     private val hits = mutableListOf<StrikeStrip.Hit>()
 
     private fun show() {
@@ -38,10 +42,15 @@ class StrikeStripTest : ComposeScreenTest() {
             val glow = remember { mapOf(1 to Animatable(0f)) }
             Column(Modifier.fillMaxSize()) {
                 StrikeControls(strike, Modifier.fillMaxWidth())
+                StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
                 StrikePadArea(strike, Modifier.fillMaxWidth().height(360.dp)) {
                     PlayBank(
                         kit, windowRows(0), glow,
-                        onHit = { _, velocity, _ -> hits += strike.hit(velocity) },
+                        onHit = { slot, velocity, _ ->
+                            val touch = strike.hit(velocity)
+                            hits += touch
+                            strike.recordHit(kit.pad(slot)!!, touch.velocity)
+                        },
                         onRelease = { _, _ -> },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -52,6 +61,30 @@ class StrikeStripTest : ComposeScreenTest() {
 
     private fun fader() = button("STRIKE STRENGTH")
     private fun pad() = compose.onNodeWithContentDescription("PAD A01: SNARE")
+
+    @Test
+    fun named_layer_highlight_follows_hits_and_does_not_move_with_a_returning_thumb() {
+        state.enabled = true
+        state.returns = true
+        show()
+        for ((index, amount) in listOf(0f, 0.5f, 1f).withIndex()) {
+            fader().performSemanticsAction(SemanticsActions.SetProgress) { it(amount) }
+            pad().performClick()
+            pump()
+            for ((i, name) in listOf("DRY", "REVERB", "ECHO").withIndex()) {
+                val layer = compose.onNodeWithContentDescription("STRIKE LAYER ${i + 1}: $name")
+                if (i == index) layer.assertIsSelected() else layer.assertIsNotSelected()
+                assertReadsInFull(name)
+            }
+        }
+        compose.runOnIdle { state.releaseTouch() }
+        pump()
+        assertEquals(0f, state.strength, 0f)
+        compose.onNodeWithContentDescription("STRIKE LAYER 3: ECHO").assertIsSelected()
+        pad().performClick()
+        pump()
+        compose.onNodeWithContentDescription("STRIKE LAYER 1: DRY").assertIsSelected()
+    }
 
     @Test
     fun a_reused_pad_reads_the_new_kits_strip_instead_of_its_old_pointer_callback() {

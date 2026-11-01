@@ -1,4 +1,4 @@
-# TIDAL — finite listening prototype, second source pass
+# TIDAL — encounter and held aftermath
 
 TIDAL turns a restricted two-center encounter into a pitched sound. Two original
 populations retain different harmonic fingerprints as their disks deform into
@@ -6,10 +6,12 @@ surviving cores and extended streams. The defining gesture is gather, encounter,
 and unravel; the late sound should contain evolving ringing strands.
 
 This milestone implements PAIR and STREAM, complete replayable recipes, dry
-listening comparisons, and a prototype kit. It is a musical adaptation of a
+listening comparisons, six factory presets, and a sixteen-pad starter. It is a musical adaptation of a
 softened restricted gravitational model, not a calibrated galaxy prediction.
-The remaining proposed voices, 36-preset bank, phone picker, and HOLD
-reconstruction remain later work. Listening acceptance is still open.
+The owner approved the model-2 source direction after the second audition.
+The remaining proposed voices and larger preset bank remain later work. HOLD
+now reconstructs the post-encounter material for pads and held keys. The preset
+bank and physical phone/MPC playback still need their own listening pass.
 
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 opens with 18 focused comparisons for the second source pass. The original
@@ -29,9 +31,11 @@ still available in model 1 and the archived audition.
 
 ROOT requests MIDI 36–84. VELOCITY changes source excitation independently of the
 encounter. The five timbral controls are APPROACH, PASSAGE, TILT, BIND, and TAIL.
-HOLD is saved at zero; positive HOLD is rejected. Repeating a clip on the audition
-page repeats the complete finite performance and does not establish a sustained
-instrument or seamless loop.
+PLAYBACK selects NOTE (`HOLD = 0`) or HOLD (`HOLD = 1`); fractional values are rejected.
+NOTE keeps the accepted finite performance. HOLD pads start in the moving aftermath
+and loop while gated. MAKE INSTRUMENT retains the opening encounter before its
+sustain marker and releases on note-off. Simply repeating a finite clip is separate
+from this reconstruction.
 
 | Control | Action |
 | --- | --- |
@@ -40,6 +44,7 @@ instrument or seamless loop.
 | TILT | Changes the actual 3D disk orientations and spin relationships. |
 | BIND | Places material farther out or deeper within the same softened central potential, with compatible circular velocities. |
 | TAIL | Changes listening emphasis and bounded resonance persistence toward material that actually extends. |
+| HOLD | Explicit NOTE/HOLD switch; selects a versioned reconstruction of the resulting material. |
 
 A fast passage can strip less material than a slow passage at the same closest
 separation. Its brighter musical impact is an explicit excitation mapping, not a
@@ -48,14 +53,56 @@ strong binding can leave little material in the tail pickup. Those comparisons
 must preserve that quiet result rather than normalize noise into a stream.
 
 `TidalPatch` saves voice, all controls, requested note, velocity, exact signed
-64-bit seed, and rendering model. The seed is canonical decimal text in JSON.
+64-bit seed, and rendering model. A held recipe also saves `heldModel = 1`; a missing or unsupported
+held version is refused. The seed is canonical decimal text in JSON.
 Models 1 and 2 fix their dynamics, reduction, source, and finite-window policies.
 New recipes use model 2; saved model-1 recipes keep their original defaults and
 rendering. Published model-1 baseline sample hashes are checked during generation.
 Derived particles, descriptor curves, oscillator phases, and resonator states
 are rebuilt. Macro and name edits retain the saved note, velocity, seed, and
-model. Provisional recipes remain outside the shared factory roster and phone
+model. The six finite model-2 recipes are in the shared factory roster and phone
 picker. Native playback continues to use rendered samples.
+
+In SYNTH, select TIDAL and PAIR or STREAM. The five timbral sliders are joined
+by ROOT, VELOCITY, SOURCE (ORIGINAL or MATERIAL), and VARIATION SEED. SOURCE
+selects the saved rendering model; changing it keeps the current encounter
+controls. An invalid or overflowing seed keeps the previous valid variation.
+Drafts, saved presets, SCRAMBLE, SEND TO PAD, and reopening a pad retain the
+complete typed recipe, including NOTE/HOLD. SPREAD uses the authored MIDI root rather than asking a
+pitch detector to infer it from upper-rich material.
+
+TIDAL on FRESH TAPE supplies sixteen dry, editable encounters. Every delivered
+pad plays once. Their long buffers are filed as LOOP by the generic duration
+classifier, but that does not enable sample looping or a held instrument. The
+starter stays finite; choosing HOLD in SYNTH is explicit.
+
+## HOLD and MAKE INSTRUMENT
+
+The characteristic gesture is gather → encounter → moving aftermath → release.
+The held field revisits a bounded 1.4-second post-passage window of the actual
+32-cohort readout. A smooth cosine traversal moves through those controls and
+back, retaining the original population's spectral profile, contact texture,
+core allocation and already-damped tail amplitudes. Only the controls reverse
+direction. Audio is resynthesized; neither the finite WAV nor a fictional
+periodic gravitational orbit is repeated.
+
+A roughly four-second field fits each carrier's frequency integral to complete
+turns. The root is fitted within 0.1 cent; metallic partials keep their stretched
+ratios with a correction bounded by half a turn per field. The oscillator,
+band-limiter, decimator and 8 Hz DC-filter state run continuously through real
+neighboring cycles. The loop marker and exported end receive no crossfade or
+fade. A 350 ms transition joins the preserved finite opening to the field,
+well before the marker. [TIDAL_HOLD.md](TIDAL_HOLD.md) records the mechanism,
+measurements, limits and reproduction commands.
+
+HOLD in SYNTH and SEND TO PAD uses the aftermath alone, with gated looping.
+Returning to NOTE clears looping and restores one-shot playback. MAKE INSTRUMENT
+works from either switch position: seventeen roots from MIDI 36 through 84,
+three semitones apart, cover C2–C6. Every zone retains the encounter and a
+nonzero sustain marker. RELEASE spans 0.1–1.5 seconds. Samples render serially,
+with progress and cancellation; the existing package path writes MPC 2, MPC 3
+and the phone's instrument sidecar. Keyboard touch scales the captured source;
+it does not rerun the encounter at each performed velocity.
 
 ## Model and sound
 
@@ -92,11 +139,33 @@ with standard 4× internal rendering, band limiting, decimation, DC control, and
 shared melodic leveling. Preparation is independent of the requested pitch and
 can be reused within a bounded process-local cache.
 
-PAIR and STREAM share the encounter model. Their defaults and source spectra
-differ; STREAM eases root support slightly and exposes a brighter population
-profile. These are two starting characters for one instrument, not distinct
-gravitational laws. The cache retains at most eight prepared settings and does
-not retain rendered audio.
+PAIR and STREAM share the encounter model. In model 2 they use the same two
+material profiles, with different encounter defaults and slightly less root
+support in STREAM. They are two starting gestures for one instrument. Model 1
+retains its original voice-specific harmonic profiles.
+
+## Rendering and edit cost
+
+The geometry cache retains at most eight prepared settings. Its key contains
+every dynamics input; note, velocity, source model, and TAIL do not change the
+trajectory. A separate completed-audio cache retains at most 8 MiB of sample
+data, keyed by voice, rendering model, note, velocity, exact seed, and all
+resolved controls. Names and macro insertion order do not create different
+sounds. Returned samples are caller-owned copies, so later pad processing
+cannot damage a cached performance.
+
+Production output and diagnostic taps share the same synthesis stages. The
+source channels are independent and use one reusable oversampled work buffer;
+their Float summation and separate conditioning order remain pinned by frozen
+model-1 and model-2 references. Ordinary playback omits diagnostic traces and
+derived taps. The diagnostic path remains available to the audition generator.
+
+Completed cache hits avoid synthesis; changing an audible recipe input requires
+a fresh render. Preview jobs are debounced and cooperatively cancellable, so
+obsolete edits can stop instead of publishing an old result over the latest
+controls. Desktop measurements and phone acceptance are separate evidence.
+See [the rendering report](TIDAL_PERFORMANCE.md) for the benchmark method,
+before/after timings, memory definitions, and remaining limits.
 
 ## Listening evidence
 
@@ -127,6 +196,8 @@ From the repository root:
 ```sh
 ./gradlew --no-daemon test
 ./gradlew --no-daemon :synth:generateTidalAudition
+./gradlew --no-daemon :synth:benchmarkTidal -PtidalBenchmarkOutput=/tmp/tidal-performance.json
+./gradlew --no-daemon :synth:generateTidalKit -PtidalKitOutput=/tmp/tidal-kit
 ./gradlew --no-daemon :cli:run --args='synth TIDAL PAIR --all --midi 60 --velocity .75 --seed 0 --out /tmp/tidal-pair'
 ./gradlew --no-daemon :cli:run --args='synth TIDAL STREAM --all --midi 48 --velocity .75 --seed 0 --out /tmp/tidal-stream'
 ./gradlew --no-daemon :cli:run --args='synth TIDAL PAIR --patch /absolute/path/to/tidal.patch.json --out /tmp/tidal-replay'
@@ -136,4 +207,7 @@ The listening generator writes `testkit/tidal-audition/`. Its manifest records
 the source revision, source-file hashes, clip hashes, gain policy, and diagnostics.
 The retained frontend lives in `synth/src/test/resources/tidal-audition/`.
 Android compilation, target-phone latency/playback, and MPC hardware acceptance
-are separate checks; the JVM environment does not include an Android SDK.
+are separate checks. The kit generator requires a fresh destination directory
+and writes both MPC generations, the editable kit, complete per-pad recipes,
+verification files, and `tidal-kit.zip`. A successful export/read-back check is
+separate from loading and listening on MPC hardware.

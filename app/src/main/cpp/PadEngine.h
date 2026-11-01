@@ -10,6 +10,7 @@
 
 #include "PrintBuffer.h"
 #include "SpscRing.h"
+#include "aquarium/PerformanceBus.h"
 
 namespace snipsnap {
 
@@ -123,6 +124,25 @@ public:
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
+    /**
+     * The hardware's own playback position: the frame count the device says it
+     * has played and the CLOCK_MONOTONIC nanoseconds it says that was true at.
+     * UI thread only, never from the audio callback (Oboe documents
+     * getTimestamp as unsafe in a data callback before Android R; minSdk is
+     * 29). stream_ is only set and reset on the UI thread, so no lock is
+     * needed. Returns false, leaving both outputs untouched, with no stream or
+     * on any Oboe error (a fresh stream has no timestamp for a moment).
+     */
+    bool hardwarePosition(int64_t* framePosition, int64_t* timeNanos);
+    /** Frames per hardware burst, or 0 with no stream. UI thread only. */
+    int32_t framesPerBurst() const;
+    /** oboe::AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio), or -1 with no stream. UI thread only. */
+    int32_t audioApi() const;
+
+    /** Serialized control thread; false means no settings were queued. */
+    bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
+    bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
+    uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -253,6 +273,7 @@ private:
     PadCommand held_[kHeldMax];
     int32_t heldCount_ = 0;
 
+    aquarium::PerformanceBus aquarium_;
     PrintBuffer print_;
 };
 

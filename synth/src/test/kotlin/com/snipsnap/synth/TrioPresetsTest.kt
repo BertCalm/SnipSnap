@@ -43,13 +43,13 @@ class TrioPresetsTest {
             assertTrue(patch.name.isNotBlank())
             assertEquals(Trio.macrosFor(patch.voice).map { it.name }.toSet(), patch.macros.keys, patch.name)
             assertTrue(patch.macros.values.all { it.isFinite() && it in 0f..1f }, patch.name)
-            assertEquals(5, patch.config.model, "${patch.name} must explicitly preserve the accepted synthesis model")
+            assertEquals(Trio.MODEL_VERSION, patch.config.model, "${patch.name} must explicitly preserve the accepted synthesis model")
             assertTrue(patch.midi in notes, "${patch.name} leaves C minor pentatonic C3-C5")
             assertTrue(patch.velocity.isFinite() && patch.velocity > 0f && patch.velocity <= 1f, patch.name)
         }
         val family = roots.single { it.voice == TrioVoice.ENSEMBLE }
         val full = TrioPresets.forGroup(TrioPresetGroup.HIGH_DRAMA).single { it.macros.getValue("DRAMA") == 1f }
-        assertEquals(TrioConfig(seed = 47010, model = 5), family.config, "the accepted listening anchor must retain its original performance")
+        assertEquals(TrioConfig(seed = 47010, model = Trio.MODEL_VERSION), family.config, "the accepted listening anchor must retain its original performance")
         assertEquals(family.copy(name = full.name, macros = family.macros + ("DRAMA" to 1f)), full,
             "the two listening anchors must compare DRAMA without changing root, velocity or seeded gestures")
         assertEquals(all, TrioPresets.all(), "reopening the catalog must retain seeds and the complete performance")
@@ -96,7 +96,7 @@ class TrioPresetsTest {
             assertEquals(patches[i].midi, patch.midi, label)
             assertEquals(patches[i].velocity, patch.velocity, label)
             assertEquals(patches[i].config, patch.config, label)
-            assertEquals(5, patch.config.model, label)
+            assertEquals(Trio.MODEL_VERSION, patch.config.model, label)
             assertEquals(patch.name, pad.displayName, "$label must retain its curated pad name")
             assertEquals(patch.name, pad.source["preset"], label)
             assertEquals(TrioPresets.groupFor(patch).name, pad.source["group"], label)

@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "4dd8b349182f886954b16aa577e1206244712d6b",
+  "source": "Owner preferred timed-return study",
+  "referenceGain": 3.2143452167510986,
+  "returnGain": 0.8930654093975182,
+  "endpoints": [
+    {
+      "id": "coral",
+      "midi": 48,
+      "velocity": 1,
+      "seed": "7",
+      "macros": {
+        "TOUCH": 0.30000001192092896,
+        "DUET": 0.15000000596046448,
+        "CURRENT": 0.20000000298023224,
+        "VENUE": 0,
+        "BLOOM": 0.3499999940395355,
+        "HOLD": 0
+      },
+      "prelevelSamplesSha256": "1af6304963edf3d172cb7c171ba8f61eb4bbce8ac6a38a4d5eaca3896ee80ffe",
+      "returnSamplesSha256": "d95b91279789da31eb59c7fefb813b7fe73c8fc580de33c775da3f4d2e4655f9",
+      "wavSha256": "23996716fad5464666937c8880f32d9de0ff12a98824b68614e83ffc09db1951"
+    },
+    {
+      "id": "seaweed",
+      "midi": 48,
+      "velocity": 1,
+      "seed": "7",
+      "macros": {
+        "TOUCH": 0.30000001192092896,
+        "DUET": 0.15000000596046448,
+        "CURRENT": 0.20000000298023224,
+        "VENUE": 1,
+        "BLOOM": 0.3499999940395355,
+        "HOLD": 0
+      },
+      "prelevelSamplesSha256": "89837c9734a0c8f17d05fb37bea8db98b36ebed29fabaac3a281e9cd017d4775",
+      "returnSamplesSha256": "c2482c4fae42f7078592f3b80f99d74ece7e2fa1b25f6dbf5f9cd0fd282abce2",
+      "wavSha256": "14fa2b8dfcbc4fb5fcd036b15b081d1b695e30201986cd69370592214cfc3303"
+    }
+  ]
+}
