@@ -161,7 +161,7 @@ object OverlapHeldPrototype {
         fun state(): DoubleArray = DoubleArray(buffer.size) { buffer[(position + it) % buffer.size] }
     }
 
-    private class Machine(val plan: Plan) {
+    private class Machine(val plan: Plan, private val cancelled: () -> Boolean = { false }) {
         private val lines = Array(6) { Delay(plan.lengths[it]) }
         private val previous = DoubleArray(6)
         private val damped = DoubleArray(6)
@@ -173,7 +173,7 @@ object OverlapHeldPrototype {
         }
         private val driver = Array(6) { node ->
             val noise = Dsp.Noise(Dsp.seedFor("OVERLAP held prototype 1", plan.midi, node))
-            FloatArray(plan.count) { if (it % 8192 == 0) stopIfUnwanted(); noise.next() }
+            FloatArray(plan.count) { if (it % 8192 == 0) stopIfUnwanted(cancelled); noise.next() }
         }
         // A finite random block can contain DC. Remove its exact period mean before
         // the resonators, so long RING is not spent maintaining an incidental offset.
@@ -216,7 +216,7 @@ object OverlapHeldPrototype {
             return dc.toFloat()
         }
         fun block(count: Int): FloatArray = FloatArray(count) { i ->
-            if (i % 8192 == 0) stopIfUnwanted()
+            if (i % 8192 == 0) stopIfUnwanted(cancelled)
             step(1.0)
         }
         fun state(): DoubleArray {
@@ -232,8 +232,8 @@ object OverlapHeldPrototype {
         }
     }
 
-    private fun stopIfUnwanted() {
-        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("OVERLAP held proof cancelled")
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw java.util.concurrent.CancellationException("OVERLAP held proof cancelled")
     }
     private fun elapsed(start: Long) = (System.nanoTime() - start) / 1e6
     private fun rms(s: FloatArray, a: Int = 0, b: Int = s.size): Double =
@@ -258,10 +258,12 @@ object OverlapHeldPrototype {
     fun renderLoopMeasured(
         topology: OverlapTopology, macros: Map<String, Float> = emptyMap(), midi: Int = 48,
         velocity: Float = .8f, periodSeconds: Double = 1.5,
+        cancelled: () -> Boolean = { false },
     ): LoopResult {
+        stopIfUnwanted(cancelled)
         val started = System.nanoTime()
         val p = plan(topology, macros, midi, velocity, periodSeconds)
-        val machine = Machine(p)
+        val machine = Machine(p, cancelled)
         val setup = elapsed(started)
         val solving = System.nanoTime()
         val budget = (ceil((3.0 * p.t60 + 2.0) / p.seconds).toInt() + 2).coerceIn(6, MAX_ATTEMPTS)
@@ -315,6 +317,7 @@ object OverlapHeldPrototype {
         // Export the kept physical period after the SAME scalar as its true
         // neighbors. House gain inference can differ by an ULP from separate
         // Float gain stages; do not return a separately rounded recording.
+        stopIfUnwanted(cancelled)
         return LoopResult(Snip(context.copyOfRange(p.frames, 2 * p.frames), 1, RATE), raw, context, diagnostics)
     }
 

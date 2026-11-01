@@ -127,6 +127,11 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.libration() },
         Starter(
+            "meridian", "MERIDIAN",
+            "Swinging contacts and ringing materials. Sixteen finite notes, including two held-sound captures.",
+            seeded = false,
+        ) { SynthKits.meridian() },
+        Starter(
             "tidal", "TIDAL",
             "String and metal populations in C minor pentatonic. Gather, pass, and unravel into ringing strands.",
             seeded = false,
@@ -403,6 +408,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.ballast() },
+        Starter(
+            "keel", "KEEL",
+            "Plucked, FM and sine-and-saw bass whose bright attack settles into a full body. Two held loops.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.keel() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

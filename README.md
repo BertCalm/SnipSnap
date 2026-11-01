@@ -1002,8 +1002,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, RIME and GRAINS round out the lineup —
-67 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME and GRAINS round out the lineup —
+68 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1217,9 +1217,13 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. BORE, ARCO
-and SCOUR have preset rosters, so `snipsnap synth` renders them.
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
+SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+
+EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
+regenerable audition. It remains outside the picker and factory presets.
+
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
 and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and
 refined factory recipes. BALLAST keeps its bass and saved GLINT identity; its

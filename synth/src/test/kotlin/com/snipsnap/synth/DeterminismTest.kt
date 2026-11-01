@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `EROSION native voices replay their saved touch`() {
+        for (voice in ErosionVoice.entries) {
+            val patch = ErosionPatch("Canary", voice, velocity = .6f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
@@ -234,6 +241,13 @@ class DeterminismTest {
             val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
             assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
         }
+    }
+
+    @Test
+    fun `MERIDIAN regenerates the saved note velocity and contact noise byte for byte`() {
+        val patch = MeridianPatch("Swing canary", MeridianVoice.SWEEP,
+            mapOf("LATITUDE" to .8f, "MEMORY" to .6f), midi = 51, velocity = .7f, seedContext = 41)
+        assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
     }
 
     @Test
@@ -577,6 +591,22 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
             assertContentEquals(Scour.render(voice, patch.macros, velocity = .3f).samples,
                 Scour.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
+        }
+    }
+
+    @Test
+    fun `KEEL is byte-identical across renders, every voice`() {
+        for (voice in KeelVoice.entries) {
+            val patch = KeelPatch("Canary", voice, Keel.defaults(voice), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `KEEL's held loop is byte-identical across renders, every voice`() {
+        for (voice in KeelVoice.entries) {
+            val patch = KeelPatch("Canary", voice, Keel.defaults(voice) + ("HOLD" to 1f), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
 }
