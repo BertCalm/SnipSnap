@@ -19,9 +19,7 @@
 - Layer names, bottom to top: `DRY`, `ROOM`, `ECHO`. Windows from `StackTakes.windows(2)` (1..41, 42..84, 85..127). File names from `freeLayerNames`.
 - Copy is facts in the house voice, upper case, in `object Copy` (`shell/.../Personality.kt`). No model identifier anywhere.
 - One Gradle invocation at a time on this machine, `./gradlew --no-daemon`, focused test classes only; the full suite runs in CI.
-- Every commit message ends with:
-  `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`
-  `Claude-Session: https://claude.ai/code/session_01YMETg4263r5yANpLA2jcUx`
+- Commit messages carry the harness's attribution trailers.
 
 ## Review Focus
 
@@ -499,6 +497,6 @@ Open a draft PR against `claude/mobile-mpc-drum-sampler-t58x74` titled "STRIKE F
 
 ## Self-review notes
 
-- Spec coverage: §6.1/6.2 → Task 6 and Task 2 constants; §6.3 → Task 3 `strikeFxAudition` + Task 6 sequence; §6.4 → Task 3; §6.5 → Tasks 1, 4; §6.6 → Task 5; §6.7 → unchanged by design; §7 tests → Tasks 1 to 7; §8 constraints → Global Constraints. Bank-B twins (§6.5 last bullet): the twin code copies `recipe` verbatim (`KitBuilder.kt:327`) and does not re-render; this plan leaves twins as they are and the PR body says so. That is a deliberate scope cut from the spec's "twin re-renders its own three files", to be its own follow-up.
+- Spec coverage: §6.1/6.2 → Task 6 and Task 2 constants; §6.3 → Task 3 `strikeFxAudition` + Task 6 sequence; §6.4 → Task 3; §6.5 → Tasks 1, 4; §6.6 → Task 5; §6.7 → unchanged by design; §7 tests → Tasks 1 to 7; §8 constraints → Global Constraints. Bank-B twins (§6.5 last bullet): bank-B twins (`remixBankB`) do not copy the recipe: each twin is ECHO through a fresh fx-only recipe from Shuffle, so it never carries a bank. It is BREED's kept children that copied the recipe, and `Breed.place` now strips `layers` from them. This plan leaves twins as they are and the PR body says so. That is a deliberate scope cut from the spec's "twin re-renders its own three files", to be its own follow-up.
 - Names used consistently: `LayerRecipe`, `layers`, `isBanked`, `processBank`, `renderBank`, `StrikeFxBank.{DEFAULT_ROOM, DEFAULT_SLAP, NAMES, layers, roomOf, slapOf, isStrikeFx, render}`, `strikeFxAudition`, `strikeFxLayers`, `clearStrikeFxLayers`, `Plan.StrikeFx`, `Copy.STRIKE_FX_ON/OFF/REPLACES_LAYERS`.
 - Review Focus items 1 to 5 each have a named test in Tasks 2, 3, 4 and 5.

@@ -106,15 +106,21 @@ order: [the plan](superpowers/plans/2026-10-31-strike-fx-layers.md).
   echo's REPEAT (0.55), TONE (0.8) and MIX (0.9) are fixed.
 - **AUDITION** plays DRY, ROOM and ECHO one second apart and writes nothing.
   Move the knobs and audition again as often as you like.
-- **KEEP** writes three files: the source bytes copied to `_v1.wav` as DRY,
-  ROOM in `_v2.wav`, and ECHO over the pad's main file. The layers are named
+- **KEEP** writes three files: the source bytes copied as DRY, ROOM as the
+  second, and ECHO over the pad's main file. The two soft-layer file names
+  come from the kit's free `_vN` names, so they are `_v1` and `_v2` only on a
+  clean pad. The layers are named
   DRY, ROOM and ECHO and take the three windows 1 to 41, 42 to 84 and 85 to
   127 (the split a stacked pad with two soft zones gets). Each rendered layer
   ends with a 4 ms fade. The pad's recipe keeps every field it had and adds
-  `layers`, which makes it a version 3 recipe. A printed board is refused,
-  and a pad with a treatment keeps its treatment.
+  `layers`, which makes it a version 3 recipe (a recipe without a bank is
+  still written as version 2). A printed board is refused,
+  and a pad with a treatment keeps its treatment. A pad whose recipe is an
+  era, mutate, splice or similar history is refused too, by KEEP and by
+  AUDITION. Soft-layer files a KEEP replaces go to the bin.
 - **CLEAR** restores the single sample from the DRY bytes and removes
-  `layers` from the recipe.
+  `layers` from the recipe. After an export and import the DRY bytes are
+  still the original take, so CLEAR returns the pad's first bytes.
 - **Confirm dialogs.** KEEP on a pad that already has SOFT HITS asks first,
   and SOFT HITS on a pad that holds a STRIKE FX bank asks first; each
   replaces the other.
@@ -122,8 +128,11 @@ order: [the plan](superpowers/plans/2026-10-31-strike-fx-layers.md).
   target pad's own sample, not to the source pad's.
 - **Export and import** keep the layer names, the windows and the version 3
   recipe.
-- **Not done: bank-B twins.** A twin copies the recipe as before and does not
-  re-render its own three files. That is its own follow-up.
+- **Not done: bank-B twins.** Twins (`remixBankB`) do not copy the recipe:
+  each twin is ECHO through a fresh fx-only recipe from Shuffle, so it has no
+  bank and no three files of its own. It is BREED's kept children that copied
+  the recipe; they now arrive as one sample with `layers` removed. Giving a
+  twin its own bank is a follow-up.
 
 Heard: no one has heard a user-pad bank yet. The owner's snare is the
 audition gate.
