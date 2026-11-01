@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Actual Meridian layers, sampler packages and JVM reference playback; no phone/hardware claim. */
@@ -89,10 +88,15 @@ class MeridianPadMakerTest {
         assertEquals(midis, instrument.zones.map { it.rootNote })
         assertEquals(39, instrument.sampleFiles.size)
         val samples = linkedMapOf<String, FloatArray>()
+        // The package on disk spans the keyboard: the writer stretches the edge zones to 0
+        // and 127, so the sidecar is compared with the spanned program, not the rendered one.
+        val spanned = program.fullKeyboard()
         for ((zoneIndex, zone) in instrument.zones.withIndex()) {
-            assertEquals(program.keygroups[zoneIndex].lowNote, zone.lowNote)
-            assertEquals(program.keygroups[zoneIndex].highNote, zone.highNote)
-            assertTrue((zone.lowNote..zone.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 })
+            assertEquals(spanned.keygroups[zoneIndex].lowNote, zone.lowNote)
+            assertEquals(spanned.keygroups[zoneIndex].highNote, zone.highNote)
+            val rendered = program.keygroups[zoneIndex]
+            assertTrue((rendered.lowNote..rendered.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 },
+                "each rendered zone stays within a semitone of its root")
             assertEquals(listOf(0, 43, 85), zone.layers.map { it.velStart })
             assertEquals(listOf(42, 84, 127), zone.layers.map { it.velEnd })
             val native = instruments[zoneIndex].obj()
@@ -130,8 +134,14 @@ class MeridianPadMakerTest {
             }
         }
         assertTrue("<SliceLoop>1</SliceLoop>" in xpm)
-        assertNull(KeyHit.resolve(instrument, 35, 1f) { samples[it]?.size?.toLong() })
-        assertNull(KeyHit.resolve(instrument, 73, 1f) { samples[it]?.size?.toLong() })
+        // Below and above the rendered roots the keyboard still plays: the edge zones run to
+        // 0 and 127 and the player pitch-shifts from the nearest root, as the hardware does.
+        val below = assertNotNull(KeyHit.resolve(instrument, 35, 1f) { samples[it]?.size?.toLong() })
+        assertEquals(instrument.zones.first().layers.last().sample, below.sampleFile)
+        assertEquals(2.0.pow(-1.0 / 12), below.pitchRatio, 1e-12)
+        val above = assertNotNull(KeyHit.resolve(instrument, 73, 1f) { samples[it]?.size?.toLong() })
+        assertEquals(instrument.zones.last().layers.last().sample, above.sampleFile)
+        assertEquals(2.0.pow(1.0 / 12), above.pitchRatio, 1e-12)
         val neighbor = assertNotNull(KeyHit.resolve(instrument, 61, .65f) { samples[it]?.size?.toLong() })
         assertEquals(2.0.pow(1.0 / 12), neighbor.pitchRatio, 1e-12)
         val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, 44_100, samples), 44_100)
