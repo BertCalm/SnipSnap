@@ -3,6 +3,8 @@ package com.snipsnap.app.ui
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -35,7 +37,9 @@ class RimeSynthScreenTest : ComposeScreenTest() {
         val action=requireNotNull(node.config.getOrNull(SemanticsActions.OnClick)?.action)
         compose.runOnIdle { assertTrue("Click refused for $label",action.invoke()) }; pump()
     }
-    private fun progress(label: String) = compose.onNodeWithContentDescription(label,useUnmergedTree=true)
+    private fun progress(label: String) = compose.onNode(
+        hasContentDescription(label,substring=true) and
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),useUnmergedTree=true)
         .fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
 
     @Test fun opening_a_saved_model_five_hold_does_not_enable_moving_detail() {
