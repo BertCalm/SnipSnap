@@ -146,4 +146,43 @@ class MidiKeysTest {
         keys.allOff()
         assertEquals(2, bends.ratios.size, "already at rest: nothing more to send")
     }
+    private class Wheels : MidiKeys.Voice {
+        val bends = mutableListOf<Double>()
+        val vibratos = mutableListOf<Float>()
+        override fun noteOn(note: Int, velocity: Float) {}
+        override fun noteOff(note: Int) {}
+        override fun allOff() {}
+        override fun bend(ratio: Double) { bends += ratio }
+        override fun vibrato(semitones: Float) { vibratos += semitones }
+    }
+
+    @Test
+    fun `the mod wheel is a vibrato up to half a semitone, a repeat is not sent twice, and the panic stills it`() {
+        val wheels = Wheels()
+        val keys = MidiKeys(wheels)
+        keys.handle(Event.Control(0, MidiWire.CC_MOD, 127))
+        keys.handle(Event.Control(0, MidiWire.CC_MOD, 127))
+        keys.handle(Event.Control(0, MidiWire.CC_MOD, 0))
+        assertEquals(listOf(0.5f, 0f), wheels.vibratos)
+        assertEquals(0.5f * 64 / 127f, MidiKeys.vibratoDepth(64), 1e-6f)
+        assertEquals(0.5f, MidiKeys.vibratoDepth(500), 1e-6f, "off the wire's range is the top")
+        keys.handle(Event.Control(0, MidiWire.CC_MOD, 127))
+        keys.handle(Event.Control(0, MidiWire.CC_ALL_SOUND_OFF, 0))
+        assertEquals(listOf(0.5f, 0f, 0.5f, 0f), wheels.vibratos, "a cable pulled with the wheel up never sends its return")
+    }
+
+    @Test
+    fun `changing the bend range re-bends a held wheel, and the ranges cycle`() {
+        val wheels = Wheels()
+        val keys = MidiKeys(wheels)
+        keys.handle(Event.PitchBend(0, 8191))
+        keys.bendRange = 12
+        assertEquals(listOf(MidiKeys.bendRatio(8191, 2), 2.0), wheels.bends, "the wheel is at the top: an octave now")
+        keys.bendRange = 12
+        assertEquals(2, wheels.bends.size)
+        keys.handle(Event.PitchBend(0, -8192))
+        assertEquals(0.5, wheels.bends.last(), 1e-12)
+        assertEquals(listOf(2, 5, 12, 1, 2), listOf(1, 2, 5, 12, 1).map(MidiKeys::nextBendRange))
+        assertEquals(MidiKeys.BEND_RANGE_SEMITONES, MidiKeys.nextBendRange(7), "a range not on the list starts again at the default")
+    }
 }

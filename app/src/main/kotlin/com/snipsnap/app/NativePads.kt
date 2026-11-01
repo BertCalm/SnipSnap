@@ -48,6 +48,13 @@ object NativePads {
      */
     external fun setPitch(handle: Long, ratio: Double, glideMs: Float): Boolean
 
+    /**
+     * The mod wheel: every voice wobbles [semitones] either way (0 off,
+     * clamped to two), gliding to that depth over [glideMs]. False when the
+     * ring dropped it.
+     */
+    external fun setVibrato(handle: Long, semitones: Float, glideMs: Float): Boolean
+
     /** The engine's whole mix times [gain] 0..1, gliding over [glideMs]. False when the ring dropped it. */
     external fun setMasterGain(handle: Long, gain: Float, glideMs: Float): Boolean
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float): Boolean

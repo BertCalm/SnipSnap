@@ -52,6 +52,7 @@ jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, 
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong, jdouble, jfloat);
 jboolean Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong, jfloat, jfloat);
+jboolean Java_com_snipsnap_app_NativePads_setVibrato(JNIEnv*, jobject, jlong, jfloat, jfloat);
 jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv*, jobject, jlong, jlongArray);
 jint Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong);
@@ -807,6 +808,7 @@ TEST(jni_the_pads_bend_and_master_gain_cross_the_bridge) {
     const auto out = pull(pads, 4);
     // Frames 0, 2, 4, 6 at half size.
     CHECK_NEAR(out[2 * 3], 0.5f * 6.0f / 1000.0f, 1e-5);
+    CHECK(Java_com_snipsnap_app_NativePads_setVibrato(e, nullptr, h, 0.5f, 0.0f) == JNI_TRUE);
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 

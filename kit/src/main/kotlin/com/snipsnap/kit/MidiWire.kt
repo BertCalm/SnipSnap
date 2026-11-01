@@ -256,6 +256,9 @@ class MidiWire {
         const val CONTINUE = 0xFB
         const val STOP = 0xFC
 
+        /** The mod wheel: 0 at rest to 127 at the top. */
+        const val CC_MOD = 1
+
         /** The sustain pedal: at or above [CC_SWITCH_ON] the pedal is down. */
         const val CC_SUSTAIN = 64
 

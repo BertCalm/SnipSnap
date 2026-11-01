@@ -49,6 +49,8 @@ class InstrumentPlayer(context: Context) {
     /** The bend asked for, and whether the engine has it; see [setBend]. */
     private var bend = 1.0
     private var bendSent = true
+    private var vibrato = 0f
+    private var vibratoSent = true
 
     /**
      * Load the instrument the sidecar describes: every zone's WAV read
@@ -142,8 +144,23 @@ class InstrumentPlayer(context: Context) {
     }
 
     private fun sendBend() {
-        if (!open || bendSent) return
-        bendSent = NativePads.setPitch(handle, bend, PadEngine.BEND_GLIDE_MS)
+        if (!open) return
+        if (!bendSent) bendSent = NativePads.setPitch(handle, bend, PadEngine.BEND_GLIDE_MS)
+        if (!vibratoSent) vibratoSent = NativePads.setVibrato(handle, vibrato, PadEngine.VIBRATO_GLIDE_MS)
+    }
+
+    /**
+     * The mod wheel: every voice wobbles [semitones] either way (0 is off),
+     * fading in and out over [PadEngine.VIBRATO_GLIDE_MS]. A value the ring
+     * refuses is kept and sent with the next bend or note, so the wheel's
+     * return to rest must land.
+     */
+    @Synchronized
+    fun setVibrato(semitones: Float) {
+        require(semitones.isFinite() && semitones >= 0f)
+        vibrato = semitones
+        vibratoSent = false
+        sendBend()
     }
 
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
