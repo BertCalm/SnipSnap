@@ -7,6 +7,7 @@ import com.snipsnap.xpm.ChainPlay
 import com.snipsnap.xpm.ChainZonePlay
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 
 /**
@@ -570,40 +571,40 @@ class Mpc3TrackWriter(
 
     private fun drumObj(program: DrumProgram): J = drumBlock(
         instruments = J.A((0 until 128).map { instrument(program.pads.getOrNull(it)) }),
-        poliphony = 0,
-        monophonic = false,
+        voice = VoiceMode.POLY,
     )
 
     /**
      * A keygroup track keeps its zones in the same `drum.instruments` array a
      * kit uses — `program.keygroup` holds only global synth state. The
-     * drum-level `poliphony: 1, monophonic: true` pair is the vestigial shape
-     * every real instrument track carries.
+     * drum-level mono/poliphony/portamento fields are the program's
+     * [KeygroupProgram.voiceMode]; the mono pair used to be copied from one
+     * factory bass track and is now the program's choice.
      */
     private fun keygroupDrumObj(program: KeygroupProgram): J = drumBlock(
         instruments = J.A(
             (0 until 128).map { keygroupZone(program.keygroups.getOrNull(it), program.volumeRelease.toDouble()) },
         ),
-        poliphony = 1,
-        monophonic = true,
+        voice = program.voiceMode,
     )
 
-    private fun drumBlock(instruments: J, poliphony: Int, monophonic: Boolean): J = obj(
+    private fun drumBlock(instruments: J, voice: VoiceMode): J = obj(
         "version" to i(8),
         "pitch" to d(0.0),
         "coarseTune" to i(0),
         "fineTune" to i(0),
-        "monophonic" to b(monophonic),
+        "monophonic" to b(voice.mono),
         // The misspelling is the format's, at exactly this path — the
         // per-instrument field below is spelled correctly. Both verbatim.
-        "poliphony" to i(poliphony.toLong()),
-        "portamentoTime" to d(0.0),
-        "portamentoLegato" to b(false),
+        "poliphony" to i(voice.polyphony.toLong()),
+        // Widening the Float directly would render 0.10000000149011612; go via its decimal text.
+        "portamentoTime" to d(voice.portamentoSeconds.toString().toDouble()),
+        "portamentoLegato" to b(voice.legato),
         "padGroup" to obj(*(0 until 128).map { "value$it" to i(0) }.toTypedArray()),
         "instruments" to instruments,
         "driftSpeed" to d(0.0),
         "portamentoQuantised" to b(false),
-        "monoRetrigger" to b(false),
+        "monoRetrigger" to b(voice.retrigger),
         "freeRunningLfoData" to obj(
             "value0" to freeLfo(), "value1" to freeLfo(),
         ),
