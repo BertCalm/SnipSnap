@@ -373,7 +373,8 @@ object Cli {
         |  --art STYLE       the expansion/xpn browser tile's style (default
         |                    waveform; also rings, grid, slices)
         |  --no-art          skip the browser tile
-        |  --overwrite       replace same-named output
+        |  --overwrite       replace the same-named kit folder whole (its bin
+        |                    and versions go too)
         |
         |export options: --export LIST, --out DIR, --overwrite, --preview,
         |                --art STYLE, --no-art (as above); --no-wear exports
