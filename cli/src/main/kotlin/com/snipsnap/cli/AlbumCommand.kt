@@ -127,8 +127,7 @@ object AlbumCommand {
         File(dest, "cover.png").writeBytes(
             com.snipsnap.shell.KitArt.png(
                 KitStore.load(firstDir), firstDir,
-                com.snipsnap.shell.ArtSidecar.resolve(firstDir, com.snipsnap.shell.Schemes.DEFAULT)
-                    .copy(style = com.snipsnap.shell.KitArt.Style.WAVEFORM),
+                Exports.artKnobs(firstDir, style = null),
                 label = title,
             ),
         )

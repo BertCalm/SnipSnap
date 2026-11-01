@@ -29,30 +29,37 @@ object Exports {
     )
 
     /**
-     * The prototyping loop's verdict (Z6.2): waveform is the default tile,
-     * rings the runner-up — `--art` picks a style, `--no-art` opts out.
+     * `--art STYLE`: null when absent, so the kit's own `art.json` (or the
+     * defaults) decides; a word overrides the style and nothing else.
+     * `--no-art` opts out.
      */
-    fun parseArtStyle(word: String?): com.snipsnap.shell.KitArt.Style = word?.let {
+    fun parseArtStyle(word: String?): com.snipsnap.shell.KitArt.Style? = word?.let {
         com.snipsnap.shell.KitArt.Style.byId(it) ?: throw CliError(
             "unknown art style '$it' - styles: " +
                 com.snipsnap.shell.KitArt.Style.entries.joinToString(",") { s -> s.id },
         )
-    } ?: com.snipsnap.shell.KitArt.Style.WAVEFORM
+    }
+
+    /** The kit's knobs from `art.json` (else the defaults), with [style] in place of its style when given. */
+    fun artKnobs(kitDir: File, style: com.snipsnap.shell.KitArt.Style?): com.snipsnap.shell.ArtKnobs {
+        val knobs = com.snipsnap.shell.ArtSidecar.resolve(kitDir, com.snipsnap.shell.Schemes.DEFAULT)
+        return if (style == null) knobs else knobs.copy(style = style)
+    }
 
     /** The browser tile, when the chosen formats can carry one. */
     fun renderArtwork(
         kit: Kit,
         kitDir: File,
         formats: List<ExportFormat>,
-        style: com.snipsnap.shell.KitArt.Style,
+        style: com.snipsnap.shell.KitArt.Style?,
         noArt: Boolean,
         out: PrintStream,
     ): ByteArray? {
         if (noArt) return null
         if (formats.none { it == ExportFormat.EXPANSION || it == ExportFormat.XPN }) return null
-        val knobs = com.snipsnap.shell.ArtSidecar.resolve(kitDir, com.snipsnap.shell.Schemes.DEFAULT).copy(style = style)
+        val knobs = artKnobs(kitDir, style)
         val png = com.snipsnap.shell.KitArt.png(kit, kitDir, knobs)
-        out.println("cover art: ${style.id} tile for the expansion browser")
+        out.println("cover art: ${knobs.style.id} tile for the expansion browser")
         return png
     }
 

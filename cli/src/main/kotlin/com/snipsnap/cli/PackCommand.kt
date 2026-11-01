@@ -49,7 +49,7 @@ object PackCommand {
         } else {
             com.snipsnap.shell.KitArt.png(
                 KitStore.load(kitDirs.first()), kitDirs.first(),
-                com.snipsnap.shell.ArtSidecar.resolve(kitDirs.first(), com.snipsnap.shell.Schemes.DEFAULT).copy(style = artStyle),
+                Exports.artKnobs(kitDirs.first(), artStyle),
                 label = title,
             )
         }
