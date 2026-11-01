@@ -966,6 +966,11 @@ object Copy {
     // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
+    /** SETUP's PAD VELOCITY: what each mode reads, under its chips. */
+    const val SETUP_PAD_VELOCITY_MODE_NOTE =
+        "POS: WHERE ON THE PAD YOU TAP. FULL LVL: ALWAYS FULL. AREA: HOW MUCH FINGER LANDS, LEARNED FROM YOUR TAPS, POSITION UNTIL THEN."
+    /** SETUP's PAD VELOCITY: the curve, under its chips. */
+    const val SETUP_PAD_VELOCITY_CURVE_NOTE = "SOFT LIFTS LIGHT TAPS. HARD NEEDS A FIRM ONE. THE SOFTEST AND LOUDEST STAY WHERE THEY ARE."
 
     // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
     /** The heading of the MIDI OUT section of SETUP. */
