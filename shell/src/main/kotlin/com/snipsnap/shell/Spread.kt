@@ -26,6 +26,8 @@ import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.OverlapPlayback
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -119,6 +121,7 @@ object Spread {
         is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is LibrationPatch -> patch.midi.toFloat()
+        is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) patch.midi.toFloat() else detect(snip)
         is OpenSkyPatch -> patch.midi.toFloat()
         is TrefoilPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()

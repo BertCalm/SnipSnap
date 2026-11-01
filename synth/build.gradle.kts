@@ -2477,6 +2477,27 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     args("${rootDir}/testkit/nacre-playable-audition")
 }
 
+/** Native EROSION one-shots, saved touch layers and diagnostic ledger. */
+tasks.register<JavaExec>("generateErosionAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ErosionAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("erosionOutput").orNull ?: "${rootDir}/testkit/erosion-native-audition")
+}
+
+/** Manual host evidence for production steady captures and completed-cache reuse. */
+tasks.register<JavaExec>("benchmarkOverlapHeld") {
+    group = "verification"
+    description = "Measure OVERLAP held uncached calls, proven cache hits, control misses and cancellation with PCM hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldBenchmark")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    providers.gradleProperty("overlapHeldBenchmarkOutput").orNull?.let { args("--output=$it") }
+}
+
 /** One dry finite MERIDIAN voice, replayable recipes and measured warm render cost. */
 tasks.register<JavaExec>("generateMeridianAudition") {
     group = "distribution"

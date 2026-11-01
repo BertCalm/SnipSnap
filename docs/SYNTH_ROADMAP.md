@@ -1,5 +1,12 @@
 # Synth roadmap — generate kits, not just capture them
 
+**EROSION native finite proof (2026-10-31).** The owner accepted the initial
+Python ARC/CRATER audition. The native port preserves its finite discharge and
+collapse laws, adds saved touch, exact event-age sampling, bounded charge
+accounting, patch/recipe registration and `generateErosionAudition`. Native
+listening and validation remain pending; HOLD, factory presets, picker and a
+starter kit are deferred. See [EROSION.md](EROSION.md).
+
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six
@@ -537,6 +544,33 @@ does not claim a circuit recreation of its historical starting point.
 [TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
 HOLD constraint and remaining acceptance work.
 
+### OVERLAP: finite bank and steady held bodies
+
+SELF, TREFOIL, MIRROR and TORUS route six passive delay lines into different
+resonant families. Twelve owner-approved model-2 factory recipes and the dry
+sixteen-pad starter retain their finite sound and JSON. Saved FINITE/HELD
+playback keeps the steady articulation explicit instead of changing HOLD's
+meaning in an existing recipe.
+
+Held playback adds RING for SELF and KNOT/RING for the other three, saved
+reference, velocity and sampler release, prepared onset-plus-loop notes, a
+bounded completed-note cache, saved presets and the instrument-library/MPC path.
+SEND and SPREAD make finite pads with a saved shared terminal fade; native
+instrument loops remain untouched. Held SPREAD uses the authored reference,
+while finite OVERLAP keeps its existing pitch detector.
+PULSE, LOCK and GLOW stay zero, HOLD stays one. The owner accepted the held
+MPC trial on 2026-10-31 without supplying model/OS or per-check measurements;
+Implementation revision `2b07c5ef` has passing Android/native CI and an executed
+emulator run of 355 tests, no failures and one unrelated benchmark skip.
+Separately, clean local `8b6d0aea` passed 7,452 JVM cases and all three APK
+assemblies, plus 106 focused tests and all twelve complete accepted-WAV
+comparisons; it is not the PR head.
+The proven cache-copy mutation guard and prior host measurements remain
+recorded separately. Physical-phone listening and timing still need a device pass.
+Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
+reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records
+the APIs, regeneration commands, release approximation and acceptance ledger.
+
 ### OHM — finite coupled family strings
 
 One plucked foreground and two answering companions exchange waves through a
@@ -1047,6 +1081,10 @@ adds sparse modal participation and reuses bass traces across structural edits
 within a 24 MiB, four-entry cache. ROOT warm desktop medians moved from 230 to
 165 ms for a one-shot and 491 to 283 ms for HOLD. Cold misses remain about
 228/517 ms; the tens-of-ms target and phone timing remain open.
+On 24 October BALLAST became the first bass with MAKE INSTRUMENT: thirteen
+held zones from C1 to C4, each the note's onset and settling in front of the
+existing HOLD loop, levelled where it is struck. `generateBallastKeys` writes
+four instruments and previews under `testkit/ballast-keys/`; not yet heard.
 
 THAW is the next material-state engine (S27), ported from
 `docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice

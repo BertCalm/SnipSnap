@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.kit.OneNote
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeysLayout
@@ -56,8 +58,12 @@ import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -87,20 +93,26 @@ fun KeysScreen(
     instrument: InstrumentStore.Instrument,
     backLabel: String,
     onBack: () -> Unit,
+    // Where a failed voice-mode save is told; the app wires the dock's toast, a screen shown alone drops it.
+    onToast: (String) -> Unit = {},
+    // Told with the re-read instrument after a voice-mode save, so the caller's copy is not left stale. Does not re-key the player or reseed the label.
+    onSaved: (InstrumentStore.Instrument) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
     // Keyed on both: a re-read sidecar (same file, new contents) reloads the
     // player. The zones' WAVs are read off the main thread; until they land
     // a key plays nothing, never a stale instrument.
-    val player = remember(sidecar, instrument) { InstrumentPlayer(context) }
+    // A voice-mode save hands the caller a re-read instrument that differs only
+    // in its mode; that must not reload the player, so the mode is left out of
+    // the key (the player and the label already hold it).
+    val loadKey = instrument.copy(voiceMode = VoiceMode.POLY)
+    val player = remember(sidecar, loadKey) { InstrumentPlayer(context) }
     DisposableEffect(player) { onDispose { player.close() } }
     // True from the player's birth until its zones have been read. Keyed on
     // the player, so a superseded open's `finally` lowers the flag of the
     // player it was opening and never the new one's.
     var opening by remember(player) { mutableStateOf(true) }
-    // The screen's one report to the dock (the sink is a single slot).
-    ReportBusy(remember(opening) { if (opening) Busy(Copy.KEYS_LOADING_BUSY) else null })
     LaunchedEffect(player) {
         try {
             withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
@@ -112,6 +124,58 @@ fun KeysScreen(
     var layout by remember(sidecar) { mutableStateOf(KeysLayout.DEFAULT_LAYOUT) }
     var octave by remember(sidecar) { mutableIntStateOf(0) }
     val root = instrument.rootNote
+
+    // The instrument's voice mode: heard at once through the player, saved to
+    // the package's three descriptors in the background. A failed save puts
+    // the label (and the player) back. Work that dies with the screen, so it
+    // reports through ReportBusy.
+    var voiceMode by remember(sidecar, loadKey) { mutableStateOf(instrument.voiceMode) }
+    var savingVoice by remember(sidecar, loadKey) { mutableStateOf(false) }
+    ReportBusy(remember(opening, savingVoice) {
+        when {
+            opening -> Busy(Copy.KEYS_LOADING_BUSY)
+            savingVoice -> Busy(Copy.KEYS_VOICE_BUSY)
+            else -> null
+        }
+    })
+    val scope = rememberCoroutineScope()
+    fun cycleVoiceMode() {
+        // Not while the zones load: the player has no instrument to change yet, and the load would overwrite the choice.
+        if (savingVoice || opening) return
+        val previous = voiceMode
+        val next = VoiceMode.entries[(previous.ordinal + 1) % VoiceMode.entries.size]
+        voiceMode = next
+        player.setVoiceMode(next)
+        savingVoice = true
+        scope.launch {
+            try {
+                // Backing out of the screen must not strand the caller's copy: once the write is
+                // under way, the re-read and onSaved run to the end (onSaved updates App-level state
+                // that outlives this screen).
+                withContext(NonCancellable) {
+                    withContext(Dispatchers.IO) {
+                        // The package is named for its sidecar file, which may differ from the program's own name.
+                        OneNote.rewriteDescriptors(
+                            checkNotNull(sidecar.parentFile),
+                            sidecar.name.removeSuffix(InstrumentStore.SUFFIX),
+                            instrument.toProgram().copy(voiceMode = next),
+                        )
+                    }
+                    // The write is done; a failed re-read only leaves the caller's copy stale.
+                    val saved = withContext(Dispatchers.IO) { runCatching { InstrumentStore.read(sidecar) }.getOrNull() }
+                    if (saved != null) onSaved(saved)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                voiceMode = previous
+                player.setVoiceMode(previous)
+                onToast(Copy.KEYS_VOICE_FAILED)
+            } finally {
+                savingVoice = false
+            }
+        }
+    }
 
     // The keyboard's rules over this same player. Every "go quiet" on
     // this screen goes through `midiKeys.allOff()` rather than the
@@ -233,7 +297,7 @@ fun KeysScreen(
         ) {
             TapeText(instrument.name.uppercase(java.util.Locale.ROOT), TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "ROOT ${KeysLayout.label(root)}  OCT ${if (octave >= 0) "+" else ""}$octave" + if (volume < 1f) "  ${KeysMidi.label(volume)}" else "",
+                "ROOT ${KeysLayout.label(root)}  OCT ${if (octave >= 0) "+" else ""}$octave" + (if (voiceMode != VoiceMode.POLY) "  ${voiceMode.name}" else "") + if (volume < 1f) "  ${KeysMidi.label(volume)}" else "",
                 TapeType.lcdSmall,
                 scheme.amber.tape,
             )
@@ -243,6 +307,7 @@ fun KeysScreen(
             ActionButton(backLabel, scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { stepOctave(-1) })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { stepOctave(+1) })
+            ActionButton("VOICE ${voiceMode.name}", scheme, enabled = !savingVoice && !opening, working = savingVoice, modifier = Modifier.weight(1f), onClick = ::cycleVoiceMode)
             // Only where a keyboard could be heard at all, like the line under the grid.
             if (midiSupported) {
                 ActionButton(

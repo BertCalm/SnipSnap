@@ -6,7 +6,11 @@ Compose over `:shell`, `:kit`, and the native engines (`SurfaceEngine`,
 without one never sees `:app`: `settings.gradle.kts` leaves it out, which
 is why a cloud session's `./gradlew test` is the nine JVM modules only.
 
-There is no `app/src/test`. The on-device Compose suites live in
+The separately installable Crease C4 study adds five host cache tests under
+`src/testCreaseStudy` (`:app:testCreaseStudyUnitTest -PcreaseStudyBuild=true`), plus four device tests
+under `src/androidTestCreaseStudy`. Its verified-cache build and physical-device
+limits are documented in [the phone study](../docs/superpowers/specs/2026-11-01-crease-phone-release.md).
+The normal on-device Compose suites live in
 `app/src/androidTest` and run under `emulator-tests` when a PR touches
 `app/`. The native engines and the JNI bridge have host tests in
 `src/main/cpp/test`, which need no SDK. `versionName` is `0.1`.
@@ -117,6 +121,9 @@ the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and g
 model, with the glass voice displayed as TILES; GLINT remains its saved identity
 and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
 and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
+BALLAST also offers MAKE INSTRUMENT: thirteen minor-third zones from C1 to C4,
+one velocity layer, each zone its onset and settling before the HOLD loop, rendered
+one zone at a time.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
@@ -246,16 +253,30 @@ can be changed by semitone or octave without resetting that recipe. Its 48
 provisional presets and dry starter kit await listening.
 TANGLE's six voices, 36 recipes and dry starter kit likewise await the
 owner's listening verdict; saved recipes preserve explicit note and velocity.
-OVERLAP adds four topologies and twelve approved factory recipes through
-`OverlapFactoryPresets`, with six macros plus saved ROOT and VELOCITY. Loading,
-editing, saving under YOURS and sending to a pad preserve the recipe's render
-model. Its fixed FRESH TAPE starter places the approved twelve first, followed
-by four octave-lower plucks. Every pad is a dry TONAL one-shot with a finite
-tail; HOLD extends excitation, and breathing has no tempo synchronization.
-ROOT is the geometry reference, so a resonant chord can suggest another pitch.
-Android compile/device CI and a real phone pass for this integration remain
-pending; the [OVERLAP checklist](../docs/OVERLAP.md#manual-real-phone-pass)
-covers the remaining flow. Held-note support is a separate future step.
+OVERLAP adds four topologies and twelve approved finite factory recipes through
+`OverlapFactoryPresets`. FINITE retains its six macros, renderer model and dry
+FRESH TAPE starter: the approved twelve followed by four octave-lower plucks.
+Explicit HELD playback exposes RING for SELF and KNOT/RING for the other three,
+with saved ROOT, VELOCITY and RELEASE. PULSE, GLOW and LOCK are off and HOLD is
+one; the complete macro map is retained. Its dry press-and-hold preview plays
+a prepared onset and steady loop, then releases on lift.
+Completed bodies use a bounded cache; no DSP runs on the press. SAVE PRESET
+under YOURS preserves the complete playback, reference, velocity and release.
+MAKE INSTRUMENT saves three sampled reference zones to the instrument library
+and normal MPC export path. SEND TO PAD and SPREAD make finite deliveries
+with saved terminal fades; they do not create held pads. Native instrument
+loops remain untouched. ROOT remains a geometry
+reference, and sampler release differs from the prototype's physical resonator
+decay. The owner accepted the
+MPC held trial on 2026-10-31 without supplying model/OS details. Implementation
+revision `2b07c5ef` has passing Android/native CI and an emulator run of 355
+tests with no failures and one unrelated benchmark skip. The separate clean
+local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies;
+106 focused tests and all twelve complete accepted-WAV comparisons also pass
+at that local checkpoint. The cache-copy guard is proven; physical
+phone listening and timing remain unmeasured. The
+[OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
+separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
@@ -347,7 +368,9 @@ logcat tag to grab when something is wrong.
 - **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
   covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
   optional volume link in PADS and FULL. Check the interaction on a phone;
-  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers;
+  an ordinary pad's PAD SHEET has a STRIKE FX section (ROOM, SLAP, AUDITION,
+  KEEP, CLEAR) that builds DRY, ROOM and ECHO layers from its own sample.
   The LAST row highlights the layer actually triggered; moving the strip
   changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
