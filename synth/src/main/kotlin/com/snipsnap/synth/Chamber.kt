@@ -33,10 +33,11 @@ object Chamber {
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_SEED = 0L
-    const val MODEL_VERSION = 3
-    /** Explicit range audition; the accepted default and factory recipes stay on model 3. */
+    /** Earlier complete recipes keep their saved renderer; new sounds use the heard register response. */
+    const val MODEL_VERSION = 5
+    /** Retained wider-endpoint renderer for exact replay of its saved recipes. */
     const val WIDE_RANGE_MODEL = 4
-    /** Register-following listening candidate; earlier complete recipes remain exact. */
+    /** Wider controls with pitch-aware excitation and sympathetic boundary responses. */
     const val REGISTER_MODEL = 5
     const val MAX_MODEL_VERSION = REGISTER_MODEL
     const val MAX_SECONDS = 6f

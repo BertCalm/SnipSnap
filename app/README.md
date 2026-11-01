@@ -84,6 +84,12 @@ CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLO
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and LIBRATION.
 
+CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware
+response. Saved sounds, including its six original factory recipes, retain
+their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
+response without changing the authored room, controls, ROOT, VELOCITY or seed.
+See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
 retain the saved renderer and seed. HOLD's top step auditions a repeating settled

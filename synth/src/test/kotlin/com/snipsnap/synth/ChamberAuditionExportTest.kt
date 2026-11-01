@@ -85,6 +85,52 @@ class ChamberAuditionExportTest {
     }
 
     @Test
+    fun `historical kit performances keep their authored model after the new instrument default changes`() {
+        val root = createTempDirectory("chamber-historical-performance").toFile()
+        try {
+            val kit = File(root, "kit").also { it.mkdirs() }
+            val page = File(root, "page").also { it.mkdirs() }
+            val pads = ChamberKits.entries().mapIndexed { index, entry ->
+                val label = "A%02d".format(index + 1)
+                val sample = File(kit, "$label.wav")
+                WavWriter.write(sample, Snip(floatArrayOf(0f, .25f, .5f, .25f, 0f, -.25f, -.5f, 0f),
+                    1, Dsp.RATE), WavWriter.BitDepth.PCM_24)
+                linkedMapOf<String, Any?>("pad" to label, "sample" to sample.name,
+                    "sampleSha256" to sha(sample), "savedRecipe" to PadRecipe(entry.patch).toJsonValue())
+            }
+            val manifest = linkedMapOf<String, Any?>("engine" to ChamberPatch.ENGINE,
+                "model" to ChamberKits.MODEL, "pads" to pads)
+            ChamberAuditionGenerator.writeJson(File(kit, "manifest.json"), manifest)
+            val performances = ChamberAuditionGenerator.performances(page, kit, "fixture-source")
+            assertEquals(2, performances.size)
+            for (performance in performances) {
+                assertEquals(3, performance["model"], "the card must describe the exported kit, not the new default")
+                val recipe = Json.parse(File(page, performance.getValue("recipe") as String).readText()).obj()
+                assertEquals(3, recipe.getValue("model").int())
+                for (source in recipe.getValue("sources").arr()) {
+                    val row = source.obj()
+                    val saved = PadRecipe.fromJsonValue(row.getValue("savedRecipe")).patch as ChamberPatch
+                    assertEquals(3, saved.model)
+                    val label = row.getValue("id").str()
+                    assertContentEquals(File(kit, "$label.wav").readBytes(),
+                        File(page, "performance-sources/$label.wav").readBytes())
+                }
+                assertTrue(ChamberPerformanceReplay.render(File(page, performance.getValue("recipe") as String)).peak() > 0f)
+            }
+            // A later renderer recipe cannot pass as a historical sample merely
+            // because the top-level manifest still names the original bank.
+            val wrongPatch = ChamberKits.entries().first().patch.copy(model = Chamber.REGISTER_MODEL)
+            pads.first()["savedRecipe"] = PadRecipe(wrongPatch).toJsonValue()
+            ChamberAuditionGenerator.writeJson(File(kit, "manifest.json"), manifest)
+            assertTrue(assertFailsWith<IllegalArgumentException> {
+                ChamberAuditionGenerator.performances(page, kit, "fixture-source")
+            }.message.orEmpty().contains("authored dry finite kit instrument"))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `model three archive preserves every historic asset and relocates only its navigation`() {
         val root = createTempDirectory("chamber-archive-preservation").toFile()
         try {

@@ -14,7 +14,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Register continuity and physical-network guards for the explicit fifth audition. */
+/** Register continuity and physical-network guards for the heard upper-register response. */
 class ChamberRegisterTest {
     private val controls = listOf("STRIKE", "BALANCE", "MATERIAL", "DIVIDE", "PLACEMENT")
 
@@ -31,7 +31,7 @@ class ChamberRegisterTest {
             assertEquals(before.geometry, after.geometry, "$label geometry changed")
             assertEquals(before.diagnostics.energy, after.diagnostics.energy, "$label network states changed")
         }
-        assertEquals(3, Chamber.MODEL_VERSION)
+        assertEquals(Chamber.REGISTER_MODEL, Chamber.MODEL_VERSION)
         assertTrue(ChamberPresets.all().all { it.model == 3 })
     }
 

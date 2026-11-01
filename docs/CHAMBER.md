@@ -11,8 +11,9 @@ patch replay, phone controls and a sixteen-pad dry MPC kit. The supplied
 [engineering specification](CHAMBER_SPEC.md) remains the unchanged proposal.
 Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work. The owner accepted the revised membrane
-direction and reported the model-3 mix was better; the wider preset and control
-matrix still needs listening acceptance.
+direction and reported the model-3 mix was better, then judged the wider
+upper-register revision "Much better". That response is the working renderer
+for new sounds. This does not establish acceptance of every preset or control pair.
 
 The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
 provides raw/matched playback, replayable downloads and the finite instrument's
@@ -21,6 +22,17 @@ current control study. Earlier timpani comparisons remain archived. The
 remains available unchanged. Numerical checks do not establish sonic acceptance.
 
 ## Finite instrument integration
+
+New patches use model 5: the wider control range together with pitch-aware
+strikes and sympathetic boundary responses. The app labels this **WIDER RESPONSE**.
+Complete saved recipes keep their explicit model, including versions 1–4;
+recalling a preset, editing ROOT or VELOCITY, and sending a sound to a pad never
+silently upgrades it. A saved earlier recipe offers **USE WIDER RESPONSE**,
+which changes only its renderer and preserves its name, controls, note, velocity,
+room, tuning, enabled strikes and exact seed. The complete edited draft persists
+immediately and remains editable through navigation, preset saving and pad delivery.
+The original six factory recipes and sixteen-pad MPC bank remain explicitly
+model 3, so their existing sounds and published kit stay reproducible.
 
 The phone SYNTH picker exposes both rooms, five physical controls, native ROOT
 and excitation VELOCITY. HOLD stays hidden because only finite strikes are
@@ -89,7 +101,7 @@ decoded PCM16 frame, and records original/container/PCM hashes in
 all historical files retain their bytes. The original manifest is retained as
 `manifest-rendered.json`; the hosting manifest names each delivered format.
 
-The finite study uses the current model across registers, velocities, presets,
+The original finite study uses model 3 across registers, velocities, presets,
 macro sweeps and interacting-control corners. Musical context clips use the same
 exported recordings as the MPC kit. Each finite event includes its attack and
 decay; neither context playback nor page Repeat demonstrates HOLD. Previous
@@ -120,8 +132,10 @@ these physical-device results.
 The [wider-extremes comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/extremes/index.html)
 puts twenty wider endpoints beside twenty existing model-3 endpoints and the two
 accepted defaults. It changes one control at a time at C4, velocity .75 and seed
-zero. The accepted model-3 factory recipes, default model and MPC kit stay intact;
-model 4 must be requested explicitly. Saved models 1–3 keep their renderer laws.
+zero. At publication the default remained model 3; the original factory recipes
+and MPC kit remain pinned there. Model 4 stays available for exact saved replay;
+new sounds now use its wider controls through the register-aware model 5.
+Saved models 1–3 keep their renderer laws.
 
 The five controls reach different underlying quantities:
 
@@ -172,7 +186,7 @@ not a claim of new phone latency or hardware acceptance.
   energy into the passive physical network.
 - Compare a small set of endpoints before changing the current factory library.
 
-## Upper register — explicit listening candidate
+## Upper register — heard working response
 
 The owner's wider-range listen identified a weaker resonant answer on higher
 notes. A Kotlin/JDK17 baseline at `efb365650` rendered 36 complete 4.5-second
@@ -188,13 +202,13 @@ span more than two periods of the high triangle's actual fundamental. A long
 half-sine force can cancel that fundamental even when its resonator has a long
 decay. Increasing decay alone cannot restore energy that was never excited.
 
-The new candidate keeps the wider controls and tests these preparation changes:
+The register revision keeps the wider controls and makes these preparation changes:
 
 - Above C4, shorten the legacy minimum contact with pitch so the body's upper
   modes keep receiving excitation. Also bound contact by each source's actual
   tuned period, following STRIKE toward a shorter hard contact. The .8-period
-  soft/default cap and .2-period hard cap are voicing choices awaiting listening
-  acceptance.
+  soft/default cap and .2-period hard cap are voicing choices. The owner judged
+  the resulting upper-register comparison "Much better".
 - Above C4, transpose the boundary modal frequencies with the requested note.
   This is a musical adaptation of the designed material response. Physical room
   dimensions, propagation delays and existing damping times stay fixed;
@@ -219,9 +233,10 @@ The new candidate keeps the wider controls and tests these preparation changes:
 These changes prepare the existing simulation and add no separate audio-rate
 stage. Exact-recipe cache identity already includes note and model.
 Fresh renders retain the coupled simulation's existing cost; no new phone
-latency or hardware acceptance is claimed. Model 3 remains the factory default,
-and earlier sound revisions remain separately replayable. Candidate measurements
-and listening acceptance are recorded separately from this baseline diagnosis.
+latency or hardware acceptance is claimed. Model 5 is now the default for new
+sounds; model 3 remains pinned in the original factory recipes and kit, and all
+earlier sound revisions remain separately replayable. The listening verdict
+applies to the published comparison rather than every possible control setting.
 
 The paired study compares the previous wider response with this candidate at
 C4, C5 and C6, holding MATERIAL at 1 and retaining the voiced defaults elsewhere.
@@ -244,6 +259,15 @@ Final exports require a clean source commit. The hosting step verifies every
 lossless FLAC sample and seek table, preserves prior recordings, and reuses
 byte-identical source snapshots through explicit hash-checked hosted paths.
 
+The integration adds complete-recording Float32 goldens captured before promotion
+from both revised C6 clips and both previous wider C6 clips. New patch and public
+render defaults must select the heard renderer; complete saved versions 1–5 must
+survive JSON, control edits and pad recipes without migration. Cache keys separate
+all five versions. Historical performance exports validate against the original
+kit's model rather than the runtime default, so promoting new sounds cannot relabel
+old recordings. Focused numerical and Android build results are recorded separately
+from the user's listening verdict; fresh physical-device timing remains unverified.
+
 ## Timpani mix lift — model 3
 
 The owner heard model 2 and approved its sound, then asked for a little more
@@ -258,7 +282,7 @@ waveform-shape preservation, identical room-energy ledgers and exact published
 model-1/model-2 WAV replay. The full-room pitch checks pass at MIDI 36/48/60/84
 in both rooms.
 
-New patches use model 3. Saved model-1 and model-2 recipes continue to reproduce
+At that milestone new patches used model 3. Saved model-1 and model-2 recipes continue to reproduce
 their original sounds; captured published WAV hashes guard both versions.
 The page compares accepted model 2 with boosted model 3 at C3 and C4, including
 full quartets and dry timpani solos at one shared gain per room/note group.

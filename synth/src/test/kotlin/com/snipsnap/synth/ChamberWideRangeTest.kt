@@ -19,8 +19,8 @@ class ChamberWideRangeTest {
     private val quick = Chamber.ProbeOptions(seconds = .85f, recordStems = false)
 
     @Test
-    fun `explicit candidate round trips without changing the accepted default or factory models`() {
-        assertEquals(3, Chamber.MODEL_VERSION)
+    fun `earlier wider recipes round trip without changing their renderer or factory models`() {
+        assertEquals(Chamber.REGISTER_MODEL, Chamber.MODEL_VERSION)
         assertTrue(ChamberPresets.all().all { it.model == 3 })
         val patch = ChamberPatch("Range candidate", ChamberVoice.HYBRID,
             Chamber.defaults(ChamberVoice.HYBRID) + ("MATERIAL" to 1f),

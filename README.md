@@ -201,14 +201,18 @@ HYBRID and AQUARIUM share geometric reflections, a late field and passive delaye
 returns into the instruments. Six factory recipes and complete saved rooms work
 through the CLI, phone SYNTH controls and FRESH TAPE starter. Preview supports
 cancellation and bounded reuse of completed recordings.
+New sounds use the heard wider response, including its improved upper-register
+body. Saved sounds keep their renderer until USE WIDER RESPONSE is selected;
+the six original factory recipes and MPC bank retain their original rendering.
 Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics, or `./gradlew :synth:generateChamberKit` for the dry
 sixteen-pad MPC 3 track, MPC 2 twin and editable recipes.
 [Implementation notes](docs/CHAMBER.md) record the finite controls, performance
 limits and proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-provides the current-model control study, kit-sample phrases and downloadable
-recipes; earlier timpani comparisons remain archived there. Physical phone/MPC
+provides the original control study, kit-sample phrases, downloadable recipes
+and [higher-note comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/register/index.html);
+earlier timpani comparisons remain archived there. Physical phone/MPC
 acceptance and the broader listening verdict remain open.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
