@@ -186,8 +186,7 @@ object MeridianKitGenerator {
         }
         val program = KeygroupProgram(instrumentName, keygroups,
             volumeRelease = MeridianKits.HELD_RELEASE_SECONDS)
-        // These instruments deliberately stop at C2/C5, as their manifest declares.
-        OneNote.writePackage(instrumentName, program, stems, folder, overwrite = true, spanKeyboard = false)
+        OneNote.writePackage(instrumentName, program, stems, folder, overwrite = true)
         val completedZones = zones.map { zone ->
             @Suppress("UNCHECKED_CAST")
             val layers = zone.getValue("layers") as List<Map<String, Any?>>
