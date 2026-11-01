@@ -54,6 +54,7 @@ class PadRecipeTest {
         MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         GyrePatch("Drawn Test", GyreVoice.DRAWN, mapOf("TOUCH" to 0.6f, "BODY" to 0.7f)),
+        MeridianPatch("Swing Test", MeridianVoice.SWEEP, mapOf("MEMORY" to .6f), midi = 57, velocity = .6f, seedContext = 41),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
         FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),

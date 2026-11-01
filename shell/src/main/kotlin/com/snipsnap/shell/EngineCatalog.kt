@@ -121,6 +121,7 @@ object EngineCatalog {
         "TIDAL" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Evolving ringing tones with a rough, string-like edge"),
         "CHAMBER" to EngineEntry(listOf(EngineCategory.DRUMS, EngineCategory.BELLS), "Tuned drum, bar, cowbell and triangle hits in a room"),
         "LIBRATION" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Wooden and glassy notes with moving, lingering overtones"),
+        "MERIDIAN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Swinging contacts leave wood, wire and glass ringing"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

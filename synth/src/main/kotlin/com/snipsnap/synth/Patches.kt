@@ -70,6 +70,7 @@ object Patches {
             ArcoPatch.ENGINE -> ArcoPatch.fromJsonValue(value)
             MercuryPatch.ENGINE -> MercuryPatch.fromJsonValue(value)
             GyrePatch.ENGINE -> GyrePatch.fromJsonValue(value)
+            MeridianPatch.ENGINE -> MeridianPatch.fromJsonValue(value)
             MagnetPatch.ENGINE -> MagnetPatch.fromJsonValue(value)
             AerostatPatch.ENGINE -> AerostatPatch.fromJsonValue(value)
             BallastPatch.ENGINE -> BallastPatch.fromJsonValue(value)

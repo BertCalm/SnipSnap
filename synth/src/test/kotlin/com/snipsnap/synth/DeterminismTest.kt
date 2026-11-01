@@ -244,6 +244,13 @@ class DeterminismTest {
     }
 
     @Test
+    fun `MERIDIAN regenerates the saved note velocity and contact noise byte for byte`() {
+        val patch = MeridianPatch("Swing canary", MeridianVoice.SWEEP,
+            mapOf("LATITUDE" to .8f, "MEMORY" to .6f), midi = 51, velocity = .7f, seedContext = 41)
+        assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,

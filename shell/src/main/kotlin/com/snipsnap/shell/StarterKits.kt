@@ -127,6 +127,11 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.libration() },
         Starter(
+            "meridian", "MERIDIAN",
+            "Swinging contacts and ringing materials. Sixteen finite notes, including two held-sound captures.",
+            seeded = false,
+        ) { SynthKits.meridian() },
+        Starter(
             "tidal", "TIDAL",
             "String and metal populations in C minor pentatonic. Gather, pass, and unravel into ringing strands.",
             seeded = false,
