@@ -1,9 +1,10 @@
 # Libration: sustained instrument
 
-Status: implemented, with focused JVM checks passing; final build validation is
-in progress. The owner accepted finite phone/MPC behavior
-on 2026-10-31 and authorized this milestone. The new sustain has not been heard.
-Repository truth: `c65d2521f5391f8443182a06bfbfff2eb8360459`.
+Status: implemented and published; the nine-module JVM suite and both Android
+APK builds pass. The owner accepted finite phone/MPC behavior on 2026-10-31
+and authorized this milestone. The new sustain still needs owner listening
+and phone/MPC checks.
+Implementation base: `c65d2521f5391f8443182a06bfbfff2eb8360459`.
 
 The characteristic gesture is **strike → gather into a recurring orbit → sustain
 → fade after key-up**.
@@ -125,7 +126,7 @@ populations. Each keygroup-generation session retains one physical population;
 zones render serially and cancellation interrupts the off-main render. Saved
 recipes contain neither cache state nor measured timing.
 
-The [held audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site/hold/)
+The [held audition](https://libration-hold-audition.bertcalm.chatgpt.site)
 contains ROUND KEYS, FINE KEYS and SPLIT PATH as three nine-zone instruments,
 covering C3..C5, plus eighteen recordings. Long holds cross two actual sample
 wraps before key-up. Long holds and keyboard phrases reload the exported PCM24
@@ -169,9 +170,24 @@ Rebuild the handoff from a clean committed checkout:
 The output is isolated in `testkit/libration-sustain/`. The three original finite
 audition folders and their archives remain separate.
 
+## Build validation (2026-11-01)
+
+The full nine-module JVM command exited zero: 7,505 tests, zero failures and
+errors, 0 skipped. The tested source is
+`efe80df64dc2c3db6cb9661ae4413acc4d25751d`, including the
+default-branch integration `95b53d655e3d29a3d222fdeeb462b49d677ac863`. Gradle
+reused unchanged module results normally. Preset promotion reconstructs
+finite, held and returned-NOTE recipes.
+
+Both `:app:assembleDebug` and `:app:assembleDebugAndroidTest` completed from
+`efe80df64dc2c3db6cb9661ae4413acc4d25751d` with SDK 35 and JDK 21;
+the app v2 signature verifies. All source inputs still match the build
+snapshot. Device UI tests compiled but were not executed locally; no phone
+timing or new HOLD hardware acceptance is claimed.
+
 ## Listening and device checks
 
-The new transport still needs owner listening. On the audition page, let each
+The new HOLD path still needs owner listening. On the audition page, let each
 long hold reach both marked wraps and its key-up ending. Compare the finite
 note, the keyboard phrase, authored soft/hard touch and the three release lengths.
 
@@ -201,10 +217,12 @@ action. This is a new check, separate from the accepted finite instrument.
   Kotlin focused checks pass actual phase/state/preceding-and-following-cycle
   closure, 4×/16× high-note spectral agreement, JSON guards, cancellation,
   bounded-cache identity, dual-MPC loop metadata and real sample-player release.
-  Full-suite and Android results are recorded below when complete.
+  The full suite passes 7,505 tests; both Android APK builds pass.
+  On-device UI execution and new HOLD listening remain pending.
 - Proposed: musical usefulness of repeating the readout and the selected
   three-period settling budget outside the measured configuration set.
-- Heard: the finite bank is accepted; this sustained version is not yet heard.
+- Heard: the finite bank is accepted. No owner listening verdict is recorded
+  for this sustained version.
 
 ## Why it is built this way
 
