@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -1690,6 +1691,8 @@ fun SurfaceScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .lcdPanel(scheme)
+                    // A drag from the side edge is the puck, not the back gesture.
+                    .systemGestureExclusion()
                     // Canvas-drawn (the puck/crosshair/rings below), so
                     // invisible to the a11y tree by default (audit
                     // finding 4). Two/four-dimensional input has no
