@@ -1046,6 +1046,14 @@ fun SynthScreen(
             return current?.let { Patches.edited(it, name, controls) }
                 ?: TidalPatch(name, voice as TidalVoice, controls)
         }
+        if (engine == Engine.LATTICE) {
+            // A SPEED accessibility edit can share a frame with SAVE or SEND.
+            // Keep its newest controls together with the authored note and excitation.
+            val current = loadedPatchesByVoice[engine to voice] as? LatticePatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: LatticePatch(name, voice as LatticeVoice, controls)
+        }
         if (engine == Engine.TREMOR) {
             // A queued save or pad update can share the frame of a preset choice.
             // Read its live recipe so the renderer model cannot lag one frame behind.
@@ -1763,6 +1771,7 @@ fun SynthScreen(
                         28 + ((Pluck.defaults(patch.voice) + patch.macros).getValue("TUNE") * Pluck.TUNE_SEMITONES).roundToInt()
                         else null
                     is TidalPatch -> patch.midi
+                    is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi)
                     is OhmPatch -> patch.midi
                     is ChamberPatch -> patch.midi
                     is CausticPatch -> patch.midi
@@ -4061,7 +4070,7 @@ private fun macroReadout(
     engine == Engine.TANGLE && name == "HOLD" && Tangle.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.SHOAL && name == "HOLD" && Shoal.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CREASE && name == "HOLD" && Crease.isLoop(macros.getValue(name)) -> "LOOP"
-    engine == Engine.LATTICE && name == "HOLD" && Lattice.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.LATTICE && name == "HOLD" && Lattice.isLoop(voice as LatticeVoice, macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "HOLD" && Relay.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "TUNE" ->
         Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(name)))
