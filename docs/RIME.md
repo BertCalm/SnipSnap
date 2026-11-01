@@ -65,7 +65,7 @@ synth RIME FILIGREE --model 6 --macros HOLD=1,UNFOLD=.85 --instrument --out /abs
 ./gradlew :shell:generateRimeCompleteInstruments -PrimeInstrumentOutput=/absolute/instruments
 ```
 
-For Sites hosting, run `python3 scripts/rime-prepare-hosting.py /absolute/audition --report /absolute/report.json` after generation. The new preview assets use lossless FLAC to fit the hosting archive limit. Every encoded file is decoded and compared with its original PCM24 bytes before the manifest changes. The player's WAV download reconstructs the same PCM24 RIFF file at 44.1 kHz; the original 195 clips and all MPC ZIPs remain unchanged. This is a delivery step and does not change synthesis or native exports.
+For Sites hosting, run `python3 scripts/rime-prepare-hosting.py /absolute/audition --report /absolute/report.json` after generation. All 387 browser previews use lossless FLAC to fit both the compressed and expanded hosting archive limits. Every encoded file is decoded and compared with its original PCM24 bytes before the manifest changes. The player's WAV download reconstructs the original PCM24 RIFF file at 44.1 kHz, including the earlier 195 examples. All MPC ZIPs retain their native WAV files. This is a delivery step and does not change synthesis, gain, or native exports.
 
 The expanded audition supplies all 36 recipes, five-step controls for the new
 voices, low/middle/high notes, velocity cases, all four required macro-pair
