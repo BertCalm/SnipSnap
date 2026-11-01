@@ -253,11 +253,13 @@ note and velocity in its native Patch JSON; `--patch recipe.json` replays
 a saved patch, with explicit note, velocity or model flags overriding only
 those fields. See [CREASE](CREASE.md) for examples.
 
-LATTICE renders WARM, PLUCK and HOLLOW with saved MIDI, velocity and model 2.
+LATTICE renders WARM, PLUCK, HOLLOW and TRACE with saved MIDI, velocity and model 2.
 An explicit `--midi` replaces the saved root and resets TUNE to 0.5 (neutral),
 so that note is the one rendered. `--patch recipe.json` replays a native patch;
-note, velocity and macro overrides preserve the other saved fields. HOLD's top
-step returns periodic sustain for looping playback. See [LATTICE](LATTICE.md).
+note, velocity and macro overrides preserve the other saved fields. WARM, PLUCK
+and HOLLOW return periodic sustain at HOLD's top step. TRACE uses TUNE, SPEED and
+finite HOLD; SPEED 0.5 reproduces the accepted moving pluck and its ringing tail,
+and TRACE never enters a held loop. See [LATTICE](LATTICE.md).
 
 CREASE model 3 also accepts `--instrument [--touch] [--release S]` for an onset followed by
 a continuously evolved, measured sustain loop. Release is 0.1–1.5 seconds,
