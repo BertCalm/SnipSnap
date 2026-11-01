@@ -61,6 +61,8 @@ import com.snipsnap.app.ui.AppJobs
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
+import com.snipsnap.app.ui.KitFromMade
+import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
 import com.snipsnap.app.ui.CaptureSheet
@@ -467,6 +469,9 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
+    // KIT FROM ANYTHING's result sheet: the kit just written and the words about it, up until
+    // it is closed or the kit is opened. Null otherwise.
+    var kitFromMade by remember { mutableStateOf<KitFromMade?>(null) }
     // The job a screen is carrying on its own (Split, and a recording being
     // read in TAPE and CHOP), reported through `LocalBusySink` and gone when
     // the screen is. Work that outlives its screen is not reported here: the
@@ -1604,6 +1609,46 @@ fun App(shelf: KitShelf) {
                 },
             )
             open = entry
+        }
+    }
+
+    /**
+     * KIT FROM ANYTHING, from the pad sheet: the pad's own audio quarried into a kit of
+     * sixteen on the shelf ([KitShelf.landKitFrom]), then the result sheet over whatever is on
+     * screen. The kit does not open by itself: OPEN KIT on the sheet does that
+     * ([landKit]); closing it leaves the user where they were, with the kit on the shelf.
+     * [texture]'s busy-then-land shape. A source the assembler refuses is told in its own
+     * words; anything else is logged and the toast is the generic failure line.
+     */
+    fun kitFrom(base: String, source: com.snipsnap.audio.Snip, key: com.snipsnap.audio.KeySpec, genre: com.snipsnap.synth.KitFromAnything.Genre) {
+        if (busy != null) return
+        busy = Busy(Copy.MAKE_KIT_BUSY)
+        scope.launch {
+            val made = try {
+                withContext(Dispatchers.IO) {
+                    val (entry, result) = shelf.landKitFrom(base, source, key, genre)
+                    KitFromMade(
+                        entry,
+                        com.snipsnap.synth.KitFromAnything.describe(result, entry.kit.name, key, genre),
+                        com.snipsnap.shell.KitMaker.genreLabel(genre),
+                    )
+                }
+            } catch (e: IllegalArgumentException) {
+                busy = null
+                Log.e(TAG, "kitFrom: refused", e)
+                dock.say(Copy.kitRefused(e.message ?: "NOTHING TO QUARRY"))
+                return@launch
+            } catch (e: Exception) {
+                busy = null
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "kitFrom: failed", e)
+                dock.say(Copy.actionFailed("KIT"))
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            busy = null
+            dock.say(Copy.kitMade(made.entry.kit.name, made.report.blends.size))
+            kitFromMade = made
         }
     }
 
@@ -4027,6 +4072,7 @@ fun App(shelf: KitShelf) {
                                     // reloads for. Bumping the same counter
                                     // here covers all three with one wire.
                                     onShelfAssetWritten = { roomsRevision++ },
+                                    onKitFrom = ::kitFrom,
                                 )
                             }
                         }
@@ -4657,6 +4703,14 @@ fun App(shelf: KitShelf) {
                     onHelp = { gearOpen = false; landOn(AppScreen.HELP) },
                     onMidi = { gearOpen = false; landOn(AppScreen.MIDI) },
                     onDismiss = { gearOpen = false },
+                )
+            }
+            kitFromMade?.let { made ->
+                KitFromResultOverlay(
+                    made = made,
+                    scheme = scheme,
+                    onOpen = { kitFromMade = null; landKit(made.entry) },
+                    onClose = { kitFromMade = null },
                 )
             }
             benchNote?.let { stamp ->

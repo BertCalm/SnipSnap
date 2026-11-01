@@ -87,6 +87,35 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `a source above the detector's range yields one period, not two, so the table sounds at the note asked`() {
+        // 1800 Hz is over Pitch's 1200 Hz ceiling: the detector reads the lag of two periods (900 Hz),
+        // and the cycle averaged at that "period" holds the true period twice
+        val f0 = 1800.0
+        val n = (0.5f * rate).toInt()
+        val src = Snip(FloatArray(n) { i ->
+            val t = i.toDouble() / rate
+            val env = exp(-6.0 * t)
+            (env * (sin(2 * PI * f0 * t) + 0.5 * sin(2 * PI * 2 * f0 * t) + 0.3 * sin(2 * PI * 3 * f0 * t))).toFloat() * 0.5f
+        }, 1, rate)
+        val a = KitFromAnything.analyse(src)
+        // the detector alone cannot say 1800 (its ceiling is 1200), so a reported note near 1800 proves the
+        // fold found the two periods and corrected the note the provenance and the siren's base carry
+        assertTrue(a.periodic, "a periodic source")
+        assertTrue(kotlin.math.abs(a.hz - f0) < 0.02 * f0, "the note should be the true fundamental near $f0, got ${a.hz}")
+        val re = a.cycle.copyOf()
+        val im = FloatArray(KitFromAnything.TABLE)
+        com.snipsnap.audio.Fft.forward(re, im)
+        fun mag(k: Int) = kotlin.math.hypot(re[k], im[k])
+        assertTrue(mag(1) > 1.5f * mag(2), "the cycle's first harmonic must be its fundamental, not empty: ${mag(1)} vs ${mag(2)}")
+        // and a pad read from it at A3 sounds at A3, not an octave up
+        val pad = Snip(KitFromAnything.cycleAt(a.cycle, FloatArray(rate / 2) { 220f }), 1, rate)
+        val read = KitFromAnything.readPitch(pad, 220f, 0.05f, 0.25f)
+        assertNotNull(read)
+        val cents = 1200 * kotlin.math.ln(read.first / 220f) / kotlin.math.ln(2f)
+        assertTrue(kotlin.math.abs(cents) < 20f, "A3 read ${read.first} Hz (${cents} cents)")
+    }
+
+    @Test
     fun `same source, same bytes`() {
         val a = KitFromAnything.assemble(bark, key, Genre.TECHNO)
         val b = KitFromAnything.assemble(bark, key, Genre.TECHNO)

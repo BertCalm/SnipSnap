@@ -250,6 +250,44 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * KIT FROM ANYTHING: [source] (a pad's own audio) quarried into sixteen
+     * pads in [key] and [genre] and landed on the shelf as a brand-new kit,
+     * [landPhotoKit]'s shape and the CLI's flow (`KitFromCommand`): the
+     * source is kept in the folder as [com.snipsnap.synth.KitFromAnything.SOURCE_FILE]
+     * and the kit is made from THAT copy read back, so every pad's recipe
+     * hashes the file on disk and `kitfrom --check` can rebuild it. Throws
+     * [IllegalArgumentException] in words for a source the assembler refuses,
+     * after deleting the folder it started, so a refusal leaves no half-kit
+     * on the shelf. Seconds-long; the caller shows a busy line.
+     */
+    fun landKitFrom(
+        base: String,
+        source: com.snipsnap.audio.Snip,
+        key: com.snipsnap.audio.KeySpec,
+        genre: com.snipsnap.synth.KitFromAnything.Genre,
+    ): Pair<Entry, com.snipsnap.synth.KitFromAnything.Result> {
+        root.mkdirs()
+        val name = freshName(base)
+        val dir = File(root, name)
+        dir.mkdirs()
+        val kept = File(dir, com.snipsnap.synth.KitFromAnything.SOURCE_FILE)
+        try {
+            com.snipsnap.audio.WavWriter.write(kept, source)
+            val result = com.snipsnap.synth.KitFromAnything.assemble(
+                WavReader.read(kept), key, genre, sourceFile = com.snipsnap.synth.KitFromAnything.SOURCE_FILE,
+            )
+            val kit = com.snipsnap.kit.KitAssembler.assembleArranged(
+                name, com.snipsnap.kit.Balance.apply(result.pads), dir, key = key, tempoBpm = genre.style.bpm,
+            )
+            return Entry(dir, kit) to result
+        } catch (e: Throwable) {
+            // Not a kit yet: the folder this call made, and only it, goes.
+            dir.deleteRecursively()
+            throw e
+        }
+    }
+
+    /**
      * KEY: set or clear [source]'s key - metadata in `kit.json`, nothing
      * retuned by itself - and hand back the entry with the kit re-read.
      */

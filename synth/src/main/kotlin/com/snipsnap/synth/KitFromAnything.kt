@@ -90,6 +90,7 @@ object KitFromAnything {
 
     /** The cycle table: 2048 points, 46 ms at the output rate, the forced excerpt's length. */
     const val TABLE = 2048
+    private const val SUB_PERIOD_MATCH = 0.98
 
     /** A pitched source is one whose period reads at this confidence or better: its note is the siren's base and the provenance says so. */
     const val PITCHED_CONFIDENCE = 0.5f
@@ -273,6 +274,53 @@ object KitFromAnything {
         val unmeasured: List<GateResult> get() = gates.filter { it.gate == Gate.UNMEASURED }
         /** The gates as they stand after the blends: a blended pad's gate is its re-gate. */
         val finalGates: List<GateResult> get() = gates.map { g -> blends.firstOrNull { it.slot == g.slot }?.after ?: g }
+    }
+
+    /**
+     * What a [Result] says about itself, in words, split the way a screen lays it out: the CLI
+     * prints these strings and the pad sheet's result overlay draws the same ones, so the two
+     * cannot disagree. [header] is "<kit> in <key>, <genre> at <bpm> bpm - <what the source read as>";
+     * [tableHeader] then one [rows] entry per slot (pad, slot, gate, what the gate measured);
+     * one [blends] line per pad that failed its gate; [summary] the one-line count.
+     */
+    class Report(
+        val header: String,
+        val tableHeader: String,
+        val rows: List<String>,
+        /** Each row's gate, in the same order, for a screen that colours a row by what the gate said. */
+        val rowGates: List<Gate>,
+        val blends: List<String>,
+        val summary: String,
+    ) {
+        /** Everything after the header, in print order. */
+        val lines: List<String> get() = listOf(tableHeader) + rows + blends + summary
+    }
+
+    /** [result] as a [Report]; [name] is the kit's name on the shelf. */
+    fun describe(result: Result, name: String, key: KeySpec, genre: Genre): Report {
+        val root = java.util.Locale.ROOT
+        val a = result.analysis
+        val header = "$name in ${key.label}, ${genre.label} at ${genre.style.bpm.toInt()} bpm - " +
+            if (a.pitched) "the source has a note (%.1f Hz)".format(root, a.hz) else "the source has no note, every cycle is forced"
+        // Locale.ROOT on the pad number: %d follows the default locale, and on an ar-EG or fa-IR
+        // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
+        val rows = result.gates.map { g ->
+            "%-4s %-11s %-10s %s".format("A%02d".format(root, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail)
+        }
+        val blends = result.blends.map { b ->
+            "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(root,
+                b.slot.name, b.synth, b.share,
+                if (b.distance != null) ", distance %.3f%s".format(root, b.distance, if (b.far) " (far)" else "") else "",
+                b.after.gate.name.lowercase(), b.after.detail)
+        }
+        val failed = result.fallbackSet
+        val unread = result.unmeasured
+        val summary = when {
+            failed.isEmpty() && unread.isEmpty() -> "every pad cleared its gate"
+            else -> "${failed.size} pad(s) failed a gate and were blended, the source never under half: ${failed.joinToString { it.slot.name }}" +
+                if (unread.isNotEmpty()) "; ${unread.size} unmeasured, left purist: ${unread.joinToString { it.slot.name }}" else ""
+        }
+        return Report(header, "%-4s %-11s %-10s %s".format("pad", "slot", "gate", "what the gate measured"), rows, result.gates.map { it.gate }, blends, summary)
     }
 
     /**
@@ -558,9 +606,13 @@ object KitFromAnything {
         } else null
         val periodic = estimate != null && estimate.confidence >= PERIOD_CONFIDENCE && estimate.hz in 40f..2000f
         val pitched = periodic && estimate!!.confidence >= PITCHED_CONFIDENCE
-        val hz = if (periodic) estimate!!.hz else 0f
+        val readHz = if (periodic) estimate!!.hz else 0f
 
-        val cycle = if (periodic) averagedPeriods(mono, bestAt, hz) else forcedCycle(mono, bestAt - TABLE / 4)
+        // the detector tops out at 1200 Hz, so a source above it is read at the lag of k true periods;
+        // averagedPeriods folds that back to one period and says by how much, and the note the
+        // provenance and the siren's base carry is the folded one: where the source sounds
+        val (cycle, folds) = if (periodic) averagedPeriods(mono, bestAt, readHz) else forcedCycle(mono, bestAt - TABLE / 4) to 1
+        val hz = readHz * folds
 
         // the colour: the long-term magnitude in Spectral's own geometry, smoothed over five bins
         val sum = FloatArray(Spectral.BINS)
@@ -592,8 +644,12 @@ object KitFromAnything {
         return Analysis(mono, bestAt, pitched, hz, cycle, colour, mono.contentHashCode(), sourceClass, whiteArrival)
     }
 
-    /** Eight consecutive periods from the arrival, each resampled to [TABLE] points, averaged: one clean cycle that wraps by construction. */
-    private fun averagedPeriods(src: FloatArray, from: Int, hz: Float): FloatArray {
+    /**
+     * Eight consecutive periods from the arrival, each resampled to [TABLE] points, averaged: one clean
+     * cycle that wraps by construction, with the number of true periods it was found to hold (1 when
+     * the detector's period was the real one; see [subPeriodFactor]).
+     */
+    private fun averagedPeriods(src: FloatArray, from: Int, hz: Float): Pair<FloatArray, Int> {
         val period = RATE / hz
         val out = FloatArray(TABLE)
         var count = 0
@@ -603,9 +659,59 @@ object KitFromAnything {
             for (i in 0 until TABLE) out[i] += readAt(src, (start + i * period / TABLE).toDouble())
             count++
         }
-        if (count == 0) return forcedCycle(src, from)
+        if (count == 0) return forcedCycle(src, from) to 1
         for (i in 0 until TABLE) out[i] /= count
-        return centred(out)
+        val averaged = centred(out)
+        val k = subPeriodFactor(averaged)
+        return subPeriod(averaged, k) to k
+    }
+
+    /**
+     * The detector reads 40 to 1200 Hz, and a source whose true fundamental sits above that (a
+     * bottle at 2053 Hz) is read at the lag of two periods (1026 Hz), so the "one period"
+     * [averagedPeriods] averages holds [k] of them and a table of it sounds [k] times too low.
+     * A cycle whose [k] equal parts match the first to 0.98 is [k] copies of one period: keep the
+     * harmonics at multiples of [k] (the k-th, 2k-th... become the 1st, 2nd...), which is the one
+     * period exactly and still wraps. The largest k that holds wins; no k holding returns the cycle itself,
+     * and the caller multiplies the detector's note by k so the provenance and the siren's base say
+     * where the source really sounds.
+     */
+    internal fun subPeriod(cycle: FloatArray): FloatArray = subPeriod(cycle, subPeriodFactor(cycle))
+
+    /** How many true periods [cycle] holds: the largest k in 4..2 whose equal parts all match the first to [SUB_PERIOD_MATCH], else 1. */
+    internal fun subPeriodFactor(cycle: FloatArray): Int {
+        for (k in 4 downTo 2) {
+            val part = TABLE / k
+            var worst = 1.0
+            for (m in 1 until k) {
+                var xy = 0.0; var xx = 0.0; var yy = 0.0
+                for (i in 0 until part) {
+                    val x = cycle[i].toDouble(); val y = cycle[m * part + i].toDouble()
+                    xy += x * y; xx += x * x; yy += y * y
+                }
+                worst = min(worst, xy / sqrt(xx * yy + 1e-30))
+            }
+            if (worst >= SUB_PERIOD_MATCH) return k
+        }
+        return 1
+    }
+
+    /** [cycle] reduced to one of the [k] periods it holds: the harmonics at multiples of k become the 1st, 2nd... */
+    private fun subPeriod(cycle: FloatArray, k: Int): FloatArray {
+        if (k > 1) {
+            val re = cycle.copyOf()
+            val im = FloatArray(TABLE)
+            Fft.forward(re, im)
+            val nr = FloatArray(TABLE)
+            val ni = FloatArray(TABLE)
+            for (j in 1 until TABLE / (2 * k)) {
+                nr[j] = re[k * j]; ni[j] = im[k * j]
+                nr[TABLE - j] = re[TABLE - k * j]; ni[TABLE - j] = im[TABLE - k * j]
+            }
+            Fft.inverse(nr, ni)
+            return centred(nr)
+        }
+        return cycle
     }
 
     /** [TABLE] samples from [start], forced to wrap with a short raised cosine at each end. Played as one period it is periodic by construction. */

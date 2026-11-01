@@ -120,6 +120,7 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Spread
+import com.snipsnap.shell.KitMaker
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
@@ -255,6 +256,13 @@ fun PadSheetScreen(
     onOpenBox: (String?) -> Unit = {},
     /** Told how many STRIKE FX layers an AUDITION rendered, before it plays them: a test's proof the button ran. */
     onStrikeHeard: (Int) -> Unit = {},
+    /**
+     * KIT FROM ANYTHING's door: the base name for the new kit, the pad's own audio, the key and
+     * the genre. The app writes the kit on its own busy line and shows the result sheet over
+     * everything; nothing is written here, which is why the six on-device suites that draw this
+     * sheet without an app around it need not pass one.
+     */
+    onKitFrom: (String, Snip, com.snipsnap.audio.KeySpec, com.snipsnap.synth.KitFromAnything.Genre) -> Unit = { _, _, _, _ -> },
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -2862,6 +2870,19 @@ fun PadSheetScreen(
     }
 
     /**
+     * MAKE KIT: the pad's own audio, the card's key and genre, handed to the app. The two
+     * refusals a thumb can cause are told here, before any work; the app owns the busy line
+     * and says the rest.
+     */
+    fun onMakeKit(key: com.snipsnap.audio.KeySpec, genre: com.snipsnap.synth.KitFromAnything.Genre) {
+        if (busy) return
+        val source = snip ?: return
+        val p = model?.kit?.pad(slot) ?: return
+        KitMaker.refusal(source.durationSeconds)?.let { onToast(it); return }
+        onKitFrom(KitMaker.kitName(p.displayName), source, key, genre)
+    }
+
+    /**
      * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
      * patch riding it as a recipe. A far match is named, not taken.
      *
@@ -3837,6 +3858,8 @@ fun PadSheetScreen(
                 onClick = ::onMakePad,
             )
         }
+
+        KitFromCard(scheme, entry.kit.key, busy, working = false, onMake = ::onMakeKit)
 
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
