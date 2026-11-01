@@ -229,8 +229,10 @@ class CreasePadMakerTest {
         // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
         // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
         // pair, the .xpm's program-level voice tags).
+        // The sidecar now writes explicitNoteOn:false too. Removing just that default field must recover the
+        // preceding sidecar hash, and both versions must still describe the same instrument.
         val expected = mapOf(
-            "Crease Paper Keys.instrument.json" to "cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
+            "Crease Paper Keys.instrument.json" to "4123f312c6f2ef3376e86bd30252aed2634b87ea87c414da37162d2da88d30d1",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
             "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "7a46aac454783287fbcd92e38f8368b0b45ac8844599abe9b4795b80bdb28391",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A3.wav" to "973f4979c6dba53b72e8de565aba6717cebc64d79e957d155cb65d0ac888f680",
@@ -250,6 +252,19 @@ class CreasePadMakerTest {
         CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
         val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
         assertEquals(expected, actual, "no --touch must retain every original package byte")
+        val sidecar = File(dest, "Crease Paper Keys.instrument.json")
+        val text = sidecar.readText()
+        val defaultField = "  \"explicitNoteOn\": false,\n"
+        assertEquals(1, text.lineSequence().count { it == defaultField.trimEnd() })
+        val previous = File.createTempFile("crease-legacy-sidecar-", ".instrument.json")
+        try {
+            previous.writeText(text.replaceFirst(defaultField, ""))
+            assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", sha(previous))
+            assertEquals(InstrumentStore.read(previous), InstrumentStore.read(sidecar),
+                "an explicitly false note-on flag must preserve the earlier instrument's meaning")
+        } finally {
+            previous.delete()
+        }
     }
 
     @Test
