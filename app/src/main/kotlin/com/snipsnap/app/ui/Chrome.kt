@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -244,17 +243,10 @@ fun TitleBar(
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
         // `weight(1f, fill = false)`: the right-hand cluster is measured first
-        // and the wordmark takes what it leaves, so a long project name
-        // ellipsises itself and never pushes SNIPSNAP to an ellipsis.
-        Row(
-            Modifier.weight(1f, fill = false),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // `.wordmark-square`: the page's tilted square before the name.
-            Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
-            TapeText("SNIPSNAP", TapeType.displayBig, scheme.titleInk.tape)
-        }
+        // and the lockup takes what it leaves; the lockup measures itself
+        // unbounded, so a long project name clips itself at 140 dp and never
+        // pushes the mark to an ellipsis.
+        MarkLockup(height = Layout.MARK_CAP_H.dp, Modifier.weight(1f, fill = false))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
                 // The bar clips the name at 140 dp; the accessible name is the whole of it.
