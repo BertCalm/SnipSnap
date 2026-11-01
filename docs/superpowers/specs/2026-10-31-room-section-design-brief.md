@@ -247,4 +247,4 @@ The owner answered all five questions "yes", read against each question's first 
 - `RoomTest` pins the tap to `Room.process` at its defaults on a kick and a snare, the tap's DISTANCE to ROOM's own default, AMT 1 as more room and a further mic, AMT 0.35 as less, and AMT 0 as dry.
 - `PadSheetTest` pins that both sheets' tap amounts (`PadSheet.DEFAULT_AMOUNT`, `BoardSheet.DEFAULT_AMOUNT`, both 0.7) still land on the heard room. synth cannot see them, so `roomed` restates 0.7, and that test catches a drift.
 
-**Not heard yet.** AMT 1 (the mic about 2.28 m back) and anything above the tap.
+**AMT 1 heard (2026-11-01).** The owner listened to the kick and the snare dry, at the tap and at AMT 1 (the mic about 2.28 m back, in the same room) and approved the sound; AMT 1 stays as shipped. Nothing about the chip is left unheard.
