@@ -1505,6 +1505,13 @@ object Copy {
 
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val STRIKE_FX_ON = "STRIKE FX ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."
+    const val STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."
+    const val STRIKE_FX_KEEPS_HISTORY = "THIS PAD KEEPS AN ERA, MUTATE OR SPLICE HISTORY. REMOVE IT BEFORE STRIKE FX."
+    /** KEEP on a pad with soft hits asks first: what goes, and where it waits. The dialog's KEEP is the question; the soft files go to the bin after the write. */
+    const val STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. THEY WAIT IN THE BIN FOR ${Reversal.DAYS} DAYS."
+    /** SOFT HITS on a banked pad asks first: the bank's ROOM and ECHO renders go, the DRY hit is the pad again, and a KEEP rebuilds the bank. */
+    const val SOFT_HITS_REPLACE_STRIKE_FX = "SOFT HITS REPLACE THIS PAD'S STRIKE FX BANK. THE DRY HIT STAYS AS THE PAD. KEEP STRIKE FX AGAIN TO REBUILD IT."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     /**
      * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
