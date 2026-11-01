@@ -103,6 +103,15 @@ class JCardTest {
 
         override fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int) =
             error("the J-card draws no arcs")
+
+        override fun fillPolygon(xs: FloatArray, ys: FloatArray, colorRgb: Int) =
+            error("the J-card fills no polygons")
+
+        override fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int) =
+            error("the J-card sets no type")
+
+        override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float =
+            error("the J-card measures no type")
     }
 
     @Test
