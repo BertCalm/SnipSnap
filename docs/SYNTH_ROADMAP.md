@@ -59,13 +59,17 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
-**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
-motion/contact core. Higher contacts survive the 243-point middle-control grid
-and disappear when mount coupling is removed. Saved model/note/velocity/cue
-recipes and 92 finite audition cases are available outside the factory roster
-and phone picker. Historical six-voice recordings remain separate references.
-HOLD loops, other voices, phone cost and sonic acceptance remain open. See
-[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
+**Cairn three-voice listening gate (2026-10-31).** The owner approved the
+KNOCK/ANSWER HOLD direction. Model 3 adds TUMBLE: one launch becomes a tightening
+cascade through gravity, drag and energy-losing rebounds. It shares the modal
+readout and real preceding-cycle HOLD check, while KNOCK/ANSWER retain their
+versioned audio. The new three-voice audition compares punctuation, conversation
+and cascade at C3–C5, identical controls, TUMBLE endpoints and two dry phrases.
+The full nine-module JVM gate passes (7,450 tests). TUMBLE listening, phone/MPC
+checks, factory recipes and phone UI remain open. SING, GRIND and VESSEL are
+still historical references.
+See [CAIRN_TUMBLE.md](CAIRN_TUMBLE.md), the [two-voice foundation](CAIRN.md), and the
+[private three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/).
 
 **Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent

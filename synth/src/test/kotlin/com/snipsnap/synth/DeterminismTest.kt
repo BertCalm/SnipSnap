@@ -48,12 +48,14 @@ class DeterminismTest {
     }
 
     @Test
-    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+    fun `CAIRN fresh uncached renders reproduce all voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
-            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
-            val a = patch.render().samples
-            Cairn.clearMotionCache()
-            assertContentEquals(a, patch.render().samples)
+            for (hold in listOf(0f, 1f)) {
+                val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice) + ("HOLD" to hold))
+                val a = patch.render().samples
+                Cairn.clearMotionCache()
+                assertContentEquals(a, patch.render().samples)
+            }
         }
     }
 
