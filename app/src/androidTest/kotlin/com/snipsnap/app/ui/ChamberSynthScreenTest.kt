@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -262,8 +263,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         SynthDrafts.write(settings, listOf(original))
         show(root, settings)
         press("SAVE PRESET")
-        compose.onNode(hasSetTextAction()).performTextReplacement("QUEUED WIDER ROOM")
+        val savedName = "QUEUED ROOM"
+        compose.onNode(hasSetTextAction()).performTextReplacement(savedName)
         pump()
+        compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true).assertIsEnabled()
         val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val velocityEdit = requireNotNull(compose.onNodeWithContentDescription("VELOCITY", useUnmergedTree = true)
@@ -284,10 +287,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertTrue(save())
         }
         waitFor("same-frame complete CHAMBER save", timeoutMillis = 30_000) {
-            UserPresets.read(root).any { it.name == "QUEUED WIDER ROOM" }
+            UserPresets.read(root).any { it.name == savedName }
         }
-        val saved = UserPresets.read(root).single { it.name == "QUEUED WIDER ROOM" }.patch as ChamberPatch
-        assertEquals(expected.copy(name = "QUEUED WIDER ROOM"), saved)
+        val saved = UserPresets.read(root).single { it.name == savedName }.patch as ChamberPatch
+        assertEquals(expected.copy(name = savedName), saved)
 
         val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
