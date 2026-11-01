@@ -293,3 +293,23 @@ tasks.register<JavaExec>("generateRimeInstruments") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
 }
+
+tasks.register<JavaExec>("generateScannedChainControlsAudition") {
+    group = "distribution"
+    description = "Render Scanned Chain editor sweeps, complete recipes and numerical evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScannedChainControlsAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("scannedChainControlsOutput").orElse("${rootDir}/testkit/scanned-chain-controls").get())
+}
+
+/** Reproduce the six factory performance recipes and four MPC-ready held instruments. */
+tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
+    group = "distribution"
+    description = "Render the ORIGAMI performance bank, native/matched takes, portable audition and MPC downloads."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+}

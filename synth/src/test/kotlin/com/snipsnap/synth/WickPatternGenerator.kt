@@ -166,7 +166,7 @@ internal object WickPatternGenerator {
     private fun renderSource(root: File, key: String, voice: WickVoice, note: Note): Source {
         val patch = WickPatch("${voice.name} ${note.midi}".take(14), voice, Wick.defaults(voice) + ("HOLD" to 0f), note.midi, note.velocity)
         val started = System.nanoTime()
-        val probe = Wick.inspect(voice, patch.macros, patch.midi, patch.velocity)
+        val probe = Wick.inspect(voice, patch.macros, patch.midi, patch.velocity, rattleSource = patch.rattleSource)
         val elapsed = (System.nanoTime() - started) / 1e6
         check(probe.raw.isNotEmpty() && probe.raw.all { it.isFinite() } && probe.diagnostics.loop == null)
         check(probe.diagnostics.rejectedEvents == 0) { "$key rejected source events" }

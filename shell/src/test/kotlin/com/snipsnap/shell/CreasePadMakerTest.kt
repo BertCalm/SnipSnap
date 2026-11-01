@@ -228,9 +228,8 @@ class CreasePadMakerTest {
         // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
         // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
         // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
-        // pair, the .xpm's program-level voice tags).
-        // The sidecar now writes explicitNoteOn:false too. Removing just that default field must recover the
-        // preceding sidecar hash, and both versions must still describe the same instrument.
+        // pair, the .xpm's program-level voice tags). The sidecar was re-pinned once more when it began carrying
+        // explicitNoteOn.
         val expected = mapOf(
             "Crease Paper Keys.instrument.json" to "4123f312c6f2ef3376e86bd30252aed2634b87ea87c414da37162d2da88d30d1",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
@@ -251,20 +250,14 @@ class CreasePadMakerTest {
         val rendered = CreasePadMaker.zoneMidis(legacy).map { CreasePadMaker.renderLayers(legacy, it) }
         CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
         val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
-        assertEquals(expected, actual, "no --touch must retain every original package byte")
-        val sidecar = File(dest, "Crease Paper Keys.instrument.json")
-        val text = sidecar.readText()
-        val defaultField = "  \"explicitNoteOn\": false,\n"
-        assertEquals(1, text.lineSequence().count { it == defaultField.trimEnd() })
-        val previous = File.createTempFile("crease-legacy-sidecar-", ".instrument.json")
-        try {
-            previous.writeText(text.replaceFirst(defaultField, ""))
-            assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", sha(previous))
-            assertEquals(InstrumentStore.read(previous), InstrumentStore.read(sidecar),
-                "an explicitly false note-on flag must preserve the earlier instrument's meaning")
-        } finally {
-            previous.delete()
-        }
+        assertEquals(expected, actual, "no --touch must retain the pinned package bytes")
+        val sidecar = Json.parse(File(dest, "Crease Paper Keys.instrument.json").readText()).obj()
+        assertEquals(JsonValue.Bool(false), sidecar.getValue("explicitNoteOn"))
+        val previousBytes = Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)
+        val previousHash = MessageDigest.getInstance("SHA-256").digest(previousBytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", previousHash,
+            "only the explicit note-on field may differ from the previous sidecar")
     }
 
     @Test

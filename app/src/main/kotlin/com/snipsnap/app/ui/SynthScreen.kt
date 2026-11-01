@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -652,6 +653,24 @@ private fun editableMacros(editable: Patch): Map<String, Float> =
     if (editable is OrigamiPatch) origamiEditingMacros(editable) else editable.macros
 
 /**
+ * The scrolling column of engine controls, behind a seam that is not inline.
+ *
+ * `Column` is an inline composable, so everything written inside it compiles into the
+ * caller's method. [SynthScreen] carries one arm per engine in that column, and once
+ * the method passed 256 registers the dex compiler began emitting a spill move the
+ * Android verifier rejects (`copy1 v0<-v263 type=Reference`), which fails every screen
+ * test at class load. Taking the content as a real lambda gives those arms a method of
+ * their own; the next engine grows this one, not [SynthScreen]'s. Measured with dexdump on
+ * the merged tree: 263 to 267 registers before, varying build to build, and 191 after.
+ */
+@Composable
+private fun ControlsColumn(
+    modifier: Modifier,
+    verticalArrangement: Arrangement.Vertical,
+    content: @Composable ColumnScope.() -> Unit,
+) = Column(modifier, verticalArrangement, content = content)
+
+/**
  * SYNTH — the drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
@@ -1044,6 +1063,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.SCANNED_CHAIN) {
+            // Envelope and macro edits can share a frame with SAVE or SEND.
+            // Read the live complete source rather than the previous composition's patch.
+            val current = loadedPatchesByVoice[engine to voice] as? ScannedChainPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: ScannedChainPatch(name, voice as ScannedChainVoice, controls)
+        }
         if (engine == Engine.OVERLAP) {
             // Mode, note and release edits can share a frame with SAVE/SEND.
             val current = loadedPatchesByVoice[engine to voice] as? OverlapPatch
@@ -2573,7 +2600,7 @@ fun SynthScreen(
                 onNext = { arrive(engine.next()) },
             )
 
-            Column(
+            ControlsColumn(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -4027,6 +4054,12 @@ private fun MacroSliders(
                 // HOLD remains a finite 2–6 s control. Held RIBBON uses
                 // its saved release instead, without changing HOLD's value.
                 if (holdingRibbon && spec.name == "HOLD") continue
+                if (engine == Engine.SCANNED_CHAIN) {
+                    ScannedMacroSlider(spec.name, macros.getValue(spec.name), classColor, scheme) { value ->
+                        onMacro(spec.name, value)
+                    }
+                    continue
+                }
                 MacroSlider(
                     label = spec.name,
                     value = macros.getValue(spec.name),

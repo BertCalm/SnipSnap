@@ -144,7 +144,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     fun strike_fx_section_fits_a_narrow_phone_beside_soft_hits() {
         show(strikeKit())
         for (text in listOf("STRIKE FX", "AUDITION", "KEEP")) assertReadsInFull(text)
-        for (label in listOf("ROOM", "SLAP", "STRIKE FX AUDITION", "STRIKE FX KEEP")) {
+        for (label in listOf("STRIKE FX ROOM", "STRIKE FX SLAP", "STRIKE FX AUDITION", "STRIKE FX KEEP")) {
             val bounds = node(label).fetchSemanticsNode("nothing on screen is named \"$label\"").boundsInRoot
             assertTrue("\"$label\" starts inside the phone width", bounds.left >= 0f)
             assertTrue("\"$label\" ends inside the phone width", bounds.right <= PHONE_WIDTH_DP * compose.density.density + 1f)
@@ -239,11 +239,11 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     fun knobs_read_back_from_a_kept_pad() {
         val entry = strikeKit()
         show(entry)
-        assertEquals("0.42", sliderText("ROOM"))
-        assertEquals("0.90", sliderText("SLAP"))
-        dial("ROOM", 0.2f)
-        dial("SLAP", 0.5f)
-        assertEquals("0.20", sliderText("ROOM"))
+        assertEquals("0.42", sliderText("STRIKE FX ROOM"))
+        assertEquals("0.90", sliderText("STRIKE FX SLAP"))
+        dial("STRIKE FX ROOM", 0.2f)
+        dial("STRIKE FX SLAP", 0.5f)
+        assertEquals("0.20", sliderText("STRIKE FX ROOM"))
         press("STRIKE FX KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         // Close the sheet and open it on the kept kit: the knobs come from the pad's recipe.
@@ -251,9 +251,9 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         pump()
         compose.runOnIdle { sheetShown = true }
         waitFor("the reopened sheet's knobs") {
-            compose.onAllNodesWithContentDescription("ROOM").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("STRIKE FX ROOM").fetchSemanticsNodes().isNotEmpty()
         }
-        assertEquals("0.20", sliderText("ROOM"))
-        assertEquals("0.50", sliderText("SLAP"))
+        assertEquals("0.20", sliderText("STRIKE FX ROOM"))
+        assertEquals("0.50", sliderText("STRIKE FX SLAP"))
     }
 }
