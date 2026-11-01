@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Aerostat
 import com.snipsnap.synth.AerostatPatch
 import com.snipsnap.synth.Alloy
@@ -57,6 +59,8 @@ import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.Libration
 import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.Lorentz
+import com.snipsnap.synth.LorentzPatch
 import com.snipsnap.synth.Magnet
 import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.Mercury
@@ -238,6 +242,7 @@ object SynthRoot {
     /** The root of [patch], or null for an engine that has none a note name would describe. */
     fun of(patch: Patch): Control? = when (patch) {
         // ---- a saved note, TUNE (where there is one) a transposition of it ----
+        is AccordPatch -> Field(patch.midi, Accord.MIN_MIDI..Accord.MAX_MIDI) { patch.copy(midi = it) }
         is AlloyPatch -> Field(patch.midi, Alloy.MIDI_MIN..Alloy.MIDI_MAX) { patch.copy(midi = it) }
         is ApsisPatch -> Field(patch.midi, Apsis.MIDI_MIN..Apsis.MIDI_MAX) { patch.copy(midi = it) }
         is BellowsPatch -> Field(patch.midi, playedRange(Bellows.midiRange(patch.voice),
@@ -291,6 +296,7 @@ object SynthRoot {
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
+        is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
         is MagnetPatch -> tune(patch, { Magnet.rootMidi(patch.voice) + Magnet.semitonesFor(it) })
         is MercuryPatch -> tune(patch, { Mercury.midiFor(patch.voice, it) })
         is MurkPatch -> tune(patch, { Murk.midiFor(patch.voice, it) })
