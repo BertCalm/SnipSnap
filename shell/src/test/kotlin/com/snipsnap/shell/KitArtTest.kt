@@ -114,7 +114,7 @@ class KitArtTest {
         for (style in KitArt.Style.entries) {
             for (palette in Palettes.ALL) {
                 val img = renderTextless(kit, dir, knobs(style, palette), 128)
-                val zone = KitArt.nameZone(style, Mark.Variant.STACKED, 128)
+                val zone = KitArt.nameZone(probeCanvas(), style, Mark.Variant.STACKED, 128)
                 var sum = 0.0
                 var n = 0
                 for (y in zone.y until zone.y + zone.h) for (x in zone.x until zone.x + zone.w) {
@@ -171,7 +171,7 @@ class KitArtTest {
             val (ox, oy) = KitArt.markOrigin(probeCanvas(), Mark.Variant.SYMBOL, size)
             val pads = Mark.symbol(ox, oy, KitArt.markHeight(Mark.Variant.SYMBOL, size))
             assertEquals(palette.field1, rgb(img, pads[0].cx.toInt(), pads[0].cy.toInt()), "${style.id}: the mark is there")
-            val zone = KitArt.nameZone(style, Mark.Variant.SYMBOL, size)
+            val zone = KitArt.nameZone(probeCanvas(), style, Mark.Variant.SYMBOL, size)
             var named = 0
             for (y in zone.y until zone.y + zone.h) for (x in zone.x until zone.x + zone.w) if (rgb(img, x, y) != palette.ground) named++
             assertTrue(named > 10, "${style.id}: the name was set in its zone ($named pixels)")
@@ -190,7 +190,7 @@ class KitArtTest {
             val img = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.LOCKUP), size = size))
             // The same tile with no name at all: the mark's own words stay, so the diff is the name alone.
             val bare = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.LOCKUP), size = size, label = ""))
-            val zone = KitArt.nameZone(style, Mark.Variant.LOCKUP, size)
+            val zone = KitArt.nameZone(probeCanvas(), style, Mark.Variant.LOCKUP, size)
             // Pixels the name added must all lie inside the zone, plus one pixel of antialiasing.
             var outside = 0
             var inside = 0
@@ -214,7 +214,7 @@ class KitArtTest {
         val size = 600
         val img = decode(KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, palette), size = size))
         val bare = decode(KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, palette), size = size, label = ""))
-        val zone = KitArt.nameZone(KitArt.Style.BLOOM, Mark.Variant.STACKED, size)
+        val zone = KitArt.nameZone(probeCanvas(), KitArt.Style.BLOOM, Mark.Variant.STACKED, size)
         // Rows inside the zone that the name touched, as runs: two lines are two runs with a gap between.
         val rows = (zone.y until zone.y + zone.h).filter { y ->
             (zone.x until zone.x + zone.w).any { x -> rgb(img, x, y) != rgb(bare, x, y) }
@@ -296,6 +296,30 @@ class KitArtTest {
             }
         }
         assertTrue(glow > 200, "a faint glow surrounds the arcs ($glow pixels)")
+    }
+
+    @Test
+    fun `the name keeps a clear gap before the mark`() {
+        // The strip styles share a row with the mark; a long name must stop a full margin short of it,
+        // the same breathing room the tile keeps at its edges.
+        val dir = File(temp, "gap")
+        buildKit(dir)
+        val kit = Kit("DUST_BREAK_DELUXE", KitStore.load(dir).pads)
+        KitStore.save(kit, dir)
+        val size = 600
+        val strip = listOf(KitArt.Style.RIBBON, KitArt.Style.WAVEFORM, KitArt.Style.GRID, KitArt.Style.SLICES, KitArt.Style.RINGS)
+        for (variant in Mark.Variant.entries) {
+            val (markX, _) = KitArt.markOrigin(probeCanvas(), variant, size)
+            for (style in strip) {
+                val img = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size))
+                val bare = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size, label = ""))
+                val zone = KitArt.nameZone(probeCanvas(), style, variant, size)
+                val right = (0 until size).lastOrNull { x ->
+                    (zone.y until zone.y + zone.h).any { y -> rgb(img, x, y) != rgb(bare, x, y) }
+                } ?: continue
+                assertTrue(right <= markX - KitArt.margin(size), "${style.id}/${variant.id}: the name ends at $right, the mark starts at $markX")
+            }
+        }
     }
 
     @Test

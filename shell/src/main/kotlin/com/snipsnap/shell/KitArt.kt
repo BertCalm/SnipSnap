@@ -140,7 +140,7 @@ object KitArt {
         require(size in 64..2048) { "size wants 64..2048, got $size" }
         val palette = knobs.palette
         canvas.fillRect(0, 0, size, size, palette.ground)
-        val zone = nameZone(knobs.style, knobs.mark, size)
+        val zone = nameZone(canvas, knobs.style, knobs.mark, size)
         val pads = TileSound.pads(kit, kitDir)
         val seed = TileSound.seedOf(pads, knobs.seedSlot)
 
@@ -214,8 +214,9 @@ object KitArt {
 
     /**
      * The mark's cap height on a tile, never below what [Mark.draw] accepts:
-     * on a tile under 200 px the one-line lockup sits at its floor and can
-     * run wider than [markReserve]; the export tile ([DEFAULT_SIZE]) and the
+     * on a tile under 200 px the one-line lockup sits at its floor and the
+     * strip's name zone, which ends a margin before the mark, gives way to
+     * it; the export tile ([DEFAULT_SIZE]) and the
      * picker's previews are well above that.
      */
     internal fun markHeight(variant: Mark.Variant, size: Int): Float {
@@ -235,16 +236,6 @@ object KitArt {
         return (size - m - w) to (size - m - h)
     }
 
-    /** What the bottom strip gives up to the mark plus a gap, without needing a canvas to measure. */
-    internal fun markReserve(variant: Mark.Variant, size: Int): Int {
-        val share = when (variant) {
-            Mark.Variant.SYMBOL -> 0.12f
-            Mark.Variant.STACKED -> 0.26f
-            Mark.Variant.LOCKUP -> 0.44f
-        }
-        return Math.round(size * share)
-    }
-
     /** A bank-A pad's cell in the Grid style, MPC layout: A01 bottom-left, A13 top-left. */
     internal fun gridCell(size: Int, slot: Int): Box {
         require(slot in 1..16) { "bank A has slots 1..16, got $slot" }
@@ -259,8 +250,13 @@ object KitArt {
         return Box(ox + col * (cell + gap), oy + row * (cell + gap), cell, cell)
     }
 
-    /** The box the name must stay inside; KitArtTest measures legibility over it. */
-    internal fun nameZone(style: Style, variant: Mark.Variant, size: Int): Box = when (style) {
+    /**
+     * The box the name must stay inside; KitArtTest measures legibility over
+     * it. A strip zone ends one margin before where the mark actually starts,
+     * measured on [canvas], so every variant gets the same breathing room on
+     * either platform's type.
+     */
+    internal fun nameZone(canvas: ArtCanvas, style: Style, variant: Mark.Variant, size: Int): Box = when (style) {
         Style.BLOOM -> {
             val half = size * 0.40f * 0.42f / sqrt(2f)
             val c = size / 2f
@@ -276,7 +272,8 @@ object KitArt {
         }
         else -> {
             val m = margin(size)
-            Box(m, Math.round(size * 0.80f), size - 2 * m - markReserve(variant, size), Math.round(size * 0.14f))
+            val markX = markOrigin(canvas, variant, size).first
+            Box(m, Math.round(size * 0.80f), maxOf(1, (markX - m).toInt() - m), Math.round(size * 0.14f))
         }
     }
 
