@@ -5,11 +5,15 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.Exporters
+import com.snipsnap.kit.SourceAttribution
+import com.snipsnap.kit.XpnPackager
 import com.snipsnap.synth.Confluence
 import com.snipsnap.synth.ConfluenceRecipe
 import com.snipsnap.synth.ConfluenceSelectedBank
 import com.snipsnap.synth.ConfluenceSelectedVoice
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
@@ -28,6 +32,8 @@ import kotlin.math.sqrt
 object ConfluenceSelectedAuditionGenerator {
     private const val FORMAT = "snipsnap-confluence-cultural-audition/v1"
     private const val BANK_URL = "assets/cultural-voice-bank-v1.zip"
+    private const val STARTER_URL = "assets/confluence-voices-starter.xpn"
+    private const val HOSTING_FILE_LIMIT = 25L * 1024 * 1024
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -88,6 +94,8 @@ object ConfluenceSelectedAuditionGenerator {
         }
         val archive = File(output, BANK_URL)
         writeBankArchive(bank, archive)
+        val starterKit = writeStarterKit(output)
+        reportHostingSize(BANK_URL, archive)
         val audition = linkedMapOf<String, Any?>(
             "format" to FORMAT, "schemaVersion" to 1, "generatedAt" to generatedAt.toString(),
             "sourceRevision" to revision,
@@ -96,6 +104,7 @@ object ConfluenceSelectedAuditionGenerator {
                 "bytes" to archive.length(), "sha256" to sha256(archive.readBytes()),
                 "manifestSha256" to bank.manifestSha256,
             ),
+            "starterKit" to starterKit,
             "processing" to linkedMapOf(
                 "appPath" to "ConfluenceSelectedWorkshop.prepare",
                 "source" to "Exact approved canonical WAV bytes, copied unchanged from the portable bank. No audition gain or fades.",
@@ -114,7 +123,42 @@ object ConfluenceSelectedAuditionGenerator {
         )
         val target = File(output, "assets/audition.json")
         target.writeText(Json.write(json(audition)) + "\n")
-        println("Wrote 45 WAVs, assets/audition.json and $BANK_URL")
+        println("Wrote 45 WAVs, assets/audition.json, $BANK_URL and $STARTER_URL")
+    }
+
+    private fun writeStarterKit(output: File): Map<String, Any?> {
+        val temporary = Files.createTempDirectory("confluence-cultural-starter-").toFile()
+        try {
+            val directory = File(temporary, "kit")
+            val starter = StarterKits.ALL.single { it.id == StarterKits.CONFLUENCE_VOICES_ID }
+            println("Rendering the production 16-pad CONFLUENCE VOICES starter")
+            val kit = starter.render(starter.displayName, directory)
+            check(kit.pads.map { it.slot }.sorted() == (1..16).toList()) { "Cultural starter requires sixteen populated slots" }
+            val archive = XpnPackager.write(kit, directory, File(output, STARTER_URL),
+                Exporters.defaultMeta(kit), overwrite = true)
+            // The production exporter writes the same source-credit notice used by ordinary app exports.
+            ZipFile(archive).use { zip ->
+                check(zip.getEntry(SourceAttribution.fileName(kit)) != null) { "Starter XPN lost its source credits" }
+                check(zip.entries().asSequence().count { it.name.startsWith("Samples/") && it.name.endsWith(".wav") } == 16) {
+                    "Starter XPN lost a rendered pad"
+                }
+            }
+            reportHostingSize(STARTER_URL, archive)
+            return linkedMapOf(
+                "name" to kit.name, "slots" to 16, "url" to STARTER_URL,
+                "bytes" to archive.length(), "sha256" to sha256(archive.readBytes()),
+                "editableSourcesIncluded" to false,
+                "description" to "Rendered MPC phrases; the source bank is a separate download. App native backup carries source-level editability.",
+            )
+        } finally {
+            temporary.deleteRecursively()
+        }
+    }
+
+    private fun reportHostingSize(url: String, file: File) {
+        println("$url: ${file.length()} bytes; below 25 MiB hosting limit: ${file.length() < HOSTING_FILE_LIMIT}")
+        if (file.length() >= HOSTING_FILE_LIMIT)
+            System.err.println("Hosting file limit exceeded: $url (${file.length()} bytes, limit $HOSTING_FILE_LIMIT)")
     }
 
     private fun variant(
