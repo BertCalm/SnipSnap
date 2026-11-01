@@ -508,6 +508,10 @@ testkit/obbligato-conversation-audition/
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
 
+# Regenerated Crease phone release cache and validation captures.
+testkit/crease-phone-release/
+testkit/crease-phone-release-r2/
+
 # Rebuildable native CAUSTIC voice comparisons and four-voice kit.
 testkit/caustic-native-voices-audition/
 testkit/caustic-native-voices-kit/
