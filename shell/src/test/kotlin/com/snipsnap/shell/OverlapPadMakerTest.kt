@@ -179,7 +179,7 @@ class OverlapPadMakerTest {
             val phone = InstrumentStore.read(sidecar)
             assertEquals(source.releaseSeconds, phone.release)
             assertEquals(listOf(43, 55, 67), phone.zones.map { it.rootNote })
-            assertEquals(listOf(0..49, 50..61, 62..127), phone.zones.map { it.lowNote..it.highNote })
+            assertEquals(listOf(0..49, 50..61, 62..127), phone.zones.map { it.lowNote..it.highNote }, "edge zones run to the ends of the keyboard")
             val native = Mpc3Project.read(File(dir, "$name.xty")).tracks.single()
                 .getValue("program").obj().getValue("drum").obj().getValue("instruments").arr()
             val data = File(dir, "${name}_[TrackData]")
