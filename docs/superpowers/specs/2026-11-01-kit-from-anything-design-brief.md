@@ -138,13 +138,15 @@ set, by design, and it is the right one: a source with nothing in it should blen
 |---|---|---|
 | RIDE (12) | centroid over 4 kHz, decay over 300 ms | 12 / 12 after the noise-based recipe; the first recipe tiled a sped-up kick into a 23 ms ride, and a review caught that the gate had never been run |
 | CRASH (12) | under 1.5 s, decay over 500 ms | 12 / 12; decays 580 to 911 ms |
-| SIREN (12) | the pitch trajectory spans at least half the genre's semitones, read in five windows | 7 / 12; the five others gave the probe fewer than two confident readings (the bark's cycle in every genre, the house rise-and-fall on the pluck and the kick), so they are unmeasured by this probe rather than known bad. A sweep needs a shorter-window tracker; the Kotlin probe should read `Pitch.detect` every 20 ms. |
+| SIREN (12) | the ordered pitch readings follow the genre's trajectory: eight 50 ms windows, each confident reading within 150 cents of the expected pitch at that instant; fewer than six confident readings is unmeasured, not a fail | 8 pass (worst 34 cents off the trajectory), 3 fail (the snare source in every genre, readings thousands of cents off: its cycle has no fundamental to sweep, the same limit as its bass pads), 1 unmeasured (the bark's house rise-and-fall, one confident reading). A first version of this gate took the min-to-max span and passed a 36-semitone jumble as a 7-semitone drop; a review caught it. |
 | BASS and TONE (96) | within 20 cents of the target, confidence 0.3 or better | 78 / 96, worst 11.2 cents, confidences 0.82 to 0.999. The 18 misses are all from the snare source: its bass pads read near 900 to 1800 Hz (a harmonic region, 36 semitones high) and its tones 220 cents high at confidence about 0.8. A noise-dominated source's forced cycle has a weak fundamental, which is a real finding and exactly the case the tonal fallback exists for. The first version of this brief called these sub-harmonic probe errors; that was the probe's bug, and it is retracted. |
 
-**The fallback set, complete:** 27 of 192 pads fail their gate: 1 snare and 3 claps (the sine
-sweep has no noise), 5 sirens (unmeasured, above), 18 bass and tone pads (the snare source has
-no fundamental to sing). Every one names a source with nothing to give for that slot, which is
-what the blend is for. All 192 pads land under the 1.5 s LOOP line. The classifier, where no
+**The fallback set, complete:** 25 of 192 pads fail their gate: 1 snare and 3 claps (the sine
+sweep has no noise), 3 sirens and 18 bass and tone pads (the snare source has no fundamental to
+sing or sweep). Every one names a source with nothing to give for that slot, which is what the
+blend is for. Kept apart from that set: 1 pad the probe could not read (the bark's house siren),
+which says nothing about the pad and waits for a listen or a better tracker. All 192 pads land
+under the 1.5 s LOOP line. The classifier, where no
 class exists for the slot, files the siren PERC, the ride SNARE or PERC, the crash HAT_OPEN or
 SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 
@@ -160,8 +162,9 @@ SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
    twelve kicks all passed, but a real phone capture with the mic's roll-off has not been tried.
 4. **The pitch probe.** The harness's NSDF was mis-normalized until 2026-11-01 (erratum above);
    the Kotlin tests use `Pitch.detect`, which was never affected, but any number this brief
-   quotes with a confidence came from the fixed script. A sweep (the siren) needs a tracker
-   with a short window, which neither probe is yet.
+   quotes with a confidence came from the fixed script. A sweep (the siren) is read in 50 ms
+   windows against the expected trajectory; one pad in twelve gave too few confident readings
+   and is reported as unmeasured, never as a fail.
 5. **The LOOP line.** A crash wants to be long; it is capped at 1.45 s so the kit stays a one-shot
    kit. HOLD is not part of this feature.
 6. **Render time**, proposed: sixteen offline chains per kit; the whitening STFT and paulstretch
@@ -207,8 +210,8 @@ SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 | 78 of 96 bass and tone pads within 20 cents at confidence 0.3 or better, worst 11.2 | measured | results JSON, `gate_pass` rows |
 | The 18 misses are all the snare source's, reading a harmonic region | measured | results JSON, `cents` rows |
 | Ride and crash gates pass 24 of 24 | measured | results JSON, `gate_pass` |
-| Siren gate passes 7 of 12, 5 unmeasured by the probe | measured | results JSON, `siren_reads` |
-| The fallback set is 27 of 192 pads | measured | results JSON `score.fallback_by_slot` |
+| Siren trajectory gate: 8 pass, 3 fail, 1 unmeasured | measured | results JSON, `siren_status` |
+| The fallback set is 25 of 192 pads, plus 1 unmeasured kept apart | measured | results JSON `score.fallback_by_slot`, `score.unmeasured_by_slot` |
 | All 192 pads under the LOOP line | measured | `under_loop_line` |
 | `:synth` depends on `:kit`, so the assembler lives in `:synth` | verified | `synth/build.gradle.kts:893` |
 | `KitAssembler` derives the choke group from the class with no override | verified | `KitAssembler.kt:164` |

@@ -27,8 +27,9 @@ rows for BOOM BAP and HOUSE (ThumpPresets.kt) and from HOUSE's WAREHOUSE / PEAK 
 TECHNO, translated into milliseconds and hertz. None has been heard.
 
 Every pad is gated as the brief's slot table says (classifier agreement for the five slots that have a
-class; centroid and decay for ride and crash; a pitch-trajectory span for the siren; root within 20 cents
-at confidence 0.3 for bass and tones) and the pads that fail are the fallback set the blend rule serves.
+class; centroid and decay for ride and crash; the ordered pitch trajectory for the siren; root within 20
+cents at confidence 0.3 for bass and tones). The pads that fail are the fallback set the blend rule serves;
+the pads the probe could not read are reported as unmeasured, apart from the fallback set.
 
 Run from the repository root (needs cli/build/libs/snipsnap.jar, from ./gradlew :cli:snipsnapJar):
   python3 docs/superpowers/specs/2026-11-01-kit-from-anything-prototype.py <out_dir>
@@ -361,6 +362,7 @@ def main(out_dir: str) -> int:
     hits = {s: 0 for s in JUDGED}
     total = 0
     gate_fail = {}
+    unmeasured = {}
     for fn, (name, genre, slot, x) in index.items():
         v = verdicts.get(fn[:28], verdicts.get(fn, {}))
         row = {"source": name, "genre": genre, "slot": slot, "file": fn, **v}
@@ -375,17 +377,37 @@ def main(out_dir: str) -> int:
         elif slot == "CRASH":
             row["gate_pass"] = v.get("seconds", 9) < LOOP_MIN_SECONDS and v.get("decay_ms", 0) > 500
         elif slot == "SIREN":
-            # the trajectory: pitch in five windows along the pad, its span in semitones against the genre's
+            # the trajectory, checked in order against the one the genre asked for: eight 50 ms windows,
+            # each confident reading compared with the expected pitch at that window's centre (the cycle's
+            # fundamental IS the trajectory, so the expectation is exact), tolerance 150 cents for the
+            # travel inside a window. Fewer than six confident readings is UNMEASURED, kept apart from a
+            # fail: a probe that cannot read a pad says nothing about the pad (review of PR 800). A min/max
+            # span passed a 35-semitone jumble as a 7-semitone drop; this does not.
             kind, seconds, semis = GENRES[genre]["siren"]
-            reads = []
-            for k in range(5):
-                hz, conf = pr.pitch(x, RATE, lo_hz=60.0, hi_hz=4000.0, window_seconds=seconds / 6, start_seconds=k * seconds / 5 + 0.01)
+            src_for_a = quarry.SOURCES[name]()
+            a_s = quarry.analyse(src_for_a, quarry.SOURCE_PITCHED[name])
+            base = a_s["ref_hz"] if a_s["pitched"] else 440.0
+            win = 0.05
+            reads, worst = 0, 0.0
+            for k in range(8):
+                t0 = 0.02 + k * (seconds - 0.1 - win) / 7
+                tc = (t0 + win / 2) / seconds
+                if kind == "drop":
+                    exp_semi = semis * (1 - tc)
+                elif kind == "risefall":
+                    exp_semi = semis * (1 - abs(2 * tc - 1))
+                else:
+                    exp_semi = semis * min(1.0, tc / 0.8)
+                hz, conf = pr.pitch(x, RATE, lo_hz=60.0, hi_hz=4000.0, window_seconds=win, start_seconds=t0)
                 if hz > 0 and conf >= 0.3:
-                    reads.append(hz)
-            span = 12 * np.log2(max(reads) / min(reads)) if len(reads) >= 2 else 0.0
-            row["siren_span_semitones"] = round(float(span), 2)
-            row["siren_reads"] = len(reads)
-            row["gate_pass"] = bool(span >= 0.5 * semis)
+                    reads += 1
+                    worst = max(worst, abs(pr.cents(hz, base * 2 ** (exp_semi / 12))))
+            row["siren_reads"] = reads
+            row["siren_worst_cents_off_trajectory"] = round(float(worst), 1) if reads else None
+            row["siren_status"] = "unmeasured" if reads < 6 else ("pass" if worst <= 150 else "fail")
+            row["gate_pass"] = row["siren_status"] == "pass"
+            if row["siren_status"] == "unmeasured":
+                row["gate_pass"] = None
         if slot.startswith(("BASS", "TONE", "SIREN")):
             # the same call the QUARRY probe uses (40 Hz floor, 0.3 s window). Before probes.py's NSDF
             # normalization was fixed (2026-11-01) this read exact sub-harmonics at confidence 1.0 on
@@ -400,12 +422,15 @@ def main(out_dir: str) -> int:
                 row["cents"] = round(float(pr.cents(hz, target)), 1) if hz > 0 else None
                 row["gate_pass"] = bool(hz > 0 and abs(pr.cents(hz, target)) <= 20 and conf >= 0.3)
         row["under_loop_line"] = len(x) / RATE < LOOP_MIN_SECONDS
-        if not row.get("gate_pass", True):
+        if row.get("gate_pass", True) is False:
             gate_fail.setdefault(slot, []).append(f"{name}/{genre}")
+        elif row.get("gate_pass", True) is None:
+            unmeasured.setdefault(slot, []).append(f"{name}/{genre}")
         results["kits"].append(row)
     results["score"] = {"judged_slots": total, "agreed": sum(hits.values()), "by_slot": hits,
                         "kits": len(quarry.SOURCES) * len(GENRES), "pads": len(index),
-                        "fallback_set": sum(len(v) for v in gate_fail.values()), "fallback_by_slot": gate_fail}
+                        "fallback_set": sum(len(v) for v in gate_fail.values()), "fallback_by_slot": gate_fail,
+                        "unmeasured": sum(len(v) for v in unmeasured.values()), "unmeasured_by_slot": unmeasured}
     with open(os.path.join(out_dir, "report.json"), "w") as f:
         json.dump(results, f, indent=2)
     print(json.dumps(results["score"], indent=2))

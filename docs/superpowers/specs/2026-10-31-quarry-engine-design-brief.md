@@ -5,7 +5,8 @@ Erratum 2026-11-01: the harness's pitch probe (`.claude/skills/luthier/scripts/p
 normalized its NSDF wrongly (one energy term subtracted from the total instead of used as
 is), which halved the denominator at short lags and clipped every confidence to 1.0. Found in
 review of PR 796, fixed in the shared script, every number below regenerated. The root claims
-held; the confidence claims and the "octave low at C4" risk did not, and are corrected below.
+held except one: the bark's C4 reading moved from an octave low to the target, so the "octave
+low at C4" risk was the probe's, and the confidence claims were the probe's too. Both corrected below.
 Repository truth: commit `2b3e1688`, read 2026-10-31. APIs grepped before being named:
 `Grains` (`synth/.../Grains.kt`, renders a cloud from a source `Snip`, no `Patch`),
 `SnapPatch` (`Patches.kt:401`, a patch that carries 256 table ints inline),
@@ -234,7 +235,7 @@ should settle it before any DSP, because every test fixture depends on it.
 | The forced cycle holds the root at C2, C3 and C4 on every source | measured | results JSON, `root`; confidence .81 to .999 |
 | The pitch-synchronous transposed cloud holds the root on a pitched source | measured | within 3.4 cents, confidence .59 to .73 |
 | The sliding excerpt holds the root on forced sources | measured | within 1.7 cents, all notes, confidence .81 to .997 |
-| The harness pitch probe is normalized correctly | verified | `probes.py`, fixed 2026-11-01; the fix raised no root reading by more than 0.3 cent and lowered every confidence from 1.0 |
+| The harness pitch probe is normalized correctly | verified | `probes.py`, fixed 2026-11-01. With the fix every reading in the table is within 3.4 cents of its target; the one reading that changed materially is the bark's CYCLE and BLEND at C4, from an octave low (130.8 Hz) to the target (261.6 Hz); every confidence fell from a clipped 1.0 to its real value |
 | A free-running cloud loses the root on forced sources | measured | `FIELD_FREE` rows |
 | HOLD closes | measured | seam 5e-9 and 2e-7 |
 | Tens of ms per knob turn in Kotlin | proposed | cache story above, no Kotlin yet |
