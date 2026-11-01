@@ -1226,13 +1226,6 @@ fun KitScreen(
 
 
 /**
- * The pad strip: one line for the selected pad from [PadStrip.line], then
- * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
- * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
- * the same strings `PadStrip` hands out. A row at least a hit target tall
- * in both states, so selecting a pad never moves the page under the thumb.
- */
-/**
  * The footer's LEARN, beside MIDI MAP while a keyboard is plugged in: opens
  * MIDI learn's panel under the footer. Its own composable, so KitScreen's
  * body (already near the size at which ART refused SurfaceScreen's) grows by
@@ -1254,6 +1247,13 @@ private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
     }
 }
 
+/**
+ * The pad strip: one line for the selected pad from [PadStrip.line], then
+ * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
+ * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
+ * the same strings `PadStrip` hands out. A row at least a hit target tall
+ * in both states, so selecting a pad never moves the page under the thumb.
+ */
 @Composable
 private fun PadStripLine(
     slot: Int?,
