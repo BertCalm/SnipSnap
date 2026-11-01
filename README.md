@@ -1232,7 +1232,7 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), FORGE (a hit formed against a die: a low shock, an all-pass
+transient), VOLUME (the pad fades in: a raised-cosine rise over the first RISE x 800 ms, at most 70 percent of the pad, with the peak restored up to 12 dB, so a pad that is loudest at its start, a snare most of all, comes out quieter; no chip yet, it waits on its listening gate), FORGE (a hit formed against a die: a low shock, an all-pass
 sweep as deep as DEPTH asks, the fast part folded and the slow part left,
 then a ceiling that closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
 on the pedal row since its listening gate, see
@@ -1247,7 +1247,7 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
+spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
 dub → vinyl → tape → ensemble → phase → echo → spring → room → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
