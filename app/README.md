@@ -6,7 +6,11 @@ Compose over `:shell`, `:kit`, and the native engines (`SurfaceEngine`,
 without one never sees `:app`: `settings.gradle.kts` leaves it out, which
 is why a cloud session's `./gradlew test` is the nine JVM modules only.
 
-There is no `app/src/test`. The on-device Compose suites live in
+The separately installable Crease C4 study adds five host cache tests under
+`src/testCreaseStudy` (`:app:testCreaseStudyUnitTest -PcreaseStudyBuild=true`), plus four device tests
+under `src/androidTestCreaseStudy`. Its verified-cache build and physical-device
+limits are documented in [the phone study](../docs/superpowers/specs/2026-11-01-crease-phone-release.md).
+The normal on-device Compose suites live in
 `app/src/androidTest` and run under `emulator-tests` when a PR touches
 `app/`. The native engines and the JNI bridge have host tests in
 `src/main/cpp/test`, which need no SDK. `versionName` is `0.1`.
@@ -100,6 +104,9 @@ the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and g
 model, with the glass voice displayed as TILES; GLINT remains its saved identity
 and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
 and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
+BALLAST also offers MAKE INSTRUMENT: thirteen minor-third zones from C1 to C4,
+one velocity layer, each zone its onset and settling before the HOLD loop, rendered
+one zone at a time.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
@@ -344,7 +351,9 @@ logcat tag to grab when something is wrong.
 - **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
   covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
   optional volume link in PADS and FULL. Check the interaction on a phone;
-  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers;
+  an ordinary pad's PAD SHEET has a STRIKE FX section (ROOM, SLAP, AUDITION,
+  KEEP, CLEAR) that builds DRY, ROOM and ECHO layers from its own sample.
   The LAST row highlights the layer actually triggered; moving the strip
   changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
