@@ -185,8 +185,11 @@ object KitArt {
 
     // ---- the AWT adapter — the only place in this file java.awt appears ----
 
-    /** Internal, not private: [JCard] reuses [waveform] against its own [Graphics2D]. */
-    internal class AwtCanvas(private val g: Graphics2D) : ArtCanvas {
+    /**
+     * Public, not private: [JCard] reuses [waveform] against its own
+     * [Graphics2D], and the CLI's `mark` verb draws [Mark] through it.
+     */
+    class AwtCanvas(private val g: Graphics2D) : ArtCanvas {
         override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
             g.color = Color(colorRgb)
             g.fillRect(x, y, w, h)
