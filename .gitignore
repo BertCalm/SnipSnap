@@ -533,3 +533,6 @@ testkit/obbligato-more-overlap-audition/
 
 # PRISM opening-once / repeating-sustain listening evidence.
 testkit/prism-opening-sustain-audition/
+
+# Regenerable native EROSION listening evidence.
+testkit/erosion-native-audition/
