@@ -132,10 +132,13 @@ class MeridianKitsTest {
                 for ((zoneIndex, zoneValue) in zones.withIndex()) {
                     val zone = zoneValue.obj()
                     val midi = zone.getValue("midi").int()
-                    val lowNote = if (zoneIndex == 0) 36 else midi - 1
-                    val highNote = if (zoneIndex == zones.lastIndex) 72 else midi + 1
-                    assertEquals(lowNote, zone.getValue("lowNote").int())
-                    assertEquals(highNote, zone.getValue("highNote").int())
+                    val capturedLow = if (zoneIndex == 0) 36 else midi - 1
+                    val capturedHigh = if (zoneIndex == zones.lastIndex) 72 else midi + 1
+                    assertEquals(capturedLow, zone.getValue("lowNote").int())
+                    assertEquals(capturedHigh, zone.getValue("highNote").int())
+                    // Native captures stay C2–C5; OneNote spans the outer playback zones across the keyboard.
+                    val lowNote = if (zoneIndex == 0) 0 else capturedLow
+                    val highNote = if (zoneIndex == zones.lastIndex) 127 else capturedHigh
                     val slot = heldSlots[zoneIndex].obj()
                     assertEquals(lowNote, slot.getValue("lowNote").int())
                     assertEquals(highNote, slot.getValue("highNote").int())
