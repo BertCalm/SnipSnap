@@ -965,7 +965,11 @@ starter are included. Run `./gradlew :synth:generateLatticeAudition` for the
 listening pack, native patch downloads and MPC 3/XPM starter export. The
 [private audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site) and
 [LATTICE notes](docs/LATTICE.md) separate the accepted source direction from new
-HOLD/preset listening and phone/MPC verification still to come.
+HOLD/preset listening and phone/MPC verification still to come. TRACE adds the
+accepted moving pluck as a saved fourth voice: SPEED sets how quickly its body
+gives way to the rejected ringing tail, and HOLD extends finite effort without
+looping. Its three presets and separate TRACE kit accompany the preserved static
+bank and starter.
 
 TIDAL brings two original source populations through a seeded encounter:
 PAIR gathers and passes, while STREAM exposes evolving ringing material.

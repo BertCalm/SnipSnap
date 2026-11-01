@@ -715,10 +715,15 @@ and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
 top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
 CLI routing and the Android picker. New presets and HOLD still await hearing.
 Native validation and physical phone/MPC checks remain separately recorded in
-[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
-engineering specification remain later work. `generateLatticeAudition` retains
-the accepted comparisons and adds R3 native/held examples plus patch and MPC
-starter downloads. The original R1 and accepted R2 evidence stays preserved.
+[LATTICE.md](LATTICE.md). The owner then accepted R4 B's moving pluck on
+2026-10-30: “B sounds cool”. TRACE brings that exact trajectory into saved native
+patches. SPEED changes its timing after the initial attack while leaving pitch
+and resonator damping fixed; TRACE HOLD extends finite excitation without a loop
+or another strike. The existing static voices and starter remain unchanged.
+R5 adds three TRACE factory positions, native speed comparisons and a separate
+MPC kit. The rest of the original engineering specification remains open.
+`generateLatticeAudition` preserves the earlier listening evidence and exports
+the native patches and MPC 3/XPM kits.
 
 ### PRISM — harmonics with different lifetimes
 
