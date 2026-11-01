@@ -2337,7 +2337,7 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** SPARK revision-two control comparisons and ordered expression families. */
+/** SPARK revision-three control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
     description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
@@ -2347,6 +2347,18 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
     providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
+}
+
+/** Local recipe neighborhoods on the unchanged, heard SPARK revision-three source. */
+tasks.register<JavaExec>("generateThumpSparkSweetSpots") {
+    group = "distribution"
+    description = "Render six SPARK starting points and nearby one-control variants, with editable recipes and matched comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThumpSparkSweetSpotAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args(providers.gradleProperty("sparkSweetSpotOutput").orNull ?: "${rootDir}/testkit/thump-spark-sweet-spots")
+    providers.gradleProperty("sparkSweetSpotBaseline").orNull?.let { args(it) }
 }
 
 /** Retained model-one/model-two Apsis listening history. */
