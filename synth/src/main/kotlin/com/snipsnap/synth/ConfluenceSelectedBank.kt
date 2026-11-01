@@ -31,7 +31,10 @@ data class ConfluenceSelectedPreset(
     val voiceIds: List<String>, val parts: Int, val recipe: ConfluenceRecipe,
 )
 
-data class ConfluenceSelectedCacheStats(val preparedMaterials: Int, val renderEntries: Int, val hits: Long, val misses: Long)
+data class ConfluenceSelectedCacheStats(
+    val preparedMaterials: Int, val renderEntries: Int, val hits: Long, val misses: Long,
+    val renderBytes: Long = 0,
+)
 
 /**
  * Nine approved passages, kept separate from the explicitly wordless VocalSet starter bank.
@@ -59,6 +62,7 @@ class ConfluenceSelectedBank private constructor(
     private val byId = voices.associateBy { it.id }
     private val byHash = voices.associateBy { it.region.assetHash }
     private val renderCache = LinkedHashMap<String, ConfluenceReport>(3, .75f, true)
+    private var renderCacheBytes = 0L
     private var hits = 0L
     private var misses = 0L
 
@@ -99,7 +103,8 @@ class ConfluenceSelectedBank private constructor(
     fun render(recipe: ConfluenceRecipe, normalize: Boolean = true): ConfluenceReport {
         val checked = checkedRecipe(recipe)
         val key = "$manifestSha256:$PREPARATION_VERSION:${Confluence.ANALYSIS_VERSION}:$normalize:${checked.toJsonText()}"
-        // Bound completed render storage to two reports, and never lend a cache-owned PCM buffer.
+        // Entry count alone retained 30 MiB for two ordinary thirty-second reports. Bound the
+        // actual three-buffer PCM payload too; long renders are returned without being cached.
         synchronized(renderCache) {
             renderCache[key]?.let { hits++; return snapshot(it) }
             misses++
@@ -110,14 +115,29 @@ class ConfluenceSelectedBank private constructor(
                 diagnostics = result.diagnostics.copy(voicedShare = 0f,
                     processor = "TEXTURE chronological playback; small duration variations are varispeed; no pitch analysis or formant synthesis"),
             )
+            val bytes = reportBytes(honest)
+            if (bytes > MAX_RENDER_CACHE_BYTES) return honest // No bank-owned alias needs a copy.
+            while (renderCache.isNotEmpty() &&
+                (renderCache.size >= MAX_RENDER_CACHE || renderCacheBytes + bytes > MAX_RENDER_CACHE_BYTES)) {
+                val removed = renderCache.remove(renderCache.keys.first())!!
+                renderCacheBytes -= reportBytes(removed)
+            }
             renderCache[key] = honest
-            if (renderCache.size > MAX_RENDER_CACHE) renderCache.remove(renderCache.keys.first())
+            renderCacheBytes += bytes
             return snapshot(honest)
         }
     }
 
     fun cacheStats(): ConfluenceSelectedCacheStats = synchronized(renderCache) {
-        ConfluenceSelectedCacheStats(materials.size, renderCache.size, hits, misses)
+        ConfluenceSelectedCacheStats(materials.size, renderCache.size, hits, misses, renderCacheBytes)
+    }
+
+    /** Release completed audio when leaving the bench; prepared source identities stay warm.
+     * May wait for an active render holding the cache lock, so lifecycle callers use a worker.
+     */
+    fun clearCompletedRenders() = synchronized(renderCache) {
+        renderCache.clear()
+        renderCacheBytes = 0L
     }
 
     private fun checkedRecipe(recipe: ConfluenceRecipe): ConfluenceRecipe {
@@ -172,6 +192,8 @@ class ConfluenceSelectedBank private constructor(
         const val STARTER_PAD_COUNT = 16
         const val MAX_VARIATION = .15f
         const val MAX_AUDIO_BYTES = 12 * 1024 * 1024
+        /** Completed cache PCM payload only, not the whole render's transient allocation budget. */
+        const val MAX_RENDER_CACHE_BYTES = 8L * 1024 * 1024
         private const val MAX_RENDER_CACHE = 2
         private const val MAX_ASSET_BYTES = Confluence.RATE * 30 * 3 + 100_000
 
@@ -326,6 +348,8 @@ class ConfluenceSelectedBank private constructor(
             snip = Snip(report.snip.samples.copyOf(), report.snip.channels, report.snip.sampleRate), raw = report.raw.copyOf(),
             dry = Snip(report.dry.samples.copyOf(), report.dry.channels, report.dry.sampleRate),
             performers = report.performers.toList(), events = report.events.toList())
+        private fun reportBytes(report: ConfluenceReport): Long = 4L *
+            (report.snip.samples.size.toLong() + report.raw.size + report.dry.samples.size)
         private fun decodeText(bytes: ByteArray): String = bytes.toString(Charsets.UTF_8).also {
             require(it.toByteArray(Charsets.UTF_8).contentEquals(bytes)) { "selected manifest must be valid UTF-8" }
         }

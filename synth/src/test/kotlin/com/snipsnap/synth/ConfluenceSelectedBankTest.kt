@@ -164,9 +164,31 @@ class ConfluenceSelectedBankTest {
         val changed = bank.render(recipe.copy(macros = recipe.macros + ("SPACE" to 0f)))
         assertFalse(changed.snip.samples.contentEquals(expected), "a room change must miss the exact render key")
         bank.render(recipe.copy(seed = recipe.seed + 1))
-        assertEquals(2, bank.cacheStats().renderEntries)
+        assertEquals(1, bank.cacheStats().renderEntries, "two eight-second reports exceed the byte budget despite fitting the entry count")
+        assertTrue(bank.cacheStats().renderBytes <= ConfluenceSelectedBank.MAX_RENDER_CACHE_BYTES)
         assertEquals(9, bank.cacheStats().preparedMaterials)
         assertEquals(3L, bank.cacheStats().misses)
+    }
+
+    @Test
+    fun `thirty second reports do not remain in the bank and lifecycle clearing preserves playback`() {
+        val recipe = bank.preset("khoomei-duo").recipe.copy(seconds = 30f)
+        val first = bank.render(recipe)
+        val expected = first.snip.samples.copyOf()
+        assertEquals(0, bank.cacheStats().renderEntries)
+        assertEquals(0L, bank.cacheStats().renderBytes, "a thirty-second report owns fifteen MiB of PCM")
+        first.snip.samples.fill(0f); first.raw.fill(0f); first.dry.samples.fill(0f)
+        assertContentEquals(expected, bank.render(recipe).snip.samples, "uncached callers must not mutate later output")
+        assertEquals(0L, bank.cacheStats().hits)
+        assertEquals(2L, bank.cacheStats().misses)
+        val short = bank.render("khoomei-duo").snip.samples.copyOf()
+        assertEquals(1, bank.cacheStats().renderEntries)
+        assertTrue(bank.cacheStats().renderBytes in 1..ConfluenceSelectedBank.MAX_RENDER_CACHE_BYTES)
+        bank.clearCompletedRenders()
+        assertEquals(0, bank.cacheStats().renderEntries)
+        assertEquals(0L, bank.cacheStats().renderBytes)
+        assertEquals(9, bank.cacheStats().preparedMaterials)
+        assertContentEquals(short, bank.render("khoomei-duo").snip.samples)
     }
 
     @Test
