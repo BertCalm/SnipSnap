@@ -88,6 +88,21 @@ class TileSoundTest {
     }
 
     @Test
+    fun `the smooth attack never jumps, whatever the pitch`() {
+        val dir = File(temp, "smooth")
+        buildKit(dir)
+        for (name in listOf("A01_Kick_01.wav", "A02_Snare_01.wav", "A03_HatClosed_01.wav")) {
+            val s = TileSound.read(File(dir, name))!!.attackSmooth(64)
+            assertEquals(64, s.size)
+            assertTrue(s.all { kotlin.math.abs(it) <= 1f }, "$name: within one")
+            val jump = (1 until s.size).maxOf { kotlin.math.abs(s[it] - s[it - 1]) }
+            assertTrue(jump <= 0.5f, "$name: neighbours differ by at most half the height (max $jump)")
+            assertTrue(s.any { it > 0.5f } && s.any { it < -0.5f }, "$name: a tone still draws a wave, not a flat line")
+        }
+        assertTrue(TileSound.read(File(dir, "A04_Silent_01.wav"))!!.attackSmooth(32).all { it == 0f }, "silence is flat")
+    }
+
+    @Test
     fun `the longest pad is the default seed`() {
         val dir = File(temp, "longest")
         val kit = buildKit(dir)

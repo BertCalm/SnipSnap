@@ -234,6 +234,26 @@ class KitArtTest {
     }
 
     @Test
+    fun `ridges and ribbon follow the seed's attack and field follows its envelope`() {
+        val dir = File(temp, "family")
+        val kit = buildKit(dir)
+        for (style in listOf(KitArt.Style.RIDGES, KitArt.Style.FIELD, KitArt.Style.RIBBON)) {
+            val a = KitArt.png(kit, dir, knobs(style, seed = 1), size = 200)
+            val b = KitArt.png(kit, dir, knobs(style, seed = 3), size = 200)
+            assertTrue(!a.contentEquals(b), "${style.id}: the seed pad draws the field")
+        }
+        // A silent seed: still a tile, still ground-dominant.
+        val quiet = File(temp, "quiet").apply { mkdirs() }
+        WavWriter.write(File(quiet, "A01_Silent_01.wav"), Snip(FloatArray(4_000), 1, 44_100))
+        val silent = Kit("Hush", listOf(KitPad(slot = 1, sampleFile = "A01_Silent_01.wav")))
+        KitStore.save(silent, quiet)
+        for (style in listOf(KitArt.Style.RIDGES, KitArt.Style.FIELD, KitArt.Style.RIBBON)) {
+            val img = decode(KitArt.png(silent, quiet, knobs(style), size = 200))
+            assertEquals(Palettes.VENT.ground, rgb(img, 2, 2), "${style.id}: silence still grounds the tile")
+        }
+    }
+
+    @Test
     fun `the seed pad changes the field and the rings seed changes only rings`() {
         val dir = File(temp, "seeded")
         val kit = buildKit(dir)

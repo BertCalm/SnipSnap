@@ -34,6 +34,20 @@ internal object TileType {
         return "$kept…" to size
     }
 
+    /** [fitText] for [tracked] text: shrink to [floorShare] of [maxSizePx], then trim with an ellipsis. */
+    fun fitTrackedText(
+        canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float, trackingEm: Float,
+        floorShare: Float = 0.3f,
+    ): Pair<String, Float> {
+        val floor = maxOf(MIN_SIZE, maxSizePx * floorShare)
+        var size = maxSizePx
+        while (size > floor && trackedWidth(canvas, text, font, size, trackingEm) > maxWidthPx) size -= 1f
+        if (trackedWidth(canvas, text, font, size, trackingEm) <= maxWidthPx) return text to size
+        var kept = text.trimEnd()
+        while (kept.isNotEmpty() && trackedWidth(canvas, "$kept…", font, size, trackingEm) > maxWidthPx) kept = kept.dropLast(1).trimEnd()
+        return "$kept…" to size
+    }
+
     /** [fit] for [tracked] text: the tracking rides along with the size. */
     fun fitTracked(canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float, trackingEm: Float): Float {
         if (text.isEmpty()) return maxSizePx

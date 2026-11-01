@@ -103,6 +103,15 @@ object KitArt {
 
         /** The seed pad's loudness wrapped round a circle, the name in the hole. */
         BLOOM("bloom", "the seed's loudness wrapped round a circle, the name in the hole"),
+
+        /** The seed sliced into ridge lines that fade back, the name top-left in an italic serif. */
+        RIDGES("ridges", "the attack sliced into ridge lines that fade back"),
+
+        /** A dot field that swells with the seed's loudness, the name on a band. */
+        FIELD("field", "a dot field that swells with the sound, the name on a band"),
+
+        /** The seed's attack as one glowing stroke, the name tracked wide below. */
+        RIBBON("ribbon", "the attack as one glowing stroke"),
         ;
 
         companion object {
@@ -137,6 +146,9 @@ object KitArt {
 
         when (knobs.style) {
             Style.BLOOM -> TileStyles.bloom(canvas, size, palette, seed, label, zone)
+            Style.RIDGES -> TileStyles.ridges(canvas, size, palette, seed, label, zone)
+            Style.FIELD -> TileStyles.field(canvas, size, palette, seed, label, zone)
+            Style.RIBBON -> TileStyles.ribbon(canvas, size, palette, seed, label, zone)
             Style.WAVEFORM -> {
                 waveformStrip(canvas, fieldBox(size), kit, kitDir)
                 TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
@@ -251,6 +263,14 @@ object KitArt {
             val half = size * 0.40f * 0.42f / sqrt(2f)
             val c = size / 2f
             Box(Math.round(c - half), Math.round(c - half), Math.round(2 * half), Math.round(2 * half))
+        }
+        Style.RIDGES -> {
+            val m = margin(size)
+            Box(m, m, size - 2 * m, Math.round(size * 0.20f))
+        }
+        Style.FIELD -> {
+            val m = margin(size)
+            Box(m, Math.round(size * 0.42f), size - 2 * m, Math.round(size * 0.16f))
         }
         else -> {
             val m = margin(size)
