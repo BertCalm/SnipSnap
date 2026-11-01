@@ -210,7 +210,7 @@ object MeridianKitGenerator {
             "name" to instrumentName, "preset" to preset.name,
             "model" to preset.model, "seedContext" to preset.seedContext,
             "lowNote" to HELD_LOW, "highNote" to HELD_HIGH,
-            "noteRange" to "C2-C5 only; notes outside MIDI 36-72 are silent.",
+            "noteRange" to "MIDI 0-127; native roots C2-C5 (36-72), with edge zones transposed beyond those roots.",
             "sampling" to "Thirteen native roots at minor thirds; intervening notes transpose by at most one semitone.",
             "clockAdaptation" to "Fixed alignment. Each native root retains its own measured pitch-compatible swing period.",
             "velocityLayers" to nativeVelocities,
@@ -245,7 +245,8 @@ object MeridianKitGenerator {
 
             MPC 3: load $instrumentName.xty with its _[TrackData] folder beside it.
             MPC 2: load $instrumentName.xpm from that same _[TrackData] folder.
-            Notes C2-C5 (MIDI 36-72) only; notes outside that range are silent.
+            The keyboard spans MIDI 0-127; native roots cover C2-C5 (MIDI 36-72).
+            Outside those roots the sampler transposes from the nearest edge root.
             Thirteen natively rendered roots at minor thirds, each with physical
             velocity layers .30, .65 and 1.0 across 0-42, 43-84 and 85-127.
             Between roots the sampler transposes by at most one semitone; that
@@ -301,7 +302,7 @@ object MeridianKitGenerator {
         appendLine()
         appendLine("The two separate held keyboard ZIPs preserve genuine sampler loops and physical velocity layers:")
         held.forEach { appendLine("${it.getValue("preset")}: ${it.getValue("archiveFile")}") }
-        appendLine("Each keyboard covers C2-C5 only with thirteen native roots and three native velocity layers.")
+        appendLine("Each keyboard spans MIDI 0-127 with thirteen native roots at C2-C5 and three native velocity layers.")
         appendLine("Each archive includes native MPC 3 .xty, MPC 2 .xpm, shared WAVs and complete recipes.")
         appendLine("The finite-pad ZIP deliberately excludes those keyboard folders. Download each keyboard separately.")
         appendLine("Hardware load and owner listening approval of this new bank remain open.")

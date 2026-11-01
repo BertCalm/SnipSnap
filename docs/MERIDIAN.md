@@ -164,8 +164,9 @@ The starter provides three separate, complete MPC packages:
   43–84 and 85–127. The 78 held WAVs retain their actual second-cycle sustain
   loops, roots and complete saved recipes.
 
-Held keyboard zones cover C2–C5 (MIDI 36–72) only; notes outside that range are
-silent. Notes between native roots transpose by at most one semitone, which also
+Current exported held keyboards span MIDI 0–127, with native roots at C2–C5
+(MIDI 36–72). Outside those roots, the sampler transposes from the nearest edge
+root. Notes between native roots transpose by at most one semitone, which also
 shifts the sampled swing cadence. Native roots use the fitted engine timing.
 Both program formats reference the same PCM24 mono 44.1 kHz samples. These
 exports use the existing typed drum and keygroup writers; LOOP filing alone
@@ -228,8 +229,9 @@ the second-cycle sustain loop. RELEASE controls the existing sample-player
 note-off fade.
 
 The typed keygroup package supplies the phone instrument, MPC 3 program and MPC
-2 twin, including explicit NoteOn playback for MPC 2. Zones cover MIDI 36–72
-only; outside notes are silent. Neighboring notes transpose at most one semitone,
+2 twin, including explicit NoteOn playback for MPC 2. Exported zones span MIDI
+0–127; outside the native 36–72 range, playback transposes from the nearest edge
+root. Notes between native roots transpose at most one semitone,
 also shifting the sampled swing cadence. Native roots retain the engine's fitted
 timing. FRESH TAPE → MERIDIAN offers the existing sixteen-pad starter with its
 authored roots and velocities; it does not assign a global kit key.

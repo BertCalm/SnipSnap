@@ -366,7 +366,10 @@ Each topology uses reference MIDI 36, 48 and 60. The three inclusive zones are
 the synthesis reference notes, not a claim that each topology's strongest
 partial is that note. The lower and upper references extend the settings heard
 in the approved MIDI-48 proof. The owner accepted this MPC trial on 2026-10-31;
-no separate register-by-register measurements were supplied.
+no separate register-by-register measurements were supplied. Current exports
+after the whole-keyboard packaging update stretch the outer zones to MIDI 0 and
+127 and transpose from the nearest root. The published trial's bounded zones
+above describe that original archive.
 
 Each WAV has an onset period followed by one untouched settled period. A short
 fade at the start of the onset prevents an abrupt start; the second period is

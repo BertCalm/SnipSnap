@@ -27,6 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -80,10 +81,14 @@ class KeelTest {
 
     /**
      * McLeod's normalised square-difference pitch, as the harness reads it (first local maximum over 0.8 of the best,
-     * parabolic refinement, 25 Hz floor). [Pitch.detect] is the house reader and is used wherever the pitch is steady;
-     * it has a 40 Hz floor and returns null on a gliding window, which the SLIDE probe needs to read.
+     * parabolic refinement, 25 Hz floor). [Pitch.detect] remains the house reader for steady windows.
+     * Its whole-window normalization can reject a low decaying sine as well as a gliding window;
+     * the SLIDE and BELLY probes use this overlap-normalized reader, retaining a confidence guard.
      */
-    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double {
+    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double =
+        nsdfPitch(x, fromSeconds, seconds, loHz, hiHz).first
+
+    private fun nsdfPitch(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Pair<Double, Double> {
         val first = (fromSeconds * rate).toInt()
         val n = minOf((seconds * rate).toInt(), x.size - first)
         val seg = DoubleArray(n) { x[first + it].toDouble() }
@@ -104,7 +109,7 @@ class KeelTest {
             ?: (minLag..maxLag).maxBy { nsdf[it] }
         val curve = nsdf[lag - 1] - 2 * nsdf[lag] + nsdf[lag + 1]
         val refined = lag + if (abs(curve) > 1e-12) 0.5 * (nsdf[lag - 1] - nsdf[lag + 1]) / curve else 0.0
-        return rate / refined
+        return (rate / refined) to nsdf[lag]
     }
 
     // ---- measurement -----------------------------------------------------------------------------------------
@@ -242,14 +247,32 @@ class KeelTest {
     }
 
     @Test
-    fun `root pitch at WEIGHT 0 is within 50 cents for both voices at MIDI 30, 36 and 42`() {
+    fun `overlap-normalized reader resolves a known decaying low sine rejected by the house reader`() {
+        val hz = Keys.midiHz(30).toDouble()
+        val samples = FloatArray(rate) { n ->
+            (.2 * sin(2 * PI * hz * n / rate) * 10.0.pow(-3.0 * n / (rate * .725))).toFloat()
+        }
+        assertNull(Pitch.detect(Snip(samples, channels = 1, sampleRate = rate), .35f, .25f),
+            "the independent fixture must demonstrate the house reader's decay bias")
+        val (measured, confidence) = nsdfPitch(samples, .35, .25)
+        assertTrue(abs(cents(measured, hz)) < 5.0, "known sine measured $measured Hz")
+        assertTrue(confidence > .9, "known sine confidence $confidence")
+    }
+
+    @Test
+    fun `root pitch at WEIGHT 0 is within 50 cents for all voices at MIDI 30, 36 and 42`() {
         for (voice in voices) for (midi in listOf(30, 36, 42)) {
             val snip = render(voice, mapOf("WEIGHT" to 0f), midi)
-            val estimate = requireNotNull(Pitch.detect(snip, .35f, .25f)) { "$voice $midi has no pitch" }
-            val c = cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
-            println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
+            // BELLY's low near-pure decay needs overlap normalization; retain the original
+            // house-reader checks for REDUCE/UPRIGHT and the same pitch/confidence limits for all.
+            val (hz, confidence) = if (voice == KeelVoice.BELLY) nsdfPitch(snip.samples, .35, .25) else {
+                val estimate = requireNotNull(Pitch.detect(snip, .35f, .25f)) { "$voice $midi has no pitch" }
+                estimate.hz.toDouble() to estimate.confidence.toDouble()
+            }
+            val c = cents(hz, Keys.midiHz(midi).toDouble())
+            println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(hz)} Hz, confidence ${f(confidence)})")
             assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")
-            assertTrue(estimate.confidence >= .3f, "$voice midi $midi confidence ${estimate.confidence}")
+            assertTrue(confidence >= .3, "$voice midi $midi confidence $confidence")
         }
         // The default WEIGHT .4 at MIDI 36 is the harness's own row.
         for (voice in voices) println("KEEL root $voice midi 36 WEIGHT .4: ${f(rootCents(render(voice), 36) ?: Double.NaN, 1)} cents")
