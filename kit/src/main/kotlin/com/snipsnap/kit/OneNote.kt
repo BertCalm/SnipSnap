@@ -257,6 +257,10 @@ object OneNote {
     /**
      * The shop's one packaging door - MAKE INSTRUMENT, MAKE PAD, the `keys`
      * and `pad` verbs, and `:shell`'s held RESIN pads all write through it.
+     *
+     * [spanKeyboard] stretches the outer zones to the whole keyboard in all
+     * three descriptors. A caller whose zones are deliberately narrow - the
+     * BELLOWS tonic bed is one key - passes false.
      */
     fun writePackage(
         name: String,
@@ -264,6 +268,7 @@ object OneNote {
         samples: Map<String, Snip>,
         destRoot: File,
         overwrite: Boolean,
+        spanKeyboard: Boolean = true,
     ) {
         destRoot.mkdirs()
         val (xty, dataDir) = occupies(destRoot, name)
@@ -289,9 +294,70 @@ object OneNote {
             }
             WavWriter.write(File(dataDir, "$stem.wav"), snip, smpl = smpl)
         }
-        Mpc3TrackWriter().writeKeygroupTo(destRoot, program)
-        KeygroupWriter().writeTo(dataDir, program)
-        // The phone's own reading of the package, beside the hardware's.
-        InstrumentStore.write(destRoot, name, program, dataDir.name)
+        writeDescriptors(destRoot, dataDir, name, program, spanKeyboard)
+    }
+
+    /**
+     * Rewrite the three descriptors of the package called [name] under
+     * [destRoot] - the program file, the `.xpm` and the phone's sidecar - from
+     * [program], and touch nothing else. No WAV is read, written or deleted,
+     * so a voice-mode change costs no render.
+     *
+     * Refused when the package's track-data folder is not there: a descriptor
+     * with no samples beside it is a program that plays nothing.
+     */
+    fun rewriteDescriptors(destRoot: File, name: String, program: KeygroupProgram) {
+        val (_, dataDir) = occupies(destRoot, name)
+        check(dataDir.isDirectory) { "no package to rewrite: ${dataDir.name} is not in ${destRoot.path}" }
+        writeDescriptors(destRoot, dataDir, name, program, spanKeyboard = false)
+    }
+
+    /**
+     * All three descriptors carry the keyboard-spanning program (unless [spanKeyboard] is false); the
+     * samples keep their own roots.
+     *
+     * Every descriptor is rendered and its previous contents staged before any is written. Each replacement
+     * is atomic, and a failed replacement rolls back descriptors already written. The `.xpm` goes first,
+     * the sidecar last - it is the file the phone's shelf lists the package by.
+     */
+    private fun writeDescriptors(
+        destRoot: File,
+        dataDir: File,
+        name: String,
+        program: KeygroupProgram,
+        spanKeyboard: Boolean = true,
+    ) {
+        val written = if (spanKeyboard) program.fullKeyboard() else program
+        val xty = Mpc3TrackWriter().writeKeygroup(written)
+        val xpm = KeygroupWriter().write(written)
+        val sidecar = InstrumentStore.render(written, dataDir.name)
+        replaceDescriptors(
+            listOf(
+                File(dataDir, "${written.name}.xpm") to xpm.toByteArray(Charsets.UTF_8),
+                File(destRoot, "${written.name}.xty") to xty,
+                InstrumentStore.sidecar(destRoot, name) to sidecar.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
+    private fun replaceDescriptors(updates: List<Pair<File, ByteArray>>) {
+        val previous = updates.associate { (file, _) -> file to file.takeIf { it.isFile }?.readBytes() }
+        val replaced = mutableListOf<File>()
+        try {
+            for ((file, bytes) in updates) {
+                AtomicFile.writeBytes(file, bytes)
+                replaced += file
+            }
+        } catch (failure: Throwable) {
+            for (file in replaced.asReversed()) {
+                try {
+                    val bytes = previous.getValue(file)
+                    if (bytes == null) file.delete() else AtomicFile.writeBytes(file, bytes)
+                } catch (rollbackFailure: Throwable) {
+                    failure.addSuppressed(rollbackFailure)
+                }
+            }
+            throw failure
+        }
     }
 }

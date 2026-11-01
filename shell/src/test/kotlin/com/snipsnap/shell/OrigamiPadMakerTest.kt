@@ -109,8 +109,9 @@ class OrigamiPadMakerTest {
             }
             assertEquals(900f, KeyHit.releaseMs(instrument))
             assertEquals(spec, OrigamiPadMaker.Spec.fromJsonText(OrigamiPadMaker.recipeFile(dir, "MY PAPER").readText()))
-            assertEquals(null, KeyHit.resolve(instrument, 47, 1f) { 500L })
-            assertEquals(null, KeyHit.resolve(instrument, 73, 1f) { 500L })
+            // The outer zones stretch to the keyboard's ends, so keys past the authored span still sound.
+            assertTrue(KeyHit.resolve(instrument, 47, 1f) { 500L } != null)
+            assertTrue(KeyHit.resolve(instrument, 73, 1f) { 500L } != null)
         } finally {
             dir.deleteRecursively()
         }
@@ -176,8 +177,9 @@ class OrigamiPadMakerTest {
             assertTrue(rms(longTail, rate * 2 / 5, rate / 2) > .001, "the longer release was ignored")
             assertTrue(longTail.copyOfRange(rate * 9 / 5, longTail.size).all { it == 0f })
             assertTrue(short.activeNotes.isEmpty() && long.activeNotes.isEmpty())
-            assertFalse(short.noteOn(47))
-            assertFalse(short.noteOn(73))
+            // The outer zones stretch to the keyboard's ends, so keys past the authored span still sound.
+            assertTrue(short.noteOn(47))
+            assertTrue(short.noteOn(73))
         } finally {
             dir.deleteRecursively()
         }
