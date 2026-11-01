@@ -199,7 +199,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         show(entry)
         press("STRIKE FX KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
-        press("SOFT HITS, ON")
+        press("SOFT HITS, OFF") // the bank is not soft hits: the chip reads off on a STRIKE FX pad
         compose.onNodeWithText(Copy.SOFT_HITS_REPLACE_STRIKE_FX, useUnmergedTree = true).assertExists()
         return entry
     }
@@ -221,7 +221,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     @Test
     fun soft_hits_toggle_on_a_strike_fx_pad_confirm_swaps_the_bank_for_ghosts() {
         val entry = keptBankThenSoftHits()
-        press("KEEP")
+        press("CONTINUE")
         waitFor("the ghosts to land") { pad(entry).velocityLayers.let { it.isNotEmpty() && it.map { l -> l.displayName } != listOf("DRY", "ROOM", "ECHO") } }
         val after = pad(entry)
         assertTrue("ghost layers are on", after.velocityLayers.isNotEmpty())

@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.StrikeFxBank
+import com.snipsnap.synth.isBanked
 import com.snipsnap.synth.TinesPresets
 import com.snipsnap.synth.TinesVoice
 import java.io.File
@@ -213,5 +214,91 @@ class StrikeFxLayersTest {
         assertEquals(era, f.m.kit.pad(1)!!.recipe)
         assertTrue(f.m.kit.pad(1)!!.velocityLayers.isEmpty())
         assertEquals(before, f.dir.listFiles()!!.associate { it.name to it.readBytes().toList() })
+    }
+
+    private fun snapshot(dir: File) = dir.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dir).path to it.readBytes().toList() }
+
+    @Test
+    fun `a round-robin chain pad is refused by all three verbs and no file changes`() {
+        val f = fixture("chain")
+        Robin.apply(f.m, 1, takes = 2, seed = 1)
+        f.m.update(1) { it.copy(recipe = null) }
+        f.m.save()
+        assertTrue(f.m.kit.pad(1)!!.chain != null)
+        val before = snapshot(f.dir)
+        for (verb in listOf<() -> Any>(
+            { f.m.strikeFxLayers(1, 0.42f, 0.9f) },
+            { f.m.strikeFxAudition(1, 0.42f, 0.9f) },
+            { f.m.clearStrikeFxLayers(1) },
+        )) {
+            val e = assertFailsWith<IllegalArgumentException> { verb() }
+            assertTrue("round-robin chain" in e.message!!, e.message)
+        }
+        assertEquals(before, snapshot(f.dir))
+    }
+
+    @Test
+    fun `audition refuses an era style recipe with the same words as keep and writes nothing`() {
+        val f = fixture("eraaudition")
+        val era = JsonValue.Obj(mapOf("era" to JsonValue.Str("tape"), "amount" to JsonValue.Num(0.5)))
+        f.m.update(1) { it.copy(recipe = era) }
+        val before = snapshot(f.dir)
+        val e = assertFailsWith<IllegalArgumentException> { f.m.strikeFxAudition(1, 0.42f, 0.9f) }
+        assertEquals(Copy.STRIKE_FX_KEEPS_HISTORY, e.message)
+        assertEquals(before, snapshot(f.dir))
+    }
+
+    @Test
+    fun `a keep over layers whose recipe lost its bank bins the replaced files instead of deleting them`() {
+        val f = fixture("lostbank")
+        val first = f.m.strikeFxLayers(1, 0.42f, 0.9f)
+        val layerFiles = first.velocityLayers.map { it.sampleFile }
+        val dryBytes = bytesOf(File(f.dir, layerFiles[0]))
+        val roomBytes = bytesOf(File(f.dir, layerFiles[1]))
+        // An MPC round trip without the sidecar: three layers named DRY/ROOM/ECHO, no recipe.
+        f.m.update(1) { it.copy(recipe = null) }
+        f.m.strikeFxLayers(1, 0.1f, 0.3f)
+        val bin = File(f.dir, KitBuilderModel.BIN_DIR).listFiles()!!.filter { it.isFile && it.extension == "wav" }
+        assertTrue(bin.any { it.name.endsWith("_" + layerFiles[0]) && it.readBytes().contentEquals(dryBytes) }, "the former DRY is in the bin")
+        assertTrue(bin.any { it.name.endsWith("_" + layerFiles[1]) && it.readBytes().contentEquals(roomBytes) }, "the former ROOM is in the bin")
+    }
+
+    @Test
+    fun `a bred child of a banked pad is one sample and its recipe carries no bank`() {
+        val a = fixture("bredA")
+        a.m.strikeFxLayers(1, 0.42f, 0.9f)
+        a.m.strikeFxLayers(2, 0.42f, 0.9f)
+        a.m.save()
+        val bDir = File(temp, "bredB")
+        val b = KitBuilderModel.create("bredB", bDir)
+        b.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        b.save()
+        val childDir = File(temp, "bredChild")
+        Breed.breed(a.dir, bDir, childDir, seed = 1)
+        val child = KitBuilderModel.open(childDir).kit
+        for (slot in listOf(1, 2)) {
+            val pad = child.pad(slot)!!
+            assertTrue(pad.velocityLayers.isEmpty(), "pad $slot")
+            val recipe = Breed.recipeOf(pad)
+            assertTrue(recipe == null || !recipe.isBanked, "pad $slot carries no bank")
+            assertFalse(pad.recipe?.entries?.containsKey("layers") == true, "pad $slot")
+        }
+        assertTrue(Breed.recipeOf(child.pad(2)!!)!!.patch != null, "the synth pad keeps its patch")
+        // The sheet and the shell agree: nothing to CLEAR on the child.
+        assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(childDir).clearStrikeFxLayers(2) }
+    }
+
+    @Test
+    fun `a kept bank survives a standalone export and import and clears back to the source bytes`() {
+        val f = fixture("roundtrip")
+        val original = bytesOf(File(f.dir, f.m.kit.pad(1)!!.sampleFile))
+        f.m.strikeFxLayers(1, 0.42f, 0.9f)
+        f.m.save()
+        val exported = com.snipsnap.kit.KitExporter.exportProgramFolder(f.m.kit, f.dir, File(temp, "roundtrip-out")).directory
+        val opened = KitBuilderModel.open(exported)
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), opened.kit.pad(1)!!.velocityLayers.map { it.displayName })
+        val cleared = opened.clearStrikeFxLayers(1)
+        assertTrue(cleared.velocityLayers.isEmpty())
+        assertContentEquals(original, bytesOf(File(exported, cleared.sampleFile)))
     }
 }

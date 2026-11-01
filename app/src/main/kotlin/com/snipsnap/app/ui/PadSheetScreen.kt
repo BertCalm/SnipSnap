@@ -1693,7 +1693,7 @@ fun PadSheetScreen(
             onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
-        if (p.velocityLayers.isNotEmpty() && StrikeFxBank.isStrikeFx(Breed.recipeOf(p))) {
+        if (hasKeptStrikeFx(p)) {
             confirmStrikeReplace = StrikeReplace.SOFT_HITS
             return
         }
@@ -1753,7 +1753,7 @@ fun PadSheetScreen(
             onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
-        if (p.velocityLayers.isNotEmpty() && !StrikeFxBank.isStrikeFx(Breed.recipeOf(p))) {
+        if (p.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(p)) {
             confirmStrikeReplace = StrikeReplace.STRIKE_FX
             return
         }
@@ -3255,6 +3255,7 @@ fun PadSheetScreen(
         val cancelReplace = { confirmStrikeReplace = null }
         ReplaceLayersConfirmDialog(
             text = if (kind == StrikeReplace.SOFT_HITS) Copy.SOFT_HITS_REPLACE_STRIKE_FX else Copy.STRIKE_FX_REPLACES_LAYERS,
+            confirmLabel = if (kind == StrikeReplace.SOFT_HITS) "CONTINUE" else "KEEP",
             busy = busy,
             onCancel = cancelReplace,
             onConfirm = { confirmStrikeReplacement(kind) },
@@ -3359,7 +3360,7 @@ fun PadSheetScreen(
                 }
                 ToggleChip(
                     "SOFT HITS",
-                    pad.velocityLayers.isNotEmpty(),
+                    pad.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(pad),
                     classColor,
                     scheme,
                     enabled = !busy,
@@ -3373,7 +3374,7 @@ fun PadSheetScreen(
                 room = strikeRoom,
                 slap = strikeSlap,
                 busy = busy,
-                kept = StrikeFxBank.isStrikeFx(Breed.recipeOf(pad)),
+                kept = hasKeptStrikeFx(pad),
                 onRoom = { strikeRoom = it },
                 onSlap = { strikeSlap = it },
                 onAudition = ::onStrikeAudition,
@@ -4400,9 +4401,13 @@ private fun StrikeFxSection(
     }
 }
 
+/** A kept STRIKE FX bank: the recipe names it and the pad carries its three layers, the same test the shell's verbs make. */
+private fun hasKeptStrikeFx(pad: KitPad): Boolean =
+    StrikeFxBank.isStrikeFx(Breed.recipeOf(pad)) && pad.velocityLayers.size == 3
+
 /** Asks before STRIKE FX and a pad's soft hits replace one another; modelled on `KitsScreen`'s KitDeleteConfirmDialog. */
 @Composable
-private fun ReplaceLayersConfirmDialog(text: String, busy: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
+private fun ReplaceLayersConfirmDialog(text: String, confirmLabel: String, busy: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -4424,7 +4429,7 @@ private fun ReplaceLayersConfirmDialog(text: String, busy: Boolean, onCancel: ()
             TapeText(text, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
-                ActionButton("KEEP", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
+                ActionButton(confirmLabel, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }
     }
