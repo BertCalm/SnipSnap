@@ -249,7 +249,8 @@ class OneNoteTest {
         OneNote.writePackage("Bed", program, mapOf("Bed_48" to snip), temp, overwrite = false, spanKeyboard = false)
         val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
         assertEquals(listOf(48 to 48), back.zones.map { it.lowNote to it.highNote })
-        val xpm = File(temp, "Bed_[TrackData]/Bed.xpm").readText()
+        val xpmFile = File(temp, "Bed_[TrackData]/Bed.xpm")
+        val xpm = xpmFile.readText()
         assertTrue("<LowNote>48</LowNote>" in xpm)
         assertTrue("<HighNote>48</HighNote>" in xpm)
         assertTrue("<LowNote>0</LowNote>" !in xpm)
@@ -259,7 +260,7 @@ class OneNoteTest {
             .copy(voiceMode = VoiceMode.LEAD))
         val rewritten = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
         assertEquals(listOf(48 to 48), rewritten.zones.map { it.lowNote to it.highNote })
-        val rewrittenXpm = File(dataDir, "Bed.xpm").readText()
+        val rewrittenXpm = xpmFile.readText()
         assertTrue("<LowNote>48</LowNote>" in rewrittenXpm)
         assertTrue("<HighNote>48</HighNote>" in rewrittenXpm)
     }
