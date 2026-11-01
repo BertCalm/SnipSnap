@@ -41,13 +41,16 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
@@ -57,6 +60,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
+import com.snipsnap.shell.PlayCapture
 import com.snipsnap.shell.Schemes
 import com.snipsnap.xpm.VoiceMode
 import java.io.File
@@ -181,14 +185,21 @@ fun KeysScreen(
     // this screen goes through `midiKeys.allOff()` rather than the
     // player's own, so the sustain pedal is forgotten with the notes:
     // a pedal still "down" after a panic would hold the next key up.
+    // What was just played, by hand or by keyboard, for GRAB.
+    val capture = remember(player) { PlayCapture() }
     val midiKeys = remember(player) {
         MidiKeys(object : MidiKeys.Voice {
-            override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
-            override fun noteOff(note: Int) = player.noteOff(note)
+            override fun noteOn(note: Int, velocity: Float) {
+                if (player.noteOn(note, velocity)) capture.noteOn(note, velocity, System.nanoTime())
+            }
+            override fun noteOff(note: Int) {
+                player.noteOff(note)
+                capture.noteOff(note, System.nanoTime())
+            }
             // Every local silence is mirrored on the wire (the one funnel for
             // midiKeys.allOff()): a local silence that is not mirrored leaves a
             // receiver holding a note whose off will name a different key.
-            override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
+            override fun allOff() { player.allOff(); capture.releaseAll(System.nanoTime()); MidiOut.allNotesOff() }
             // The wheel or strip bends every voice, MidiKeys' range.
             override fun bend(ratio: Double) = player.setBend(ratio)
         })
@@ -220,6 +231,38 @@ fun KeysScreen(
         if (next == octave) return
         silence()
         octave = next
+    }
+
+    // GRAB: the last sixteen seconds played, as a MIDI file handed to the
+    // share sheet. Written off the main thread; the notes are read here, on it.
+    var grabbing by remember { mutableStateOf(false) }
+    fun grab() {
+        if (grabbing) return
+        val clip = capture.grab(System.nanoTime())
+        if (clip == null) {
+            onToast(Copy.KEYS_GRAB_EMPTY)
+            return
+        }
+        grabbing = true
+        scope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    val name = "SnipSnap ${Names.sanitizeStem(instrument.name)} Grab ${ShareOut.stamp(System.currentTimeMillis())}.mid"
+                    // Channel 1: a melody, not the drum channel MidiGroove writes by default.
+                    MidiGroove.writeTo(File(ShareOut.shareDir(context), name), clip, PlayCapture.DEFAULT_BPM, overwrite = true, channel = 0)
+                }
+                if (ShareOut.send(context, file, "audio/midi", "GRAB")) {
+                    onToast(Copy.keysGrabbed(clip.notes.size, clip.bars))
+                } else {
+                    onToast(Copy.KEYS_GRAB_NO_APP)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onToast(Copy.KEYS_GRAB_FAILED)
+            } finally {
+                grabbing = false
+            }
+        }
     }
 
     val midi = remember(player) { MidiInput(context) }
@@ -357,14 +400,38 @@ fun KeysScreen(
                             enabled = covered,
                             // Touch only: these go out over MIDI on the keys channel, and only for a note that sounded locally.
                             // The MidiKeys.Voice above is MIDI in and stays silent.
-                            onPress = { v -> note?.let { if (player.noteOn(it, v)) MidiOut.keysOn(it, v, System.nanoTime()) } },
-                            onRelease = { note?.let { player.noteOff(it); MidiOut.keysOff(it, System.nanoTime()) } },
+                            onPress = { v ->
+                                note?.let {
+                                    if (player.noteOn(it, v)) {
+                                        val now = System.nanoTime()
+                                        capture.noteOn(it, v, now)
+                                        MidiOut.keysOn(it, v, now)
+                                    }
+                                }
+                            },
+                            onRelease = {
+                                note?.let {
+                                    val now = System.nanoTime()
+                                    player.noteOff(it)
+                                    capture.noteOff(it, now)
+                                    MidiOut.keysOff(it, now)
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
             }
         }
+
+        ActionButton(
+            "GRAB THE LAST 16 SECONDS",
+            scheme,
+            enabled = !grabbing,
+            working = grabbing,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = ::grab,
+        )
 
         if (midiSupported && showLearn) {
             MidiLearnPanel(
