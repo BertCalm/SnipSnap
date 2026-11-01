@@ -86,6 +86,7 @@ import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.KitMidi
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiGate
@@ -438,15 +439,51 @@ fun KitScreen(
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
     var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
-    val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
-        MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
+
+    // MIDI MAP's step, from the footer's button or a control learned to it.
+    fun stepMidiMap() {
+        // Panic before the switch: a held note must release under the map it struck under.
+        panic()
+        midiMap = midiMap.next()
+        // Remembered for every connected hardware controller, not the virtual port.
+        val chosen = midiMap.name
+        val keys = MidiPadMaps.keysToSave(midiDevices)
+        if (keys.isNotEmpty()) {
+            val editor = padMapPrefs.edit()
+            for (k in keys) editor.putString(k, chosen)
+            editor.apply()
+        }
+    }
+
+    // MIDI learn (the footer's LEARN): a key, pad or button on MIDI MAP or
+    // PANIC, through `:shell`'s KitMidi. Learned controls are consumed before
+    // MidiPads sees them, so a pad on PANIC no longer plays a pad too.
+    val learnState = rememberMidiLearn(KitMidi.SCREEN, kinds = KitMidi::kinds) { KitMidi.prefer(it) }
+    var showLearn by remember { mutableStateOf(false) }
+    // The panel shows only while a keyboard is plugged in; when the last one
+    // goes, a learn still waiting is stopped with it, so whatever the next
+    // keyboard sends on connecting cannot be learned unasked.
+    val learnShown = showLearn && midiDevices.isNotEmpty()
+    LaunchedEffect(learnShown) { learnState.showing = learnShown }
+
+    val onMidi by rememberUpdatedState<(MidiWire.Event, String?) -> Unit>({ event, device ->
+        learnState.heard(event)
+        val result = learnState.learn.handle(event, device) { null }
+        learnState.learned(result.learned)
+        val change = KitMidi.changes(result.actions)
+        if (change.panic) panic()
+        repeat(change.mapSteps) { stepMidiMap() }
+        if (!result.consumed) {
+            MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
+        }
     })
+
     // The listener outlives a composition; compare against the live map, not a captured one.
     val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event, device?.fingerprint?.key)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) {
                 midiDevices = devices
                 // A controller seen before brings its pad map back. Panic FIRST:
@@ -462,7 +499,11 @@ fun KitScreen(
                 }
             }
             // The cable is out: a gated pad it held would ring until PANIC.
-            override fun onDeviceRemoved() = onPanic()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learnState.learn.releaseAll()
+                onPanic()
+            }
         }
     }
 
@@ -487,6 +528,8 @@ fun KitScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learnState.learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)
@@ -1143,25 +1186,23 @@ fun KitScreen(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "MIDI MAP ${midiMap.label}") {
-                                // Panic before the switch: a held note must release under the map it struck under.
-                                panic()
-                                midiMap = midiMap.next()
-                                // Remembered for every connected hardware controller, not the virtual port.
-                                val chosen = midiMap.name
-                                val keys = MidiPadMaps.keysToSave(midiDevices)
-                                if (keys.isNotEmpty()) {
-                                    val editor = padMapPrefs.edit()
-                                    for (k in keys) editor.putString(k, chosen)
-                                    editor.apply()
-                                }
-                            }
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}", onClick = ::stepMidiMap)
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
                     }
+                    KitLearnChip(showLearn) { showLearn = !showLearn }
                 }
+            }
+            if (learnShown) {
+                MidiLearnPanel(
+                    learnState,
+                    KitMidi.TARGETS,
+                    supported = true,
+                    connected = true,
+                    hint = "A LEARNED PAD PLAYS NO SOUND",
+                )
             }
         }
     }
@@ -1193,6 +1234,28 @@ fun KitScreen(
     }
 }
 
+
+/**
+ * The footer's LEARN, beside MIDI MAP while a keyboard is plugged in: opens
+ * MIDI learn's panel under the footer. Its own composable, so KitScreen's
+ * body (already near the size at which ART refused SurfaceScreen's) grows by
+ * one call rather than by a button's worth of modifiers and semantics.
+ */
+@Composable
+private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .raisedBevel(scheme, fill = if (showing) scheme.amber.tape.copy(alpha = 0.85f) else null)
+            .tapeClick(label = "LEARN", onClick = onToggle)
+            .semantics { selected = showing }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText("LEARN", TapeType.pixel, if (showing) scheme.titleInk.tape else scheme.ink2.tape)
+    }
+}
 
 /**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
