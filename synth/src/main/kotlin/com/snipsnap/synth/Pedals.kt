@@ -140,7 +140,7 @@ object Pedals {
         // not movable. Its sound passed its gate on 2026-10-28 (docs/superpowers/specs/2026-10-22-delay-head-design.md),
         // and it is on the slate's default row (docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
         Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = true),
-        // A drum room: the `roomed` character, ROOM at its defaults. After the amp and last, where the rack puts the room
+        // A drum room: the `roomed` character, whose tap (AMT 0.7) is ROOM at its defaults. After the amp and last, where the rack puts the room
         // everything is heard in; not movable, since a room in front of an amp is not a place. Gated on 2026-11-01
         // (docs/superpowers/specs/2026-10-31-room-section-design-brief.md). Behind MORE: the default row is the owner's five.
         Entry("ROOM", "roomed", character("roomed"), PedalSide.POST, movable = false, gated = true),

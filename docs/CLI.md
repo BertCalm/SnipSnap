@@ -551,9 +551,10 @@ long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
 whole note feeding them, HEAD off), `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
-peak) and `roomed` (a drum room: ROOM at its defaults, a live room with the mic
-about 1.35 m back; AMT moves only the mic, closer in the same room as it falls,
-so AMT 70 keeps about half the room and AMT 0 none).
+peak) and `roomed` (a drum room: AMT 70, the pad sheet's tap, is ROOM at its
+defaults, a live room with the mic about 1.35 m back; AMT moves only the mic, so
+AMT 100 puts it about 2.3 m back in the same room, lower AMT closer, and AMT 0
+none).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.

@@ -5,6 +5,7 @@ import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Room
 import com.snipsnap.synth.Treatments
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -91,6 +92,16 @@ class PadSheetTest {
     @Test
     fun `the sheet opens at NONE, 70 percent - a first tap you can hear`() {
         assertEquals(0.7f, PadSheet.DEFAULT_AMOUNT)
+    }
+
+    @Test
+    fun `a tap of the ROOM pedal, on either sheet, is the default room the owner heard`() {
+        // `roomed` sets DISTANCE so that the tap lands on ROOM's default (the owner's choice, 2026-11-01). synth cannot see
+        // the sheets' tap amount, so the character restates it; this pins the two together.
+        val heard = Room.defaults().getValue("DISTANCE")
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            assertEquals(heard, Treatments.chain("roomed", tap).room!!.getValue("DISTANCE"), "a tap at $tap misses the heard room")
+        }
     }
 
     @Test

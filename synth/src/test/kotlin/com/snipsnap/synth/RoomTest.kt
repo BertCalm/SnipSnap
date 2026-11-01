@@ -175,21 +175,30 @@ class RoomTest {
     // ---------- the chip ----------
 
     @Test
-    fun `the ROOM chip at full is the default room the owner heard, and AMT brings less of it`() {
-        // The character sets DISTANCE alone, at ROOM's default; SIZE and WALLS are left to ROOM's defaults so AMT moves the
-        // mic and not the room. Pin the one restated number so a default moved here moves the chip too.
-        assertEquals(mapOf("DISTANCE" to Room.defaults().getValue("DISTANCE")), Treatments.chain("roomed").room, "the roomed character drifted")
-        // A character without VALVE gets no pre-amp fade, so the chip at AMT 1 is ROOM at its defaults, sample for sample.
-        for (pad in listOf(kick, snare)) assertContentEquals(Room.process(pad).samples, Treatments.apply("roomed", pad, 1f).snip.samples)
-        // At the pad sheet's tap (AMT 0.7) the mic walks in, the room stays: still clearly a room. Measured: AMT 1 0.0013,
-        // AMT 0.7 0.0006. With all three macros fading it was 0.000008, a tap next to dry.
-        val tapped = Treatments.chain("roomed", 0.7f).room!!
-        assertEquals(0.42f, tapped.getValue("DISTANCE"), 1e-6f)
+    fun `a tap of the ROOM chip is the default room the owner heard, and AMT walks the mic`() {
+        // The character sets DISTANCE alone; SIZE and WALLS are left to ROOM's defaults so AMT moves the mic and not the
+        // room. A tap is AMT 0.7 (the sheets' DEFAULT_AMOUNT; PadSheetTest pins that it still is), and DISTANCE fades
+        // linearly, so the tap's DISTANCE is ROOM's default exactly. Derive it from Room so a default moved there is caught.
+        val tap = 0.7f
+        assertEquals(setOf("DISTANCE"), Treatments.chain("roomed").room!!.keys, "the roomed character set more than the mic")
+        assertEquals(Room.defaults().getValue("DISTANCE"), Treatments.chain("roomed", tap).room!!.getValue("DISTANCE"),
+            "a tap no longer lands on ROOM's default DISTANCE")
+        // A character without VALVE gets no pre-amp fade, so a tap is ROOM at its defaults, sample for sample.
+        for (pad in listOf(kick, snare)) {
+            assertContentEquals(Room.process(pad).samples, Treatments.apply("roomed", pad, tap).snip.samples)
+        }
+        // AMT 1 is the mic further back in the same room, so more room; lower AMT walks it in and AMT 0 is dry.
+        // Measured: the mic 1.35 m back at the tap, 2.28 m at AMT 1; the snare's room share 0.0013 at the tap, 0.0027 at AMT 1.
+        val mic = { amt: Float -> Room.plan(Room.defaults() + Treatments.chain("roomed", amt).room!!, rate).micMetres }
+        println("ROOM chip mic: tap %.2f m, AMT 1 %.2f m".format(mic(tap), mic(1f)))
+        assertTrue(mic(1f) > mic(tap), "AMT 1 did not put the mic further back")
+        val tapped = roomShare(Treatments.apply("roomed", snare, tap).snip, snare)
         val full = roomShare(Treatments.apply("roomed", snare, 1f).snip, snare)
-        val tap = roomShare(Treatments.apply("roomed", snare, 0.7f).snip, snare)
-        println("ROOM chip on the snare, room share: AMT 1 %.4f, AMT 0.7 %.4f".format(full, tap))
-        assertTrue(tap < full, "a lower AMT was not less room: $tap against $full")
-        assertTrue(tap > full * 0.3, "the chip at the sheet's tap is next to dry: $tap against $full")
+        val half = roomShare(Treatments.apply("roomed", snare, 0.35f).snip, snare)
+        println("ROOM chip on the snare, room share: AMT 1 %.4f, tap (0.7) %.4f, AMT 0.35 %.4f".format(full, tapped, half))
+        assertTrue(full > tapped, "AMT 1 was not more room than the tap: $full against $tapped")
+        assertTrue(half < tapped, "a lower AMT was not less room: $half against $tapped")
+        assertContentEquals(snare.samples, Treatments.apply("roomed", snare, 0f).snip.samples, "AMT 0 is not dry")
     }
 
     // ---------- the risks ----------
