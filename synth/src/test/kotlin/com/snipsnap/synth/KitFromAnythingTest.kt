@@ -87,6 +87,70 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `a source above the detector's range yields one period, not two, so the table sounds at the note asked`() {
+        // 1800 Hz is over Pitch's 1200 Hz ceiling: the detector reads the lag of two periods (900 Hz),
+        // and the cycle averaged at that "period" holds the true period twice
+        val f0 = 1800.0
+        val n = (0.5f * rate).toInt()
+        val src = Snip(FloatArray(n) { i ->
+            val t = i.toDouble() / rate
+            val env = exp(-6.0 * t)
+            (env * (sin(2 * PI * f0 * t) + 0.5 * sin(2 * PI * 2 * f0 * t) + 0.3 * sin(2 * PI * 3 * f0 * t))).toFloat() * 0.5f
+        }, 1, rate)
+        val a = KitFromAnything.analyse(src)
+        // the detector alone cannot say 1800 (its ceiling is 1200), so a reported note near 1800 proves the
+        // fold found the two periods and corrected the note the provenance and the siren's base carry
+        assertTrue(a.periodic, "a periodic source")
+        assertTrue(kotlin.math.abs(a.hz - f0) < 0.02 * f0, "the note should be the true fundamental near $f0, got ${a.hz}")
+        val re = a.cycle.copyOf()
+        val im = FloatArray(KitFromAnything.TABLE)
+        com.snipsnap.audio.Fft.forward(re, im)
+        fun mag(k: Int) = kotlin.math.hypot(re[k], im[k])
+        assertTrue(mag(1) > 1.5f * mag(2), "the cycle's first harmonic must be its fundamental, not empty: ${mag(1)} vs ${mag(2)}")
+        // and a pad read from it at A3 sounds at A3, not an octave up
+        val pad = Snip(KitFromAnything.cycleAt(a.cycle, FloatArray(rate / 2) { 220f }), 1, rate)
+        val read = KitFromAnything.readPitch(pad, 220f, 0.05f, 0.25f)
+        assertNotNull(read)
+        val cents = 1200 * kotlin.math.ln(read.first / 220f) / kotlin.math.ln(2f)
+        assertTrue(kotlin.math.abs(cents) < 20f, "A3 read ${read.first} Hz (${cents} cents)")
+    }
+
+    @Test
+    fun `describe is the one text the CLI prints and the result sheet draws`() {
+        // the sweep fails some gates and is blended, the pluck clears them all: both shapes of the report
+        val clean = KitFromAnything.assemble(pluck, key, Genre.HOUSE)
+        val c = KitFromAnything.describe(clean, "Pluck Kit", key, Genre.HOUSE)
+        assertTrue(c.header.startsWith("Pluck Kit in A minor, house at 124 bpm - "), c.header)
+        assertEquals(16, c.rows.size)
+        assertEquals(clean.gates.map { it.gate }, c.rowGates, "each row carries the gate it prints, for the sheet to colour by")
+        assertTrue(c.rows.first().startsWith("A01  KICK"), c.rows.first())
+        assertEquals(listOf(c.tableHeader) + c.rows + c.blends + c.summary, c.lines)
+        if (clean.fallbackSet.isEmpty() && clean.unmeasured.isEmpty()) assertEquals("every pad cleared its gate", c.summary)
+
+        val blended = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        assertTrue(blended.blends.isNotEmpty(), "the sweep must blend, or this test checks nothing about blend lines")
+        val b = KitFromAnything.describe(blended, "Sweep Kit", key, Genre.BOOM_BAP)
+        assertEquals(blended.blends.size, b.blends.size)
+        for ((line, blend) in b.blends.zip(blended.blends)) {
+            assertTrue(blend.slot.name in line && "blended with ${blend.synth} at " in line && "gate after: ${blend.after.gate.name.lowercase()}" in line, line)
+        }
+        assertTrue("${blended.fallbackSet.size} pad(s) failed a gate and were blended" in b.summary, b.summary)
+    }
+
+    @Test
+    fun `describe prints pad numbers in ASCII digits whatever the device locale`() {
+        val saved = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-EG"))
+        try {
+            val r = KitFromAnything.describe(KitFromAnything.assemble(pluck, key, Genre.TECHNO), "Pluck Kit", key, Genre.TECHNO)
+            for (row in r.rows) assertTrue(row[0] == 'A' && row[1] in '0'..'9' && row[2] in '0'..'9', row)
+            assertTrue(r.header.contains("132 bpm"), r.header)
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
+    }
+
+    @Test
     fun `same source, same bytes`() {
         val a = KitFromAnything.assemble(bark, key, Genre.TECHNO)
         val b = KitFromAnything.assemble(bark, key, Genre.TECHNO)

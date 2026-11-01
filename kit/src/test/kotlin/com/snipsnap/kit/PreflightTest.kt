@@ -115,4 +115,33 @@ class PreflightTest {
         assertTrue(!findings.blocked())
         assertTrue(findings.any { it.severity == Severity.WARN && "choke" in it.message })
     }
+
+    @Test
+    fun `a ride and a crash tagged open hat may ring free beside a choked pair`() {
+        // KIT FROM ANYTHING lays the ride and the crash out under the HAT_OPEN tag for colour and
+        // balance, in mute group 0 by an explicit override, while A03 and A04 choke each other.
+        // That is a choice, so it is named in the OK line, not warned about.
+        wav("c.wav"); wav("o.wav"); wav("r.wav"); wav("x.wav")
+        val kit = kitOf(
+            KitPad(3, "c.wav", drumClass = DrumClass.HAT_CLOSED, muteGroup = 1),
+            KitPad(4, "o.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 1),
+            KitPad(6, "r.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 0),
+            KitPad(7, "x.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 0),
+        )
+        val findings = Preflight.check(kit, temp)
+        assertTrue(findings.none { it.severity == Severity.WARN && "choke" in it.message }, "$findings")
+        val ok = findings.single { it.severity == Severity.OK && "choke group 1" in it.message }
+        assertTrue("6, 7 ring free" in ok.message, ok.message)
+    }
+
+    @Test
+    fun `an open hat in a different non-zero group than the closed hat still warns`() {
+        wav("c.wav"); wav("o.wav")
+        val kit = kitOf(
+            KitPad(3, "c.wav", drumClass = DrumClass.HAT_CLOSED, muteGroup = 1),
+            KitPad(4, "o.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 2),
+        )
+        val findings = Preflight.check(kit, temp)
+        assertTrue(findings.any { it.severity == Severity.WARN && "choke" in it.message }, "$findings")
+    }
 }

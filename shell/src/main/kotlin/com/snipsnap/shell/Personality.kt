@@ -1912,6 +1912,12 @@ object Copy {
     fun madeNamed(what: String, made: String): String = "$what MADE — $made. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
+    const val KIT_TOO_SHORT = "TOO SHORT TO MAKE A KIT. FEED IT MORE THAN A BLINK."
+    const val KIT_TOO_LONG = "TOO LONG FOR A KIT. TRIM IT UNDER THIRTY SECONDS."
+    /** MAKE KIT's toast: the kit is on the shelf and the result sheet is up; [blended] pads failed their gate and were blended. */
+    fun kitMade(made: String, blended: Int): String = "KIT MADE — $made. $blended OF 16 PADS BLENDED."
+    /** MAKE KIT's refusal when the assembler says the sound cannot be quarried; [reason] is its own sentence. */
+    fun kitRefused(reason: String): String = "CAN'T MAKE A KIT OF THAT — ${reason.uppercase(java.util.Locale.ROOT)}."
 
     // Chop shop.
     /**
@@ -2922,6 +2928,8 @@ object Copy {
     const val DESAMPLE_BUSY = "DE-SAMPLING…"
     /** The dock's line while MAKE PAD renders a new pad out of one hit. */
     const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE KIT quarries one sound into sixteen pads. */
+    const val MAKE_KIT_BUSY = "MAKING THE KIT…"
     /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
     const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
     /** The dock's line while SPREAD writes the pad's sound across a bank. */
