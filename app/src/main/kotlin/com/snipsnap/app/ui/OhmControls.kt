@@ -27,7 +27,6 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
-import com.snipsnap.audio.Scales
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.KitPad
@@ -96,14 +95,6 @@ internal fun OhmControls(
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        MacroSlider(
-            label = "NOTE", value = (patch.midi - Ohm.MIDI_MIN) / (Ohm.MIDI_MAX - Ohm.MIDI_MIN).toFloat(),
-            fillColor = fillColor, scheme = scheme, readout = Scales.nameOf(patch.midi),
-            onValueChange = { value ->
-                changePatch(currentPatch.copy(midi = (Ohm.MIDI_MIN + value * (Ohm.MIDI_MAX - Ohm.MIDI_MIN))
-                    .roundToInt().coerceIn(Ohm.MIDI_MIN, Ohm.MIDI_MAX)))
-            },
-        )
         MacroSlider(
             label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
             onValueChange = { changePatch(currentPatch.copy(velocity = it.coerceIn(0f, 1f))) },
