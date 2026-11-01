@@ -132,13 +132,18 @@ class MeridianKitsTest {
                 for ((zoneIndex, zoneValue) in zones.withIndex()) {
                     val zone = zoneValue.obj()
                     val midi = zone.getValue("midi").int()
+                    // The manifest records the rendered zones; the written program spans the
+                    // keyboard, its edge zones running to 0 and 127 so the sampler pitch-shifts
+                    // from the nearest root, as Akai's own keygroups do.
                     val lowNote = if (zoneIndex == 0) 36 else midi - 1
                     val highNote = if (zoneIndex == zones.lastIndex) 72 else midi + 1
                     assertEquals(lowNote, zone.getValue("lowNote").int())
                     assertEquals(highNote, zone.getValue("highNote").int())
                     val slot = heldSlots[zoneIndex].obj()
-                    assertEquals(lowNote, slot.getValue("lowNote").int())
-                    assertEquals(highNote, slot.getValue("highNote").int())
+                    val spannedLow = if (zoneIndex == 0) 0 else lowNote
+                    val spannedHigh = if (zoneIndex == zones.lastIndex) 127 else highNote
+                    assertEquals(spannedLow, slot.getValue("lowNote").int())
+                    assertEquals(spannedHigh, slot.getValue("highNote").int())
                     assertEquals(2, slot.getValue("triggerMode").int(), "held keygroup zones must obey note release")
                     val layers = slot.getValue("layersv").arr().map { it.obj() }
                         .filter { it.getValue("sampleName").str().isNotEmpty() }
@@ -146,8 +151,8 @@ class MeridianKitsTest {
                     assertEquals(listOf(85, 43, 0), layers.map { it.getValue("velocityStart").int() },
                         "MPC 3 velocity zones descend loudest first")
                     val xmlSlot = heldXmlSlots.item(zoneIndex) as Element
-                    assertEquals(lowNote.toString(), xmlSlot.text("LowNote"))
-                    assertEquals(highNote.toString(), xmlSlot.text("HighNote"))
+                    assertEquals(spannedLow.toString(), xmlSlot.text("LowNote"))
+                    assertEquals(spannedHigh.toString(), xmlSlot.text("HighNote"))
                     val xmlNodes = xmlSlot.getElementsByTagName("Layer")
                     val xmlLayers = (0 until xmlNodes.length).map { xmlNodes.item(it) as Element }
                         .filter { it.text("SampleName").isNotEmpty() }.associateBy { it.text("SampleName") }
