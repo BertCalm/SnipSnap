@@ -22,7 +22,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.tape
-import com.snipsnap.audio.Scales
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.Scheme
@@ -36,7 +35,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
-import kotlin.math.roundToInt
 
 private fun finiteReturnKey(patch: OverlapPatch) = "overlap.finite-return.${patch.topology.name}"
 
@@ -49,16 +47,6 @@ internal fun OverlapPerformanceControls(
     scheme: Scheme,
     onEdit: ((OverlapPatch) -> OverlapPatch) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Overlap.MIN_MIDI).toFloat() / (Overlap.MAX_MIDI - Overlap.MIN_MIDI),
-        fillColor = fill, scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onEdit { current -> current.copy(midi = (Overlap.MIN_MIDI + value * (Overlap.MAX_MIDI - Overlap.MIN_MIDI))
-                .roundToInt().coerceIn(Overlap.MIN_MIDI, Overlap.MAX_MIDI)) }
-        },
-    )
     MacroSlider("VELOCITY", patch.velocity, fill, scheme,
         onValueChange = { value -> onEdit { it.copy(velocity = value.coerceIn(0f, 1f)) } })
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
