@@ -9,7 +9,9 @@ import kotlin.math.sqrt
  *
  * Intermediate gates keep the starting positions away from accidental extinction. COLOR and
  * REJECT vary harmonic survival and the collected outline, rather than filling the bank with
- * different gains of the same neutral transmission. One deliberate HOLD loop serves each voice.
+ * different gains of the same neutral transmission. One deliberate HOLD loop serves each
+ * original source voice. TRACE keeps the accepted moving pluck as its reference and offers
+ * slower and quicker versions of that same gesture; all three remain finite notes.
  */
 object LatticePresets {
     /** Promoted user-preset rows can paste into the same native patch helper. */
@@ -67,6 +69,10 @@ object LatticePresets {
             turn = .92f, twist = .83f, color = .78f, reject = .68f, hold = .38f),
         recipe(LatticeVoice.HOLLOW, "Hollow Thread", gates = 6.0,
             turn = .92f, twist = .35f, color = .85f, reject = .35f, hold = 1f),
+
+        p(LatticeVoice.TRACE, "Ringing Trace", "TUNE" to .5f, "SPEED" to .5f, "HOLD" to 0f),
+        p(LatticeVoice.TRACE, "Slow Trace", "TUNE" to .5f, "SPEED" to .25f, "HOLD" to 0f),
+        p(LatticeVoice.TRACE, "Quick Trace", "TUNE" to .5f, "SPEED" to .75f, "HOLD" to 0f),
     )
 
     fun all(): List<LatticePatch> = presets
