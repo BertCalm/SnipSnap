@@ -563,8 +563,9 @@ musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBan
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Thirty-six dry presets and a sixteen-pad
-C minor pentatonic FRESH TAPE starter are included. Run
+remain saved with each patch. The original 36 presets and starter remain; six
+listening-selected KEY/CHOIR settings and the MURMUR SELECTED starter are also
+available. `./gradlew :synth:generateMurmurSelectedKit` exports the new MPC kit. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the approved six-voice sound, settled HOLD loops and the expanded bank's

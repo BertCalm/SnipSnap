@@ -867,6 +867,17 @@ tasks.register<JavaExec>("generateMurmurKit") {
     args("${rootDir}/testkit")
 }
 
+/** The listening-selected Murmur recipes in a separate, fully editable MPC 2 / MPC 3 kit. */
+tasks.register<JavaExec>("generateMurmurSelectedKit") {
+    group = "distribution"
+    description = "Export the selected KEY and lower-air CHOIR starter, both MPC formats and exact recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurSelectedKitGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("murmurSelectedKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Original BELLOWS source models, saved gestures and dry listening comparisons. */
 tasks.register<JavaExec>("generateBellowsAudition") {
     group = "distribution"

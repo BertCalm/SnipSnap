@@ -324,6 +324,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
         Starter(
+            "murmur-selected", "MURMUR SELECTED",
+            "Selected vowel keys, four voice contrasts and lower-air choir at C2 and C3.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.murmurSelected() },
+        Starter(
             "scanned-chain", "SCANNED CHAIN",
             "Moving shapes become plucks, metal and growing tones in C minor pentatonic.",
             seeded = false,

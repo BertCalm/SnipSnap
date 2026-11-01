@@ -197,7 +197,7 @@ class MurmurPresetsTest {
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     companion object {
-        private val bank by lazy { MurmurPresets.all() }
+        private val bank by lazy { MurmurPresets.original() }
         private val drums = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
             DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
         private val edges = doubleArrayOf(0.0, 150.0, 250.0, 400.0, 650.0, 1000.0, 1500.0,
