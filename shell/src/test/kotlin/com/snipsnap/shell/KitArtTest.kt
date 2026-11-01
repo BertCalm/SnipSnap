@@ -7,9 +7,12 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.synth.isBanked
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.math.pow
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,42 +48,174 @@ class KitArtTest {
         return kit
     }
 
+    private fun knobs(style: KitArt.Style, palette: Palette = Palettes.VENT, seed: Int? = null, mark: Mark.Variant = Mark.Variant.STACKED) =
+        ArtKnobs(style, palette, seed, mark)
+
+    private fun rgb(img: BufferedImage, x: Int, y: Int) = img.getRGB(x, y) and 0xFFFFFF
+
+    private fun decode(png: ByteArray): BufferedImage = ImageIO.read(ByteArrayInputStream(png))
+
+    /** WCAG relative luminance of a packed colour. */
+    private fun luminance(rgb: Int): Double {
+        fun ch(v: Int): Double {
+            val c = v / 255.0
+            return if (c <= 0.03928) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
+        }
+        return 0.2126 * ch((rgb shr 16) and 0xFF) + 0.7152 * ch((rgb shr 8) and 0xFF) + 0.0722 * ch(rgb and 0xFF)
+    }
+
+    private fun contrast(l1: Double, l2: Double): Double = (maxOf(l1, l2) + 0.05) / (minOf(l1, l2) + 0.05)
+
+    /** Everything but the type: what the name zone holds under the name. */
+    private class TextlessCanvas(private val inner: ArtCanvas) : ArtCanvas by inner {
+        override fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int) = Unit
+    }
+
+    private fun renderTextless(kit: Kit, dir: File, k: ArtKnobs, size: Int): BufferedImage {
+        val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
+        val g = img.createGraphics()
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            KitArt.draw(TextlessCanvas(KitArt.AwtCanvas(g)), kit, dir, k, size, kit.name)
+        } finally {
+            g.dispose()
+        }
+        return img
+    }
+
+    private fun probeCanvas(): ArtCanvas = KitArt.AwtCanvas(BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB).createGraphics())
+
     @Test
-    fun `every style renders on every scheme, deterministic, right size`() {
+    fun `every style renders on every palette, deterministic, right size, ground dominant`() {
         val dir = File(temp, "kit")
         val kit = buildKit(dir)
         for (style in KitArt.Style.entries) {
-            for (scheme in Schemes.ALL) {
-                val a = KitArt.png(kit, dir, style, scheme, seed = 3, size = 200)
-                val b = KitArt.png(kit, dir, style, scheme, seed = 3, size = 200)
-                assertTrue(a.contentEquals(b), "same inputs, same bytes: ${style.id}/${scheme.id}")
-                val img = ImageIO.read(ByteArrayInputStream(a))
+            for (palette in Palettes.ALL) {
+                val k = knobs(style, palette)
+                val a = KitArt.png(kit, dir, k, size = 200)
+                val b = KitArt.png(kit, dir, k, size = 200)
+                assertTrue(a.contentEquals(b), "same inputs, same bytes: ${style.id}/${palette.id}")
+                val img = decode(a)
                 assertEquals(200, img.width, "${style.id}: width")
                 assertEquals(200, img.height, "${style.id}: height")
-                // Something got drawn on the LCD ground.
-                val ground = img.getRGB(0, 0)
-                var drawn = 0
-                for (y in 0 until img.height step 4) {
-                    for (x in 0 until img.width step 4) {
-                        if (img.getRGB(x, y) != ground) drawn++
-                    }
-                }
-                assertTrue(drawn > 20, "${style.id}/${scheme.id}: the tile isn't blank")
+                val counts = HashMap<Int, Int>()
+                for (y in 0 until 200 step 4) for (x in 0 until 200 step 4) counts.merge(rgb(img, x, y), 1, Int::plus)
+                val top = counts.maxByOrNull { it.value }!!.key
+                assertEquals(palette.ground, top, "${style.id}/${palette.id}: the ground is the most frequent colour (got ${top.toString(16)})")
+                assertTrue(counts.size > 3, "${style.id}/${palette.id}: something was drawn")
             }
         }
     }
 
     @Test
-    fun `the seed reshuffles rings and nothing else`() {
+    fun `the name stays legible in its zone on every style and palette`() {
+        val dir = File(temp, "legible")
+        val kit = buildKit(dir)
+        for (style in KitArt.Style.entries) {
+            for (palette in Palettes.ALL) {
+                val img = renderTextless(kit, dir, knobs(style, palette), 128)
+                val zone = KitArt.nameZone(style, Mark.Variant.STACKED, 128)
+                var sum = 0.0
+                var n = 0
+                for (y in zone.y until zone.y + zone.h) for (x in zone.x until zone.x + zone.w) {
+                    sum += luminance(rgb(img, x, y))
+                    n++
+                }
+                val ratio = contrast(luminance(palette.ink), sum / n)
+                assertTrue(ratio >= 4.5, "${style.id}/${palette.id}: ink over the zone reads at ${"%.1f".format(ratio)}:1, wants 4.5:1")
+            }
+        }
+    }
+
+    @Test
+    fun `the mark sits bottom-right in the palette's two tones`() {
+        val dir = File(temp, "marked")
+        val kit = buildKit(dir)
+        val palette = Palettes.VENT
+        val size = 300
+        for (style in KitArt.Style.entries) {
+            val sym = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.SYMBOL), size = size))
+            val (ox, oy) = KitArt.markOrigin(probeCanvas(), Mark.Variant.SYMBOL, size)
+            val h = KitArt.markHeight(Mark.Variant.SYMBOL, size)
+            val pads = Mark.symbol(ox, oy, h)
+            val expected = listOf(palette.field1, palette.ink, palette.ink, palette.field1)
+            pads.forEachIndexed { i, d ->
+                assertEquals(expected[i], rgb(sym, d.cx.toInt(), d.cy.toInt()), "${style.id}: symbol pad $i at its centre")
+            }
+            assertTrue(pads.maxOf { it.cx + it.r } <= size - KitArt.margin(size) + 1, "${style.id}: the symbol ends at the right margin")
+            for (variant in listOf(Mark.Variant.STACKED, Mark.Variant.LOCKUP)) {
+                val img = decode(KitArt.png(kit, dir, knobs(style, palette, mark = variant), size = size))
+                val (x, y) = KitArt.markOrigin(probeCanvas(), variant, size)
+                var ink = 0
+                var accent = 0
+                for (yy in y.toInt() until size - KitArt.margin(size)) for (xx in x.toInt() until size - KitArt.margin(size)) {
+                    when (rgb(img, xx, yy)) {
+                        palette.ink -> ink++
+                        palette.field1 -> accent++
+                    }
+                }
+                assertTrue(ink > 20 && accent > 20, "${style.id}/${variant.id}: both tones in the mark box (ink $ink, accent $accent)")
+            }
+        }
+    }
+
+    @Test
+    fun `an empty kit still gets a name and a mark`() {
+        val dir = File(temp, "empty").apply { mkdirs() }
+        val kit = Kit("Empty", emptyList())
+        KitStore.save(kit, dir)
+        val palette = Palettes.PHOSPHOR
+        for (style in KitArt.Style.entries) {
+            val size = 128
+            val img = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.SYMBOL), size = size))
+            val (ox, oy) = KitArt.markOrigin(probeCanvas(), Mark.Variant.SYMBOL, size)
+            val pads = Mark.symbol(ox, oy, KitArt.markHeight(Mark.Variant.SYMBOL, size))
+            assertEquals(palette.field1, rgb(img, pads[0].cx.toInt(), pads[0].cy.toInt()), "${style.id}: the mark is there")
+            val zone = KitArt.nameZone(style, Mark.Variant.SYMBOL, size)
+            var named = 0
+            for (y in zone.y until zone.y + zone.h) for (x in zone.x until zone.x + zone.w) if (rgb(img, x, y) != palette.ground) named++
+            assertTrue(named > 10, "${style.id}: the name was set in its zone ($named pixels)")
+        }
+    }
+
+    @Test
+    fun `a long name shrinks into its zone`() {
+        val dir = File(temp, "longname")
+        buildKit(dir)
+        val kit = Kit("A Really Quite Long Kit Name Indeed 2026", KitStore.load(dir).pads)
+        KitStore.save(kit, dir)
+        val palette = Palettes.VENT
+        val size = 128
+        for (style in KitArt.Style.entries) {
+            val img = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.LOCKUP), size = size))
+            // The same tile with no name at all: the mark's own words stay, so the diff is the name alone.
+            val bare = decode(KitArt.png(kit, dir, knobs(style, palette, mark = Mark.Variant.LOCKUP), size = size, label = ""))
+            val zone = KitArt.nameZone(style, Mark.Variant.LOCKUP, size)
+            // Pixels the name added must all lie inside the zone, plus one pixel of antialiasing.
+            var outside = 0
+            var inside = 0
+            for (y in 0 until size) for (x in 0 until size) {
+                if (rgb(img, x, y) == rgb(bare, x, y)) continue
+                if (x in (zone.x - 1)..(zone.x + zone.w) && y in (zone.y - 1)..(zone.y + zone.h)) inside++ else outside++
+            }
+            assertTrue(inside > 10, "${style.id}: the name was set ($inside pixels)")
+            assertEquals(0, outside, "${style.id}: name pixels outside the zone")
+        }
+    }
+
+    @Test
+    fun `the seed pad changes the field and the rings seed changes only rings`() {
         val dir = File(temp, "seeded")
         val kit = buildKit(dir)
-        val rings3 = KitArt.png(kit, dir, KitArt.Style.RINGS, seed = 3, size = 200)
-        val rings4 = KitArt.png(kit, dir, KitArt.Style.RINGS, seed = 4, size = 200)
+        val bloomA = KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, seed = 1), size = 200)
+        val bloomB = KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM, seed = 3), size = 200)
+        assertTrue(!bloomA.contentEquals(bloomB), "the seed pad draws the bloom")
+        val bloom3 = KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM), size = 200, ringsSeed = 3)
+        val bloom4 = KitArt.png(kit, dir, knobs(KitArt.Style.BLOOM), size = 200, ringsSeed = 4)
+        assertTrue(bloom3.contentEquals(bloom4), "the rings dice do not touch the bloom")
+        val rings3 = KitArt.png(kit, dir, knobs(KitArt.Style.RINGS), size = 200, ringsSeed = 3)
+        val rings4 = KitArt.png(kit, dir, knobs(KitArt.Style.RINGS), size = 200, ringsSeed = 4)
         assertTrue(!rings3.contentEquals(rings4), "rings answer the dice")
-
-        val grid3 = KitArt.png(kit, dir, KitArt.Style.GRID, seed = 3, size = 200)
-        val grid4 = KitArt.png(kit, dir, KitArt.Style.GRID, seed = 4, size = 200)
-        assertTrue(grid3.contentEquals(grid4), "the grid is what the kit is, not what the dice say")
     }
 
     @Test
@@ -98,40 +233,9 @@ class KitArtTest {
                 }
             }
             for (style in KitArt.Style.entries) {
-                val png = KitArt.png(kit, dir, style, size = 128)
+                val png = KitArt.png(kit, dir, knobs(style), size = 128)
                 assertTrue(png.isNotEmpty(), "${starter.id}/${style.id}")
             }
         }
-    }
-
-    @Test
-    fun `pixel type fits long names instead of overflowing`() {
-        // Every char the MPC-safe alphabet allows, plus one it doesn't:
-        // the box glyph renders visibly rather than crashing.
-        val name = "The Quick-Brown_Fox & 0123456789.é"
-        val px = PixelType.fit(name, maxWidthPx = 300, maxHeightPx = 70)
-        assertTrue(PixelType.width(name, px) <= 300, "shrunk to fit")
-
-        // Every glyph in the face draws without error, box fallback included.
-        val img = java.awt.image.BufferedImage(600, 40, java.awt.image.BufferedImage.TYPE_INT_RGB)
-        val g = img.createGraphics()
-        PixelType.draw(
-            KitArt.AwtCanvas(g), "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-_.'&é", 0, 0, 14,
-            0xFFFFFF, maxWidthPx = 600,
-        )
-        g.dispose()
-
-        val dir = File(temp, "longname")
-        dir.mkdirs()
-        WavWriter.write(
-            File(dir, "A01_Snip_01.wav"),
-            Snip(FloatArray(1_000) { 0.3f }, 1, 44_100),
-        )
-        val kit = Kit(
-            "A Really Quite Long Kit Name Indeed 2026",
-            listOf(KitPad(slot = 1, sampleFile = "A01_Snip_01.wav")),
-        )
-        KitStore.save(kit, dir)
-        assertTrue(KitArt.png(kit, dir, KitArt.Style.GRID, size = 200).isNotEmpty())
     }
 }

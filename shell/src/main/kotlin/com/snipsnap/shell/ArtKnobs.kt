@@ -20,7 +20,7 @@ data class ArtKnobs(
     companion object {
         /** What a kit gets before anyone touches the knobs: the scheme's own palette, the longest pad, the stacked mark. */
         fun default(scheme: Scheme): ArtKnobs =
-            ArtKnobs(KitArt.Style.WAVEFORM, Palettes.forScheme(scheme), seedSlot = null, mark = Mark.Variant.STACKED)
+            ArtKnobs(KitArt.Style.BLOOM, Palettes.forScheme(scheme), seedSlot = null, mark = Mark.Variant.STACKED)
     }
 }
 

@@ -54,6 +54,11 @@ class ArtKnobsTest {
     }
 
     @Test
+    fun `the default style is bloom`() {
+        assertEquals(KitArt.Style.BLOOM, ArtKnobs.default(Schemes.VENT).style)
+    }
+
+    @Test
     fun `a stale sidecar falls back to defaults`() {
         val dir = File(temp, "stale").apply { mkdirs() }
         val file = File(dir, ArtSidecar.FILE)

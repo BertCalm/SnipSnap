@@ -126,7 +126,7 @@ object JCard {
 
     private fun front(c: ArtCanvas, kit: Kit, kitDir: File, scheme: Scheme, w: Int, h: Int, m: Int) {
         val nameBand = (h * 0.22f).toInt()
-        KitArt.waveform(c, KitArt.Box(m, m, w - 2 * m, h - 2 * m - nameBand), kit, kitDir)
+        KitArt.waveformStrip(c, KitArt.Box(m, m, w - 2 * m, h - 2 * m - nameBand), kit, kitDir)
         val bandTop = h - m - nameBand + (nameBand * 0.1f).toInt()
         PixelType.draw(
             c, kit.name.uppercase(), w / 2, bandTop, (nameBand * 0.55f).toInt(), scheme.lcdInk,

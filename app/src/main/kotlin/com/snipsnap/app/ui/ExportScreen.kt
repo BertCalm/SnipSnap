@@ -547,11 +547,11 @@ private fun ExportContent(
     // inputs; any other format has no bitmap, so the box has no picture.
     suspend fun landedNote(outcome: ExportOutcome, onCard: Boolean, where: String) {
         val tile = offMain {
-            val style = model.artStyle
-            if (style == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
+            val knobs = model.artKnobs
+            if (knobs == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
                 null
             } else {
-                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, style, assets = context.assets)) }.getOrNull()
+                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, knobs, assets = context.assets)) }.getOrNull()
             }
         }
         onNote(

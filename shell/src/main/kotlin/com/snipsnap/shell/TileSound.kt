@@ -88,10 +88,11 @@ internal class TileSound(val mono: FloatArray, val sampleRate: Int) {
         fun longestSlot(kit: Kit, kitDir: File): Int? = pads(kit, kitDir).maxByOrNull { it.sound.frames }?.slot
 
         /** The seed: [slot]'s sound when it exists and reads, else the longest pad's, else null. */
-        fun seed(kit: Kit, kitDir: File, slot: Int?): TileSound? {
-            val pads = pads(kit, kitDir)
-            return pads.firstOrNull { it.slot == slot }?.sound ?: pads.maxByOrNull { it.sound.frames }?.sound
-        }
+        fun seed(kit: Kit, kitDir: File, slot: Int?): TileSound? = seedOf(pads(kit, kitDir), slot)
+
+        /** [seed] over pads already read, so one draw reads each WAV once. */
+        fun seedOf(pads: List<PadSound>, slot: Int?): TileSound? =
+            pads.firstOrNull { it.slot == slot }?.sound ?: pads.maxByOrNull { it.sound.frames }?.sound
     }
 }
 

@@ -66,7 +66,10 @@ object SideACommand {
         val firstKit = KitStore.load(kitDirs.first())
         File(tapeDir, "cover.png").writeBytes(
             com.snipsnap.shell.KitArt.png(
-                firstKit, kitDirs.first(), com.snipsnap.shell.KitArt.Style.WAVEFORM, label = title,
+                firstKit, kitDirs.first(),
+                com.snipsnap.shell.ArtSidecar.resolve(kitDirs.first(), com.snipsnap.shell.Schemes.DEFAULT)
+                    .copy(style = com.snipsnap.shell.KitArt.Style.WAVEFORM),
+                label = title,
             ),
         )
 

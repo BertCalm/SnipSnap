@@ -67,16 +67,12 @@ interface ArtCanvas {
  * its waveforms, its class colours, its name. Deterministic: same kit,
  * same parameters, same bytes, so re-exporting never churns a card.
  *
- * Everything renders on the scheme's dark LCD surface — the two-surface
- * rule says that's where sound lives, and a browser tile is a picture of
- * sound. Text is a built-in 5×7 pixel font drawn as rectangles: no
- * `java.awt.Font`, no fontconfig, identical on every machine — and chunky
- * pixel type is TapeOS's accent anyway.
- *
- * The look is a taste call, so everything is a parameter — [Style],
- * scheme, seed, size — and the CLI `art` verb regenerates in one command.
- * Once a direction wins the prototyping loop it becomes the export
- * default (Z6.3).
+ * Everything renders on a [Palette]'s ground with the kit name set in a
+ * bundled face inside the style's own name zone, and the SnipSnap mark
+ * bottom-right in the palette's ink and first field tone. The four knobs
+ * ([ArtKnobs]: style, palette, seed pad, mark) are what a person picks;
+ * the CLI `art` verb regenerates every style in one command so the owner
+ * can judge them on screen.
  *
  * [draw] is the actual rendering — every style, the caption, the
  * hairline — expressed purely against [ArtCanvas]. Nothing it calls
@@ -91,7 +87,7 @@ interface ArtCanvas {
  */
 object KitArt {
 
-    /** Four starting directions to react against, not one take. */
+    /** The family: four redrawn, four new, one blurb each for the CLI's listing. */
     enum class Style(val id: String, val blurb: String) {
         /** The kit laid on tape: every pad's audio, joined, class-coloured. */
         WAVEFORM("waveform", "all the pads end to end, each in its class colour"),
@@ -104,6 +100,9 @@ object KitArt {
 
         /** Seeded orbits: one arc per pad, sized by its sound. */
         RINGS("rings", "seeded arcs, one per pad, sized by the sound"),
+
+        /** The seed pad's loudness wrapped round a circle, the name in the hole. */
+        BLOOM("bloom", "the seed's loudness wrapped round a circle, the name in the hole"),
         ;
 
         companion object {
@@ -114,62 +113,68 @@ object KitArt {
     const val DEFAULT_SIZE = 600
 
     /**
-     * The platform-agnostic half of rendering onto [canvas]: LCD
-     * background, the style dispatch, the caption, the readout hairline.
-     * See the class doc for why this exists apart from [render]/[png].
-     * Public, not internal — see [ArtCanvas]'s own doc.
+     * The platform-agnostic half of rendering onto [canvas]: the ground,
+     * the style's field and name, the mark. See the class doc for why
+     * this exists apart from [render]/[png]. Public, not internal — see
+     * [ArtCanvas]'s own doc. [ringsSeed] is the one hidden parameter: the
+     * dice RINGS throws for its start angles, settable from the CLI.
      */
     fun draw(
         canvas: ArtCanvas,
         kit: Kit,
         kitDir: File,
-        style: Style,
-        scheme: Scheme,
-        seed: Int,
+        knobs: ArtKnobs,
         size: Int,
         label: String,
+        ringsSeed: Int = 0,
     ) {
         require(size in 64..2048) { "size wants 64..2048, got $size" }
-        canvas.fillRect(0, 0, size, size, scheme.lcd)
+        val palette = knobs.palette
+        canvas.fillRect(0, 0, size, size, palette.ground)
+        val zone = nameZone(knobs.style, knobs.mark, size)
+        val pads = TileSound.pads(kit, kitDir)
+        val seed = TileSound.seedOf(pads, knobs.seedSlot)
 
-        val m = (size * 0.08f).toInt()
-        val nameBand = (size * 0.16f).toInt()
-        val art = Box(m, m, size - 2 * m, size - 2 * m - nameBand)
-
-        when (style) {
-            Style.WAVEFORM -> waveform(canvas, art, kit, kitDir)
-            Style.GRID -> grid(canvas, art, kit, scheme)
-            Style.SLICES -> slices(canvas, art, kit, kitDir)
-            Style.RINGS -> rings(canvas, art, kit, kitDir, seed)
+        when (knobs.style) {
+            Style.BLOOM -> TileStyles.bloom(canvas, size, palette, seed, label, zone)
+            Style.WAVEFORM -> {
+                waveformStrip(canvas, fieldBox(size), kit, kitDir)
+                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+            }
+            Style.GRID -> {
+                grid(canvas, fieldBox(size), kit, palette.ground)
+                TileStyles.stripName(canvas, palette, label, zone, ArtFont.OSWALD_BOLD)
+            }
+            Style.SLICES -> {
+                slices(canvas, fieldBox(size), kit, kitDir)
+                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+            }
+            Style.RINGS -> {
+                rings(canvas, fieldBox(size), kit, kitDir, ringsSeed)
+                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+            }
         }
 
-        // The name, pixel type, centred in the bottom band.
-        val caption = label.uppercase()
-        val bandTop = size - m - nameBand + (nameBand * 0.25f).toInt()
-        for (px in PixelType.rects(caption, size / 2, bandTop, nameBand / 2, centered = true, maxWidthPx = size - 2 * m)) {
-            canvas.fillRect(px.x, px.y, px.w, px.h, scheme.lcdInk)
-        }
-
-        // A hairline between sound and name — the LCD's readout rule.
-        canvas.fillRect(m, size - m - nameBand + (nameBand * 0.05f).toInt(), size - 2 * m, max(1, size / 300), scheme.amber)
+        val (mx, my) = markOrigin(canvas, knobs.mark, size)
+        Mark.draw(canvas, knobs.mark, mx, my, markHeight(knobs.mark, size), palette.ink, palette.field1)
     }
 
     /** Render to pixels. [size] is the square edge, 64..2048. */
     fun render(
         kit: Kit,
         kitDir: File,
-        style: Style,
-        scheme: Scheme = Schemes.DEFAULT,
-        seed: Int = 0,
+        knobs: ArtKnobs,
         size: Int = DEFAULT_SIZE,
         /** The tile's caption — a pack tile carries the pack's title, not one kit's. */
         label: String = kit.name,
+        ringsSeed: Int = 0,
     ): BufferedImage {
         val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            draw(AwtCanvas(g), kit, kitDir, style, scheme, seed, size, label)
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            draw(AwtCanvas(g), kit, kitDir, knobs, size, label, ringsSeed)
         } finally {
             g.dispose()
         }
@@ -180,14 +185,13 @@ object KitArt {
     fun png(
         kit: Kit,
         kitDir: File,
-        style: Style,
-        scheme: Scheme = Schemes.DEFAULT,
-        seed: Int = 0,
+        knobs: ArtKnobs,
         size: Int = DEFAULT_SIZE,
         label: String = kit.name,
+        ringsSeed: Int = 0,
     ): ByteArray {
         val out = ByteArrayOutputStream()
-        ImageIO.write(render(kit, kitDir, style, scheme, seed, size, label), "png", out)
+        ImageIO.write(render(kit, kitDir, knobs, size, label, ringsSeed), "png", out)
         return out.toByteArray()
     }
 
@@ -195,7 +199,64 @@ object KitArt {
      * [png] in the shape `ExportWizardModel.artRenderer` takes: the desktop
      * default, named here so the write path never spells the AWT call.
      */
-    fun awtPng(kit: Kit, kitDir: File, style: Style): ByteArray = png(kit, kitDir, style)
+    fun awtPng(kit: Kit, kitDir: File, knobs: ArtKnobs): ByteArray = png(kit, kitDir, knobs)
+
+    // ---- the tile's geometry, shared by every style and pinned by KitArtTest ----
+
+    /** The margin every style keeps from the tile's edge. */
+    internal fun margin(size: Int): Int = Math.round(size * 0.06f)
+
+    /** Where the field goes for the styles that set their name in the bottom strip. */
+    internal fun fieldBox(size: Int): Box {
+        val m = margin(size)
+        return Box(m, m, size - 2 * m, Math.round(size * 0.70f))
+    }
+
+    /**
+     * The mark's cap height on a tile, never below what [Mark.draw] accepts:
+     * on a tile under 200 px the one-line lockup sits at its floor and can
+     * run wider than [markReserve]; the export tile ([DEFAULT_SIZE]) and the
+     * picker's previews are well above that.
+     */
+    internal fun markHeight(variant: Mark.Variant, size: Int): Float {
+        val share = when (variant) {
+            Mark.Variant.SYMBOL -> 0.08f
+            Mark.Variant.STACKED -> 0.07f
+            Mark.Variant.LOCKUP -> 0.04f
+        }
+        return maxOf(Mark.MIN_HEIGHT, size * share)
+    }
+
+    /** The mark's top-left: its right edge and bottom edge both one margin in from the tile's. */
+    internal fun markOrigin(canvas: ArtCanvas, variant: Mark.Variant, size: Int): Pair<Float, Float> {
+        val h = markHeight(variant, size)
+        val w = Mark.width(canvas, variant, h)
+        val m = margin(size)
+        return (size - m - w) to (size - m - h)
+    }
+
+    /** What the bottom strip gives up to the mark plus a gap, without needing a canvas to measure. */
+    internal fun markReserve(variant: Mark.Variant, size: Int): Int {
+        val share = when (variant) {
+            Mark.Variant.SYMBOL -> 0.12f
+            Mark.Variant.STACKED -> 0.26f
+            Mark.Variant.LOCKUP -> 0.44f
+        }
+        return Math.round(size * share)
+    }
+
+    /** The box the name must stay inside; KitArtTest measures legibility over it. */
+    internal fun nameZone(style: Style, variant: Mark.Variant, size: Int): Box = when (style) {
+        Style.BLOOM -> {
+            val half = size * 0.40f * 0.42f / sqrt(2f)
+            val c = size / 2f
+            Box(Math.round(c - half), Math.round(c - half), Math.round(2 * half), Math.round(2 * half))
+        }
+        else -> {
+            val m = margin(size)
+            Box(m, Math.round(size * 0.80f), size - 2 * m - markReserve(variant, size), Math.round(size * 0.14f))
+        }
+    }
 
     // ---- the AWT adapter — java.awt lives here and in the font cache below, nowhere else ----
 
@@ -289,7 +350,7 @@ object KitArt {
 
     // ---- styles ------------------------------------------------------------
 
-    internal data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
+    data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
 
     /** A pad's audio and looks, loaded once per render. [color] is packed 0xRRGGBB. */
     private data class Voice(val mono: FloatArray, val color: Int, val peak: Float)
@@ -308,7 +369,8 @@ object KitArt {
             Voice(mono, Schemes.classColor(pad.drumClass), peak)
         }
 
-    internal fun waveform(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File) {
+    /** The original strip: every pad's min/max columns end to end. The J-Card's front still wears it. */
+    internal fun waveformStrip(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File) {
         val vs = voices(kit, kitDir)
         if (vs.isEmpty()) return
         val total = vs.sumOf { it.mono.size }
@@ -343,7 +405,7 @@ object KitArt {
         }
     }
 
-    private fun grid(canvas: ArtCanvas, box: Box, kit: Kit, scheme: Scheme) {
+    private fun grid(canvas: ArtCanvas, box: Box, kit: Kit, ground: Int) {
         val side = min(box.w, box.h)
         val ox = box.x + (box.w - side) / 2
         val oy = box.y + (box.h - side) / 2
@@ -360,15 +422,15 @@ object KitArt {
                 val y = oy + row * (cell + gap)
                 if (pad == null) {
                     // Empty pads sit dim on the LCD; the kit is the light.
-                    canvas.fillRect(x, y, cell, cell, lighten(scheme.lcd, 0.07f))
+                    canvas.fillRect(x, y, cell, cell, TileStyles.lighten(ground, 0.07f))
                 } else {
                     val c = Schemes.classColor(pad.drumClass)
                     canvas.fillRect(x, y, cell, cell, c)
                     // The raised bevel every TapeOS pad wears.
-                    canvas.fillRect(x, y, cell, bevel, lighten(c, 0.35f))
-                    canvas.fillRect(x, y, bevel, cell, lighten(c, 0.35f))
-                    canvas.fillRect(x, y + cell - bevel, cell, bevel, darken(c, 0.35f))
-                    canvas.fillRect(x + cell - bevel, y, bevel, cell, darken(c, 0.35f))
+                    canvas.fillRect(x, y, cell, bevel, TileStyles.lighten(c, 0.35f))
+                    canvas.fillRect(x, y, bevel, cell, TileStyles.lighten(c, 0.35f))
+                    canvas.fillRect(x, y + cell - bevel, cell, bevel, TileStyles.darken(c, 0.35f))
+                    canvas.fillRect(x + cell - bevel, y, bevel, cell, TileStyles.darken(c, 0.35f))
                 }
             }
         }
@@ -409,27 +471,6 @@ object KitArt {
         }
     }
 
-    // ---- colour helpers (packed 0xRRGGBB in, same out) ----------------------
-
-    private fun lighten(rgb: Int, k: Float): Int {
-        val r = (rgb shr 16) and 0xFF
-        val g = (rgb shr 8) and 0xFF
-        val b = rgb and 0xFF
-        val nr = (r + (255 - r) * k).toInt().coerceIn(0, 255)
-        val ng = (g + (255 - g) * k).toInt().coerceIn(0, 255)
-        val nb = (b + (255 - b) * k).toInt().coerceIn(0, 255)
-        return (nr shl 16) or (ng shl 8) or nb
-    }
-
-    private fun darken(rgb: Int, k: Float): Int {
-        val r = (rgb shr 16) and 0xFF
-        val g = (rgb shr 8) and 0xFF
-        val b = rgb and 0xFF
-        val nr = (r * (1 - k)).toInt().coerceIn(0, 255)
-        val ng = (g * (1 - k)).toInt().coerceIn(0, 255)
-        val nb = (b * (1 - k)).toInt().coerceIn(0, 255)
-        return (nr shl 16) or (ng shl 8) or nb
-    }
 }
 
 /**

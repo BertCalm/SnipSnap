@@ -50,7 +50,8 @@ object Exports {
     ): ByteArray? {
         if (noArt) return null
         if (formats.none { it == ExportFormat.EXPANSION || it == ExportFormat.XPN }) return null
-        val png = com.snipsnap.shell.KitArt.png(kit, kitDir, style)
+        val knobs = com.snipsnap.shell.ArtSidecar.resolve(kitDir, com.snipsnap.shell.Schemes.DEFAULT).copy(style = style)
+        val png = com.snipsnap.shell.KitArt.png(kit, kitDir, knobs)
         out.println("cover art: ${style.id} tile for the expansion browser")
         return png
     }

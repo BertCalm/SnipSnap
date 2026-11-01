@@ -48,7 +48,8 @@ object ArtCommand {
         out.println("kit: ${kit.name} (${kit.pads.size} pads) - scheme ${scheme.id.displayName}, seed $seed, ${size}px")
         for (style in styles) {
             val file = File(outDir, "${kit.name}_${style.id}.png")
-            file.writeBytes(KitArt.png(kit, kitDir, style, scheme, seed, size))
+            val knobs = com.snipsnap.shell.ArtKnobs(style, com.snipsnap.shell.Palettes.forScheme(scheme), null, com.snipsnap.shell.Mark.Variant.STACKED)
+            file.writeBytes(KitArt.png(kit, kitDir, knobs, size, ringsSeed = seed))
             out.println("  %-9s %s  (%s)".format(style.id, file.path, style.blurb))
         }
         if (styles.size > 1) {

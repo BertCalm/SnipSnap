@@ -8,10 +8,11 @@ import android.graphics.Path
 import android.graphics.RectF
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.ArtCanvas
+import com.snipsnap.shell.ArtFill
 import com.snipsnap.shell.ArtFont
+import com.snipsnap.shell.ArtKnobs
+import com.snipsnap.shell.ArtPath
 import com.snipsnap.shell.KitArt
-import com.snipsnap.shell.Scheme
-import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextAnchor
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -36,15 +37,13 @@ object AndroidKitArt {
     /**
      * Renders [kit]'s cover art and returns PNG bytes — the same contract
      * [KitArt.png] has, so this drops straight into
-     * `ExportWizardModel.artRenderer: (Kit, File, KitArt.Style) -> ByteArray`.
+     * `ExportWizardModel.artRenderer: (Kit, File, ArtKnobs) -> ByteArray`.
      * [assets] is where the bundled faces live on the phone; see [AndroidFonts].
      */
     fun png(
         kit: Kit,
         kitDir: File,
-        style: KitArt.Style,
-        scheme: Scheme = Schemes.DEFAULT,
-        seed: Int = 0,
+        knobs: ArtKnobs,
         size: Int = KitArt.DEFAULT_SIZE,
         label: String = kit.name,
         assets: AssetManager,
@@ -56,7 +55,7 @@ object AndroidKitArt {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         try {
             val canvas = Canvas(bitmap)
-            KitArt.draw(AndroidCanvas(canvas, assets), kit, kitDir, style, scheme, seed, size, label)
+            KitArt.draw(AndroidCanvas(canvas, assets), kit, kitDir, knobs, size, label)
             val out = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             return out.toByteArray()
@@ -131,5 +130,17 @@ object AndroidKitArt {
             textPaint.textSize = sizePx
             return textPaint.measureText(text)
         }
+
+        // The tile family's path, gradient and circle primitives land with
+        // their device tests; until then the phone cannot paint a style
+        // that uses them, and says so rather than drawing nothing.
+        override fun fillPath(path: ArtPath, fill: ArtFill): Unit =
+            throw UnsupportedOperationException("the phone's canvas does not fill paths yet")
+
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill): Unit =
+            throw UnsupportedOperationException("the phone's canvas does not stroke paths yet")
+
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill): Unit =
+            throw UnsupportedOperationException("the phone's canvas does not fill circles yet")
     }
 }
