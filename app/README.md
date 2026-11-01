@@ -116,8 +116,14 @@ ACCORD exposes BRUSH by default, WOOD and TINE, five finite controls, ROOT
 Bright Edge and Long Ring without changing the saved mechanical initializer,
 seed or passage start. Preset recall, YOURS, navigation and pad reopening keep
 the complete typed recipe. HOLD is hidden and every delivered pad plays once;
-long-file LOOP classification is not sustained playback. The native audition
-and device acceptance remain separate gates. See [ACCORD](../docs/ACCORD.md).
+long-file LOOP classification is not sustained playback. Three unchanged
+functional tests at `fac839f0` passed on a software emulator with the documented
+ART setup. The full nine-module JVM gate at `00a1f9ff` passed 8,010 tests with
+zero failures/errors/skips. Final standard debug/test compilation and the
+optional non-debuggable development build also passed at that source. The
+rebuilt APK has not been device-executed; native listening and physical-device
+acceptance remain separate gates.
+See [ACCORD](../docs/ACCORD.md).
 
 OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
 performances. Complete scores survive preset saves, navigation and SEND TO PAD.

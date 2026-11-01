@@ -92,7 +92,8 @@ down by roughly 14.6 dB for a rare corner. Soft/hard excitation and the evolving
 within-file envelope retain their relationship. Factory eight-second references
 use 222 frozen profile/note gains regenerated as calibration version 2 for the
 corrected tail policy. A first edit outside that table needs calibration work;
-that additional cold cost has not yet been isolated. The corrected 429-case
+one measured edited fixture is recorded below, without a general latency bound.
+The corrected 429-case
 probe passed, including intermediate touches and the former worst resonance.
 That sampled matrix is evidence, not an analytic bound on every possible edit.
 
@@ -103,6 +104,13 @@ That sampled matrix is evidence, not an analytic bound on every possible edit.
 ./gradlew --no-daemon :synth:generateAccordAudition -PaccordQuick=true
 ./gradlew --no-daemon :synth:generateAccordKit
 ```
+
+The generic CLI auditions registered factory voices and presets, for example
+`snipsnap synth ACCORD TINE --all --out out/accord-tine`. Select one recipe
+with `--preset N`. Accord's CLI scope is factory audition only: typed `--patch`
+replay and note, touch, control, seed, model or duration override flags are
+unsupported. Complete edited recipes remain available through the Kotlin API,
+Android editor and generated audition recipes.
 
 The audition writes to `testkit/accord-audition/`, with native raw and matched
 WAVs, complete recipes, metrics, contact rasters/order plots and a local page.
@@ -131,10 +139,10 @@ unverified for this new pack.
 SYNTH now includes the Accord picker, ROOT, TOUCH, LENGTH and explicit TINE
 profile controls. Typed drafts, YOURS, navigation and pad reopening preserve the
 complete recipe, and SEND/SPREAD retain its authored MIDI note. HOLD is hidden.
-The SDK build and instrumentation-source compilation passed for the candidate
-before the gain/release correction; that correction requires a new APK build.
-Held/keygroup playback remains later work. Compilation does not establish
-phone performance, emulator test execution or hardware listening.
+The SDK build and three unchanged functional instrumentation tests at
+`fac839f0` passed with the software-emulator setup documented below. Held/keygroup
+playback remains later work. These checks do not establish physical-phone
+performance or hardware listening.
 
 ## Evidence and current validation
 
@@ -164,12 +172,68 @@ the six copied prototypes match the frozen originals, and maximum PCM24
 encoding error was 5.96e-8.
 The earlier 360-case failure remains the reason for the correction above.
 
-Android `:app:assembleDebug` and `:app:compileDebugAndroidTestKotlin` exited
-zero in 5m24s before the correction, including all four native ABIs; the C++
-host suite passed all six tests. A corrected APK, complete JVM suite, Compose
-emulator execution and native listening remain pending. Phone latency values
-in the design are targets, and phone/MPC acceptance remains open. Finite
-HOLD=0 is the only supported playback contract.
+At source `fac839f098f5d9095e82df0ee3df42b7892941d8`, the standard debug assembly
+and instrumentation compilation exited zero in 28 seconds. The opt-in
+non-debuggable validation assembly, including vital lint, passed in 4m25s.
+All three unchanged Accord device methods then passed, with zero failures or
+skips, under the exact-context ART setup below: runner 163.048 seconds,
+wall 172.537 seconds. The C++ host suite passed all six tests in 8.98 seconds
+on the unchanged merged C++ tree. The final unfiltered nine-module JVM gate
+at clean source `00a1f9ff67cecf44076fb2472db2d7dab921ec1f` exited zero in
+1h30m58s: **8,010 tests, zero failures, errors or skips**. All 4,403 synth tests
+reran; the other eight unchanged module tasks were validly up to date. Native
+listening remains pending. Phone latency values are targets, and
+physical phone/MPC acceptance remains open. Finite HOLD=0 is the only
+supported playback contract.
+
+The current checkout also includes the later complete-preset promotion and
+instrument-descriptor fixes at `c57f6161`/`578d9119`, plus the bounded Meridian
+distribution export at `00a1f9ff`. Its explicit keyboard-expansion opt-out keeps
+the asserted first low note at 36 and the declared range at 36–72; original
+generator assertions are unchanged. Accord's DSP, calibration and generated
+PCM are unchanged. The functional validation hashes and three-test result
+belong to `fac839f0`. Final builds at `00a1f9ff` are recorded below; the rebuilt
+APK has not been device-executed. The source comparison confirms unchanged
+listed Accord DSP, presets, patches, SynthScreen, C++ and frozen references;
+it does not establish complete binary identity or device execution.
+
+The full-suite review also exposed an inherited Keel pitch fixture. Default
+BELLY at MIDI 30 reads +5.28 cents with the existing independent NSDF helper;
+the house detector returned null because its biased-ACF ratio .804 fell below
+.85 and the .575-second capture truncated the .35–.60-second window.
+Test-only `986b789b` adds a default HOLD=0 NSDF ±50-cent guard for all nine
+voice/note pairs and retains the house ±50-cent/confidence ≥.3 checks with uniform
+finite HOLD=.65 in the same window. Source audit and independent review
+confirmed envelope/capture changes only; production code is unchanged.
+The Keel fixture and Meridian distribution-export cases passed in the final
+unfiltered JVM gate at `00a1f9ff`.
+The nine-module command ran with no Android SDK/local.properties, test filters,
+exclusions or skip switches:
+
+```sh
+env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon --max-workers=4 \
+  -Dkotlin.daemon.options=autoshutdownIdleSeconds=30 test --continue
+```
+
+### Final APK provenance
+
+At source `00a1f9ff67cecf44076fb2472db2d7dab921ec1f`, standard
+`:app:assembleDebug :app:compileDebugAndroidTestKotlin` exited zero in
+154.627 seconds. The optional non-debuggable `:app:assembleDebug` exited zero
+in 157.730 seconds using `scripts/android-aot-validation.init.gradle`.
+Both APKs passed ZIP CRC and signature verification. The selected development
+APK retains debug signing, source and dependencies, with `debuggable=false`;
+the init script does not change the repository's default build settings.
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| Standard debug APK | 56,046,124 | `2488f52ee2b9a680aa921091ff93e0d919b4462c330bcfb7778249983da8020e` |
+| `SnipSnap-Accord-development.apk` | 46,461,883 | `fd66d3dc1df63ba98401d05f5cfefb3cfe25e83edb14b98688afdc04de75fc82` |
+
+The published development APK and its `Accord-APK-provenance.json` sidecar
+record these builds. This final artifact was not run on a device: the three
+passing functional methods below remain scoped to the earlier `fac839f0`
+artifact and its exact ART setup.
 
 ## Native measurement methods and limits
 
@@ -208,7 +272,105 @@ with `:synth:generateAccordValidation` and `:synth:generateAccordRateReference`.
   factory BRUSH render took 537.8 ms cold, 272.1 ms with prepared mechanics,
   and 2.10 ms for exact completed-audio recall including owned copies.
   These are one wall-time sample per path, with byte-identical PCM; they
-  establish neither a phone p95 nor the cold cost of an edited performance.
+  establish no phone p95. A separate cold host measurement of the edited A01
+  fixture took 376.15 ms: 50.89 ms mechanics, 231.97 ms shared calibration and
+  85.87 ms actual-touch audio. That fixture is TINE Bright Edge, MIDI 63,
+  touch .37, CONTACT .61, project initializer/Long.MIN_VALUE seed, start .75
+  cycles and source 1.04 seconds; it captures 142,884 frames. This single
+  shorter performance is not an all-edit budget or a phone measurement.
+
+## Software-emulator functional validation
+
+The Android 15 AOSP ATD environment used here downgraded compilation of
+debuggable packages to verification, including explicit shell requests.
+A shell `Success` response
+therefore does not prove that the app uses compiled code. The optional
+[`android-aot-validation.init.gradle`](../scripts/android-aot-validation.init.gradle)
+lets a software-emulator functional run opt into a non-debuggable target while
+retaining the debug variant's sources, dependencies and signing. It changes
+no default build configuration and disables no tests. With an SDK configured:
+
+```sh
+./gradlew --no-daemon --init-script scripts/android-aot-validation.init.gradle \
+  :app:assembleDebug :app:assembleDebugAndroidTest
+adb -s emulator-5554 install -r -t app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5554 install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s emulator-5554 shell cmd package compile -f -m speed com.snipsnap.app.brassgrow
+adb -s emulator-5554 shell dumpsys package dexopt > accord-dexopt.txt
+```
+
+Verify the target package's actual filter; do not accept a neighboring
+package's state or a `verify` result. This check is **necessary but insufficient**
+for the instrumentation gate: it confirms an AOT artifact, not that the
+instrumented runtime accepts or executes that artifact.
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+text = Path("accord-dexopt.txt").read_text()
+marker = "  [com.snipsnap.app.brassgrow]\n"
+if marker not in text:
+    raise SystemExit("Target package is missing from dexopt state")
+target = text.split(marker, 1)[1].split("\n  [", 1)[0]
+if "[status=speed]" not in target:
+    raise SystemExit("Target is not speed-compiled:\n" + target)
+print(target)
+PY
+```
+
+The initial `speed` artifact used class-loader context `PCL[]`. Instrumentation
+adds three Android test framework JARs and the installed test APK before the
+target APK. ART reported the resulting context mismatch and rejected that AOT
+artifact for the instrumented loader. Native solver code was present in the
+artifact, so package status and machine-code presence alone did not settle
+runtime use. The unchanged three-method attempt passed two methods; save/send
+still reached the 180-second deadline (241.562 seconds total).
+
+The passing run additionally used the **actual observed initial instrumentation
+context**: `android.test.runner.jar`, `android.test.mock.jar`,
+`android.test.base.jar`, then the installed test APK, in that order. The full
+`PCL[...]` records installed paths and checksums. Official ART tooling compiled
+that exact flat context into a staging artifact in 580.888 seconds, with the
+compiler watchdog enabled at the finite 1,200,000 ms bound. Original artifacts
+were backed up; installation preserved ownership, permissions and SELinux
+labels. No context wildcard, verifier bypass or test change was used.
+
+The staged artifact contains native integrate/derivative/energy code of
+6,472/2,044/632 bytes. A discovery-only launch checked loading and counted as
+zero functional tests. The initial flat loader matched; later child-loader
+and image-context warnings remained. An executable OAT mapping was observed
+during the actual run, but the precise executing solver program counter was
+not captured. These observations support the setup record; they do not prove
+every solver call used that artifact. The simple build/filter commands above
+alone do not reproduce this additional context-specific setup.
+
+With that setup installed, the unchanged functional command was:
+
+```sh
+adb -s emulator-5554 shell am instrument -w -r \
+  -e class com.snipsnap.app.ui.AccordSynthScreenTest \
+  com.snipsnap.app.brassgrow.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+It reported **OK (3 tests)**, zero failures/skips, runner time 163.048 seconds
+and wall time 172.537 seconds. The 180-second send deadline, toast failure
+checks and complete recipe assertions were unchanged. This is the functional
+gate; discovery output and native-code mappings are not substituted for it.
+The validation target APK SHA-256 was
+`687e8f41fbc23eb61d880f02da14aa1b922e8cc8b35bd8fd0468f16cd5d5e252`;
+the unchanged test APK was
+`350be9e79c6e814706a43b38007d0d814c39d8aa7de54dff385b7f059f965c7a`,
+both from source `fac839f098f5d9095e82df0ee3df42b7892941d8`.
+Rebuilding or reinstalling can change both APK identities and installed paths;
+recapture the instrumentation context for a new pair instead of reusing this
+session's context string.
+
+Run this gate separately from large JVM/compiler jobs to avoid host memory
+pressure. The emulator was stopped before the full JVM retry. This result
+establishes the tested bindings, persistence and SEND behavior under the
+documented software-emulator setup. It is not a three-test pass for the
+default debuggable APK, a physical-phone latency measurement, native listening
+acceptance or MPC hardware check.
 
 ## Why it is built this way
 

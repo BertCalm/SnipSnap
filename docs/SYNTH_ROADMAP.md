@@ -14,10 +14,16 @@ and short captured tails; the corrected constant per-performance gain shared
 across velocity and extended unforced release explicitly revise the original
 cross-setting gain policy. The corrected pipeline passed 43 focused tests,
 429 full-length output cases, six deterministic 4×/8× comparisons and calibration
-spot checks; it generated the native audition and kit. Android assembly/
-instrumentation-source compilation and six C++ host tests passed before the
-correction. A rebuilt APK, complete JVM suite, Compose execution, native
-listening and phone/MPC acceptance remain open.
+spot checks; it generated the native audition and kit. Corrected Android
+assembly/instrumentation compilation, six C++ host tests and all three unchanged
+Accord functional device methods passed. The latter used the documented
+non-debuggable, exact-context ART setup on a software emulator; it does not
+establish phone latency or a default-debug instrumentation pass. That Android
+result is scoped to `fac839f0`. The full unfiltered nine-module JVM gate at
+clean `00a1f9ff` passed 8,010 tests, zero failures/errors/skips, in 1h30m58s.
+Final standard debug/test compilation and optional non-debuggable APK assembly
+also passed at `00a1f9ff`; that rebuilt APK has not been device-executed.
+Native listening and physical phone/MPC acceptance remain open.
 Nonzero HOLD is refused. See [ACCORD.md](ACCORD.md) and the
 [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md).
 

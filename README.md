@@ -994,7 +994,11 @@ profiles. Six saved starting recipes, native note/touch/seed/passage replay,
 a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
 Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
 ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
-Native validation, listening and device checks are separate gates.
+Native numerical checks and three software-emulator functional tests passed
+with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
+passed 8,010 tests with zero failures/errors/skips. Both final Android builds
+passed at that source; the rebuilt development APK has not been device-executed.
+Owner listening and physical phone/MPC acceptance remain open.
 [Usage and limits](docs/ACCORD.md) link the design and frozen references.
 
 TIDAL brings two original source populations through a seeded encounter:
