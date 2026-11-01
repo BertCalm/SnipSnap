@@ -125,7 +125,7 @@
       button.disabled = matchedOnly && button.dataset.level === 'native';
       button.setAttribute('aria-pressed', String(button.dataset.level === state.level));
     });
-    $('#level-note').textContent = matchedOnly ? 'Source-study previews use matched levels.' : state.level === 'matched' ? 'Matched files make differences easier to hear.' : !state.current || state.current.nativeFile ? 'Native files preserve the engine’s rendered level.' : 'Raw files use a shared −6 dB export gain.';
+    $('#level-note').textContent = matchedOnly ? 'Body comparisons use matched levels.' : state.level === 'matched' ? 'Matched files make differences easier to hear.' : !state.current || state.current.nativeFile ? 'Native files preserve the engine’s rendered level.' : 'Raw files use a shared −6 dB export gain.';
   }
   function sectionFor(group, clips) {
     const id = String(group.id || '').toLowerCase();
@@ -368,7 +368,7 @@
   }
   function clipTitle(clip) {
     if (isSourceStudy(clip)) {
-      const names = { current: 'Current body', warm_wire: 'Warm wire', hollow_reed: 'Hollow reed', rubbed_glass: 'Rubbed glass' };
+      const names = { current: 'Previous body', warm_wire: 'Warm wire', hollow_reed: 'Hollow reed', rubbed_glass: 'Rubbed glass' };
       const family = /^source_(current|warm_wire|hollow_reed|rubbed_glass)_/.exec(clip.id)[1];
       return `${names[family]}${clip.kind === 'pattern' ? ' · phrase' : clip.loop ? ' · held' : ''}`;
     }
@@ -393,7 +393,10 @@
     card.dataset.clip = String(clip.id);
     const top = el('div', 'clip-top');
     top.append(el('span', 'voice-tag', clip.voice || 'WICK'));
-    if (isSourceStudy(clip)) top.append(el('span', 'source-tag', 'Source study'));
+    if (isSourceStudy(clip)) {
+      const badge = clip.id.startsWith('source_current_') ? 'Previous body' : clip.id.startsWith('source_warm_wire_') ? 'Default body' : 'Saved body';
+      top.append(el('span', 'source-tag', badge));
+    }
     if (clip.loop) top.append(el('span', 'hold-tag', 'HOLD'));
     top.append(el('span', 'clip-id', clip.id));
     const main = el('div', 'clip-main');
@@ -430,7 +433,10 @@
     if (pattern) {
       const sequenceRecipe = clip.sequenceRecipeFile || clip.recipeFile;
       if (sequenceRecipe) footer.append(link('Sequence recipe ↓', sequenceRecipe));
-    } else if (clip.patchFile || clip.recipeFile) footer.append(link(clip.recipeFile ? 'Recipe ↓' : 'Patch ↓', clip.patchFile || clip.recipeFile));
+    } else {
+      if (clip.patchFile) footer.append(link('Patch ↓', clip.patchFile));
+      if (clip.recipeFile) footer.append(link('Recipe ↓', clip.recipeFile));
+    }
     const details = el('details', 'clip-details');
     const summary = el('summary', '', 'Diagnostics');
     summary.setAttribute('aria-controls', unique);
@@ -469,11 +475,11 @@
     const heading = el('div', 'group-heading');
     const headingId = `group-${String(group.id).replace(/[^\w-]/g, '-')}`;
     const musicalPatterns = group.id === 'musical-patterns';
-    const title = el('h4', '', group.id === 'source-register' ? 'RATTLE · Same movement, four bodies' : rattleCohesion ? 'RATTLE · Earlier separate hits / Connected body' : musicalPatterns ? 'Six voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
+    const title = el('h4', '', group.id === 'source-register' ? 'RATTLE · Three bodies, one movement' : rattleCohesion ? 'RATTLE · Earlier separate hits / Connected body' : musicalPatterns ? 'Six voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
     title.id = headingId;
     section.setAttribute('aria-labelledby', headingId);
     heading.append(title);
-    if (rattleCohesion) heading.append(el('p', '', 'Does the new version feel like one body, with the rattle moving inside it? Compare each earlier/new pair at the same pitch, velocity, and controls. C4 comes first, followed by C3 and C5.'));
+    if (rattleCohesion) heading.append(el('p', '', 'This earlier articulation comparison retains the previous folded-FM body. Compare the separate openings with the connected response at the same pitch, velocity, and controls. C4 comes first, followed by C3 and C5. The saved bodies above keep the connected movement.'));
     else if (musicalPatterns) heading.append(el('p', '', 'Hear the same phrase played by RATTLE, FLICKER, BREATH, PLUCK, WOOD, and BUBBLE. The established three-voice arrangement follows, combining PLUCK, WOOD, and BUBBLE. These finite renders include the exact sequence recipes.'));
     else if (bubbleTone) heading.append(el('p', '', 'Can you hear the note ring through the smaller pops? Compare each pair at MIDI 48, 60, and 72. Pitch, velocity, and all controls match within each pair; FEED stays at 25%.'));
     else if (group.description) heading.append(el('p', '', group.description));
@@ -699,7 +705,7 @@
           manifest.entries = entries;
           manifest.groups = [...study.groups, ...(Array.isArray(manifest.groups) ? manifest.groups : [])];
           sourceStudy = study;
-        } catch (_) { tell('The source study is unavailable. The earlier listening comparisons are still here.'); }
+        } catch (_) { tell('The body comparisons are unavailable. The main renders and earlier comparisons are still here.'); }
       }
       if (sourceStudy) {
         $('#source-study-intro').hidden = false;
@@ -707,7 +713,7 @@
         $('#first-play-label').textContent = 'Hear Warm wire at C4';
         $('#source-study-download').hidden = false;
         $('#source-study-download').href = safePath(manifest.sourceStudyFile);
-        $('#audition-scope').textContent = 'This audition applies RATTLE’s connected movement to three alternate sources: Warm wire, Hollow reed, and Rubbed glass. Compare them with the current body at the same settings, then try the same phrase or a held cycle. The names describe tonal directions, not physical models. These are diagnostic candidates; the normal RATTLE patch and the five accepted voices are preserved.';
+        $('#audition-scope').textContent = 'RATTLE now uses Warm wire by default, with Hollow reed and Rubbed glass as saved variants. Download a normal editable patch from each body’s single-note or held card, or try all three at C4 in the playable kit. The previous body remains as a comparison. The five accepted voices are preserved. All renders are dry; the body names describe tonal directions, not physical models.';
       }
       state.manifest = manifest;
       entries.forEach((clip, index) => { clip.id = String(clip.id ?? `clip-${index + 1}`); state.clips.set(clip.id, clip); });
@@ -724,7 +730,7 @@
       }
       const macros = [...new Set(state.groups.filter(group => group.section === 'controls').flatMap(group => group.clips.map(clip => clip.macro).filter(Boolean)))];
       macros.forEach(macro => { const option = el('option', '', macro); option.value = String(macro).toUpperCase(); $('#macro-filter').append(option); });
-      const first = entries.find(clip => clip.id === 'source_warm_wire_60' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.id === 'rattle_cohesion_60_candidate' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && clip.voice === 'RATTLE' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
+      const first = entries.find(clip => clip.id === 'source_warm_wire_60' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && clip.voice === 'RATTLE' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.id === 'rattle_cohesion_60_candidate' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
       if (first) {
         $('#first-play').disabled = false;
         $('#first-play').addEventListener('click', () => { switchTab('start'); playClip(first); });

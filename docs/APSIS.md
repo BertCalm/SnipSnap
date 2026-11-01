@@ -11,7 +11,7 @@ The second listening round responded to the owner's report that the first takes
 had little variation. That round introduced model 2: the center follows the encounters,
 body contacts have distinct upper resonances, and bright modes decay before the
 next passage. Explicit model-1 patches retain the original renderer. Missing or
-null model metadata in a saved recipe also decodes as model 1.
+null model metadata in a saved PASSAGE recipe also decodes as model 1.
 
 The musical-bank round uses model 3 for new patches. It retains model 2's
 body-forward gesture, adds velocity-dependent excitation color and a normalized
@@ -20,16 +20,20 @@ Explicit model-1 and model-2 recipes retain their audio. A newly constructed
 `ApsisConfig()` now selects model 3. The owner found model 2 more distinctive;
 the musical bank still awaits the owner's listening decision.
 
-This prototype implements PASSAGE, with three participating bodies
-at its default BODIES setting and a stable roster of up to six. It is not the
-proposed six-voice, 36-preset production bank. Dedicated keygroup export,
+The Kotlin engine now implements PASSAGE, GRAIN and ANCHOR, with three participating
+bodies at the default BODIES setting and a stable roster of up to six. GRAIN and
+ANCHOR port the owner-preferred Python study laws, with three starter presets
+each. PASSAGE retains its six recipes and all three saved renderers. New voice
+recipes use model 3; model-less GRAIN/ANCHOR recipes select their first model, 3.
+The other study candidates remain Python prototypes. See
+[the port notes](APSIS-POPULATIONS.md) for mechanisms, reproduction and limits. Dedicated keygroup export,
 device acceptance, naming clearance, and the owner's sonic verdict remain later
 work. All audition clips are dry.
 
 ## Android integration
 
-SYNTH's engine picker now includes APSIS with PASSAGE and all six factory
-presets. ROOT spans MIDI 36–84 (C2–C6); VELOCITY changes native excitation,
+SYNTH's engine picker includes APSIS with PASSAGE, GRAIN and ANCHOR: six
+PASSAGE recipes and three starters per new voice. ROOT spans MIDI 36–84 (C2–C6); VELOCITY changes native excitation,
 independently of STRETCH, DISTANCE, BODIES, ALIGN, COUPLE and HOLD. Loading an
 older saved renderer retains that model and seed through edits, SCRAMBLE,
 navigation, SAVE PRESET, YOURS and SEND TO PAD. SPREAD uses the authored root

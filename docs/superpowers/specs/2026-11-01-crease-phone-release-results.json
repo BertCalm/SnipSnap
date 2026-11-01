@@ -1,5 +1,5 @@
 {
-  "scope": "Actual Kotlin captures, Python/JS/native PCM transport; no physical device playback",
+  "scope": "Actual Kotlin captures and Python/JS/native transport measurements, plus owner-reported phone operation; no instrumented physical timing",
   "baseline": "9c10026772232018674a233d4e5108876631faf7",
   "captureCommit": "907a6638699363afc2179df594d8a293ef822b86",
   "captureDirty": false,
@@ -147,7 +147,7 @@
     "jvmSourcesUnchangedFromTestStart": true,
     "scope": "Complete nine-module JVM gate; unchanged tasks reused valid cached results"
   },
-  "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard",
+  "ownerListening": "Previous sound accepted; owner subsequently reports the separate study works in the app. No detailed latency or sound-quality verdict supplied.",
   "optimizedApk": {
     "result": "passed",
     "build": "R8 optimized, x86_64, Android 10 software emulator",
@@ -171,5 +171,17 @@
     "commonTailsBitExact": true,
     "scope": "Actual Kotlin floating-point captures compared with the earlier owner-approved sound; added captures refine the approximation"
   },
-  "normalAndroidAggregate": "passed without a study cache: Debug, Strike FX and Release"
+  "normalAndroidAggregate": "passed without a study cache: Debug, Strike FX and Release",
+  "ownerPhoneReport": {
+    "statement": "Works in the app",
+    "kind": "owner-reported",
+    "application": "separate SnipSnap Crease Study APK discussed in the preceding instructions",
+    "result": "phone operation confirmed",
+    "installedBuild": null,
+    "deviceModel": null,
+    "androidVersion": null,
+    "audioRoute": null,
+    "individualStressChecks": "not individually reported",
+    "instrumentedLatencyMeasurement": false
+  }
 }
