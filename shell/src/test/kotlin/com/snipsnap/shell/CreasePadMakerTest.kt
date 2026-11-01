@@ -254,6 +254,11 @@ class CreasePadMakerTest {
         val instrument = InstrumentStore.list(dest).single().second
         assertEquals(VoiceMode.POLY, instrument.voiceMode)
         assertFalse(instrument.explicitNoteOn)
+        val sidecar = Json.parse(File(dest, "Crease Paper Keys.instrument.json").readText()).obj()
+        assertEquals(JsonValue.Bool(false), sidecar.getValue("explicitNoteOn"))
+        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
+            sha(Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)),
+            "removing only the added trigger field restores the previous sidecar byte hash")
         val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
         assertEquals(expected, actual, "default capture retains the published WAVs and current descriptor schema")
     }
@@ -418,7 +423,9 @@ class CreasePadMakerTest {
     private fun rms(samples: FloatArray, start: Int, end: Int): Double =
         sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))
 
-    private fun sha(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+    private fun sha(file: File): String = sha(file.readBytes())
+
+    private fun sha(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it.toInt() and 255) }
 
     private fun harmonicPower(samples: FloatArray, hz: Double, start: Int): DoubleArray {
