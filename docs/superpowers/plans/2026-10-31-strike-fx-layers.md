@@ -213,7 +213,7 @@ git commit -m "Add StrikeFxBank: ROOM and SLAP knobs become a DRY, ROOM, ECHO la
   - `fun strikeFxLayers(slot: Int, room: Float, slap: Float): KitPad`: KEEP.
   - `fun clearStrikeFxLayers(slot: Int): KitPad`: CLEAR.
   - `fun strikeFxSource(slot: Int): File` (private is fine; the test reaches it through behaviour): `_v1`-style DRY file when the pad is a STRIKE FX bank, else the main file.
-  - `Copy.STRIKE_FX_ON = "STRIKE FX ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."`, `Copy.STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."`, `Copy.STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. KEEP?"`
+  - `Copy.STRIKE_FX_ON = "STRIKE FX ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."`, `Copy.STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."`, `Copy.STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. THEY WAIT IN THE BIN FOR ${Reversal.DAYS} DAYS."` (the dialog asks; the line answers the reversal law)
 
 - [ ] **Step 1: Write the failing tests** in `StrikeFxLayersTest.kt`, mirroring `KitBuilderTest.kt:17` (`Files.createTempDirectory("strikefx").toFile()`, `KitBuilderModel.create("StrikeFx", dir)`, a pad assigned from a short generated WAV). Helper `fun bytesOf(f: File) = f.readBytes()`.
 

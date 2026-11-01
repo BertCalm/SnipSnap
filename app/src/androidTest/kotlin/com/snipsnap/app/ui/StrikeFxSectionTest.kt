@@ -115,6 +115,12 @@ class StrikeFxSectionTest : ComposeScreenTest() {
 
     private fun node(label: String) = compose.onNodeWithContentDescription(label, useUnmergedTree = true)
 
+    /** The sheet is idle when its buttons answer again: `busy` disables every one of them. */
+    private fun settled() = waitFor("the sheet to settle") {
+        val keep = compose.onAllNodesWithContentDescription("STRIKE FX KEEP", useUnmergedTree = true).fetchSemanticsNodes()
+        keep.isNotEmpty() && keep[0].config.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
     /** The control's own `OnClick`, which needs no part of it on screen. */
     private fun press(label: String) {
         node(label).performSemanticsAction(SemanticsActions.OnClick)
@@ -199,6 +205,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         show(entry)
         press("STRIKE FX KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
+        settled() // the files land before `busy` clears; a tap while busy is dropped on the floor
         press("SOFT HITS, OFF") // the bank is not soft hits: the chip reads off on a STRIKE FX pad
         compose.onNodeWithText(Copy.SOFT_HITS_REPLACE_STRIKE_FX, useUnmergedTree = true).assertExists()
         return entry
