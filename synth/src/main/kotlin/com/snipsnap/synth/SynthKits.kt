@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
+    fun accord(): List<ArrangedPad> = AccordKits.arranged()
+
     /** Sixteen finite Libration notes; native touch zones retain their energy. */
     fun libration(): List<ArrangedPad> = LibrationKits.arranged()
 

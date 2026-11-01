@@ -1,0 +1,93 @@
+{
+  "status": "passed",
+  "original_source_files_unchanged": true,
+  "source_files": 25,
+  "audio_files": 6,
+  "relocation_test": "Copied to a fresh /tmp directory and executed from / with audit-hook reads of all four original /workspace/accord-* source roots forbidden",
+  "dependency_versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "matplotlib": "3.10.8"
+  },
+  "quick_verifier": {
+    "status": "passed",
+    "snapshot_files_checked": 25,
+    "audio": [
+      {
+        "path": "reference/musicality/brush.wav",
+        "seconds": 8.9,
+        "sha256": "54c9c770afce11b52782e4e04b7ef72fbb78a466604f8e699ab79df2f754724b"
+      },
+      {
+        "path": "reference/musicality/tine.wav",
+        "seconds": 8.9,
+        "sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951"
+      },
+      {
+        "path": "reference/musicality/wood.wav",
+        "seconds": 8.9,
+        "sha256": "4a57bb0dd678322452229300bbeb9c5e46c6bc86af6ead995f3626b483a0bd45"
+      },
+      {
+        "path": "reference/tine-options/bright_edge.wav",
+        "seconds": 10.2,
+        "sha256": "1c24ea1faf26a1d3f5fb3375bbeb545af8e012e8b273a1167a8b803ecb536259"
+      },
+      {
+        "path": "reference/tine-options/long_ring.wav",
+        "seconds": 10.2,
+        "sha256": "b2d4bdc6707cf872e3e538b347aa7920642ec5568c842cf8f7f765a5422c3f61"
+      },
+      {
+        "path": "reference/tine-options/soft_attack.wav",
+        "seconds": 10.2,
+        "sha256": "1b41ad52492dba6e29434b8f5b6cf50f9021d190996cd5c6c9f5fef938964d08"
+      }
+    ],
+    "imports": "mechanics, validation, musicality, controls, refinement, TINE renderer and QA",
+    "portable_tine_reference": "reference/musicality/tine.wav",
+    "selected_exact_contact_events": 528,
+    "versions": {
+      "python": "3.12.14",
+      "numpy": "2.3.5",
+      "scipy": "1.17.0",
+      "matplotlib": "3.10.8"
+    },
+    "work_not_run": "No mechanical solver, audio renderer, broad control sweep, Kotlin tests or listening"
+  },
+  "expensive_work_not_run": [
+    "No mechanical integration",
+    "No audio regeneration",
+    "No 36-case matrix",
+    "No Kotlin build/tests",
+    "No listening judgment"
+  ],
+  "deduplicated_tine_QA_run": {
+    "status": "passed",
+    "failures": [],
+    "reference": {
+      "file_byte_identical": true,
+      "active_pcm_byte_identical": true
+    },
+    "root_centers": {
+      "hz": 130.8127826502993,
+      "same_frequencies_all_options": true
+    },
+    "mechanics": {
+      "input_array_unmodified": true,
+      "event_count": 528,
+      "bright_and_long_force_identical_to_baseline": true,
+      "no_acoustic_noise_in_any_config": true,
+      "cached_model_seed": 20261022
+    },
+    "contrast_checks": {
+      "soft_upper_energy_lower": true,
+      "bright_upper_energy_ratio": 3.49808128795844,
+      "bright_difference_not_only_scalar": true,
+      "long_tail_first900ms_energy_ratio": 19.515009066093835,
+      "long_decay_duration_larger": true
+    }
+  },
+  "checks_run": "Relocated quick verifier and compact existing TINE PCM/source/force QA; original source-root opens forbidden"
+}

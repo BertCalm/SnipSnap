@@ -121,6 +121,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "accord", "ACCORD",
+            "Brushed wood and ringing tines. Sixteen finite pitched performances with shared mechanical timing.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.accord() },
+        Starter(
             "libration", "LIBRATION",
             "Wood, glass and departing orbits. Sixteen finite notes with soft and hard touch.",
             seeded = false,

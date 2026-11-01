@@ -2,6 +2,49 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateAccordAudition") {
+    group = "distribution"
+    description = "Render native Accord voices, TINE profiles, note/touch/control comparisons, recipes and numerical diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("accordOutput").orNull ?: "${rootDir}/testkit/accord-audition")
+    if (providers.gradleProperty("accordQuick").orNull == "true") args("--quick")
+}
+
+tasks.register<JavaExec>("generateAccordKit") {
+    group = "distribution"
+    description = "Export sixteen dry Accord one-shots, complete recipes, MPC 3 track, MPC 2 twin and a downloadable ZIP."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordKitGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("accordKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateAccordValidation") {
+    group = "verification"
+    description = "Measure full-length Accord corner/seed headroom, native cache and render-time evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordValidationGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("accordValidationOutput").orNull ?: "${rootDir}/testkit/accord-validation")
+}
+
+tasks.register<JavaExec>("generateAccordCalibration") {
+    group = "verification"
+    description = "Generate or verify the frozen versioned native Accord note/profile calibration table."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordCalibrationGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    providers.gradleProperty("accordCalibrationArgs").orNull?.let {
+        args(it.split(Regex("\\s+")).filter(String::isNotBlank))
+    }
+}
+
 tasks.register<JavaExec>("generateFerryMatchAudition") {
     group = "distribution"
     description = "Render Ferry MATCH tuning comparisons, accepted aligned PCM checks and saved recipes."

@@ -13,6 +13,15 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `ACCORD retains its accepted voices profiles and saved mechanical history`() {
+        for (reference in AccordPresets.all()) {
+            val patch = reference.copy(sourceSeconds = .5)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, patch.name)
+        }
+    }
+
+    @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
         assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)

@@ -257,6 +257,10 @@ import com.snipsnap.synth.Libration
 import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LibrationRenderSession
 import com.snipsnap.synth.LibrationVoice
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
+import com.snipsnap.synth.AccordVoice
+import com.snipsnap.synth.AccordAcousticProfile
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -776,7 +780,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
+                    val nativeFactory = if (e == Engine.ACCORD || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -790,6 +794,7 @@ fun SynthScreen(
                         ?: if (e == Engine.FILAMENT) seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
+                        else if (e == Engine.ACCORD) seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
@@ -816,7 +821,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -945,7 +950,7 @@ fun SynthScreen(
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        if (patch is AccordPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1007,6 +1012,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.ACCORD) {
+            // A profile/root edit and SAVE can share one frame. Read the live
+            // typed recipe so its profile, initializer and exact seed survive.
+            val current = loadedPatchesByVoice[engine to voice] as? AccordPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: AccordPatch(name, voice as AccordVoice, controls)
+        }
         if (engine == Engine.ORIGAMI) {
             // Expression, gesture and pitch events can share a frame. Preserve
             // the newest complete recipe instead of the last composed snapshot.
@@ -1187,6 +1200,9 @@ fun SynthScreen(
         // that edited recipe so onDispose can flush it before navigation.
         if (pair !in loadedPatchesByVoice) {
             when (engine) {
+                Engine.ACCORD -> loadedPatchesByVoice[pair] = AccordPatch(
+                    engine.patchDisplayName(voice), voice as AccordVoice, macrosByVoice.getValue(pair),
+                )
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
                     engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
                 )
@@ -1306,6 +1322,16 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = patch
+    }
+    fun updateAccordPatch(expectedVoice: AccordVoice, change: (AccordPatch) -> AccordPatch) {
+        if (engine != Engine.ACCORD || voice != expectedVoice) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? AccordPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[engine to voice] = change(patch)
+        // Navigation can dispose the screen before its composition effects.
+        SynthDrafts.write(settings, currentDrafts())
     }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
@@ -1441,6 +1467,7 @@ fun SynthScreen(
                         }
                         if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
                         if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
+                        if (editable is AccordPatch) macrosByVoice[pair] = Accord.defaults(editable.voice) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
@@ -1636,7 +1663,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -1755,10 +1782,15 @@ fun SynthScreen(
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
+                val cls = when (patch) {
+                    is AccordPatch -> Accord.drumClassFor(patch)
+                    is OhmPatch -> Ohm.drumClassFor(patch)
+                    else -> engine.drumClass(voice, macros)
+                }
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is AccordPatch -> patch.midi
                     is LibrationPatch -> patch.midi
                     is TrefoilPatch -> patch.midi
                     is ApsisPatch -> patch.midi
@@ -1824,7 +1856,8 @@ fun SynthScreen(
                             // ORIGAMI retains its existing finite-note behavior.
                             val knownTune = when {
                                 patch is ApsisPatch && cls == DrumClass.LOOP -> 0 to 0
-                                (patch is FilamentPatch || patch is ChamberPatch) && reopenedHere -> null
+                                (patch is AccordPatch || patch is FilamentPatch || patch is ChamberPatch) && reopenedHere -> null
+                                patch is AccordPatch && !reopenedHere -> 0 to 0
                                 patch is FilamentPatch && cls == DrumClass.LOOP -> 0 to 0
                                 patch is TidalPatch && !reopenedHere -> 0 to 0
                                 else -> tonalRoot?.let { model.tuningForKnownRoot(it) }
@@ -1841,7 +1874,7 @@ fun SynthScreen(
                                     identified.copy(
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
                                         tuneFine = knownTune?.second ?: identified.tuneFine,
-                                        oneShot = if (patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
+                                        oneShot = if (patch is AccordPatch || patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
                                         source = when {
                                             patch is FilamentPatch && reopenedHere ->
                                                 if (filamentRootChanged) identified.source + authoredSource.orEmpty() else identified.source
@@ -1868,6 +1901,13 @@ fun SynthScreen(
                             model.update(slot) { ApsisPad.configure(it, patch) }
                         }
                         if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
+                        if (patch is AccordPatch) model.update(slot) {
+                            // LOOP is duration filing; this finite performance
+                            // never acquires a pad loop or a note-off gate.
+                            it.copy(loop = false, oneShot = true,
+                                tuneCoarse = if (reopenedHere) it.tuneCoarse else 0,
+                                tuneFine = if (reopenedHere) it.tuneFine else 0)
+                        }
                         model.save()
                         alreadyThere to model.kit
                     }
@@ -2302,7 +2342,11 @@ fun SynthScreen(
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
         spreadOpening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
-        val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
+        val cls = when (patch) {
+            is AccordPatch -> Accord.drumClassFor(patch)
+            is OhmPatch -> Ohm.drumClassFor(patch)
+            else -> engine.drumClass(voice, macros)
+        }
         scope.launch {
             try {
                 val spreadJob = coroutineContext[Job]
@@ -2684,6 +2728,11 @@ fun SynthScreen(
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
+                }
+
+                if (engine == Engine.ACCORD) {
+                    AccordPerformanceControls(buildCurrentPatch(engine.patchDisplayName(voice)) as AccordPatch,
+                        classColor, scheme, ::updateAccordPatch)
                 }
 
                 if (engine == Engine.LIBRATION) {
@@ -3332,6 +3381,9 @@ fun SynthScreen(
                                 Lattice.scramble(voice as LatticeVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.FLOCK ->
                                 Flock.scramble(voice as FlockVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.ACCORD ->
+                                Accord.scramble(voice as AccordVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.TIDAL ->
                                 Tidal.scramble(voice as TidalVoice, random,
@@ -4912,6 +4964,47 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
+/** Copy the current typed performance rather than a stale composition snapshot. */
+@Composable
+internal fun AccordPerformanceControls(
+    patch: AccordPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (AccordVoice, (AccordPatch) -> AccordPatch) -> Unit,
+) {
+    MacroSlider("ROOT", (patch.midi - Accord.MIN_MIDI).toFloat() / (Accord.MAX_MIDI - Accord.MIN_MIDI),
+        fill, scheme, readout = Scales.nameOf(patch.midi), onValueChange = { value ->
+            onEdit(patch.voice) { current -> current.copy(midi =
+                (Accord.MIN_MIDI + value * (Accord.MAX_MIDI - Accord.MIN_MIDI))
+                    .roundToInt().coerceIn(Accord.MIN_MIDI, Accord.MAX_MIDI)) }
+        })
+    MacroSlider("TOUCH", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    MacroSlider("LENGTH", kotlin.math.sqrt((patch.sourceSeconds - Accord.MIN_SOURCE_SECONDS) /
+        (Accord.MAX_SOURCE_SECONDS - Accord.MIN_SOURCE_SECONDS)).toFloat(), fill, scheme,
+        readout = "%.2f s".format(Locale.ROOT, patch.sourceSeconds), onValueChange = { value ->
+            val v = value.coerceIn(0f, 1f).toDouble()
+            val seconds = Accord.MIN_SOURCE_SECONDS + (Accord.MAX_SOURCE_SECONDS - Accord.MIN_SOURCE_SECONDS) * v * v
+            onEdit(patch.voice) { it.copy(sourceSeconds = (seconds * 1000).roundToInt() / 1000.0) }
+        })
+    if (patch.voice == AccordVoice.TINE) {
+        TapeText("PROFILE", TapeType.pixelSmall, scheme.ink2.tape)
+        for (row in listOf(AccordAcousticProfile.REFERENCE, AccordAcousticProfile.SOFT_ATTACK,
+            AccordAcousticProfile.BRIGHT_EDGE, AccordAcousticProfile.LONG_RING).chunked(2)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (profile in row) {
+                    val title = profile.name.replace('_', ' ')
+                    ActionButton(title, scheme, enabled = true, lit = patch.acousticProfile == profile,
+                        modifier = Modifier.weight(1f).semantics { selected = patch.acousticProfile == profile },
+                        accessibilityLabel = "ACCORD PROFILE $title",
+                    ) { onEdit(patch.voice) { it.copy(acousticProfile = profile) } }
+                }
+            }
+        }
+    }
+    TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
+}
+
 /** Finite performance controls live outside the already large bench composable. */
 @Composable
 private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
@@ -5037,7 +5130,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    LATTICE,
+    LATTICE, ACCORD,
     THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION;
     val displayName: String get() = name.replace('_', ' ')
 
@@ -5108,6 +5201,7 @@ private enum class Engine {
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
         LIBRATION -> LibrationVoice.entries
+        ACCORD -> AccordVoice.entries
         ORIGAMI -> OrigamiVoice.entries
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
@@ -5179,6 +5273,7 @@ private enum class Engine {
         APSIS -> Apsis.macrosFor(voice as ApsisVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
         LIBRATION -> Libration.macrosFor(voice as LibrationVoice).filterNot { it.name == "HOLD" }
+        ACCORD -> Accord.macrosFor(voice as AccordVoice).filterNot { it.name == "HOLD" }
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
         MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
@@ -5248,6 +5343,7 @@ private enum class Engine {
         APSIS -> Apsis.defaults(voice as ApsisVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
         LIBRATION -> Libration.defaults(voice as LibrationVoice)
+        ACCORD -> Accord.defaults(voice as AccordVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
         MERCURY -> Mercury.defaults(voice as MercuryVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
@@ -5319,6 +5415,7 @@ private enum class Engine {
         APSIS -> Apsis.scramble(voice as ApsisVoice, random)
         OVEN -> Oven.scramble(voice as OvenVoice, random)
         LIBRATION -> Libration.scramble(voice as LibrationVoice, random)
+        ACCORD -> Accord.scramble(voice as AccordVoice, random)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
@@ -5400,6 +5497,7 @@ private enum class Engine {
         APSIS -> Apsis.render(voice as ApsisVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
         LIBRATION -> Libration.render(voice as LibrationVoice, macros)
+        ACCORD -> Accord.render(voice as AccordVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
@@ -5475,6 +5573,7 @@ private enum class Engine {
         APSIS -> Apsis.drumClassFor(voice as ApsisVoice, macros)
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
         LIBRATION -> Libration.drumClassFor(voice as LibrationVoice, macros)
+        ACCORD -> Accord.drumClassFor(voice as AccordVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
         MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
@@ -5545,6 +5644,7 @@ private enum class Engine {
         APSIS -> ApsisPatch(name, voice as ApsisVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
         LIBRATION -> LibrationPatch(name, voice as LibrationVoice, macros)
+        ACCORD -> AccordPatch(name, voice as AccordVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)

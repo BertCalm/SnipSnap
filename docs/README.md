@@ -1,5 +1,12 @@
 # Which document to trust
 
+**Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
+BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
+Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)
+separates the approved Python direction from pending native tests, listening,
+phone performance and HOLD. The complete frozen reference bundle is retained
+under [`reference/accord`](../reference/accord/README.md).
+
 **Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
 
 **Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT

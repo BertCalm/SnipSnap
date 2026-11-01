@@ -35,6 +35,10 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
+            midi = 55, velocity = .6f, seed = Long.MIN_VALUE,
+            acousticProfile = AccordAcousticProfile.LONG_RING,
+            initializer = AccordInitializer.PROJECT_SINE_V1, sourceStartCycles = 1.25, sourceSeconds = 1.0),
         CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
