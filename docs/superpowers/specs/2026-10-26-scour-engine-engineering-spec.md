@@ -6,7 +6,8 @@ listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, th
 kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C)
 Status: R1 to R5 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1 to R4 auditions; the R5 page is published and not yet heard.
+renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
+on the R5 page).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
 voices as built are in the As built sections. The phone's synth picker and a docs page remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
@@ -593,7 +594,7 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
 | the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
 | BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
-| bank B now varies enough, and BEAM sounds like a struck girder | heard? | the R5 page |
+| bank B now varies enough, and BEAM sounds like a struck girder | heard: bank B varied enough, yes; bank C as it is, yes; BEAM into a drop, yes; "a struck girder" | the R5 page (As built: R5) |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -1134,6 +1135,15 @@ same round, the owner said yes, with its own bank C.
 - The hits within a bank are held apart from every other pad but not from each other: they are one line on
   four notes.
 - SHEET's lowest octave on a phone speaker or an MPC is still unheard.
+
+### Heard on the R5 page (the owner, 2026-11-01)
+
+| Question | Answer |
+|---|---|
+| Is bank B varied enough now? | yes |
+| Would you load bank C as it is? | yes |
+| Would you reach for BEAM into a drop? | yes |
+| What does BEAM sound like to you? | a struck girder |
 
 ### Why R5 is built this way
 
