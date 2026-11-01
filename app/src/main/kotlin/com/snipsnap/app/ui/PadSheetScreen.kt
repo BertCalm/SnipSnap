@@ -253,6 +253,8 @@ fun PadSheetScreen(
     /** The production native renderer; injectable so delayed/error previews can be exercised on a device. */
     aquariumRenderer: AquariumOfflineRenderer = AquariumPadRenderer,
     onOpenBox: (String?) -> Unit = {},
+    /** Told how many STRIKE FX layers an AUDITION rendered, before it plays them: a test's proof the button ran. */
+    onStrikeHeard: (Int) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -1722,6 +1724,7 @@ fun PadSheetScreen(
         strikeAuditionJob = appScope.launch {
             try {
                 val layers = offMain { KitWrites.mutex.withLock { m.strikeFxAudition(targetSlot, room, slap) } }
+                onStrikeHeard(layers.size)
                 for (layer in layers) {
                     audition(layer, level)
                     delay(1000)
@@ -3250,7 +3253,12 @@ fun PadSheetScreen(
         // Drawn instead of the sheet, as SpreadOverlay above is; Back and the
         // scrim cancel, only KEEP writes.
         val cancelReplace = { confirmStrikeReplace = null }
-        ReplaceLayersConfirmDialog(onCancel = cancelReplace, onConfirm = { confirmStrikeReplacement(kind) })
+        ReplaceLayersConfirmDialog(
+            text = if (kind == StrikeReplace.SOFT_HITS) Copy.SOFT_HITS_REPLACE_STRIKE_FX else Copy.STRIKE_FX_REPLACES_LAYERS,
+            busy = busy,
+            onCancel = cancelReplace,
+            onConfirm = { confirmStrikeReplacement(kind) },
+        )
         BackHandler(onBack = cancelReplace)
         return
     }
@@ -4394,7 +4402,7 @@ private fun StrikeFxSection(
 
 /** Asks before STRIKE FX and a pad's soft hits replace one another; modelled on `KitsScreen`'s KitDeleteConfirmDialog. */
 @Composable
-private fun ReplaceLayersConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+private fun ReplaceLayersConfirmDialog(text: String, busy: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -4413,10 +4421,10 @@ private fun ReplaceLayersConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Un
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText(Copy.STRIKE_FX_REPLACES_LAYERS, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText(text, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
-                ActionButton("KEEP", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onConfirm)
+                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("KEEP", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }
     }

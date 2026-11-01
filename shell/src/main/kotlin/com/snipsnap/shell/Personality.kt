@@ -1509,6 +1509,7 @@ object Copy {
     const val STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."
     const val STRIKE_FX_KEEPS_HISTORY = "THIS PAD'S RECIPE IS NOT A SYNTH OR CAPTURE RECIPE. STRIKE FX LEFT IT ALONE."
     const val STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. KEEP?"
+    const val SOFT_HITS_REPLACE_STRIKE_FX = "SOFT HITS REPLACE THIS PAD'S STRIKE FX BANK. CONTINUE?"
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     /**
      * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the

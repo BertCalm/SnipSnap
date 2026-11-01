@@ -55,6 +55,8 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val kitDirs = mutableListOf<File>()
     private var sheetShown by mutableStateOf(true)
+    private val toasts = mutableListOf<String>()
+    private val heard = mutableListOf<Int>()
 
     @After
     fun cleanUp() {
@@ -89,7 +91,8 @@ class StrikeFxSectionTest : ComposeScreenTest() {
                     backLabel = "◄ PADS",
                     onSlotChange = {},
                     onBack = {},
-                    onToast = {},
+                    onToast = { toasts += it },
+                    onStrikeHeard = { heard += it },
                     onNavigateTape = {},
                     onGrainField = {},
                     onSplice = {},
@@ -150,13 +153,10 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         val files = entry.dir.list()!!.sorted()
         show(entry)
         press("STRIKE FX AUDITION")
-        // The audition renders off the main thread; give it real time to finish and to fail, if it will.
-        val deadline = System.currentTimeMillis() + 3_000
-        while (System.currentTimeMillis() < deadline) {
-            compose.mainClock.advanceTimeByFrame()
-            compose.waitForIdle()
-            Thread.sleep(50)
-        }
+        // The audition renders off the main thread: wait for it to say it rendered, or fail.
+        waitFor("the audition to render its layers") { synchronized(heard) { heard.isNotEmpty() } || toasts.isNotEmpty() }
+        assertEquals("the audition rendered DRY, ROOM and ECHO", listOf(3), heard.toList())
+        assertEquals("no toast: nothing failed", emptyList<String>(), toasts.toList())
         assertArrayEquals("kit.json is the same bytes", before, File(entry.dir, KitStore.FILE_NAME).readBytes())
         assertEquals("no file came or went", files, entry.dir.list()!!.sorted())
         assertTrue(pad(entry).velocityLayers.isEmpty())
@@ -191,6 +191,41 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         press("KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.map { it.displayName } == listOf("DRY", "ROOM", "ECHO") }
         assertEquals(3, pad(entry).velocityLayers.size)
+    }
+
+    /** A kept bank on pad 1, then the SOFT HITS chip tapped: the dialog is up. */
+    private fun keptBankThenSoftHits(): KitShelf.Entry {
+        val entry = strikeKit()
+        show(entry)
+        press("STRIKE FX KEEP")
+        waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
+        press("SOFT HITS, ON")
+        compose.onNodeWithText(Copy.SOFT_HITS_REPLACE_STRIKE_FX, useUnmergedTree = true).assertExists()
+        return entry
+    }
+
+    @Test
+    fun soft_hits_toggle_on_a_strike_fx_pad_asks_first_and_cancel_leaves_it() {
+        val entry = keptBankThenSoftHits()
+        val kitBytes = File(entry.dir, KitStore.FILE_NAME).readBytes()
+        val sample = File(entry.dir, "kick1.wav").readBytes()
+        // The scrim and the button both answer to CANCEL; either one cancels.
+        compose.onAllNodesWithContentDescription("CANCEL", useUnmergedTree = true)[0].performSemanticsAction(SemanticsActions.OnClick)
+        pump()
+        compose.onNodeWithText(Copy.SOFT_HITS_REPLACE_STRIKE_FX, useUnmergedTree = true).assertDoesNotExist()
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), pad(entry).velocityLayers.map { it.displayName })
+        assertArrayEquals(kitBytes, File(entry.dir, KitStore.FILE_NAME).readBytes())
+        assertArrayEquals(sample, File(entry.dir, "kick1.wav").readBytes())
+    }
+
+    @Test
+    fun soft_hits_toggle_on_a_strike_fx_pad_confirm_swaps_the_bank_for_ghosts() {
+        val entry = keptBankThenSoftHits()
+        press("KEEP")
+        waitFor("the ghosts to land") { pad(entry).velocityLayers.let { it.isNotEmpty() && it.map { l -> l.displayName } != listOf("DRY", "ROOM", "ECHO") } }
+        val after = pad(entry)
+        assertTrue("ghost layers are on", after.velocityLayers.isNotEmpty())
+        assertTrue("no STRIKE FX bank in the recipe", !com.snipsnap.synth.StrikeFxBank.isStrikeFx(com.snipsnap.shell.Breed.recipeOf(after)))
     }
 
     @Test
