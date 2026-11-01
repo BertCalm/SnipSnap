@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -42,6 +43,8 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.ScannedChainEditor
+import com.snipsnap.shell.Scheme
 import com.snipsnap.synth.Draw
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.ScannedChain
@@ -62,6 +65,32 @@ private data class ScannedSource(val snip: Snip, val label: String, val truncate
 
 private const val SCANNED_SOURCE_MAX_SECONDS = 30f
 
+/** Edits arriving before the next composition must start from the preceding complete edit. */
+private class ScannedPatchEdit(var patch: ScannedChainPatch)
+
+/** Slider travel changes editor precision; recipes continue to store the physical macro value. */
+@Composable
+internal fun ScannedMacroSlider(
+    name: String,
+    value: Float,
+    fillColor: Color,
+    scheme: Scheme,
+    onValueChange: (Float) -> Unit,
+) {
+    MacroSlider(
+        label = name,
+        value = ScannedChainEditor.macroPosition(name, value),
+        fillColor = fillColor,
+        scheme = scheme,
+        readout = "${(value * 100).roundToInt()}",
+        onValueChange = { onValueChange(ScannedChainEditor.macroValue(name, it)) },
+    )
+}
+
+private fun scannedTimeReadout(seconds: Float): String = if (seconds < 1f) {
+    "${(seconds * 1000).roundToInt()} ms"
+} else String.format(Locale.ROOT, "%.2f s", seconds)
+
 /**
  * The fields outside SCANNED CHAIN's four physical macros. Each callback supplies a complete
  * patch, so changing a shape never loses the note, physical configuration or current controls.
@@ -76,8 +105,13 @@ internal fun ScannedShapeControls(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    val currentPatch by rememberUpdatedState(patch)
-    val changePatch by rememberUpdatedState(onPatchChanged)
+    val edit = remember { ScannedPatchEdit(patch) }
+    edit.patch = patch
+    val onChange by rememberUpdatedState(onPatchChanged)
+    fun changePatch(changed: ScannedChainPatch) {
+        edit.patch = changed
+        onChange(changed)
+    }
     var drawing by remember { mutableStateOf(false) }
     var pickingSource by remember { mutableStateOf(false) }
     var recalling by remember { mutableStateOf(false) }
@@ -123,7 +157,7 @@ internal fun ScannedShapeControls(
         if (patch.model == ScannedChain.LEGACY_MODEL) {
             TapeText("ORIGINAL CONTROL RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
             LabButton("USE UPDATED CONTROLS", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                changePatch(currentPatch.copy(model = ScannedChain.MODEL_VERSION))
+                changePatch(edit.patch.copy(model = ScannedChain.MODEL_VERSION))
             }
             TapeText(
                 "Keeps this source and settings with a stronger BEND and source-aware BLOOM.",
@@ -143,7 +177,7 @@ internal fun ScannedShapeControls(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             LabButton("FACTORY", scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
                 error = null
-                changePatch(currentPatch.copy(shape = ScannedChainShape.factory(currentPatch.voice)))
+                changePatch(edit.patch.copy(shape = ScannedChainShape.factory(edit.patch.voice)))
             }
             LabButton("DRAW", scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
                 error = null
@@ -167,22 +201,58 @@ internal fun ScannedShapeControls(
         MacroSlider(
             label = "ROOT", value = patch.midi.toFloat(), valueRange = ScannedChain.MIDI_MIN.toFloat()..ScannedChain.MIDI_MAX.toFloat(),
             fillColor = scheme.amber.tape, scheme = scheme, readout = Scales.nameOf(patch.midi),
-            onValueChange = { changePatch(currentPatch.copy(midi = it.roundToInt().coerceIn(ScannedChain.MIDI_MIN, ScannedChain.MIDI_MAX))) },
+            onValueChange = { changePatch(edit.patch.copy(midi = it.roundToInt().coerceIn(ScannedChain.MIDI_MIN, ScannedChain.MIDI_MAX))) },
         )
         MacroSlider(
             label = "VELOCITY", value = patch.velocity, fillColor = scheme.amber.tape, scheme = scheme,
-            onValueChange = { changePatch(currentPatch.copy(velocity = it.coerceIn(0f, 1f))) },
+            onValueChange = { changePatch(edit.patch.copy(velocity = it.coerceIn(0f, 1f))) },
         )
         MacroSlider(
             label = "LENGTH", value = patch.config.seconds, valueRange = .25f..4f,
             fillColor = scheme.amber.tape, scheme = scheme,
             readout = String.format(Locale.ROOT, "%.2f s", patch.config.seconds),
-            onValueChange = { changePatch(currentPatch.copy(config = currentPatch.config.copy(seconds = it.coerceIn(.25f, 4f)))) },
+            onValueChange = { changePatch(edit.patch.copy(config = edit.patch.config.copy(seconds = it.coerceIn(.25f, 4f)))) },
         )
         if (recallable.isNotEmpty()) {
             LabButton("RECALL SCANNED PAD ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                 recalling = true
             }
+        }
+        MacroSlider(
+            label = "ATTACK", value = ScannedChainEditor.attackPosition(patch.config.attackSeconds),
+            fillColor = scheme.amber.tape, scheme = scheme,
+            readout = scannedTimeReadout(patch.config.attackSeconds), readoutWidth = 66.dp,
+            onValueChange = {
+                changePatch(edit.patch.copy(config = edit.patch.config.copy(attackSeconds = ScannedChainEditor.attackSeconds(it))))
+            },
+        )
+        MacroSlider(
+            label = "RELEASE", value = ScannedChainEditor.releasePosition(patch.config.releaseSeconds),
+            fillColor = scheme.amber.tape, scheme = scheme,
+            readout = scannedTimeReadout(patch.config.releaseSeconds), readoutWidth = 66.dp,
+            onValueChange = {
+                changePatch(edit.patch.copy(config = edit.patch.config.copy(releaseSeconds = ScannedChainEditor.releaseSeconds(it))))
+            },
+        )
+        TapeText(
+            "MOTION at 0 freezes the shape. DAMP settles movement, not volume. BEND changes stiffness, not the played note.",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
+        )
+        TapeText(
+            "BLOOM develops the body later. Low MOTION, short LENGTH or long RELEASE can make it subtle.",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
+        )
+        val controls = ScannedChain.defaults(patch.voice) + patch.macros
+        if (controls.getValue("MOTION") == 0f) {
+            TapeText(
+                "Shape frozen: raise MOTION to hear DAMP, BEND and BLOOM change its movement.",
+                TapeType.pixelSmall, scheme.amber.tape, maxLines = 3,
+            )
+        } else if (controls.getValue("BLOOM") > 0f && patch.config.seconds - patch.config.releaseSeconds < .5f) {
+            TapeText(
+                "BLOOM has little time to build. Try a longer LENGTH or shorter RELEASE.",
+                TapeType.pixelSmall, scheme.amber.tape, maxLines = 3,
+            )
         }
     }
 
@@ -190,7 +260,7 @@ internal fun ScannedShapeControls(
         ScannedDrawDialog(
             initial = points,
             onUse = { shape ->
-                changePatch(currentPatch.copy(shape = shape))
+                changePatch(edit.patch.copy(shape = shape))
                 drawing = false
             },
             onCancel = { drawing = false },
@@ -224,7 +294,7 @@ internal fun ScannedShapeControls(
                             val shape = offMain(Dispatchers.Default) {
                                 ScannedChainShape.fromSample(loaded.snip, startFrame, mode, loaded.label)
                             }
-                            changePatch(currentPatch.copy(shape = shape))
+                            changePatch(edit.patch.copy(shape = shape))
                             source = null
                         } catch (cancelled: CancellationException) {
                             throw cancelled

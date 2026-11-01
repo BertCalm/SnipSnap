@@ -37,8 +37,8 @@ enum class PedalSide(val id: String) {
  * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
  * first board, authored as a hypothesis for its own gate; FORGE, the
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
- * spec and gated on 2026-10-28. Seven pedals do not fit row seven's six
- * chips, so the sheet draws a slate: five of the gated pedals on the row,
+ * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01.
+ * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
  */
@@ -140,6 +140,10 @@ object Pedals {
         // not movable. Its sound passed its gate on 2026-10-28 (docs/superpowers/specs/2026-10-22-delay-head-design.md),
         // and it is on the slate's default row (docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
         Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = true),
+        // A drum room: the `roomed` character, ROOM at its defaults. After the amp and last, where the rack puts the room
+        // everything is heard in; not movable, since a room in front of an amp is not a place. Gated on 2026-11-01
+        // (docs/superpowers/specs/2026-10-31-room-section-design-brief.md). Behind MORE: the default row is the owner's five.
+        Entry("ROOM", "roomed", character("roomed"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

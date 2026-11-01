@@ -88,6 +88,49 @@ object SynthKits {
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
     /**
+     * Sixteen dry finite NACRE notes for the MPC listening trial. A01–A08 play
+     * Pearl Close up C minor pentatonic from C3 at medium excitation. A09–A10
+     * compare Coral Reply and Kelp Passage at the same note and strike; A11–A16
+     * supply each starting sound's soft and hard strikes at C3.
+     * Native note and excitation are rendered into each full six-second sample.
+     * Hardware velocity then changes playback level, not the saved excitation.
+     * The source stays TONAL and plays once: a long finite tail is not a loop.
+     */
+    fun nacre(): List<ArrangedPad?> {
+        val presets = NacrePresets.all().associateBy { it.name }
+        fun note(name: String, midi: Int, velocity: Float): ArrangedPad {
+            val original = presets.getValue(name)
+            val strike = when (velocity) {
+                .30f -> "Soft"
+                .65f -> "Medium"
+                1f -> "Hard"
+                else -> error("NACRE starter strike is not authored: $velocity")
+            }
+            val displayName = "$name ${Scales.nameOf(midi)} $strike"
+            val patch = original.copy(name = displayName, midi = midi, velocity = velocity)
+            return pad(patch, Nacre.drumClassFor(patch.voice, patch.macros)).copy(
+                displayName = displayName,
+                oneShot = true,
+                source = mapOf(
+                    "engine" to patch.engine,
+                    "voice" to patch.voiceName,
+                    "preset" to original.name,
+                    "pitchMidi" to patch.midi.toString(),
+                    "velocity" to patch.velocity.toString(),
+                    "seed" to patch.seed.toString(),
+                    "model" to patch.model.toString(),
+                ),
+            )
+        }
+        return PENTATONIC.take(8).map { note("Pearl Close", 48 + it, .65f) } + listOf(
+            note("Coral Reply", 48, .65f), note("Kelp Passage", 48, .65f),
+            note("Pearl Close", 48, .30f), note("Pearl Close", 48, 1f),
+            note("Coral Reply", 48, .30f), note("Coral Reply", 48, 1f),
+            note("Kelp Passage", 48, .30f), note("Kelp Passage", 48, 1f),
+        )
+    }
+
+    /**
      * Sixteen dry OHM notes from the five accepted model-2 encounters. A01–A08
      * play Solo up C minor pentatonic from C3; the other pads compare the four
      * relationships at C4, three low answers at C3 and a Gather at C5.
@@ -1225,16 +1268,17 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD, BUBBLE, BREATH, FLICKER and RATTLE each speak at C3 and C4.
-     * The remaining four pads compare held BUBBLE, BREATH, FLICKER and RATTLE.
+     * PLUCK, WOOD, BUBBLE, BREATH and FLICKER retain their C3/C4 pairs.
+     * RATTLE's Warm Wire, Hollow Reed and Rubbed Glass each speak at C4,
+     * followed by held BUBBLE, BREATH and warm-wire RATTLE.
      * Each voice's native-root default is its exact library patch. This
-     * sixteen-pad selection samples the twenty-five-recipe library with ten
-     * exact library recipes and six transposed default variations;
+     * sixteen-pad selection samples the twenty-seven-recipe library with eleven
+     * exact library recipes and five transposed default variations;
      * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1245,10 +1289,13 @@ object SynthKits {
             }
         }
         val recipeNames = listOf(
-            "Held Bubbles", "Held Breath", "Held Flicker", "Held Rattle",
+            "Warm Wire", "Hollow Reed", "Rubbed Glass",
+            "Held Bubbles", "Held Breath", "Held Rattle",
         )
         val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
-        return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        return (notes + recipes).map { patch ->
+            pad(patch, Wick.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+        }
     }
 
     /**
