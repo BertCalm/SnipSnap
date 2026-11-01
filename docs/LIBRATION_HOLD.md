@@ -182,11 +182,20 @@ zero skipped. That baseline includes default revision
 `95b53d655e3d29a3d222fdeeb462b49d677ac863`; Gradle reused unchanged module results.
 
 The current integration includes default `7cb8f34507c664ad671b952f93934c0bc53265c5`.
-At `7d137063985c7f7dbb6c14cc0afada6508e9172d`, 198 focused JVM checks across five
-modules pass, covering every Libration test, saved-preset promotion, the
-sample player and shared phone/MPC serialization. The five Libration
-rendering files still match the complete baseline. Full current-head
-[PR CI](https://github.com/BertCalm/SnipSnap/pull/812) remains a separate gate.
+Its complete diagnostic at `b4793e09017a7f4d6ca13f739e202da4e4213e12` ran 7,975
+tests: five failures, zero errors and zero skipped. Those failures identified
+MERIDIAN's authored range in two export paths, a sidecar snapshot predating
+the trigger field, stale starter counts and a late pitch-probe window for
+KEEL's added BELLY voice. This diagnostic was not a passing full suite.
+
+At `5d0358aa97ddbaba1924157217e0c621b6fb1d71`, all 550 repair checks across six
+modules pass, including every failed assertion above, all Libration tests,
+saved-preset promotion, shared export, sample-player contracts and the complete
+262-test CLI suite. KEEL retains all nine voice/note cells, its 50-cent limit
+and its confidence floor; the probe now reads the active post-attack body.
+All 25 audition provenance files still match the verified render source
+`7d137063985c7f7dbb6c14cc0afada6508e9172d`. Full regression for the final revision
+runs in [PR CI](https://github.com/BertCalm/SnipSnap/pull/812).
 
 The package exporter now explicitly retains the authored clipped range and
 declares NoteOn in legacy XPM as well as native MPC 3. Before opting out of
@@ -198,10 +207,16 @@ reuses the exported file path for its second read.
 Both `:app:assembleDebug` and `:app:assembleDebugAndroidTest` pass from the
 current source above with SDK 35 and JDK 21; the app v2 signature verifies.
 The STRIKE FX APK assembles, Crease Study Kotlin compiles, and its five host
-unit tests pass. All six native CTest executables pass with assertions
-enabled. Source inputs still match their build snapshot. Device UI tests
-compiled but were not executed locally; no phone render timing or new HOLD
-hardware acceptance is claimed.
+unit tests pass. Grouping preset state and draft/cache ownership reduces the
+actual SYNTH debug method from 263 registers to 245, below the budget implicated
+by the emulator's verifier rejection. The Confluence test scopes ROOM to its
+gathering card because STRIKE FX exposes another ROOM control. Device UI tests
+compile; the emulator job checks runtime behavior.
+
+All six native CTest executables pass with assertions enabled at the unchanged
+native source from `7d137063985c7f7dbb6c14cc0afada6508e9172d`. Source inputs match
+their build snapshots. Device UI tests were not executed locally; no phone
+render timing or new HOLD hardware acceptance is claimed.
 
 ## Listening and device checks
 
@@ -235,8 +250,10 @@ action. This is a new check, separate from the accepted finite instrument.
   Kotlin focused checks pass actual phase/state/preceding-and-following-cycle
   closure, 4×/16× high-note spectral agreement, JSON guards, cancellation,
   bounded-cache identity, dual-MPC loop metadata and real sample-player release.
-  The complete baseline passes 7,505 tests; current integration passes 198
-  focused JVM checks, both Android APK builds and six native executables.
+  The earlier complete baseline passes 7,505 tests. The later 7,975-test
+  diagnostic found five integration regressions; all five repaired assertions
+  pass in the 550-check repair suite. Both Android APK builds and five Study
+  host checks pass; the six native executables cover unchanged native source.
   On-device UI execution and new HOLD listening remain pending.
 - Proposed: musical usefulness of repeating the readout and the selected
   three-period settling budget outside the measured configuration set.
