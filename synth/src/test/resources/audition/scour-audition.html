@@ -65,7 +65,8 @@
   const search = document.getElementById('search');
   const audio = document.getElementById('audio');
   const repeat = document.getElementById('repeat');
-  const notesKey = 'snipsnap_scour_r2_listening';
+  // One store per round, so a regenerated page never shows or exports an earlier round's notes as its own.
+  const notesKey = 'snipsnap_scour_listening_' + manifest.auditionRevision;
   let notes = {};
   try { notes = JSON.parse(localStorage.getItem(notesKey) || '{}'); } catch (_) { /* Notes remain usable in memory. */ }
   let playingCard = null;
