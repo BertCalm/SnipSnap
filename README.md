@@ -172,13 +172,17 @@ are available outside the factory roster and phone picker. Run
 record the aligned Kotlin listening approval and keep MATCH, tail, HOLD and phone
 acceptance separate. Model-1 saved patches retain their original sound.
 
-CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
-and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
-contact-aligned playback, a 243-point middle-control check and a 92-clip audition
-are available outside the factory roster and phone picker. The earlier six-voice
-recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
-new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
-provides the next listening gate. HOLD loops and the other four voices are deferred.
+CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, and the
+new TUMBLE a tightening cascade of real rebounds. Model 3 adds TUMBLE's passive
+flight/contact law while preserving the earlier two voices. Each has powered
+HOLD, measured against a real preceding segment. The
+[three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/)
+compares one-shots/HOLD at C3–C5, common controls and dry musical roles. Earlier
+auditions and original six-voice recordings remain available.
+[Implementation notes](docs/CAIRN_TUMBLE.md) explain the new voice; the
+[KNOCK/ANSWER foundation](docs/CAIRN.md) records their mechanics and compatibility.
+Factory expansion, the remaining voices, phone/MPC timing and the Android picker
+remain deferred.
 
 APSIS's first listening prototype is a pitched center with independently
 orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
@@ -393,7 +397,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 56 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 57 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -620,14 +624,14 @@ ranks, immediate keying, electronic key-click, vibrato and transistor drive.
 Its fuller body adds a rounded same-pitch foundation while retaining the opening
 click. The sustain revision keeps subtle ensemble movement in short held loops
 and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
-Ten starting settings, saved recipes, native velocity and CLI rendering share
+Eleven starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
-opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
-preset with stronger bank motion and vibrato and a nine-zone MPC download. The
-earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
-phone/MPC listening of Rich Ensemble is pending;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/harmonics/)
+opens with the owner's selected Octave Keys preset: stronger octave registration
+with calmer ensemble motion, plus a matching nine-zone MPC download. The earlier
+Rich Ensemble, R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of the Octave Keys instrument is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
@@ -658,6 +662,14 @@ Saved model-1 and model-2 recipes retain their sound. Run
 `./gradlew :synth:generateShoalMaterialAudition` for the playable comparison, or
 `generateShoalAudition` for the preserved model-2 listening matrix.
 [Implementation notes](docs/SHOAL.md) describe the material and loop contracts.
+
+RIME projects a finite Koch contour through two contact pickups into a resonating
+body. LOOP, GLINT and VESSEL cover bass, keyed strikes and unfolding textures.
+The nine model-4 recipes retain the accepted sound direction. Model 5 adds HOLD:
+finite gate extension below 85%, periodic sustain above it, and nine-root MPC
+keygroups that retain the contour opening. The picker exposes note, velocity,
+gate and all six controls, with complete recipe recall. Additional voices and
+the planned expanded bank await the original specification. See [RIME.md](docs/RIME.md).
 
 LIBRATION turns precomputed rotating-frame three-body trajectories into wood,
 glass and departing tonal gestures. GATHER, TWINS and DEPARTURE share REGION,
@@ -990,8 +1002,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION and GRAINS round out the lineup —
-66 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME and GRAINS round out the lineup —
+68 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1205,9 +1217,13 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. BORE, ARCO
-and SCOUR have preset rosters, so `snipsnap synth` renders them.
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
+SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+
+EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
+regenerable audition. It remains outside the picker and factory presets.
+
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
 and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and
 refined factory recipes. BALLAST keeps its bass and saved GLINT identity; its
