@@ -65,6 +65,17 @@ class KeelTest {
      */
     private val MAX_STILL_DIP_DB = 1.0
 
+    /**
+     * The root test's late tail must be a clear pitch, not only a near one. NSDF at a lag is the share of the window's
+     * energy that repeats at that lag: a repeating part of power P beside a part that does not repeat, of power Q,
+     * reads P / (P + Q). At .5 the repeating note is at least as strong as everything else in the tail; Pitch.kt
+     * draws the same line ("Below ~0.5 is a guess"). The late check used to ask Pitch.detect for .3; that detector
+     * divides by the whole window's energy, so it reads a little under this one, and .5 here asks more. Every voice
+     * reads .92 to .99 at MIDI 30, 36 and 42. REDUCE's MIDI 36 tail under white noise at four times its power still
+     * reads within 50 cents of the note, at a clarity of .18.
+     */
+    private val MIN_LATE_CLARITY = .5
+
     private fun render(voice: KeelVoice, macros: Map<String, Float> = emptyMap(), midi: Int = 36, velocity: Float = 1f): Snip =
         Keel.render(voice, harness + macros, midi, velocity)
 
@@ -83,7 +94,18 @@ class KeelTest {
      * parabolic refinement, 25 Hz floor). [Pitch.detect] is the house reader and is used wherever the pitch is steady;
      * it has a 40 Hz floor and returns null on a gliding window, which the SLIDE probe needs to read.
      */
-    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double {
+    private fun nsdfHz(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): Double =
+        readNsdf(x, fromSeconds, seconds, loHz, hiHz).hz
+
+    /**
+     * What [readNsdf] found: the pitch; the clarity, the NSDF value at the chosen lag (1 is a window that repeats
+     * exactly at that lag); and whether that lag passed the peak rule, rather than being the strongest lag taken
+     * when no peak did.
+     */
+    private class NsdfReading(val hz: Double, val clarity: Double, val qualifying: Boolean)
+
+    /** [nsdfHz]'s reader, keeping what it chose (see [NsdfReading]). */
+    private fun readNsdf(x: FloatArray, fromSeconds: Double, seconds: Double, loHz: Double = 25.0, hiHz: Double = 1000.0): NsdfReading {
         val first = (fromSeconds * rate).toInt()
         val n = minOf((seconds * rate).toInt(), x.size - first)
         val seg = DoubleArray(n) { x[first + it].toDouble() }
@@ -100,11 +122,11 @@ class KeelTest {
             nsdf[tau] = 2 * acf / max(cumulative[n - tau] + cumulative[n] - cumulative[tau], 1e-12)
         }
         val best = (minLag..maxLag).maxOf { nsdf[it] }
-        var lag = (minLag + 1 until maxLag).firstOrNull { nsdf[it] > nsdf[it - 1] && nsdf[it] >= nsdf[it + 1] && nsdf[it] >= 0.8 * best }
-            ?: (minLag..maxLag).maxBy { nsdf[it] }
+        val peak = (minLag + 1 until maxLag).firstOrNull { nsdf[it] > nsdf[it - 1] && nsdf[it] >= nsdf[it + 1] && nsdf[it] >= 0.8 * best }
+        val lag = peak ?: (minLag..maxLag).maxBy { nsdf[it] }
         val curve = nsdf[lag - 1] - 2 * nsdf[lag] + nsdf[lag + 1]
         val refined = lag + if (abs(curve) > 1e-12) 0.5 * (nsdf[lag - 1] - nsdf[lag + 1]) / curve else 0.0
-        return rate / refined
+        return NsdfReading(rate / refined, nsdf[lag], qualifying = peak != null)
     }
 
     // ---- measurement -----------------------------------------------------------------------------------------
@@ -247,7 +269,8 @@ class KeelTest {
             val snip = render(voice, mapOf("WEIGHT" to 0f), midi)
             // BELLY's detuned bite changes the short-lag correlation as it fades.
             // Read the house detector while the body is strong, then independently
-            // check the late tail with overlap-normalized NSDF rather than dropping it.
+            // check the late tail with overlap-normalized NSDF rather than dropping it:
+            // a peak that passes the reader's own rule, clear enough to be a pitch, on the root.
             val from = .15f
             val window = .25f
             assertTrue((from + window) * snip.sampleRate <= snip.frameCount,
@@ -257,9 +280,13 @@ class KeelTest {
             println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
             assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")
             assertTrue(estimate.confidence >= .3f, "$voice midi $midi confidence ${estimate.confidence}")
-            val late = cents(nsdfHz(snip.samples, .35, .20), Keys.midiHz(midi).toDouble())
-            println("KEEL late root $voice midi $midi WEIGHT 0: ${f(late, 1)} cents (NSDF)")
-            assertTrue(abs(late) < 50.0, "$voice midi $midi late tail reads ${f(late, 1)} cents from the root")
+            val late = readNsdf(snip.samples, .35, .20)
+            val lateCents = cents(late.hz, Keys.midiHz(midi).toDouble())
+            println("KEEL late root $voice midi $midi WEIGHT 0: ${f(lateCents, 1)} cents (NSDF, clarity ${f(late.clarity, 3)}, " +
+                "${if (late.qualifying) "a qualifying peak" else "no peak qualified, the strongest lag"})")
+            assertTrue(late.qualifying, "$voice midi $midi late tail has no NSDF peak within 0.8 of its best, only the strongest lag")
+            assertTrue(late.clarity >= MIN_LATE_CLARITY, "$voice midi $midi late tail clarity ${f(late.clarity, 3)} is under $MIN_LATE_CLARITY")
+            assertTrue(abs(lateCents) < 50.0, "$voice midi $midi late tail reads ${f(lateCents, 1)} cents from the root")
         }
         // The default WEIGHT .4 at MIDI 36 is the harness's own row.
         for (voice in voices) println("KEEL root $voice midi 36 WEIGHT .4: ${f(rootCents(render(voice), 36) ?: Double.NaN, 1)} cents")
