@@ -351,6 +351,11 @@ class PadSheetTest {
         linkedMapOf<String, JsonValue>("era" to JsonValue.Str("tape"), "amount" to JsonValue.Num(0.5)),
     )
 
+    /** What `desamplePad` and a plain synth send write: a patch and nothing riding it. */
+    private val PATCH: JsonValue.Obj = PadRecipe(
+        patch = com.snipsnap.synth.ThumpPatch("Kick", com.snipsnap.synth.ThumpVoice.KICK, com.snipsnap.synth.Thump.defaults(com.snipsnap.synth.ThumpVoice.KICK)),
+    ).toJsonValue()
+
     @Test
     fun `NONE is live over a treatment and dead over an untreated pad - every other chip is always live`() {
         assertTrue(PadSheet.tappable(PadSheet.NONE, isNoneState = false), "NONE is the un-treat when there is one")
@@ -416,10 +421,11 @@ class PadSheetTest {
 
     /**
      * The pad-sheet half of when THE BIN hides BACK on a kept row (the owner's call, 2026-10-31):
-     * where the pad's own sheet can give that entry back, through NONE over a card treatment or
-     * MUTATE's or OUTSIDE's UNDO for the main file. A SPLICE, a DE-SAMPLE or anything else with no
-     * door on the sheet answers false here, because BACK is then its only way back in the app. Rows
-     * under a print lose BACK by the other half (`KitBuilderModel.filesUnderPrints`, BoardSheetTest).
+     * where the pad's own sheet can give that entry back, through NONE over a card treatment, or
+     * MUTATE's, OUTSIDE's, UNDO SPLICE's or DE-SAMPLE's UNDO for the main file (2026-11-01).
+     * Anything else with no door on the sheet answers false here, because BACK is then its only way
+     * back in the app. Rows under a print lose BACK by the other half
+     * (`KitBuilderModel.filesUnderPrints`, BoardSheetTest).
      */
     @Test
     fun `a pad has its own way back only through a door its sheet really has`() {
@@ -452,10 +458,99 @@ class PadSheetTest {
         assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
 
         val splice = obj("""{"splice":{"crossfaded":true}}""")
-        assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE has no door on the sheet: BACK stays")
-        val patch = obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}}}""")
+        assertTrue(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE: UNDO SPLICE")
+        val splicedLayers = treated(splice, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertTrue(PadSheet.hasOwnWayBack(splicedLayers, main, both), "soft hits after the splice: SOFT HITS off, then UNDO SPLICE")
+        assertFalse(PadSheet.hasOwnWayBack(splicedLayers, soft, both), "UNDO SPLICE restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, setOf(soft)), "nothing binned under the main file, nothing to give back")
+        val mutateSplice = obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutateSplice), main, both), "MUTATE's SPLICE move: MUTATE's own UNDO")
+
+        val patch = PATCH
         val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
-        assertFalse(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE has no door on the sheet: BACK stays")
+        assertTrue(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE: its UNDO")
+        val desampledLayers = treated(patch, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127))).copy(source = mapOf("desampled" to "0.12"))
+        assertTrue(PadSheet.hasOwnWayBack(desampledLayers, main, both), "soft hits after the de-sample: SOFT HITS off, then its UNDO")
+        assertFalse(PadSheet.hasOwnWayBack(desampledLayers, soft, both), "a DE-SAMPLE's UNDO restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(treated(patch), main, both), "a plain synth send re-renders from its patch: no door reads the bin")
+        val withFx = PadRecipe.fromJsonValue(patch).copy(fx = Treatments.chain("washed")).toJsonValue()
+        assertFalse(
+            PadSheet.hasOwnWayBack(desampled.copy(recipe = withFx), main, both),
+            "a chain rides the de-sample's patch: no card reads it and the de-sample is not on top, so BACK stays",
+        )
+        val withPedals = PadRecipe.fromJsonValue(patch)
+            .copy(pedals = com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f)))).toJsonValue()
+        assertEquals(PadSheet.UnTreat.READY, PadSheet.unTreatState(desampled.copy(recipe = withPedals), both), "test setup: NONE reads the pedals")
+        assertTrue(PadSheet.hasOwnWayBack(desampled.copy(recipe = withPedals), main, both), "pedals over a de-sample: NONE")
         assertFalse(PadSheet.hasOwnWayBack(treated(null), main, both), "an untreated pad has nothing to undo")
+    }
+
+    /** TAPE SPLICE's recipe is the top-level `"splice"` key `splicePad` writes, never MUTATE's SPLICE move. */
+    @Test
+    fun `a pad is spliced only by TAPE SPLICE's own top-level key`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        assertTrue(PadSheet.isSpliced(obj("""{"splice":{"crossfaded":false}}""")))
+        assertFalse(PadSheet.isSpliced(obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")), "MUTATE's SPLICE move has its own UNDO")
+        assertFalse(PadSheet.isSpliced(obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}},"note":"splice"}""")), "the word as a value is not the key")
+        assertFalse(PadSheet.isSpliced(ERA))
+        assertFalse(PadSheet.isSpliced(null))
+    }
+
+    /**
+     * A DE-SAMPLE is on top when its stamp is there and the recipe is exactly what `desamplePad`
+     * writes: a patch, and nothing riding it. A print over it, pedals, a chain, a treatment or a
+     * layer bank each mean another door's undo comes first.
+     */
+    @Test
+    fun `a pad is de-sampled only while the bare patch DE-SAMPLE wrote is on top`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        val patchJson = PATCH
+        val bare = PadRecipe.fromJsonValue(patchJson)
+        val stamp = mapOf("desampled" to "0.12")
+        fun pad(recipe: JsonValue.Obj?) = treated(recipe).copy(source = stamp)
+
+        assertTrue(PadSheet.isDesampled(pad(patchJson)))
+        assertFalse(PadSheet.isDesampled(treated(patchJson)), "no stamp: a synth send, not a de-sample")
+        assertFalse(PadSheet.isDesampled(pad(null)), "a stamp with no patch under it")
+        assertFalse(PadSheet.isDesampled(pad(bare.copy(fx = Treatments.chain("washed")).toJsonValue())), "a chain rides it")
+        assertFalse(
+            PadSheet.isDesampled(pad(bare.copy(fx = Treatments.chain("crushed"), treatment = "crushed", amount = 1f).toJsonValue())),
+            "a treatment rides it",
+        )
+        assertFalse(
+            PadSheet.isDesampled(pad(bare.copy(pedals = com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f)))).toJsonValue())),
+            "pedals ride it: NONE first",
+        )
+        assertFalse(
+            PadSheet.isDesampled(pad(bare.copy(layers = listOf(com.snipsnap.synth.LayerRecipe("DRY"))).toJsonValue())),
+            "a layer bank rides it",
+        )
+        assertFalse(PadSheet.isDesampled(pad(ERA)), "an era over it")
+        val printed = JsonValue.Obj(patchJson.entries + ("boardPad" to JsonValue.Num(1.0)))
+        assertFalse(PadSheet.isDesampled(pad(printed)), "a print marker, even on a recipe that still reads as the patch")
+    }
+
+    /**
+     * The two new UNDOs refuse from most final to least, so nobody is told to turn SOFT HITS off
+     * and is then refused anyway: not on top, then not in the bin, then layered.
+     */
+    @Test
+    fun `UNDO SPLICE and DE-SAMPLE's UNDO refuse in order, most final first`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        val layers = listOf(KitLayer("a1_kick_soft.wav", 1, 63), KitLayer("a1_kick.wav", 64, 127))
+        val splice = obj("""{"splice":{"crossfaded":true}}""")
+        assertEquals(Copy.SPLICE_UNDO_NOTHING, PadSheet.spliceUndoRefusal(treated(ERA, layers), binned = false))
+        assertEquals(Copy.SPLICE_UNDO_NOT_BINNED, PadSheet.spliceUndoRefusal(treated(splice, layers), binned = false))
+        assertEquals(Copy.UNDO_LAYERED, PadSheet.spliceUndoRefusal(treated(splice, layers), binned = true))
+        assertNull(PadSheet.spliceUndoRefusal(treated(splice), binned = true))
+
+        val patch = PATCH
+        val stamp = mapOf("desampled" to "0.12")
+        assertEquals(Copy.DESAMPLE_UNDO_NOTHING, PadSheet.desampleUndoRefusal(treated(patch, layers), binned = false))
+        assertEquals(Copy.DESAMPLE_UNDO_NOT_BINNED, PadSheet.desampleUndoRefusal(treated(patch, layers).copy(source = stamp), binned = false))
+        assertEquals(Copy.UNDO_LAYERED, PadSheet.desampleUndoRefusal(treated(patch, layers).copy(source = stamp), binned = true))
+        assertNull(PadSheet.desampleUndoRefusal(treated(patch).copy(source = stamp), binned = true))
+        assertEquals(Copy.DESAMPLE_UNDO_NOTHING, PadSheet.desampleUndoRefusal(treated(splice).copy(source = stamp), binned = true), "a splice over the de-sample")
+        assertEquals(Copy.SPLICE_UNDO_NOTHING, PadSheet.spliceUndoRefusal(treated(patch).copy(source = stamp), binned = true), "a de-sample is not a splice")
     }
 }

@@ -408,9 +408,10 @@ fun PadSheetScreen(
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     // The pad's newest bin entry, the one its undo restores (`refreshPadAudio`).
     // `binDaysLeft` is non-null exactly when the bin holds one, which is all the
-    // six "is it in the bin?" checks below read. `binKept`: a pad still needs that
-    // entry, so no sweep takes it and the provenance line says so instead of a
-    // count; `binDaysLeft` is then 0 and never drawn.
+    // eight "is it in the bin?" checks below read (the UNDO doors' handlers ask
+    // it too). `binKept`: a pad still needs that entry, so no sweep takes it
+    // and the provenance line says so instead of a count; `binDaysLeft` is
+    // then 0 and never drawn.
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
     var binKept by remember(model) { mutableStateOf(false) }
 
@@ -739,7 +740,8 @@ fun PadSheetScreen(
      * Bug fix (tab-switch data loss): launched into [appScope], not this
      * composable's own `scope` — same fix, same reason, as [applySmear]'s
      * own KDoc: this is a real audio-rewriting op (GHOSTS/EJECT/UNDO/
-     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/PASTE), so a cancelled `scope`
+     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/UNDO SPLICE/DE-SAMPLE's UNDO/PASTE),
+     * so a cancelled `scope`
      * could abandon the write before it starts, or let it land on disk
      * while losing `onKitUpdated`/the toast — this function's own opening
      * line. [onSuccess] is a generic callback most callers only use to
@@ -2093,6 +2095,46 @@ fun PadSheetScreen(
             return
         }
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+    }
+
+    /**
+     * UNDO SPLICE, MUTATE's UNDO for TAPE SPLICE: the take the splice binned
+     * comes back and the splice's recipe comes off
+     * ([KitBuilderModel.unsplicePad]). With nothing to undo (no TAPE SPLICE on
+     * the live pad, a print over it, no earlier take in the bin, or soft hits
+     * on) the button is dimmed, not disabled, and a tap says which
+     * ([PadSheet.spliceUndoRefusal]), asked of the live pad, never the one
+     * under a print.
+     */
+    fun onUnsplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.spliceUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNSPLICED) }) { mm -> mm.unsplicePad(slot) }
+    }
+
+    /**
+     * DE-SAMPLE's UNDO, in the MAKE box's DE-SAMPLE row: the take the
+     * de-sample binned comes back, and the patch and the `desampled` stamp
+     * come off ([KitBuilderModel.undesamplePad]). Dimmed, not disabled, when
+     * the de-sample is not what sits on top of the live pad (pedals riding it
+     * - NONE comes first - a later replacement, a print), when the bin holds
+     * no earlier take, or with soft hits on; a tap says which
+     * ([PadSheet.desampleUndoRefusal]).
+     */
+    fun onUndesample() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.desampleUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
@@ -3849,7 +3891,21 @@ fun PadSheetScreen(
 
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            // The header row MUTATE's and OUTSIDE's cards draw, with DE-SAMPLE's own
+            // UNDO. Dimmed, not disabled, when it cannot act: a tap says why
+            // (onUndesample). Named in full for TalkBack: MAKE holds five doors, so a
+            // bare UNDO would not say whose it is.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                ActionButton(
+                    "UNDO",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null,
+                    accessibilityLabel = "UNDO DE-SAMPLE",
+                    onClick = ::onUndesample,
+                )
+            }
             val away = pad.source["desampled"]
             TapeText(
                 if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
@@ -3938,14 +3994,31 @@ fun PadSheetScreen(
             // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
             // pad's file has at least one recoverable prior take," the
             // same signal `refreshPadAudio` computes for the undo buttons.
-            ActionButton(
-                "SPLICE ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = binDaysLeft == null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onSplice(slot) },
-            )
+            //
+            // UNDO SPLICE shares the row, half each (a weight inside a Row,
+            // not the Column trap GRAIN ▸'s comment describes). Always drawn
+            // and dimmed when it cannot act, so the sheet does not rearrange
+            // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
+            // nothing. Its own label, not a bare UNDO: this foot is always
+            // composed, so a second "UNDO" would sit beside the open box's.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton(
+                    "SPLICE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = binDaysLeft == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onSplice(slot) },
+                )
+                ActionButton(
+                    "UNDO SPLICE",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onUnsplice,
+                )
+            }
             // Same history, same dimming rule as SPLICE ▸ - plus dimmed
             // when the pad already has layers, since STACK wants a
             // single-sample pad to build on. Still tappable: the screen

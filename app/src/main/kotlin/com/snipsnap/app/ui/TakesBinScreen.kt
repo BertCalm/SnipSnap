@@ -798,12 +798,14 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
         // over the pad's audio without binning what it replaces and leaves
         // the recipe, so the card would still show a treatment the sound no
         // longer has, and the pad's own undo would then refuse. That pad's
-        // NONE (or MUTATE's or OUTSIDE's UNDO) gives the same original back
-        // and takes the recipe off with it; the row names the pad. That
+        // NONE (or MUTATE's, OUTSIDE's, UNDO SPLICE's or DE-SAMPLE's UNDO,
+        // the last two since 2026-11-01) gives the same original back and
+        // takes the recipe off with it; the row names the pad. That
         // includes a print over such a pad (its NONE removes the print
         // first) and soft hits added after the treatment (SOFT HITS off,
-        // then NONE). A kept row whose pad has no such door (a SPLICE, a
-        // DE-SAMPLE) keeps BACK: it is that pad's only way back in the app.
+        // then NONE or the UNDO). A kept row whose pad has no such door (a
+        // round-robin chain, a treatment only the CLI makes) keeps BACK: it
+        // is that pad's only way back in the app.
         // And no BACK on any row whose file a print's saved source names
         // (2026-11-01, `KitBuilderModel.filesUnderPrints`): BACK would
         // overwrite a file REMOVE restores and checks by hash, so the print

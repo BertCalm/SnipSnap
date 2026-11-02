@@ -647,13 +647,18 @@ class KitBuilderModel private constructor(
         // The imported audition's fingerprint describes the previous WAV.
         // Keep its provenance, but never carry that current-file claim onto
         // regenerated or treated audio; exporters fingerprint the new file.
+        // The `desampled` stamp says "this audio is a de-sample's render", so it
+        // goes with the render (the owner's call, 2026-11-01): a synth send, SNAP,
+        // a paste or any rewrite over a de-sample leaves a pad DE-SAMPLE's UNDO no
+        // longer owns ([PadSheet.isDesampled]). [desamplePad] stamps again
+        // straight after its own replacement.
         // An unlabelled audio replacement also cannot retain a printed inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
         return update(slot) {
             it.copy(
                 recipe = recipe ?: it.recipe?.takeUnless(PrintedPads::has),
-                source = it.source - "rawSha256",
+                source = it.source - "rawSha256" - "desampled",
             )
         }
     }
@@ -708,8 +713,8 @@ class KitBuilderModel private constructor(
      * from [tailFrames] onward — [com.snipsnap.audio.TapeSplice.join]'s own
      * seam-aware crossfade, baked in only when the raw cut would click.
      * Bin-backed like every rewrite ([replaceAudio]): whatever's live now
-     * is itself binned first, so the splice is undoable from THE BIN like
-     * any other pad rewrite.
+     * is itself binned first, and [unsplicePad] (the pad sheet's UNDO
+     * SPLICE) gives it back.
      */
     fun splicePad(slot: Int, head: Snip, headFrames: Int, tail: Snip, tailFrames: Int): com.snipsnap.audio.TapeSplice.Spliced {
         val spliced = com.snipsnap.audio.TapeSplice.join(head, headFrames, tail, tailFrames)
@@ -724,6 +729,24 @@ class KitBuilderModel private constructor(
         )
         replaceAudio(slot, recipe) { spliced.snip }
         return spliced
+    }
+
+    /**
+     * UNDO SPLICE: the take [splicePad] binned when it joined comes back out of the bin and the
+     * splice's recipe comes off, through [untreatPad], the way `Mutate.undo` and `OutsideSheet.undo`
+     * do it. After two splices that take is the first splice's result. The recipe the pad had before
+     * the splice was overwritten by it, so the pad reads untreated afterwards. A splice adds no
+     * source stamp, so there is none to clear.
+     *
+     * Refuses, touching nothing, with the pad sheet's own words ([PadSheet.spliceUndoRefusal], asked
+     * of the live pad): no TAPE SPLICE on the pad (MUTATE's SPLICE move, or a print over the splice),
+     * no earlier take of its file in the bin, or soft hits added after the splice. A chain is
+     * refused by [untreatPad].
+     */
+    fun unsplicePad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        PadSheet.spliceUndoRefusal(pad, binned = binHoldsTakeOf(pad))?.let { throw IllegalArgumentException(it) }
+        return untreatPad(slot)
     }
 
     /**
@@ -795,10 +818,12 @@ class KitBuilderModel private constructor(
     /**
      * DE-SAMPLE: the pad replaced by the nearest synth patch's own render,
      * the patch riding the pad as its recipe so the sound is a synth pad
-     * from here on - bin-backed like every rewrite. The search starts on
-     * the voices kindred to the pad's class. A far match ([Far]) is
-     * refused unless [evenIfFar]; the match is returned either way it
-     * goes ahead.
+     * from here on - bin-backed like every rewrite, and [undesamplePad]
+     * gives the take before it back. The search starts on the voices
+     * kindred to the pad's class. A far match ([Far]) is refused unless
+     * [evenIfFar]; the match is returned either way it goes ahead. The
+     * `desampled` stamp goes on after [replaceAudio], which drops it from
+     * any earlier de-sample.
      */
     fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -814,6 +839,28 @@ class KitBuilderModel private constructor(
         update(slot) { it.copy(source = it.source + mapOf("desampled" to "%.2f".format(java.util.Locale.ROOT, match.distance))) }
         return match
     }
+
+    /**
+     * DE-SAMPLE's UNDO (the pad sheet's, and `snipsnap desample --undo`): the take [desamplePad]
+     * binned comes back out of the bin, the patch comes off ([untreatPad]; a bare patch has no
+     * pedals for the undo to keep) and so does the `desampled` stamp, so the MAKE strip, the grid
+     * marker and the bin's hold all stop counting the pad as a patch. After two de-samples that take
+     * is the first one's render. The recipe the pad had before the de-sample was overwritten by it.
+     *
+     * Refuses, touching nothing, with the pad sheet's own words ([PadSheet.desampleUndoRefusal],
+     * asked of the live pad) whenever the de-sample is not what sits on top ([PadSheet.isDesampled]:
+     * pedals ride it, a later replacement cleared its stamp, a print covers it), when the bin holds
+     * no earlier take of its file, or with soft hits on. A chain is refused by [untreatPad].
+     */
+    fun undesamplePad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        PadSheet.desampleUndoRefusal(pad, binned = binHoldsTakeOf(pad))?.let { throw IllegalArgumentException(it) }
+        untreatPad(slot)
+        return update(slot) { it.copy(source = it.source - "desampled") }
+    }
+
+    /** Whether the bin holds an earlier take under [pad]'s main file: what the pad sheet's `binDaysLeft != null` asks. */
+    private fun binHoldsTakeOf(pad: KitPad): Boolean = binContents().any { it.originalName == pad.sampleFile }
 
     /**
      * Age one pad through a Time Machine era — every file it references
@@ -1729,11 +1776,13 @@ class KitBuilderModel private constructor(
          * wrapper ([PrintedPads]) keeps its source in its own store. A plain synth render, a
          * [com.snipsnap.synth.PadRecipe] with a patch and no pedals and no treatment, re-renders
          * from the patch, and no undo door reads the bin for it — unless DE-SAMPLE made it: the
-         * recipe is the same, but [desamplePad] stamps `desampled` and `snipsnap desample --undo`
-         * brings the capture back out of the bin, so a de-sampled pad counts. A synth send over it
-         * keeps the stamp, so the bin then keeps the render that send replaced, which is what
-         * `--undo` would restore. "Any recipe but these", not a list of recipe readers, so a
-         * treatment added later is kept without anyone adding it here.
+         * recipe is the same, but [desamplePad] stamps `desampled` and its UNDO ([undesamplePad],
+         * the pad sheet's and `snipsnap desample --undo`) brings the take before it back out of the
+         * bin, so a de-sampled pad counts. Any later audio replacement drops the stamp
+         * ([replaceAudio], the owner's call, 2026-11-01), so a synth send over a de-sampled pad
+         * leaves a plain synth pad that keeps nothing, and what the de-sample replaced goes on the
+         * bin's clock. "Any recipe but these", not a list of recipe readers, so a treatment added
+         * later is kept without anyone adding it here.
          */
         internal fun dependsOnBin(pad: KitPad): Boolean {
             if (pad.chain != null) return true

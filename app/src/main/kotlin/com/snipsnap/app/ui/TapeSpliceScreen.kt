@@ -76,7 +76,10 @@ import kotlinx.coroutines.withContext
  * [TapeSplice.join] decides on its own whether the raw cut needs a short
  * declick overlap; COMMIT is honest about which happened
  * ([Copy.spliced]). Whatever was live before COMMIT is itself binned,
- * same as every other pad rewrite — undoable from THE BIN.
+ * same as every other pad rewrite, and the pad sheet's UNDO SPLICE
+ * (`KitBuilderModel.unsplicePad`) gives it back and takes the splice's
+ * recipe off. THE BIN shows no BACK on that kept take while the splice is
+ * on top (`PadSheet.hasOwnWayBack`).
  */
 @Composable
 fun TapeSpliceScreen(

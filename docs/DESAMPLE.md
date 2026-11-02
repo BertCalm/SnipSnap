@@ -62,8 +62,19 @@ noise.
 - `snipsnap desample <hit.wav> [--out patch.json]` prints the patch;
 - `snipsnap desample <kit-dir> <pad> [--force] [--undo]` makes the pad
   the patch's own render, the patch riding it as its recipe, the capture
-  in the bin, `desampled` stamped with the distance for `lineage`;
-- the PAD SHEET's DE-SAMPLE card on the phone, one button.
+  in the bin, `desampled` stamped with the distance for `lineage`. Since
+  2026-11-01 the next audio replacement over the pad (a synth send,
+  SNAP, a paste, any rewrite through `replaceAudio`) clears the stamp:
+  it says the audio is a de-sample's render, and that is then no longer
+  true. `--undo` is `KitBuilderModel.undesamplePad`: the take before the
+  de-sample comes back out of the bin, and the patch and the stamp come
+  off. It refuses a pad the de-sample is no longer on top of (never
+  de-sampled, pedals, a treatment or a print over it, or a later
+  replacement that cleared the stamp), a pad with soft hits on, and a
+  pad whose bin no longer holds the take;
+- the PAD SHEET's DE-SAMPLE card on the phone: MAKE SYNTH, and since
+  2026-11-01 an UNDO in its header that runs the same `undesamplePad`
+  (`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
 
 ## Bounds
 
