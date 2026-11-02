@@ -329,7 +329,9 @@ object Cli {
         |                        with classes and sources, groove notation,
         |                        key/tempo/mileage; --width PX, --out DIR)
         |  art <kit-dir>         procedural cover art from the kit itself
-        |                        (--style waveform|grid|slices|rings, --scheme,
+        |                        (--style bloom|ridges|field|ribbon|waveform|
+        |                        grid|slices|rings, --palette ID or --scheme,
+        |                        --seed-pad N, --mark symbol|lockup|stacked,
         |                        --seed N, --size PX, --out DIR; no --style
         |                        renders every style side by side)
         |  mark                  the SnipSnap mark as PNGs: symbol, one-line

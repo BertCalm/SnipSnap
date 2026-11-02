@@ -523,6 +523,31 @@ object Copy {
      */
     const val EXPORT_BLOCKED = "NOTHING WAS WRITTEN."
 
+    // The tile art picker (EXPORT's ART row and its sheet).
+    /** EXPORT's ART row heading: a label, like FORMAT. */
+    const val ART_ROW = "ART"
+    /** Under the ART row: which writes carry the tile. */
+    const val ART_ROW_NOTE = "WRITTEN WITH EXPANSION AND XPN."
+    /** The picker sheet's title. */
+    const val ART_SHEET_TITLE = "PICK THE ART"
+    /** The picker's palette row heading. */
+    const val ART_PALETTE = "PALETTE"
+    /** The picker's seed-pad row heading. */
+    const val ART_SEED_PAD = "SEED PAD"
+    /** The seed-pad chip that lets the longest pad draw. */
+    const val ART_SEED_AUTO = "AUTO"
+    /** The picker's mark row heading. */
+    const val ART_MARK = "MARK"
+    /** A preview cell while its tile is drawn: a busy line. */
+    const val ART_BUSY = "DRAWING…"
+    /** The toast when the picker closes on changed knobs. */
+    const val ART_SET = "ART SET."
+    /** A pick that could not be written to the kit's art.json: this export still uses it. */
+    const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
+
+    /** The ART row's reading: style · palette · seed pad · mark. */
+    fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"
+
     /**
      * The kit shelf's own legend (September UAT, finding 17). Every creation
      * door auto-names, so RENAME is the only place a user ever types a kit

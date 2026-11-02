@@ -599,7 +599,7 @@ class CliTest {
     }
 
     @Test
-    fun `expansion exports carry the waveform tile by default`() {
+    fun `expansion exports carry the kit's own tile by default`() {
         val wav = writeBreak(File(temp, "tile.wav"))
         val out = File(temp, "tile-out")
         val (code, stdout, stderr) = cli(
@@ -607,7 +607,8 @@ class CliTest {
             "--slices", "8", "--export", "expansion,xpn",
         )
         assertEquals(0, code, "stderr: $stderr")
-        assertContains(stdout, "cover art: waveform tile")
+        // A fresh chop has no art.json, so the tile is the defaults: Bloom.
+        assertContains(stdout, "cover art: bloom tile")
 
         val art = File(out, "card/Expansions/TileKit/TileKit.png")
         assertTrue(art.isFile, "the browser tile landed")
@@ -643,6 +644,34 @@ class CliTest {
         )
         assertEquals(2, clashCode)
         assertContains(clashErr, "contradict")
+    }
+
+    @Test
+    fun `export draws the kit's art knobs and --art overrides only the style`() {
+        val wav = writeBreak(File(temp, "knobs.wav"))
+        val out = File(temp, "knobs-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "KnobKit", "--slices", "8").first)
+        val kitDir = File(out, "KnobKit")
+        com.snipsnap.shell.ArtSidecar.write(
+            kitDir,
+            com.snipsnap.shell.ArtKnobs(
+                com.snipsnap.shell.KitArt.Style.FIELD, com.snipsnap.shell.Palettes.TIDE, null,
+                com.snipsnap.shell.Mark.Variant.SYMBOL,
+            ),
+        )
+        val plain = File(temp, "knobs-plain")
+        val (code, stdout, stderr) = cli("export", kitDir.path, "--export", "expansion", "--out", plain.path)
+        assertEquals(0, code, stderr)
+        assertContains(stdout, "cover art: field tile")
+        val tile = javax.imageio.ImageIO.read(File(plain, "card/Expansions/KnobKit/KnobKit.png"))
+        assertEquals(com.snipsnap.shell.Palettes.TIDE.ground, tile.getRGB(1, 1) and 0xFFFFFF, "the sidecar's palette")
+
+        val ringsOut = File(temp, "knobs-rings")
+        val (rCode, rOut, rErr) = cli("export", kitDir.path, "--export", "expansion", "--art", "rings", "--out", ringsOut.path)
+        assertEquals(0, rCode, rErr)
+        assertContains(rOut, "cover art: rings tile")
+        val ringsTile = javax.imageio.ImageIO.read(File(ringsOut, "card/Expansions/KnobKit/KnobKit.png"))
+        assertEquals(com.snipsnap.shell.Palettes.TIDE.ground, ringsTile.getRGB(1, 1) and 0xFFFFFF, "--art keeps the palette")
     }
 
     @Test

@@ -91,7 +91,7 @@ the audition-page rule it comes from.
 | Sunken field (list, input) | 1dp inverted bevel on `field` | `field` fill, 1dp line, no inset | `.note-card textarea` |
 | Primary action | OILSLICK rim, dark fill | `ink` fill, `gray` text, square corners | `.primary-button` |
 | Window frame | 3dp `winFrame` (OILSLICK: the sweep) | 1dp `winFrame` | `.sound-card` border |
-| Title bar | `title1 → title2` gradient | flat `gray`, hairline below, heavy wordmark with the tilted square | `.masthead`, `.wordmark-square` |
+| Title bar | `title1 → title2` gradient | flat `gray`, hairline below, the SnipSnap lockup (SNIP · pad-cluster symbol · SNAP, Unbounded ExtraBold) | `.masthead`, `.wordmark-square` |
 | Desk | 3px `desk1`/`desk2` checker + `deskGlow` radial | flat `desk1` + `deskGlow` radial (the sun) + faint ray wedges | `.sun-disc`, `.sun-rays` |
 | LCD | `lcd` fill, 1px-in-3 scanline at 30 % | same fill, same stripe at 18 % | `.sun-disc::after` (2px-in-3 at 18 %) |
 | Assigned pad | 2dp class border + 14px glow | class colour as a 4dp bottom edge, no glow | PlayMode's "colour as bottom edge" |

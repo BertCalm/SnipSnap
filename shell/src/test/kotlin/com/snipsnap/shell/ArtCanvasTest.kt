@@ -96,4 +96,80 @@ class ArtCanvasTest {
         val drawn = (columns.last() - columns.first() + 1).toFloat()
         assertTrue(kotlin.math.abs(drawn - w40) < w40 * 0.15f, "measured $w40, drawn $drawn")
     }
+
+    // ---- paths, fills, circles (the tile family's primitives) ----
+
+    private fun rgb(img: BufferedImage, x: Int, y: Int) = img.getRGB(x, y) and 0xFFFFFF
+    private fun red(c: Int) = (c shr 16) and 0xFF
+    private fun green(c: Int) = (c shr 8) and 0xFF
+    private fun blue(c: Int) = c and 0xFF
+    private fun luminance(c: Int) = (red(c) * 299 + green(c) * 587 + blue(c) * 114) / 1000
+
+    private val square = ArtPath.polygon(floatArrayOf(0f, 100f, 100f, 0f), floatArrayOf(0f, 0f, 100f, 100f))
+
+    private fun onWhite(draw: (ArtCanvas) -> Unit): BufferedImage = render(100) {
+        it.fillRect(0, 0, 100, 100, 0xFFFFFF)
+        draw(it)
+    }
+
+    @Test
+    fun `a linear fill runs from one tone to the other`() {
+        val img = onWhite { it.fillPath(square, ArtFill.Linear(0f, 50f, 100f, 50f, 0xFF0000, 0x0000FF)) }
+        val left = rgb(img, 2, 50)
+        val right = rgb(img, 97, 50)
+        assertTrue(red(left) > 200 && blue(left) < 60, "left end is red: ${left.toString(16)}")
+        assertTrue(blue(right) > 200 && red(right) < 60, "right end is blue: ${right.toString(16)}")
+    }
+
+    @Test
+    fun `a radial fill is inner at the centre and outer at the rim`() {
+        val img = onWhite {
+            it.fillRect(0, 0, 100, 100, 0x808080)
+            it.fillCircle(50f, 50f, 45f, ArtFill.Radial(50f, 50f, 45f, 0xFFFFFF, 0x000000))
+        }
+        assertTrue(luminance(rgb(img, 50, 50)) > 230, "centre is the inner tone")
+        assertTrue(luminance(rgb(img, 50, 8)) < 40, "rim is the outer tone")
+    }
+
+    @Test
+    fun `alpha blends with what is under`() {
+        val img = onWhite { it.fillPath(square, ArtFill.Solid(0x000000, 0.5f)) }
+        val c = rgb(img, 50, 50)
+        assertTrue(red(c) in 100..160 && green(c) in 100..160 && blue(c) in 100..160, "half black over white is grey: ${c.toString(16)}")
+    }
+
+    @Test
+    fun `a quadratic segment bulges toward its control point`() {
+        val arch = ArtPath().moveTo(0f, 100f).quadTo(50f, 0f, 100f, 100f).close()
+        val img = onWhite { it.fillPath(arch, ArtFill.Solid(0x000000)) }
+        assertTrue(luminance(rgb(img, 50, 60)) < 60, "under the apex is filled")
+        assertTrue(luminance(rgb(img, 50, 20)) > 200, "above the apex (y = 50) stays white")
+    }
+
+    @Test
+    fun `a circle fills its centre and not its corner`() {
+        val img = onWhite { it.fillCircle(50f, 50f, 40f, ArtFill.Solid(0x000000)) }
+        assertTrue(luminance(rgb(img, 50, 50)) < 60, "centre filled")
+        assertTrue(luminance(rgb(img, 3, 3)) > 200, "corner clear")
+    }
+
+    @Test
+    fun `a stroked polyline has the width asked for`() {
+        val line = ArtPath.polyline(floatArrayOf(10f, 90f), floatArrayOf(50f, 50f))
+        val img = onWhite { it.strokePath(line, 10f, ArtFill.Solid(0x000000)) }
+        assertTrue(luminance(rgb(img, 50, 50)) < 60, "on the line")
+        assertTrue(luminance(rgb(img, 50, 53)) < 60, "inside the half width")
+        assertTrue(luminance(rgb(img, 50, 58)) > 200, "outside the half width")
+    }
+
+    @Test
+    fun `every bundled face loads headless and sets ink`() {
+        System.setProperty("java.awt.headless", "true")
+        for (font in ArtFont.entries) {
+            assertTrue(font.bytes().size > 50_000, "${font.name} has bytes")
+            val img = onWhite { it.drawText("H", font, 60f, 10f, 80f, TextAnchor.START, 0x000000) }
+            val lit = (30..80).sumOf { y -> (10..60).count { x -> luminance(rgb(img, x, y)) < 60 } }
+            assertTrue(lit > 100, "${font.name} drew an H ($lit dark pixels)")
+        }
+    }
 }
