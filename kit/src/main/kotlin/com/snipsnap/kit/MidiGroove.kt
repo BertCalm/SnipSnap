@@ -12,6 +12,9 @@ import kotlin.math.roundToInt
  * included. Export and a DAW opens the captured rhythm; import and a beat
  * programmed anywhere becomes a kit groove.
  *
+ * Notes ride the drum channel unless a caller names another (a captured
+ * melody is not a drum part, and a DAW would play it on a kit).
+ *
  * Format 0, division 960 — MIDI's own favourite resolution and exactly
  * our clips' PPQ, so exported times are the clip's times verbatim. Notes
  * ride channel 10 (the GM drum channel) and pads are already at GM-ish
@@ -33,8 +36,9 @@ object MidiGroove {
 
     // ---- writing -----------------------------------------------------------
 
-    fun write(clip: Mpc3Clip, bpm: Float): ByteArray {
+    fun write(clip: Mpc3Clip, bpm: Float, channel: Int = DRUM_CHANNEL): ByteArray {
         require(bpm > 0) { "bpm must be positive: $bpm" }
+        require(channel in 0..15) { "channel must be 0..15: $channel" }
 
         // Absolute-time events first; deltas come from sorting. Offs sort
         // before ons at the same tick so retriggers never stack.
@@ -52,8 +56,8 @@ object MidiGroove {
         val name = clip.name.toByteArray(Charsets.US_ASCII)
         events += Ev(0L, 0, byteArrayOf(0xFF.toByte(), 0x03, name.size.toByte()) + name)
 
-        val on = (0x90 or DRUM_CHANNEL).toByte()
-        val off = (0x80 or DRUM_CHANNEL).toByte()
+        val on = (0x90 or channel).toByte()
+        val off = (0x80 or channel).toByte()
         for (n in clip.notes) {
             val vel = (n.velocity * 127f).roundToInt().coerceIn(1, 127)
             events += Ev(n.timePulses, 2, byteArrayOf(on, n.note.toByte(), vel.toByte()))
@@ -83,12 +87,12 @@ object MidiGroove {
         return out.toByteArray()
     }
 
-    fun writeTo(file: File, clip: Mpc3Clip, bpm: Float, overwrite: Boolean = false): File {
+    fun writeTo(file: File, clip: Mpc3Clip, bpm: Float, overwrite: Boolean = false, channel: Int = DRUM_CHANNEL): File {
         if (file.exists() && !overwrite) {
             throw DestinationExists(file)
         }
         file.parentFile?.mkdirs()
-        file.writeBytes(write(clip, bpm))
+        file.writeBytes(write(clip, bpm, channel))
         return file
     }
 

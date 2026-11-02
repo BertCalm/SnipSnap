@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.pow
@@ -54,6 +55,13 @@ object Resin {
             MacroSpec("CREAM", 0.3f), MacroSpec("CONTOUR", 0.75f), MacroSpec("DECAY", 0.5f),
         )
     }
+
+    /**
+     * Every RESIN pad files as TONAL: pitched notes through a filter, never judged
+     * from a render. The phone's picker and the starter kit both read this rule.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun drumClassFor(voice: ResinVoice, macros: Map<String, Float> = emptyMap()): DrumClass = DrumClass.TONAL
 
     fun defaults(voice: ResinVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }

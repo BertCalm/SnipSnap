@@ -1556,6 +1556,126 @@ tasks.register<JavaExec>("generateSirenKit") {
     args("${rootDir}/testkit")
 }
 
+tasks.register<JavaExec>("generateFathomKit") {
+    group = "distribution"
+    description = "Render the FATHOM bass starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FathomKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the FATHOM listening page through the shared RosterAudition under testkit/fathom-audition/. */
+tasks.register<JavaExec>("generateFathomAudition") {
+    group = "distribution"
+    description = "Render the FATHOM audition clips, manifest and listening page under testkit/fathom-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FathomAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fathom-audition")
+}
+
+tasks.register<JavaExec>("generateVelvetKit") {
+    group = "distribution"
+    description = "Render the VELVET starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelvetKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateTonewheelKit") {
+    group = "distribution"
+    description = "Render the TONEWHEEL starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TonewheelKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateResinKit") {
+    group = "distribution"
+    description = "Render the RESIN starter kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ResinKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the VELVET listening page through the shared RosterAudition under testkit/velvet-audition/. */
+tasks.register<JavaExec>("generateVelvetAudition") {
+    group = "distribution"
+    description = "Render the VELVET audition clips, manifest and listening page under testkit/velvet-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelvetRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/velvet-audition")
+}
+
+/** Render the TONEWHEEL listening page through the shared RosterAudition under testkit/tonewheel-audition/. */
+tasks.register<JavaExec>("generateTonewheelAudition") {
+    group = "distribution"
+    description = "Render the TONEWHEEL audition clips, manifest and listening page under testkit/tonewheel-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TonewheelRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tonewheel-audition")
+}
+
+/** Render the SKIN listening page through the shared RosterAudition under testkit/skin-audition/. */
+tasks.register<JavaExec>("generateSkinAudition") {
+    group = "distribution"
+    description = "Render the SKIN audition clips, manifest and listening page under testkit/skin-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkinRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skin-audition")
+}
+
+/** Render the TIDE listening page through the shared RosterAudition under testkit/tide-audition/. */
+tasks.register<JavaExec>("generateTideAudition") {
+    group = "distribution"
+    description = "Render the TIDE audition clips, manifest and listening page under testkit/tide-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TideRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tide-audition")
+}
+
+/** Render the VOX listening page through the shared RosterAudition under testkit/vox-audition/. */
+tasks.register<JavaExec>("generateVoxAudition") {
+    group = "distribution"
+    description = "Render the VOX audition clips, manifest and listening page under testkit/vox-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VoxRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vox-audition")
+}
+
+/** Render the RESIN listening page through the shared RosterAudition under testkit/resin-audition/. */
+tasks.register<JavaExec>("generateResinAudition") {
+    group = "distribution"
+    description = "Render the RESIN audition clips, manifest and listening page under testkit/resin-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ResinRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/resin-audition")
+}
+
+/** Time one knob-turn re-render per voice of every engine; writes testkit/render-times/. See RenderTimingScan. */
+tasks.register<JavaExec>("scanRenderTimes") {
+    group = "verification"
+    description = "Measure each engine voice's knob-turn render time under testkit/render-times/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RenderTimingScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/render-times") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+    // -Pjfr=<file> records a Java Flight Recorder profile of the same renders, for finding
+    // which functions the time is spent in (read it with `jfr print --events ExecutionSample`).
+    providers.gradleProperty("jfr").orNull?.let { jvmArgs("-XX:StartFlightRecording=filename=$it,settings=profile") }
+}
+
 tasks.register<JavaExec>("generateForkKit") {
     group = "distribution"
     description = "Render the FORK modal electric piano acceptance kit under testkit/."

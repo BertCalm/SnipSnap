@@ -2214,6 +2214,101 @@ TEST(pad_engine_a_bend_that_is_not_a_speed_is_ignored_and_a_huge_one_clamped) {
     CHECK_NEAR(speedAt(out, 31), PadEngine::kMaxBend, 4e-2);
 }
 
+namespace {
+/** The speed over the 16 frames to i: a float ramp's rounding is ~3e-3 a frame, which a window of 16 divides down. */
+double speedWin(const std::vector<float>& out, size_t i) {
+    return (static_cast<double>(out[2 * i]) - static_cast<double>(out[2 * (i - 16)])) * 100000.0 / 16.0;
+}
+
+PadCommand vibrato(double semitones, float glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetVibrato;
+    c.pitch = semitones;
+    c.fadeMs = glideMs;
+    return c;
+}
+}  // namespace
+
+TEST(pad_engine_vibrato_wobbles_a_held_note_around_its_own_speed_at_the_stated_depth_and_rate) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 16);
+    e.pushCommand(vibrato(0.5, 0.0f));  // half a semitone either way, at once
+    // One period at 5.5 Hz is 8727 frames; read two.
+    std::vector<float> all;
+    for (int block = 0; block < 4; ++block) {
+        auto out = callback(e, 4400);
+        all.insert(all.end(), out.begin(), out.end());
+    }
+    double lo = 1e9, hi = -1e9, mean = 0.0;
+    size_t n = 0;
+    for (size_t i = 16; i < all.size() / 2; ++i, ++n) {
+        const double sp = speedWin(all, i);
+        lo = std::min(lo, sp);
+        hi = std::max(hi, sp);
+        mean += sp;
+    }
+    mean /= static_cast<double>(n);
+    const double top = std::pow(2.0, 0.5 / 12.0);
+    CHECK_NEAR(hi, top, 2e-3);
+    CHECK_NEAR(lo, 1.0 / top, 2e-3);
+    CHECK_NEAR(mean, 1.0, 2e-3);
+    // The rate: one swing up past +1% per period, with hysteresis so the ramp's rounding noise is not counted.
+    int ups = 0;
+    bool armed = true;
+    for (size_t i = 16; i < all.size() / 2; ++i) {
+        const double sp = speedWin(all, i);
+        if (sp < 0.99) armed = true;
+        if (armed && sp > 1.01) { ++ups; armed = false; }
+    }
+    CHECK(ups == 2);  // 17600 frames is just over two periods (8727 each): the swings up peak at 2182 and 10909
+    CHECK(ended(e).empty());
+}
+
+TEST(pad_engine_vibrato_glides_in_and_out_and_leaves_the_note_exactly_as_it_was) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 64);
+    e.pushCommand(vibrato(1.0, 100.0f));  // in over 4800 frames
+    auto out = callback(e, 1200);
+    double early = 0.0;
+    for (size_t i = 16; i < 200; ++i) early = std::max(early, std::fabs(speedWin(out, i) - 1.0));
+    double later = 0.0;
+    for (size_t i = 1000; i < 1200; ++i) later = std::max(later, std::fabs(speedWin(out, i) - 1.0));
+    CHECK(early < 0.002);   // it does not start with a jump
+    CHECK(later > early);   // and it grows
+    // Once the glide is over it is at the full depth asked for, not stuck part way.
+    callback(e, 4000);
+    double full = 0.0;
+    for (int block = 0; block < 3; ++block) {
+        out = callback(e, 3000);
+        for (size_t i = 16; i < 3000; ++i) full = std::max(full, std::fabs(speedWin(out, i) - 1.0));
+    }
+    CHECK_NEAR(full, std::pow(2.0, 1.0 / 12.0) - 1.0, 4e-3);
+    e.pushCommand(vibrato(0.0, 10.0f));
+    callback(e, 960);
+    out = callback(e, 512);
+    for (size_t i = 16; i < 512; ++i) CHECK_NEAR(speedWin(out, i), 1.0, 1e-3);
+}
+
+TEST(pad_engine_vibrato_and_bend_multiply_and_a_bad_depth_is_ignored_or_clamped) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 16);
+    e.pushCommand(bend(2.0, 0.0f));
+    e.pushCommand(vibrato(std::nan(""), 0.0f));
+    e.pushCommand(vibrato(-1.0, 0.0f));
+    auto out = callback(e, 64);
+    CHECK_NEAR(speedAt(out, 63), 2.0, 2e-2);  // the bend alone: NaN ignored, negative clamped to off
+    e.pushCommand(vibrato(50.0, 0.0f));
+    double hi = 0.0;
+    for (int block = 0; block < 4; ++block) {
+        out = callback(e, 2400);
+        for (size_t i = 16; i < 2400; ++i) hi = std::max(hi, speedWin(out, i));
+    }
+    CHECK_NEAR(hi, 2.0 * std::pow(2.0, PadEngine::kMaxVibratoSemitones / 12.0), 5e-3);
+}
+
 TEST(pad_engine_the_master_gain_glides_the_whole_mix_and_outlives_a_kit_swap) {
     // Sample 1 is a flat 0.5 / -0.25, so the output is the gain.
     PadEngine& e = seeded();

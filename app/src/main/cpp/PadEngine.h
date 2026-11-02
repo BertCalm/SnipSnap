@@ -39,12 +39,15 @@ struct Bank {
 struct PadCommand {
     /**
      * SetPitch and SetMaster are the whole engine's, not one voice's, so
-     * their `voiceId` is ignored. SetPitch is a bend: every voice, the
+     * their `voiceId` is ignored. SetVibrato is the mod wheel: a slow pitch
+     * wobble on every voice, `pitch` its depth in semitones either way
+     * (0 is off, clamped to [PadEngine::kMaxVibratoSemitones]), at a fixed
+     * rate, gliding to the new depth over `fadeMs`. SetPitch is a bend: every voice, the
      * sounding ones, their release tails and notes started later, reads at
      * its own speed times `pitch`. SetMaster scales the whole mix by
      * `gainL`. Both glide over `fadeMs` from wherever they are.
      */
-    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3, SetPitch = 4, SetMaster = 5 };
+    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3, SetPitch = 4, SetMaster = 5, SetVibrato = 6 };
     Type type = Type::NoteOn;
     int32_t voiceId = 0;
     int32_t sample = -1;
@@ -122,6 +125,9 @@ public:
      * clamped to it; one that is not a positive number is ignored.
      */
     static constexpr double kMaxBend = 4.0;
+    /** The deepest vibrato, in semitones either way of the note, and the rate it wobbles at. */
+    static constexpr double kMaxVibratoSemitones = 2.0;
+    static constexpr double kVibratoHz = 5.5;
 
     explicit PadEngine(int32_t preferredSampleRate);
     ~PadEngine() override;
@@ -259,6 +265,7 @@ private:
     Voice& freeVoice();
     void endVoice(Voice& v);
     void render(float* out, int32_t numFrames);
+    void renderChunk(float* out, int32_t numFrames);
     /** The master gain over one rendered piece, after the Aquarium bus. */
     void applyMaster(float* out, int32_t numFrames);
 
@@ -311,6 +318,17 @@ private:
     };
     Glide bend_;
     Glide master_;
+    /** The vibrato's depth in semitones (0 at rest) and where its wobble is, in radians. */
+    Glide depth_ = {0.0, 0.0, 0};
+    double vibratoPhase_ = 0.0;
+    /**
+     * The speed multiplier for each frame of the chunk being rendered: the
+     * bend times the vibrato, worked out once per frame for all voices
+     * rather than once per voice per frame.
+     */
+    static constexpr int32_t kPitchChunk = 512;
+    double pitchMul_[kPitchChunk];
+    void fillPitch(int32_t frames);
 
     SpscRing<PadCommand, 256> commands_;
     SpscRing<int32_t, 256> ended_;
