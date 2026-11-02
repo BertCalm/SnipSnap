@@ -122,7 +122,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         }
         assertEquals(.55f, progress("MOTION"), .00001f)
         assertEquals(.37f, progress("VELOCITY"), .00001f)
-        assertEquals((55 - 36) / 48f, progress("ROOT"), .00001f)
+        assertRoot(55)
         assertEquals(before, original.toJsonText())
     }
 

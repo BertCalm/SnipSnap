@@ -1404,6 +1404,9 @@ fun SynthScreen(
         macrosByVoice[engine to voice] = values
         // Navigation can replace this screen before its state effect runs.
         settings[macroSettingsKey(engine, voice, name)] = bounded.toString()
+        // The expanded CAUSTIC recipe is written now. A rebuild of the screen in this frame
+        // seeds from the drafts, and its own first write would otherwise put the old recipe back.
+        if (engine == Engine.CAUSTIC) SynthDrafts.write(settings, currentDrafts())
         if (engine == Engine.RIME && name == "HOLD" && bounded > 0f) {
             val old = loadedPatchesByVoice[engine to voice] as? RimePatch
             if (old != null) loadedPatchesByVoice[engine to voice] = old.copy(model = Rime.MODEL_VERSION, macros = values)
