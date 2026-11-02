@@ -2974,3 +2974,13 @@ tasks.register<JavaExec>("generateLorentzKit") {
     maxHeapSize = "512m"
     args("${rootDir}/testkit/lorentz-kit")
 }
+
+/** Sixteen dry percussion pads with three native touch zones and a separate SCAR study. */
+tasks.register<JavaExec>("generateErosionBank") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ErosionBankGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-playable-bank")
+}

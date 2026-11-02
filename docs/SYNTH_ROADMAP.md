@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**EROSION playing bank and SCAR study (2026-11-02).** Sixteen provisional
+ARC/CRATER recipes receive three native touch zones, MPC 3/MPC 2 exports and
+an exported-sample groove. SCAR separately adds a held-energy aftershock after
+a recovery gap. Original-voice corner/touch hashes protect the previous native
+renderer. `generateErosionBank` creates the next audition; new recipes and SCAR
+await listening. Factory promotion, picker work and HOLD remain later rounds.
+See [EROSION.md](EROSION.md).
+
 **RIME — complete six-voice build (2026-11-01).** The restored engineering handoff
 supplies REED, FILIGREE and CRUST. Model 6 adds their contour/body profiles, six
 presets per voice (36 total), and periodic scale-motion HOLD derived from saved

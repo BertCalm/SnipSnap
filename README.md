@@ -1280,7 +1280,9 @@ which sit beside the picker. `:synth` also holds engines that picker does not sh
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
-regenerable audition. It remains outside the picker and factory presets.
+regenerable audition. Its provisional sixteen-pad playing bank has three touch
+zones and both MPC program formats; SCAR is a separate aftershock study.
+It remains outside the picker and factory presets.
 
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
 and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and

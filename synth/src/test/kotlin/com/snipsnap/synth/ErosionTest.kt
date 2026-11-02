@@ -32,7 +32,7 @@ class ErosionTest {
             assertTrue(out.size.toDouble()/Dsp.RATE < 1.5)
             assertTrue(out.maxOf { abs(it) } > .01f)
         }
-        println("EROSION 64 corners rawPeak=$rawPeak maxAbsDC=$dc conservation=$conservation")
+        println("EROSION ${ErosionVoice.entries.size * 32} corners rawPeak=$rawPeak maxAbsDC=$dc conservation=$conservation")
     }
     @Test fun `invalid direct controls fall back and audio controls preserve events`() {
         for (voice in ErosionVoice.entries) {
