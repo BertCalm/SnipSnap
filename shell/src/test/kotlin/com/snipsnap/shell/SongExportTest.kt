@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.DestinationExists
@@ -110,5 +111,29 @@ class SongExportTest {
 
         val again = SongExport.write(m.kit, m.kitDir, plan, dest, overwrite = true)
         assertTrue(bytes.contentEquals(again.project.readBytes()), "same plan, same project bytes")
+    }
+
+    @Test
+    fun `a mix the caller holds is the one written, and omitting it still renders`() {
+        val m = model("Held")
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val rendered = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        // A mix that no render of this plan would produce: a quarter second of a constant.
+        val held = Arranger.Mix(Snip(FloatArray(11025) { 0.25f }, channels = 1, sampleRate = 44100), listOf(0))
+        assertTrue(held.snip.frameCount != rendered.snip.frameCount, "the held mix is told apart from a render")
+
+        val used = SongExport.write(m.kit, m.kitDir, plan, File(temp, "held"), mixdown = true, mix = held)
+        assertTrue(used.mixdown!!.mix === held, "the mixdown carries the mix it was handed")
+        val back = WavReader.read(used.mixdown!!.file)
+        assertEquals(held.snip.frameCount, back.frameCount, "the WAV holds the supplied mix, not a fresh render")
+
+        val fresh = SongExport.write(m.kit, m.kitDir, plan, File(temp, "fresh"), mixdown = true)
+        assertEquals(rendered.snip.frameCount, WavReader.read(fresh.mixdown!!.file).frameCount, "omitted, the mix is rendered")
+
+        // A held mix is for a WAV; without one asked for, none is written.
+        val none = SongExport.write(m.kit, m.kitDir, plan, File(temp, "none"), mix = held)
+        assertNull(none.mixdown)
+        assertFalse(File(temp, "none/Held Song.wav").exists())
     }
 }
