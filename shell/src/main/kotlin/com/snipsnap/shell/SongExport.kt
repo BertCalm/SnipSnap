@@ -39,6 +39,11 @@ object SongExport {
      * WAV refuses with [DestinationExists] naming the one on disk, and
      * nothing is touched. The CLI used to check the WAV only after the
      * project was already written, so a refusal left half an export behind.
+     *
+     * [mix] is a mixdown the caller already holds for this [plan] (ARRANGE
+     * keeps one once PLAY has rendered it): with [mixdown] set it is the
+     * one written, so the song is not rendered twice. Left null, the mix
+     * is rendered here. It is ignored when [mixdown] is not set.
      */
     fun write(
         kit: Kit,
@@ -47,6 +52,7 @@ object SongExport {
         destRoot: File,
         overwrite: Boolean = false,
         mixdown: Boolean = false,
+        mix: Arranger.Mix? = null,
     ): Written {
         val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(plan.name))
         val xpjDest = File(destRoot, "${plan.name}.xpj")
@@ -69,9 +75,9 @@ object SongExport {
         }
 
         val mixed = if (mixdown) {
-            val mix = Arranger.mixdown(kit, kitDir, plan)
-            WavWriter.write(wav, mix.snip)
-            Mixdown(wav, mix)
+            val held = mix ?: Arranger.mixdown(kit, kitDir, plan)
+            WavWriter.write(wav, held.snip)
+            Mixdown(wav, held)
         } else {
             null
         }

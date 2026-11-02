@@ -1380,6 +1380,15 @@ object Copy {
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
     const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+    /** EXPORT, while the project and the WAV are written. Ends on a full stop like the toast it is. */
+    const val ARRANGE_EXPORT_BUSY = "MIXING AND WRITING THE SONG."
+    /** The write threw - no pad file that reads, no external storage to write to. */
+    const val ARRANGE_EXPORT_FAILED = "COULDN'T EXPORT THE SONG. TRY AGAIN."
+    /** The chooser is up. [fileName] is the WAV the receiver sees; [where] is the folder under the app's files that holds it and the MPC project. */
+    fun songShared(fileName: String, where: String): String =
+        "SONG SHARED AS ${fileName.uppercase(java.util.Locale.ROOT)}. PROJECT KEPT AT $where."
+    /** Written but no app took the WAV; [where] is the folder under the app's files, so neither file is lost. */
+    fun songKept(where: String): String = "SONG AND PROJECT KEPT AT $where. $SHARE_NOWHERE"
 
     // ---- RE-TRIM: a pad goes back to its own tape (docs/RETRIM.md) ----
     /** RE-TRIM ▸ on a pad with no tape name at all: GRAB/HOLD off the mic ring, an import, a synth. */
