@@ -76,7 +76,7 @@ from the audio.
 | TIDAL | a two-center encounter drives 32 persistent harmonic cohorts that end as ringing strands (PAIR, STREAM); HOLD is 0 or 1 | APPROACH PASSAGE TILT BIND TAIL HOLD | always filed L |
 | TREFOIL | three pitched banks move under equal-mass Newtonian gravity and trade energy on contact (WEAVE, HOLLOW, WIRE, TANGLE, TRACE) | WEAVE NUDGE EXCHANGE THREAD MEMORY HOLD (HOLD refused) | T |
 | SCOUR† | a roller spins up on a free plate while shot rains faster, dents harden it, one slam lands and it rings (PLATE, PANE, SHEET, BEAM); never loops | TUNE BUILD RPM SHOT HARDEN HOLD | P; L past 1.5 s |
-| EROSION† | charge, irregular discharge, delayed collapse, thinning dust: an energy-reservoir analogy (ARC, CRATER); prototype, no HOLD | TUNE VOLTAGE FEED FLUID SLAG | classified from the render |
+| EROSION† | charge, irregular discharge and delayed collapse (ARC, CRATER); provisional sixteen-pad three-zone MPC bank; SCAR adds a held-reserve aftershock after recovery; prototype, no HOLD | TUNE VOLTAGE FEED FLUID SLAG | classified from the render |
 
 ## Drums
 | Engine | Idea | Macros | Class |
