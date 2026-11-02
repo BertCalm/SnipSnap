@@ -106,8 +106,11 @@ while reducing per-sample work. Saved model/note/velocity/exact seed, recipe rep
 velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
 The owner approved the aligned Kotlin character on 2026-10-30. Model 2 adds MATCH
 with 0–6 cents of upper-B detuning while retaining every fundamental, the aligned
-output and model-1 recipes. `generateFerryMatchAudition` supplies its separate gate.
-MATCH listening, production tail termination, SPAN/LOSS/BODY, HOLD, further
+output and model-1 recipes. MATCH passed the owner's listening gate on 2026-11-01.
+Model 3 adds LOSS, scaling physical damping .5×–4× with one-to-eight-second
+observations. Neutral LOSS and both older recipe models keep the accepted sound.
+`generateFerryLossAudition` supplies the next comparison. LOSS listening,
+production tail termination, SPAN/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
 

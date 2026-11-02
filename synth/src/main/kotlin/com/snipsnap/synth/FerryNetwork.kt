@@ -32,7 +32,8 @@ internal object FerryNetwork {
     }
 
     /** MATCH separates upper B modes while the four fundamentals retain a shared root. */
-    fun build(midi: Int, pace: Double, support: Boolean = true, mistuneCents: Double = 0.0): Model {
+    fun build(midi: Int, pace: Double, support: Boolean = true, mistuneCents: Double = 0.0, lossScale: Double = 1.0): Model {
+        require(lossScale.isFinite() && lossScale in .5..4.0) { "FERRY loss scale must be finite and in 0.5..4" }
         require(mistuneCents.isFinite() && mistuneCents in 0.0..Ferry.MAX_MISTUNE_CENTS) {
             "FERRY mistuning must be finite and in 0..${Ferry.MAX_MISTUNE_CENTS} cents"
         }
@@ -76,7 +77,7 @@ internal object FerryNetwork {
         return Model(scaled(alpha), doubleArrayOf(
             .5, .8, 1.2, 1.7, .18, .25, .32, .4, .5, .6, .7, .8,
             .12, .14, .16, .18, .20, .22, .24, .26, .28, .35,
-        ), doubleArrayOf(
+        ).map { it * lossScale }.toDoubleArray(), doubleArrayOf(
             1.0, .42, .2, .1, .28, .65, .95, 1.2, .07, .07, .07, .07,
             .22, .22, .22, .22, .22, .22, .22, .22, .22, .8,
         ), alpha, hz)

@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFerryLossAudition") {
+    group = "distribution"
+    description = "Render Ferry LOSS comparisons with complete recipes, physical decay and timing evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryLossAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryLossOutput").orNull ?: "${rootDir}/testkit/ferry-loss-audition")
+}
+
 tasks.register<JavaExec>("generateApsisPopulations") {
     group = "distribution"
     description = "Render Kotlin GRAIN and ANCHOR, complete recipes, native WAVs and pre-output reference floats."

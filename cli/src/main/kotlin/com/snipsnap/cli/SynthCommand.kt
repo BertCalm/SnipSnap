@@ -751,6 +751,11 @@ object SynthCommand {
             else if (withNote is FerryPatch) {
                 val model = modelOverride ?: withNote.model
                 var controls = withNote.macros + macroOverrides
+                if (model < 3 && "LOSS" in controls) {
+                    if (controls.getValue("LOSS") != .5f || "LOSS" in macroOverrides)
+                        throw CliError("FERRY LOSS requires --model 3; a changed decay cannot be downgraded")
+                    controls = controls - "LOSS"
+                }
                 if (model == 1 && "MATCH" in controls) {
                     if (controls.getValue("MATCH") != 1f || "MATCH" in macroOverrides)
                         throw CliError("FERRY MATCH requires --model 2; a detuned recipe cannot be downgraded")
