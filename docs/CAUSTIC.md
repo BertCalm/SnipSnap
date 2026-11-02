@@ -6,16 +6,18 @@ the four implemented finite voices. The owner selected the earlier study
 directions; the production ports still await an explicit listening verdict.
 Native model 2 develops them into sustained instruments with moving
 source/pickup geometry and onset-preserving keygroups. The implementation and
-generated instrument pack are built; final integration checks remain open.
+generated instrument pack are built and validated by the full JVM gate.
 The completion audition is published. Its new held and moving sounds remain
 unheard. Root and excitation velocity
 remain explicit saved fields. The working name has not been checked for release.
 
-## Model-2 completion: current contract
+## Model-2 completion: as built
 
 Status: implemented and generated on 2026-10-31 from clean source `c9748aa93`.
 Native audio, publication and offline generation-cost checks are complete;
-the full integration gate and listening acceptance remain pending. The
+the 8,233-test nine-module gate passes on merged source `d572c36a2` against
+upstream `e4e7b2932`. Listening and physical device/MPC acceptance remain open.
+The
 [completion design brief](superpowers/specs/2026-10-31-caustic-completion.md)
 records the selected design and proof requirements. Older measurements below
 belong to their named finite-model revisions.
@@ -99,7 +101,9 @@ The existing instrument player supplies live note velocity gain and a separate
 .1–1.5-second note-off release, default .6 seconds. The generated C4 instruments
 each contain nine roots from MIDI 48 to 72. Both MPC formats and the phone
 SMPL reader pass their writer/readback checks, including positive onset/loop
-markers and host release.
+markers and host release. The merged exporter explicitly uses
+`spanKeyboard=false`, retaining the documented narrow ranges after the
+upstream default changed to full-keyboard coverage.
 
 ### Compatibility and cost
 
@@ -112,6 +116,8 @@ they do not all reject unknown fields. New
 native patches default to model 2. Explicit HOLD, MOTION or INSTRUMENT actions
 can promote an editor working copy; ordinary replay does not upgrade the
 source patch, and stale stored controls cannot request promotion.
+Live ROOT drafting retains the upstream fix in `1807cacbb`; this completion
+does not add a separate ROOT fix.
 
 At model-2 MOTION=0 and HOLD=0, the compatibility target is exact earlier
 finite PCM. This must be checked independently of the legacy model-1 canaries.
@@ -130,7 +136,8 @@ establish the model-2 cost.
 
 ### Measured offline generation
 
-The isolated 48-call benchmark completed on 2026-11-02 with Java 17.0.21,
+The isolated 48-call benchmark ran on 2026-10-31 at approximately 23:45 UTC;
+its summary was extracted and reviewed on 2026-11-02. It used Java 17.0.21,
 four allocated cores, `-XX:ActiveProcessorCount=4 -Xms1g -Xmx2g`, and no
 concurrent Gradle or native renders. It timed the public native call, including
 preparation/audio/finish, with hashing and file I/O excluded. At C4, velocity
@@ -149,7 +156,8 @@ These repeated-call host medians do not meet the house goal of regeneration
 in tens of milliseconds. They measure offline generation, with the first call
 potentially including class loading/JIT. Playback uses the pre-rendered
 instrument buffers. No real-time rendering or phone latency claim follows.
-The source report is `caustic-complete-production-latency-summary.json`.
+The per-call measurements and runtime context are embedded under
+`productionLatency` in the [completion evidence aggregate](evidence/caustic-completion-2026-10-31.json).
 
 ### Why it is built this way
 
@@ -172,35 +180,48 @@ The source report is `caustic-complete-production-latency-summary.json`.
 - **Verified:** baseline `d7c2379c1` and clean implementation/generation
   checkpoint `c9748aa93`. All four voices have model-2 HOLD, motion, real-onset
   keygroup rendering and explicit editor promotion. The eleven original
-  presets remain model 1; earlier listening artifacts are unchanged.
+  presets remain model 1; earlier listening artifacts are unchanged. Completed
+  integration validation uses merged source `d572c36a2`; published media
+  remains the clean `c9748aa93` generation.
 - **Proposed:** held articulation, motion excursion and cycle timing are
   implemented sound-design choices awaiting listening. Their implementation
   does not establish the owner's acceptance.
 - **Measured:** the generated pack, native audio and 48-call host benchmark
   pass. The measured generation cost misses the tens-of-ms goal. The complete
-  JVM gate and corrected direct-test rerun remain pending. Publication and
-  browser payload checks pass.
+  nine-module JVM gate passes 8,233 tests with zero failures/errors/skips on
+  merged `d572c36a2`. The pre-merge focused Gradle gate passes 124 tests;
+  publication and browser payload checks pass.
   The earlier 7,001-test result below applies to the finite expansion.
 
-| Completion check | Evidence at `c9748aa93` |
+| Completion check | Evidence and source scope |
 | --- | --- |
-| Legacy preservation | All 78 Float32 stage hashes match the `d7c2379c1` baseline: seventeen ALLOY cases and nine character defaults, each at three stages. |
+| Legacy preservation | All 78 Float32 stage hashes match the `d7c2379c1` baseline: seventeen ALLOY cases and nine character defaults, each at three stages. The post-merge check at `d572c36a2` also retains all 78 hashes exactly. |
 | Native audio | An independent Java 21.0.13+9 harness passes twenty-seven audio cases plus four normal/probe parity, silence and cancellation checks. Coverage includes all voices at C2/C4/C6, full motion, velocity and the Catches BODY=0/LENGTH=.15165251 corner. This matrix is not the JDK 17 Gradle gate. |
 | Pitch, bounds and continuation | Worst measured pitch error is 12.2813 cents, minimum confidence .8448, maximum relative DC `8.06e-9`, raw peak .12663 and conditioned continuation error `1.354e-5`. These are measured cases, not an exhaustive chromatic guarantee. |
 | Higher-rate comparison | In that Java 21 matrix, 4× versus 16× normalized log-band spectral TV is `8.63e-6` for Alloy, `6.25e-6` for Catches, `1.50e-4` for Hollow and `.00414` for Rubbed. Noisy characters have rate-dependent seeded texture; this is broad-shape evidence, not isolated alias subtraction. |
-| Generated pack | Twenty-eight clips produce 56 native/matched WAVs plus four production-player release previews. Five ZIPs contain four nine-zone keygroups and a portable C4 comparison. Expanded payload is 78,182,796 bytes; the largest ZIP is 16,255,824 bytes. |
+| Generated pack | At `c9748aa93`, twenty-eight clips produce 56 native/matched WAVs plus four real-neighbour seam-context WAVs. Each context contains the actual preceding, kept and following cycles. Five ZIPs contain four nine-zone keygroups and a portable C4 comparison. Expanded payload is 78,182,796 bytes; the largest ZIP is 16,255,824 bytes. |
 | Output and export | The Temurin 17.0.21+9 generator exits 0. Native peak is at most .9900; maximum reported house seam is `6.01e-12`. All five ZIP CRCs and all 36 zones pass MPC 2, MPC 3, phone SMPL and PCM24 seam/readback checks. |
 | Published audition | [Completion page](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/), site source `5cfa2c81c8e0a1d4f325d4a28940621c18f36640`, terminal deployment succeeded with the owner's private audience retained. The complete site contains 268 files and 213,394,966 expanded bytes. |
 | Browser payload | Widths 320–1440, all 28 clip routes and named references, mode-offset/rapid switching, keyboard playback, replay, load failure/retry, download bytes and root/bare-path navigation pass. These checks exercise exported recordings, not browser synthesis. |
-| Build scope | Main classes compile, and debug plus Android test APKs package on Temurin 17.0.21+9. The complete integration build/test gate remains pending. There is no usable KVM-backed device; instrumentation is compile/package evidence only. |
-| Compiler configuration | The existing Gradle configuration excludes `Filament::synthesize` and `CausticInstrument::synthesize` from C2 compilation. This work does not add exclusions. A separate direct JDK 17 check without those flags initially passed 18 of 19 tests; its corrected rerun is pending. |
+| Focused Gradle gate | At pre-merge `981a7d93f`, 124 tests pass on Temurin 17.0.21+9: 94 synth, 20 shell and 10 CLI, zero failures/errors/skips, exit 0 in 5m 14s. |
+| Full JVM gate | At `d572c36a219f2cf36957b3b5a05749ebe4fcde8c`, against upstream `e4e7b2932`, all nine JVM modules pass 8,233 tests with zero failures, errors or skips on Temurin 17.0.21+9. This includes 4,521 synth, 1,915 shell and 274 CLI tests. Exit 0; wall time 2h 45m 24s. |
+| Merged build scope | The same successful run assembles debug and Android test APKs with four native ABIs. The debug APK is 69,407,847 bytes, SHA-256 `5843e4a00af34c4bb8888b7ad13426225362e043f30bfc37a1dfad358984a451`; test APK SHA-256 is `66ac1949a3f914f4555174a9ebdf50f93f52a109c2228959aa93bb52f781f3b3`. Android instrumentation is packaged, not executed; `:app:test` is outside the nine-module JVM gate. |
+| Compiler configuration | The existing Gradle configuration excludes `Filament::synthesize` and `CausticInstrument::synthesize` from C2 compilation. This work does not add exclusions. The initial standalone JDK 17 check without those flags passed 18/19; the corrected assertion is covered by the passing focused Gradle run. No corrected standalone rerun result is claimed. |
 
 The initial direct-test failure demanded an exactly zero first sample after
 FFT onset routing. Only that test assertion now uses an absolute `1e-9`
 tolerance, −180 dB and approximately 42 dB below a 24-bit sample step. Real
 zero-state evolution, independent continuation and exact zero-effort silence
 guards remain unchanged. This test-only correction does not change DSP or
-the published audio, and it is not yet reported as a passing rerun.
+the published audio. It passes the focused and full Gradle gates under the
+repository's existing compiler configuration. Those passing gates remain
+separate from the original standalone no-exclusion runtime check.
+
+`CausticPadMakerTest` exercises preview and actual player note-off/release.
+The four additional published evidence WAVs are real-neighbour seam context,
+not production-player release captures. The published audio and packages
+remain the original `c9748aa93` artifacts; no regeneration is implied by the
+later integration merge.
 
 The [completion evidence aggregate](evidence/caustic-completion-2026-10-31.json)
 records the separate native-harness, generator, Gradle and publication scopes.
@@ -211,16 +232,18 @@ listening or a physical phone/MPC check.
 ### Listen or reproduce the completion pack
 
 The [published completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
-contains all 28 recordings, four actual-player note-off previews and the five
-downloads. The earlier finite page remains available through its history link.
+contains all 28 recordings and five downloads. Four additional evidence WAVs
+retain the actual preceding, kept and following cycles; they are not note-off
+previews. The earlier finite page remains available
+through its history link.
 
 ```text
 ./gradlew --no-daemon :shell:generateCausticCompleteAudition
 ```
 
 This writes `testkit/caustic-complete-audition/`, including native and matched
-recordings, complete model-2 recipes, four real-player release previews and
-the five portable downloads. Native files are the renderer/player output;
+recordings, complete model-2 recipes, four real-neighbour seam-context WAVs and
+the five portable downloads. Native files are the actual renderer output;
 matched copies use `AuditionLevel` once per complete preview. The browser
 plays exported recordings and does not synthesize live control changes.
 

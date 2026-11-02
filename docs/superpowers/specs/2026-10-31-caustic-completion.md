@@ -1,8 +1,11 @@
 # Caustic completion: design brief
 
-2026-10-31. Status: implemented at clean checkpoint `c9748aa93`; native audio
-and generated-export checks pass, audition published, full integration and
-corrected direct-test rerun pending. Offline host cost is measured and misses
+2026-10-31 implementation, validated on 2026-11-02: published audio uses clean
+checkpoint `c9748aa93`; the full nine-module gate passes 8,233 tests at merged
+`d572c36a2`, against upstream `e4e7b2932`, with zero failures/errors/skips.
+Native audio, generated-export and browser checks pass. The focused 124-test
+Gradle gate also passes.
+Offline host cost is measured and misses
 the tens-of-ms regeneration goal.
 The four finite native voices are implemented and measured. The owner selected
 their earlier study directions; the native finite ports still await explicit
@@ -148,6 +151,7 @@ separate cost measurements. The completed isolated host benchmark reports
 C4 group medians span 350–1182 ms across loop and onset-plus-loop paths.
 The house's tens-of-ms regeneration goal is not met. These Java 17 host
 generation timings do not measure phone latency or pre-rendered playback.
+They were measured on October 31 and summarized/reviewed on November 2.
 
 The cheapest proof begins with one stationary full-HOLD voice, independently
 checked periodic state and a real onset. Then prove one moving SOURCE/FOCUS
@@ -158,8 +162,8 @@ determinism, source/root phase, bounded raw state, independent continuation,
 4×/higher-rate comparisons, control interactions, cancellation and register
 edges. Run the current complete repository gate only after the implementation
 is ready. Native continuation, higher-rate broad-shape, export and host-cost
-checks have completed as recorded below; the full gate and corrected
-direct-test rerun remain pending.
+checks and the full nine-module gate have completed as recorded below; no
+corrected standalone no-exclusion rerun result is claimed.
 
 ## Verified, proposed and heard
 
@@ -174,10 +178,13 @@ direct-test rerun remain pending.
   pass in the independent Java 21 harness. The Java 17 generated 28-clip and
   four-keygroup pack exits 0 with both MPC and phone SMPL readback and PCM24
   seam checks. Publication, browser payload and the 48-call idle host benchmark
-  pass. Full integration and the corrected direct-test rerun remain open. The
+  pass. The pre-merge focused Gradle gate passes 124 tests, while the full
+  merged-source gate passes 8,233 tests, zero failures/errors/skips, exit 0 in
+  2h 45m 24s. The
   initial direct run passed 18 of 19 tests; only its FFT onset first-sample
   assertion changes from exact zero to an absolute `1e-9` tolerance. Exact
-  silence and real-state/continuation guards remain. See [CAUSTIC.md](../../CAUSTIC.md)
+  silence and real-state/continuation guards remain, and the corrected assertion
+  passes the focused Gradle gate. See [CAUSTIC.md](../../CAUSTIC.md)
   for scoped results and the inherited Gradle compiler exclusions.
 - **Heard:** the owner preferred Alloy/Fuller Body and selected the three
   character-study directions. Native finite ports still await a listening
@@ -193,11 +200,23 @@ zero-state startup and settling, with three rendered cycles and output filters
 before the final crop. Pad loops and onset-plus-loop keygroup samples remain
 separate products of that render.
 
-The release previews use the production instrument player. The four generated
+The four extra evidence WAVs contain the actual preceding, kept and following
+loop cycles. Preview and actual note-off/release are exercised by
+`CausticPadMakerTest`; the published pack does not contain four release
+captures. The four generated
 C4 keygroups have nine minor-third roots from 48 to 72, a .6-second host
 release and positive loop starts. No new settings have been added to the
 eleven model-1 factory presets. Technical completion does not confer hearing
 approval on the new sources or motion.
+
+Published audio remains the clean `c9748aa93` generation. Current validation
+uses merged `d572c36a2`, with all 78 legacy stage hashes still exact. The
+exporter explicitly keeps `spanKeyboard=false`, preserving the published
+narrow keygroup ranges after an upstream default change. Existing live ROOT
+draft updates from `1807cacbb` are retained. Both merged APKs package with
+four ABIs in the successful nine-module gate run. Local Android instrumentation
+was not executed. The published media source, merged validation source and
+physical listening/playing acceptance remain separate scopes.
 
 The [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
 is deployed from site source `5cfa2c81c8e0a1d4f325d4a28940621c18f36640`

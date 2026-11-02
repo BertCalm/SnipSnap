@@ -1,6 +1,6 @@
 {
   "schema": "snipsnap.caustic.completion-evidence.v1",
-  "recordedAt": "2026-11-02T02:31:48.855354+00:00",
+  "recordedAt": "2026-11-02T05:21:24.017384+00:00",
   "baselineCommit": "d7c2379c16520df2679457679844b56d32777712",
   "source": {
     "commit": "c9748aa935dd80440333e1d0b7e474ab75f583cb",
@@ -3486,6 +3486,11 @@
     ],
     "runtime": "17.0.21+9 amd64"
   },
+  "currentImplementation": {
+    "commit": "d572c36a2",
+    "upstreamBaseline": "e4e7b2932",
+    "scope": "Phone/CLI conflict resolutions and explicit narrow-range packaging on the current upstream; Caustic DSP and shared audio output sources retain the published capture calculations."
+  },
   "listening": {
     "selectedEarlierStudies": true,
     "nativeFiniteListeningVerdict": "awaiting owner",
@@ -3502,6 +3507,7 @@
         "internalFloat32"
       ],
       "matchingStageHashes": 51,
+      "checkedImplementation": "d572c36a2",
       "baselineSha256": "315739bbc27534c4b22ce1835768300ae6ec2bfcdb152db9b1a338d56eb92fac",
       "finalSha256": "315739bbc27534c4b22ce1835768300ae6ec2bfcdb152db9b1a338d56eb92fac",
       "rows": [
@@ -3533,6 +3539,7 @@
         "internalFloat32"
       ],
       "matchingStageHashes": 27,
+      "checkedImplementation": "d572c36a2",
       "baselineSha256": "067f8c088c4842277e437efedfce2690efcc87714c54ee8effae4aa575ae8425",
       "finalSha256": "067f8c088c4842277e437efedfce2690efcc87714c54ee8effae4aa575ae8425",
       "rows": [
@@ -6888,19 +6895,156 @@
         "rms": 0.12696058430115695,
         "passed": true
       }
+    ],
+    "measuredAtApproxUtc": "2026-10-31T23:45:00Z",
+    "summaryReviewedAtUtc": "2026-11-02"
+  },
+  "focusedGateBeforeUpstreamMerge": {
+    "status": "passed",
+    "exitCode": 0,
+    "sourceCommit": "981a7d93f",
+    "runtime": "Temurin17.0.21+9",
+    "wall": "5m14s",
+    "modules": [
+      {
+        "module": "synth",
+        "tests": 94,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "shell",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "cli",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
     ]
   },
-  "repositoryGate": null,
+  "repositoryGate": {
+    "status": "passed",
+    "exitCode": 0,
+    "sourceCommit": "d572c36a219f2cf36957b3b5a05749ebe4fcde8c",
+    "upstreamBaseline": "e4e7b2932",
+    "runtime": "Temurin17.0.21+9",
+    "command": "SNIPSNAP_INCLUDE_ANDROID=1 python3 /workspace/scratch/run-snipsnap-gradle17.py test -x :app:test :app:assembleDebug :app:assembleDebugAndroidTest --parallel --max-workers=4 -Pkotlin.daemon.jvmargs=-Xmx4g",
+    "wall": "2h 45m 24s",
+    "modules": [
+      {
+        "module": "json",
+        "classes": 2,
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "xpm",
+        "classes": 6,
+        "tests": 48,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "audio",
+        "classes": 62,
+        "tests": 457,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "kit",
+        "classes": 70,
+        "tests": 470,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "mpc3",
+        "classes": 11,
+        "tests": 95,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "synth",
+        "classes": 526,
+        "tests": 4521,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "loop",
+        "classes": 37,
+        "tests": 437,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "cli",
+        "classes": 51,
+        "tests": 274,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "shell",
+        "classes": 250,
+        "tests": 1915,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "totalTests": 8233,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "logSha256": "62e32cf1fb3a432797e03ab7db367c81c7be4d396a4f8d21d84a722cdd0bc054",
+    "android": {
+      "sourceCommit": "d572c36a219f2cf36957b3b5a05749ebe4fcde8c",
+      "app": {
+        "file": "/workspace/artifacts/SnipSnap-caustic-complete-debug.apk",
+        "bytes": 69407847,
+        "sha256": "5843e4a00af34c4bb8888b7ad13426225362e043f30bfc37a1dfad358984a451",
+        "abis": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86",
+          "x86_64"
+        ]
+      },
+      "testApkSha256": "66ac1949a3f914f4555174a9ebdf50f93f52a109c2228959aa93bb52f781f3b3",
+      "causticUiTestsPackaged": true,
+      "instrumentationExecuted": false
+    }
+  },
   "inheritedRepositoryCompilerExclusions": [
     "com.snipsnap.synth.Filament::synthesize",
     "com.snipsnap.synth.CausticInstrument::synthesize"
   ],
   "newCompilerExclusionsAdded": false,
   "android": {
-    "build": "assembleDebug and assembleDebugAndroidTest succeeded together with synth/shell/cli testClasses; Gradle exit 0 (7m 3s).",
-    "apkSha256": "9d14dacf0472481e870d13d820de6521c94e199eed42cbb8b7dc583f04e24dc4",
-    "apkBytes": 62360853,
-    "instrumentationApkSha256": "3f27d6ba7fbf034fc344a169cc67d8d8d162712dd83f114e30df2729e751f76c",
+    "sourceCommit": "d572c36a2",
+    "build": "Merged-source nine-module JVM suite and assembleDebug/assembleDebugAndroidTest completed together; Gradle exit 0. See repositoryGate.",
+    "apkSha256": "5843e4a00af34c4bb8888b7ad13426225362e043f30bfc37a1dfad358984a451",
+    "apkBytes": 69407847,
+    "instrumentationApkSha256": "66ac1949a3f914f4555174a9ebdf50f93f52a109c2228959aa93bb52f781f3b3",
     "instrumentationExecutedLocally": false,
     "reason": "No KVM; prior local software emulator never reached a usable boot. No physical phone or MPC listening performed."
   },

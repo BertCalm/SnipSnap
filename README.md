@@ -478,10 +478,11 @@ held/moving sounds are implemented and unheard; the finite native ports also
 await an explicit listening verdict on the selected study directions. Eleven
 existing model-1 presets and archived study models 1–4 retain their
 interpretation. The earlier finite integration passed its 7,001-test gate;
-the completion's full gate is pending. Measured C4 host generation medians
+the completion passes its focused 124-test and full 8,233-test JVM gates.
+Measured C4 host generation medians
 are .35–1.18 seconds, above the tens-of-ms goal; playback uses generated samples.
 Run `./gradlew :shell:generateCausticCompleteAudition` for 28 clips, four
-production-player release previews and four nine-zone MPC/phone keygroups.
+real-neighbour seam-context WAVs and four nine-zone MPC/phone keygroups.
 The five completion downloads pass generator readback and PCM24 seam checks;
 the [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
 is published. Physical playback and listening remain separate. The archived listening

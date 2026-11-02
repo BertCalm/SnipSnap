@@ -214,7 +214,7 @@ Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
 
-**Caustic completion (2026-10-31, built with final validation pending).** The owner
+**Caustic completion (built 2026-10-31, validated 2026-11-02).** The owner
 selected the earlier Alloy/Fuller Body and three character-study directions.
 Four finite native voices are implemented and measured, with listening
 acceptance open. Native model 2 extends that instrument with actual
@@ -228,17 +228,24 @@ roots clipped to MIDI 36–84 and .1–1.5-second note-off release. The eleven
 model-1 presets and missing-model JSON interpretation stay frozen. Explicit
 HOLD/MOTION/INSTRUMENT actions promote an editor working copy; ordinary
 replay does not upgrade it. Clean checkpoint `c9748aa93` generates 28 clips,
-four production-player release previews, four nine-zone held keygroups and a
+four real-neighbour seam-context WAVs, four nine-zone held keygroups and a
 portable comparison. All 78 legacy Float32 stage hashes remain exact; native
 audio and MPC 2/MPC 3/phone SMPL readback checks pass. New held/moving sounds
 remain unheard. The [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
-is published with browser checks from 320 to 1440 pixels; final integration
-checks remain pending. An isolated 48-call Java 17 benchmark passes repeated
+is published with browser checks from 320 to 1440 pixels. The full nine-module
+gate passes 8,233 tests with zero failures/errors/skips, exit 0 in 2h 45m 24s.
+An isolated 48-call Java 17 benchmark passes repeated
 hash/health checks, with C4 group medians of 350–1182 ms across loop/keyNote
 paths. This misses the tens-of-ms generation goal and is not phone latency.
-The first direct JDK 17 run passed 18/19 tests; the corrected FFT first-sample
-tolerance rerun remains pending, with real-state/continuation and exact-silence
-guards retained. The native 27-case audio matrix ran on
+The benchmark was measured October 31 and summarized/reviewed November 2.
+The focused Gradle gate passes 124 tests at pre-merge `981a7d93f`. The corrected
+FFT first-sample assertion passes there, with real-state/continuation and
+exact-silence guards retained. Published media remains `c9748aa93`; current
+merged validation is `d572c36a2`, with all 78 legacy stage hashes still exact.
+Both merged APKs package in that same successful run, including four native
+ABIs and the Android test classes; instrumentation was not executed locally.
+The exporter explicitly retains narrow ranges after the upstream keygroup
+default change. The native 27-case audio matrix ran on
 Java 21, while generation and APK builds use the repository's Java 17 runtime.
 The inherited Gradle C2 exclusions are unchanged. See the
 [completion brief](superpowers/specs/2026-10-31-caustic-completion.md).
