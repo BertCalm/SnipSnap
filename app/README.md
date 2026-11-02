@@ -318,7 +318,7 @@ GRAINS, SNAP and DRAW work on source material beside the engine picker.
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers |
 | Window | `ui/Chrome.kt` — SNIPSNAP titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | The menu's screens under `ui/` — SHELF, KIT (4×4, MPC geometry: A13 top-left, A01 bottom-left), TAPE, CHOP, PLAY, KEYS, SURFACE, GROOVE, SYNTH, SNAP, EXPORT, SETUP, HELP, and the rest |
-| Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
+| Data | `KitShelf` over `KitStore` (kits under app files/Kits; expansions under app files/expansions, one `expansion.json` each, naming member kits by the `id` in their `kit.json`). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 
 ## Things to verify on first run (beyond "does it compile")
@@ -759,6 +759,14 @@ logcat tag to grab when something is wrong.
   box is open on the next pad. Open OUTSIDE and SEND a ROOM trip: the
   box's strip turns cyan and two reels turn on an LCD strip beside
   LISTENING…, then SENDING…; SEND reads the stage dimmed.
+- **Expansions on the shelf**: hold a kit and tap EXPANSION ▸, then NEW,
+  name it, pick its art and close the picker: THE SHELF grows an
+  EXPANSIONS group with that expansion at 1 KIT. Hold a second kit and tap
+  the expansion's row in the sheet: 2 KITS. Delete one of the kits: the
+  count drops; restore it from DELETED KITS: it comes back. Tap the
+  expansion row: EXPORT opens on its EXPANSION side with the tile; CHANGE
+  ART, then WRITE EXPANSION, and the folder (or the `.xpn`) lands under the
+  expansion's title, on the card when one is picked.
 - **ROOMS on the shelf**: after KEEP ROOM, THE SHELF grows a ROOMS
   section under INSTRUMENTS, one row per room with its measurement and
   length. Hold a row: it presses and shows FORGET → BIN; tap it and the

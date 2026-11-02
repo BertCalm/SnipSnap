@@ -614,7 +614,7 @@ object Copy {
      * thing. No full stop: like ROOMS' legend and the grid's own, this is
      * furniture that stays on screen, not a line the app says once.
      */
-    const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
+    const val SHELF_LEGEND = "HOLD A KIT TO RENAME, DELETE OR ADD TO AN EXPANSION"
 
     // ---- SETUP's answers (September UAT, finding 23) ----
 

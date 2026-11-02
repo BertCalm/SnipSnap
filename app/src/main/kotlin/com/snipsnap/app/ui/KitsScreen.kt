@@ -1178,7 +1178,8 @@ private fun KitRow(
                         enabled = !busy || armed,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onLongClickLabel = "RENAME OR DELETE",
+                        // The same words as the legend under the shelf, so the sighted and the spoken app agree.
+                        onLongClickLabel = if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE",
                         onLongClick = { onArm() },
                         onClick = { if (armed) onDisarm() else onOpen(entry) },
                     )
