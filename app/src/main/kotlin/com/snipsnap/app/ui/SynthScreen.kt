@@ -121,6 +121,7 @@ import com.snipsnap.shell.CausticPadMaker
 import com.snipsnap.shell.CausticPad
 import com.snipsnap.shell.CausticEditing
 import com.snipsnap.shell.LibrationPadMaker
+import com.snipsnap.shell.LatticePadMaker
 import com.snipsnap.shell.LibrationPad
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.RimePad
@@ -1188,7 +1189,7 @@ fun SynthScreen(
                 ?: engine.buildPatch(name, voice, controls)
         }
         if (engine == Engine.LATTICE) {
-            // A SPEED accessibility edit can share a frame with SAVE or SEND.
+            // A SPEED accessibility edit can share a frame with SAVE, SEND or MAKE.
             // Keep its newest controls together with the authored note and excitation.
             val current = loadedPatchesByVoice[engine to voice] as? LatticePatch
             val controls = macrosByVoice.getValue(engine to voice)
@@ -2219,6 +2220,7 @@ fun SynthScreen(
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
+        (engine == Engine.LATTICE && LatticePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch)) ||
         (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
@@ -2253,6 +2255,11 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.LATTICE -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch
+            if (LatticePadMaker.supports(patch))
+                HeldSpec.Lattice(LatticePadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.CAUSTIC -> HeldSpec.Caustic(CausticPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
         Engine.LIBRATION -> {
@@ -2336,7 +2343,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2375,20 +2382,20 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
                         // and ORIGAMI keeps its oversampled attack and sustain
                         // work to one zone at a time.
-                        // FILAMENT similarly bounds its network history to one root.
+                        // FILAMENT and LATTICE similarly bound their causal histories to one root.
                         // BALLAST simulates a frame, six strings and six tiles at 4x for
                         // each of its thirteen zones.
                         // Render serially so phones never hold nine
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -4590,6 +4597,7 @@ private fun contourMacroGroup(name: String): String = when (name) {
  * CREASE keeps its first pressure attack before the repeating moving sustain.
  * CONTOUR begins at its settled tone, omitting the original finite attack.
  * BALLAST keeps its onset and the structure settling before its held loop.
+ * LATTICE TRACE keeps its moving pluck before the collector reaches its held tone.
  */
 internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -4608,6 +4616,18 @@ internal sealed interface HeldSpec {
     fun preview(cancelled: () -> Boolean): Snip
     fun previewPlayback(cancelled: () -> Boolean): HeldPreviewPlayback = HeldPreviewPlayback(preview(cancelled))
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
+
+    class Lattice(private val spec: LatticePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = LatticePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${LatticePadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "C3–C5 · KEEPS THE MOVING PLUCK, THEN HOLDS ITS RINGING TONE. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LatticePadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = LatticePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            LatticePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
 
     class Libration(private val spec: LibrationPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = LibrationPadMaker.zoneMidis(spec)

@@ -891,6 +891,11 @@ R5 adds three TRACE factory positions, native speed comparisons and a separate
 MPC kit. The rest of the original engineering specification remains open.
 `generateLatticeAudition` preserves the earlier listening evidence and exports
 the native patches and MPC 3/XPM kits.
+The next milestone adds TRACE MAKE INSTRUMENT and CLI `--instrument`: nine
+roots across C3–C5, a causal opening followed by a measured sustain loop, host
+note-off release, and a separately versioned held recipe. The finite B render
+and existing static HOLD behavior remain intact. Keyboard sustain and hardware
+playback still require their own listening/device verdict.
 
 ### PRISM — harmonics with different lifetimes
 

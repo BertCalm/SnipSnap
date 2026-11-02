@@ -6,7 +6,8 @@
   const audio = $('#audition-audio');
   const state = { manifest: null, clips: [], hero: null, current: null, mode: 'common', filter: 'all', loadAttempt: 0, playbackRequest: 0, metadataResume: null };
   const sectionInfo = {
-    focus: { title: 'The accepted movement', label: 'Reference', description: 'The original plain-versus-moving comparison, preserved from R4.' },
+    keys: { title: 'Play it from the keyboard', label: 'Keygroups', description: 'A plucked opening, a held ringing tone, then a fade when the key is released.' },
+    focus: { title: 'The accepted movement', label: 'Reference', description: 'The original plain-versus-moving comparison and its native TRACE rendering, preserved.' },
     trace: { title: 'Choose the movement speed', label: 'TRACE', description: 'Native saved patches: reference speed, slower, and quicker.' },
     instrument: { title: 'Playable voices', label: 'Voices', description: 'Native saved presets on the same short phrase.' },
     hold: { title: 'Keep the passage open', label: 'HOLD', description: 'Four consecutive loop cycles, with no crossfade or makeup gain.' },
@@ -19,7 +20,7 @@
     range: { title: 'Across the keyboard', label: 'Range', description: 'The same source at different pitches and velocities.' },
     gesture: { title: 'The complete gesture', label: 'Gesture', description: 'Follow the original tone as the passage closes and rebuilds.' },
   };
-  const sectionOrder = ['focus', 'trace', 'instrument', 'hold', 'source', 'comparison', 'reference', 'color', 'rejection', 'musical', 'range', 'gesture'];
+  const sectionOrder = ['keys', 'focus', 'trace', 'instrument', 'hold', 'source', 'comparison', 'reference', 'color', 'rejection', 'musical', 'range', 'gesture'];
   const playIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l10-6.5z" fill="currentColor"/></svg>';
   const pauseIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z" fill="currentColor"/></svg>';
   const linkIcon = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M2 2h8v8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
@@ -53,6 +54,7 @@
   function decodeSafe(value) { try { return decodeURIComponent(value); } catch { return value; } }
   function clipSection(clip) {
     const raw = String(clip.section || 'reference').toLowerCase();
+    if (raw === 'keys') return 'keys';
     if (raw === 'focus') return 'focus';
     if (raw === 'trace') return 'trace';
     if (/instrument|native|preset/.test(raw)) return 'instrument';
@@ -71,8 +73,9 @@
   function effectiveMode(clip, hero = false) { return !hero && !['focus', 'gesture'].includes(clipSection(clip)) && state.mode === 'matched' && safeUrl(clip.matchedFile) ? 'matched' : 'common'; }
   function clipUrl(clip, mode) { return safeUrl(mode === 'matched' ? clip.matchedFile : clip.file); }
   function recipeUrl(clip, mode) { return mode === 'matched' && safeUrl(clip.matchedRecipeFile) ? safeUrl(clip.matchedRecipeFile) : safeUrl(clip.recipeFile); }
-  function cardModeText(clip) { return `${effectiveMode(clip) === 'matched' ? 'RMS-MATCHED' : 'COMMON GAIN'}${clipCues(clip).length > 1 ? ' · A/B' : ''}`; }
+  function cardModeText(clip) { return `${effectiveMode(clip) === 'matched' ? 'RMS-MATCHED' : 'COMMON GAIN'}${clipSection(clip) === 'keys' ? ' · NOTE ON / OFF' : clipCues(clip).length > 1 ? ' · A/B' : ''}`; }
   function isFeatured(clip) {
+    if (state.clips.some(item => clipSection(item) === 'keys')) return clipSection(clip) === 'keys';
     if (state.clips.some(item => clipSection(item) === 'trace')) return clipSection(clip) === 'trace';
     const native = state.clips.some(item => clipSection(item) === 'instrument');
     return native ? ['instrument', 'hold'].includes(clipSection(clip)) : clipSection(clip) === 'source';
@@ -111,9 +114,10 @@
       $('#hero-player').innerHTML = '<p class="error-inline">The opening demonstration is not included in this audition.</p>';
       return;
     }
+    const keys = clipSection(clip) === 'keys';
     const focus = clipSection(clip) === 'focus';
     const manifest = state.manifest || {};
-    document.body.classList.toggle('focus-audition', focus);
+    document.body.classList.toggle('focus-audition', focus || keys);
     $('#hero-listen-title').textContent = manifest.heroTitle || (focus ? 'Plain pluck → ringing trace' : 'Hear it disappear. Then return.');
     $('#hero-listen-eyebrow').textContent = manifest.heroEyebrow || (focus ? 'START HERE · THE SAME THREE NOTES' : 'THE SHORT PROOF · ONE CONTINUOUS TAKE');
     $('#hero-listen-guide').textContent = manifest.heroDescription || (focus ? 'A plays the plain phrase. B moves the gates during each note. Listen for the body to thin and a ringing tail to remain.' : 'Follow the original tone as the passage closes, then intermediate gates restore it.');
@@ -122,8 +126,9 @@
     const file = clipUrl(clip, 'common');
     const recipe = recipeUrl(clip, 'common');
     const patch = safeUrl(clip.patchFile);
-    const downloads = `<div class="hero-downloads clip-links">${patch ? `<a href="${escape(patch)}" download data-hero-patch-link aria-label="Download saved TRACE patch">Patch</a>` : ''}${recipe ? `<a href="${escape(recipe)}" download aria-label="Download common-gain recipe for ${escape(clip.title)}">Recipe</a>` : ''}${file ? `<a href="${escape(file)}" download aria-label="Download WAV for ${escape(clip.title)}">WAV ${linkIcon}</a>` : ''}</div>`;
-    $('#hero-player').innerHTML = `<div class="hero-controls"><button class="play-button hero-play" data-play="${escape(clip.id)}" data-hero="true" type="button" aria-label="Play ${escape(clip.title)}">${playIcon}</button>${waveform(clip, true)}<span class="hero-time" data-elapsed="${escape(clip.id)}">${time(clip.duration)}</span></div>${cues.length ? `<div class="hero-cues${focus ? ' focus-cues' : ''}" style="grid-template-columns:repeat(${cues.length},minmax(0,1fr))">${cues.map((cue, index) => `<button class="hero-cue${index === 0 ? ' active' : ''}" type="button" data-cue="${Number(cue.time) || 0}" title="${escape(cue.label)}" aria-label="Play ${escape(cue.label)} at ${time(cue.time)}">${escape(cueLabel(cue.label))}<span>${time(cue.time)}</span></button>`).join('')}</div>` : ''}${downloads}`;
+    const keygroups = keys ? safeUrl(manifest.downloads?.keygroups || manifest.downloads?.keysKit) : null;
+    const downloads = `<div class="hero-downloads clip-links">${keygroups ? `<a href="${escape(keygroups)}" download aria-label="Download TRACE keyboard instrument for MPC">Keygroups</a>` : ''}${patch ? `<a href="${escape(patch)}" download data-hero-patch-link aria-label="Download saved TRACE patch">Patch</a>` : ''}${recipe ? `<a href="${escape(recipe)}" download aria-label="Download common-gain recipe for ${escape(clip.title)}">Recipe</a>` : ''}${file ? `<a href="${escape(file)}" download aria-label="Download WAV for ${escape(clip.title)}">WAV ${linkIcon}</a>` : ''}</div>`;
+    $('#hero-player').innerHTML = `<div class="hero-controls"><button class="play-button hero-play" data-play="${escape(clip.id)}" data-hero="true" type="button" aria-label="Play ${escape(clip.title)}">${playIcon}</button>${waveform(clip, true)}<span class="hero-time" data-elapsed="${escape(clip.id)}">${time(clip.duration)}</span></div>${cues.length ? `<div class="hero-cues${focus || keys ? ' focus-cues' : ''}" style="grid-template-columns:repeat(${cues.length},minmax(0,1fr))">${cues.map((cue, index) => `<button class="hero-cue${index === 0 ? ' active' : ''}" type="button" data-cue="${Number(cue.time) || 0}" title="${escape(cue.label)}" aria-label="Play ${escape(cue.label)} at ${time(cue.time)}">${escape(cueLabel(cue.label))}<span>${time(cue.time)}</span></button>`).join('')}</div>` : ''}${downloads}`;
   }
 
   function renderCard(clip) {
@@ -150,19 +155,21 @@
   }
 
   function renderSources() {
-    const clips = state.clips.filter(isFeatured).sort((a, b) => sectionOrder.indexOf(clipSection(a)) - sectionOrder.indexOf(clipSection(b)));
+    const clips = state.clips.filter(clip => clip !== state.hero && isFeatured(clip)).sort((a, b) => sectionOrder.indexOf(clipSection(a)) - sectionOrder.indexOf(clipSection(b)));
+    const keys = state.clips.some(clip => clipSection(clip) === 'keys');
     const native = clips.some(clip => clipSection(clip) === 'instrument');
     const trace = clips.some(clip => clipSection(clip) === 'trace');
     $('#source-listen').hidden = !clips.length;
-    $('#source-listen-title').textContent = trace ? 'One motion. Three speeds.' : native ? 'Short notes. Held tones.' : 'Find a source you like.';
-    $('#source-listen-intro').innerHTML = trace ? 'Keep the reference.<br>Then try slower or quicker.' : native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
-    $('#source-footnote').textContent = trace ? 'Choose LATTICE → TRACE in SnipSnap. SPEED .5 keeps B; lower values slow the movement and higher values speed it up. HOLD extends a finite note. Each Patch download saves these controls.' : native ? 'These three source voices keep their original fixed gate settings. Each HOLD recording repeats its loop four times. Their patches and the earlier listening studies remain available below.' : 'Each source uses the same phrase. Compare the source character, then try the listening studies.';
+    $('#source-listen .eyebrow').textContent = keys ? 'THE KEYBOARD INSTRUMENT' : 'THE SAVED INSTRUMENT';
+    $('#source-listen-title').textContent = keys ? 'Keep the ringing tone.' : trace ? 'One motion. Three speeds.' : native ? 'Short notes. Held tones.' : 'Find a source you like.';
+    $('#source-listen-intro').innerHTML = keys ? 'Hold one note.<br>Then hear the voices overlap.' : trace ? 'Keep the reference.<br>Then try slower or quicker.' : native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
+    $('#source-footnote').textContent = keys ? 'Choose LATTICE → TRACE → MAKE INSTRUMENT in SnipSnap. The instrument covers C3–C5 with nine sampled roots and one captured velocity timbre. SPEED is baked into the samples. Held mode replaces finite HOLD with key-controlled duration; release fades the whole sound.' : trace ? 'Choose LATTICE → TRACE in SnipSnap. SPEED .5 keeps B; lower values slow the movement and higher values speed it up. HOLD extends a finite note. Each Patch download saves these controls.' : native ? 'These three source voices keep their original fixed gate settings. Each HOLD recording repeats its loop four times. Their patches and the earlier listening studies remain available below.' : 'Each source uses the same phrase. Compare the source character, then try the listening studies.';
     $('#source-clips').innerHTML = clips.map(renderCard).join('');
     const firstTarget = state.hero ? '#passage-proof' : clips.length ? '#source-listen' : '#listen';
     $('.skip-link').href = firstTarget;
-    $('.skip-link').textContent = state.hero ? 'Skip to the opening comparison' : 'Skip to listening studies';
+    $('.skip-link').textContent = state.hero ? keys ? 'Skip to the held-note recording' : 'Skip to the opening comparison' : 'Skip to listening studies';
     $('#first-listen-link').href = firstTarget;
-    $('#first-listen-link').innerHTML = `${state.hero ? clipSection(state.hero) === 'focus' ? 'Play the short comparison' : 'Play the passage proof' : clips.length ? 'Listen to the sources' : 'Explore the listening studies'} <span aria-hidden="true">↓</span>`;
+    $('#first-listen-link').innerHTML = `${state.hero ? keys ? 'Hear the held note' : clipSection(state.hero) === 'focus' ? 'Play the short comparison' : 'Play the passage proof' : clips.length ? 'Listen to the sources' : 'Explore the listening studies'} <span aria-hidden="true">↓</span>`;
   }
 
   function renderFilters() {
@@ -199,13 +206,18 @@
     $('#reference-checks').innerHTML = rows.length ? rows.map(row => `<tr><td>${escape(row.gates)}</td><td>${numeric(row.amplitude, 6)}</td><td>${numeric(row.expected, 6)}</td><td>${Number.isFinite(+row.error) ? (+row.error).toExponential(2) : '—'}</td></tr>`).join('') : '<tr><td colspan="4">Reference measurements are available in the downloadable report.</td></tr>';
     const validation = manifest.validation && typeof manifest.validation === 'object' ? Object.entries(manifest.validation) : [];
     $('#validation-facts').innerHTML = validation.map(([key, value]) => `<div class="validation-item"><span class="small-label">${escape(label(key))}</span><span>${escape(formatFact(value))}</span></div>`).join('');
+    const keysValidation = manifest.keysValidation && typeof manifest.keysValidation === 'object' ? Object.entries(manifest.keysValidation) : [];
+    $('#keys-evidence').hidden = !keysValidation.length;
+    $('#keys-validation-facts').innerHTML = keysValidation.map(([key, value]) => `<div class="validation-item"><span class="small-label">${escape(label(key))}</span><span>${escape(formatFact(value))}</span></div>`).join('');
     const engine = manifest.engine || {};
     const rate = +engine.sampleRate || 44100;
     const facts = [ ['OUTPUT', `${numeric(rate / 1000, 1)} kHz · mono`], ['INTERNAL RATE', `${engine.oversample || 4}× oversampled`], ['EXTERNAL EFFECTS', 'None'], ['MODEL', String(engine.model ?? 'Finite prototype')] ];
     if (engine.sourceCommit) facts.push(['SOURCE BASE', String(engine.sourceCommit).slice(0, 10)]);
+    const keysEngine = manifest.keysEngine || {};
+    if (keysEngine.sourceCommit) facts.push(['KEYGROUP SOURCE', String(keysEngine.sourceCommit).slice(0, 10)]);
     $('#engine-facts').innerHTML = facts.map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
     const downloads = manifest.downloads || {};
-    const links = [['traceKit', 'TRACE · 16 finite MPC pads', '↓'], ['tracePatches', 'TRACE · 3 saved speed patches', '↓'], ['traceNote', 'Ringing Trace · C3 note, PCM24', '↓'], ['kit', 'Original 16-pad MPC kit', '↓'], ['patches', 'Original 12 static patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Measurements JSON', '↗'], ['source', 'Engine source', '↗'], ['motionReference', 'Accepted R4 motion audition', '↓'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
+    const links = [['keygroups', 'TRACE · C3–C5 MPC keyboard instrument', '↓'], ['keysMeasurements', 'Keyboard loop & playback measurements', '↗'], ['keysRecipes', 'Keyboard performance recipes', '↓'], ['keysSource', 'Keyboard instrument source', '↗'], ['traceKit', 'TRACE · 16 finite MPC pads', '↓'], ['tracePatches', 'TRACE · 3 saved speed patches', '↓'], ['traceNote', 'Ringing Trace · C3 note, PCM24', '↓'], ['kit', 'Original 16-pad MPC kit', '↓'], ['patches', 'Original 12 static patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Earlier study measurements', '↗'], ['source', 'Earlier instrument source', '↗'], ['nativeReference', 'R5 native TRACE audition archive', '↓'], ['motionReference', 'Accepted R4 motion audition', '↓'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
     $('#download-links').innerHTML = links.length ? links.map(([key, title, arrow]) => `<a href="${escape(safeUrl(downloads[key]))}" download>${title}<span aria-hidden="true">${arrow === '↗' ? linkIcon : arrow}</span></a>`).join('') : '<span class="muted">Use the WAV and recipe links on each study.</span>';
     const date = new Date(manifest.generatedAt);
     $('#footer-build').textContent = `Lattice instrument study${manifest.revision ? ` · R${manifest.revision}` : ''}${!Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : ''}`;
@@ -219,6 +231,33 @@
     $('#revision-summary').textContent = manifest.revisionSummary || manifest.subtitle || (revision > 1 ? 'Start with short musical sources. Then compare the same phrase through different gates, with cue buttons to move between A and B.' : 'Cross two gates and the tone disappears. Add smaller turns between them, and the same sound finds a way through.');
     $('#revision-note').hidden = !manifest.revisionNote;
     $('#revision-note').textContent = manifest.revisionNote || '';
+    const keys = state.clips.some(clip => clipSection(clip) === 'keys');
+    document.body.classList.toggle('keys-audition', keys);
+    $('#round-description').textContent = keys ? 'TRACE now has a keyboard version. A plucked opening gives way to a steady ringing tone while the key stays down. The accepted B one-shot remains below.' : 'The accepted movement is saved in TRACE patches. SPEED chooses how quickly the pluck becomes its ringing trace.';
+    $('#hold-description').textContent = keys ? 'MAKE INSTRUMENT keeps the source gently feeding its tuned halo. It replaces finite HOLD with keyboard duration. Releasing the key fades the whole sound over 0.6 seconds in these recordings; it does not trigger a separate resonator tail.' : 'TRACE HOLD keeps one finite source effort ringing longer, then releases. The original WARM, PLUCK and HOLLOW voices keep their existing static settings and loop behavior.';
+    $('#download-description').textContent = keys ? 'Download the C3–C5 keyboard instrument with MPC3 and MPC2 programs, loop-marked WAVs, and the editable held recipe. The finite TRACE pad kit and all earlier patches and studies remain available.' : 'Take TRACE patches, a C3 note, and a separate dry 16-pad TRACE kit. TRACE pads play once; keep sample looping disabled. The original static kit and its HOLD-loop instructions remain available.';
+    $('meta[name="description"]').content = keys ? 'Play Lattice TRACE as a C3–C5 keyboard instrument: plucked attack, held ringing tone and key-release fade, with MPC keygroup downloads.' : 'The accepted Lattice ringing pluck, now saved as native TRACE patches with SPEED and finite HOLD controls.';
+  }
+
+  async function withKeyboardManifest(base) {
+    const path = safeUrl(base.keysManifest);
+    if (!path) return base;
+    const response = await fetch(path, { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`Keyboard manifest request returned ${response.status}`);
+    const keys = await response.json();
+    if (!Array.isArray(keys.clips) || !keys.clips.length) throw new Error('The keyboard manifest has no recordings.');
+    const usedIds = new Set(base.clips.map(clip => String(clip.id)));
+    const clips = keys.clips.map(clip => {
+      if (!clip.id || usedIds.has(String(clip.id)) || !safeUrl(clip.file)) throw new Error('The keyboard manifest contains an invalid or duplicate recording.');
+      usedIds.add(String(clip.id));
+      return { ...clip, section: 'keys', duration: clip.duration ?? clip.durationSeconds, recipeFile: clip.recipeFile ?? clip.recipe };
+    });
+    const merged = { ...base, clips: [...base.clips, ...clips], keysEngine: keys.keysEngine, keysValidation: keys.keysValidation || keys.validation, instrument: keys.instrument, downloads: { ...base.downloads, ...keys.downloads } };
+    if (!merged.downloads.keygroups && keys.downloads?.keysKit) merged.downloads.keygroups = keys.downloads.keysKit;
+    for (const field of ['revision', 'title', 'subtitle', 'revisionTitle', 'revisionSummary', 'revisionNote', 'heroClipId', 'heroTitle', 'heroEyebrow', 'heroDescription', 'heroFootnote', 'generatedAt']) {
+      if (keys[field] !== undefined) merged[field] = keys[field];
+    }
+    return merged;
   }
 
   async function loadManifest() {
@@ -228,9 +267,17 @@
     try {
       const response = await fetch('./manifest.json', { cache: 'no-cache' });
       if (!response.ok) throw new Error(`Manifest request returned ${response.status}`);
-      const manifest = await response.json();
-      if (!Array.isArray(manifest.clips) || !manifest.clips.length) throw new Error('The manifest has no audio clips.');
+      const base = await response.json();
+      if (!Array.isArray(base.clips) || !base.clips.length) throw new Error('The manifest has no audio clips.');
+      let manifest = base;
+      let keyboardLoadFailed = false;
+      try { manifest = await withKeyboardManifest(base); }
+      catch (error) {
+        keyboardLoadFailed = true;
+        console.warn('Lattice keyboard recordings:', error.message);
+      }
       if (attempt !== state.loadAttempt) return;
+      $('#keyboard-load-note').hidden = !keyboardLoadFailed;
       state.manifest = manifest;
       state.clips = manifest.clips.map((clip, index) => ({ ...clip, id: String(clip.id || `clip-${index + 1}`), title: String(clip.title || `Study ${index + 1}`) })).filter(clip => safeUrl(clip.file));
       if (!state.clips.length) throw new Error('The manifest has no usable audio paths.');

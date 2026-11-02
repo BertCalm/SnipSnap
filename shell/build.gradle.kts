@@ -355,3 +355,19 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
 }
+
+/** Held TRACE delivery and note-on/off recordings from the exported keygroup samples. */
+tasks.register<JavaExec>("generateLatticeKeysAudition") {
+    group = "distribution"
+    description = "Render TRACE attack/sustain keygroups, independent-cycle evidence and exported-file listening clips."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LatticeKeysAuditionGenerator")
+    workingDir = rootDir
+    val recipe = providers.gradleProperty("latticeKeysRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("latticeKeysReplayOutput").get())
+    } else {
+        args(providers.gradleProperty("latticeKeysOutput").orElse(rootDir.resolve("testkit/lattice-keys-audition").absolutePath).get())
+    }
+}

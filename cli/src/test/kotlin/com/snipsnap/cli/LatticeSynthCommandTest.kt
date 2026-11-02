@@ -2,6 +2,9 @@ package com.snipsnap.cli
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.shell.LatticePadMaker
 import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.LatticePresets
@@ -16,6 +19,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LatticeSynthCommandTest {
@@ -130,6 +134,67 @@ class LatticeSynthCommandTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `TRACE instrument exports bounded roots real sustain markers release and preserved edited source`() {
+        val root = createTempDirectory("lattice-cli-keys").toFile()
+        try {
+            val patch = LatticePatch("SAVED TRACE", LatticeVoice.TRACE,
+                Lattice.defaults(LatticeVoice.TRACE) + mapOf("TUNE" to .625f, "SPEED" to .23f, "HOLD" to .7f),
+                midi = 57, velocity = .42f)
+            val recipe = File(root, "trace.patch").also { it.writeText(patch.toJsonText()) }
+            val destination = File(root, "instrument")
+            val output = ByteArrayOutputStream()
+            val errors = ByteArrayOutputStream()
+            assertEquals(0, Cli.run(arrayOf("synth", "LATTICE", "TRACE", "--patch", recipe.path,
+                "--instrument", "--release", ".37", "--velocity", ".3", "--macros", "SPEED=.78",
+                "--out", destination.path), PrintStream(output), PrintStream(errors)), errors.toString())
+            val expected = LatticePadMaker.Spec(patch.copy(velocity = .3f,
+                macros = patch.macros + ("SPEED" to .78f)), .37f)
+            val (_, instrument) = InstrumentStore.list(destination).single()
+            assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
+            assertEquals((48..72).toList(), instrument.zones.flatMap { (it.lowNote..it.highNote).toList() })
+            assertEquals(.37f, instrument.release)
+            val saved = LatticePadMaker.Spec.fromJsonText(
+                LatticePadMaker.recipeFile(destination, instrument.name).readText())
+            assertEquals(expected, saved)
+            assertEquals(57, saved.patch.midi)
+            assertEquals(.625f, saved.patch.macros.getValue("TUNE"))
+            assertEquals(.7f, saved.patch.macros.getValue("HOLD"))
+            val sidecar = InstrumentStore.list(destination).single().first
+            for (zone in instrument.zones) {
+                assertTrue(zone.loopStartFrame > 0)
+                val wave = File(sidecar.parentFile, zone.sample)
+                val smpl = assertNotNull(WavReader.readSmpl(wave))
+                assertEquals(zone.rootNote, smpl.rootNote)
+                assertEquals(zone.loopStartFrame, assertNotNull(smpl.loop).startFrame)
+                assertEquals(zone.frameCount, assertNotNull(smpl.loop).endFrameExclusive)
+                assertTrue(WavReader.read(wave).samples.any { kotlin.math.abs(it) > .00001f })
+            }
+            assertTrue("9 LATTICE TRACE zones C3-C5" in output.toString())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `TRACE instrument rejects attack malformed release and multi preset output before writes`() {
+        val root = createTempDirectory("lattice-cli-key-errors").toFile()
+        try {
+            val destination = File(root, "not-created")
+            for (flags in listOf(
+                listOf("--attack", ".1"), listOf("--release", "NaN"), listOf("--release", "Infinity"),
+                listOf("--release", "0"), listOf("--release", "1.51"), listOf("--release", "oops"),
+                listOf("--all"), listOf("--touch"), listOf("--drone"),
+            )) {
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run((listOf("synth", "LATTICE", "TRACE", "--instrument") + flags +
+                    listOf("--out", destination.path)).toTypedArray(), PrintStream(ByteArrayOutputStream()),
+                    PrintStream(errors)), flags.joinToString())
+                assertTrue(errors.size() > 0)
+                assertFalse("Exception" in errors.toString())
+                assertFalse(destination.exists(), "invalid ${flags.joinToString()} created output")
+            }
+        } finally { root.deleteRecursively() }
     }
 
     @Test

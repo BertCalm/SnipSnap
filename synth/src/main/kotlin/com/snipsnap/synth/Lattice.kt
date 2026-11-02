@@ -11,6 +11,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -546,6 +547,114 @@ object Lattice {
         val renderMillis: Double,
     )
 
+    /** Keyboard-only causal run. The finite model above never enters this path. */
+    internal fun traceKeyProbe(patch: LatticePatch, midi: Int, cancelled: () -> Boolean): LatticeKeyProbe {
+        val started = System.nanoTime()
+        stopIfUnwanted(cancelled)
+        val m = settled(LatticeVoice.TRACE, patch.macros)
+        val motion = LatticeMotion.plan(m.getValue("SPEED"), cancelled)
+        val requested = Keys.midiHz(midi).toDouble()
+        val periods = (2.0 * requested).roundToInt().coerceAtLeast(1)
+        val loopFrames = (periods * Dsp.RATE.toDouble() / requested).roundToInt()
+        val fitted = periods * Dsp.RATE.toDouble() / loopFrames
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val cycleSamples = loopFrames * Dsp.OVERSAMPLE
+        val settings = LatticeMotion.settings(m.getValue("SPEED"), 0f, midi, patch.velocity)
+        val bank = Source(settings, rate, fitted)
+        val halo = Halo(fitted, rate)
+        val groups = DoubleArray(GROUPS)
+        // The postroll belongs to the same source/filter run. It keeps the batch FIR's far
+        // boundary outside every candidate loop; it is never part of the exported sample.
+        val postroll = 512 * Dsp.OVERSAMPLE
+        val raw = FloatArray(LatticeKeys.MAX_CYCLES * cycleSamples + postroll)
+        val states = ArrayList<DoubleArray>(LatticeKeys.MAX_CYCLES + 1)
+        val directPeaks = DoubleArray(LatticeKeys.MAX_CYCLES)
+        fun state() = bank.state() + halo.state()
+        states += state()
+        var block = motion.block(0)
+        for (i in raw.indices) {
+            if (i % CONTROL_BLOCK == 0) {
+                stopIfUnwanted(cancelled)
+                block = motion.block(i / CONTROL_BLOCK)
+            }
+            val t = motion.sourceTime(i.toDouble() / rate)
+            bank.next(groups, LatticeKeys.sourceEffort(t, patch.velocity))
+            var dry = 0.0
+            for (g in 0 until GROUPS) dry += groups[g] * block.geometry.groups[g].transmission
+            val collected = halo.process(groups, block.drives)
+            val mixed = (1.0 - block.reject) * dry + block.reject * collected
+            check(mixed.isFinite()) { "LATTICE key generated a non-finite sample at $i" }
+            raw[i] = mixed.toFloat()
+            val cycle = i / cycleSamples
+            if (cycle < directPeaks.size) directPeaks[cycle] = max(directPeaks[cycle], abs(dry))
+            if ((i + 1) % cycleSamples == 0 && cycle < LatticeKeys.MAX_CYCLES) states += state()
+        }
+        stopIfUnwanted(cancelled)
+        Tide.bandLimit(raw, rate)
+        stopIfUnwanted(cancelled)
+        val conditioned = Dsp.decimate(raw, Dsp.RATE)
+        val dc = Dsp.OnePole(Dsp.RATE)
+        for (i in conditioned.indices) {
+            if (i % 1024 == 0) stopIfUnwanted(cancelled)
+            conditioned[i] -= dc.lp(conditioned[i], 8f)
+        }
+        check(conditioned.all { it.isFinite() && abs(it) <= .99f }) { "LATTICE key exceeds fixed-gain headroom" }
+        val transitionEnd = LatticeMotion.physicalTime(LatticeKeys.TRANSITION_END, motion.scale)
+        val layerGain = if (patch.velocity > 0f) patch.velocity.toDouble().pow(.72).toFloat() else 1f
+        for (endCycle in 3..LatticeKeys.MAX_CYCLES) {
+            stopIfUnwanted(cancelled)
+            val loopStart = (endCycle - 1) * loopFrames
+            if ((loopStart - loopFrames).toDouble() / Dsp.RATE < max(transitionEnd, motion.movementSeconds)) continue
+            val startState = states[endCycle - 1]
+            val endState = states[endCycle]
+            var stateError = 0.0
+            for (i in startState.indices) stateError = max(stateError, abs(startState[i] - endState[i]))
+            if (stateError >= LatticeKeys.STATE_TOLERANCE) continue
+            val previous = conditioned.copyOfRange(loopStart - loopFrames, loopStart)
+            val loop = conditioned.copyOfRange(loopStart, endCycle * loopFrames)
+            var difference = 0.0
+            var energy = 0.0
+            var pcm16MaxDifference = 0
+            var pcm24MaxDifference = 0
+            val pcm16 = FloatArray(2 * loopFrames)
+            for (i in loop.indices) {
+                val d = loop[i] - previous[i].toDouble()
+                difference += d * d
+                energy += previous[i].toDouble() * previous[i]
+                // Match WavWriter's actual float-to-PCM arithmetic, without dither or gain.
+                val a16 = (previous[i] * 32767f).roundToInt()
+                val b16 = (loop[i] * 32767f).roundToInt()
+                pcm16MaxDifference = max(pcm16MaxDifference, abs(a16 - b16))
+                val a24 = (previous[i].toDouble() * 8_388_607.0).roundToLong().toInt()
+                val b24 = (loop[i].toDouble() * 8_388_607.0).roundToLong().toInt()
+                pcm24MaxDifference = max(pcm24MaxDifference, abs(a24 - b24))
+                // The package host supplies note velocity, so the exported layer removes this
+                // scalar. Prove that actual amplified PCM too, especially for quiet captures.
+                val layerA = previous[i] / layerGain
+                val layerB = loop[i] / layerGain
+                check(abs(layerA) <= .99f && abs(layerB) <= .99f) { "LATTICE key layer exceeds fixed-gain headroom" }
+                pcm16MaxDifference = max(pcm16MaxDifference, abs((layerA * 32767f).roundToInt() - (layerB * 32767f).roundToInt()))
+                pcm24MaxDifference = max(pcm24MaxDifference,
+                    abs((layerA.toDouble() * 8_388_607.0).roundToLong().toInt() - (layerB.toDouble() * 8_388_607.0).roundToLong().toInt()))
+                pcm16[i] = a16.toFloat()
+                pcm16[i + loopFrames] = b16.toFloat()
+            }
+            val cycleError = if (energy == 0.0) 0.0 else difference / energy
+            if (cycleError >= LatticeKeys.CYCLE_TOLERANCE || pcm16MaxDifference > 1 || pcm24MaxDifference > 2) continue
+            val out = conditioned.copyOf(endCycle * loopFrames)
+            val seam = if (energy == 0.0) 0.0 else Keys.seamError(out, loopStart)
+            val pcmSeam = if (pcm16.all { it == 0f }) 0.0 else Keys.seamError(pcm16, loopFrames)
+            check(seam.isFinite() && seam < Keys.MAX_SEAM_ERROR) { "LATTICE key does not close: $seam" }
+            check(pcmSeam.isFinite() && pcmSeam < Keys.MAX_SEAM_ERROR) { "LATTICE PCM key does not close: $pcmSeam" }
+            check(out.size.toDouble() / Dsp.RATE <= LatticeKeys.MAX_SAMPLE_SECONDS)
+            return LatticeKeyProbe(KeyNote(Snip(out, 1, Dsp.RATE), loopStart.toLong()), previous,
+                startState, endState, seam, cycleError, pcmSeam, pcm16MaxDifference, pcm24MaxDifference,
+                stateError, requested, fitted, loopFrames, transitionEnd, bank.gain,
+                directPeaks[endCycle - 1], (System.nanoTime() - started) / 1_000_000.0)
+        }
+        error("LATTICE TRACE MIDI $midi sustain did not converge within ${LatticeKeys.MAX_SAMPLE_SECONDS} seconds")
+    }
+
     private data class Carrier(val harmonic: Int, val group: Int, val amplitude: Double,
         val sine: Double, val cosine: Double)
     private data class Response(val real: Double, val imaginary: Double)
@@ -639,7 +748,7 @@ object Lattice {
         return out
     }
 
-    private class Source(settings: Settings, rate: Int) {
+    private class Source(settings: Settings, rate: Int, fittedFrequency: Double? = null) {
         private val sine = DoubleArray(PARTIALS)
         private val cosine = DoubleArray(PARTIALS)
         private val stepSin = DoubleArray(PARTIALS)
@@ -685,7 +794,7 @@ object Lattice {
                 val phase = 2.0 * PI * phases[p]
                 sine[p] = sin(phase)
                 cosine[p] = cos(phase)
-                val step = 2.0 * PI * hz / rate
+                val step = 2.0 * PI * (fittedFrequency?.times(harmonic) ?: hz) / rate
                 stepSin[p] = sin(step)
                 stepCos[p] = cos(step)
             }
@@ -709,6 +818,8 @@ object Lattice {
         fun heldCarriers(): List<Carrier> = (0 until PARTIALS).map { p ->
             Carrier(p + 1, groups[p], weights[p] * gain, sine[p], cosine[p])
         }
+
+        fun state(): DoubleArray = sine + cosine
     }
 
     /**
@@ -792,6 +903,8 @@ object Lattice {
             }
             return HALO_GAIN * out
         }
+
+        fun state(): DoubleArray = x1 + x2 + y1 + y2
 
         /** Actual settled response from one source group through signed rejects and all modes. */
         fun response(drives: Array<DoubleArray>, group: Int, frequencyHz: Double): Response {

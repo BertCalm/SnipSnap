@@ -17,6 +17,7 @@ import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.TidalPadMaker
+import com.snipsnap.shell.LatticePadMaker
 import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
@@ -236,9 +237,13 @@ import kotlin.random.Random
  * `--instrument` selects the expanded instrument unless `--model 1` was requested.
  * HOLD 1 writes a periodic WAV; --instrument retains the arrival before its sustain
  * and accepts --release. Saved root and velocity remain part of either recipe.
- * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.
+ * LATTICE WARM/PLUCK/HOLLOW/TRACE accepts existing `--patch` and `--macros` options.
  * Its `--midi 36..84` resets relative TUNE to .5; velocity-only edits keep saved tuning.
  * Every LATTICE WAV has a complete `.patch` beside it, including held-loop settings.
+ * TRACE also accepts `--instrument [--release .1..1.5]` for nine C3-C5 roots with
+ * its authored arrival and continuous held collector. SPEED shapes the arrival;
+ * key duration replaces finite HOLD, and saved source velocity shapes the capture's timbre.
+ * The exported `.lattice-keys.json` preserves the complete source and held-render version.
  * VENT accepts `--seed N` for its initial trajectory. PULSE, COIL and PLUME
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
@@ -401,7 +406,7 @@ object SynthCommand {
             }
         }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OtisPatch.ENGINE -> Otis.MIDI_MIN..Otis.MIDI_MAX
@@ -519,7 +524,11 @@ object SynthCommand {
             if (engine == RimePatch.ENGINE && opts["--attack"] != null) throw CliError("RIME retains its UNFOLD opening; use --release")
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
             if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
-            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM, TIDAL and CAUSTIC export a keys instrument here")
+            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM, TIDAL, CAUSTIC and LATTICE TRACE export a keys instrument here")
+            if (engine == LatticePatch.ENGINE) {
+                if (voice != LatticeVoice.TRACE.name) throw CliError("LATTICE --instrument supports TRACE; $voice keeps its existing finite or loop render")
+                if (opts["--attack"] != null) throw CliError("LATTICE TRACE keeps its authored attack; use --release for the held instrument")
+            }
             if (engine == CausticPatch.ENGINE && opts["--attack"] != null) throw CliError("CAUSTIC keeps its authored attack; use --release for the held instrument")
             if (engine == OverlapPatch.ENGINE) {
                 if ((savedPatch as? OverlapPatch)?.playback != OverlapPlayback.HELD)
@@ -826,6 +835,14 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--release: ${e.message ?: "invalid CONTOUR instrument"}")
         } else null
+        val latticeInstrumentSpec = if (instrument && engine == LatticePatch.ENGINE) try {
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() } ?: throw CliError("--release wants finite seconds")
+            } ?: LatticePadMaker.RELEASE.default
+            LatticePadMaker.Spec(chosen.single() as LatticePatch, release)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("LATTICE --instrument: ${e.message}")
+        } else null
         val tidalInstrumentSpec = if (instrument && engine == TidalPatch.ENGINE) try {
             val release = opts["--release"]?.let { raw ->
                 raw.toFloatOrNull()?.takeIf { it.isFinite() } ?: throw CliError("--release wants finite seconds")
@@ -866,6 +883,7 @@ object SynthCommand {
         if (overlapInstrumentSpec != null) return makeOverlapInstrument(overlapInstrumentSpec, dir, out)
         if (creaseInstrumentSpec != null) return makeCreaseInstrument(creaseInstrumentSpec, dir, out)
         if (contourInstrumentSpec != null) return makeContourInstrument(contourInstrumentSpec, dir, out)
+        if (latticeInstrumentSpec != null) return makeLatticeInstrument(latticeInstrumentSpec, dir, out)
         if (tidalInstrumentSpec != null) return makeTidalInstrument(tidalInstrumentSpec, dir, out)
         if (origamiInstrumentSpec != null) return makeOrigamiInstrument(origamiInstrumentSpec, dir, out)
         if (ohmInstrumentSpec != null) return makeOhmInstrument(ohmInstrumentSpec, dir, out)
@@ -956,6 +974,19 @@ object SynthCommand {
         OhmPadMaker.export(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} OHM zones, authored attack and sustain, RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
+        return 0
+    }
+
+    private fun makeLatticeInstrument(spec: LatticePadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = LatticePadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            LatticePadMaker.renderZone(spec, midi)
+        }
+        LatticePadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ MPC 2 twin)")
+        out.println("${midis.size} LATTICE TRACE zones C3-C5, authored attack and held collector, RELEASE ${LatticePadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
     }
 

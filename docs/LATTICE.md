@@ -67,6 +67,51 @@ Why it is built this way:
 - The existing source gain stays fixed. A result-level boost would conceal the
   losses that connect this example to Lattice's mechanism.
 
+## TRACE keyboard instrument
+
+Choose TRACE, then MAKE INSTRUMENT, to capture a C3–C5 keygroup instrument.
+The authored opening leads into a sustained ringing tone while a key is held;
+releasing the key applies the instrument player's release fade. RELEASE covers
+.1–1.5 seconds, default .6 seconds. There is no separate attack adjustment.
+The CLI provides the same path with `--instrument --release 0.6`.
+
+```sh
+./gradlew --no-daemon :cli:run \
+  --args='synth LATTICE TRACE --preset 1 --instrument --release 0.6 --out /tmp/lattice-keys'
+./gradlew --no-daemon :shell:generateLatticeKeysAudition \
+  -PlatticeKeysOutput=/absolute/fresh/lattice-keys-audition
+```
+
+The keyboard audition reloads the exported PCM24 samples and instrument sidecar
+through `InstrumentEngine`, drives exact note-on/off events, and verifies that
+each note wraps and releases to silence. Saved performance recipes replay the
+same files and event frames. `keys-measurements.json` records source fingerprints,
+package readback, real preceding-cycle evidence and pitch fit; physical MPC
+playback and the owner's listening verdict are not inferred from those checks.
+
+This held renderer is separate from the finite TRACE patch renderer. It keeps
+the source's original decay through .30 reference seconds, then smoothly settles
+at .20 source amplitude by .45 reference seconds. The same source, gate chain
+and rejection collector run continuously from rest. SPEED changes the motion
+and source-envelope clock as before. Finite HOLD is retained in the saved source
+patch but has no effect on keyboard sustain; note length belongs to the player.
+The accepted finite B reference remains unchanged.
+
+Nine roots, every minor third from MIDI 48 through 72, cover that range without
+extending the edge zones across the entire keyboard. Each root uses absolute
+pitch with TUNE neutralized. The sustain period fits whole output frames with
+its pitch offset reported. The loop follows its own causal attack and settling
+prefix; actual preceding-cycle and PCM recurrence measurements establish the
+handoff. No crossfade, seam repair or output normalization conceals a mismatch.
+Note-off fades the running sample; it does not synthesize a new physical tail.
+
+The package includes MPC 3 and MPC 2 keygroup programs, root/loop WAV metadata,
+the phone instrument sidecar, and a separately versioned `.lattice-keys.json`
+recipe containing the complete original patch and release time. One captured
+velocity supplies the timbre; playback velocity controls level. Within a zone,
+ordinary sample transposition also changes the baked movement timing slightly.
+Physical phone and MPC import/playback remain separate device checks.
+
 The [published audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site)
 retains the source choices, comparison studies and R4's accepted B. R5 adds the
 saved TRACE voice and speed comparisons. Earlier listening archives remain
@@ -105,8 +150,8 @@ note-on/gate playback if releasing the pad should stop the sound. The supplied
 WAVs contain periodic sustain, but those device settings are not preconfigured.
 
 Native patches are registered with common patch decoding, presets, velocity
-rendering, the CLI, starter-kit selection and the Android synth picker. This does
-not add a separate MAKE INSTRUMENT keygroup workflow.
+rendering, the CLI, starter-kit selection and the Android synth picker. The
+three static voices retain these paths; MAKE INSTRUMENT currently supports TRACE.
 
 ## Model and level policy
 
@@ -149,7 +194,8 @@ No crossfade, waveform repair or loudness normalization forces closure.
 
 The previous period, loop length and seam error are exposed for numerical
 verification. These periodic HOLD loops belong to WARM, PLUCK and HOLLOW. TRACE
-uses its finite moving gesture and refuses the periodic-loop renderer.
+refuses this loop-only renderer; its separate keyboard renderer retains the
+causal attack before a measured sustain loop.
 
 ## Render and replay
 
@@ -206,6 +252,24 @@ comparisons require the stage-sensitive collector.
 
 ## Evidence and validation
 
+- **Keyboard measurements, 2026-11-02:** a fresh JVM measured TRACE C3/C4/C5 at
+  SPEED .5. The causal prefix was 5.997–6.009 seconds followed by one approximately
+  two-second loop. Maximum pitch fit offset was .0064 cents; source/collector
+  state differences were below 3.6e-11 and whole conditioned-cycle relative
+  squared errors below 2.4e-14. Native and velocity-unscaled export layers
+  differed from their actual preceding cycle by at most one PCM16/PCM24 unit.
+  Warm median note render times were 255–286 ms over five repeats; first renders
+  with a cleared motion cache took 264–494 ms. These are host measurements,
+  separate from physical phone/MPC timing, playback and listening acceptance.
+- **Keyboard review pack, 2026-11-02:** all 63 focused Lattice JVM tests passed
+  with Gradle exit zero. All 26 R5 listening WAVs remained byte-identical. Nine
+  actual exported PCM24 roots retained their bounded C3–C5 coverage and loop
+  markers; every loop differed from its preceding cycle by at most one PCM unit.
+  Three reference-player performances wrapped and released to silence, then
+  replayed exactly from saved exported-file hashes and note-on/off frames.
+  Two additional Android regressions cover TRACE-only MAKE INSTRUMENT and
+  same-frame SPEED/release capture; local JVM validation does not compile or
+  execute them because this host has no Android SDK.
 - **Heard:** the owner's R1 report rejected the source and found the takes hard
   to distinguish. On 2026-10-23 the owner accepted the improved R2 source and
   clearer comparisons. On 2026-10-30 the owner accepted R4 B: “B sounds cool”.
