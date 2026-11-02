@@ -57,15 +57,32 @@ object ExportReadBack {
     }
 
     fun verify(kit: Kit, outcome: ExportOutcome): List<Finding> {
-        val dialect = when (outcome.format) {
-            ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION, ExportFormat.XPN -> XML
-            ExportFormat.MPC3_TRACK, ExportFormat.MPC3_PROJECT -> ACVS
-            ExportFormat.MIDI, ExportFormat.SFZ, ExportFormat.DECENT_SAMPLER -> return listOf(
-                Finding(Severity.SKIP, "read back: ${outcome.format.cyclerLabel} isn't an MPC program — nothing X-Ray can read"),
-            )
-        }
+        val dialect = dialectFor(outcome.format) ?: return notAProgram(outcome.format)
         val file = programFile(outcome)
             ?: return listOf(Finding(Severity.FAIL, "read back: no program file found at ${outcome.primary}"))
+        return verifyFile(kit, file, dialect)
+    }
+
+    /**
+     * [verify] for a program file already in hand: a pack writes one
+     * program per member kit under one expansion folder, and reads each
+     * back against its own kit.
+     */
+    fun verifyProgram(kit: Kit, program: File, format: ExportFormat): List<Finding> {
+        val dialect = dialectFor(format) ?: return notAProgram(format)
+        return verifyFile(kit, program, dialect)
+    }
+
+    private fun dialectFor(format: ExportFormat): Dialect? = when (format) {
+        ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION, ExportFormat.XPN -> XML
+        ExportFormat.MPC3_TRACK, ExportFormat.MPC3_PROJECT -> ACVS
+        ExportFormat.MIDI, ExportFormat.SFZ, ExportFormat.DECENT_SAMPLER -> null
+    }
+
+    private fun notAProgram(format: ExportFormat): List<Finding> =
+        listOf(Finding(Severity.SKIP, "read back: ${format.cyclerLabel} isn't an MPC program — nothing X-Ray can read"))
+
+    private fun verifyFile(kit: Kit, file: File, dialect: Dialect): List<Finding> {
         val reading = try {
             MpcXRay.read(file)
         } catch (e: Exception) {
