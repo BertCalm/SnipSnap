@@ -119,8 +119,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.macros.getValue("BODY"), progress("BODY"), .00001f)
             val midi = 48 + index * 3
             val velocity = .3f + index * .1f
-            dial("ROOT", (midi - CausticInstrument.MIDI_MIN).toFloat() /
-                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN))
+            rootTo(midi)
             dial("VELOCITY", velocity)
             dial("LENGTH", 0f)
             waitFor("independent $voice draft") {
@@ -133,8 +132,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         for ((index, voice) in CausticVoice.entries.withIndex()) {
             press(labels.getValue(voice))
             val midi = 48 + index * 3
-            assertEquals((midi - CausticInstrument.MIDI_MIN).toFloat() /
-                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN), progress("ROOT"), .00001f)
+            assertRoot(midi)
             assertEquals(.3f + index * .1f, progress("VELOCITY"), .00001f)
             assertEquals(CausticPresets.forVoice(voice).first().macros.getValue("BODY"), progress("BODY"), .00001f)
             assertEquals(0f, progress("LENGTH"), .00001f)
@@ -165,8 +163,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             assertEquals(factory.macros.getValue(macro), progress(macro), .00001f)
         }
 
-        dial("ROOT", (57 - CausticInstrument.MIDI_MIN).toFloat() /
-            (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN))
+        rootTo(57)
         dial("VELOCITY", .43f)
         dial("SOURCE", .68f)
         dial("BODY", .62f)
@@ -178,7 +175,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         // carries ROOT, VELOCITY and the native model when MAKE is recreated.
         compose.runOnIdle { generation++ }
         pump()
-        waitFor("the restored Caustic root") { progress("ROOT") == (57 - 36) / 48f }
+        waitFor("the restored Caustic root") { rootIs(57) }
         assertEquals(.43f, progress("VELOCITY"), .00001f)
         assertEquals(.68f, progress("SOURCE"), .00001f)
         assertFiniteControls()
@@ -251,7 +248,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             "macro.CAUSTIC.ALLOY.SOURCE" to ".33", "macro.CAUSTIC.ALLOY.HOLD" to "1.0")
         SynthDrafts.write(settings, listOf(patch))
         show(root, settings)
-        waitFor("restored explicit Caustic root") { progress("ROOT") == (69 - 36) / 48f }
+        waitFor("restored explicit Caustic root") { rootIs(69) }
         assertEquals(.37f, progress("VELOCITY"), .00001f)
         assertEquals(.33f, progress("SOURCE"), .00001f)
         assertFiniteControls()

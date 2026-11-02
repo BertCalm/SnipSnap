@@ -1,7 +1,6 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTextReplacement
@@ -60,8 +59,7 @@ class ScannedChainEditorScreenTest : ComposeScreenTest() {
                 onDroneToLoop = { _, _, _ -> }, onOpenSurface = {}, appScope = appScope, settings = settings,
             )
         }
-        val root = button("ROOT").fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
-        assertEquals(source.midi.toFloat(), root.current, 0f)
+        assertRoot(source.midi)
         fun progress(label: String) = button(label).fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
         val attack = progress("ATTACK")
         val release = progress("RELEASE")

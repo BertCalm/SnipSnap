@@ -175,7 +175,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     fun a_drawn_starting_shape_commits_without_resetting_the_current_recipe() {
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original)
-        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "ROOT", "VELOCITY", "LENGTH")) {
+        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "VELOCITY", "LENGTH")) {
             assertReadsInFull(label)
         }
 
@@ -217,7 +217,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     }
 
     @Test
-    fun root_velocity_and_length_each_preserve_the_other_saved_fields() {
+    fun velocity_and_length_each_preserve_the_other_saved_fields() {
         val voice = ScannedChainVoice.BLOOM
         val custom = ScannedChainShape.drawn(
             FloatArray(ScannedChain.SHAPE_SIZE) { i -> if (i < 29) .27f else -.08f },
@@ -226,15 +226,14 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
         val original = fixture(voice).copy(shape = custom)
         show(original)
 
-        adjust("ROOT", 65f)
-        assertEquals(original.copy(midi = 65), currentPatch)
-
+        // ROOT is the shared stepper row drawn by the screen, not by these controls; the screen
+        // tests drive it. What is checked here is that each control keeps the others' saved fields.
         adjust("VELOCITY", .64f)
-        assertEquals(original.copy(midi = 65, velocity = .64f), currentPatch)
+        assertEquals(original.copy(velocity = .64f), currentPatch)
 
         adjust("LENGTH", 2.5f)
-        assertEquals(original.copy(midi = 65, velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
-        assertEquals(3, changeCount)
+        assertEquals(original.copy(velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
+        assertEquals(2, changeCount)
     }
 
     @Test

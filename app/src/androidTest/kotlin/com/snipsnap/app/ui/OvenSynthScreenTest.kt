@@ -110,7 +110,7 @@ class OvenSynthScreenTest : ComposeScreenTest() {
             invokeClick(voice.name)
             waitFor("${voice.name} selection") { settings["voice"] == voice.name }
             for (macro in Oven.macrosFor(voice)) slider(macro.name).assertExists()
-            slider("ROOT").assertExists()
+            currentRoot()
             slider("VELOCITY").assertExists()
             for (preset in OvenPresets.forVoice(voice)) {
                 invokeClick("PRESET ${preset.name}")
@@ -132,7 +132,7 @@ class OvenSynthScreenTest : ComposeScreenTest() {
         val shelf = show(factory, KitShelf.Entry(kitDir, kit))
         waitFor("factory strike") { stored(factory.voice) == factory }
 
-        dial("ROOT", .25f) // MIDI 42, independent of relative TUNE.
+        rootTo(42) // Independent of relative TUNE.
         dial("VELOCITY", .37f)
         dial("TUNE", .75f)
         dial("BODY", .22f)
@@ -152,7 +152,7 @@ class OvenSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle { visit += 1 }
         pump()
         waitFor("restored strike") { stored(factory.voice) == scrambled }
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(42)
         assertEquals(.37f, progress("VELOCITY"), 1e-6f)
         for ((name, value) in scrambled.macros) assertEquals(value, progress(name), 1e-6f)
 

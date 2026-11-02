@@ -75,7 +75,7 @@ class RimeSynthScreenTest : ComposeScreenTest() {
             val patch=presets.last()
             press("PRESET ${patch.name}")
             for ((macro,value) in patch.macros) assertEquals(value,progress(macro),.00001f)
-            assertEquals((patch.midi-Rime.MIN_MIDI).toFloat()/(Rime.MAX_MIDI-Rime.MIN_MIDI),progress("ROOT"),.00001f)
+            assertRoot(patch.midi)
             assertEquals(patch.velocity,progress("VELOCITY"),.00001f)
             assertEquals((patch.gateSeconds-.15f)/3.85f,progress("GATE"),.00001f)
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
