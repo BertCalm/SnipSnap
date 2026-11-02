@@ -55,6 +55,8 @@ internal object CausticCharacters {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<KernelKey, Kernels>?) = size > CACHE_LIMIT
     }
 
+    internal fun clearCache() = synchronized(kernelCache) { kernelCache.clear() }
+
     /** Same zero-state Double Butterworth-2 as scipy.signal.butter(2, hz, fs=rate) + sosfilt.
      * The 45 Hz roughness filter needs Double state; a Float direct-form denominator loses
      * accuracy close to z=1. House output filtering remains the caller's existing pipeline. */
