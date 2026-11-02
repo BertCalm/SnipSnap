@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -220,7 +221,8 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
         waitForRender("held SPREAD panel") {
             compose.onAllNodes(hasContentDescription("FEWER PADS")).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("ROOT ${Scales.nameOf(copy.midi)}").assertExists()
+        // One in the SPREAD panel, one in the SYNTH screen's ROOT row beneath it: both name the copy's root.
+        assertEquals(2, compose.onAllNodesWithText("ROOT ${Scales.nameOf(copy.midi)}").fetchSemanticsNodes().size)
         repeat(12) { activate("FEWER PADS") } // Four slots, with the existing A01 left intact.
         activate("SPREAD")
         waitForRender("held SPREAD finite pads") { KitStore.load(entry!!.dir).pad(4) != null }

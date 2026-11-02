@@ -1514,19 +1514,27 @@ fun SynthScreen(
      * recipe kept (STOOP's source and chord intervals, ORPHICA's grain settings,
      * NACRE's seed), through the same keep path its other performance edits use.
      */
-    fun updateRoot(control: SynthRoot.Control, midi: Int) {
+    fun updateRoot(midi: Int) {
+        // Read the live recipe at the moment of the edit, not the row's snapshot from the
+        // last frame: a response, profile or model change can share a frame with a root
+        // tap, and stepping from the stale copy would undo it (CHAMBER's and ACCORD's
+        // same-frame device tests). Each keep path then re-applies the step to the patch
+        // it holds, so its own state (drafts, saved settings) moves with it.
+        val pair = engine to voice
+        val live = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
+        val control = SynthRoot.of(live) ?: return
+        fun moved(patch: Patch): Patch = SynthRoot.of(patch)?.at(midi) ?: patch
         when (control) {
             is SynthRoot.Tune -> updateMacro("TUNE", control.tuneFor(midi))
             is SynthRoot.Field -> {
-                val next = control.at(midi)
                 touched = true
-                currentPresetByVoice.remove(engine to voice)
-                when (next) {
-                    is OhmPatch -> updateOhmPerformance { next }
-                    is MeridianPatch -> keepMeridianPatch(next)
-                    is TidalPatch -> updateTidalPatch(next.voice) { next }
-                    is AccordPatch -> updateAccordPatch(next.voice) { next }
-                    else -> loadedPatchesByVoice[engine to voice] = next
+                currentPresetByVoice.remove(pair)
+                when (live) {
+                    is OhmPatch -> updateOhmPerformance { moved(it) as OhmPatch }
+                    is MeridianPatch -> keepMeridianPatch(moved(live) as MeridianPatch)
+                    is TidalPatch -> updateTidalPatch(live.voice) { moved(it) as TidalPatch }
+                    is AccordPatch -> updateAccordPatch(live.voice) { moved(it) as AccordPatch }
+                    else -> loadedPatchesByVoice[pair] = moved(live)
                 }
             }
         }
@@ -3308,7 +3316,7 @@ fun SynthScreen(
                 val rootControl = if (embouchureRestore.waitsForRecipe(engine, voice)) null
                     else SynthRoot.of(buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)))
                 if (rootControl != null) {
-                    RootStepperRow(rootControl, scheme) { midi -> updateRoot(rootControl, midi) }
+                    RootStepperRow(rootControl, scheme) { midi -> updateRoot(midi) }
                 }
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
