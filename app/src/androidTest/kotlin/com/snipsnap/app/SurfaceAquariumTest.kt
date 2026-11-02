@@ -56,7 +56,9 @@ class SurfaceAquariumTest {
             assertTrue("the effect must create actual left/right differences", wet.samples.indices.step(2).any {
                 abs(wet.samples[it] - wet.samples[it + 1]) > 1e-4f
             })
-            WavWriter.write(file, wet)
+            // The engine runs at the device rate (48 kHz here); this checks that the
+            // write-and-read-back keeps the stereo width, not that the file is MPC-native.
+            WavWriter.write(file, wet, allowNonMpcRate = true)
             val saved = WavReader.read(file)
             assertEquals(2, saved.channels)
             assertTrue("saving must retain effect width", saved.samples.indices.step(2).any {

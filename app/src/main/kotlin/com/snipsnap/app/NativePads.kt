@@ -40,6 +40,16 @@ object NativePads {
         gainsL: FloatArray, gainsR: FloatArray, pitch: Double, reverses: BooleanArray,
     ): Boolean
     external fun setVoiceGain(handle: Long, voiceId: Int, gainL: Float, gainR: Float, glideMs: Float)
+
+    /**
+     * The engine's bend: every voice, sounding or started later, reads at
+     * its own speed times [ratio] (clamped to two octaves either way),
+     * gliding there over [glideMs]. False when the ring dropped it.
+     */
+    external fun setPitch(handle: Long, ratio: Double, glideMs: Float): Boolean
+
+    /** The engine's whole mix times [gain] 0..1, gliding over [glideMs]. False when the ring dropped it. */
+    external fun setMasterGain(handle: Long, gain: Float, glideMs: Float): Boolean
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float): Boolean
     external fun allOff(handle: Long, fadeMs: Float): Boolean
     external fun drainEnded(handle: Long): IntArray

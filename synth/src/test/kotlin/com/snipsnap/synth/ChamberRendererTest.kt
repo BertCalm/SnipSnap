@@ -40,7 +40,7 @@ class ChamberRendererTest {
             base.copy(macros = base.macros + ("DIVIDE" to .7f)),
             base.copy(macros = base.macros + ("PLACEMENT" to .7f)),
             base.copy(midi = 48), base.copy(velocity = .3f), base.copy(seed = Long.MAX_VALUE),
-            base.copy(model = 1), base.copy(model = 2),
+            base.copy(model = 1), base.copy(model = 2), base.copy(model = 3), base.copy(model = 4),
             base.copy(configuration = c.copy(dimensions = c.dimensions.copy(width = 9f))),
             base.copy(configuration = c.copy(listener = c.listener.copy(x = .55f))),
             base.copy(configuration = c.copy(sources = c.sources.copy(membrane = c.sources.membrane.copy(x = .16f)))),

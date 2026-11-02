@@ -20,7 +20,7 @@ data class ApsisPatch(
         Patches.validateMacros(this, Apsis.macrosFor(voice))
         require(midi in Apsis.MIDI_MIN..Apsis.MIDI_MAX) { "APSIS MIDI out of ${Apsis.MIDI_MIN}..${Apsis.MIDI_MAX}: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "APSIS velocity must be finite in 0..1" }
-        require(Apsis.supportsModel(config.modelVersion)) { "unsupported APSIS model ${config.modelVersion}" }
+        require(Apsis.supportsModel(voice, config.modelVersion)) { "unsupported APSIS $voice model ${config.modelVersion}" }
     }
 
     override val engine get() = ENGINE
@@ -46,11 +46,12 @@ data class ApsisPatch(
         fun fromJsonValue(value: JsonValue): ApsisPatch {
             val obj = value.obj()
             val configuration = obj["config"]?.takeUnless { it is JsonValue.Null }?.obj()
-            val model = configuration?.get("modelVersion")?.takeUnless { it is JsonValue.Null }?.int()
-                ?: Apsis.LEGACY_MODEL_VERSION
-            if (!Apsis.supportsModel(model)) throw JsonException("unsupported APSIS model $model")
+            val savedModel = configuration?.get("modelVersion")?.takeUnless { it is JsonValue.Null }?.int()
+            if (savedModel != null && !Apsis.supportsModel(savedModel)) throw JsonException("unsupported APSIS model $savedModel")
             val seed = configuration?.get("seedContext")?.takeUnless { it is JsonValue.Null }?.int() ?: 0
             return Patches.decode(value, ENGINE, { n -> ApsisVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                val model = savedModel ?: if (voice == ApsisVoice.PASSAGE) Apsis.LEGACY_MODEL_VERSION else Apsis.POPULATION_MODEL_VERSION
+                if (!Apsis.supportsModel(voice, model)) throw JsonException("unsupported APSIS $voice model $model")
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Apsis.DEFAULT_MIDI
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
                 ApsisPatch(name, voice, macros, midi, velocity, ApsisConfig(model, seed))

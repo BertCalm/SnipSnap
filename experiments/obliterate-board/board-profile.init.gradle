@@ -1,0 +1,35 @@
+// Isolated host board/cache profile; production source sets and build settings are unchanged.
+// JDK17: ./gradlew --offline -I experiments/obliterate-board/board-profile.init.gradle :synth:profileObliterateBoard
+gradle.projectsEvaluated {
+    def synth = gradle.rootProject.project(':synth')
+    def runtime = synth.sourceSets.main.runtimeClasspath
+    def compiler = synth.configurations.create('obliterateBoardCompiler')
+    synth.dependencies.add(compiler.name, 'org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21')
+    def repo = gradle.rootProject.projectDir
+    def classes = new File(repo, 'build/obliterate-board-helper-classes')
+    def props = gradle.startParameter.projectProperties
+    def output = props.get('obliterateBoardOutput') ?: new File(repo, 'testkit/obliterate-board').path
+    synth.tasks.register('compileObliterateBoardProfile', JavaExec) {
+        dependsOn synth.tasks.named('classes')
+        classpath compiler, runtime
+        mainClass.set('org.jetbrains.kotlin.cli.jvm.K2JVMCompiler')
+        maxHeapSize = '1g'
+        doFirst {
+            classes.mkdirs()
+            args '-jvm-target', '17', '-no-stdlib', '-no-reflect', '-classpath', runtime.asPath,
+                '-Xfriend-paths=' + new File(repo, 'synth/build/classes/kotlin/main').path,
+                '-d', classes.path, new File(repo, 'experiments/obliterate-board/BoardProfileRenderer.kt').path
+        }
+    }
+    synth.tasks.register('profileObliterateBoard', JavaExec) {
+        dependsOn synth.tasks.named('compileObliterateBoardProfile')
+        // When both tasks are selected, keep compilation/test load outside the benchmark.
+        mustRunAfter synth.tasks.named('test')
+        mustRunAfter gradle.rootProject.project(':shell').tasks.named('test')
+        classpath classes, runtime
+        mainClass.set('com.snipsnap.synth.BoardProfileRenderer')
+        maxHeapSize = '1g'
+        workingDir repo
+        args repo.path, new File(output).absolutePath
+    }
+}

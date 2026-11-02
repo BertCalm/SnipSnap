@@ -46,6 +46,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.KitDiff
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -154,6 +155,10 @@ fun TakesBinScreen(
     var armed by remember(model) { mutableStateOf(false) }
     var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
     var binHolds by remember(model) { mutableStateOf<List<KitBuilderModel.BinHold>>(emptyList()) }
+    // The rows that show no BACK, by entry file (`BinRowLine`): a kept row whose
+    // pad can give the entry back itself (`PadSheet.hasOwnWayBack`), and any row
+    // whose file a print's saved source names (`KitBuilderModel.filesUnderPrints`).
+    var noBack by remember(model) { mutableStateOf<Set<File>>(emptySet()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
     // SINCE T3: which take row is open, as (file, mtime) — the same identity
     // `doRestoreTake` checks, for the same reason (see its KDoc): rows are
@@ -199,10 +204,16 @@ fun TakesBinScreen(
      * will not read), every row falls back to its plain countdown from [m]'s
      * bin listing rather than failing the screen; the sweep deletes nothing
      * in such a kit, so those files are still there.
+     *
+     * The same fresh kit decides which rows hide BACK: a kept row whose pad
+     * can give the entry back itself ([PadSheet.hasOwnWayBack]), and any row
+     * whose file a print's saved source names
+     * ([KitBuilderModel.filesUnderPrints]). In the fallback the prints are what
+     * would not read, so every row keeps its BACK.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val live = kitOverride ?: kitSnapshot
-        val (t, b) = withContext(Dispatchers.IO) {
+        val (t, b, own) = withContext(Dispatchers.IO) {
             val scans = m.takes().map { f ->
                 // mtime read once, here: it is the row's identity check
                 // for `doRestoreTake` (see its KDoc) as well as its text.
@@ -210,16 +221,30 @@ fun TakesBinScreen(
                 val changes = runCatching { KitDiff.changes(KitStore.read(f), live) }.getOrNull()
                 TakeScan(f, mtime, changes)
             }
-            val holds = KitWrites.mutex.withLock {
-                runCatching { KitBuilderModel.open(m.kitDir).binHolds() }
+            val (holds, ownBack) = KitWrites.mutex.withLock {
+                runCatching {
+                    val fresh = KitBuilderModel.open(m.kitDir)
+                    val held = fresh.binHolds()
+                    val binned = held.map { it.entry.originalName }.toSet()
+                    val underPrints = fresh.filesUnderPrints()
+                    val hidden = held.filter { h ->
+                        // The pad under any prints: the one binHolds kept the entry for, and
+                        // whose door a printed pad's NONE reaches once the print is off.
+                        val keeper = h.keptFor?.let { fresh.kit.pad(it) }?.let(fresh::unprinted)
+                        h.entry.originalName in underPrints ||
+                            (keeper != null && PadSheet.hasOwnWayBack(keeper, h.entry.originalName, binned))
+                    }.map { it.entry.file }.toSet()
+                    held to hidden
+                }
             }.getOrElse { e ->
                 Log.w("TakesBinScreen", "the bin's kept set would not build; plain countdowns instead", e)
-                onTheClock(m.binContents())
+                onTheClock(m.binContents()) to emptySet<File>()
             }
-            scans to holds
+            Triple(scans, holds, ownBack)
         }
         takeScans = t
         binHolds = b
+        noBack = own
         if (kitOverride != null) kitSnapshot = kitOverride
     }
 
@@ -316,10 +341,12 @@ fun TakesBinScreen(
      * can bin several copies of the same `originalName` (each treat-then-
      * rewrite cycle bins the previous version under that same filename), and
      * this row's own [KitBuilderModel.BinEntry] is a specific one of those,
-     * distinguished on screen by its own countdown (or, for the newest while
-     * a pad still needs it, by that pad). The name-keyed overload
+     * distinguished on screen by its own countdown, or, for the newest entry a
+     * pad still keeps, by that pad's KEPT FOR. The name-keyed overload
      * always resolves to the newest, which is not necessarily the row that
-     * was tapped.
+     * was tapped. A row a pad keeps and can undo itself has no BACK at all
+     * (`BinRowLine`, [PadSheet.hasOwnWayBack]): that pad's own undo is its
+     * way back.
      */
     fun doRestoreFromBin(entry: KitBuilderModel.BinEntry) {
         if (busy) return
@@ -432,7 +459,7 @@ fun TakesBinScreen(
         }
     }
 
-    val binRows = remember(binHolds, kitSnapshot) {
+    val binRows = remember(binHolds, noBack, kitSnapshot) {
         val now = System.currentTimeMillis()
         binHolds.map { hold ->
             val be = hold.entry
@@ -455,7 +482,7 @@ fun TakesBinScreen(
             val classColor = matchedPad?.let { p ->
                 (p.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(p.drumClass)).tape
             }
-            BinRow(be, hold.keptFor, daysLeft, classColor)
+            BinRow(be, hold.keptFor, daysLeft, classColor, back = be.file !in noBack)
         }
     }
 
@@ -581,7 +608,18 @@ private data class TakeRow(
  * ([KitBuilderModel.BinHold.keptFor]), and [daysLeft] is then null; otherwise
  * [daysLeft] is the entry's countdown ([KitBuilderModel.BinHold.daysLeft]).
  */
-private data class BinRow(val entry: KitBuilderModel.BinEntry, val keptFor: Int?, val daysLeft: Int?, val classColor: Color?)
+private data class BinRow(
+    val entry: KitBuilderModel.BinEntry,
+    val keptFor: Int?,
+    val daysLeft: Int?,
+    val classColor: Color?,
+    /**
+     * False, so no BACK, on a kept row whose pad can give the entry back itself
+     * ([PadSheet.hasOwnWayBack]) and on a row whose file a print's saved source names
+     * ([KitBuilderModel.filesUnderPrints]).
+     */
+    val back: Boolean,
+)
 
 /**
  * Every entry on its plain clock, [KitBuilderModel.BIN_KEEP_DAYS] from when it
@@ -755,17 +793,34 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
             // same as the artboard.
             daysLeft != null -> TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape)
         }
-        Box(
-            Modifier
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                // Always clickable, `!busy` forwarded rather than dropped
-                // (accessibility audit finding 12).
-                .tapeClick(label = "BRING BACK ${row.entry.originalName.uppercase()}", enabled = !busy) { onRestore(row.entry) }
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("BACK", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+        // No BACK on a kept row whose pad can undo itself (the owner's call,
+        // 2026-10-31; `PadSheet.hasOwnWayBack`): BACK copies the original
+        // over the pad's audio without binning what it replaces and leaves
+        // the recipe, so the card would still show a treatment the sound no
+        // longer has, and the pad's own undo would then refuse. That pad's
+        // NONE (or MUTATE's or OUTSIDE's UNDO) gives the same original back
+        // and takes the recipe off with it; the row names the pad. That
+        // includes a print over such a pad (its NONE removes the print
+        // first) and soft hits added after the treatment (SOFT HITS off,
+        // then NONE). A kept row whose pad has no such door (a SPLICE, a
+        // DE-SAMPLE) keeps BACK: it is that pad's only way back in the app.
+        // And no BACK on any row whose file a print's saved source names
+        // (2026-11-01, `KitBuilderModel.filesUnderPrints`): BACK would
+        // overwrite a file REMOVE restores and checks by hash, so the print
+        // could never come off. Once the print is removed, BACK comes back.
+        if (row.back) {
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                    // Always clickable, `!busy` forwarded rather than dropped
+                    // (accessibility audit finding 12).
+                    .tapeClick(label = "BRING BACK ${row.entry.originalName.uppercase()}", enabled = !busy) { onRestore(row.entry) }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("BACK", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+            }
         }
     }
 }

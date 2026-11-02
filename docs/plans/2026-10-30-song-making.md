@@ -112,6 +112,43 @@ clipping.
 - a bed note 19 semitones over the root renders within 50 cents of its written pitch (`Pitch.detect`)
 - `ArrangerTest.kt:281` ("ring-outs and transitions on top") is rewritten to the new rule in the same commit, saying why
 
+#### Phase 2, as built (2026-11-01)
+
+- **Sections on the grid.**
+  - `Arranger.mixdown` counts each section's start in pulses and turns it into a frame once, with KitPreview's own arithmetic (`60 / bpm × RATE / PULSES_PER_BEAT`).
+  - Segments are added into the song at those frames, so each ring-out sounds under the next section's opening.
+  - `Mix.sectionStarts` now reports the grid, which is what ARRANGE's needle reads.
+- **Pull-up (D1):** `pullUpOver` keeps the outgoing section up to its last beat, plays `BeatTape.pullUp` built from that audio across the last beat, and stops at the turn's downbeat. A pulled-up record has stopped, so nothing of the outgoing section, bed included, sounds under the turn.
+- **One take per stretch, and the tape stop on the song (from review, #802).**
+  - Overlapping sections exposed two things that end-to-end placement had hidden behind its gaps.
+  - *Chokes across a boundary.* Each section rendered on its own, so an open hat on the theme's last 16th rang under the variation's closed hat on one instead of choking. The drums of each stretch the pull-up does not interrupt (before the turn, and from the turn on) now render as one take through a new `KitPreview.renderNotes`, the same engine as `render` without a clip's 64-bar limit. The bed still renders per section and is added at each section's start.
+  - *The tape stop.* It ran on the outro's buffer alone, so a long note from an earlier section played on at full speed past the ending. It now runs on the summed song at the outro's end (its drums plus ring-out), and anything past that point is gone with the tape.
+  - Both are measured. Against the previous commit's mixdown, `an open hat chokes on the next section's closed hat` reads 5.97 of energy where it now reads under 1e-6, and `the tape stop ends the whole song` runs 184,079 frames (4.2 s) past the last bar.
+  - *Where the song ends* (second review, #806). The stretch's render runs as long as its longest voice, so a long pad struck in the reprise held the tape stop back past the outro. The end is now the outro's own length, measured by rendering it alone; only the length is used, and the audio stays the stretch's. `a long pad struck before the outro does not hold back the tape stop` covers it. The bass test now compares against the same plan with no Answer, so it fails if the bed never renders instead of passing on the reprise's drums.
+- **Bed (D4):**
+  - `repitched` resamples to a virtual rate at any ratio, which is `TempoFit.repitch`'s arithmetic without its factor-of-two bound.
+  - The old `0.51..1.99` window refused a speed of exactly 2, so **every octave note in an Answer line played at the root, an octave low**. `Answer.pickOffset` picks the octave 12% of the time (34% in a scale without a fifth), so this was routine, not an edge case.
+  - A note past `BED_REACH_SEMITONES = 24` is left out. No line the app writes reaches it (the Answer's widest leap is the octave), so it is not plumbed into a section's `reason` as the plan suggested; only a hand-edited `answer.json` could get there.
+- **Found while building, fixed because they move section timing:**
+  - `tiled` offset each repeat by a four-four bar (`PULSES_PER_BAR`) whatever the clip's meter. `Mpc3Clip` refuses a note past its own length, so for a three-four clip repeated more than once this did not play late: it threw. Every repeated section is tiled, so a waltz-time groove could not be mixed down at all. It now steps by `clip.lengthPulses`.
+  - The bed was tiled by the drum section's repeat count, not by its own length. A two-bar line under a one-bar clip played 4 times ran 8 bars, past the section into the next; a one-bar line under a four-bar clip played once covered one bar of four. `bedNotes` lays the line end to end across the section and drops anything at or past its end.
+- **Measured:** `ArrangerTest`, 24 tests.
+  - Section starts equal the grid frame exactly at the default 92 BPM and at 140 BPM.
+  - The song runs less than a second (the outro's ring-out) past its last bar.
+  - `pullUpOver` leaves everything before the last beat untouched, fills the beat, and ends at the turn.
+  - Bed notes 12, 19 and −12 semitones from a 110 Hz sine land within 50 cents.
+  - A three-four clip tiled 3 times is nine beats with no gaps, and the bed covers a section exactly in both directions.
+- **Each guard is proven by reverting it alone:**
+  - End-to-end placement fails the grid test and the length test ("158770 frames" past the last bar, 3.6 s, the review's stumble summed).
+  - The four-four tiling fails the three-four test ("note at 8640 falls outside 3 bars").
+  - The old window fails the pitch test ("12 semitones: wanted 220.0 Hz, heard 110.0").
+- **Disclosed, not fixed:**
+  - A bed note that is still ringing when the next section's bed starts overlaps it. The bed is a sampler one-shot, not a monophonic voice, as it was before.
+  - The spinback starts at 0.8 of the last sample before the cut, so the turn's pull-up opens with a small level step. This is unchanged from the appended version.
+  - A chained pad's hit count now runs on through a stretch instead of restarting at each section, so a section can open on a later slice than it did. That is closer to the hardware, which counts hits across a sequence.
+  - `BeatTape.arrange` (SIDE A) also steps by `PULSES_PER_BAR` and is left alone here; its gaps between kits are a tape leader by design.
+- **Heard:** nothing. The boundary after the theme is the moment to listen to, before and after.
+
 ### Phase 3. Grid patterns: no click, real tails, chokes (M)
 
 **Goal:** a pattern on the grid sounds like the same pattern on ORBIT.
@@ -130,6 +167,36 @@ clipping.
 - **3c, chokes (S):**
   - `bakePattern` reads `source.muteGroups(kit)`. A hit in group g ends the earlier voices in g over `AutoPlace.CHOKE_FADE`, the fade ORBIT uses (`OrbitEngine.kt:374`).
   - **Test:** in group 1, an open hat followed by a closed hat leaves under −60 dB of open hat after the fade. The same pattern rendered by the grid and by ORBIT agrees within a stated tolerance.
+
+#### Phase 3, as built (2026-11-01)
+
+- **Changed against the design: no overhang buffers.**
+  - The design gave a baked pattern a body plus an overhang and had the mix add the previous interval's overhang. That would have broken the one-interval-per-buffer rule that `Mixer`, `Residency` and the drone path all lean on, and it could not place an early hit: that needs the *next* interval's audio before it is mixed, a lookahead the live engine does not have.
+  - Instead, a pattern interval renders from three patterns on one timeline: the one before it in the chain at minus one interval, itself at zero, and the one after at plus one interval (`Neighbourhood`, `Arrangement.neighbourhoodAt`). It writes only its own frames.
+  - Every buffer is still exactly one interval, the inputs are pattern data rather than baked audio, and neighbouring intervals compute every shared voice identically, so a voice split across a boundary joins without a seam.
+  - `Residency` and `Bouncer` key their caches by the neighbourhood. A chain of n patterns still bakes n entries per track, and a swap re-bakes the swapped pattern and its two neighbours, nothing further away.
+- **3a, the click:** subsumed. Between patterns nothing is cut at the bar line. A pattern heard alone (`BlockBaker.bake(block)`) fades over `TAIL_FADE_MS` at its end, and a voice past its one-interval carry fades the same way.
+- **3b, tails and early hits:** a hit late in one pattern rings into the next, and the chain wraps, so a one-pattern loop carries its own tail to its downbeat. A hit nudged early on the downbeat starts in the bar before, where it was written.
+- **3c, chokes:** `bakePattern` reads `source.muteGroups(kit)` and applies KitPreview's rule (`AutoPlace.CHOKE_FADE`, a voice already fading keeps its ramp) across the three-pattern timeline, within one kit.
+- **Measured:** `PatternTailTest`, 6 tests, plus all 426 existing `:loop` tests.
+  - Two intervals with an open-hat-style tone on the last 16th equal the same hit placed once on a plain timeline, within 1e-6 per sample (before: cut at the bar line, a 0.27 step).
+  - A lone pattern's last frame is under 1% of the hit's level.
+  - A downbeat hit nudged 200 frames early starts 200 frames before the bar.
+  - A closed hat chokes the previous pattern's open hat across the bar, and its own open hat inside one pattern; the control without a group still rings.
+  - Live playback through `LoopEngine` equals `Bouncer.render` sample for sample on a chain with tails, an early hit and a choke.
+- **Each mechanism proven by disabling it alone:**
+  - Ignoring the neighbours fails the tail, early-hit and cross-bar choke tests ("expected 95800 but was 96000" for the early hit).
+  - Skipping chokes fails both choke tests (432 of energy where 0 was expected).
+  - Dropping the lone fade fails the fade test (last frame still at 0.5).
+- **Disclosed, not fixed:**
+  - Only patterns carry. Into or out of a loop, drone or silence interval, a pattern's tail fades at the bar line and an early hit loses its head, as before.
+  - The chain wraps, so the first interval after pressing play carries the tail of the chain's last pattern. That is what makes a bounced cycle loop seamlessly, and it is the same audio every later pass plays.
+  - A voice carries at most one interval past its own; a pad longer than that fades out there.
+  - Chokes act within one track's patterns. Two tracks playing the same kit do not choke each other, where ORBIT's do.
+  - A carried tail plays at the level and pan its track has in the interval it sounds in; muting a track silences its tails at once.
+  - A hit nudged early by more than a 16th can start before the previous pattern's last hits; a choke from the pattern two back is then not seen by the interval after.
+  - The grid/ORBIT agreement test the plan named was not written: the two engines apply track level and pan differently, so it would compare more than the choke.
+- **Heard:** nothing. A loop with an open hat on the last 16th is the one to listen to, at the loop point.
 
 ### Phase 4. Export the song from the app (S pure, then S app)
 

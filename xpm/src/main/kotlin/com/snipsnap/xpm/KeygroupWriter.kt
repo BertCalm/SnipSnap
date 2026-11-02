@@ -46,6 +46,8 @@ data class KeygroupProgram(
      * preserves existing package bytes; native MPC 3 already declares NoteOn.
      */
     val explicitNoteOn: Boolean = false,
+    /** How the keys share voices; written to both the `.xty` and the `.xpm` program headers. */
+    val voiceMode: VoiceMode = VoiceMode.POLY,
 ) {
     init {
         require(name.isNotBlank()) { "program name must not be blank" }
@@ -53,6 +55,23 @@ data class KeygroupProgram(
             "1..128 keygroups, got ${keygroups.size}"
         }
         require(pitchBendRange in 0f..24f) { "pitchBendRange out of range: $pitchBendRange" }
+    }
+
+    /**
+     * A copy whose lowest zone(s) reach down to note 0 and highest zone(s) up to
+     * 127, so every key plays. Zones tied for an edge all stretch; order is kept.
+     */
+    fun fullKeyboard(): KeygroupProgram {
+        val low = keygroups.minOf { it.lowNote }
+        val high = keygroups.maxOf { it.highNote }
+        return copy(
+            keygroups = keygroups.map {
+                it.copy(
+                    lowNote = if (it.lowNote == low) 0 else it.lowNote,
+                    highNote = if (it.highNote == high) 127 else it.highNote,
+                )
+            },
+        )
     }
 }
 
@@ -87,6 +106,13 @@ class KeygroupWriter {
         sb.append("  </Version>\n")
         sb.append("  <Program type=\"Keygroup\">\n")
         sb.append("    <ProgramName>").append(program.name.esc()).append("</ProgramName>\n")
+        val voice = program.voiceMode
+        sb.append("    <Mono>").append(voice.mono.xmlBool()).append("</Mono>\n")
+        sb.append("    <Program_Polyphony>").append(voice.polyphony).append("</Program_Polyphony>\n")
+        sb.append("    <PortamentoTime>").append(voice.portamentoSeconds.f()).append("</PortamentoTime>\n")
+        sb.append("    <PortamentoLegato>").append(voice.legato.xmlBool()).append("</PortamentoLegato>\n")
+        sb.append("    <PortamentoQuantized>False</PortamentoQuantized>\n")
+        sb.append("    <MonoRetrigger>").append(voice.retrigger.xmlBool()).append("</MonoRetrigger>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
             appendInstrument(sb, index, kg, program.volumeRelease, program.explicitNoteOn)
@@ -215,3 +241,5 @@ class KeygroupWriter {
         }
     }
 }
+
+private fun Boolean.xmlBool(): String = if (this) "True" else "False"

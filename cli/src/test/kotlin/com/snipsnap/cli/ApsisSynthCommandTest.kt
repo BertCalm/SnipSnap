@@ -4,6 +4,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.ApsisConfig
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.ApsisPresets
+import com.snipsnap.synth.ApsisVoice
 import com.snipsnap.synth.Patches
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -16,6 +17,26 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ApsisSynthCommandTest {
+    @Test
+    fun `new finite and held populations export their own saved identity and native performance`() {
+        val directory = createTempDirectory("apsis-populations-cli").toFile()
+        try {
+            for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (held in listOf(false, true)) {
+                val patch = ApsisPresets.forVoice(voice).let { if (held) it.last() else it.first() }
+                    .copy(config = ApsisConfig(3, Int.MIN_VALUE))
+                val source = File(directory, "$voice-$held.json").also { it.writeText(patch.toJsonText()) }
+                val output = File(directory, "$voice-$held")
+                assertEquals(0, SynthCommand.run(listOf("APSIS", voice.name, "--patch", source.path,
+                    "--midi", "57", "--velocity", ".4", "--out", output.path), PrintStream(ByteArrayOutputStream())))
+                val expected = patch.copy(midi = 57, velocity = .4f)
+                val recipe = requireNotNull(output.listFiles { it.extension == "patch" }).single()
+                assertEquals(expected, Patches.fromJsonText(recipe.readText()))
+                val wav = requireNotNull(output.listFiles { it.extension == "wav" }).single()
+                assertContentEquals(ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray(), wav.readBytes())
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test
     fun `the CLI exports dry native audio and its exact replayable recipe`() {
         val directory = createTempDirectory("apsis-cli").toFile()

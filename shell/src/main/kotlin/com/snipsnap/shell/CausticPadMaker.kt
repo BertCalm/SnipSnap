@@ -100,7 +100,8 @@ object CausticPadMaker {
     fun export(name: String, spec: Spec, notes: List<KeyNote>, destRoot: File,
         overwrite: Boolean = false): KeygroupProgram {
         val (program, samples) = assemble(name, spec, notes)
-        OneNote.writePackage(name, program, samples, destRoot, overwrite)
+        // Keep the deliberately sampled register identical in the phone and both MPC descriptors.
+        OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
         AtomicFile.writeText(File(dataDir, PATCH_FILE), spec.patch.toJsonText())
         return program

@@ -69,12 +69,19 @@ class SurfaceScreenTest : ComposeScreenTest() {
             }
             val toggle = compose.onNodeWithTag("surface-aquarium-route")
             toggle.assertIsNotSelected()
-            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
-            waitFor("the routed choice saved") { SurfaceStore.load(entry.dir).aquariumFromKit }
-            toggle.assertIsSelected()
-            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
-            waitFor("the disconnected choice saved") { !SurfaceStore.load(entry.dir).aquariumFromKit }
-            toggle.assertIsNotSelected()
+            repeat(3) {
+                for (routed in listOf(true, false)) {
+                    toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+                    // Disk IO can finish before the frozen clock delivers the
+                    // recomposition. Neither completion proves the other: wait
+                    // for both, pumping frames even when the save wins the race.
+                    waitFor("SURFACE route $routed saved and drawn") {
+                        SurfaceStore.load(entry.dir).aquariumFromKit == routed &&
+                            toggle.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected) == routed
+                    }
+                    if (routed) toggle.assertIsSelected() else toggle.assertIsNotSelected()
+                }
+            }
             assertEquals(sound.toJsonValue(), entry.kit.aquariumPerformance)
             assertArrayEquals(originalMetadata, metadata.readBytes())
             assertArrayEquals(originalWave, File(entry.dir, "one.wav").readBytes())

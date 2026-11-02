@@ -123,8 +123,8 @@ class OrigamiGestureWorkflowTest {
             val (sidecar, instrument) = InstrumentStore.list(dir).single()
             assertEquals(.73f, instrument.release)
             assertEquals(roots, instrument.zones.map { it.rootNote })
-            assertEquals(48, instrument.zones.first().lowNote)
-            assertEquals(72, instrument.zones.last().highNote)
+            assertEquals(0, instrument.zones.first().lowNote)
+            assertEquals(127, instrument.zones.last().highNote)
             val center = instrument.zones.single { it.rootNote == 60 }
             assertEquals(notes[roots.indexOf(60)].loopStartFrame, center.loopStartFrame)
             assertEquals(SmplChunk(60, SmplChunk.Loop(center.loopStartFrame, center.frameCount)),

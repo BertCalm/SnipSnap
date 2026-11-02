@@ -43,7 +43,7 @@ object ObbligatoConversationAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Usage: ObbligatoConversationAuditionGenerator [output-directory]" }
-        require(Obbligato.MODEL == 5 && Obbligato.MUSICAL_MODEL == 7 && Obbligato.CONVERSATION_MODEL == 8)
+        require(Obbligato.LEGACY_MODEL == 5 && Obbligato.MUSICAL_MODEL == 7 && Obbligato.CONVERSATION_MODEL == 8)
         val root = File(args.firstOrNull() ?: "../testkit/obbligato-conversation-audition").absoluteFile
         check(root.isDirectory || root.mkdirs()) { "Could not create $root" }
         val normal = relationships.flatMap { relationship ->
@@ -162,8 +162,8 @@ object ObbligatoConversationAuditionGenerator {
         writeJson("measurements.json", causal)
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "OBBLIGATO", "audition" to "Play, Fight and Protect conversations",
-            "status" to "The conversation revision awaits a listening verdict. The accepted default and kit remain model 5.",
-            "acceptedModel" to Obbligato.MODEL, "previousModel" to Obbligato.MUSICAL_MODEL,
+            "status" to "Historical comparison: model 5 was accepted when the model 8 conversation revision was first reviewed.",
+            "acceptedModel" to Obbligato.LEGACY_MODEL, "previousModel" to Obbligato.MUSICAL_MODEL,
             "candidateModel" to Obbligato.CONVERSATION_MODEL,
             "relationships" to relationships, "sampleRate" to Dsp.RATE, "channels" to 1, "pcmBits" to 24,
             "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED,
@@ -311,15 +311,15 @@ object ObbligatoConversationAuditionGenerator {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OBBLIGATO · three conversations</title><style>
 :root{color-scheme:dark;--bg:#101511;--panel:#19221b;--ink:#eaf2e9;--muted:#acbbaa;--accent:#ff8a7a;--line:#354738}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:40px 22px 64px}.eyebrow,.take-label,label,summary{font:12px/1.5 ui-monospace,monospace;letter-spacing:.05em}.eyebrow,.take-label{color:var(--accent)}h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.04em;margin:8px 0}h2{font-size:32px;margin:0}h3{font-size:22px;margin:0}p{color:var(--muted);margin:10px 0 18px}.intro{max-width:790px}a{color:var(--accent);text-underline-offset:3px}.tools{display:flex;gap:14px 22px;flex-wrap:wrap;margin:24px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:22px 0}.card,.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px}.relationship{margin:36px 0;padding-top:22px;border-top:1px solid var(--line)}.listen{margin:18px 0}.take-label{display:flex;gap:12px;justify-content:space-between;align-items:center}audio{display:block;width:100%;margin-top:8px}details{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}summary{cursor:pointer;min-height:36px}button,select,textarea{font:inherit;border:1px solid var(--line);border-radius:5px;padding:10px;background:#0f1711;color:var(--ink)}button{cursor:pointer;min-height:44px}select,textarea{width:100%;margin-top:8px}textarea{resize:vertical}label{display:block;color:var(--accent);margin-top:16px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.small{font-size:14px}.status{min-height:1.5em;margin:8px 0}footer{margin-top:32px}@media(max-width:680px){main{padding:25px 16px 45px}.grid{grid-template-columns:1fr}.card,.note{padding:18px}.take-label{font-size:11px}}
 </style></head><body><main>
-<div class="eyebrow">SNIPSNAP / OBBLIGATO / LISTENING COMPARISON</div><h1>Three conversations</h1>
+<div class="eyebrow">SNIPSNAP / OBBLIGATO / HISTORICAL COMPARISON</div><h1>Three conversations</h1>
 <p class="intro">The gentler duet develops through remembered answers and individual articulations. Compare Play, Fight and Protect on a single note, then in the same short melody. Start with the relationship you know best.</p>
 <div class="tools"><a href="#play">Play</a><a href="#fight">Fight</a><a href="#protect">Protect</a><a href="$ARCHIVE" id="pack-link" download>Download all 24 WAVs and recipes ↓</a><a href="standalone.html" id="standalone-link" download>Single-file page ↓</a><a href="manifest.json" id="manifest-download" download="manifest.json">Settings and measurements ↓</a></div>
-<p class="small">Complete normal notes and melodies are matched to the same loudness. Actual source taps and the support checks keep their normal duet's gain. Dry mono, without rack effects. This new revision awaits your listening verdict.</p>
+<p class="small">Complete normal notes and melodies are matched to the same loudness. Actual source taps and the support checks keep their normal duet's gain. Dry mono, without rack effects. This archived comparison retains its original listening settings.</p>
 <p class="small">The melody is C4, E-flat4, G4, F4. Each new note starts as the previous one releases, preserving its whole tail. Each note begins a fresh duet.</p><p class="small" id="embedded-note" hidden>This file embeds all 24 recordings and the main instrument patches. The complete recipe ZIP is available from the published page.</p>
 $sections
 <details id="support-check"><summary>Explore how Protect responds when the flute weakens</summary><p>Only the flute's blowing pressure is briefly lowered, from 0.95 to 1.45 seconds. Hear the full duet and the unweakened reed. Compare the two response-disabled reed recordings: they are exactly identical, showing that the intervention changes only the flute when responses are disabled.</p><div class="grid"><section class="card"><h3>Responses enabled</h3>${player("protect8_weak_duet", "WEAKENED FLUTE · DUET")}${player("protect8_weak_reed", "WEAKENED FLUTE · REED")}</section><section class="card"><h3>Responses disabled</h3>${player("protect8_off_duet", "NO INTERVENTION · DUET")}${player("protect8_off_reed", "NO INTERVENTION · REED")}${player("protect8_weak_off_duet", "WEAKENED FLUTE · DUET")}${player("protect8_weak_off_reed", "WEAKENED FLUTE · REED")}</section></div><p class="small">These supporting recordings use the normal Protect conversation's exact gain. The downloaded diagnostic recipes retain response and intervention flags; ordinary instrument patches retain normal playback.</p></details>
 <section class="note" style="margin-top:30px"><h2>Your listening notes</h2><label for="verdict">THE NEW CONVERSATIONS</label><select id="verdict"><option value="">Choose a verdict</option><option>More expressive and musical</option><option>Relationships need more contrast</option><option>Too busy or distracting</option><option>Prefer the gentler reference</option></select><label for="notes">WHAT DID YOU HEAR?</label><textarea id="notes" rows="5" placeholder="Which relationship develops most convincingly? Do the answers feel connected? Does either player disappear?"></textarea><p><button type="button" id="export-notes">Export listening notes ↓</button></p><p class="status small" id="status" aria-live="polite"></p></section>
-<footer><p class="small">The conversation revision is a separate saved instrument. Complete patches, melody onsets, physical intervention recipes, event summaries and recording hashes are included in the download. Your listening verdict determines the next direction.</p></footer>
+<footer><p class="small">The conversation revision is a separate saved instrument. Complete patches, melody onsets, physical intervention recipes, event summaries and recording hashes are included in the download. This archive preserves the comparison that led to later revisions.</p></footer>
 <script id="manifest" type="application/json">${manifest.replace("<", "\\u003c")}</script><script>
 const AUDIO = {};
 const manifest = JSON.parse(document.getElementById('manifest').textContent);
@@ -340,8 +340,8 @@ document.getElementById('export-notes').addEventListener('click',()=>{const reco
         OBBLIGATO: Play, Fight and Protect conversations
 
         Compare each gentler reference with its conversation revision. Both use the same
-        C4, velocity 0.8, seed 0, BREATH 0.65, MISCHIEF 0.2 and HOLD 0.45. The candidate
-        awaits a listening verdict. All 24 recordings are dry mono PCM24 at 44.1 kHz.
+        C4, velocity 0.8, seed 0, BREATH 0.65, MISCHIEF 0.2 and HOLD 0.45. This historical snapshot
+        retains the original recipes. All 24 recordings are dry mono PCM24 at 44.1 kHz.
 
         Open index.html beside audio/, patches/, recipes/, diagnostics/ and manifest.json.
         If provided, standalone.html embeds the audio and main patches for offline use.

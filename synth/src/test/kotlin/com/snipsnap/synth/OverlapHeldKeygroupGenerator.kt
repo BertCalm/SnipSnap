@@ -224,7 +224,9 @@ object OverlapHeldKeygroupGenerator {
             "pcm24OnsetToLoopSeam" to onsetToLoop)
     }
 
-    internal fun verifyPrograms(program: KeygroupProgram, xpm: File, xty: File, sidecar: File) {
+    internal fun verifyPrograms(declared: KeygroupProgram, xpm: File, xty: File, sidecar: File) {
+        // The packaging door stretches the outer zones to the keyboard's edges; the files are checked against that.
+        val program = declared.fullKeyboard()
         val factory = DocumentBuilderFactory.newInstance().apply {
             setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
         }

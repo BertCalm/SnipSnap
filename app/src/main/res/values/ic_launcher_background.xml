@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The default scheme's LCD ground (Schemes.DEFAULT.lcd): the mark on the icon sits where it sits in the app. -->
+    <color name="ic_launcher_background">#0F100E</color>
+</resources>

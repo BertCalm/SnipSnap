@@ -5,6 +5,7 @@ import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Room
 import com.snipsnap.synth.Treatments
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -94,6 +95,16 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of the ROOM pedal, on either sheet, is the default room the owner heard`() {
+        // `roomed` sets DISTANCE so that the tap lands on ROOM's default (the owner's choice, 2026-11-01). synth cannot see
+        // the sheets' tap amount, so the character restates it; this pins the two together.
+        val heard = Room.defaults().getValue("DISTANCE")
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            assertEquals(heard, Treatments.chain("roomed", tap).room!!.getValue("DISTANCE"), "a tap at $tap misses the heard room")
+        }
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -116,8 +127,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "the card should hold 38 segments")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(39, PadSheet.ALL_SEGMENTS.size, "the card should hold 39 segments")
     }
 
     /**
@@ -128,7 +139,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven and DELAY thirty-eight`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight and ROOM thirty-nine`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -155,9 +166,11 @@ class PadSheetTest {
             "FORGE",
             // DELAY's gate (2026-10-28): on the slate, drawn on the default row and behind MORE
             "DELAY",
+            // ROOM's Kotlin gate (2026-11-01): on the slate, behind MORE
+            "ROOM",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(39, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
@@ -399,5 +412,50 @@ class PadSheetTest {
             PadSheet.UnTreat.NOT_BINNED,
             PadSheet.unTreatState(layered, setOf("a1_kick_soft.wav")),
         )
+    }
+
+    /**
+     * The pad-sheet half of when THE BIN hides BACK on a kept row (the owner's call, 2026-10-31):
+     * where the pad's own sheet can give that entry back, through NONE over a card treatment or
+     * MUTATE's or OUTSIDE's UNDO for the main file. A SPLICE, a DE-SAMPLE or anything else with no
+     * door on the sheet answers false here, because BACK is then its only way back in the app. Rows
+     * under a print lose BACK by the other half (`KitBuilderModel.filesUnderPrints`, BoardSheetTest).
+     */
+    @Test
+    fun `a pad has its own way back only through a door its sheet really has`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        val main = "a1_kick.wav"
+        val soft = "a1_kick_soft.wav"
+        val both = setOf(main, soft)
+
+        assertTrue(PadSheet.hasOwnWayBack(treated(ERA), main, both), "an era: NONE")
+        val layered = treated(ERA, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertTrue(PadSheet.hasOwnWayBack(layered, soft, both), "NONE restores every file the pad plays, a layer too")
+        assertFalse(PadSheet.hasOwnWayBack(layered, soft, setOf(soft)), "NONE refuses while the main file is not binned")
+        // Soft hits added after the treatment: NONE refuses until SOFT HITS goes off, then gives the
+        // main file back. Clearing the soft hits drops every layer, so a layer's entry is not given back.
+        val ghosted = treated(ERA, listOf(KitLayer(soft, 1, 40), KitLayer("a1_kick_softer.wav", 41, 80), KitLayer(main, 81, 127)))
+        assertEquals(PadSheet.UnTreat.GHOSTS_POSTDATE, PadSheet.unTreatState(ghosted, both), "test setup: one soft hit never went in")
+        assertTrue(PadSheet.hasOwnWayBack(ghosted, main, both), "soft hits after the treatment: SOFT HITS off, then NONE")
+        assertFalse(PadSheet.hasOwnWayBack(ghosted, soft, both), "SOFT HITS off drops the layers, so NONE never gives a layer back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), main, setOf(soft)), "nothing in the bin under the file, nothing to give back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), "someone_else.wav", both + "someone_else.wav"), "not one of the pad's files")
+
+        val mutate = obj("""{"mutate":{"mode":"morph","with":["B02"]}}""")
+        assertTrue(MutateSheet.read(mutate) != null, "test setup: a MUTATE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a MUTATE: its UNDO")
+        val mutatedLayers = treated(mutate, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "MUTATE's UNDO restores the main file only, never a layer")
+
+        val outside = obj("""{"outside":{"move":"reamp"}}""")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an OUTSIDE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
+
+        val splice = obj("""{"splice":{"crossfaded":true}}""")
+        assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE has no door on the sheet: BACK stays")
+        val patch = obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}}}""")
+        val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
+        assertFalse(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE has no door on the sheet: BACK stays")
+        assertFalse(PadSheet.hasOwnWayBack(treated(null), main, both), "an untreated pad has nothing to undo")
     }
 }

@@ -2,10 +2,10 @@ package com.snipsnap.synth
 
 import com.snipsnap.kit.ArrangedPad
 
-/** The accepted model-five duet on four relationship rows and four explicit notes. */
+/** The accepted duet on four relationship rows and four explicit notes. */
 object ObbligatoKits {
     const val NAME = "SnipSnap Obbligato Kit"
-    const val MODEL = 5
+    const val MODEL = Obbligato.MODEL
     const val MAIN_VELOCITY = .8f
     const val SOFT_VELOCITY = .3f
     const val MID_VELOCITY = .6f

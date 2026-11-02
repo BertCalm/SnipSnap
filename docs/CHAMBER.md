@@ -11,8 +11,9 @@ patch replay, phone controls and a sixteen-pad dry MPC kit. The supplied
 [engineering specification](CHAMBER_SPEC.md) remains the unchanged proposal.
 Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work. The owner accepted the revised membrane
-direction and reported the model-3 mix was better; the wider preset and control
-matrix still needs listening acceptance.
+direction and reported the model-3 mix was better, then judged the wider
+upper-register revision "Much better". That response is the working renderer
+for new sounds. This does not establish acceptance of every preset or control pair.
 
 The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
 provides raw/matched playback, replayable downloads and the finite instrument's
@@ -21,6 +22,17 @@ current control study. Earlier timpani comparisons remain archived. The
 remains available unchanged. Numerical checks do not establish sonic acceptance.
 
 ## Finite instrument integration
+
+New patches use model 5: the wider control range together with pitch-aware
+strikes and sympathetic boundary responses. The app labels this **WIDER RESPONSE**.
+Complete saved recipes keep their explicit model, including versions 1–4;
+recalling a preset, editing ROOT or VELOCITY, and sending a sound to a pad never
+silently upgrades it. A saved earlier recipe offers **USE WIDER RESPONSE**,
+which changes only its renderer and preserves its name, controls, note, velocity,
+room, tuning, enabled strikes and exact seed. The complete edited draft persists
+immediately and remains editable through navigation, preset saving and pad delivery.
+The original six factory recipes and sixteen-pad MPC bank remain explicitly
+model 3, so their existing sounds and published kit stay reproducible.
 
 The phone SYNTH picker exposes both rooms, five physical controls, native ROOT
 and excitation VELOCITY. HOLD stays hidden because only finite strikes are
@@ -89,7 +101,7 @@ decoded PCM16 frame, and records original/container/PCM hashes in
 all historical files retain their bytes. The original manifest is retained as
 `manifest-rendered.json`; the hosting manifest names each delivered format.
 
-The finite study uses the current model across registers, velocities, presets,
+The original finite study uses model 3 across registers, velocities, presets,
 macro sweeps and interacting-control corners. Musical context clips use the same
 exported recordings as the MPC kit. Each finite event includes its attack and
 decay; neither context playback nor page Repeat demonstrates HOLD. Previous
@@ -115,6 +127,147 @@ root notes, overlapping tails and the membrane balance at soft and hard playing
 levels. Software builds, emulator checks and format read-back do not establish
 these physical-device results.
 
+## Wider endpoints — explicit model-4 listening candidate
+
+The [wider-extremes comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/extremes/index.html)
+puts twenty wider endpoints beside twenty existing model-3 endpoints and the two
+accepted defaults. It changes one control at a time at C4, velocity .75 and seed
+zero. At publication the default remained model 3; the original factory recipes
+and MPC kit remain pinned there. Model 4 stays available for exact saved replay;
+new sounds now use its wider controls through the register-aware model 5.
+Saved models 1–3 keep their renderer laws.
+
+The five controls reach different underlying quantities:
+
+| Control | Wider candidate behavior |
+| --- | --- |
+| STRIKE | Soft contact can reach twice the old duration, with less upper-mode participation; hard contact reaches a quarter of the old duration with an 80 μs minimum. Soft extension is bounded by each source's actual tuned period. |
+| BALANCE | The excitation floor falls from .17 to .025 and the focus width from .69 to .30 at the endpoints. A small low-pitched anchor remains while the selected source becomes more distinct. |
+| MATERIAL | Boundary decay scales from .22× to 2×, capped at three seconds; reflection cutoff scales from .30× to 1.30×. These are designed responses, not measured materials. |
+| DIVIDE | Normalized geometric coupling weights become more blended or local, with powers .50 to 2.50. Material weights remain convex and the scattering network remains passive. |
+| PLACEMENT | Sources move nearer or farther around the fixed listener. A common scale respects wall, source and listener clearance. Authored `EXPLICIT` positions remain unchanged. |
+
+MATERIAL and DIVIDE also bring the room pickup forward by up to 10×, outside
+feedback. This changes the room/source proportion, rather than master gain;
+matched playback and normalized spectral comparisons separate timbre from level.
+Each voice's accepted default follows the unchanged renderer path exactly.
+All new endpoint constants are shape choices awaiting listening acceptance.
+
+Local verification covers 61 distinct CHAMBER tests across the full focused run
+and a subsequent rate-reference run. Published model-1/model-2 WAVs and four
+accepted model-3 Float32 production hashes remain exact. Both wider voices pass
+the existing high-register 4×/8× pressure and spectral targets without relaxing
+their margins. These are JVM measurements, not listening or phone results.
+
+The study measures attack, body, early answer and late-tail windows separately,
+plus cumulative-energy times and requested-root/octave-down tone shares. Complete
+energy ledgers cover the new endpoints and combined extremes. Upper metal sources
+can cross a half-sine contact notch as STRIKE changes at high notes; separate
+diagnostics inspect that transition. The membrane/bar root guards do not imply
+uniform triangle-root strength throughout the control range.
+
+```sh
+./gradlew --no-daemon :synth:generateChamberExtremesAudition -PchamberExtremesBaseline=/absolute/finite-WAV-study -PchamberExtremesOutput=/tmp/chamber-extremes -PchamberExtremesExtendedChecks=true
+python3 scripts/package_chamber_extremes_site.py /absolute/current-hosted-dist /tmp/chamber-extremes /tmp/chamber-extremes-hosting
+```
+
+The full generated study stays in WAV. Hosting encodes only its new raw/matched
+recordings in lossless FLAC, verifies every PCM16 sample and references the prior
+recordings in place. Existing archives, recipes and listening notes are retained.
+Fresh settings still require the coupled simulation; this is a sound-range study,
+not a claim of new phone latency or hardware acceptance.
+
+### Why these ranges are separate
+
+- Preserve the accepted center and exact saved sounds while testing stronger edges.
+- Change contact, source participation, boundary behavior and geometry so overall
+  volume alone cannot account for the variation.
+- Keep observer pickup outside feedback so a more audible room does not inject
+  energy into the passive physical network.
+- Compare a small set of endpoints before changing the current factory library.
+
+## Upper register — heard working response
+
+The owner's wider-range listen identified a weaker resonant answer on higher
+notes. A Kotlin/JDK17 baseline at `efb365650` rendered 36 complete 4.5-second
+recordings. At MATERIAL 1, model 4's cumulative-energy T90 falls from 1.431 s
+at C4 to .343 s at C6 in HYBRID, and from 1.256 s to .399 s in AQUARIUM.
+Room/direct RMS falls from 3.123 to .071 and from 1.255 to .017 respectively.
+T90 measures the complete mix's energy distribution; it is not material T60.
+The individual source decay times change little. Fixed boundary resonances
+therefore lose their contribution as the requested note rises.
+
+There is also a distinct excitation defect: the old .5 ms minimum contact can
+span more than two periods of the high triangle's actual fundamental. A long
+half-sine force can cancel that fundamental even when its resonator has a long
+decay. Increasing decay alone cannot restore energy that was never excited.
+
+The register revision keeps the wider controls and makes these preparation changes:
+
+- Above C4, shorten the legacy minimum contact with pitch so the body's upper
+  modes keep receiving excitation. Also bound contact by each source's actual
+  tuned period, following STRIKE toward a shorter hard contact. The .8-period
+  soft/default cap and .2-period hard cap are voicing choices. The owner judged
+  the resulting upper-register comparison "Much better".
+- Above C4, transpose the boundary modal frequencies with the requested note.
+  This is a musical adaptation of the designed material response. Physical room
+  dimensions, propagation delays and existing damping times stay fixed;
+  it does not claim that a real room retunes itself.
+- Fade a note-aligned sympathetic root into each boundary between C4 and C5.
+  Its decay follows the material mixture's first mode, alongside the existing
+  material families. The enlarged modal port stays unit normalized and exchanges
+  existing energy without another strike. This costs at most ten additional modes.
+- Give the high-register triangle's fundamental up to 25% more modal weight,
+  with the same unit port normalization, to retain its requested pitch when the
+  shorter contact also excites more upper modes.
+- Calibrate only surface and late-field pickups with the square root of the
+  upper-register note ratio, bounded at 2 at C6. This is an observer voicing
+  choice, like the existing boundary and membrane pressure calibrations. It
+  changes the returning room's proportion without changing network energy,
+  direct sound or early reflections.
+- Scale all upper-register observer pressure by the inverse of that note-ratio
+  square root to reserve PCM headroom for the restored transients. This bounded,
+  prepared calibration uses no measured peak, clipping or runtime limiter.
+  Matched playback retains the same room/body proportions.
+
+These changes prepare the existing simulation and add no separate audio-rate
+stage. Exact-recipe cache identity already includes note and model.
+Fresh renders retain the coupled simulation's existing cost; no new phone
+latency or hardware acceptance is claimed. Model 5 is now the default for new
+sounds; model 3 remains pinned in the original factory recipes and kit, and all
+earlier sound revisions remain separately replayable. The listening verdict
+applies to the published comparison rather than every possible control setting.
+
+The paired study compares the previous wider response with this candidate at
+C4, C5 and C6, holding MATERIAL at 1 and retaining the voiced defaults elsewhere.
+The complete-recording guards require each C6 answer/attack ratio to exceed its
+previous value by 25% and retain at least half of C4's relative answer, with T90
+at least 60% of C4. These are declared engineering targets, not listening verdicts.
+MATERIAL contrast is measured across the entire .55–2 s tail with a joint
+time/frequency distribution normalized once for the full window. Counterexamples
+reject unchanged audio and gain alone while detecting same-pitch decay changes.
+A single short normalized spectral slice remains an informational descriptor;
+it cannot by itself determine whether a pitched decay has changed.
+
+```sh
+./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.Chamber*Test'
+./gradlew --no-daemon :synth:generateChamberRegisterAudition -PchamberRegisterBaseline=/absolute/register-baseline -PchamberRegisterPublished=/absolute/extremes-WAV-study -PchamberRegisterOutput=/tmp/chamber-register
+python3 scripts/package_chamber_register_site.py /absolute/current-hosted-dist /tmp/chamber-register /tmp/chamber-register-hosting
+```
+
+Final exports require a clean source commit. The hosting step verifies every
+lossless FLAC sample and seek table, preserves prior recordings, and reuses
+byte-identical source snapshots through explicit hash-checked hosted paths.
+
+The integration adds complete-recording Float32 goldens captured before promotion
+from both revised C6 clips and both previous wider C6 clips. New patch and public
+render defaults must select the heard renderer; complete saved versions 1–5 must
+survive JSON, control edits and pad recipes without migration. Cache keys separate
+all five versions. Historical performance exports validate against the original
+kit's model rather than the runtime default, so promoting new sounds cannot relabel
+old recordings. Focused numerical and Android build results are recorded separately
+from the user's listening verdict; fresh physical-device timing remains unverified.
+
 ## Timpani mix lift — model 3
 
 The owner heard model 2 and approved its sound, then asked for a little more
@@ -129,7 +282,7 @@ waveform-shape preservation, identical room-energy ledgers and exact published
 model-1/model-2 WAV replay. The full-room pitch checks pass at MIDI 36/48/60/84
 in both rooms.
 
-New patches use model 3. Saved model-1 and model-2 recipes continue to reproduce
+At that milestone new patches used model 3. Saved model-1 and model-2 recipes continue to reproduce
 their original sounds; captured published WAV hashes guard both versions.
 The page compares accepted model 2 with boosted model 3 at C3 and C4, including
 full quartets and dry timpani solos at one shared gain per room/note group.

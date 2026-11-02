@@ -44,7 +44,7 @@ object ApsisKitBank {
     private val entries: List<ApsisBankEntry> by lazy {
         fun entry(slot: Int, id: String, role: ApsisPadRole, preset: String, midi: Int,
             velocity: Float): ApsisBankEntry {
-            val source = ApsisPresets.all().single { it.name == preset }
+            val source = ApsisPresets.forVoice(ApsisVoice.PASSAGE).single { it.name == preset }
             val name = if (role == ApsisPadRole.COLOR) source.name else "${source.name} ${Scales.nameOf(midi)}"
             return ApsisBankEntry(slot, id, role, preset, source.copy(name = name, midi = midi, velocity = velocity))
         }

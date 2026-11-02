@@ -37,8 +37,8 @@ class OrigamiWorkflowTest {
     @AfterTest
     fun cleanUp() { temp.deleteRecursively() }
 
-    private fun authored() = OrigamiPresets.forVoice(OrigamiVoice.FAN).last().copy(
-        name = "MY WARM PAPER", macros = OrigamiPresets.forVoice(OrigamiVoice.FAN).last().macros +
+    private fun authored() = OrigamiPresets.references().last { it.voice == OrigamiVoice.FAN }.copy(
+        name = "MY WARM PAPER", macros = OrigamiPresets.references().last { it.voice == OrigamiVoice.FAN }.macros +
             mapOf("TUNE" to 0f, "CREASE" to .31f),
         midi = 72, velocity = .58f, seed = Long.MIN_VALUE + 23L, model = 4)
 
@@ -162,7 +162,8 @@ class OrigamiWorkflowTest {
             patch
         }
         assertEquals(OrigamiVoice.entries.toSet(), patches.map { it.voice }.toSet())
-        for (factory in OrigamiPresets.all()) assertTrue(factory in patches, "${factory.name} missing from starter")
+        assertEquals(OrigamiPresets.references(), patches.subList(8, 14),
+            "new performance factories must not reorder or expand the accepted sixteen-pad starter")
         assertTrue(patches.take(8).all { it.voice == OrigamiVoice.CRANE })
         assertTrue(patches.takeLast(2).all { it.macros.getValue("FOLD") == 0f })
         for (voice in OrigamiVoice.entries) {

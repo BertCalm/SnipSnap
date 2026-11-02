@@ -3,12 +3,14 @@ package com.snipsnap.kit
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.AfterTest
+import kotlin.test.assertContentEquals
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -186,6 +188,52 @@ class ImportSidecarTest {
             assertEquals(saved.pads.map { it.slot }, imported.first.pads.map { it.slot })
             assertEquals(null, imported.first.pad(1)!!.recipe, "chain import does not invent regenerable history")
             assertEquals(hash(File(samples, "Kick.wav")), hash(File(imported.second, "Kick.wav")))
+        }
+    }
+
+    @Test
+    fun `a kept bank survives export and import and clears back to one sample`() {
+        val bank = File(root, "bank-source").apply { mkdirs() }
+        val files = listOf("snare_v1.wav", "snare_v2.wav", "snare.wav")
+        files.forEachIndexed { index, name ->
+            WavWriter.write(File(bank, name), Snip(FloatArray(4410) { i ->
+                (.3 * kotlin.math.sin(i / (11.0 + 3 * index))).toFloat()
+            }, 1, 44_100))
+        }
+        val original = files.map { File(bank, it).readBytes() }
+        val strike = Json.parse("""{"recipe":3,"alias":false,"layers":[{"name":"DRY"},{"name":"ROOM","fx":{"fx":1,"spring":{"SIZE":0.42,"TONE":0.7,"MIX":1.0}},"terminalFadeMs":4.0},{"name":"ECHO","fx":{"fx":1,"echo":{"TIME":0.9,"REPEAT":0.55,"TONE":0.8,"MIX":0.9}},"terminalFadeMs":4.0}]}""") as JsonValue.Obj
+        val kit = Kit("Bank", listOf(KitPad(1, "snare.wav", "SNARE", DrumClass.SNARE, recipe = strike,
+            velocityLayers = listOf(KitLayer("snare_v1.wav", 1, 41, "DRY"), KitLayer("snare_v2.wav", 42, 84, "ROOM"),
+                KitLayer("snare.wav", 85, 127, "ECHO")))))
+        for (native in listOf(false, true)) {
+            val target = File(root, if (native) "bank-native" else "bank-compat")
+            val landed = if (native) {
+                Mpc3Exporter.exportTrack(kit, bank, target)
+                Mpc3Importer.import(File(target, "Bank.xtd"), File(root, "bank-native-landed")).let { it.kit to it.directory }
+            } else {
+                val folder = KitExporter.exportProgramFolder(kit, bank, target).directory
+                val zipFile = File(root, "bank-compat.zip")
+                ZipOutputStream(zipFile.outputStream()).use { zip ->
+                    for (file in folder.listFiles()!!.filter { it.isFile }.sortedBy { it.name }) {
+                        zip.putNextEntry(ZipEntry(file.name))
+                        file.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+                XpnImporter.import(zipFile, File(root, "bank-compat-landed")).let { it.kit to it.directory }
+            }
+            val pad = landed.first.pad(1)!!
+            assertEquals(listOf("DRY", "ROOM", "ECHO"), pad.velocityLayers.map { it.displayName })
+            assertEquals(listOf(1..41, 42..84, 85..127), pad.velocityLayers.map { it.velStart..it.velEnd })
+            assertEquals(strike, pad.recipe)
+            assertEquals(3, pad.recipe!!.entries["recipe"]!!.int())
+            // What a clear needs: the DRY layer file is present and is the original take.
+            val dry = File(landed.second, pad.velocityLayers[0].sampleFile)
+            assertTrue(dry.isFile)
+            assertContentEquals(original[0], dry.readBytes())
+            pad.velocityLayers.forEachIndexed { i, layer ->
+                assertContentEquals(original[i], File(landed.second, layer.sampleFile).readBytes())
+            }
         }
     }
 

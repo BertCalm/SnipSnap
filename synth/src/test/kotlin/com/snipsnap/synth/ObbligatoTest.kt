@@ -251,10 +251,10 @@ class ObbligatoTest {
     }
 
     @Test
-    fun `Play audibly hands emphasis from air to reed and back to air`() {
+    fun `legacy Play audibly hands emphasis from air to reed and back to air`() {
         val starter = ObbligatoPresets.all().single { it.name == "Play" }.macros
         for (hold in listOf(.45f, 1f)) for (midi in listOf(60, 63, 65, 67)) {
-            val play = Obbligato.probe(starter + ("HOLD" to hold), midi = midi, velocity = .8f, seed = 0)
+            val play = Obbligato.probe(starter + ("HOLD" to hold), midi = midi, velocity = .8f, seed = 0, model = Obbligato.LEGACY_MODEL)
             val label = "Play MIDI $midi HOLD $hold"
             val rate = play.snip.sampleRate
             val heldSeconds = play.snip.durationSeconds.toDouble() - .75
@@ -274,10 +274,10 @@ class ObbligatoTest {
     }
 
     @Test
-    fun `Fight overlaps continuously while prominence reverses several times`() {
+    fun `legacy Fight overlaps continuously while prominence reverses several times`() {
         val starter = ObbligatoPresets.all().single { it.name == "Fight" }.macros
         for (hold in listOf(0f, .45f, 1f)) for (midi in listOf(60, 63, 65, 67)) {
-            val fight = Obbligato.probe(starter + ("HOLD" to hold), midi = midi, velocity = .8f, seed = 0)
+            val fight = Obbligato.probe(starter + ("HOLD" to hold), midi = midi, velocity = .8f, seed = 0, model = Obbligato.LEGACY_MODEL)
             val label = "Fight MIDI $midi HOLD $hold"
             val heldSeconds = fight.snip.durationSeconds.toDouble() - .75
             val air = ArrayList<Double>()
@@ -481,7 +481,7 @@ class ObbligatoTest {
 
     @Test
     fun `model five preserves Harmony Play and Protect exactly while advancing Fight rivalry`() {
-        assertEquals(5, Obbligato.MODEL)
+        assertEquals(5, Obbligato.LEGACY_MODEL)
         for (bond in listOf(0f, 1f / 7f, 6f / 7f)) {
             val controls = macros(bond)
             val old = Obbligato.probe(controls, midi = 67, velocity = .7f, seed = 17, model = 4)

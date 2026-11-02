@@ -7,6 +7,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
 import com.snipsnap.shell.KeyHit
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 
 /**
@@ -44,6 +45,10 @@ class InstrumentPlayer(context: Context) {
 
     /** The player's master gain, 1 = the instrument as made; see [setVolume]. */
     private var volume = 1f
+
+    /** The bend asked for, and whether the engine has it; see [setBend]. */
+    private var bend = 1.0
+    private var bendSent = true
 
     /**
      * Load the instrument the sidecar describes: every zone's WAV read
@@ -101,6 +106,12 @@ class InstrumentPlayer(context: Context) {
         instrument = instrument?.copy(release = seconds)
     }
 
+    /** Change how a captured instrument's keys share voices (see [VoiceMode]) without loading or rendering anything again. */
+    @Synchronized
+    fun setVoiceMode(mode: VoiceMode) {
+        instrument = instrument?.copy(voiceMode = mode)
+    }
+
     /**
      * Every voice's gain times [gain] (0..1, already through the screen's
      * volume law): new notes start at it, and held ones glide to it over a
@@ -115,6 +126,26 @@ class InstrumentPlayer(context: Context) {
         for ((id, v) in voices) NativePads.setVoiceGain(handle, id, v.gain * gain, v.gain * gain, PadEngine.FADER_GLIDE_MS)
     }
 
+    /**
+     * Bend every voice, held, releasing or started later, to its own speed
+     * times [ratio] (1 at rest), gliding over [PadEngine.BEND_GLIDE_MS] so
+     * a wheel's stream of steps is one movement. A value the ring refuses
+     * is kept and sent with the next bend or note: the wheel's return to
+     * rest must land.
+     */
+    @Synchronized
+    fun setBend(ratio: Double) {
+        require(ratio.isFinite() && ratio > 0.0)
+        bend = ratio
+        bendSent = false
+        sendBend()
+    }
+
+    private fun sendBend() {
+        if (!open || bendSent) return
+        bendSent = NativePads.setPitch(handle, bend, PadEngine.BEND_GLIDE_MS)
+    }
+
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
     @Synchronized
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
@@ -125,9 +156,17 @@ class InstrumentPlayer(context: Context) {
         if (!running || NativePads.needsRestart(handle)) running = NativePads.start(handle)
         if (!running) return false
         reap()
+        sendBend()
         val inst = instrument ?: return false
         val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
         val sample = sampleIndex[hit.sampleFile] ?: return false
+        // LEAD and GLIDE are one voice: a new note takes every sounding one with it.
+        // Released voices leave `voices` once noteOff ran, so a release tail is not choked by a new
+        // LEAD/GLIDE note on the phone (the reference engine chokes it); a native choke is the owner's follow-up.
+        if (inst.voiceMode.mono) {
+            for (id in voices.keys.toList()) NativePads.stopVoice(handle, id, PadEngine.CHOKE_FADE_MS)
+            voices.clear()
+        }
         while (voices.size >= InstrumentEngine.MAX_VOICES) {
             val oldest = voices.keys.first()
             NativePads.stopVoice(handle, oldest, PadEngine.CHOKE_FADE_MS)

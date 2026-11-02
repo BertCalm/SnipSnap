@@ -263,8 +263,9 @@ class OrphicaScreenTest : ComposeScreenTest() {
         waitFor("the held ORPHICA package", timeoutMillis = 60_000) { InstrumentStore.list(instruments).isNotEmpty() }
         val (sidecar, instrument) = InstrumentStore.list(instruments).single()
         assertEquals(OrphicaPadMaker.RELEASE.value(.25f), instrument.release, .00001f)
-        assertEquals(60, instrument.zones.minOf { it.lowNote })
-        assertEquals(84, instrument.zones.maxOf { it.highNote })
+        // Exported keygroups span the keyboard.
+        assertEquals(0, instrument.zones.minOf { it.lowNote })
+        assertEquals(127, instrument.zones.maxOf { it.highNote })
         assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
         for (zone in instrument.zones) {
             val sample = WavReader.read(File(sidecar.parentFile, zone.sample))

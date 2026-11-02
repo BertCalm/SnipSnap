@@ -82,6 +82,7 @@ class MicSessionService : Service() {
     private var projection: MediaProjection? = null
     private var readerThread: Thread? = null
     private var foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+    private var sessionOwnerToken: String? = null
 
     /**
      * Where the reader thread posts its own-initiative teardown when it
@@ -118,10 +119,13 @@ class MicSessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_ARM -> handleArm()
+            ACTION_ARM -> handleArm(intent.getStringExtra(EXTRA_OWNER_TOKEN))
             ACTION_ARM_INSIDE -> handleArmInside(intent)
             ACTION_SNIP -> handleSnip()
-            ACTION_EJECT -> handleEject()
+            ACTION_EJECT -> {
+                val owner = intent.getStringExtra(EXTRA_OWNER_TOKEN)
+                if (owner == null || owner == sessionOwnerToken) handleEject()
+            }
         }
         // Nothing armed after handling this action (arm failed, eject just
         // ran, or this start doesn't correspond to a live session) — don't
@@ -159,11 +163,12 @@ class MicSessionService : Service() {
         attachBubbleIfAllowed()
     }
 
-    private fun handleArm() {
+    private fun handleArm(ownerToken: String?) {
         if (ring != null) {
             reenter()
             return
         }
+        sessionOwnerToken = ownerToken
 
         // startForeground() runs FIRST, before the AudioRecord (or the
         // 10.6 MB ring) is ever built: on the Android 14+ FGS-type model,
@@ -249,6 +254,7 @@ class MicSessionService : Service() {
             reenter()
             return
         }
+        sessionOwnerToken = null
         val code = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
@@ -560,6 +566,7 @@ class MicSessionService : Service() {
         // UI-side elapsed-time readout diffs against so it survives that
         // UI remounting (ArmControl recomposing doesn't reset the timer).
         armedAtElapsedRealtime = SystemClock.elapsedRealtime()
+        activeOwnerToken = sessionOwnerToken
         _armed.value = true
     }
 
@@ -637,6 +644,8 @@ class MicSessionService : Service() {
      * just an explicit drag-to-eject.
      */
     private fun stopReaderAndRecord() {
+        sessionOwnerToken = null
+        activeOwnerToken = null
         reading = false
         val r = record
         if (r != null) {
@@ -699,6 +708,7 @@ class MicSessionService : Service() {
         const val ACTION_EJECT = "com.snipsnap.app.EJECT"
         const val EXTRA_RESULT_CODE = "com.snipsnap.app.RESULT_CODE"
         const val EXTRA_RESULT_DATA = "com.snipsnap.app.RESULT_DATA"
+        private const val EXTRA_OWNER_TOKEN = "com.snipsnap.app.CAPTURE_OWNER"
         const val RING_SECONDS = 60
 
         private const val TAG = "MicSessionService"
@@ -753,6 +763,10 @@ class MicSessionService : Service() {
 
         private val _armed = MutableStateFlow(false)
         val armed: StateFlow<Boolean> = _armed.asStateFlow()
+
+        /** Optional owner for finite in-app takes; ordinary ARM/EJECT remains unscoped. */
+        @Volatile internal var activeOwnerToken: String? = null
+            private set
 
         private val _source = MutableStateFlow<Source?>(null)
         /** Which source the live session reads, or null when nothing is armed. */
@@ -961,9 +975,9 @@ class MicSessionService : Service() {
          * construction: a synchronous call from a button's onClick is
          * itself a foreground start).
          */
-        fun arm(context: Context) {
+        fun arm(context: Context, ownerToken: String? = null) {
             context.startForegroundService(
-                Intent(context, MicSessionService::class.java).setAction(ACTION_ARM),
+                Intent(context, MicSessionService::class.java).setAction(ACTION_ARM).putExtra(EXTRA_OWNER_TOKEN, ownerToken),
             )
         }
 
@@ -988,9 +1002,9 @@ class MicSessionService : Service() {
             )
         }
 
-        fun eject(context: Context) {
+        fun eject(context: Context, ownerToken: String? = null) {
             context.startService(
-                Intent(context, MicSessionService::class.java).setAction(ACTION_EJECT),
+                Intent(context, MicSessionService::class.java).setAction(ACTION_EJECT).putExtra(EXTRA_OWNER_TOKEN, ownerToken),
             )
         }
     }

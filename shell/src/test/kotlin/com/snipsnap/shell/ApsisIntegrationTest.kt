@@ -10,6 +10,7 @@ import com.snipsnap.kit.KitExporter
 import com.snipsnap.kit.Mpc3Exporter
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Apsis
+import com.snipsnap.synth.ApsisVoice
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.ApsisConfig
 import com.snipsnap.synth.ApsisPatch
@@ -32,7 +33,10 @@ class ApsisIntegrationTest {
             val source = File(root, "source").apply { mkdirs() }
             KitStore.save(Kit("Apsis desk", emptyList()), source)
             val model = KitBuilderModel.open(source)
-            val patches = listOf(ApsisPresets.all()[1], ApsisPresets.all().last()).map {
+            val patches = ApsisVoice.entries.flatMap { voice ->
+                val presets = ApsisPresets.forVoice(voice)
+                listOf(presets[1], presets.last())
+            }.map {
                 it.copy(midi = 48, velocity = .43f, config = ApsisConfig(3, -91))
             }
             for ((index, patch) in patches.withIndex()) {
@@ -57,6 +61,7 @@ class ApsisIntegrationTest {
             for (sample in native.samples + legacy.samples) assertTrue(sample.length() > 44)
             assertFalse(kit.pads[0].loop)
             assertTrue(kit.pads[1].loop)
+            assertEquals(listOf(false, true, false, true, false, true), kit.pads.map { it.loop })
             assertEquals(0, kit.pads[0].tuneCoarse)
             assertEquals(0, kit.pads[0].tuneFine)
         } finally { root.deleteRecursively() }
@@ -66,13 +71,13 @@ class ApsisIntegrationTest {
     fun `edited recipes preserve every saved model and seed through drafts presets and reopened work`() {
         val shelf = createTempDirectory("apsis-integration").toFile()
         try {
-            for (model in 1..3) {
-                val original = ApsisPresets.all().first().copy(
+            for (voice in ApsisVoice.entries) for (model in (if (voice == ApsisVoice.PASSAGE) 1..3 else 3..3)) {
+                val original = ApsisPresets.forVoice(voice).first().copy(
                     midi = 43, velocity = .37f, config = ApsisConfig(model, -193),
                 )
-                val edited = Patches.edited(original, "MY APSIS $model",
+                val edited = Patches.edited(original, "${voice.name} $model",
                     original.macros + mapOf("STRETCH" to .91f, "COUPLE" to .73f)) as ApsisPatch
-                val settings = mutableMapOf("engine" to "APSIS", "voice" to "PASSAGE")
+                val settings = mutableMapOf("engine" to "APSIS", "voice" to voice.name)
                 SynthDrafts.write(settings, listOf(edited))
                 assertEquals(edited, SynthDrafts.read(settings).single())
                 UserPresets.save(shelf, edited, model.toLong())
@@ -88,7 +93,7 @@ class ApsisIntegrationTest {
 
     @Test
     fun `held delivery repeats the entire sample while finite notes ignore release`() {
-        val held = ApsisPresets.all().last()
+        val held = ApsisPresets.forVoice(ApsisVoice.PASSAGE).last()
         val pad = ApsisPad.configure(KitPad(1, "cycle.wav"), held)
         assertFalse(pad.oneShot)
         assertTrue(pad.loop)

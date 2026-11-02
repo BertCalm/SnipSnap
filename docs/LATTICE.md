@@ -13,14 +13,68 @@ steps”. That verdict authorizes this native instrument milestone. The new pres
 bank and HOLD behavior still need their own listening verdict; the original
 engineering specification is not declared complete.
 
+## Focused musical gesture
+
+R4 asks a narrower listening question: does a solid pluck becoming a hollow,
+ringing trace give Lattice a useful musical character? The opening comparison
+plays a plain phrase, then the same notes with moving gates and a changing blend
+of passing tone and rejected resonance. Both use the same source, note velocities
+and source gain. The ringing tail comes from the existing rejection collector.
+
+The owner accepted B on 2026-10-30: “B sounds cool”, then authorized bringing
+that movement into saved patches. TRACE now carries the accepted trajectory in
+the native instrument. Its default SPEED .5 and HOLD zero reproduce B; the R4
+recording remains the fixed listening reference. Faster, slower and held settings
+are extensions of that direction and still need their own listening verdict.
+
+## TRACE: the saved moving voice
+
+Choose LATTICE → TRACE → Ringing Trace. The note begins with a solid pluck,
+changes its harmonic balance, then closes the direct path and leaves the
+rejected-signal resonators ringing. Its voice, speed, hold, MIDI root, velocity
+and synthesis model are saved in an ordinary `LatticePatch` and travel with the
+pad recipe through rendering and export.
+
+| Control | Behavior |
+| --- | --- |
+| TUNE | Relative pitch around the saved root, as on the other Lattice voices. |
+| SPEED | .5 is B's original timing. Zero takes twice as long after the first 35 ms; one takes half as long. Pitch and the resonators' natural damping stay fixed. |
+| HOLD | Keeps feeding the ringing component longer, adding up to 3.24 seconds of finite effort. The top remains a finite note; it does not loop or strike again. |
+
+TRACE deliberately has only pitch, motion speed and finite HOLD controls. The
+accepted gate relationships move together rather than becoming more independent
+knobs. SPEED also changes the source envelope's clock so slower gates still have
+energy to reject. The first 35 ms remain fixed. Compiled gate and collector
+coefficients are cached by SPEED in a bounded eight-entry cache; note, velocity
+and HOLD do not create separate geometry plans.
+Native TRACE rendering computes the mixed WAV without allocating or conditioning
+unused diagnostic stems. Full probes retain both branches and their energy
+evidence; tests require the native output to match those probes exactly.
+
+The factory bank adds Ringing Trace, Slow Trace and Quick Trace. The earlier
+twelve static patches and sixteen-pad starter remain available. R5 adds a
+separate TRACE pad kit and native patch downloads; these finite samples use
+ordinary one-shot playback. The native motion is now implemented; physical phone
+and MPC listening still require device checks.
+
+Why it is built this way:
+
+- The plain phrase gives the ear a direct reference for what the gates change.
+- Gate movement must reshape the passing tone before the branch blend, so the
+  example demonstrates more than fading between two sounds.
+- The source stops before the exposed tail. That makes the collector's stored
+  ringing energy distinct from a separate sustained source or added reverb.
+- The existing source gain stays fixed. A result-level boost would conceal the
+  losses that connect this example to Lattice's mechanism.
+
 The [published audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site)
-retains the source choices and comparison studies. R3 adds native instrument and
-HOLD examples, a native patch download and a dry sixteen-pad MPC starter. Earlier
-R1 and R2 listening evidence remains preserved.
+retains the source choices, comparison studies and R4's accepted B. R5 adds the
+saved TRACE voice and speed comparisons. Earlier listening archives remain
+available alongside the current WAVs, patches and MPC kits.
 
-## Native patch and controls
+## Static voices and controls
 
-`LatticeVoice.WARM`, `PLUCK` and `HOLLOW` select the three source profiles from the
+`LatticeVoice.WARM`, `PLUCK` and `HOLLOW` select the three static source profiles from the
 accepted R2 direction. `LatticePatch` saves the voice, macro map, explicit MIDI
 root, excitation velocity and model 2. Native roots are MIDI 36–84, default 48;
 velocity is finite 0–1, default .75. Editing macros and generating velocity zones
@@ -94,22 +148,23 @@ the measured periods. The returned sustain has no finite attack or tail fade.
 No crossfade, waveform repair or loudness normalization forces closure.
 
 The previous period, loop length and seam error are exposed for numerical
-verification. Long source motion and changing gate geometry remain a separate
-milestone; this HOLD implementation supports static settings.
+verification. These periodic HOLD loops belong to WARM, PLUCK and HOLLOW. TRACE
+uses its finite moving gesture and refuses the periodic-loop renderer.
 
 ## Render and replay
 
-Generate R3 into a fresh directory so older assets cannot silently enter its ZIP:
+Generate the current audition into a fresh directory so older assets cannot
+silently enter its ZIP:
 
 ```sh
 ./gradlew --no-daemon :synth:generateLatticeAudition \
-  -PlatticeOutput=/absolute/fresh/lattice-audition-r3
+  -PlatticeOutput=/absolute/fresh/lattice-audition-r5
 ```
 
 The generator writes real Kotlin WAVs, recipes, waveform peaks, measurements,
-source provenance and downloadable packs. New native and held examples lead the
-page; the accepted short source phrases, 9.6-second restoration proof and repeated
-A/B studies remain available. The proof always retains common gain. Only the
+source provenance and downloadable packs. Native TRACE and its speed examples
+lead the page; the accepted short source phrases, static native/HOLD examples,
+9.6-second restoration proof and repeated A/B studies remain available. The proof always retains common gain. Only the
 separate COLOR/TWIST diagnostic copies match each condition's RMS.
 
 Replay an audition recipe with its saved kind and gains:
@@ -129,6 +184,10 @@ and explicit macro edits, writing the complete `.patch` beside each WAV:
   --args='synth LATTICE WARM --preset 1 --midi 48 --out /tmp/lattice-warm'
 ./gradlew --no-daemon :cli:run \
   --args='synth LATTICE PLUCK --preset 1 --macros HOLD=1 --out /tmp/lattice-held'
+./gradlew --no-daemon :cli:run \
+  --args='synth LATTICE TRACE --preset 1 --midi 48 --out /tmp/lattice-trace'
+./gradlew --no-daemon :cli:run \
+  --args='synth LATTICE TRACE --preset 1 --macros SPEED=0.75 --out /tmp/lattice-quick-trace'
 ```
 
 ## Reference interpretation
@@ -149,11 +208,23 @@ comparisons require the stage-sensitive collector.
 
 - **Heard:** the owner's R1 report rejected the source and found the takes hard
   to distinguish. On 2026-10-23 the owner accepted the improved R2 source and
-  clearer comparisons. New native voicings and held loops are awaiting hearing.
+  clearer comparisons. On 2026-10-30 the owner accepted R4 B: “B sounds cool”.
+  That moving pluck is TRACE's default sound reference. New speed/HOLD positions
+  and the other native voicings still need their own listening verdict.
 - **Verified in source:** R1 grouped harmonics 1–3 under COLOR's unchanged
   geometry; model 2 leaves only the fundamental there. Native patch routing,
-  three voice identities, the factory roster, starter and settled-HOLD algorithm
-  have now been implemented. Build and numerical validation are separate checks.
+  the three static source identities, factory roster, starter and settled-HOLD
+  algorithm have been implemented. TRACE adds a fourth voice with the accepted
+  movement, a saved SPEED setting and finite HOLD. Build and numerical validation
+  are separate checks.
+- **R5 focused validation, 2026-10-31:** fifty-one Lattice tests across synth, shell
+  and CLI passed with Gradle exit zero. Twenty-six listening recipes replayed
+  sample-identically. All twenty-two R4 WAVs stayed byte-identical, and the new
+  plain/native TRACE comparison is also identical to the accepted R4 comparison.
+  The three TRACE patches and sixteen finite one-shot pad recipes round-tripped;
+  MPC 3/XPM containers and PCM24 samples passed artifact checks. Two Android
+  instrumentation regressions cover immediate SPEED/save/send and authored-root
+  delivery; no Android SDK is available here, so those await SDK-backed CI.
 - **Measured previously:** published R1 sustained C4 PCM16 had a power centroid
   of 815 Hz and 10.3% of power above 2 kHz over .25–1.25 seconds. The R2 Kotlin
   sustained-source test measured approximately .33% above 2 kHz. Exported R2
@@ -215,5 +286,5 @@ does not establish that this entire repository gate passed.
   normalization would erase that behavior.
 - Derive held sustain from the actual linear source/collector response so it
   can continue without another attack or a new synthetic layer at the wrap.
-- Start with a small dry bank and playable pad row so the next listening verdict
-  can judge useful instrument positions before adding moving geometry.
+- Promote the owner's accepted moving example with an exact default comparison,
+  then offer speed and finite HOLD as focused extensions of that reference.

@@ -142,15 +142,26 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
 
     @Test
     fun theArrowsStepOneEngineEitherWayAndWrap() {
-        show("LATTICE")
-        isOn("LATTICE")
-        // LATTICE is the first engine in the enum and LIBRATION the last.
+        // The ring is the catalogue's order, so the ends are read from it: the next engine
+        // appended moves them, and this test follows instead of breaking.
+        val ring = EngineCatalog.ENTRIES.keys.map { it.replace('_', ' ') }
+        show(ring.first())
+        isOn(ring.first())
         tap("PREVIOUS ENGINE")
-        isOn("LIBRATION")
+        isOn(ring.last())
+        tap("PREVIOUS ENGINE")
+        isOn(ring[ring.size - 2])
         tap("NEXT ENGINE")
-        isOn("LATTICE")
+        isOn(ring.last())
+        tap("NEXT ENGINE")
+        isOn(ring.first())
+        tap("NEXT ENGINE")
+        isOn("ACCORD")
+        assertEquals("BRUSH", settings["voice"])
         tap("NEXT ENGINE")
         isOn("THUMP")
+        tap("PREVIOUS ENGINE")
+        isOn("ACCORD")
         tap("PREVIOUS ENGINE")
         isOn("LATTICE")
         assertEquals("LATTICE", settings["engine"])
@@ -171,7 +182,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
         assertTrue("the list starts closed", !listIsOpen())
         openList()
         assertTrue(listIsOpen())
-        // THUMP is far down an A to Z list of 63, out of the first screenful: find it by name.
+        // THUMP is far down an A to Z list of 70, out of the first screenful: find it by name.
         type("thump")
         assertEquals("the current engine is marked", 1, compose.onAllNodesWithText("● CURRENT", useUnmergedTree = true).fetchSemanticsNodes().size)
         type("onset")
@@ -270,5 +281,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
             tap("NEXT ENGINE")
         }
         assertEquals("every engine was visited once", EngineCatalog.ENTRIES.size, seen.toSet().size)
+        assertEquals("stepping NEXT walks the catalogue in order",
+            EngineCatalog.ENTRIES.keys.map { it.replace('_', ' ') }, seen)
     }
 }

@@ -30,6 +30,8 @@ import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PedalSlate
+import com.snipsnap.synth.ObliterateBoard
+import com.snipsnap.synth.BoardRecipe
 import com.snipsnap.synth.BoardType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +51,7 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * The Android half of editable WIDE: the staged slider must not commit,
+ * The Android half of editable WIDE, RUSH and OBLITERATE: staged controls must not commit,
  * KEEP must use its displayed amount, and REMOVE/UNDO must refresh the
  * screen after saving. BoardSheetTest covers DSP and snapshot integrity;
  * these tests drive the real PadSheetScreen callbacks and reopen kit.json.
@@ -296,11 +298,61 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         }
         assertEquals(original, savedPad(entry))
         assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        waitForText("Hear a wider sound before keeping it")
         waitForUndo()
         activate("UNDO")
         waitForKept(.55f, BoardType.RUSH)
         assertEquals(rush, savedPad(entry))
         assertEquals("55%", amountText(BoardType.RUSH))
+    }
+
+    @Test
+    fun obliterate_stages_and_saves_every_control_then_remove_and_undo_restore_exact_state() {
+        val entry = kit(listOf(1, 2)); val original = entry.kit.pad(1)!!
+        val originalAudio = File(entry.dir, original.sampleFile).readBytes()
+        show(entry)
+        val before = files(entry.dir)
+        activate("Choose OBLITERATE")
+        waitForText("OBLITERATE · HALO & DESTRUCTION")
+        assertEquals("35%", amountText(BoardType.OBLITERATE))
+        activate("CLOCK & PATTERN")
+        fun dial(label: String) = requireNotNull(compose.onNode(
+            hasContentDescription(label) and hasAnyAncestor(hasContentDescription("OBLITERATE")), useUnmergedTree = true,
+        ).fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val shimmer = dial("SHIMMER")
+        val bpm = dial("BPM")
+        // Invoke both mounted callbacks before recomposition. Neither may erase the other's edit.
+        compose.runOnIdle { assertTrue(shimmer(.6f)); assertTrue(bpm(.29f)) }
+        pump()
+        activate("OBLITERATE division 1/8")
+        activate("OBLITERATE ROOM")
+        val newPattern = requireNotNull(compose.onNodeWithContentDescription("NEW PATTERN", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        compose.runOnIdle { repeat(2) { assertTrue(newPattern()) } }
+        pump()
+        val expected = BoardRecipe(BoardType.OBLITERATE, .35f, ObliterateBoard.Settings(.3, false, 98.0, 8, 20261025L))
+        assertEquals("all OBLITERATE controls remain staged", before, files(entry.dir))
+        assertEquals(original, savedPad(entry))
+        activate("KEEP")
+        waitFor("complete OBLITERATE settings to be saved", timeoutMillis = 60_000) {
+            BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe)?.recipe == expected
+        }
+        waitForText("OBLITERATE kept at 35%")
+        val kept = savedPad(entry)
+        assertEquals(expected, BoardSheet.read(kept.recipe)!!.recipe)
+        activate("${PadBanks.tag(2)} ►")
+        waitForText("PAD ${PadBanks.tag(2)}")
+        activate("◄ ${PadBanks.tag(1)}")
+        waitForText("OBLITERATE kept at 35%")
+        waitForText("98 BPM · 1/8 · ROOM")
+        activate("REMOVE")
+        waitFor("OBLITERATE removal", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == original }
+        assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        waitForText("Hear a wider sound before keeping it")
+        waitForUndo()
+        activate("UNDO")
+        waitFor("complete OBLITERATE undo", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == kept }
+        assertEquals(expected, BoardSheet.read(savedPad(entry).recipe)!!.recipe)
     }
 
 }

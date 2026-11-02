@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Provisional port references. The Kotlin renderer still needs the owner's listen. */
+/** Provisional references. The aligned Kotlin sound is approved; MATCH awaits listening. */
 object FerryPresets {
     fun forVoice(voice: FerryVoice): List<FerryPatch> = listOf(
         FerryPatch("Passage", voice, Ferry.defaults(voice)),

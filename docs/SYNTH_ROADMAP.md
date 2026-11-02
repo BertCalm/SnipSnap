@@ -1,5 +1,81 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIME — complete six-voice build (2026-11-01).** The restored engineering handoff
+supplies REED, FILIGREE and CRUST. Model 6 adds their contour/body profiles, six
+presets per voice (36 total), and periodic scale-motion HOLD derived from saved
+UNFOLD. Models 1–5, the nine accepted finite recipes, original sixteen-pad kit
+and 195 earlier audition clips remain reproducible. RIME COMPLETE adds a separate
+six-voice starter; six native held instruments sample nine roots each. The
+expanded listening page and numerical probes cover all voices and both held
+adaptations. New-voice sonic acceptance, physical device performance and MPC
+hardware loading remain open. See [RIME.md](RIME.md).
+
+**Accord finite native candidate (2026-11-01).** Fifteen autonomous mechanisms
+exchange inertial reaction through a moving support; their individual contacts
+and pressure drive one tuned feedforward acoustic bank. BRUSH is the default,
+with WOOD and TINE Reference, Soft Attack, Bright Edge and Long Ring preserved
+from the approved Python direction. Native model/initializer/profile/note/touch/
+seed/passage recipes, strict JSON and velocity dispatch, six starting recipes,
+a dry sixteen-pad one-shot starter and diagnostic audition are implemented.
+The complete frozen handoff, six Python WAVs and unchanged manifests live in
+`reference/accord/`. The SDK-built picker includes ROOT, TOUCH, LENGTH and TINE
+profiles with complete typed recall. A 360-case probe exposed resonant overload
+and short captured tails; the corrected constant per-performance gain shared
+across velocity and extended unforced release explicitly revise the original
+cross-setting gain policy. The corrected pipeline passed 43 focused tests,
+429 full-length output cases, six deterministic 4×/8× comparisons and calibration
+spot checks; it generated the native audition and kit. Corrected Android
+assembly/instrumentation compilation, six C++ host tests and all three unchanged
+Accord functional device methods passed. The latter used the documented
+non-debuggable, exact-context ART setup on a software emulator; it does not
+establish phone latency or a default-debug instrumentation pass. That Android
+result is scoped to `fac839f0`. The full unfiltered nine-module JVM gate at
+clean `00a1f9ff` passed 8,010 tests, zero failures/errors/skips, in 1h30m58s.
+Final standard debug/test compilation and optional non-debuggable APK assembly
+also passed at `00a1f9ff`; that rebuilt APK has not been device-executed.
+Native listening and physical phone/MPC acceptance remain open.
+Nonzero HOLD is refused. See [ACCORD.md](ACCORD.md) and the
+[design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md).
+
+**EROSION native finite proof (2026-10-31).** The owner accepted the initial
+Python ARC/CRATER audition. The native port preserves its finite discharge and
+collapse laws, adds saved touch, exact event-age sampling, bounded charge
+accounting, patch/recipe registration and `generateErosionAudition`. Native
+listening and validation remain pending; HOLD, factory presets, picker and a
+starter kit are deferred. See [EROSION.md](EROSION.md).
+
+**RIME — HOLD and integration build (2026-10-31).** The nine finite model-4 recipes
+remain exact. Model 5 adds finite gate extension and independently measured
+periodic sustain. Nine-root XTY/XPM instruments retain UNFOLD's opening; the
+phone picker exposes saved root, excitation velocity, gate and complete-patch
+recall. Additional voices and the planned expanded library await the missing
+original specification. Device, MPC hardware and new HOLD sonic acceptance
+remain open. See [RIME.md](RIME.md).
+
+Earlier finite-bank milestone:
+
+**RIME — nine-preset musical bank (2026-10-31).** LOOP, GLINT and VESSEL
+project the same finite Koch contour through two pickups into an eight-mode body.
+DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,
+gate, seed and model round-trip in the patch. Model 4 refines ANGLE's return travel,
+retaining the preferred model-3 anchors and all three starters sample-exact.
+Models 1 through 3 remain replayable.
+`RimePresets` now supplies three finite recipes per voice, with the three accepted
+starters kept explicit. `generateRimeAudition` supplies 189 clips, musical phrases,
+touch studies and the retained control bench. `generateRimeKit` exports sixteen
+editable, three-zone pads as MPC 3 XTD and MPC 2 XPM, with a four-bar pattern and
+complete layer provenance. Native one-shots and patches are separate downloads.
+HOLD is explicitly refused; phone integration and the full library follow listening.
+See [RIME.md](RIME.md). Owner sonic acceptance is pending.
+
+**TRIO contact profile (2026-11-01).** The owner hears and prefers the upper
+TOUCH contact experiment. New model-7 ensemble patches promote that strike
+color with the original strums, single companion hits and timing. Models 1–6
+replay their saved audio, and all sixteen factory sounds remain exact. The
+approved DRAMA .5/1 references are unchanged; below .5 the source profile eases
+to zero to preserve continuity. Root, velocity, phrase controls and finite
+3.5-second recording remain the existing contract. See [TRIO.md](TRIO.md).
+
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six
@@ -28,7 +104,10 @@ network. An independent quiet root and full-network fundamental cap preserve
 the reference tuning design. Compiled block readouts retain actual state exchange
 while reducing per-sample work. Saved model/note/velocity/exact seed, recipe replay,
 velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
-Kotlin listening, production tail termination, MATCH/SPAN/LOSS/BODY, HOLD, further
+The owner approved the aligned Kotlin character on 2026-10-30. Model 2 adds MATCH
+with 0–6 cents of upper-B detuning while retaining every fundamental, the aligned
+output and model-1 recipes. `generateFerryMatchAudition` supplies its separate gate.
+MATCH listening, production tail termination, SPAN/LOSS/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
 
@@ -49,13 +128,30 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
-**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
-motion/contact core. Higher contacts survive the 243-point middle-control grid
-and disappear when mount coupling is removed. Saved model/note/velocity/cue
-recipes and 92 finite audition cases are available outside the factory roster
-and phone picker. Historical six-voice recordings remain separate references.
-HOLD loops, other voices, phone cost and sonic acceptance remain open. See
-[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
+**Cairn three-voice listening gate (2026-10-31).** The owner approved the
+KNOCK/ANSWER HOLD direction. Model 3 adds TUMBLE: one launch becomes a tightening
+cascade through gravity, drag and energy-losing rebounds. It shares the modal
+readout and real preceding-cycle HOLD check, while KNOCK/ANSWER retain their
+versioned audio. The new three-voice audition compares punctuation, conversation
+and cascade at C3–C5, identical controls, TUMBLE endpoints and two dry phrases.
+The full nine-module JVM gate passes (7,450 tests). TUMBLE listening, phone/MPC
+checks, factory recipes and phone UI remain open. SING, GRIND and VESSEL are
+still historical references.
+See [CAIRN_TUMBLE.md](CAIRN_TUMBLE.md), the [two-voice foundation](CAIRN.md), and the
+[private three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/).
+
+**Keel R1 first-listen prototype (2026-10-24), held keygroup R2 (2026-10-26).** REDUCE and UPRIGHT are two bass
+voices that follow one settle clock: the upper spectrum distils away while the
+note's own body fills in (WEIGHT, rebuilt 2026-10-26). The finite prototype has
+saved note and velocity recipes, a probe table measured beside the Python harness, and
+a listening page whose first screen is one question: does WEIGHT make the note
+heavier? From HOLD .85 a pad is the settled note as a seamless 3 s loop, and
+`KeelPadMaker` builds a nine-zone held keygroup (attack and settle, then that loop) that
+`:shell:generateKeelKeys` exports to the MPC. The phone picker
+follows listening review. See [KEEL.md](KEEL.md)
+and the spec's "As built" section for the deviations. The keygroup's first listen
+(2026-10-27) found UPRIGHT's held keys pumping; its bow is now locked to the string,
+and the bow page (2026-10-28) heard it, with more hair, as no pump at C2 and A2. R3 (2026-10-29) files twelve presets in `Presets`, adds `SynthKits.keel()`, `:synth:generateKeelKit` and a KEEL starter, and puts BELLY to one listening question before any Kotlin; none of it is heard yet. BELLY was heard as its own sound (2026-10-31) and is now KEEL's third voice, with six presets and two pads and a loop in the kit; the Kotlin BELLY is measured against that clip, not heard.
 
 **Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
@@ -83,10 +179,14 @@ fresh settings still run the coupled simulation. This stage is finite only:
 positive HOLD is rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
 for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-includes a refreshed current-model control/preset study and kit-sample phrases,
+includes the original finite control/preset study and kit-sample phrases,
 with earlier timpani comparisons archived. The owner approved model 2's timbre
 and preferred model 3's 3 dB membrane mix lift. That voicing and saved earlier
-models remain replayable. The wider library, true HOLD, advanced room editor
+models remain replayable. Following the owner's "Much better" verdict on the
+[upper-register comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/register/index.html),
+new sounds use the wider register-aware response. Saved versions and the six
+original factory/kit recipes stay exact; USE WIDER RESPONSE is an explicit
+choice for a loaded sound. The wider library, true HOLD, advanced room editor
 and physical phone/MPC acceptance remain later work.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
@@ -198,7 +298,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### LIBRATION — finite orbital gestures (native integration)
+### LIBRATION — finite gestures and recurring held keys (native integration)
 
 GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
 trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
@@ -208,11 +308,14 @@ picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
 soft/hard velocity layers through both MPC export formats.
 
 A bounded preview cache reuses trajectories and previously rendered audio.
-Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
-phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
-and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
-records the preserved rendering versions, audition generators, measured limits
-and hardware acceptance checks.
+The owner accepted finite phone/MPC behavior on 2026-10-31; phone timing remains
+unmeasured. An independently versioned HOLD path periodically traverses the same
+physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
+exports its real onset, verified sustain loop and player amplitude release.
+Generation is serial and cancellable, and fresh renders take seconds on the cloud
+JVM. The new held transport awaits owner listening and phone/MPC checks.
+[LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
+[held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
 ### CREASE — pressure memory in a phase map (native integration)
 
@@ -547,6 +650,33 @@ does not claim a circuit recreation of its historical starting point.
 [TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
 HOLD constraint and remaining acceptance work.
 
+### OVERLAP: finite bank and steady held bodies
+
+SELF, TREFOIL, MIRROR and TORUS route six passive delay lines into different
+resonant families. Twelve owner-approved model-2 factory recipes and the dry
+sixteen-pad starter retain their finite sound and JSON. Saved FINITE/HELD
+playback keeps the steady articulation explicit instead of changing HOLD's
+meaning in an existing recipe.
+
+Held playback adds RING for SELF and KNOT/RING for the other three, saved
+reference, velocity and sampler release, prepared onset-plus-loop notes, a
+bounded completed-note cache, saved presets and the instrument-library/MPC path.
+SEND and SPREAD make finite pads with a saved shared terminal fade; native
+instrument loops remain untouched. Held SPREAD uses the authored reference,
+while finite OVERLAP keeps its existing pitch detector.
+PULSE, LOCK and GLOW stay zero, HOLD stays one. The owner accepted the held
+MPC trial on 2026-10-31 without supplying model/OS or per-check measurements;
+Implementation revision `2b07c5ef` has passing Android/native CI and an executed
+emulator run of 355 tests, no failures and one unrelated benchmark skip.
+Separately, clean local `8b6d0aea` passed 7,452 JVM cases and all three APK
+assemblies, plus 106 focused tests and all twelve complete accepted-WAV
+comparisons; it is not the PR head.
+The proven cache-copy mutation guard and prior host measurements remain
+recorded separately. Physical-phone listening and timing still need a device pass.
+Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
+reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records
+the APIs, regeneration commands, release approximation and acceptance ledger.
+
 ### OHM — finite coupled family strings
 
 One plucked foreground and two answering companions exchange waves through a
@@ -688,8 +818,13 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-The expanded preset bank's listening review, phone/MPC validation and release
-naming remain open.
+The shared roster also appends six listening-selected settings: four C4 KEY
+MOTION cases and lower-breath CHOIR at C2/C3, all with saved render version 3.
+MURMUR SELECTED is a separate FRESH TAPE starter; `generateMurmurSelectedKit`
+exports its sixteen pads as MPC 2 and MPC 3 with editable recipes. Original
+presets, the original starter and historical audition cases remain unchanged.
+The expanded bank's separate listening review, physical phone/MPC validation and
+release naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
@@ -729,10 +864,15 @@ and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
 top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
 CLI routing and the Android picker. New presets and HOLD still await hearing.
 Native validation and physical phone/MPC checks remain separately recorded in
-[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
-engineering specification remain later work. `generateLatticeAudition` retains
-the accepted comparisons and adds R3 native/held examples plus patch and MPC
-starter downloads. The original R1 and accepted R2 evidence stays preserved.
+[LATTICE.md](LATTICE.md). The owner then accepted R4 B's moving pluck on
+2026-10-30: “B sounds cool”. TRACE brings that exact trajectory into saved native
+patches. SPEED changes its timing after the initial attack while leaving pitch
+and resonator damping fixed; TRACE HOLD extends finite excitation without a loop
+or another strike. The existing static voices and starter remain unchanged.
+R5 adds three TRACE factory positions, native speed comparisons and a separate
+MPC kit. The rest of the original engineering specification remains open.
+`generateLatticeAudition` preserves the earlier listening evidence and exports
+the native patches and MPC 3/XPM kits.
 
 ### PRISM — harmonics with different lifetimes
 
@@ -768,6 +908,11 @@ fitted cycle readouts and enough complete cycles for loop classification.
 Existing recipes keep their default finite rendering and JSON shape. A new
 bounded audition compares the actual editor/source results and repeated exports;
 phone response and physical MPC playback remain device checks.
+The [opening instrument](PRISM_OPENING_SUSTAIN.md) uses MAKE INSTRUMENT to keep
+one opening before a continuously moving sustain. Nine minor-third roots,
+explicit internal loop markers and note-off release use the shared keygroup
+writer for the phone and MPC 2/3. It retains the complete authored source and
+motion recipe in a versioned delivery companion.
 
 ### SHOAL — materials animated by moving energy
 
@@ -1047,6 +1192,10 @@ adds sparse modal participation and reuses bass traces across structural edits
 within a 24 MiB, four-entry cache. ROOT warm desktop medians moved from 230 to
 165 ms for a one-shot and 491 to 283 ms for HOLD. Cold misses remain about
 228/517 ms; the tens-of-ms target and phone timing remain open.
+On 24 October BALLAST became the first bass with MAKE INSTRUMENT: thirteen
+held zones from C1 to C4, each the note's onset and settling in front of the
+existing HOLD loop, levelled where it is struck. `generateBallastKeys` writes
+four instruments and previews under `testkit/ballast-keys/`; not yet heard.
 
 THAW is the next material-state engine (S27), ported from
 `docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice
@@ -2605,7 +2754,7 @@ word, two stutters. The longest render takes about 60 ms.
 
 ## NACRE — playable finite harp revision
 
-Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
+Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** A separate sixteen-pad MPC starter trial uses an eight-note Pearl Close scale and complete soft/medium/hard C3 comparisons for all three presets. Its native MPC 3/MPC 2 export, editable recipes and exact sample playback are checked before the hardware listen; factory-menu promotion remains pending that listen. Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
 
 ## S24 — FLOTILLA, as built
 
@@ -2663,7 +2812,11 @@ path. Saved models 1/2 retain their audio. Scoped engine/export checks and
 desktop/mobile audition checks pass; physical MPC playback and the owner's
 musical-bank verdict remain open.
 
-Android integration adds APSIS to SYNTH with PASSAGE and the six presets,
+Android integration adds APSIS to SYNTH with PASSAGE, GRAIN and ANCHOR.
+PASSAGE keeps its six presets and native bank; each new voice has three starters.
+The preferred Python GRAIN/ANCHOR laws now render in Kotlin with model-3 recipes,
+immutable geometry reuse and complete held material state.
+[Port notes](APSIS-POPULATIONS.md) record fidelity and verification. All voices use
 independent ROOT/VELOCITY, all six movement controls, complete recipe restoration,
 SAVE PRESET/YOURS, SPREAD's authored root and SEND TO PAD. Held previews repeat
 the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
@@ -2686,3 +2839,251 @@ The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-ex
 records implementation, cost, verification and the new listening gate. Owner
 acceptance of the expression curve and physical MPC playback remain listening
 and hardware checks.
+
+## MERIDIAN: first finite Kotlin prototype
+
+SWEEP uses a maintained swing to excite twelve fixed material ribbons. Each
+surface retains four independent modes through revisits, and every surface has
+a mode at the requested root. The pickup stays fixed. LATITUDE controls signed
+precession, stationary exactly at .50; LENGTH controls the full swing period;
+REACH changes excursion, footprint and engagement; SURFACE morphs the material
+tables and contact hardness; MEMORY controls distributed modal T60. This first
+round has no shared support or FX. The motion is an accelerated musical analogy,
+with no acoustic return to the trajectory. The separate test-only Foucault
+fixture declares its constants and compares numerical and analytic motion.
+
+In this first round HOLD extended the **finite** active gesture from two to four
+seconds, including its top setting. A bounded natural tail ended with a
+state-preserving damper. No setting then supplied a sampler loop or held
+keygroup. The subsequent passes below add fixed-alignment sustain and a smaller
+eight-preset starter bank; repeating traversal, support, additional voices and
+the phone picker remain later work.
+
+`MeridianPatch` saves native MIDI, physical velocity, model and seed context in
+addition to voice and macros. JSON dispatch, recipe edits, native velocity and a
+CLI-only starting recipe were wired; the factory preset dispatcher was initially
+empty. Contact descriptors are cached independently of pitch, velocity, SURFACE
+and MEMORY in a bounded eight-plan cache. Surface noise uses stable seeded
+substreams, retaining its identity across direction and MEMORY comparisons.
+
+`generateMeridianAudition` renders dry finite control comparisons, fixed-contact
+ablations, register/touch examples and interaction cases. Its portable page has
+native and matched PCM16 audio, saved recipes, actual trajectory/contact plots,
+pitch/classifier probes, raw modal diagnostics and warm public-render timing.
+Use `-PmeridianOutput=/absolute/output/path` to select the destination. The earlier
+Python concept/proof received a positive response. On 2026-10-23 the owner
+described the published Kotlin audition as “incredible.” The subsequent held
+adaptation has its own listening gate; this response does not close every pitch
+or register question.
+
+The first focused JVM/CLI gate passed 22 tests. All five timbral controls change
+gain-matched waveforms at .2/.5/.8. The new grazing regression reduces a newly
+appearing REACH .869 to .870 catch from about .26 to 1.8e-7; the raw waveform
+changes by .0061 of its RMS. Catches use positive ungated engagement slope and
+the prepared visit's penetration, an explicit offline ribbon-hardness design.
+The reference integrator's largest normalized position/velocity error is below
+6.6e-9 over 600 seconds; its windowed axis estimate is within .35% of the stated
+latitude rate. This is evidence for the declared linear fixture only.
+
+The complete JVM regression gate passed **5,842 tests**, with no failures or
+skips, including 3,031 synth tests. A session-only Gradle configuration used four
+synth test workers; the repository's test selection and worker defaults are
+unchanged. No Android build was run because this environment has no SDK.
+
+The 35-clip Kotlin audition is finite and unclipped, with a maximum raw peak of
+.388 and sampled modal energy of 3.22. Three independently replayed recipes
+recreate their samples exactly. Tested unforced root peaks stay within .078
+cents; the MIDI 108 upper-band fixture keeps an audible root and suppresses
+energy above 18 kHz. Whole-mix pitch is a separate open question: moderate
+short-note detector errors are 1.5 to 7.1 cents, while the audition's local body
+estimates span -13.4 to +34.4 cents. Some local tail estimates choose a suboctave
+or return no estimate. These are disclosed detector observations, not a claim
+that every material tail has a clear perceived root.
+
+Warm public renders on the development JVM measured a median 172 ms for the
+default 2.94-second file and 322 ms for the longer 4.94-second file (seven
+measurements after three warmups). This exceeds the intended tens-of-ms knob
+response budget; optimization and a phone benchmark remain open. The first
+cold descriptor preparation was 7.6 ms and is shared across pitches and MEMORY.
+
+Why it is built this way: geometric contact decides where new work enters;
+independent states preserve the audible past; separate motion clocks leave the
+note tuning alone. The principal sonic risk is slow traversal doing too little
+during a useful short note. The principal engineering risk is the render cost of
+48 continuously ringing modes plus the standard oversampled output stage.
+
+
+## MERIDIAN: playability and fixed-alignment HOLD
+
+Model 2 adds a genuine sustained adaptation at HOLD >= .975 while retaining the
+accepted finite signal below that step. Existing model-1 and unversioned recipes
+remain finite at HOLD 1. LATITUDE selects the plane reached after two finite
+seconds, then that plane remains fixed. Whole-swing loops fit a nearby number of
+requested-root periods; the motion clock adjusts slightly, and modal frequencies
+stay unchanged. Periodic noise-filter states and stable modal states are solved
+analytically, then verified through real consecutive evolved cycles. No repeated
+output is used to manufacture the seam evidence, and the exported cycle has no
+wrap crossfade or tail fade. CLI WAVs carry their played root and forward sustain
+markers, beside a complete model-pinned recipe.
+
+The finite renderer now flattens contact events and renders independent surfaces
+in stable ID order. All seventeen captured legacy raw-float buffers remain
+bit-identical. The same warm profiling harness measured default 178.2 -> 87.3 ms,
+fixed alignment 169.8 -> 62.2 ms, and the long finite gesture 320.0 -> 164.5 ms.
+The faster path uses about 10.5 MB in its main arrays at default duration and
+24.3 MB at maximum finite duration, excluding conditioning/cache. This remains
+development-JVM evidence; long notes can still exceed the tens-of-ms target,
+and phone measurements remain open.
+
+The separate `generateMeridianPlayabilityAudition` pack keeps the accepted
+reference unchanged, checks current finite default decoded PCM equality, and
+adds eleven held examples with real sampler metadata and eight-repeat playback.
+Its warm model-2 medians were 85.6 ms finite and 75.8 ms held. Exported PCM16 seams
+were zero in all eleven cases; modal-state errors stayed below 2.4e-12 and noise
+filter closure was zero at Float64 precision. Local full-mix pitch observations
+spanned -5.6 to +12.2 cents with confidence .72-.97. The root forcing-grid fit was
+within .022 cents; motion-period changes ranged -.545% to +.019%. These narrower
+measurements do not close the earlier full-mix/octave-estimator limitation.
+
+The focused engine/CLI gate passed 31 tests, including legacy waveform goldens,
+missing-model JSON, real preceding-cycle and full-cycle evidence, state closure,
+note corners, cancellation, silence, sampler bounds and exact recipe replay.
+On 2026-10-24 the complete JVM gate returned exit 0: **5,851 tests**, with zero
+failures, errors or skips, including 3,038 synth tests. Unchanged tasks reused
+Gradle's up-to-date results; the synth, CLI and shell suites ran against this tree.
+The command, module counts and portable source patch accompany the generated
+pack. The held adaptation awaits owner listening. The bank pass below supplies
+factory presets, a kit and held keygroups. Short stabs, full traversal loops and
+the Android picker remain later work. See [MERIDIAN.md](MERIDIAN.md) for the model
+contract and why it is built this way.
+
+## MERIDIAN: eight-preset bank and sixteen-pad starter
+
+The ordinary factory dispatcher now supplies FIRST ARC, BACK ARC, CLOSE GRAIN,
+DEEP KNOCK, STILL PAIR, LONG TRAIL, ROUND THREAD and FINE FILAMENT. All eight
+save model 2, MIDI 57 (A3), physical velocity 1, seed context 4810 and every macro.
+The first six are finite; the final two are genuine fixed-alignment HOLD. FIRST
+ARC preserves the accepted starting sound exactly. New presets await owner
+listening; this round leaves the round-two DSP signal path unchanged.
+
+`SynthKits.meridian()` provides sixteen dry one-shot pads. A01–A08 are native
+FIRST ARC renders on a C-minor-pentatonic walk with varied physical touch.
+A09–A16 are the eight authored A3 presets. ROUND THREAD and FINE FILAMENT are
+finite captures on these pads, with a 20 ms terminal fade and no WAV sustain
+loop. The complete drum package contains the supported MPC 3 `.xtd` track and
+MPC 2 `.xpm` twin, known-root PCM24 mono samples and saved recipes.
+
+Two separate keyboard packages preserve the true held instruments through the
+existing typed keygroup writer, with MPC 3 `.xty` and MPC 2 `.xpm` programs.
+Each covers MIDI 36–72 only, using thirteen native roots every three semitones
+and three physically rendered velocity layers (.30, .65, 1.0): 78 held WAVs
+across both instruments. Samples retain the actual second-cycle sustain loops
+and roots. Intermediate notes transpose at most one semitone, also changing the
+sampled swing cadence; notes outside the declared range are silent. MPC hardware
+loading remains unverified.
+
+The CLI uses the standard bank path: `synth MERIDIAN SWEEP --all` exports all
+eight, and `--preset 8` selects FINE FILAMENT. `generateMeridianKit` regenerates
+the three standalone packages, with `-PmeridianKitOutput=/absolute/output/path`.
+`generateMeridianBankAudition` builds the new listening page, including native
+and matched comparisons, exact recipes, a playable sixteen-pad grid and a saved
+four-bar, 100 BPM phrase made from every exported pad WAV. The phrase keeps full
+tails and uses fixed accents with one shared mix gain. The accepted reference
+PCM and nineteen source snapshots are retained and checked. Use
+`-PmeridianBankOutput=/absolute/output/path` and
+`-PmeridianBankReference=/absolute/path/to/meridian-round2-audition`.
+
+The focused bank, export, CLI and preset-storage gate passed **55 tests**. It
+checks exact first-sound retention, model/note/velocity/seed persistence, replay,
+gain- and phase-independent preset distinction, all sixteen pad captures and
+all held layers in both program formats. On 2026-10-26 the complete JVM gate
+returned exit 0: **5,864 tests**, including 3,047 synth tests, with zero
+failures, errors or skips. Unchanged tasks reused Gradle up-to-date results;
+synth, CLI and shell ran against this tree. The command, full log and module
+counts accompany the pack. That bank session had no Android SDK, so the picker
+and phone performance remained unverified at that gate. The later Android
+integration is recorded below.
+Browser interactions have their own verification limit; no listening verdict
+is inferred from successful rendering or numerical closure.
+
+Why it is built this way: fixed audition metadata makes preset differences
+traceable to gesture and material response; native pad renders keep cadence
+independent of pitch; finite drum captures and separate held keygroups follow
+the actual exporter contracts; physical velocity layers retain contact changes;
+recipes, schedules and source hashes make the musical example reproducible.
+
+## MERIDIAN: Android picker, finite pads and held instruments
+
+The current Android picker retains all 66 existing engines and adds MERIDIAN
+as engine 67. SWEEP supplies eight factory presets and seven macros, plus native
+ROOT (MIDI 36–96) and physical VELOCITY. TUNE transposes relative to ROOT with .5
+at its center. Complete model, note, velocity and noise context survive edits,
+SCRAMBLE, YOURS, navigation and reopening pad recipes.
+
+Model 1 stays finite even at HOLD 1. Model 2 selects fixed-alignment sustain at
+HOLD ≥ .975. The ordinary SYNTH audition remains a bounded short capture and its
+caption explains this. SEND TO PAD and SPREAD deliver finite TONAL one-shots
+with authored roots, plus a saved terminal fade of at least 20 ms for held
+captures. Reopened sources retain the full rack, board and pedal recipe with
+its processing order. Their original model and HOLD setting remain saved.
+
+MAKE INSTRUMENT accepts only actual model-2 held patches. It renders thirteen
+native roots from MIDI 36 to 72 in steps of three, each at physical velocities
+.30, .65 and 1.0, for 39 layers. Generation is serial and cancellable; absolute
+zone roots center TUNE to avoid applying transposition twice. The typed phone,
+MPC 3 and MPC 2 packages keep the real second-cycle sustain loops and note-off
+release, with explicit MPC 2 NoteOn playback. Neighboring notes transpose at
+most one semitone, which also shifts sampled swing cadence. Notes outside the
+declared range are silent. FRESH TAPE → MERIDIAN is one of the 57 starters and keeps the
+existing sixteen-pad bank and authored roots without assigning a global kit key.
+
+`app/src/androidTest/kotlin/com/snipsnap/app/bench/MeridianRenderBenchmark.kt`
+adds an opt-in device diagnostic: first call, three warmups and seven unprofiled
+timings per case, separate 10 ms managed-heap occupancy sampling with PSS and
+native-heap snapshots, and a complete 39-layer package measurement. It records
+device identity and distinguishes a software emulator from a physical phone.
+These measurements exclude UI debounce, preview transfer and audio output
+latency. [MERIDIAN.md](MERIDIAN.md) gives the exact class-filtered Gradle command
+and `adb exec-out run-as com.snipsnap.app.brassgrow` report retrieval.
+
+**Android validation (2026-10-31):** final debug and canonical instrumentation
+APK assemblies returned exit 0. The final JVM gate passed **7,319 tests**, with
+zero failures, errors or skips; unchanged suites reused Gradle up-to-date
+results while CLI and shell reran. All three Meridian workflow tests passed on
+the exact canonical APK in the API 34 x86_64 TCG software emulator, configured
+at 360 × 640 pixels and 160 dpi without KVM.
+
+The separate ONSET saved-pad update check still failed its 30-second callback
+wait at `SynthScreenTest.kt:369`. The same assertion reproduced on untouched
+upstream `fde661771fcbb6345a76f76e65537bfd9bb7c7ce` using the same canonical
+instrumentation APK, with neither run sharing the host with builds or tests. It remains a recorded
+failure; its precise cause and physical phone behavior are unmeasured. The
+benchmark was cancelled without a complete report. Physical phone performance,
+listening to the new APK and MPC hardware loading remain separate gates.
+
+Why it is built this way: retaining model identity protects old finite recipes;
+explicit preview captions match the bounded audition behavior; authored roots
+avoid detector retuning; saved delivery fades preserve finite pad endings;
+serial native-layer generation bounds memory while genuine keygroups preserve
+sustain.
+
+The Android factory name FINE STRAND replaces the earlier FINE FILAMENT label
+to avoid the newly added FILAMENT engine name. This changes no audio settings;
+saved recipe names remain intact.
+
+## Otis finite collection integration (2026-10-31)
+
+The owner accepted the organ baseline, stronger Steam, the harmonica direction with
+chord auditions, and Squeeze's restored Shared chord motion. The production OTIS
+collection retains those four source identities as sixteen editable finite scores.
+Registration covers Patches, Presets, native velocity, the synth picker/catalog,
+MAKE navigation drafts, CLI replay/overrides, StarterKits and a sixteen-pad MPC bank.
+The source references and published PCM fixtures remain independent tests.
+
+LENGTH scales a finite performance; this landing does not add periodic HOLD or a
+held-keyboard export. Shared pressure applies within the saved score. Independent
+MPC pads cannot share an offline renderer's state. Cold render cost, cache behavior,
+Android compilation and remaining device validation are recorded in [OTIS.md](OTIS.md).
+## LORENTZ finite collision handoff
+
+LORENTZ ports the accepted third Python listening pass into the JVM synth: falling sweep, finite collision, irreversible capture and a steady sub tail. FUSE and LORENTZ share the root but have distinct contact behavior. IMPACT and GAP retain their widened audible ranges; HOLD is a finite decay extension. Saved model/velocity, factory anchors, CLI controls, raw reference probes, a dry sixteen-pad kit and Kotlin audition tasks are wired in. Classification uses actual PCM rather than forcing every hit into KICK. Android picker integration remains deferred to an SDK-backed session. See [LORENTZ](engines/LORENTZ.md) for source provenance, validation and the As built record.

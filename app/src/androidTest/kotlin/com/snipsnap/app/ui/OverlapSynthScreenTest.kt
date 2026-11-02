@@ -147,10 +147,10 @@ class OverlapSynthScreenTest : ComposeScreenTest() {
         for (macro in listOf("KNOT", "PULSE", "LOCK", "GLOW", "RING", "HOLD")) {
             assertEquals(factory.macros.getValue(macro), progress(macro), .00001f)
         }
-        assertEquals((factory.midi - 24) / 60f, progress("ROOT"), .00001f)
+        assertRoot(factory.midi)
         assertEquals(factory.velocity, progress("VELOCITY"), .00001f)
 
-        dial("ROOT", (57 - 24) / 60f)
+        rootTo(57)
         dial("VELOCITY", .43f)
         dial("GLOW", .62f)
         val saved = saveAs("MY OVERLAP", root)
@@ -158,7 +158,7 @@ class OverlapSynthScreenTest : ComposeScreenTest() {
             macros = factory.macros + ("GLOW" to .62f)), saved)
 
         recreate()
-        waitFor("the restored preset root") { progress("ROOT") == (57 - 24) / 60f }
+        waitFor("the restored preset root") { rootIs(57) }
         assertEquals(.43f, progress("VELOCITY"), .00001f)
         assertEquals(.62f, progress("GLOW"), .00001f)
         press("SEND TO PAD")
@@ -186,7 +186,7 @@ class OverlapSynthScreenTest : ComposeScreenTest() {
         val settings = mutableMapOf("engine" to "OVERLAP", "voice" to "TREFOIL",
             "preset.OVERLAP.TREFOIL" to legacy.name)
         show(root, settings)
-        waitFor("the legacy preset root") { progress("ROOT") == (55 - 24) / 60f }
+        waitFor("the legacy preset root") { rootIs(55) }
         assertEquals(.65f, progress("RING"), .00001f)
         loadPersonalPreset("OLD NETWORK")
         assertEquals(.65f, progress("RING"), .00001f)
@@ -199,7 +199,7 @@ class OverlapSynthScreenTest : ComposeScreenTest() {
         assertEquals(.42f, saved.macros.getValue("GLOW"), .00001f)
 
         recreate()
-        waitFor("the saved legacy root") { progress("ROOT") == (55 - 24) / 60f }
+        waitFor("the saved legacy root") { rootIs(55) }
         assertEquals(.65f, progress("RING"), .00001f)
         assertEquals(.42f, progress("GLOW"), .00001f)
     }

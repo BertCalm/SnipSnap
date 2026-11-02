@@ -194,8 +194,13 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is AccordPatch -> Accord.macrosFor(patch.voice)
+        is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
+        is OtisPatch -> Otis.macrosFor(patch.voice)
+        is LorentzPatch -> Lorentz.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
-        is FerryPatch -> Ferry.macrosFor(patch.voice)
+        is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
@@ -233,6 +238,7 @@ object Velocity {
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
+        is MeridianPatch -> Meridian.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is BallastPatch -> Ballast.macrosFor(patch.voice)
@@ -264,7 +270,8 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
-        is OverlapPatch -> Overlap.macrosFor(patch.topology)
+        is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
+            else Overlap.macrosFor(patch.topology, patch.model)
         is FlockPatch -> Flock.macrosFor(patch.voice)
         is ShoalPatch -> Shoal.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
@@ -281,6 +288,7 @@ object Velocity {
         is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
         is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
+        is KeelPatch -> Keel.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
         is OhmPatch -> Ohm.macrosFor(patch.model)
@@ -383,6 +391,12 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
+        is AccordPatch -> patch.copy(velocity = v).render()
+        is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
+        is RimePatch -> patch.copy(velocity = v).render()
+        is OtisPatch -> patch.copy(velocity = patch.velocity * v).render()
+        is LorentzPatch -> patch.copy(velocity = v).render()
         is LibrationPatch -> patch.copy(velocity = v).render()
         is ApsisPatch -> patch.copy(velocity = v).render()
         // UPRIGHT changes its released-string excitation. The existing five
@@ -420,6 +434,7 @@ object Velocity {
         // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
         is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
+        is MeridianPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.
         is StoopPatch -> patch.copy(velocity = v).render()
@@ -444,6 +459,7 @@ object Velocity {
         is NacrePatch -> patch.copy(velocity = v).render()
         is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
+        is KeelPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
         is OhmPatch -> patch.copy(velocity = v).render()

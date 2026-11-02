@@ -4,10 +4,13 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.TidalPatch
@@ -34,6 +37,7 @@ import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
@@ -425,10 +429,30 @@ object UserPresets {
      * through the complete JSON constructor. TRIO retains its note, velocity and complete
      * seeded performance, including the synthesis model. FILAMENT retains its root,
      * velocity, geometry seed, profile, retention setting and saved model through
-     * the complete JSON constructor. Names and embedded JSON are escaped
+     * the complete JSON constructor. ACCORD retains its acoustic profile, initializer,
+     * passage, root, velocity, exact seed and render model through that constructor.
+     * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is AccordPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "AccordPatch.fromJsonText($recipe),"
+        }
+        if (patch is RimePatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "RimePatch.fromJsonText($recipe),"
+        }
+        if (patch is OtisPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OtisPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.LorentzPatch) {
+            // Complete JSON retains native touch/model even for sparse user macro maps.
+            val saved = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "LorentzPatch.fromJsonText($saved),"
+        }
+
         if (patch is ApsisPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ApsisPatch.fromJsonText($recipe),"
@@ -516,8 +540,9 @@ object UserPresets {
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
         if (patch is LibrationPatch) {
+            val held = if (patch.heldModel != 0) ", heldModel = ${patch.heldModel}" else ""
             return "LibrationPatch(\"$name\", LibrationVoice.${patch.voice}, mapOf($macros), " +
-                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}),"
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}$held),"
         }
         if (patch is OnsetPatch) {
             return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
@@ -561,6 +586,7 @@ object UserPresets {
             return "OhmPatch.fromJsonText($recipe),"
         }
         val state = when (patch) {
+            is MeridianPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, seedContext = ${patch.seedContext})"
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is FlotillaPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"

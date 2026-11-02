@@ -194,7 +194,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
     fun heldRecipeSurvivesEditsVoiceSwitchNavigationSavingAndOneShotSend() {
         show()
         activate("RIBBON HELD")
-        dial("ROOT", (64 - Flock.MIN_MIDI).toFloat() / (Flock.MAX_MIDI - Flock.MIN_MIDI))
+        rootTo(64)
         dial("VELOCITY", .31f)
         dial("FLOW", .22f)
         dial("RELEASE", .83f)

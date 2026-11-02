@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * SCOUR's factory roster: twelve impacts, four for each voice, from a bare slam to a long grinding run,
+ * SCOUR's factory roster: sixteen impacts, four for each voice, from a bare slam to a long grinding run,
  * a ringing bell and a distant storm. Every sound is dry and names all six controls; TUNE stays on C minor
  * pentatonic from each voice's root (C3, and C2 for SHEET). BUILD is in seconds (the engine has no
  * tempo): the kit's own build pads are cut to bar lengths at 90 and 120 BPM. These names and settings are
@@ -16,6 +16,7 @@ object ScourPresets {
         ScourVoice.PLATE -> plate
         ScourVoice.PANE -> pane
         ScourVoice.SHEET -> sheet
+        ScourVoice.BEAM -> beam
     }
 
     fun all(): List<ScourPatch> = ScourVoice.entries.flatMap { forVoice(it) }
@@ -37,8 +38,16 @@ object ScourPresets {
     /** SHEET plays from C2, so its TUNE counts semitones from there. */
     private val sheet = listOf(
         p(ScourVoice.SHEET, "STEEL BOOM", "TUNE" to 0f, "BUILD" to 0f, "RPM" to 0.30f, "SHOT" to 0.60f, "HARDEN" to 0.50f, "HOLD" to 0.40f),
-        p(ScourVoice.SHEET, "SHEET RISE", "TUNE" to 0f, "BUILD" to 0.60f, "RPM" to 0.60f, "SHOT" to 0.80f, "HARDEN" to 0.80f, "HOLD" to 0.30f),
+        p(ScourVoice.SHEET, "SHEET RISE", "TUNE" to 5 / 24f, "BUILD" to 0.60f, "RPM" to 0.60f, "SHOT" to 0.80f, "HARDEN" to 0.80f, "HOLD" to 0.30f),
         p(ScourVoice.SHEET, "THUNDER RUN", "TUNE" to 0f, "BUILD" to 0.85f, "RPM" to 1f, "SHOT" to 0.50f, "HARDEN" to 0.40f, "HOLD" to 0.60f),
         p(ScourVoice.SHEET, "DISTANT STORM", "TUNE" to 7 / 24f, "BUILD" to 0.70f, "RPM" to 0.40f, "SHOT" to 0.30f, "HARDEN" to 0.30f, "HOLD" to 1f),
+    )
+
+    /** BEAM plays from C3, like PLATE and PANE. */
+    private val beam = listOf(
+        p(ScourVoice.BEAM, "GIRDER CLANG", "TUNE" to 0f, "BUILD" to 0f, "RPM" to 0.20f, "SHOT" to 0.60f, "HARDEN" to 0.70f, "HOLD" to 0.30f),
+        p(ScourVoice.BEAM, "RIVET RISE", "TUNE" to 7 / 24f, "BUILD" to 0.60f, "RPM" to 0.50f, "SHOT" to 0.90f, "HARDEN" to 0.90f, "HOLD" to 0.20f),
+        p(ScourVoice.BEAM, "GANTRY RUN", "TUNE" to 3 / 24f, "BUILD" to 0.85f, "RPM" to 0.80f, "SHOT" to 0.50f, "HARDEN" to 0.50f, "HOLD" to 0.50f),
+        p(ScourVoice.BEAM, "FOUNDRY BELL", "TUNE" to 12 / 24f, "BUILD" to 0.30f, "RPM" to 0.10f, "SHOT" to 0.40f, "HARDEN" to 1f, "HOLD" to 1f),
     )
 }

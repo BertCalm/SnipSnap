@@ -4,6 +4,10 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.ArrangedPad
+import com.snipsnap.kit.KitAssembler
+import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Mpc3Exporter
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.synth.Lattice
@@ -59,7 +63,9 @@ class LatticeSurfaceTest {
         }, channels = 1, sampleRate = 44_100)
         for (voice in LatticeVoice.entries) {
             val patch = LatticePatch("Saved Path", voice,
-                Lattice.defaults(voice) + mapOf("TUNE" to .625f, "REJECT" to 1f),
+                Lattice.defaults(voice) + if (voice == LatticeVoice.TRACE) {
+                    mapOf("TUNE" to .625f, "SPEED" to .8f)
+                } else mapOf("TUNE" to .625f, "REJECT" to 1f),
                 midi = 60, velocity = .35f)
             val duplicate = requireNotNull(PadRecipe.fromJsonText(PadRecipe(patch).toJsonText()).patch)
             assertEquals(63f, Spread.detect(silence, duplicate))
@@ -67,6 +73,67 @@ class LatticeSurfaceTest {
             assertEquals(36f, Spread.detect(silence, patch.copy(midi = 36, macros = mapOf("TUNE" to 0f))))
             assertEquals(84f, Spread.detect(silence, patch.copy(midi = 84, macros = mapOf("TUNE" to 1f))))
             assertEquals(60f, Spread.detect(silence, patch.copy(macros = emptyMap())), "sparse maps retain neutral TUNE")
+        }
+    }
+
+    @Test
+    fun `TRACE shelf presets reopen with speed and can be promoted as the same native voice`() {
+        val directory = Files.createTempDirectory("lattice-trace-preset-").toFile()
+        try {
+            val patch = LatticePatch("MY TRACE", LatticeVoice.TRACE,
+                mapOf("TUNE" to .625f, "SPEED" to .73f, "HOLD" to .2f), midi = 55, velocity = .31f)
+            UserPresets.save(directory, patch, 123L)
+            val saved = UserPresets.read(directory).single()
+            assertEquals(patch, saved.patch)
+            assertEquals(listOf(saved), UserPresets.forVoice(listOf(saved), "LATTICE", "TRACE"))
+            assertContentEquals(patch.render().samples, saved.patch.render().samples)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertTrue(line.startsWith("p(LatticeVoice.TRACE, \"MY TRACE\", "), line)
+            assertTrue("\"SPEED\" to 0.73f" in line, line)
+            assertTrue(line.endsWith(".copy(midi = 55, velocity = 0.31f, model = ${Lattice.MODEL_VERSION}),"), line)
+            val edited = assertIs<LatticePatch>(Patches.edited(saved.patch, "MY QUICK TRACE",
+                patch.macros + ("SPEED" to .9f)))
+            assertEquals(patch.midi, edited.midi)
+            assertEquals(patch.velocity, edited.velocity)
+            assertEquals(patch.model, edited.model)
+            assertEquals(.9f, edited.macros.getValue("SPEED"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `TRACE motion remains in native kit recipes and the exported MPC sample`() {
+        val directory = Files.createTempDirectory("lattice-trace-export-").toFile()
+        try {
+            val patch = LatticePatch("Saved moving trace", LatticeVoice.TRACE,
+                mapOf("TUNE" to .625f, "SPEED" to .73f, "HOLD" to .2f), midi = 55, velocity = .43f)
+            val recipe = PadRecipe(patch)
+            val rendered = recipe.render()
+            val source = File(directory, "source")
+            KitAssembler.assembleArranged("Trace Motion", listOf(
+                ArrangedPad(rendered, DrumClass.TONAL, recipe.toJsonValue(), displayName = patch.name),
+            ), source)
+            val model = KitBuilderModel.open(source)
+            model.save(accrueWear = false)
+            val reopened = PadRecipe.fromJsonValue(requireNotNull(model.kit.pads.single().recipe))
+            assertEquals(patch, reopened.patch)
+            assertContentEquals(rendered.samples, reopened.render().samples)
+            assertEquals(58f, Spread.detect(rendered, requireNotNull(reopened.patch)))
+
+            val exported = Mpc3Exporter.exportTrack(model.kit, source, File(directory, "export"), mpc2Twin = true)
+            assertTrue(exported.program.isFile)
+            val data = File(directory, "export/Trace Motion_[TrackData]")
+            val written = KitStore.load(data).pads.single()
+            assertEquals(DrumClass.TONAL, written.drumClass)
+            assertTrue(written.oneShot, "motion is already baked into one finite sample")
+            val exportedRecipe = PadRecipe.fromJsonValue(requireNotNull(written.recipe))
+            assertEquals(patch, exportedRecipe.patch)
+            assertContentEquals(File(source, model.kit.pads.single().sampleFile).readBytes(),
+                File(data, written.sampleFile).readBytes(), "MPC export must keep the complete rendered motion")
+            assertTrue(data.listFiles().orEmpty().any { it.extension == "xpm" }, "MPC 2 twin must accompany the native track")
+        } finally {
+            directory.deleteRecursively()
         }
     }
 
@@ -87,7 +154,7 @@ class LatticeSurfaceTest {
                 assertEquals(null, recipe.fx, "the engine renders this dry starter")
                 Triple(pad, recipe, patch)
             }
-            assertEquals(LatticeVoice.entries.toSet(), decoded.map { it.third.voice }.toSet())
+            assertEquals(setOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW), decoded.map { it.third.voice }.toSet())
             assertTrue(decoded.any { it.first.drumClass == DrumClass.LOOP })
             assertTrue(decoded.any { it.first.drumClass == DrumClass.TONAL })
             // Rebuild representative notes and held buffers from the JSON written to the kit.

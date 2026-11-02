@@ -50,6 +50,29 @@ class JCardTest {
     }
 
     @Test
+    fun `the spine carries the mark`() {
+        // The symbol leads the spine: 0.6 of the band tall, vertically
+        // centred, a margin in from the left end, in the scheme's two tones.
+        val m = model("Spined")
+        val width = 600
+        // OPENSKY, a light scheme: its chrome ink is as dark as its LCD, so
+        // the spine must take the LCD tones or two pads vanish.
+        val scheme = Schemes.OPENSKY
+        val img = JCard.render(m.kit, m.kitDir, scheme, width = width, catalog = "SHT-001")
+        val top = (width * 0.64f).toInt()
+        val h = (width * 0.1475f).toInt()
+        val margin = (width * 0.05f).toInt()
+        val box = JCard.markBox(top, h, margin)
+        val (ink, accent) = Mark.lcdTones(scheme)
+        val pads = Mark.symbol(box.x.toFloat(), box.y.toFloat(), box.h.toFloat())
+        val expected = listOf(accent, ink, ink, accent)
+        pads.forEachIndexed { i, d ->
+            assertEquals(expected[i], img.getRGB(d.cx.toInt(), d.cy.toInt()) and 0xFFFFFF, "pad $i at its centre")
+        }
+        assertTrue(pads.maxOf { it.cx + it.r } < h, "the symbol sits inside the spine's left end")
+    }
+
+    @Test
     fun `long names and a full 32-pad kit still fit`() {
         val big = model("The Longest Kit Name Anyone Ever Typed Onto A Cassette")
         for (slot in 4..32) {
@@ -103,6 +126,29 @@ class JCardTest {
 
         override fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int) =
             error("the J-card draws no arcs")
+
+        /** A plain even-odd scanline fill, no antialiasing: the parity test skips the box the symbol sits in. */
+        override fun fillPolygon(xs: FloatArray, ys: FloatArray, colorRgb: Int) {
+            val n = xs.size
+            for (yy in maxOf(0, ys.min().toInt()) until minOf(h, ys.max().toInt() + 1)) {
+                val sy = yy + 0.5f
+                val crossings = ArrayList<Float>()
+                for (i in 0 until n) {
+                    val j = (i + 1) % n
+                    if ((ys[i] <= sy) != (ys[j] <= sy)) crossings += xs[i] + (sy - ys[i]) / (ys[j] - ys[i]) * (xs[j] - xs[i])
+                }
+                crossings.sort()
+                for (k in 0 until crossings.size - 1 step 2) {
+                    for (xx in maxOf(0, crossings[k].toInt()) until minOf(w, crossings[k + 1].toInt())) px[yy * w + xx] = colorRgb
+                }
+            }
+        }
+
+        override fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int) =
+            error("the J-card sets no type")
+
+        override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float =
+            error("the J-card measures no type")
     }
 
     @Test
@@ -115,11 +161,19 @@ class JCardTest {
         JCard.draw(canvas, m.kit, m.kitDir, width = width, catalog = "SHT-001")
         val awt = JCard.render(m.kit, m.kitDir, width = width, catalog = "SHT-001")
         assertEquals(canvas.h, awt.height)
+        // The spine's symbol is the card's one antialiased element; AWT's
+        // edge coverage is its own, so that box is the one place the plain
+        // canvas is allowed to differ. Everything else must match exactly.
+        val mark = JCard.markBox((width * 0.64f).toInt(), (width * 0.1475f).toInt(), (width * 0.05f).toInt())
+        var compared = 0
         for (y in 0 until awt.height) {
             for (x in 0 until awt.width) {
+                if (x in mark.x..(mark.x + mark.w) && y in mark.y..(mark.y + mark.h)) continue
                 assertEquals(awt.getRGB(x, y) and 0xFFFFFF, canvas.px[y * width + x], "pixel $x,$y")
+                compared++
             }
         }
+        assertTrue(compared > awt.width * awt.height * 0.99, "the skipped box is a sliver of the card")
     }
 
     @Test

@@ -49,7 +49,7 @@ class PedalSlateTest {
 
     @Test
     fun `the slate is the library's gated pedals in library order, the words the card dispatches`() {
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), PedalSlate.slate().map { it.word })
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM"), PedalSlate.slate().map { it.word })
         assertEquals(Pedals.gated().filter { !it.isBoard }, PedalSlate.slate())
         assertEquals(PadSheet.PEDAL_SEGMENTS, PedalSlate.slate().map { it.word })
         for (e in PedalSlate.slate()) {
@@ -342,17 +342,17 @@ class PedalSlateTest {
     @Test
     fun `MORE lists the whole library, says which are on, on the row, movable, and which can go on the row`() {
         val idle = PedalSlate.more(PedalSlate.DEFAULT, null, null)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), idle.map { it.word })
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM"), idle.map { it.word })
         assertEquals(Pedals.gated().map { it.word }, idle.map { it.word }, "MORE is the library's gated entries, boards included once one is gated")
         assertTrue(idle.none { it.on || it.marked || it.canFlip })
         assertTrue(idle.all { it.inLibrary && it.onSlate })
-        assertEquals(listOf("TOUCH", "ROCK"), idle.filter { it.canPutOnRow }.map { it.word })
+        assertEquals(listOf("TOUCH", "ROCK", "ROOM"), idle.filter { it.canPutOnRow }.map { it.word })
         assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY"), idle.filter { it.onRow }.map { it.word })
 
         val b = board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST), PedalBoard.Pick("driven", 1f), PedalBoard.Pick("rig", 0.7f))
         val listed = PedalSlate.more(PedalSlate.DEFAULT, recipeOf(b), "wahed")
         // RIG after DRIVE takes the amp, so DRIVE is silent and not read as on.
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "RIG"), listed.map { it.word }, "a pick the library does not offer comes last")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "RIG"), listed.map { it.word }, "a pick the library does not offer comes last")
         val wah = listed.single { it.word == "WAH" }
         assertTrue(wah.on && wah.marked && wah.canFlip)
         assertEquals(PedalSide.POST, wah.side)

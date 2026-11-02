@@ -6,6 +6,9 @@ import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.BoardRecipe
+import com.snipsnap.synth.ObliterateBoard
+import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.xpm.PadNoteMap
 
 /**
@@ -42,7 +45,10 @@ object RecipeReplay {
         data class Era(val era: String, val amount: Float) : Plan()
         data class Character(val name: String, val amount: Float) : Plan()
         /** Copy the board settings; the destination retains its own source and recipe. */
-        data class Board(val amount: Float, val type: BoardType = BoardType.WIDE) : Plan()
+        data class Board(val amount: Float, val type: BoardType = BoardType.WIDE,
+            val obliterate: ObliterateBoard.Settings? = if (type == BoardType.OBLITERATE) ObliterateBoard.Settings() else null) : Plan() {
+            val recipe: BoardRecipe get() = BoardRecipe(type, amount, obliterate)
+        }
         /** Copy complete Aquarium controls/context; the destination keeps its own immutable baseline. */
         data class Aquarium(val recipe: AquariumRenderRecipe) : Plan()
         /** The pedal library's board: every pick with its AMT and side, re-rendered on the destination's own audio. */
@@ -54,6 +60,8 @@ object RecipeReplay {
         data class Dust(val amount: Float, val tape: String) : Plan()
         /** A synth patch: replaying it REPLACES the destination's sound with the patch's own render. */
         data class Patch(val recipe: PadRecipe) : Plan()
+        /** A STRIKE FX bank: replaying it re-renders DRY/ROOM/ECHO from the destination's own sample at [room] and [slap]. */
+        data class StrikeFx(val room: Float, val slap: Float) : Plan()
         /** Round robin: complete, but the deal mixes the seed with the slot — same recipe, new deal. */
         data class RobinDeal(val takes: Int, val seed: Int, val zones: Int?) : Plan()
         /** Refused, in the words the toast says. */
@@ -75,12 +83,12 @@ object RecipeReplay {
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("boardPad" in e) {
-            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type) }
+            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type, it.obliterate) }
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("board" in e && "recipe" in e) {
             return runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()
-                ?.let { Plan.Board(it.amount, it.type) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+                ?.let { Plan.Board(it.amount, it.type, it.obliterate) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("pedals" in e && "recipe" in e) {
             return PadSheet.readPedals(recipe)?.let { Plan.Pedals(it) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
@@ -89,6 +97,7 @@ object RecipeReplay {
             return Plan.Refused(Copy.replayNeedsPartner(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
         }
         OutsideSheet.read(recipe)?.let { return Plan.Refused(Copy.REPLAY_OUTSIDE) }
+        if (com.snipsnap.synth.KitFromAnything.Recipe.KEY in e) return Plan.Refused(Copy.REPLAY_KITFROM)
         if ("splice" in e) return Plan.Refused(Copy.REPLAY_SPLICE)
         if ("clean" in e) return Plan.Refused(Copy.replayMeasured("CLEAN"))
         if ("doctor" in e) return Plan.Refused(Copy.replayMeasured("THE DOCTOR"))
@@ -104,6 +113,15 @@ object RecipeReplay {
                 }
             }
             return Plan.Refused(Copy.REPLAY_NO_DOOR)
+        }
+        if ("layers" in e) {
+            val banked = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
+            if (banked != null && StrikeFxBank.isStrikeFx(banked)) {
+                // Named layers without their dials (hand-edited, or from a later build) is no bank to replay.
+                val room = StrikeFxBank.roomOf(banked)
+                val slap = StrikeFxBank.slapOf(banked)
+                if (room != null && slap != null) return Plan.StrikeFx(room, slap)
+            }
         }
         if ("patch" in e) {
             val parsed = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
@@ -165,7 +183,7 @@ object RecipeReplay {
             is Plan.Refused -> throw IllegalArgumentException(p.reason)
             is Plan.Era -> Done(model.eraPad(slot, p.era, p.amount), Copy.replayed(word, padName))
             is Plan.Character -> Done(model.characterPad(slot, p.name, p.amount), Copy.replayed(word, padName))
-            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.amount, p.type), Copy.replayedBoard(word, padName))
+            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.recipe), Copy.replayedBoard(word, padName))
             is Plan.Aquarium -> {
                 val renderer = requireNotNull(aquariumRenderer) { PrintedPads.AQUARIUM_RENDERER_REQUIRED }
                 Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard("AQUARIUM", padName))
@@ -193,6 +211,7 @@ object RecipeReplay {
                 model.replaceAudio(slot, p.recipe.toJsonValue()) { p.recipe.render() },
                 Copy.replayedPatch(padName),
             )
+            is Plan.StrikeFx -> Done(model.strikeFxLayers(slot, p.room, p.slap), Copy.STRIKE_FX_ON)
             is Plan.RobinDeal -> Done(
                 Robin.apply(model, slot, takes = p.takes, seed = p.seed, zones = p.zones),
                 Copy.replayedRobin(p.takes, padName),

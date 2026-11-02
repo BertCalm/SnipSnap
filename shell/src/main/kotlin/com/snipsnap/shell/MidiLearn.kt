@@ -160,20 +160,37 @@ class MidiLearn(bindings: List<MidiBinding> = emptyList()) {
     /** The mode [armed]'s control gets, where its kind allows it. */
     private var prefer: MidiBinding.Mode? = null
 
+    /** The kinds of message [armed] will learn from, or null for any. */
+    private var kinds: Set<MidiBinding.Kind>? = null
+
     /**
      * The next learnable message binds to [target]. [prefer] is the mode the
      * target wants (a HOLD wants MOMENTARY, so a key holds rather than fires);
      * a control whose kind cannot have it gets its kind's default instead.
+     * [kinds] limits what may complete the learn: a button target that only
+     * fires should not be taken by a bend strip or pressure brushed while it
+     * waits, so those pass on as if nothing were armed.
      */
-    fun arm(target: String, prefer: MidiBinding.Mode? = null) {
+    fun arm(target: String, prefer: MidiBinding.Mode? = null, kinds: Set<MidiBinding.Kind>? = null) {
         require(target.isNotBlank()) { "a binding needs a target" }
         armed = target
         this.prefer = prefer
+        this.kinds = kinds
     }
 
     fun disarm() {
         armed = null
         prefer = null
+        kinds = null
+    }
+
+    /**
+     * Forget which buttons are held. A button whose release never arrived
+     * (the cable pulled, the input closed while it was down) would otherwise
+     * look held for ever, and its next press would not count as one.
+     */
+    fun releaseAll() {
+        pressed.clear()
     }
 
     /** Drop [target]'s binding, if it has one. */
@@ -206,7 +223,7 @@ class MidiLearn(bindings: List<MidiBinding> = emptyList()) {
     fun handle(event: MidiWire.Event, device: String?, current: (target: String) -> Float?): Result {
         val heard = sourceOf(event, device) ?: return Result.NONE
         val armedTarget = armed
-        if (armedTarget != null && learnable(event)) return learn(armedTarget, heard, event)
+        if (armedTarget != null && learnable(event) && kinds.let { it == null || heard.kind in it }) return learn(armedTarget, heard, event)
         val binding = list.firstOrNull { it.source == heard } ?: list.firstOrNull { it.source == heard.anyDevice() }
             ?: return Result.NONE
         return Result(apply(binding, heard, event, current), consumed = true)

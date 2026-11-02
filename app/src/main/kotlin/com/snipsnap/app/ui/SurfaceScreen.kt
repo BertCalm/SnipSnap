@@ -1073,7 +1073,7 @@ fun SurfaceScreen(
     fun landOnTape(snip: Snip) {
         scope.launch {
             val landed = offMain {
-                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis(), preserveStereo = true) }
             }
             landed.onSuccess {
                 onToast(Copy.surfacePrinted(it.seconds))

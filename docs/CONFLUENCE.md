@@ -8,6 +8,10 @@ and a clear wordless answer. The earlier Row Row Row Your Boat recordings remain
 as historical scheduling demonstrations; they are not factory bank sources.
 The owner's listening verdict remains open.
 
+The separate [My Voice workflow](CONFLUENCE_MY_VOICE.md) adds a short personal
+recording or import, original/solo/ensemble previews, and portable personal
+sources. It does not change the starter bank's source eligibility or credits.
+
 The supplied [engineering specification](CONFLUENCE_SPEC.md) is retained unchanged
 as the long-term proposal. This document describes the smaller implementation in
 the draft app build; it is not a release announcement.

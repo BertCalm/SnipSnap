@@ -16,7 +16,11 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import java.util.Locale
 
-/** [KitBuilderModel.nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+/**
+ * [KitBuilderModel.nextStem]'s bound, past the names THE BIN holds, which it adds on. A kit holds
+ * 128 pads, so this is ample headroom over the live pads; the bin's names are counted separately,
+ * because a slot replaced again and again leaves one there each time for as long as the bin keeps it.
+ */
 private const val MAX_STEM_ATTEMPTS = 999
 
 /**
@@ -453,6 +457,88 @@ class KitBuilderModel private constructor(
             add(com.snipsnap.kit.KitLayer(pad.sampleFile, windows.last().first, windows.last().last))
         }
         return update(slot) { it.copy(velocityLayers = layers) }
+    }
+
+    /**
+     * STRIKE FX, the audition: the three layers a KEEP would write, rendered
+     * from the pad's source and handed back. Writes nothing.
+     */
+    fun strikeFxAudition(slot: Int, room: Float, slap: Float): List<com.snipsnap.audio.Snip> {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "applying STRIKE FX to")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
+        require(pad.recipe == null || Breed.recipeOf(pad) != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
+        return com.snipsnap.synth.StrikeFxBank.render(com.snipsnap.audio.WavReader.read(strikeFxSource(slot)), room, slap)
+    }
+
+    /**
+     * STRIKE FX, KEEP: the pad's sample becomes DRY (bottom), ROOM (middle)
+     * and ECHO (top, the pad's own file). DRY is the source's bytes copied
+     * as they are. A pad that already carries a bank is re-rendered from its
+     * DRY layer in place, so the echo never feeds the next keep. Soft hits or
+     * stacked takes on the pad are replaced.
+     */
+    fun strikeFxLayers(slot: Int, room: Float, slap: Float): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "applying STRIKE FX to")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
+        val padRecipe = Breed.recipeOf(pad)
+        require(pad.recipe == null || padRecipe != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
+        val banked = com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3
+        val sourceFile = strikeFxSource(slot)
+        val source = com.snipsnap.audio.WavReader.read(sourceFile)
+        val bank = com.snipsnap.synth.StrikeFxBank.render(source, room, slap)
+        val recipeJson = (padRecipe ?: com.snipsnap.synth.PadRecipe(layers = com.snipsnap.synth.StrikeFxBank.layers(room, slap)))
+            .copy(layers = com.snipsnap.synth.StrikeFxBank.layers(room, slap)).toJsonValue()
+
+        // Fresh names on a first keep: the old soft files are still referenced
+        // until update(), so freeLayerNames skips them. They are deleted only
+        // after update, as clearGhostLayers does, so a failed write leaves the
+        // pad as it was.
+        val oldSoft = if (banked) emptyList() else pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
+        val names = if (banked) pad.velocityLayers.take(2).map { it.sampleFile } else freeLayerNames(pad.sampleStem, 2)
+        // DRY: the source's own bytes, never re-encoded. On a re-keep the DRY
+        // file is the source already.
+        val dryFile = File(kitDir, names[0])
+        if (!banked) sourceFile.copyTo(dryFile, overwrite = true)
+        WavWriter.write(File(kitDir, names[1]), bank[1], allowNonMpcRate = true)
+        WavWriter.write(File(kitDir, pad.sampleFile), bank[2], allowNonMpcRate = true)
+
+        val windows = StackTakes.windows(2)
+        val files = names + pad.sampleFile
+        val labels = com.snipsnap.synth.StrikeFxBank.NAMES
+        val layers = files.mapIndexed { i, f -> com.snipsnap.kit.KitLayer(f, windows[i].first, windows[i].last, labels[i]) }
+        val kept = update(slot) { it.copy(velocityLayers = layers, recipe = recipeJson) }
+        // Replaced layer files go to the bin, not deleted: a pad whose recipe lost its bank
+        // (era, MPC round trip) still has the real DRY among them.
+        oldSoft.forEach { moveToBin(it) }
+        return kept
+    }
+
+    /** STRIKE FX, CLEAR: DRY goes back over the pad's file, ROOM and DRY files are deleted, the bank leaves the recipe. */
+    fun clearStrikeFxLayers(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "applying STRIKE FX to")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
+        val padRecipe = Breed.recipeOf(pad)
+        require(com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3) { "pad $slot has no STRIKE FX to clear" }
+        val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
+        File(kitDir, softFiles[0]).copyTo(File(kitDir, pad.sampleFile), overwrite = true)
+        val remaining = try {
+            padRecipe!!.copy(layers = null).toJsonValue()
+        } catch (e: IllegalArgumentException) {
+            null // the bank was all the recipe held
+        }
+        val cleared = update(slot) { it.copy(velocityLayers = emptyList(), recipe = remaining) }
+        softFiles.forEach { File(kitDir, it).delete() }
+        return cleared
+    }
+
+    /** The audio STRIKE FX reads: a kept bank's DRY layer, else the pad's own file. */
+    private fun strikeFxSource(slot: Int): File {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val banked = com.snipsnap.synth.StrikeFxBank.isStrikeFx(Breed.recipeOf(pad)) && pad.velocityLayers.size == 3
+        return File(kitDir, if (banked) pad.velocityLayers[0].sampleFile else pad.sampleFile)
     }
 
     /**
@@ -1326,8 +1412,9 @@ class KitBuilderModel private constructor(
      * before it: when the entry a claimant would read is an eject record, it keeps nothing rather
      * than falling back to the entry underneath. Every eject writes a tombstone ([moveToBin]) and
      * every treatment bins without, so such an entry is a record of an ejected pad, and a new pad on
-     * a reused file name (an EVIL TWINS reroll) must not pin a stranger's sound, nor the sound under
-     * it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
+     * a reused file name (an EVIL TWINS reroll handed one out before 2026-11-01, and bins and kits
+     * from then still hold such names; [nextStem] no longer does) must not pin a stranger's sound,
+     * nor the sound under it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
      * VERSIONS ([restoreTake]) copies an eject record back without consuming it, so a pad it makes
      * live again can be reading its own eject record, and its original then leaves with that
      * tombstone. Every other entry keeps the clock: [keepDays] after it went in.
@@ -1380,9 +1467,11 @@ class KitBuilderModel private constructor(
      * ([PrintedPads.sourcePad]), followed down through a print over a print (an aquarium over a
      * board) to the pad underneath, whose NONE is the one that reads the bin. Throws when a saved
      * source will not read, or when the prints loop back on themselves, which only a hand-edited kit
-     * could hold: either way [binHolds] cannot know what that pad needs, and fails closed.
+     * could hold: either way [binHolds] cannot know what that pad needs, and fails closed. Public for
+     * THE BIN's screen, which asks of this pad, not the print over it, whether it can undo itself
+     * ([PadSheet.hasOwnWayBack]): a printed pad's NONE removes the print first.
      */
-    private fun unprinted(pad: KitPad): KitPad {
+    fun unprinted(pad: KitPad): KitPad {
         var under = pad
         val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
         while (PrintedPads.has(under.recipe)) {
@@ -1390,6 +1479,46 @@ class KitBuilderModel private constructor(
             under = PrintedPads.sourcePad(kitDir, under)
         }
         return under
+    }
+
+    /**
+     * Every file name a print's saved source names, at every level under every print THE BIN could
+     * still bring back: each live printed pad, and each ejected one whose tombstone BACK can
+     * reinstate. REMOVE (and the print's own UNDO) restores those files and first checks each one
+     * by hash (`PrintedPadStore.requireRestoreSafe`), so BACK on a bin row under one of these names
+     * would overwrite a file the print then refuses to restore, for good. THE BIN shows no BACK on
+     * such a row (the owner's call, 2026-11-01); once the print is removed, the name leaves this set
+     * and BACK comes back. Throws when a saved source will not read, as [unprinted] does, with
+     * [binHolds]' one exception: an ejected print whose tombstone the sweep at [nowMillis] takes
+     * anyway is skipped when its source will not read, so it cannot drop THE BIN to its fallback
+     * when the kept set itself built.
+     */
+    fun filesUnderPrints(keepDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Set<String> {
+        val names = HashSet<String>()
+        // One print's names, whole or not at all: a walk that fails partway (a print over a print
+        // whose inner source will not read) must not leave the levels it did read behind.
+        fun walk(top: KitPad): Set<String> {
+            val found = HashSet<String>()
+            var under = top
+            val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
+            while (PrintedPads.has(under.recipe)) {
+                require(seen.add(under.recipe!!)) { "pad ${top.slot}'s prints loop back on themselves" }
+                under = PrintedPads.sourcePad(kitDir, under)
+                found += under.sampleFile
+                under.velocityLayers.mapTo(found) { it.sampleFile }
+            }
+            return found
+        }
+        kit.pads.forEach { names += walk(it) }
+        val keepMs = (keepDays * DAY_MS).toLong()
+        for (entry in binContents()) {
+            val snapshot = entry.padSnapshot ?: continue
+            // binHolds' saturating clock, and its rule: a tombstone leaving at nowMillis anyway
+            // holds nothing past it, so a print in it that will not read is skipped, not thrown.
+            val purgeAt = if (keepMs > 0 && entry.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else entry.binnedAtMillis + keepMs
+            names += if (purgeAt < nowMillis) runCatching { walk(snapshot) }.getOrDefault(emptySet()) else walk(snapshot)
+        }
+        return names
     }
 
     /**
@@ -1466,26 +1595,48 @@ class KitBuilderModel private constructor(
 
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 
+    /**
+     * A file stem for a new pad on [slot] that nothing else answers to: no live pad plays it, no
+     * file sits there, and THE BIN holds nothing under it. The bin counts because its undo doors
+     * read by name ([restoreFromBin] by name): a new pad on a binned name would find a stranger's
+     * audio as its own "original", and an EVIL TWINS reroll, which clears bank B and names the new
+     * twins at once, did exactly that until 2026-11-01. Once the bin lets the entry go, the name is
+     * free again. [binHolds]' tombstone guard still covers bins and kits from before that.
+     */
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
+        val binned = binnedNames()
         // Bounded, not `while (true)`: the loop only terminates because the
         // formatted counter varies from n to n, an invariant Locale.ROOT
         // restores today but does not itself guarantee. A kit holds 128
-        // pads, so 999 candidates is ample headroom; if every one of them
-        // still collides — the invariant broken again, or genuinely 999
-        // takers of one stem — this fails loudly instead of hanging the
-        // caller (an onClick, in production) forever.
-        for (n in 1..MAX_STEM_ATTEMPTS) {
+        // pads, so 999 candidates is ample headroom over the live pads, and
+        // every name the bin holds is added on top: a pad replaced on one
+        // slot a thousand times inside the bin's days still finds a name.
+        // If every candidate still collides (the invariant broken again),
+        // this fails loudly instead of hanging the caller (an onClick, in
+        // production) forever.
+        val attempts = MAX_STEM_ATTEMPTS + binned.size
+        for (n in 1..attempts) {
             val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
-                File(kitDir, "$stem.wav").exists()
+                File(kitDir, "$stem.wav").exists() ||
+                "$stem.wav".lowercase(Locale.ROOT) in binned
             if (!taken) return stem
         }
         throw IllegalStateException(
-            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
-                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+            "couldn't find a free stem for '$base' after $attempts attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, attempts))}')",
         )
     }
+
+    /**
+     * Every `originalName` THE BIN holds, lower-cased: [binContents]' names without reading a
+     * tombstone, for [nextStem], which only needs to know a name is spoken for.
+     */
+    private fun binnedNames(): Set<String> =
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) && !f.name.endsWith(".json", ignoreCase = true) }
+            ?.map { BIN_NAME.find(it.name)!!.groupValues[2].lowercase(Locale.ROOT) }
+            ?.toSet() ?: emptySet()
 
     private fun deleteIfUnreferenced(pad: KitPad) {
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()

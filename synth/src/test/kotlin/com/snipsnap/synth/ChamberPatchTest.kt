@@ -68,7 +68,7 @@ class ChamberPatchTest {
         for (bad in listOf("9223372036854775808", "1.5", "-01", "+1", " 1")) {
             assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("seed", JsonValue.Str(bad))) }
         }
-        for (bad in listOf(0.0, 1.5, 4.0)) {
+        for (bad in listOf(0.0, 1.5, (Chamber.MAX_MODEL_VERSION + 1).toDouble())) {
             assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("model", JsonValue.Num(bad))) }
         }
         assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("seed", JsonValue.Num(1.0))) }

@@ -6,6 +6,10 @@ The audition records render evidence; the accompanying pull request records
 build and test results. Phone and physical MPC interaction remain separate
 checks; no new listening approval is claimed.
 
+The [opening instrument](PRISM_OPENING_SUSTAIN.md) adds MAKE INSTRUMENT for a
+one-time opening followed by repeating sustain, using explicit keygroup loop
+markers and note-off release.
+
 The characteristic gesture is **lower body → upper colour → return to body → repeat**.
 OPEN keeps the accepted **body → colour → finite release** gesture.
 This is amplitude movement between two saved spectra, with a stable carrier pitch.

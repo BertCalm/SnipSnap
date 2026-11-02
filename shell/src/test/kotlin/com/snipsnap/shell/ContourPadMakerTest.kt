@@ -133,8 +133,11 @@ class ContourPadMakerTest {
         assertEquals(.4f, instrument.release)
         assertTrue("<SliceLoop>1</SliceLoop>" in xpm)
         assertTrue("\"LoopMode\": 1" in xty)
+        assertEquals(0, instrument.zones.first().lowNote)
+        assertEquals(127, instrument.zones.last().highNote)
+        val spanned = program.fullKeyboard()
         instrument.zones.forEachIndexed { i, zone ->
-            val group = program.keygroups[i]
+            val group = spanned.keygroups[i]
             val expected = notes[i]
             assertEquals(group.lowNote, zone.lowNote)
             assertEquals(group.highNote, zone.highNote)
@@ -179,8 +182,9 @@ class ContourPadMakerTest {
             assertTrue(release.samples.takeLast(960).all { it == 0f })
             assertTrue(engine.activeNotes.isEmpty())
         }
-        assertFalse(InstrumentEngine(loaded, 44_100).noteOn(35))
-        assertFalse(InstrumentEngine(loaded, 44_100).noteOn(85))
+        // The edge zones stretch to the keyboard's ends, so keys beyond the authored span now play.
+        assertTrue(InstrumentEngine(loaded, 44_100).noteOn(35))
+        assertTrue(InstrumentEngine(loaded, 44_100).noteOn(85))
         val soft = InstrumentEngine(loaded, 44_100).also { it.noteOn(60, .25f) }
         val hard = InstrumentEngine(loaded, 44_100).also { it.noteOn(60, 1f) }
         val softAudio = render(soft, .3f, 44_100).samples

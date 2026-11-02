@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.snipsnap.kit.Kit
@@ -24,19 +25,20 @@ import java.io.File
  */
 object AndroidJCard {
 
-    /** Renders [kit]'s J-card and returns PNG bytes — [JCard.png]'s contract. */
+    /** Renders [kit]'s J-card and returns PNG bytes — [JCard.png]'s contract. [assets] carries the bundled faces. */
     fun png(
         kit: Kit,
         kitDir: File,
         scheme: Scheme = Schemes.DEFAULT,
         width: Int = JCard.DEFAULT_WIDTH,
         catalog: String? = null,
+        assets: AssetManager,
     ): ByteArray {
         // JCard.draw's first call is a full-canvas fillRect (the LCD), so
         // the bitmap ends fully opaque whatever the config.
         val bitmap = Bitmap.createBitmap(width, JCard.heightFor(width), Bitmap.Config.ARGB_8888)
         try {
-            JCard.draw(AndroidKitArt.AndroidCanvas(Canvas(bitmap)), kit, kitDir, scheme, width, catalog)
+            JCard.draw(AndroidKitArt.AndroidCanvas(Canvas(bitmap), assets), kit, kitDir, scheme, width, catalog)
             val out = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             return out.toByteArray()

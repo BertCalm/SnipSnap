@@ -3,6 +3,7 @@ package com.snipsnap.kit
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import java.io.File
@@ -76,6 +77,40 @@ class StandaloneExportSidecarTest {
             assertTrue(File(samples, "${kit.name}.xpm").isFile)
         }
     }
+
+    @Test
+    fun `a kept strike fx bank survives both standalone exports with names windows and recipe`() {
+        val source = File(temp, "bank-source").also { it.mkdirs() }
+        val files = listOf("snare_v1.wav", "snare_v2.wav", "snare.wav")
+        files.forEachIndexed { index, name ->
+            WavWriter.write(File(source, name), Snip(FloatArray(4410) { i ->
+                ((index + 1) * .1 * Math.sin(i / (15.0 + index))).toFloat()
+            }, 1, 44100))
+        }
+        val recipe = strikeRecipe()
+        val kit = Kit("Bank Export", listOf(
+            KitPad(1, "snare.wav", "Snare bank", DrumClass.SNARE, recipe = recipe, velocityLayers = listOf(
+                KitLayer("snare_v1.wav", 1, 41, "DRY"), KitLayer("snare_v2.wav", 42, 84, "ROOM"),
+                KitLayer("snare.wav", 85, 127, "ECHO"),
+            )),
+        ))
+        for (native in listOf(false, true)) {
+            val dest = File(temp, if (native) "bank-native" else "bank-compat")
+            val result = if (native) Mpc3Exporter.exportTrack(kit, source, dest)
+                else KitExporter.exportProgramFolder(kit, source, dest)
+            val samples = if (native) File(dest, Mpc3TrackWriter.trackDataDirName(kit.name)) else result.directory
+            val restored = KitStore.load(samples).pad(1)!!
+            assertEquals(listOf("DRY", "ROOM", "ECHO"), restored.velocityLayers.map { it.displayName })
+            assertEquals(listOf(1..41, 42..84, 85..127), restored.velocityLayers.map { it.velStart..it.velEnd })
+            assertEquals(3, restored.recipe!!.entries["recipe"]!!.int())
+            assertEquals(3, (restored.recipe!!.entries["layers"] as JsonValue.Arr).items.size)
+            assertEquals(recipe, restored.recipe)
+            assertEquals(files, restored.velocityLayers.map { it.sampleFile })
+            files.forEach { assertContentEquals(File(source, it).readBytes(), File(samples, it).readBytes(), it) }
+        }
+    }
+
+    private fun strikeRecipe() = Json.parse("""{"recipe":3,"alias":false,"layers":[{"name":"DRY"},{"name":"ROOM","fx":{"fx":1,"spring":{"SIZE":0.42,"TONE":0.7,"MIX":1.0}},"terminalFadeMs":4.0},{"name":"ECHO","fx":{"fx":1,"echo":{"TIME":0.9,"REPEAT":0.55,"TONE":0.8,"MIX":0.9}},"terminalFadeMs":4.0}]}""") as JsonValue.Obj
 
     private fun hash(file: File) = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
         .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }

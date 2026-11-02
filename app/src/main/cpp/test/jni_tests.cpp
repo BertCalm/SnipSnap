@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -29,11 +30,18 @@
 #include "check.h"
 #include "jni.h"
 #include "measure.h"
+#include "callback_allocations.h"
 
 using namespace snipsnap;
 
 // jni.cpp's entry points, as the JVM would see them.
 extern "C" {
+jlong Java_com_snipsnap_app_NativeAquariumBus_create(JNIEnv*, jobject, jint);
+void Java_com_snipsnap_app_NativeAquariumBus_destroy(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativeAquariumBus_configure(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
+jboolean Java_com_snipsnap_app_NativeAquariumBus_process(JNIEnv*, jobject, jlong, jfloatArray, jdouble, jboolean);
+jboolean Java_com_snipsnap_app_NativeAquariumBus_faulted(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativeAquariumBus_limitedFrames(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativePads_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativePads_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativePads_beginBank(JNIEnv*, jobject, jlong);
@@ -42,6 +50,8 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong, jdouble, jfloat);
+jboolean Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong, jfloat, jfloat);
 jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv*, jobject, jlong, jlongArray);
 jint Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong);
@@ -97,7 +107,9 @@ struct FakeArray {
 
 bool failAllocations = false;
 bool pendingJniException = false;
-std::vector<FakeArray*> allocated;
+bool failFloatWrites = false;
+// Also release the final test's fake JNI arrays at process teardown.
+std::vector<std::unique_ptr<FakeArray>> allocated;
 
 FakeArray* impl(jarray a) { return reinterpret_cast<FakeArray*>(a); }
 
@@ -118,7 +130,7 @@ void fakeGetBooleanArrayRegion(JNIEnv*, jbooleanArray a, jsize s, jsize n, jbool
     for (jsize k = 0; k < n; ++k) buf[k] = impl(a)->z[static_cast<size_t>(s + k)];
 }
 
-FakeArray* track(FakeArray* a) { allocated.push_back(a); return a; }
+FakeArray* track(FakeArray* a) { allocated.emplace_back(a); return a; }
 
 jfloatArray fakeNewFloatArray(JNIEnv*, jsize n) {
     if (failAllocations) return nullptr;
@@ -135,6 +147,10 @@ jintArray fakeNewIntArray(JNIEnv*, jsize n) {
     return reinterpret_cast<jintArray>(a);
 }
 void fakeSetFloatArrayRegion(JNIEnv*, jfloatArray a, jsize s, jsize n, const jfloat* buf) {
+    if (failFloatWrites || s < 0 || n < 0 || static_cast<size_t>(s) + static_cast<size_t>(n) > impl(a)->f.size()) {
+        pendingJniException = true;
+        return;
+    }
     for (jsize k = 0; k < n; ++k) impl(a)->f[static_cast<size_t>(s + k)] = buf[k];
 }
 void fakeSetIntArrayRegion(JNIEnv*, jintArray a, jsize s, jsize n, const jint* buf) {
@@ -165,7 +181,7 @@ JNIEnv* env() {
     static JNIEnv_ e{&kIface};
     failAllocations = false;
     pendingJniException = false;
-    for (auto* a : allocated) delete a;
+    failFloatWrites = false;
     allocated.clear();
     return &e;
 }
@@ -774,6 +790,26 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
 }
 
+TEST(jni_the_pads_bend_and_master_gain_cross_the_bridge) {
+    // A ramp i/1000, so the output is the read position: the bend shows as
+    // the read's speed and the master gain as its size.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 8);
+    CHECK(Java_com_snipsnap_app_NativePads_setPitch(e, nullptr, h, 2.0, 0.0f) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_setMasterGain(e, nullptr, h, 0.5f, 0.0f) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(
+              e, nullptr, h, 1, 0, 0, 1000, -1, 1.0f, 1.0f, 1.0, JNI_FALSE) == JNI_TRUE);
+    const auto out = pull(pads, 4);
+    // Frames 0, 2, 4, 6 at half size.
+    CHECK_NEAR(out[2 * 3], 0.5f * 6.0f / 1000.0f, 1e-5);
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
 TEST(jni_the_pads_print_crosses_as_stereo_at_its_full_length) {
     // The bridge's own arithmetic, and the mistake this one invites: the
     // both live prints are stereo: frames and floats differ. An array sized
@@ -1102,4 +1138,78 @@ TEST(jni_surface_aquarium_uses_the_shared_strict_domains_and_exception_checks) {
     CHECK(!Java_com_snipsnap_app_NativeSurface_aquariumFaulted(e, nullptr, 0));
     CHECK_EQ(Java_com_snipsnap_app_NativeSurface_aquariumLimitedFrames(e, nullptr, 0), 0);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_array_aquarium_matches_the_accepted_bus_across_chunks_tempo_reset_and_unsigned_seed) {
+    using namespace snipsnap::aquarium;
+    auto* e = env();
+    const auto h = Java_com_snipsnap_app_NativeAquariumBus_create(e, nullptr, 48000);
+    CHECK(h != 0);
+    PerformanceSettings s; s.enabled = true; s.outputGain = .125f; s.seed = 0xffff'ffffu; s.bpm = 123.5;
+    CHECK(setParameter(s.parameters, "aqua_tide_mix", 1));
+    CHECK(setParameter(s.parameters, "aqua_tide_depth", .8f));
+    CHECK(setParameter(s.parameters, "aqua_tide_stereoPhase", 180));
+    CHECK(setParameter(s.parameters, "aqua_tide_shape", 2));
+    CHECK(setParameter(s.parameters, "aqua_tide_syncEnabled", 1));
+    CHECK(setParameter(s.parameters, "aqua_tide_syncDiv", 5));
+    const auto values = floats(std::vector<float>(s.parameters.values.begin(), s.parameters.values.end()));
+    CHECK(Java_com_snipsnap_app_NativeAquariumBus_configure(e, nullptr, h, values, s.seed, s.model, s.bpm, s.outputGain, true, false));
+    PerformanceBus reference; CHECK(reference.prepare(48000)); CHECK(reference.publish(s));
+    bool stereo = false;
+    for (int turn = 0; turn < 40; ++turn) {
+        if (turn == 20) { s.bpm = 90; CHECK(reference.publish(s, true)); }
+        if (turn == 30) {
+            // Accepted S&H deliberately shares its random value across L/R.
+            // The sinusoidal shape separately proves stereo phase transfer.
+            CHECK(setParameter(s.parameters, "aqua_tide_shape", 0));
+            const auto sine = floats(std::vector<float>(s.parameters.values.begin(), s.parameters.values.end()));
+            CHECK(Java_com_snipsnap_app_NativeAquariumBus_configure(e, nullptr, h, sine, s.seed, s.model, s.bpm, s.outputGain, true, false));
+            CHECK(reference.publish(s));
+        }
+        const int frames = turn % 2 ? 4097 : 37;
+        std::vector<float> input(frames * 2);
+        for (int i = 0; i < frames; ++i) input[2*i] = input[2*i+1] = .4f * std::sin(.1f * i);
+        const auto a = floats(input);
+        reference.beginCallback(); reference.process(input.data(), frames);
+        performance_allocation::allocations.store(0); performance_allocation::frees.store(0);
+        performance_allocation::enabled = true;
+        const bool ok = Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, a, s.bpm, turn == 20);
+        performance_allocation::enabled = false;
+        CHECK(ok); CHECK(impl(a)->f == input);
+        CHECK_EQ(performance_allocation::allocations.load(), 0u); CHECK_EQ(performance_allocation::frees.load(), 0u);
+        for (int i = 0; i < frames; ++i) stereo = stereo || std::abs(input[2*i] - input[2*i+1]) > 1e-4;
+    }
+    CHECK(stereo);
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_faulted(e, nullptr, h));
+    CHECK_EQ(Java_com_snipsnap_app_NativeAquariumBus_limitedFrames(e, nullptr, h), reference.limitedFrames());
+    Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, h);
+}
+
+TEST(jni_array_aquarium_keeps_dry_overs_and_rejects_bad_buffers_and_pending_copy_exceptions) {
+    auto* e = env();
+    CHECK_EQ(Java_com_snipsnap_app_NativeAquariumBus_create(e, nullptr, 0), 0);
+    const auto h = Java_com_snipsnap_app_NativeAquariumBus_create(e, nullptr, 44100);
+    CHECK(h != 0);
+    const auto dry = floats({1.5f, -2.f, .1f, -.3f});
+    const auto original = impl(dry)->f;
+    CHECK(Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, 123.5, false));
+    CHECK(impl(dry)->f == original);
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, 0, dry, 0, false));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, nullptr, 0, false));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, floats({1, 2, 3}), 0, false));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, -1, false));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, std::numeric_limits<double>::quiet_NaN(), false));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, 0, 2));
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_configure(e, nullptr, h, nullptr, 0, 1, 0, .5f, true, false));
+    pendingJniException = true;
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, 0, false));
+    CHECK(pendingJniException); pendingJniException = false;
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, floatsClaiming(4, {}), 0, false));
+    CHECK(pendingJniException); pendingJniException = false;
+    failFloatWrites = true;
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, dry, 0, false));
+    CHECK(pendingJniException); pendingJniException = false; failFloatWrites = false;
+    CHECK(Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, floats({}), 0, false));
+    Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, h);
+    Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, 0);
 }
