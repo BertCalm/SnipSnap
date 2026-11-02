@@ -43,7 +43,7 @@ From the review's T-items, landed: T1 the stop-drop guard (`27d059a65`, `e7cfc00
 | 4 | **Step sequencer depth**: probability, conditional trigs, ratchets, micro-timing, p-locks, Euclidean, polymeter beyond ORBIT's rings | `:loop` beside `OrbitPatterns`, `Arp.kt` | pure-function test tables |
 | 5 | **Sensor modulation** with tilt-engage gating, calibration, smoothing, as learn sources | `:shell` source model, `:app` sensor glue | JVM filter tests; a bench row for feel |
 | 6 | **Scala and MTS** through MTS-ESP's ideas (0BSD), tuning column in `Scales` | `:audio`, `:kit` | `.scl` round-trip tests |
-| 7 | **SMF import and export** beyond grooves (tempo map, CC lanes) and **last-N-bars MIDI capture** | `MidiGroove.kt`, a MIDI ring beside `RingBuffer` | SMF round-trip; a capture after the fact plays back what was played |
+| 7 | **SMF import and export** beyond grooves (tempo map, CC lanes) and **last-N-bars MIDI capture**. First slice landed on KEYS: `PlayCapture` (`:shell`) remembers the last minute of notes, touched or played from a keyboard, and GRAB turns the last 16 seconds into a clip at 120 BPM (KEYS has no tempo of its own) that starts at its first note, written as a melody on channel 1 by `MidiGroove.write(..., channel)` and handed to the share sheet. Not yet: a tempo, quantising, CC and bend lanes, a ring of raw MIDI rather than notes, KIT and SURFACE | `MidiGroove.kt`, a MIDI ring beside `RingBuffer` | SMF round-trip; a capture after the fact plays back what was played |
 
 ## P3: frontier
 
