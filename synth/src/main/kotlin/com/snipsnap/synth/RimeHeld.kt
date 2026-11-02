@@ -11,6 +11,7 @@ internal object RimeHeld {
     private val cache = object : LinkedHashMap<RimePatch, Render>(8, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<RimePatch, Render>?) = size > 8
     }
+    internal fun clearCache() = synchronized(cache) { cache.clear() }
     private fun Render.owned() = copy(note = note.copy(snip = note.snip.copy(samples = note.snip.samples.copyOf())),
         previousCycle = previousCycle.copyOf(), cycle = cycle.copyOf())
 

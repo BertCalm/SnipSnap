@@ -139,6 +139,8 @@ internal object RimeContour {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<TableKey, Prepared>?): Boolean = size > 12
     }
 
+    @Synchronized internal fun clearCache() { preparedCache.clear() }
+
     /** At most twelve immutable banks, about 14 MiB at the maximum band count. */
     @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null, apertureLaw: Int = 3,
         variant: Variant = Variant.REFERENCE): Prepared {
