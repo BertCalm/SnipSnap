@@ -193,7 +193,7 @@ object Velocity {
      * whether a voice *has* a brightness macro is a question about the
      * voice, never about which keys happen to be present on one instance.
      */
-    private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+    internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)

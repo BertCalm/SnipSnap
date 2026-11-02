@@ -50,6 +50,21 @@ object Filament {
     const val MAX_MIDI = 84
     private const val RATE = Dsp.RATE
     private const val HIGH_RATE = RATE * Dsp.OVERSAMPLE
+
+    /**
+     * Recursive states below this are set to exactly zero. A long tail otherwise decays into
+     * subnormal doubles, which the processor handles on a slow path: the render-speed scan
+     * (docs/ENGINE_STANDARD_SCAN_2026_11.md) measured FILAMENT's knob-turn renders at 6 to
+     * 11 s, almost all of it in these filters, and flooring them cut that by six to nine
+     * times. 1e-100 is ACCORD's floor (AccordAcoustics.filterExcitation): about -2000 dB, far
+     * above where subnormals begin (2.2e-308) and far below any 24-bit sample step, so the
+     * published WAVs FilamentCharacterTest pins are unchanged.
+     */
+    internal const val TINY_STATE = 1e-100
+
+    /** [x], or exactly zero when it has decayed below [TINY_STATE]. */
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun floored(x: Double): Double = if (abs(x) < TINY_STATE) 0.0 else x
     private const val STRANDS = 4
     private const val PATHS = 4
     private const val SECTIONS = 4
@@ -457,8 +472,8 @@ object Filament {
         var maxState = 0.0; private set
         fun next(x: Double): Double {
             val y = a2 * x + s1
-            s1 = a1 * x - a1 * y + s2
-            s2 = x - a2 * y
+            s1 = floored(a1 * x - a1 * y + s2)
+            s2 = floored(x - a2 * y)
             if (captureDiagnostics) maxState = max(maxState, max(abs(s1), abs(s2)))
             return y
         }
@@ -478,8 +493,8 @@ object Filament {
         var maxState = 0.0; private set
         fun next(x: Double): Double {
             val y = b * x + s1
-            s1 = -a1 * y + s2
-            s2 = -b * x - a2 * y
+            s1 = floored(-a1 * y + s2)
+            s2 = floored(-b * x - a2 * y)
             if (captureDiagnostics) maxState = max(maxState, max(abs(s1), abs(s2)))
             return y
         }
@@ -528,7 +543,7 @@ object Filament {
         var state = 0.0
         var maxState = 0.0; private set
         fun next(x: Double): Double {
-            state += alpha * (x - state)
+            state = floored(state + alpha * (x - state))
             if (captureDiagnostics) maxState = max(maxState, abs(state))
             return x - state
         }

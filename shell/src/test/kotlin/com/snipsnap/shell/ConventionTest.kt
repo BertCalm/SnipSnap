@@ -1247,7 +1247,7 @@ class ConventionTest {
         } else {
             count("README.md's picker count", rootCount.groupValues[1], picker.size)
         }
-        val complement = Regex("""holds engines that picker does not show\. (.+?) have preset rosters""").find(readme)
+        val complement = Regex("""holds engines that picker does not show\. (.+?) (?:have preset rosters|has a preset roster)""").find(readme)
         if (complement == null) {
             problems += "README.md no longer names the rostered engines the picker does not show; move this law with the sentence"
         } else {
