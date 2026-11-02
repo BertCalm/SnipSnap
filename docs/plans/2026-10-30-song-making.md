@@ -206,6 +206,20 @@ clipping.
   - **Test:** the CLI output stays byte-identical, proven by the existing CLI tests.
 - **App, SDK session:** an EXPORT on `ArrangeScreen` calls `SongExport`. It writes where OUT already writes, and offers the WAV to the share sheet the way GROOVE's SHARE ▸ does.
 
+#### Phase 4, as built (2026-11-01): the shared half
+
+- **`SongExport`** (`shell/.../SongExport.kt`) holds what was `ArrangeCommand.run`'s body:
+  - `write(kit, kitDir, plan, destRoot, overwrite, mixdown)` stages the program, writes the `.xpj` with the sections as sequences numbered in plan order and the song slot named, and, when asked, writes the mixdown WAV beside it.
+  - It returns `Written(project, mixdown)`. `Mixdown` carries the file and the `Arranger.Mix`, so a caller can show the length and section starts without rendering again.
+  - `sectionClips(plan)` is the numbering rule on its own.
+- **`snipsnap arrange`** now calls it and prints the same lines. A refusal comes back as the existing `DestinationExists` (from `:kit`), which the CLI turns into its old message.
+- **Changed on purpose:** every destination is checked before anything is written. The CLI used to check the WAV only after the project was written, so `--mixdown` onto a card that already held the WAV refused with half an export already there. A refusal also now names the file actually on disk (`DestinationExists.firstOf`), where the CLI always named the `.xpj` even when only its data folder was left.
+- **Measured:**
+  - A scratch test ran `arrange --mixdown` through `Cli.run` with the old and the new `ArrangeCommand`, and hashed the exit code, stdout, stderr and every file written (the `.xpj`, the WAV, the three staged pad samples). All seven hashes matched. The scratch test was deleted.
+  - `SongExportTest` (4 tests) covers the numbered sequences, the WAV only when asked, the mixdown equal to `Arranger.mixdown`, an existing WAV refusing with nothing written, the refusal naming the data folder when only that is left, and overwrite giving the same bytes.
+  - With the old check order put back alone, `an existing WAV refuses before anything is written` fails ("no project written").
+- **Not done here:** the EXPORT button on `ArrangeScreen`. It needs a session with an Android SDK, by the house rule that a screen wired blind is worse than one left for a session that can verify it. It is one call: `SongExport.write(kit, kitDir, plan, destRoot, mixdown = true)` with the plan ARRANGE already holds, then the share sheet for `written.mixdown.file`.
+
 ### Phase 5. An arrangement you can edit (M pure, then M app)
 
 **Goal:** the Arranger suggests a song, and the user changes it.
