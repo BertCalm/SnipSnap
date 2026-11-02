@@ -2606,6 +2606,133 @@ class ConventionTest {
         )
     }
 
+    // ---- Laws: UNDO SPLICE and DE-SAMPLE's UNDO are MUTATE's UNDO, not OUTSIDE's ----
+
+    /**
+     * TAPE SPLICE and DE-SAMPLE got their own UNDO on the pad sheet on 2026-11-01
+     * (`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`), so BACK in THE BIN is no
+     * longer their only way back (PadSheet.hasOwnWayBack hides it on their kept rows). Both copy
+     * MUTATE's UNDO, held by the two laws above, and not OUTSIDE's, which is disabled with no word
+     * when it cannot act. One law per door, each cloned from MUTATE's two:
+     *
+     * - Only `busy` disables the button (`enabled = !busy`). When it cannot act it is dimmed by the
+     *   very refusal its door toasts: `PadSheet.spliceUndoRefusal(pad, binDaysLeft != null)` or
+     *   `PadSheet.desampleUndoRefusal(...)`, asked of the screen's live pad, so a printed pad says
+     *   the print is on top rather than undoing under it.
+     * - The door (`onUnsplice`, `onUndesample`) asks that refusal with `binned = binDaysLeft !=
+     *   null`, toasts it (`onToast(nothing)`) and returns before `commitPadEditNow(`, which then runs
+     *   the model's own undo (`unsplicePad`, `undesamplePad`, which ask the same refusal) and lands
+     *   on `Copy.UNSPLICED` or `Copy.UNDESAMPLED`.
+     * - Where they sit: UNDO SPLICE shares one Row with SPLICE ▸, half each. Its label is its own,
+     *   "UNDO SPLICE", because the sheet's foot is always composed and WidePadSheetScreenTest
+     *   finds the open box's UNDO by the bare word. DE-SAMPLE's is a visible "UNDO" in the DE-SAMPLE
+     *   header row inside the MAKE box, which composes only while open, and it is spoken as "UNDO
+     *   DE-SAMPLE", because MAKE holds five doors.
+     */
+    @Test
+    fun `law - UNDO SPLICE dims with the refusal its door toasts, as MUTATE's UNDO does`() {
+        val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
+        val splice = undoButton(code, "\"UNDO SPLICE\"")
+        assertUndoGreysOnlyForBusy(
+            splice,
+            "dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null",
+            "onClick = ::onUnsplice",
+        )
+        assertTrue(
+            splice.startsWith("( \"UNDO SPLICE\",") && "▸" !in splice,
+            "UNDO SPLICE's label is not its own `\"UNDO SPLICE\"`, or carries a ▸. The foot is always composed, so a bare " +
+                "UNDO would be a second one beside the open box's; and it opens nothing:\n  $splice",
+        )
+        val spliceAt = code.indexOf("\"SPLICE ▸\"")
+        assertTrue(spliceAt >= 0, "expected PadSheetScreen to draw `\"SPLICE ▸\"`")
+        val row = blockAfter(code.substring(code.lastIndexOf("Row(", spliceAt)), "Row(")
+        assertTrue(
+            "\"UNDO SPLICE\"" in row && "modifier = Modifier.weight(1f)" in undoButton(code, "\"SPLICE ▸\"") &&
+                "modifier = Modifier.weight(1f)" in splice,
+            "UNDO SPLICE does not share one Row with SPLICE ▸ at half width each (`modifier = Modifier.weight(1f)`):\n  $row",
+        )
+        assertUndoDoorRefusesFirst(
+            code,
+            door = "fun onUnsplice() {",
+            refusal = "PadSheet.spliceUndoRefusal(p, binned = binDaysLeft != null)",
+            landing = "Copy.UNSPLICED",
+            undo = "mm.unsplicePad(slot)",
+        )
+    }
+
+    /** DE-SAMPLE's half of the law above. */
+    @Test
+    fun `law - DE-SAMPLE's UNDO dims with the refusal its door toasts, as MUTATE's UNDO does`() {
+        val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
+        val desample = undoButton(code, "accessibilityLabel = \"UNDO DE-SAMPLE\"")
+        assertUndoGreysOnlyForBusy(
+            desample,
+            "dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null",
+            "onClick = ::onUndesample",
+        )
+        assertTrue(
+            desample.startsWith("( \"UNDO\","),
+            "DE-SAMPLE's UNDO does not read UNDO, as MUTATE's and OUTSIDE's header buttons do:\n  $desample",
+        )
+        val legend = code.indexOf("legend = PadSheetBoxes.Box.MAKE.legend")
+        assertTrue(legend >= 0, "expected the MAKE box's GroupBox")
+        val box = code.lastIndexOf("GroupBox(", legend)
+        val args = blockAfterList(code.substring(box), "GroupBox(")
+        val make = blockAfter(code.substring(box + "GroupBox".length + args.length), "{")
+        val header = make.indexOf("TapeText(\"DE-SAMPLE · THE NEAREST PATCH\"")
+        val rowAt = if (header >= 0) make.lastIndexOf("Row(", header) else -1
+        assertTrue(
+            rowAt >= 0 && "accessibilityLabel = \"UNDO DE-SAMPLE\"" in blockAfter(make.substring(rowAt), "Row("),
+            "DE-SAMPLE's UNDO is not in the DE-SAMPLE header row inside the MAKE box. Outside a box it would be a " +
+                "second bare UNDO on the always-composed sheet.",
+        )
+        assertUndoDoorRefusesFirst(
+            code,
+            door = "fun onUndesample() {",
+            refusal = "PadSheet.desampleUndoRefusal(p, binned = binDaysLeft != null)",
+            landing = "Copy.UNDESAMPLED",
+            undo = "mm.undesamplePad(slot)",
+        )
+    }
+
+    /** The whole `ActionButton(...)` call around [marker], whitespace-normalised. */
+    private fun undoButton(code: String, marker: String): String {
+        val at = code.indexOf(marker)
+        assertTrue(at >= 0, "expected PadSheetScreen to draw `$marker`")
+        return normalizeSpan(blockAfterList(code.substring(code.lastIndexOf("ActionButton(", at)), "ActionButton("))
+    }
+
+    private fun assertUndoGreysOnlyForBusy(button: String, dimmed: String, click: String) {
+        assertTrue(
+            Regex("""enabled = !busy\s*[,)]""").containsMatchIn(button) && dimmed in button && click in button,
+            "an UNDO is greyed for a reason it does not say, or does not reach its door. Only `busy` disables it " +
+                "(`enabled = !busy`); when it cannot act it is `$dimmed`, and `$click` toasts why:\n  $button",
+        )
+    }
+
+    private fun assertUndoDoorRefusesFirst(code: String, door: String, refusal: String, landing: String, undo: String) {
+        val body = codeOnly(blockAfter(code, door))
+        val ask = body.indexOf(refusal)
+        val toast = body.indexOf("onToast(nothing)")
+        val commit = body.indexOf("commitPadEditNow(\"UNDO\"")
+        assertTrue(
+            ask >= 0 && toast > ask && commit > toast,
+            "`$door` commits without asking `$refusal` first and toasting it (`onToast(nothing)`), so a dimmed " +
+                "UNDO either does nothing or says the take is back when it is not:\n  $body",
+        )
+        val commitCall = body.substring(commit)
+        assertTrue(
+            "onToast($landing)" in commitCall && undo in commitCall,
+            "`$door` does not commit `$undo` and land on `$landing`; the model's own undo asks the same refusal " +
+                "of the fresh pad, so a race cannot undo what the screen would have refused:\n  $body",
+        )
+        assertFalse(
+            "unprinted" in body,
+            "`$door` asks its refusal of the pad under the print. The door reads the live pad: undoing under a " +
+                "print would overwrite the print's render, and REMOVE's hash check would then refuse for good.",
+        )
+    }
+
     /**
      * ROULETTE and DRIFT used to turn every IllegalArgumentException into
      * "the crate is empty": a chained pad, a shelf of doubles and a real

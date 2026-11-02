@@ -20,6 +20,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Thump
@@ -1615,8 +1616,22 @@ class CliTest {
         assertContains(padOut, "is a thump/kick patch now")
         assertTrue(!before.contentEquals(padFile.readBytes()))
         assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
-        assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)
+        assertTrue(KitStore.load(kitDir).pad(1)!!.source["desampled"] != null, "test setup: the de-sample's stamp")
+        val (undoCode, undoOut, undoErr) = cli("desample", kitDir.path, "A01", "--undo")
+        assertEquals(0, undoCode, "stderr: $undoErr")
+        assertContains(undoOut, "the take before the de-sample came back out of the bin")
         assertTrue(before.contentEquals(padFile.readBytes()))
+        assertNull(KitStore.load(kitDir).pad(1)!!.recipe, "the patch went with the render")
+        assertNull(KitStore.load(kitDir).pad(1)!!.source["desampled"], "and so did the stamp")
+
+        // A pad that was never de-sampled refuses, even with a take of its own in the bin.
+        KitBuilderModel.open(kitDir).apply { treatPad(2, "punched"); save() }
+        val pad2 = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val treated = pad2.readBytes()
+        val (neverCode, _, neverErr) = cli("desample", kitDir.path, "A02", "--undo")
+        assertTrue(neverCode != 0 && com.snipsnap.shell.Copy.DESAMPLE_UNDO_NOTHING in neverErr, "exit $neverCode: $neverErr")
+        assertTrue(treated.contentEquals(pad2.readBytes()), "the refusal pops no stranger's take")
+        assertEquals(1, KitBuilderModel.open(kitDir).priorTakes(2).size, "the treatment's take is still in the bin")
 
         val (badCode, _, badErr) = cli("desample", File(temp, "nowhere").path)
         assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)

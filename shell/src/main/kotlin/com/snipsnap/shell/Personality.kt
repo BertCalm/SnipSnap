@@ -1698,6 +1698,20 @@ object Copy {
      */
     fun desampled(pad: String, engine: String, voice: String, distance: Float): String =
         "$pad IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+    /**
+     * DE-SAMPLE's UNDO on the pad sheet (and `snipsnap desample --undo`). It restores the newest take
+     * of the pad's file from the bin, which after two de-samples is the first one's render, and the
+     * take before a de-sample may itself have been treated; so the line says the take, not the
+     * capture.
+     */
+    const val UNDESAMPLED = "UNDONE. THE TAKE BEFORE THE LAST DE-SAMPLE IS BACK FROM THE BIN."
+    /**
+     * DE-SAMPLE's UNDO when the de-sample is not what sits on top: never de-sampled, already undone,
+     * a later audio replacement over it, pedals riding it (NONE comes first), or a print over it.
+     */
+    const val DESAMPLE_UNDO_NOTHING = "THIS PAD CARRIES NO DE-SAMPLE. NOTHING TO UNDO HERE."
+    /** DE-SAMPLE's UNDO when the bin holds no earlier take of the pad. */
+    const val DESAMPLE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE PATCH STAYS."
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
@@ -1736,6 +1750,13 @@ object Copy {
     const val UNDO_NOTHING = "THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE."
     /** MUTATE's UNDO when the bin holds no earlier take of the pad. */
     const val UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS."
+    /**
+     * The pad sheet's UNDO SPLICE and DE-SAMPLE's UNDO, when the pad has soft hits on (GHOSTS or
+     * STACK THE TAKES, added after the splice or the de-sample). Their own sibling of
+     * [MUTATE_LAYERED], which names MUTATE: turning SOFT HITS off clears every layer, and the UNDO
+     * then lands.
+     */
+    const val UNDO_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. UNDO WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
@@ -1800,13 +1821,30 @@ object Copy {
     fun stackOverLive(zone: String, db: Float): String =
         "$zone IS +${String.format(java.util.Locale.ROOT, "%.1f", db)} DB OVER LIVE. THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS."
 
-    /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
+    /**
+     * COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. Either way
+     * the line ends on where the take before the splice went, as DE-SAMPLE's, MUTATE's and DRIFT's
+     * landings do: the pad sheet's UNDO SPLICE brings it back ([UNSPLICED]).
+     */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {
-            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF TAPE OVERLAP WENT IN."
+            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF TAPE OVERLAP WENT IN. THE TAKE BEFORE IT SLEEPS IN THE BIN."
         } else {
-            "SPLICED CLEAN. NO OVERLAP NEEDED."
+            "SPLICED CLEAN. NO OVERLAP NEEDED. THE TAKE BEFORE IT SLEEPS IN THE BIN."
         }
+    /**
+     * The pad sheet's UNDO SPLICE. It restores the newest take of the pad's file from the bin, which
+     * after two splices is the first splice's result, not the original; so the line says exactly
+     * what came back, as [UNMUTATED] does.
+     */
+    const val UNSPLICED = "UNDONE. THE TAKE BEFORE THE LAST SPLICE IS BACK FROM THE BIN."
+    /**
+     * UNDO SPLICE on a pad that carries no TAPE SPLICE: never spliced, already undone, MUTATE's own
+     * SPLICE move (whose UNDO is on the MUTATE card), or a print over the splice.
+     */
+    const val SPLICE_UNDO_NOTHING = "THIS PAD CARRIES NO SPLICE. NOTHING TO UNDO HERE."
+    /** UNDO SPLICE when the bin holds no earlier take of the pad (EMPTY THE BIN NOW, or a BACK spent it). */
+    const val SPLICE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE SPLICE STAYS."
 
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. NEW TAPE ON THE SHELF."
@@ -2965,7 +3003,7 @@ object Copy {
     // in the word of the control that started it. A treatment says its own
     // name through `treatmentBusy`. SAVING_PAD_BUSY is what `commitPadEditNow`
     // says when its caller gives it no word (PASTE, SOFT HITS, EJECT, and
-    // both UNDOs) and what the flush the editor hands on when it closes says.
+    // the UNDOs) and what the flush the editor hands on when it closes says.
     // Every other job the editor starts falls back to WORKING_BUSY, and that
     // includes some writes (a board or AQUARIUM KEEP, NONE, KEEP ROOM, MAKE
     // A GATHERING, the debounced save) as well as decodes, the mic trip and
@@ -2987,7 +3025,7 @@ object Copy {
     /**
      * The dock's line for two kinds of write in the pad editor: the ones
      * `commitPadEditNow` runs for a caller that gives it no word of its own
-     * (PASTE, SOFT HITS, EJECT, and both UNDOs), and the flush the editor
+     * (PASTE, SOFT HITS, EJECT, and the UNDOs), and the flush the editor
      * hands on when it closes with an edit the debounce had not written. That
      * last one is why the line exists: the write outlives the editor, and the
      * job board keeps it on the dock until it lands. Other writes the editor

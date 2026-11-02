@@ -1092,9 +1092,16 @@ macros. A `.wav` prints the patch (`--out patch.json` writes it); a kit
 pad becomes the patch's own render with the patch as its recipe — a
 synth pad from here on, editable and breedable — bin-backed, `--undo`
 byte-identical, the search starting on the voices kindred to the pad's
-class. The distance is always told; past 0.45 the nearest is a stranger
-and the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
-On the phone it is the PAD SHEET's DE-SAMPLE card.
+class. `--undo` is `KitBuilderModel.undesamplePad`: it gives back the
+take before the de-sample and clears the pad's `desampled` mark. It
+refuses a pad the de-sample is no longer on top of (never de-sampled,
+pedals or a print over it, or a later send or other audio replacement,
+which clears the mark), a pad with soft hits on, and an emptied bin.
+The distance is always told; past 0.45 the nearest is a stranger and
+the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
+On the phone it is the PAD SHEET's DE-SAMPLE card, whose UNDO runs the
+same `undesamplePad` (since 2026-11-01:
+`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
 
 ### `arrange <kit-dir>` — songs, not loops
 

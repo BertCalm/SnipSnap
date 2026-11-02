@@ -22,9 +22,13 @@ import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PedalSlate
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Treatments
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,10 +48,11 @@ import kotlin.math.sin
  *
  * And THE BIN's BACK on a kept row (docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md,
  * sections 4 and 6). A row a pad keeps names that pad. When the pad can give the entry back itself
- * (NONE over a card treatment, `PadSheet.hasOwnWayBack`), the row has no BACK: BACK would copy the
- * original over the pad's audio, leave its treatment on the card, and use up the original that undo
- * needs. A kept row whose pad has no such door (a SPLICE) keeps BACK, its only way back in the app,
- * and so does a row on the clock. And no row whose file a print's saved source names has BACK
+ * (NONE over a card treatment, or, since 2026-11-01, UNDO SPLICE over a TAPE SPLICE;
+ * `PadSheet.hasOwnWayBack`), the row has no BACK: BACK would copy the original over the pad's audio,
+ * leave its recipe on the card, and use up the original that undo needs. A kept row whose pad has no
+ * such door (an fx-only recipe, which no card reads) keeps BACK, its only way back in the app, and so
+ * does a row on the clock. And no row whose file a print's saved source names has BACK
  * (`KitBuilderModel.filesUnderPrints`): BACK would overwrite a file REMOVE restores and checks by
  * hash, and the print could never come off. The rows sit in a plain `verticalScroll` column, so
  * every row is in the semantics tree without scrolling.
@@ -164,30 +169,44 @@ class TakesBinScreenTest : ComposeScreenTest() {
         hit(dir, "hit1.wav", 240.0)
         hit(dir, "hit2.wav", 180.0)
         hit(dir, "hit3.wav", 320.0)
+        hit(dir, "hit4.wav", 400.0)
         val pads = listOf(
             KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.SNARE),
             KitPad(slot = 2, sampleFile = "hit2.wav", drumClass = DrumClass.KICK),
             KitPad(slot = 3, sampleFile = "hit3.wav", drumClass = DrumClass.SNARE),
+            KitPad(slot = 4, sampleFile = "hit4.wav", drumClass = DrumClass.SNARE),
         )
         KitStore.save(Kit(name = "TAKES BIN TEST", pads = pads, tempoBpm = 92f), dir)
         val m = KitBuilderModel.open(dir)
         assertTrue("DRIVE landed", PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")) is PedalSlate.Landed.Applied)
         m.clear(2) // an untreated pad ejected: nothing keeps its entry, so it sits on the clock
-        // SPLICE's recipe, as splicePad writes it: the pad keeps its pre-splice take, and its sheet
-        // has no NONE or UNDO that reads it.
+        // SPLICE's recipe, as splicePad writes it: the pad keeps its pre-splice take, and its sheet's
+        // UNDO SPLICE gives it back (2026-11-01).
         m.replaceAudio(3, Json.parse("""{"splice":{"crossfaded":true}}""") as JsonValue.Obj) { it }
+        // A chain with no treatment name: the pad keeps its take (a recipe that is not a bare patch),
+        // but no card reads it (`PadSheet.read` sees no treatment), so its sheet has no NONE or UNDO
+        // that gives the take back.
+        m.replaceAudio(4, PadRecipe(fx = Treatments.chain("washed")).toJsonValue()) { it }
         m.save()
-        val holds = KitBuilderModel.open(dir).binHolds().associateBy { it.entry.originalName }
+        val fresh = KitBuilderModel.open(dir)
+        val holds = fresh.binHolds().associateBy { it.entry.originalName }
         assertEquals("test setup: the treated pad's original is kept for A01", 1, holds.getValue("hit1.wav").keptFor)
         assertNull("test setup: the ejected pad's entry is on the clock", holds.getValue("hit2.wav").keptFor)
         assertEquals("test setup: the spliced pad's take is kept for A03", 3, holds.getValue("hit3.wav").keptFor)
+        assertEquals("test setup: the chained pad's take is kept for A04", 4, holds.getValue("hit4.wav").keptFor)
+        assertTrue("test setup: UNDO SPLICE reads A03's take", PadSheet.hasOwnWayBack(fresh.kit.pad(3)!!, "hit3.wav", holds.keys))
+        assertFalse("test setup: no door on A04's sheet reads its take", PadSheet.hasOwnWayBack(fresh.kit.pad(4)!!, "hit4.wav", holds.keys))
 
         show(KitShelf.Entry(dir, KitStore.load(dir)), "◄ PADS")
         val kept = Copy.binKeptFor(PadBanks.tag(1))
         val keptSplice = Copy.binKeptFor(PadBanks.tag(3))
-        waitFor("the kept rows' \"$kept\" and \"$keptSplice\"", timeoutMillis = 60_000) { hasText(kept) && hasText(keptSplice) }
+        val keptChain = Copy.binKeptFor(PadBanks.tag(4))
+        waitFor("the kept rows' \"$kept\", \"$keptSplice\" and \"$keptChain\"", timeoutMillis = 60_000) {
+            hasText(kept) && hasText(keptSplice) && hasText(keptChain)
+        }
         waitFor("the BACK on the row on the clock", timeoutMillis = 60_000) { nodes("BRING BACK HIT2.WAV").isNotEmpty() }
-        assertTrue("the spliced pad's kept row keeps BACK, its only way back", nodes("BRING BACK HIT3.WAV").isNotEmpty())
+        assertTrue("the chained pad's kept row keeps BACK, its only way back", nodes("BRING BACK HIT4.WAV").isNotEmpty())
+        assertTrue("the spliced pad's kept row has no BACK: its UNDO SPLICE gives the take back", nodes("BRING BACK HIT3.WAV").isEmpty())
         assertTrue("the treated pad's kept row has no BACK: its NONE gives the original back", nodes("BRING BACK HIT1.WAV").isEmpty())
     }
 
