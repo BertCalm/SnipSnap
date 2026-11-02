@@ -68,6 +68,7 @@ import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
 import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
@@ -1671,7 +1672,7 @@ private fun PadCell(
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
                     held = true
-                    currentOnTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
+                    currentOnTap(slot, PadFeelStore.shape(PadHit.velocityAt(down.position.y, size.height.toFloat()), down.pressure))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
