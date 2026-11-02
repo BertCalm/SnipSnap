@@ -149,7 +149,6 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Copy
-import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
@@ -303,8 +302,7 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
 @Composable
 fun App(shelf: KitShelf) {
     // The phone's expansions, beside the shelf's kits: `<files>/expansions`.
-    val filesDir = LocalContext.current.filesDir
-    val expansionStore = remember(filesDir) { ExpansionStore(java.io.File(filesDir, "expansions")) }
+    val expansionStore = remember(shelf) { shelf.expansionStore() }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -1175,6 +1173,8 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted kits (Task 4): the shelf's own bin
         // empties itself of whatever DELETE put there more than 30 days ago.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }
+        // A kit the sweep forgot for good leaves every expansion it was in.
+        withContext(Dispatchers.IO) { runCatching { shelf.pruneExpansions() } }
         // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
         // always the intent (KitBuilder.kt's own docs), but nothing ever called
         // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected

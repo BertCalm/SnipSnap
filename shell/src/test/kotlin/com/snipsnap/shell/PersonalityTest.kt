@@ -540,6 +540,8 @@ class PersonalityTest {
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
+        // The shelf's EXPANSIONS group heading, the rename dialog title, and DELETE's confirming question.
+        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE", "EXPANSION_DELETE_CONFIRM",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.

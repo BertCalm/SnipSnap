@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.pruneExpansions
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -152,7 +153,7 @@ internal fun DeletedKitsSection(
         busy = true
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.emptyKitBin() } }
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.emptyKitBin().also { runCatching { shelf.pruneExpansions() } } } }
                 binned = emptyList()
                 onToast(Copy.kitBinEmptied)
             } catch (e: Exception) {

@@ -568,6 +568,15 @@ object Copy {
     fun kitJoined(kit: String, expansion: String): String = "$kit IS IN $expansion."
     fun kitLeft(kit: String, expansion: String): String = "$kit IS OUT OF $expansion."
     fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
+    /** The shelf's group heading over the expansions. */
+    const val EXPANSIONS_HEADING = "EXPANSIONS"
+    /** An expansion row whose kits are all gone or binned. */
+    const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
+    /** The rename dialog's title for an expansion. */
+    const val EXPANSION_RENAME_TITLE = "RENAME EXPANSION"
+    /** DELETE's confirm on an expansion row: a question. */
+    const val EXPANSION_DELETE_CONFIRM = "DELETE THIS EXPANSION? ITS KITS STAY ON THE SHELF."
+    fun expansionDeleted(name: String): String = "$name IS GONE. ITS KITS STAY ON THE SHELF."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"

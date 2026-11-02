@@ -78,6 +78,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
 import com.snipsnap.app.LocalHaptics
+import com.snipsnap.shell.Expansion
+import com.snipsnap.app.KitWrites
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
 import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.Names as NameRoll
 
@@ -231,6 +238,8 @@ fun KitsScreen(
     expansions: ExpansionStore? = null,
     /** The dock's line, for what the expansion flow has to say. */
     onToast: (String) -> Unit = {},
+    /** An expansion row tapped: EXPORT opens with it as the subject. */
+    onOpenExpansion: (Expansion) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     // The loading screen's own rule, the dock bar's latch: no words for the
@@ -319,6 +328,24 @@ fun KitsScreen(
     var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var expansionTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // The EXPANSIONS group: read off the main thread, again after any change to it.
+    var expansionsRevision by remember { mutableIntStateOf(0) }
+    val expansionList by produceState(emptyList<Expansion>(), expansions, expansionsRevision) {
+        value = expansions?.let { store -> offMain { runCatching { store.list() }.getOrDefault(emptyList()) } } ?: emptyList()
+    }
+    var armedExpansionIds by remember { mutableStateOf(setOf<String>()) }
+    var renameExpansion by remember { mutableStateOf<Expansion?>(null) }
+    var deleteExpansion by remember { mutableStateOf<Expansion?>(null) }
+    val expansionScope = rememberCoroutineScope()
+    /** Runs one change to the store off the main thread under the kit-write lock, says [said] on success, and rereads the group. */
+    fun changeExpansions(said: String, change: (ExpansionStore) -> Unit) {
+        val store = expansions ?: return
+        expansionScope.launch {
+            val ok = offMain { KitWrites.mutex.withLock { runCatching { change(store) }.isSuccess } }
+            onToast(if (ok) said else Copy.EXPANSION_SAVE_FAILED)
+            expansionsRevision++
+        }
+    }
     // Which kit rows are armed (DELETE/RENAME revealed), lifted up here
     // rather than kept in KitRow's own remember: cancelling (or dismissing
     // by tapping outside) either dialog below needs to disarm the row that
@@ -554,6 +581,24 @@ fun KitsScreen(
                                     enabled = !busy,
                                     modifier = Modifier.fillMaxWidth(),
                                     onClick = onNewProject,
+                                )
+                            }
+                        }
+                        if (expansionList.isNotEmpty()) {
+                            item(key = "expansions-header") {
+                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            }
+                            items(expansionList, key = { "expansion:" + it.id }) { e ->
+                                ExpansionRow(
+                                    e = e,
+                                    present = presentMembers(e, kits),
+                                    armed = e.id in armedExpansionIds,
+                                    busy = busy,
+                                    onArm = { armedExpansionIds = armedExpansionIds + e.id },
+                                    onDisarm = { armedExpansionIds = armedExpansionIds - e.id },
+                                    onOpen = onOpenExpansion,
+                                    onRequestRename = { renameExpansion = it },
+                                    onRequestDelete = { deleteExpansion = it },
                                 )
                             }
                         }
@@ -826,7 +871,29 @@ fun KitsScreen(
                 ExpansionFlow(target, expansions, onToast) {
                     expansionTarget = null
                     armedKitDirs = armedKitDirs - target.dir.path
+                    expansionsRevision++
                 }
+            }
+            renameExpansion?.let { e ->
+                val cancel = { renameExpansion = null; armedExpansionIds = armedExpansionIds - e.id }
+                ExpansionNameDialog(
+                    title = Copy.EXPANSION_RENAME_TITLE,
+                    initialName = e.title,
+                    check = { name -> check(name, expansionList, exceptId = e.id) },
+                    taken = expansionList.map { it.title }.toSet(),
+                    onCancel = cancel,
+                    onConfirm = { name -> cancel(); changeExpansions(Copy.kitRenamed(name)) { it.rename(e.id, name) } },
+                    confirmLabel = "RENAME",
+                )
+                BackHandler(onBack = cancel)
+            }
+            deleteExpansion?.let { e ->
+                val cancel = { deleteExpansion = null; armedExpansionIds = armedExpansionIds - e.id }
+                ExpansionDeleteConfirm(
+                    onCancel = cancel,
+                    onConfirm = { cancel(); changeExpansions(Copy.expansionDeleted(e.title)) { it.delete(e.id) } },
+                )
+                BackHandler(onBack = cancel)
             }
         }
     }
