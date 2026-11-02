@@ -67,34 +67,9 @@ object KitFromCommand {
         }
         val kit = KitAssembler.assembleArranged(name, Balance.apply(result.pads), dir, key = key, tempoBpm = genre.style.bpm)
 
-        val a = result.analysis
-        out.println(
-            "kit from ${file.name}: ${kit.name} in ${key.label}, ${genre.label} at ${genre.style.bpm.toInt()} bpm - " +
-                if (a.pitched) "the source has a note (%.1f Hz)".format(java.util.Locale.ROOT, a.hz) else "the source has no note, every cycle is forced",
-        )
-        out.println("%-4s %-11s %-10s %s".format("pad", "slot", "gate", "what the gate measured"))
-        for (g in result.gates) {
-            // Locale.ROOT on the pad number: %d follows the default locale, and on an ar-EG or fa-IR
-            // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
-            out.println("%-4s %-11s %-10s %s".format("A%02d".format(java.util.Locale.ROOT, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail))
-        }
-        for (b in result.blends) {
-            out.println(
-                "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(java.util.Locale.ROOT,
-                    b.slot.name, b.synth, b.share,
-                    if (b.distance != null) ", distance %.3f%s".format(java.util.Locale.ROOT, b.distance, if (b.far) " (far)" else "") else "",
-                    b.after.gate.name.lowercase(), b.after.detail),
-            )
-        }
-        val failed = result.fallbackSet
-        val unread = result.unmeasured
-        out.println(
-            when {
-                failed.isEmpty() && unread.isEmpty() -> "every pad cleared its gate"
-                else -> "${failed.size} pad(s) failed a gate and were blended, the source never under half: ${failed.joinToString { it.slot.name }}" +
-                    if (unread.isNotEmpty()) "; ${unread.size} unmeasured, left purist: ${unread.joinToString { it.slot.name }}" else ""
-            },
-        )
+        val report = KitFromAnything.describe(result, kit.name, key, genre)
+        out.println("kit from ${file.name}: ${report.header}")
+        report.lines.forEach { out.println(it) }
         out.println("wrote $dir, the source kept as ${KitFromAnything.SOURCE_FILE}; every pad carries a recipe (kitfrom --check <dir> rebuilds them)")
         return 0
     }
