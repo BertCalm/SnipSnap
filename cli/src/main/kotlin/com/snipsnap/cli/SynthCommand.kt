@@ -22,6 +22,8 @@ import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.shell.CreasePadMaker
+import com.snipsnap.shell.CausticPadMaker
+import com.snipsnap.shell.CausticEditing
 import com.snipsnap.synth.Apsis
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.ApsisVoice
@@ -230,9 +232,10 @@ import kotlin.random.Random
  * --midi and --macros TUNE/HOLD edits are refused in this mode.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
- * All four CAUSTIC voices accept `--model 1`, saved `--patch <json>` and `--macros` overrides,
- * retaining the patch's explicit note, velocity and native renderer model. It renders a
- * finite note; HOLD is reserved and must stay at zero.
+ * CAUSTIC keeps saved finite recipes unchanged. A deliberate HOLD/MOTION edit or
+ * `--instrument` selects the expanded instrument unless `--model 1` was requested.
+ * HOLD 1 writes a periodic WAV; --instrument retains the arrival before its sustain
+ * and accepts --release. Saved root and velocity remain part of either recipe.
  * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.
  * Its `--midi 36..84` resets relative TUNE to .5; velocity-only edits keep saved tuning.
  * Every LATTICE WAV has a complete `.patch` beside it, including held-loop settings.
@@ -368,9 +371,6 @@ object SynthCommand {
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
-                if (engine == CausticPatch.ENGINE && name == "HOLD" && value > 0f) {
-                    throw CliError("--macros HOLD is reserved for CAUSTIC; only 0 is supported")
-                }
                 if (engine == FerryPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() != 0.0) {
                     throw CliError("FERRY is finite; HOLD must be 0")
                 }
@@ -401,7 +401,7 @@ object SynthCommand {
             }
         }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OtisPatch.ENGINE -> Otis.MIDI_MIN..Otis.MIDI_MAX
@@ -519,7 +519,8 @@ object SynthCommand {
             if (engine == RimePatch.ENGINE && opts["--attack"] != null) throw CliError("RIME retains its UNFOLD opening; use --release")
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
             if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
-            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM and TIDAL export a keys instrument here")
+            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM, TIDAL and CAUSTIC export a keys instrument here")
+            if (engine == CausticPatch.ENGINE && opts["--attack"] != null) throw CliError("CAUSTIC keeps its authored attack; use --release for the held instrument")
             if (engine == OverlapPatch.ENGINE) {
                 if ((savedPatch as? OverlapPatch)?.playback != OverlapPlayback.HELD)
                     throw CliError("OVERLAP --instrument requires a saved HELD --patch; select held mode in SYNTH first")
@@ -716,7 +717,7 @@ object SynthCommand {
             } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is CausticPatch) {
-                withNote.copy(macros = withNote.macros + macroOverrides, model = modelOverride ?: withNote.model)
+                editCaustic(withNote, macroOverrides, modelOverride, instrument)
             } else if (withNote is LatticePatch && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is SkitterPatch) {
@@ -776,6 +777,16 @@ object SynthCommand {
             else withNote
         }
 
+        val causticInstrumentSpec = if (instrument && engine == CausticPatch.ENGINE) try {
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() &&
+                    it in CausticPadMaker.RELEASE_MIN_SECONDS..CausticPadMaker.RELEASE_MAX_SECONDS }
+                    ?: throw CliError("CAUSTIC --release wants finite seconds in ${CausticPadMaker.RELEASE_MIN_SECONDS}..${CausticPadMaker.RELEASE_MAX_SECONDS}")
+            } ?: CausticPadMaker.RELEASE.default
+            CausticPadMaker.Spec(chosen.single() as CausticPatch, release)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("CAUSTIC --instrument: ${e.message ?: "invalid held recipe"}")
+        } else null
         val skyInstrumentSpec = if (instrument && engine == OpenSkyPatch.ENGINE) try {
             OpenSkyPadMaker.Spec(chosen.single() as OpenSkyPatch, releaseSeconds = skyInstrumentRelease ?: OpenSkyPadMaker.RELEASE.default)
         } catch (e: IllegalArgumentException) {
@@ -849,6 +860,7 @@ object SynthCommand {
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
         if (rimeInstrumentSpec != null) return makeRimeInstrument(rimeInstrumentSpec, dir, out)
+        if (causticInstrumentSpec != null) return makeCausticInstrument(causticInstrumentSpec, dir, out)
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
         if (flockInstrumentSpec != null) return makeFlockInstrument(flockInstrumentSpec, dir, out)
         if (overlapInstrumentSpec != null) return makeOverlapInstrument(overlapInstrumentSpec, dir, out)
@@ -889,6 +901,9 @@ object SynthCommand {
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
                 ?: heldOverlap?.let { SmplChunk((patch as OverlapPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
+                ?: (patch as? CausticPatch)?.takeIf {
+                    CausticInstrument.isLoop(it.voice, it.macros, it.model)
+                }?.let { SmplChunk(it.midi, SmplChunk.Loop(0, snip.frameCount.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
             if (patch is LorentzPatch || patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
@@ -896,6 +911,8 @@ object SynthCommand {
             }
             if (patch is FlockPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             if (patch is OverlapPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
+            if (patch is CausticPatch && patch.model >= 2)
+                File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             if (patch is OhmPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
@@ -1001,6 +1018,30 @@ object SynthCommand {
         if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         out.println("recipe: ${File(dir, "$name.patch.json").path}")
         if (spec.touchLayers) out.println("instrument recipe: ${FlockPadMaker.recipeFile(dir, name).path}")
+        return 0
+    }
+
+    /** A deliberate extension edit selects the expanded renderer; ordinary legacy edits retain their model. */
+    private fun editCaustic(patch: CausticPatch, overrides: Map<String, Float>, modelOverride: Int?, instrument: Boolean): CausticPatch {
+        val values = patch.macros + overrides
+        val extension = (values["MOTION"] ?: 0f) > 0f || (values["HOLD"] ?: 0f) > 0f
+        val model = modelOverride ?: if (patch.model == 1 && (extension || instrument)) 2 else patch.model
+        if (model == 1 && (extension || instrument || modelOverride == 1 && "MOTION" in overrides))
+            throw CliError("CAUSTIC model 1 keeps its finite sound; HOLD, MOTION and --instrument require model 2")
+        return CausticEditing.edited(patch, macros = values, model = model)
+    }
+
+    private fun makeCausticInstrument(spec: CausticPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = CausticPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { index, midi ->
+            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            CausticPadMaker.renderZone(spec, midi)
+        }
+        CausticPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, authored attack and repeating sustain - RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}")
+        out.println("CAUSTIC model ${spec.patch.model}, saved root ${Scales.nameOf(spec.patch.midi)}, saved velocity ${spec.patch.velocity}")
         return 0
     }
 

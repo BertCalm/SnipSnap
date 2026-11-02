@@ -344,3 +344,14 @@ tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
     workingDir = projectDir
     args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
 }
+
+/** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */
+tasks.register<JavaExec>("generateCausticCompleteAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC motion and sustain comparisons, genuine-cycle evidence and playable keygroup exports."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CausticCompleteAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
+}

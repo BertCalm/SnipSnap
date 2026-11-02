@@ -34,6 +34,7 @@ data class CausticInstrumentProbe(
     val samples: FloatArray, val prelevel: FloatArray, val raw: FloatArray,
     val internalRaw: FloatArray, val sampleRate: Int,
     val diagnostics: CausticInstrumentDiagnostics,
+    val motion: CausticSustainDiagnostics? = null,
 )
 
 /**
@@ -41,7 +42,8 @@ data class CausticInstrumentProbe(
  * ALLOY retains its original model-1 calculation; the other voices change contact and body.
  * BODY changes excitation pressure, attack and decay between the heard Alloy and Fuller-body
  * endpoints. LENGTH shortens source decay and modal release, rather than cutting an unchanged tail.
- * MIDI and velocity are explicit recipe fields. HOLD is reserved and positive values are refused.
+ * MIDI and velocity are explicit recipe fields. Model 1 reserves HOLD. Model 2 adds actual
+ * path motion and continued excitation at HOLD 1, retaining model-1 PCM at zero extensions.
  *
  * The bank is linear and uncoupled. A delayed exponential/carrier has an exact discrete forced
  * response plus a free modal response, so causal arrivals can be folded into 48 shared forcing
@@ -50,7 +52,8 @@ data class CausticInstrumentProbe(
  * Geometry alone is cached in a bounded LRU; note, velocity and BODY never share mutable state.
  */
 object CausticInstrument {
-    const val MODEL_VERSION = 1
+    const val LEGACY_MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val RATE = Dsp.RATE
     const val DEFAULT_MIDI = 60
     const val MIDI_MIN = 36
@@ -65,11 +68,11 @@ object CausticInstrument {
     private const val DIRECT_ROOT = .035
     private const val TAU = 2.0 * PI
 
-    fun supportsModel(model: Int) = model == MODEL_VERSION
+    fun supportsModel(model: Int) = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
 
     fun macrosFor(voice: CausticVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
         require(supportsModel(model)) { "Unsupported CAUSTIC instrument model $model" }
-        return when (voice) {
+        val finite = when (voice) {
             CausticVoice.ALLOY -> listOf(
                 MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
                 MacroSpec("BODY", 1f, 1f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
@@ -83,6 +86,8 @@ object CausticInstrument {
                 MacroSpec("BODY", 0f, 0f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
             )
         }
+        return if (model == LEGACY_MODEL_VERSION) finite else
+            finite.dropLast(1) + MacroSpec("MOTION", 0f, 0f) + finite.last()
     }
 
     fun defaults(voice: CausticVoice, model: Int = MODEL_VERSION): Map<String, Float> =
@@ -94,23 +99,41 @@ object CausticInstrument {
                 values[name] = value.coerceIn(0f, 1f)
         }
 
-    private fun finiteMacros(voice: CausticVoice, macros: Map<String, Float>, model: Int): Map<String, Float> =
-        settled(voice, macros, model).also {
-            require(it.getValue("HOLD") == 0f) { "CAUSTIC HOLD is reserved; this model renders finite notes only" }
+    fun isLoop(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): Boolean {
+        val m = settled(voice, macros, model)
+        require(model != LEGACY_MODEL_VERSION || m.getValue("HOLD") == 0f) {
+            "CAUSTIC model 1 HOLD is reserved; its saved finite sound remains unchanged"
         }
+        return model == MODEL_VERSION && m.getValue("HOLD") == 1f
+    }
 
-    fun durationSeconds(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): Double =
-        .5 + 7.5 * finiteMacros(voice, macros, model).getValue("LENGTH")
+    private fun finiteMacros(voice: CausticVoice, macros: Map<String, Float>, model: Int): Map<String, Float> {
+        require(!isLoop(voice, macros, model)) { "CAUSTIC HOLD 1 needs the sustained renderer" }
+        val m = settled(voice, macros, model)
+        val hold = m.getValue("HOLD")
+        // Below the looping top step, lengthen the actual source and modal release.
+        // This internal value may exceed one; the public controls remain in 0..1.
+        return if (model == MODEL_VERSION && hold > 0f) m +
+            ("LENGTH" to (m.getValue("LENGTH") + 4f * hold / 7.5f)) + ("HOLD" to 0f) else m
+    }
+
+    fun durationSeconds(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION,
+        midi: Int = DEFAULT_MIDI): Double =
+        if (isLoop(voice, macros, model)) CausticSustain.loopFrameCount(midi,
+            settled(voice, macros, model).getValue("LENGTH")) / RATE.toDouble()
+        else .5 + 7.5 * finiteMacros(voice, macros, model).getValue("LENGTH")
 
     fun drumClassFor(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): DrumClass {
+        if (isLoop(voice, macros, model)) return DrumClass.LOOP
         val frames = (durationSeconds(voice, macros, model) * RATE).roundToInt()
         return if (frames > RATE * 1.5) DrumClass.LOOP else DrumClass.TONAL
     }
 
     fun scramble(voice: CausticVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
-        val base = settled(voice, near?.macros ?: emptyMap())
+        val model = (near as? CausticPatch)?.model ?: MODEL_VERSION
+        val base = settled(voice, near?.macros ?: emptyMap(), model)
         return Dsp.scrambleNear(base, temperature.takeIf { it.isFinite() } ?: .35f, random).toMutableMap().also {
-            it["HOLD"] = 0f
+            it["HOLD"] = base.getValue("HOLD")
         }
     }
 
@@ -368,14 +391,46 @@ object CausticInstrument {
 
     fun render(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, model: Int = MODEL_VERSION): Snip =
-        Snip(synthesize(voice, macros, midi, velocity, model, null, 4, true, false).samples, 1, RATE)
+        if (isLoop(voice, macros, model)) renderLoop(voice, macros, midi, velocity, model)
+        else Snip(synthesize(voice, macros, midi, velocity, model, null, 4, true, false).samples, 1, RATE)
+
+    /** A whole-buffer loop for ordinary sampler pads; it deliberately contains no attack prefix. */
+    fun renderLoop(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): Snip =
+        CausticHeld.probe(voice, macros, midi, velocity, model, 4, true, cancelled, record = false).loop
+
+    /** Keygroups keep the real note-on prefix and a positive, explicitly measured loop marker. */
+    fun keyNote(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): KeyNote {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("CAUSTIC key no longer wanted")
+        return if (isLoop(voice, macros, model)) CausticHeld.probe(voice, macros, midi, velocity, model,
+            4, true, cancelled, record = false).note else KeyNote(render(voice, macros, midi, velocity, model))
+    }
+
+    fun heldProbe(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, model: Int = MODEL_VERSION, oversample: Int = 4,
+        normalize: Boolean = true, cancelled: () -> Boolean = { false }): CausticHeldProbe =
+        CausticHeld.probe(voice, macros, midi, velocity, model, oversample, normalize, cancelled)
 
     /** Optional [seconds] captures a prefix without changing LENGTH or its source/modal release.
      * Diagnostic 16x uses the same source and modes with finer discrete rotation/kick steps. */
     fun probe(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, normalize: Boolean = true, model: Int = MODEL_VERSION,
         seconds: Double? = null, oversample: Int = 4): CausticInstrumentProbe =
-        synthesize(voice, macros, midi, velocity, model, seconds, oversample, normalize, true)
+        if (!isLoop(voice, macros, model)) synthesize(voice, macros, midi, velocity, model, seconds, oversample, normalize, true)
+        else {
+            require(seconds == null) { "CAUSTIC held probes retain complete cycles; use heldProbe for the real context" }
+            val p = heldProbe(voice, macros, midi, velocity, model, oversample, normalize)
+            val peak = p.prelevelLoop.maxOf { abs(it.toDouble()) }
+            val rms = sqrt(p.prelevelLoop.sumOf { it.toDouble() * it } / p.prelevelLoop.size)
+            val dc = p.prelevelLoop.sumOf { it.toDouble() } / p.prelevelLoop.size
+            CausticInstrumentProbe(p.loop.samples, p.prelevelLoop, p.legacyLoop, p.internalLoop, RATE,
+                CausticInstrumentDiagnostics(peak, rms, dc, p.diagnostics.rawPeak,
+                    440.0 * 2.0.pow((midi - 69) / 12.0), p.loop.durationSeconds.toDouble(), false,
+                    p.diagnostics.prepareNanos, p.diagnostics.renderNanos, p.finishNanos,
+                    p.renderNanos, p.modeFrequencies.copyOf(), model, oversample),
+                p.diagnostics)
+        }
 
     private fun synthesize(voice: CausticVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
         model: Int, seconds: Double?, oversample: Int, normalize: Boolean, record: Boolean): CausticInstrumentProbe {
@@ -417,6 +472,12 @@ object CausticInstrument {
                 frequencies = rendered.frequencies
             }
         }
+        val motionStarted = System.nanoTime()
+        val motion = if (model == MODEL_VERSION && (m["MOTION"] ?: 0f) > 0f) {
+            CausticSustain.applyMotion(voice, m, midi, vel, audio.internal, oversample)
+        } else null
+        val motionNanos = if (motion == null) 0L else System.nanoTime() - motionStarted
+        val internalPeak = if (motion == null) audio.peak else audio.internal.maxOf { abs(it.toDouble()) }
         val internalRaw = if (record) audio.internal.copyOf() else FloatArray(0)
         val finishStarted = System.nanoTime()
         val decimated = decimate(audio.internal, oversample)
@@ -430,9 +491,9 @@ object CausticInstrument {
         var peak = 0.0; var sum = 0.0; var square = 0.0
         if (record) for (x in prelevel) { peak = maxOf(peak, abs(x.toDouble())); sum += x; square += x.toDouble() * x }
         val n = prelevel.size.coerceAtLeast(1)
-        val diagnostics = CausticInstrumentDiagnostics(peak, sqrt(square / n), sum / n, audio.peak,
-            440.0 * 2.0.pow((midi - 69) / 12.0), duration, cacheHit, prepareNanos, audio.nanos,
+        val diagnostics = CausticInstrumentDiagnostics(peak, sqrt(square / n), sum / n, internalPeak,
+            440.0 * 2.0.pow((midi - 69) / 12.0), duration, cacheHit, prepareNanos, audio.nanos + motionNanos,
             finishNanos, System.nanoTime() - started, frequencies.copyOf(), model, oversample)
-        return CausticInstrumentProbe(samples, prelevel, raw, internalRaw, RATE, diagnostics)
+        return CausticInstrumentProbe(samples, prelevel, raw, internalRaw, RATE, diagnostics, motion)
     }
 }

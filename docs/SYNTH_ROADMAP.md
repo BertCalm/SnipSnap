@@ -225,19 +225,43 @@ Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
 
-**Caustic finite instrument and character expansion (2026-10-28).** The owner
-selected Alloy, heard the fuller tonal body, then chose all three distinct
-character-study gestures for native development. HOLLOW_MALLET, RUBBED_RING
-and TRAVELLING_CATCHES join ALLOY within the same engine. Soft low/odd-mode
-contact, a finite rough pressure swell and four scheduled spatial catches use
-the shared circular source/pickup geometry. SOURCE, FOCUS, BODY and LENGTH
-retain saved ROOT and VELOCITY; BODY changes voice-specific contact/pressure
-or metal fullness, LENGTH scales the .5–8-second gesture, and HOLD is reserved.
-Hollow and rubbed use BODY=.5 reference positions; catches use BODY=0 and sum
-four raw responses before one output stage. Native ALLOY model 1 and archived
-models 1–4 retain their interpretation. The study recordings have been heard;
-the native ports and their new control positions still need listening. Current
-validation is recorded separately from the earlier twenty-clip ALLOY pack.
+**Caustic completion (built 2026-10-31, validated 2026-11-02).** The owner
+selected the earlier Alloy/Fuller Body and three character-study directions.
+Four finite native voices are implemented and measured, with listening
+acceptance open. Native model 2 extends that instrument with actual
+SOURCE/FOCUS path motion before the passive bank, ongoing excitation at full
+HOLD and onset-preserving keygroups. Six controls are SOURCE, FOCUS, BODY,
+LENGTH, MOTION and HOLD, with saved ROOT and VELOCITY. MOTION=0 is stationary;
+HOLD below 1 adds up to four seconds to the actual finite gesture, while HOLD=1
+selects a separately planned sustain loop. Drum pads receive the pure loop;
+keygroups retain the real onset, a positive loop start, up to nine minor-third
+roots clipped to MIDI 36–84 and .1–1.5-second note-off release. The eleven
+model-1 presets and missing-model JSON interpretation stay frozen. Explicit
+HOLD/MOTION/INSTRUMENT actions promote an editor working copy; ordinary
+replay does not upgrade it. Clean checkpoint `c9748aa93` generates 28 clips,
+four real-neighbour seam-context WAVs, four nine-zone held keygroups and a
+portable comparison. All 78 legacy Float32 stage hashes remain exact; native
+audio and MPC 2/MPC 3/phone SMPL readback checks pass. New held/moving sounds
+remain unheard. The [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
+is published with browser checks from 320 to 1440 pixels. The full nine-module
+gate passes 8,233 tests with zero failures/errors/skips, exit 0 in 2h 45m 24s.
+An isolated 48-call Java 17 benchmark passes repeated
+hash/health checks, with C4 group medians of 350–1182 ms across loop/keyNote
+paths. This misses the tens-of-ms generation goal and is not phone latency.
+The benchmark was measured October 31 and summarized/reviewed November 2.
+The focused Gradle gate passes 124 tests at pre-merge `981a7d93f`. The corrected
+FFT first-sample assertion passes there, with real-state/continuation and
+exact-silence guards retained. Published media remains `c9748aa93`; current
+merged validation is `d572c36a2`, with all 78 legacy stage hashes still exact.
+Both merged APKs package in that same successful run, including four native
+ABIs and the Android test classes; instrumentation was not executed locally.
+The exporter explicitly retains narrow ranges after the upstream keygroup
+default change. The native 27-case audio matrix ran on
+Java 21, while generation and APK builds use the repository's Java 17 runtime.
+The inherited Gradle C2 exclusions are unchanged. See the
+[completion brief](superpowers/specs/2026-10-31-caustic-completion.md).
+
+The retained finite-model evidence is separate from this completion.
 The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
 provides 42 clips and six downloads. Native patch/WAV hashes, all six ZIP CRCs,
 32 MPC pad readbacks and browser checks from 320 to 1440 pixels pass. The
@@ -247,8 +271,8 @@ unchanged. Merged `04071091` completes all nine JVM `testClasses` tasks and
 both Android APK builds on JDK 17. The full gate passes at `d17359db` with
 7,001 results, zero failures/errors/skips; its final run repeats all 421 loop
 tests and reuses the eight unchanged modules' successful Gradle results.
-Deformation, SCATTER, ORBIT, sustained HOLD and hardware checks remain later
-work. See [CAUSTIC.md](CAUSTIC.md) for the control contract and evidence ledger.
+Surface deformation, SCATTER and hardware checks remain later work. See
+[CAUSTIC.md](CAUSTIC.md) for the current contract and separate evidence ledgers.
 
 ## Why this is cheaper than it sounds
 

@@ -131,13 +131,14 @@ class CausticSynthCommandTest {
             for (flags in listOf(
                 arrayOf("--midi", "35"), arrayOf("--midi", "85"), arrayOf("--midi", "60.5"),
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "Infinity"), arrayOf("--velocity", "1.01"),
-                arrayOf("--model", "0"), arrayOf("--model", "2"), arrayOf("--model", "4"), arrayOf("--model", "1.5"),
-                arrayOf("--macros", "HOLD=.000001"), arrayOf("--macros", "HOLD=1"),
+                arrayOf("--model", "0"), arrayOf("--model", "3"), arrayOf("--model", "4"), arrayOf("--model", "1.5"),
+                arrayOf("--model", "1", "--macros", "HOLD=.000001"),
+                arrayOf("--model", "1", "--macros", "MOTION=.2"),
                 arrayOf("--macros", "BODY=NaN"), arrayOf("--macros", "FOCUS=Infinity"),
                 arrayOf("--macros", "BODY=.2,body=.7"), arrayOf("--macros", "UNKNOWN=.5"),
                 arrayOf("--macros", "SOURCE=-.01"), arrayOf("--macros", "LENGTH=1.01"),
                 arrayOf("--macros", ""), arrayOf("--macros", "FOCUS=.2,"),
-                arrayOf("--instrument"), arrayOf("--drone"), arrayOf("--seconds", "1"), arrayOf("--seed", "1"),
+                arrayOf("--model", "1", "--instrument"), arrayOf("--drone"), arrayOf("--seconds", "1"), arrayOf("--seed", "1"),
             )) {
                 val errors = ByteArrayOutputStream()
                 assertEquals(2, Cli.run(
@@ -177,7 +178,7 @@ class CausticSynthCommandTest {
 
     private fun savedPatch() = CausticPatch(
         "SAVED ALLOY", CausticVoice.ALLOY,
-        CausticInstrument.defaults(CausticVoice.ALLOY) + mapOf("BODY" to .8f, "LENGTH" to .2f),
+        CausticInstrument.defaults(CausticVoice.ALLOY, 1) + mapOf("BODY" to .8f, "LENGTH" to .2f),
         midi = 48, velocity = .42f, model = 1,
     )
 
