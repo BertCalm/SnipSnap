@@ -77,7 +77,7 @@ object Trefoil {
         for(k in 0..2) { val(i,j)=TrefoilTrajectory.pairs[k]
             val dx=y[2*j]-y[2*i]; val dy=y[2*j+1]-y[2*i+1]; val r=hypot(dx,dy)
             val rate=(dx*(y[6+2*j]-y[6+2*i])+dy*(y[7+2*j]-y[7+2*i]))/r
-            c[k]=1/(1+(r/1.15).pow(4)); a[k]=tanh(-rate/1.8)
+            c[k]=1/(1+(r/1.15).pow(4)); a[k]=FastMath.tanh(-rate/1.8)
             distance[i]+=r*.5; distance[j]+=r*.5
         }
         return Descriptor(c,a,DoubleArray(3) { 1/(1+(distance[it]/3.5).pow(2)) })
@@ -170,7 +170,7 @@ object Trefoil {
                     val phase=TAU*root*seconds+b*.17
                     val carrier=sin(phase)+.45*thread*sin(2*phase)+.3*thread*sin(3*phase)
                     val target=.55*carrier+(.15+.4*thread)*noiseState[b]
-                    val friction=tanh(2.0*(target-3*bank.dot(bank.excite)))
+                    val friction=FastMath.tanh(2.0*(target-3*bank.dot(bank.excite)))
                     var delta=if(!options.impulseOnly) .8*sqrt(max(1.0,130/root))*p.velocity*envelope*attachment[b]*pressure*friction/IR else 0.0
                     if(pulseAge[b]<onset) delta+=pulseStrength[b]*p.velocity*(1-cos(TAU*(pulseAge[b]+.5)/onset))/onset
                     val port=bank.dot(bank.excite); val injected=port*delta+.5*delta*delta
