@@ -63,6 +63,98 @@ internal object TidalHeld {
         return if (energy == 0.0) 0.0 else sqrt(difference / energy)
     }
 
+    private class Synthesis(val body: FloatArray, val rawPeak: Double, val maxClosure: Double)
+
+    /**
+     * The oscillator bank, band limit, decimation and DC trim, returning only the trimmed body.
+     * Kept as its own function so the 4x oversampled buffer and the decimator's working copies
+     * become unreachable when it returns. In a debuggable build (the on-device tests) a local
+     * stays alive until its function ends, so inside [probe] they were held through the cycle
+     * checks and the attack render, which is where the emulator ran out of heap.
+     */
+    private fun synthesize(amplitudes: Array<DoubleArray>, frequencies: Array<DoubleArray>,
+        contacts: Array<DoubleArray>, correction: DoubleArray, turns: IntArray, offsets: DoubleArray,
+        plan: Plan, carriers: Int, prerollBlocks: Int, preroll: Int, mainFrames: Int,
+        cancelled: () -> Boolean): Synthesis {
+        val raw = FloatArray((preroll + mainFrames) * OS)
+        val phases = offsets.copyOf()
+        // Initialize before zero with the actual integral of the final field segment.
+        for (p in 0 until carriers) for (block in plan.blocks - prerollBlocks until plan.blocks) {
+            phases[p] -= (.5 * (frequencies[p][block] + frequencies[p][block + 1]) + correction[p]) * BLOCK_FRAMES / RATE
+        }
+        for (p in phases.indices) phases[p] -= floor(phases[p])
+        var rawPeak = 0.0
+        var maxClosure = 0.0
+        val phaseAtZero = DoubleArray(carriers)
+        // Whole turns stay exact integers; a large floating phase sum can accumulate
+        // rounding error even when the actual fractional oscillator state closes.
+        val wholeTurns = IntArray(carriers)
+        val turnsAtZero = IntArray(carriers)
+        val amplitude = DoubleArray(carriers); val amplitudeStep = DoubleArray(carriers)
+        val frequency = DoubleArray(carriers); val frequencyStep = DoubleArray(carriers)
+        val phaseContact = DoubleArray(carriers); val contactStep = DoubleArray(carriers)
+        for (block in 0 until raw.size / BLOCK) {
+            stop(cancelled)
+            val local = Math.floorMod(block - prerollBlocks, plan.blocks)
+            if (block == prerollBlocks) {
+                phases.copyInto(phaseAtZero)
+                wholeTurns.copyInto(turnsAtZero)
+            }
+            for (p in 0 until carriers) {
+                amplitude[p] = amplitudes[p][local]
+                amplitudeStep[p] = (amplitudes[p][local + 1] - amplitude[p]) / BLOCK
+                frequencyStep[p] = (frequencies[p][local + 1] - frequencies[p][local]) / BLOCK
+                frequency[p] = frequencies[p][local] + correction[p] + .5 * frequencyStep[p]
+                phaseContact[p] = contacts[p][local]
+                contactStep[p] = (contacts[p][local + 1] - phaseContact[p]) / BLOCK
+            }
+            for (offset in 0 until BLOCK) {
+                var sum = 0.0
+                for (p in 0 until carriers) {
+                    sum += amplitude[p] * Tidal.osc(phases[p] + phaseContact[p])
+                    val increment = frequency[p] / INTERNAL_RATE
+                    phases[p] += increment
+                    val wraps = floor(phases[p])
+                    phases[p] -= wraps
+                    wholeTurns[p] += wraps.toInt()
+                    amplitude[p] += amplitudeStep[p]; frequency[p] += frequencyStep[p]
+                    phaseContact[p] += contactStep[p]
+                }
+                raw[block * BLOCK + offset] = sum.toFloat()
+                rawPeak = maxOf(rawPeak, abs(sum))
+            }
+            if (block + 1 == prerollBlocks + plan.blocks) for (p in 0 until carriers)
+                maxClosure = maxOf(maxClosure, abs((wholeTurns[p] - turnsAtZero[p] - turns[p]).toDouble() + phases[p] - phaseAtZero[p]))
+        }
+        check(rawPeak < .96) { "TIDAL HOLD raw allocation exceeded: $rawPeak" }
+        stop(cancelled)
+        Tide.bandLimit(raw, INTERNAL_RATE)
+        stop(cancelled)
+        val down = Dsp.decimate(raw, RATE)
+        val dc = Dsp.FixedOnePole(8f, RATE)
+        for (i in down.indices) {
+            if (i % 8192 == 0) stop(cancelled)
+            down[i] -= dc.lp(down[i])
+        }
+        return Synthesis(down.copyOfRange(preroll, preroll + mainFrames), rawPeak, maxClosure)
+    }
+
+    /**
+     * [Keys.seamError] of `body.copyOfRange(0, 2 * frames)` at `frames`, read in place. Same sums
+     * in the same order, so the result is bit-identical, without the 1.4 MB copy.
+     */
+    private fun seamError(body: FloatArray, frames: Int): Double {
+        require(frames >= 256 && body.size >= 2 * frames) { "no room to measure a seam: loop $frames" }
+        var diff = 0.0
+        var level = 0.0
+        for (i in frames - 256 until frames) {
+            val d = body[i + frames] - body[i].toDouble()
+            diff += d * d
+            level += body[i].toDouble() * body[i]
+        }
+        return diff / level
+    }
+
     fun probe(patch: TidalPatch, cancelled: () -> Boolean, keepAttack: Boolean): Probe {
         stop(cancelled)
         require(patch.heldModel == TidalKeys.MODEL_VERSION) { "unsupported TIDAL held model ${patch.heldModel}" }
@@ -144,72 +236,16 @@ internal object TidalHeld {
         val prerollBlocks = (RATE / 2 + BLOCK_FRAMES - 1) / BLOCK_FRAMES
         val preroll = prerollBlocks * BLOCK_FRAMES
         val mainFrames = 3 * plan.frames + BLOCK_FRAMES * 4
-        val raw = FloatArray((preroll + mainFrames) * OS)
-        val phases = offsets.copyOf()
-        // Initialize before zero with the actual integral of the final field segment.
-        for (p in 0 until carriers) for (block in plan.blocks - prerollBlocks until plan.blocks) {
-            phases[p] -= (.5 * (frequencies[p][block] + frequencies[p][block + 1]) + correction[p]) * BLOCK_FRAMES / RATE
-        }
-        for (p in phases.indices) phases[p] -= floor(phases[p])
-        var rawPeak = 0.0
-        var maxClosure = 0.0
-        val phaseAtZero = DoubleArray(carriers)
-        // Whole turns stay exact integers; a large floating phase sum can accumulate
-        // rounding error even when the actual fractional oscillator state closes.
-        val wholeTurns = IntArray(carriers)
-        val turnsAtZero = IntArray(carriers)
-        val amplitude = DoubleArray(carriers); val amplitudeStep = DoubleArray(carriers)
-        val frequency = DoubleArray(carriers); val frequencyStep = DoubleArray(carriers)
-        val phaseContact = DoubleArray(carriers); val contactStep = DoubleArray(carriers)
-        for (block in 0 until raw.size / BLOCK) {
-            stop(cancelled)
-            val local = Math.floorMod(block - prerollBlocks, plan.blocks)
-            if (block == prerollBlocks) {
-                phases.copyInto(phaseAtZero)
-                wholeTurns.copyInto(turnsAtZero)
-            }
-            for (p in 0 until carriers) {
-                amplitude[p] = amplitudes[p][local]
-                amplitudeStep[p] = (amplitudes[p][local + 1] - amplitude[p]) / BLOCK
-                frequencyStep[p] = (frequencies[p][local + 1] - frequencies[p][local]) / BLOCK
-                frequency[p] = frequencies[p][local] + correction[p] + .5 * frequencyStep[p]
-                phaseContact[p] = contacts[p][local]
-                contactStep[p] = (contacts[p][local + 1] - phaseContact[p]) / BLOCK
-            }
-            for (offset in 0 until BLOCK) {
-                var sum = 0.0
-                for (p in 0 until carriers) {
-                    sum += amplitude[p] * Tidal.osc(phases[p] + phaseContact[p])
-                    val increment = frequency[p] / INTERNAL_RATE
-                    phases[p] += increment
-                    val wraps = floor(phases[p])
-                    phases[p] -= wraps
-                    wholeTurns[p] += wraps.toInt()
-                    amplitude[p] += amplitudeStep[p]; frequency[p] += frequencyStep[p]
-                    phaseContact[p] += contactStep[p]
-                }
-                raw[block * BLOCK + offset] = sum.toFloat()
-                rawPeak = maxOf(rawPeak, abs(sum))
-            }
-            if (block + 1 == prerollBlocks + plan.blocks) for (p in 0 until carriers)
-                maxClosure = maxOf(maxClosure, abs((wholeTurns[p] - turnsAtZero[p] - turns[p]).toDouble() + phases[p] - phaseAtZero[p]))
-        }
-        check(rawPeak < .96) { "TIDAL HOLD raw allocation exceeded: $rawPeak" }
-        stop(cancelled)
-        Tide.bandLimit(raw, INTERNAL_RATE)
-        stop(cancelled)
-        val down = Dsp.decimate(raw, RATE)
-        val dc = Dsp.FixedOnePole(8f, RATE)
-        for (i in down.indices) {
-            if (i % 8192 == 0) stop(cancelled)
-            down[i] -= dc.lp(down[i])
-        }
-        val body = down.copyOfRange(preroll, preroll + mainFrames)
+        val synthesis = synthesize(amplitudes, frequencies, contacts, correction, turns, offsets,
+            plan, carriers, prerollBlocks, preroll, mainFrames, cancelled)
+        val body = synthesis.body
+        val rawPeak = synthesis.rawPeak
+        val maxClosure = synthesis.maxClosure
         if (patch.velocity > 0f) Dsp.levelTo(body, RATE, Dsp.MELODIC_LOUDNESS_TARGET * patch.velocity.toDouble().let { Math.pow(it, .65).toFloat() })
         val previous = body.copyOfRange(0, plan.frames)
         val loop = body.copyOfRange(plan.frames, 2 * plan.frames)
         val next = body.copyOfRange(2 * plan.frames, 3 * plan.frames)
-        val seam = if (patch.velocity == 0f) 0.0 else Keys.seamError(body.copyOfRange(0, 2 * plan.frames), plan.frames)
+        val seam = if (patch.velocity == 0f) 0.0 else seamError(body, plan.frames)
         val cycle = maxOf(relative(loop, previous), relative(loop, next))
         check(seam < Keys.MAX_SEAM_ERROR && cycle < 1e-3 && maxClosure < 1e-6) {
             "TIDAL held field failed closure: seam=$seam, cycle=$cycle, phase=$maxClosure"
