@@ -216,6 +216,46 @@ class ExportWizardTest {
      * a blank one, a duplicate pasted from its neighbour, one too long for
      * the row, or one that stops shouting the way the rest of TapeOS does.
      */
+    // ---- the tile's knobs ----
+
+    private fun tileUnder(root: File, kit: Kit): ByteArray =
+        root.walkTopDown().first { it.isFile && it.name == "${kit.name}.png" }.readBytes()
+
+    @Test
+    fun `the sidecar round trip changes no bytes`() {
+        val (kit, dir) = makeKit("Roundtrip")
+        val a = ExportWizardModel(kit, dir)
+        a.setFormat(ExportFormat.EXPANSION)
+        val destA = File(temp, "rt-a")
+        assertTrue(a.write(destA) is ExportWizardModel.WriteResult.Done)
+        ArtSidecar.write(dir, a.artKnobs!!)
+        val b = ExportWizardModel(kit, dir)
+        b.setFormat(ExportFormat.EXPANSION)
+        val destB = File(temp, "rt-b")
+        assertTrue(b.write(destB) is ExportWizardModel.WriteResult.Done)
+        assertTrue(tileUnder(destA, kit).contentEquals(tileUnder(destB, kit)), "the same knobs, read back from disk, write the same tile")
+    }
+
+    @Test
+    fun `the caller's knobs and then the sidecar's pick the tile`() {
+        val (kit, dir) = makeKit("Picked")
+        val seen = mutableListOf<ArtKnobs>()
+        val spy: (Kit, File, ArtKnobs) -> ByteArray = { k, d, knobs -> seen += knobs; KitArt.awtPng(k, d, knobs) }
+        val chosen = ArtKnobs(KitArt.Style.RIBBON, Palettes.SAGE, 2, Mark.Variant.LOCKUP)
+        val w = ExportWizardModel(kit, dir, artRenderer = spy, artKnobs = chosen)
+        w.setFormat(ExportFormat.EXPANSION)
+        assertTrue(w.write(File(temp, "picked")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(listOf(chosen), seen, "the knobs the caller opened the wizard with")
+
+        ArtSidecar.write(dir, ArtKnobs(KitArt.Style.FIELD, Palettes.RISO, null, Mark.Variant.SYMBOL))
+        seen.clear()
+        val fromDisk = ExportWizardModel(kit, dir, artRenderer = spy)
+        fromDisk.setFormat(ExportFormat.EXPANSION)
+        assertTrue(fromDisk.write(File(temp, "picked-disk")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(KitArt.Style.FIELD, seen.single().style)
+        assertEquals(Palettes.RISO, seen.single().palette)
+    }
+
     // ---- finding 18: a second dub to the same place asks first ----
 
     @Test

@@ -48,7 +48,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--export LIST` | comma-separated formats, see below |
 | `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
 | `--art STYLE` / `--no-art` | expansion/`xpn` exports carry a procedural browser tile (`KitArt`) **by default** — the prototyping loop's verdict made `waveform` the standard look, with `rings` the runner-up (`grid` and `slices` also available). `--no-art` skips it |
-| `--overwrite` | replace same-named output |
+| `--overwrite` | replace the same-named kit folder whole: its bin and versions go too, so no new pad can mistake the old kit's audio for its own original. Also replaces same-named export output. Refused when the input file lives inside that folder. |
 
 More than 16 hits doesn't drop slices: placement rounds up to whole banks,
 the core classes claim their bank-A pads, and the rest overflow upward.
@@ -1092,9 +1092,16 @@ macros. A `.wav` prints the patch (`--out patch.json` writes it); a kit
 pad becomes the patch's own render with the patch as its recipe — a
 synth pad from here on, editable and breedable — bin-backed, `--undo`
 byte-identical, the search starting on the voices kindred to the pad's
-class. The distance is always told; past 0.45 the nearest is a stranger
-and the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
-On the phone it is the PAD SHEET's DE-SAMPLE card.
+class. `--undo` is `KitBuilderModel.undesamplePad`: it gives back the
+take before the de-sample and clears the pad's `desampled` mark. It
+refuses a pad the de-sample is no longer on top of (never de-sampled,
+pedals or a print over it, or a later send or other audio replacement,
+which clears the mark), a pad with soft hits on, and an emptied bin.
+The distance is always told; past 0.45 the nearest is a stranger and
+the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
+On the phone it is the PAD SHEET's DE-SAMPLE card, whose UNDO runs the
+same `undesamplePad` (since 2026-11-01:
+`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
 
 ### `arrange <kit-dir>` — songs, not loops
 
@@ -1189,20 +1196,31 @@ lands under `NAME 2`, and the bin rides minus what has expired.
 
 ### `art <kit-dir>` — procedural cover tiles
 
-Cover art drawn from the kit itself — its waveforms, its class colours,
-its name in the built-in 5×7 pixel face — on the scheme's dark LCD.
-Deterministic: same kit, same parameters, same bytes.
+The expansion browser's tile, drawn from the kit's own sound: a field
+from one pad's audio (or every pad's, for the per-pad styles), the kit
+name set in a bundled face inside the style's name zone, and the
+SnipSnap mark bottom-right. Deterministic per platform: same kit, same
+knobs, same bytes.
 
-Four styles: `waveform` (all the pads end to end, each in its class
-colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
-per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
-picks one of the eight TapeOS schemes (`vent`, the default, `dusk`,
-`phosphor`, `opensky`, `tide`, `memo`, `riso` or `sage`; the
-words come from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
-sets the square edge (default 600), `--out DIR` says where the PNGs
-land. **No `--style` renders every style side by side** — the
-prototyping loop is one command per look. The winning direction becomes
-the expansion/`.xpn` export default (Z6.3).
+Eight styles in one family. From the seed pad: `bloom` (its loudness
+wrapped round a six-petal flower, the name in the hole — the default),
+`ridges` (its windows stacked as ridge lines that fade back), `field` (a
+dot grid that swells with its loudness, the name on a band), `ribbon`
+(its attack as one glowing stroke). From every pad: `waveform` (the pads
+end to end as one river, class colours blending), `grid` (the 4×4 bank,
+each pad a small bloom of its own sound), `slices` (one wedge per pad
+round a wheel), `rings` (seeded glowing arcs — `--seed N` reshuffles).
+
+The knobs start from the kit's own `art.json` (what the phone's art
+picker saves) and each flag overrides one: `--palette` (`vent`, `dusk`,
+`phosphor`, `opensky`, `tide`, `memo`, `riso`, `sage` — one per scheme;
+`--scheme` picks a scheme's palette), `--seed-pad N` (which pad draws
+the field; the longest by default), `--mark symbol|lockup|stacked`
+(stacked by default). `--size PX` sets the square edge (default 600),
+`--out DIR` says where the PNGs land. **No `--style` renders all eight
+side by side** — the prototyping loop is one command per look. Exports
+(`export`, `chop --export`, `pack`, `sidea`, `album`) draw the same
+knobs; `--art STYLE` there overrides only the style.
 
 ### `doctor <kit-dir>` — the mix doctor
 

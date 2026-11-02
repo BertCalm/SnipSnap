@@ -5,6 +5,7 @@ import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -314,6 +315,52 @@ class PersonalityTest {
     }
 
     /**
+     * The same law for the two UNDOs the pad sheet gained on 2026-11-01, TAPE SPLICE's and
+     * DE-SAMPLE's: each has four answers (it landed, nothing of its kind is on the pad, the bin
+     * holds no earlier take, soft hits are in the way) and they have to be told apart. The landing
+     * says the take came from the bin; the not-binned refusal says the bin and claims no restore.
+     * Neither door borrows MUTATE's words, which name MUTATE.
+     */
+    @Test
+    fun `UNDO SPLICE and DE-SAMPLE's UNDO each say which of their four answers they are giving`() {
+        val doors = mapOf(
+            "SPLICE" to listOf(Copy.UNSPLICED, Copy.SPLICE_UNDO_NOTHING, Copy.SPLICE_UNDO_NOT_BINNED),
+            "DE-SAMPLE" to listOf(Copy.UNDESAMPLED, Copy.DESAMPLE_UNDO_NOTHING, Copy.DESAMPLE_UNDO_NOT_BINNED),
+        )
+        for ((door, lines) in doors) {
+            val (landed, nothing, notBinned) = lines
+            val answers = lines + Copy.UNDO_LAYERED
+            assertEquals(answers.size, answers.toSet().size, "$door: a refusal that reads like a success teaches nothing: $answers")
+            assertTrue(landed.contains("BIN"), "$door: the bin is where the take came from: $landed")
+            assertTrue(landed.contains(door), "$door: the landing names what it took off: $landed")
+            assertTrue(nothing.contains(door), "$door: the refusal names what the pad does not carry: $nothing")
+            assertFalse(nothing.contains("BACK"), "$door: nothing came back: $nothing")
+            assertTrue(notBinned.contains("BIN"), "$door: $notBinned")
+            assertFalse(notBinned.contains("BACK"), "$door: nothing came back: $notBinned")
+            for (line in answers) {
+                assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+                assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+                assertFalse(line.contains("MUTATE"), "$door's UNDO is not MUTATE's: $line")
+            }
+        }
+        assertTrue(Copy.UNDO_LAYERED.contains("SOFT HITS"), "the layered refusal names the chip that clears it: ${Copy.UNDO_LAYERED}")
+        assertFalse(Copy.UNDO_LAYERED.contains("BACK"), Copy.UNDO_LAYERED)
+        assertTrue(Copy.UNSPLICED.contains("THE TAKE BEFORE THE LAST SPLICE"), "after two splices the first splice's result comes back: ${Copy.UNSPLICED}")
+        assertTrue(Copy.UNDESAMPLED.contains("THE TAKE BEFORE THE LAST DE-SAMPLE"), Copy.UNDESAMPLED)
+    }
+
+    /** TAPE SPLICE's landing names its way back, as DE-SAMPLE's, MUTATE's and DRIFT's do. */
+    @Test
+    fun `the SPLICE landing says where the take before it went, either way it joined`() {
+        for (crossfaded in listOf(true, false)) {
+            val line = Copy.spliced(crossfaded)
+            assertTrue(line.endsWith(" THE TAKE BEFORE IT SLEEPS IN THE BIN."), "crossfaded=$crossfaded: $line")
+            assertTrue(line.startsWith("SPLICED"), line)
+        }
+        assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
+    }
+
+    /**
      * Finding 23. SETUP held three settings and answered none of the
      * questions a user actually arrives with. These are the three the app
      * can answer from what it already knows — the format EXPORT will open
@@ -536,6 +583,8 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
+        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
@@ -675,7 +724,7 @@ class PersonalityTest {
         // SPLIT - the same `…`-suffixed shape as every other *_BUSY constant
         // above: a line the dock says while the job runs, not a landing.
         // Each job's own landing toast is a separate line.
-        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
+        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_KIT_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
         // The pad editor's plain save and its close-time flush: the same
         // `…`-suffixed dock line as the named jobs above, for a write no
         // control of its own started.

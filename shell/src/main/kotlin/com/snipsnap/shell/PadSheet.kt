@@ -481,25 +481,85 @@ object PadSheet {
      * - for the pad's main file only, NONE after SOFT HITS off when it is GHOSTS_POSTDATE (NONE's
      *   refusal says so, and clearing the soft hits drops every layer, so a layer's entry is not
      *   given back);
-     * - for the pad's main file only, MUTATE's UNDO ([MutateSheet.read]) or OUTSIDE's UNDO
-     *   ([OutsideSheet.read]).
+     * - for the pad's main file only, MUTATE's UNDO ([MutateSheet.read]), OUTSIDE's UNDO
+     *   ([OutsideSheet.read]), UNDO SPLICE ([isSpliced]) or DE-SAMPLE's UNDO ([isDesampled]), the
+     *   last two since 2026-11-01. Soft hits on a spliced or de-sampled pad make its UNDO refuse
+     *   until SOFT HITS goes off ([Copy.UNDO_LAYERED]), as NONE's GHOSTS_POSTDATE does, so it still
+     *   counts. MUTATE's and OUTSIDE's UNDO restore the main file under the layers without refusing.
      *
      * Pass the pad underneath any prints ([KitBuilderModel.unprinted]), not the print: a printed
-     * pad's NONE removes the print first, and that pad's door is the one that reads the bin.
+     * pad's NONE removes the print first, and that pad's door is the one that reads the bin. (The
+     * doors themselves ask of the LIVE pad, so UNDO SPLICE and DE-SAMPLE's UNDO refuse under a print
+     * until it is removed.)
      *
      * THE BIN hides BACK on a row a pad keeps when this is true (the owner's call, 2026-10-31):
      * BACK copies over the pad's audio and leaves its recipe, so where the pad can undo itself, that
      * undo is the honest way back. Everything else a pad can keep an entry for has no such door on
-     * the sheet: a SPLICE, a DE-SAMPLE, a round-robin chain, a treatment only the CLI makes. There
-     * BACK is the only way back in the app, so it stays, unless a print covers the pad: THE BIN also
-     * hides BACK on any row whose file a print's saved source names
-     * ([KitBuilderModel.filesUnderPrints], 2026-11-01), and it comes back once the print is removed.
+     * the sheet: a round-robin chain, a treatment only the CLI makes. There BACK is the only way back
+     * in the app, so it stays, unless a print covers the pad: THE BIN also hides BACK on any row
+     * whose file a print's saved source names ([KitBuilderModel.filesUnderPrints], 2026-11-01), and
+     * it comes back once the print is removed.
      */
     fun hasOwnWayBack(pad: KitPad, file: String, binned: Set<String>): Boolean {
         if (file !in binned || (file != pad.sampleFile && pad.velocityLayers.none { it.sampleFile == file })) return false
         val state = unTreatState(pad, binned)
         if (state == UnTreat.READY) return true
         if (file != pad.sampleFile) return false
-        return state == UnTreat.GHOSTS_POSTDATE || MutateSheet.read(pad.recipe) != null || OutsideSheet.read(pad.recipe) != null
+        return state == UnTreat.GHOSTS_POSTDATE || MutateSheet.read(pad.recipe) != null || OutsideSheet.read(pad.recipe) != null ||
+            isSpliced(pad.recipe) || isDesampled(pad)
+    }
+
+    /**
+     * Whether [recipe] is TAPE SPLICE's own (`KitBuilderModel.splicePad`): the top-level `"splice"`
+     * key, the same test the TAKES diff and DO IT AGAIN read. Never MUTATE's SPLICE move
+     * (`{"mutate":{"mode":"splice"}}`), whose UNDO is on the MUTATE card. A print over a splice
+     * carries the print's own recipe, so the live printed pad reads false here.
+     */
+    fun isSpliced(recipe: JsonValue.Obj?): Boolean = recipe != null && "splice" in recipe.entries
+
+    /**
+     * Whether a DE-SAMPLE (`KitBuilderModel.desamplePad`) is what sits on top of [pad], so its UNDO
+     * gives back the take before it: the `desampled` stamp, no print, and exactly the recipe
+     * `desamplePad` writes, a patch with nothing riding it (no fx, treatment, amount, compound
+     * board, tail fade, pedals or layer bank).
+     *
+     * Any later audio replacement drops the stamp (`KitBuilderModel.replaceAudio`, the owner's call,
+     * 2026-11-01), so a synth send, SNAP or a patch paste over a de-sample reads false, and the UNDO
+     * never says "the take before the last de-sample" when a send sits on top. That holds for sends
+     * made since: one made before 2026-11-01 kept the stamp, so on such a pad this reads true and the
+     * UNDO gives back the de-sample's own render, the newest take, with the older capture still on
+     * the bin's clock and its BACK still showing. Pedals keep the stamp
+     * and the patch: this reads false until their NONE gives the bare patch back, then true again.
+     * An era, character or keyed treatment (or the CLI's fx-rack treatment) keeps the stamp but
+     * replaces the patch, and its NONE leaves no recipe, so this stays false.
+     */
+    fun isDesampled(pad: KitPad): Boolean {
+        if ("desampled" !in pad.source || PrintedPads.has(pad.recipe)) return false
+        val r = Breed.recipeOf(pad.recipe) ?: return false
+        return r.patch != null && r.fx == null && r.treatment == null && r.amount == null && r.board == null &&
+            r.terminalFadeMs == null && r.pedals == null && r.layers == null
+    }
+
+    /**
+     * Why UNDO SPLICE cannot act on [pad], or null when it can, given whether the bin holds an
+     * earlier take under the pad's main file ([binned]; the pad sheet's `binDaysLeft != null`). Ask
+     * it of the LIVE pad, never the one under a print. Most final first, so nobody is told to turn
+     * SOFT HITS off and is then refused anyway: no splice on top, then no take in the bin, then
+     * soft hits. The sheet dims its button on a non-null answer and toasts it on a tap;
+     * [KitBuilderModel.unsplicePad] asks the same question and throws the answer.
+     */
+    fun spliceUndoRefusal(pad: KitPad, binned: Boolean): String? = when {
+        !isSpliced(pad.recipe) -> Copy.SPLICE_UNDO_NOTHING
+        !binned -> Copy.SPLICE_UNDO_NOT_BINNED
+        pad.velocityLayers.isNotEmpty() -> Copy.UNDO_LAYERED
+        else -> null
+    }
+
+    /** [spliceUndoRefusal] for DE-SAMPLE's UNDO: [isDesampled] in place of [isSpliced], the same order. */
+    fun desampleUndoRefusal(pad: KitPad, binned: Boolean): String? = when {
+        !isDesampled(pad) -> Copy.DESAMPLE_UNDO_NOTHING
+        !binned -> Copy.DESAMPLE_UNDO_NOT_BINNED
+        pad.velocityLayers.isNotEmpty() -> Copy.UNDO_LAYERED
+        else -> null
     }
 }

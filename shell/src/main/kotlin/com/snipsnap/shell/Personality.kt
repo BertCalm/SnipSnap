@@ -523,6 +523,31 @@ object Copy {
      */
     const val EXPORT_BLOCKED = "NOTHING WAS WRITTEN."
 
+    // The tile art picker (EXPORT's ART row and its sheet).
+    /** EXPORT's ART row heading: a label, like FORMAT. */
+    const val ART_ROW = "ART"
+    /** Under the ART row: which writes carry the tile. */
+    const val ART_ROW_NOTE = "WRITTEN WITH EXPANSION AND XPN."
+    /** The picker sheet's title. */
+    const val ART_SHEET_TITLE = "PICK THE ART"
+    /** The picker's palette row heading. */
+    const val ART_PALETTE = "PALETTE"
+    /** The picker's seed-pad row heading. */
+    const val ART_SEED_PAD = "SEED PAD"
+    /** The seed-pad chip that lets the longest pad draw. */
+    const val ART_SEED_AUTO = "AUTO"
+    /** The picker's mark row heading. */
+    const val ART_MARK = "MARK"
+    /** A preview cell while its tile is drawn: a busy line. */
+    const val ART_BUSY = "DRAWING…"
+    /** The toast when the picker closes on changed knobs. */
+    const val ART_SET = "ART SET."
+    /** A pick that could not be written to the kit's art.json: this export still uses it. */
+    const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
+
+    /** The ART row's reading: style · palette · seed pad · mark. */
+    fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"
+
     /**
      * The kit shelf's own legend (September UAT, finding 17). Every creation
      * door auto-names, so RENAME is the only place a user ever types a kit
@@ -966,6 +991,11 @@ object Copy {
     // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
+    /** SETUP's PAD VELOCITY: what each mode reads, under its chips. */
+    const val SETUP_PAD_VELOCITY_MODE_NOTE =
+        "POS: WHERE ON THE PAD YOU TAP. FULL LVL: ALWAYS FULL. AREA: HOW MUCH FINGER LANDS, LEARNED FROM YOUR TAPS, POSITION UNTIL THEN."
+    /** SETUP's PAD VELOCITY: the curve, under its chips. */
+    const val SETUP_PAD_VELOCITY_CURVE_NOTE = "SOFT LIFTS LIGHT TAPS. HARD NEEDS A FIRM ONE. THE SOFTEST AND LOUDEST STAY WHERE THEY ARE."
 
     // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
     /** The heading of the MIDI OUT section of SETUP. */
@@ -1375,6 +1405,15 @@ object Copy {
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
     const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+    /** EXPORT, while the project and the WAV are written. Ends on a full stop like the toast it is. */
+    const val ARRANGE_EXPORT_BUSY = "MIXING AND WRITING THE SONG."
+    /** The write threw - no pad file that reads, no external storage to write to. */
+    const val ARRANGE_EXPORT_FAILED = "COULDN'T EXPORT THE SONG. TRY AGAIN."
+    /** The chooser is up. [fileName] is the WAV the receiver sees; [where] is the folder under the app's files that holds it and the MPC project. */
+    fun songShared(fileName: String, where: String): String =
+        "SONG SHARED AS ${fileName.uppercase(java.util.Locale.ROOT)}. PROJECT KEPT AT $where."
+    /** Written but no app took the WAV; [where] is the folder under the app's files, so neither file is lost. */
+    fun songKept(where: String): String = "SONG AND PROJECT KEPT AT $where. $SHARE_NOWHERE"
 
     // ---- RE-TRIM: a pad goes back to its own tape (docs/RETRIM.md) ----
     /** RE-TRIM ▸ on a pad with no tape name at all: GRAB/HOLD off the mic ring, an import, a synth. */
@@ -1659,6 +1698,20 @@ object Copy {
      */
     fun desampled(pad: String, engine: String, voice: String, distance: Float): String =
         "$pad IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+    /**
+     * DE-SAMPLE's UNDO on the pad sheet (and `snipsnap desample --undo`). It restores the newest take
+     * of the pad's file from the bin, which after two de-samples is the first one's render, and the
+     * take before a de-sample may itself have been treated; so the line says the take, not the
+     * capture.
+     */
+    const val UNDESAMPLED = "UNDONE. THE TAKE BEFORE THE LAST DE-SAMPLE IS BACK FROM THE BIN."
+    /**
+     * DE-SAMPLE's UNDO when the de-sample is not what sits on top: never de-sampled, already undone,
+     * a later audio replacement over it, pedals riding it (NONE comes first), or a print over it.
+     */
+    const val DESAMPLE_UNDO_NOTHING = "THIS PAD CARRIES NO DE-SAMPLE. NOTHING TO UNDO HERE."
+    /** DE-SAMPLE's UNDO when the bin holds no earlier take of the pad. */
+    const val DESAMPLE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE PATCH STAYS."
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
@@ -1697,6 +1750,13 @@ object Copy {
     const val UNDO_NOTHING = "THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE."
     /** MUTATE's UNDO when the bin holds no earlier take of the pad. */
     const val UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS."
+    /**
+     * The pad sheet's UNDO SPLICE and DE-SAMPLE's UNDO, when the pad has soft hits on (GHOSTS or
+     * STACK THE TAKES, added after the splice or the de-sample). Their own sibling of
+     * [MUTATE_LAYERED], which names MUTATE: turning SOFT HITS off clears every layer, and the UNDO
+     * then lands.
+     */
+    const val UNDO_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. UNDO WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
@@ -1761,13 +1821,30 @@ object Copy {
     fun stackOverLive(zone: String, db: Float): String =
         "$zone IS +${String.format(java.util.Locale.ROOT, "%.1f", db)} DB OVER LIVE. THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS."
 
-    /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
+    /**
+     * COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. Either way
+     * the line ends on where the take before the splice went, as DE-SAMPLE's, MUTATE's and DRIFT's
+     * landings do: the pad sheet's UNDO SPLICE brings it back ([UNSPLICED]).
+     */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {
-            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF TAPE OVERLAP WENT IN."
+            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF TAPE OVERLAP WENT IN. THE TAKE BEFORE IT SLEEPS IN THE BIN."
         } else {
-            "SPLICED CLEAN. NO OVERLAP NEEDED."
+            "SPLICED CLEAN. NO OVERLAP NEEDED. THE TAKE BEFORE IT SLEEPS IN THE BIN."
         }
+    /**
+     * The pad sheet's UNDO SPLICE. It restores the newest take of the pad's file from the bin, which
+     * after two splices is the first splice's result, not the original; so the line says exactly
+     * what came back, as [UNMUTATED] does.
+     */
+    const val UNSPLICED = "UNDONE. THE TAKE BEFORE THE LAST SPLICE IS BACK FROM THE BIN."
+    /**
+     * UNDO SPLICE on a pad that carries no TAPE SPLICE: never spliced, already undone, MUTATE's own
+     * SPLICE move (whose UNDO is on the MUTATE card), or a print over the splice.
+     */
+    const val SPLICE_UNDO_NOTHING = "THIS PAD CARRIES NO SPLICE. NOTHING TO UNDO HERE."
+    /** UNDO SPLICE when the bin holds no earlier take of the pad (EMPTY THE BIN NOW, or a BACK spent it). */
+    const val SPLICE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE SPLICE STAYS."
 
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. NEW TAPE ON THE SHELF."
@@ -1912,6 +1989,12 @@ object Copy {
     fun madeNamed(what: String, made: String): String = "$what MADE — $made. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
+    const val KIT_TOO_SHORT = "TOO SHORT TO MAKE A KIT. FEED IT MORE THAN A BLINK."
+    const val KIT_TOO_LONG = "TOO LONG FOR A KIT. TRIM IT UNDER THIRTY SECONDS."
+    /** MAKE KIT's toast: the kit is on the shelf and the result sheet is up; [blended] pads failed their gate and were blended. */
+    fun kitMade(made: String, blended: Int): String = "KIT MADE — $made. $blended OF 16 PADS BLENDED."
+    /** MAKE KIT's refusal when the assembler says the sound cannot be quarried; [reason] is its own sentence. */
+    fun kitRefused(reason: String): String = "CAN'T MAKE A KIT OF THAT — ${reason.uppercase(java.util.Locale.ROOT)}."
 
     // Chop shop.
     /**
@@ -2895,6 +2978,15 @@ object Copy {
     const val KEYS_VOICE_BUSY = "SAVING THE VOICE MODE…"
     /** The toast when KEYS could not rewrite the instrument's descriptors; the button goes back to the mode it had. */
     const val KEYS_VOICE_FAILED = "COULDN'T SAVE THE VOICE MODE."
+    /** The toast when KEYS' GRAB is pressed before anything was played in the last sixteen seconds. */
+    const val KEYS_GRAB_EMPTY = "NOTHING TO GRAB. PLAY SOMETHING FIRST."
+    /** The toast when no app on the phone takes the MIDI file KEYS' GRAB made. */
+    const val KEYS_GRAB_NO_APP = "NO APP ON THIS PHONE TAKES A MIDI FILE."
+    /** The toast when KEYS' GRAB could not write its MIDI file. */
+    const val KEYS_GRAB_FAILED = "COULDN'T WRITE THE GRAB."
+    /** KEYS' GRAB handing its MIDI file to the share sheet. */
+    fun keysGrabbed(notes: Int, bars: Int): String =
+        "GRABBED $notes ${if (notes == 1) "NOTE" else "NOTES"} OVER $bars ${if (bars == 1) "BAR" else "BARS"}. CHOOSE WHERE IT GOES."
     /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
     const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**
@@ -2911,7 +3003,7 @@ object Copy {
     // in the word of the control that started it. A treatment says its own
     // name through `treatmentBusy`. SAVING_PAD_BUSY is what `commitPadEditNow`
     // says when its caller gives it no word (PASTE, SOFT HITS, EJECT, and
-    // both UNDOs) and what the flush the editor hands on when it closes says.
+    // the UNDOs) and what the flush the editor hands on when it closes says.
     // Every other job the editor starts falls back to WORKING_BUSY, and that
     // includes some writes (a board or AQUARIUM KEEP, NONE, KEEP ROOM, MAKE
     // A GATHERING, the debounced save) as well as decodes, the mic trip and
@@ -2922,6 +3014,8 @@ object Copy {
     const val DESAMPLE_BUSY = "DE-SAMPLING…"
     /** The dock's line while MAKE PAD renders a new pad out of one hit. */
     const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE KIT quarries one sound into sixteen pads. */
+    const val MAKE_KIT_BUSY = "MAKING THE KIT…"
     /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
     const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
     /** The dock's line while SPREAD writes the pad's sound across a bank. */
@@ -2931,7 +3025,7 @@ object Copy {
     /**
      * The dock's line for two kinds of write in the pad editor: the ones
      * `commitPadEditNow` runs for a caller that gives it no word of its own
-     * (PASTE, SOFT HITS, EJECT, and both UNDOs), and the flush the editor
+     * (PASTE, SOFT HITS, EJECT, and the UNDOs), and the flush the editor
      * hands on when it closes with an edit the debounce had not written. That
      * last one is why the line exists: the write outlives the editor, and the
      * job board keeps it on the dock until it lands. Other writes the editor

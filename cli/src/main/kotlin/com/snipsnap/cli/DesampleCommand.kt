@@ -11,8 +11,10 @@ import java.util.Locale
  * `snipsnap desample <wav> | <kit-dir> <pad>` — DE-SAMPLE: the nearest
  * THUMP patch to a captured hit. A `.wav` prints the patch (and `--out
  * patch.json` writes it); a kit pad is replaced by the patch's own
- * render with the patch as its recipe, bin-backed (`--undo`). A far
- * match is named far and refused for a pad unless `--force`.
+ * render with the patch as its recipe, bin-backed (`--undo` gives the
+ * take before the de-sample back and refuses a pad it is no longer on top
+ * of, `KitBuilderModel.undesamplePad`). A far match is named far and
+ * refused for a pad unless `--force`.
  */
 object DesampleCommand {
 
@@ -43,9 +45,11 @@ object DesampleCommand {
         val slot = parsePad(padArg)
         val model = KitBuilderModel.open(target)
         if (opts.has("--undo")) {
-            model.untreatPad(slot)
+            // The pad sheet's own UNDO: it refuses a pad the de-sample is no longer on top of,
+            // rather than popping whatever take is newest, and clears the `desampled` stamp.
+            model.undesamplePad(slot)
             model.save()
-            out.println("pad $padArg restored - the capture came back out of the bin")
+            out.println("pad $padArg restored - the take before the de-sample came back out of the bin")
             return 0
         }
         if (model.kit.pad(slot) == null) throw CliError("no pad on $padArg")

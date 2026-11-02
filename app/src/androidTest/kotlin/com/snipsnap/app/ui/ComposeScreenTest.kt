@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,7 +16,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeTheme
+import com.snipsnap.audio.Scales
 import com.snipsnap.shell.Schemes
+import com.snipsnap.synth.SynthCaches
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -60,6 +64,10 @@ abstract class ComposeScreenTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    // The suite runs in one process, so one test's render caches must not outlive it.
+    @After
+    fun dropSynthCaches() = SynthCaches.clearAll()
 
     /**
      * [content], wrapped at [PHONE_WIDTH_DP] with the clock frozen. Every
@@ -118,6 +126,47 @@ abstract class ComposeScreenTest {
         runCatching { button(label).performScrollTo() }
         button(label).performClick()
         pump()
+    }
+
+    // ---- the ROOT stepper row -------------------------------------------------------------------------
+    // Every tonal engine's root is one shared row: "OCT −", "−", a readout ("ROOT C#4"), "+", "OCT +".
+    // There is no ROOT slider, so a test reads the root from the readout and walks it with the buttons.
+
+    /** The root the readout names, or null while the row is not on screen. */
+    protected fun currentRootOrNull(): Int? = (0..127).firstOrNull {
+        compose.onAllNodesWithText("ROOT ${Scales.nameOf(it)}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    protected fun currentRoot(): Int = currentRootOrNull() ?: error("no ROOT readout on screen")
+
+    /** Whether the readout names [midi] now; for `waitFor` while a saved root loads. */
+    protected fun rootIs(midi: Int): Boolean = currentRootOrNull() == midi
+
+    protected fun assertRoot(midi: Int) {
+        assertEquals("ROOT readout", Scales.nameOf(midi), currentRootOrNull()?.let { Scales.nameOf(it) })
+    }
+
+    /** One press of a ROOT button, by its action, as the other screen tests press buttons. */
+    protected fun pressRoot(label: String) {
+        val action = compose.onNodeWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNode()
+            .config.getOrNull(SemanticsActions.OnClick)?.action ?: error("No click action for $label")
+        compose.runOnIdle { assertTrue("Click refused for $label", action.invoke()) }
+        pump()
+    }
+
+    /** Walks the root to [target], an octave then a semitone at a time. */
+    protected fun rootTo(target: Int) {
+        var presses = 0
+        while (currentRoot() != target) {
+            check(presses++ < 40) { "ROOT never reached $target from ${currentRoot()}" }
+            val gap = target - currentRoot()
+            pressRoot(when {
+                gap >= 12 -> "ROOT OCTAVE UP"
+                gap > 0 -> "ROOT UP"
+                gap <= -12 -> "ROOT OCTAVE DOWN"
+                else -> "ROOT DOWN"
+            })
+        }
     }
 
     /**

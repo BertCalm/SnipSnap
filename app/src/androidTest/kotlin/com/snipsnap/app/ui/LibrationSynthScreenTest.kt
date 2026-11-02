@@ -108,12 +108,13 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
             invokeClick(voice.name)
             for (macro in Libration.macrosFor(voice).filterNot { it.name == "HOLD" }) slider(macro.name).assertExists()
             slider("HOLD").assertDoesNotExist()
-            for (label in listOf("ROOT", "TOUCH", "LENGTH")) slider(label).assertExists()
+            assertTrue("ROOT stepper row", currentRootOrNull() != null)
+            for (label in listOf("TOUCH", "LENGTH")) slider(label).assertExists()
             for (patch in LibrationPresets.forVoice(voice)) {
                 invokeClick("PRESET ${patch.name}")
                 waitFor("${patch.name} saved performance") { stored(voice) == patch }
                 assertEquals(patch.velocity, progress("TOUCH"), 1e-6f)
-                assertEquals((patch.midi - 36) / 48f, progress("ROOT"), 1e-6f)
+                assertRoot(patch.midi)
             }
         }
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
@@ -126,7 +127,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         val factory = LibrationPresets.all().single { it.name == "ROUND KEYS" }
         val shelf = show(factory, KitShelf.Entry(kitDir, kit))
         waitFor("factory performance") { stored(factory.voice) == factory }
-        dial("ROOT", .25f)
+        rootTo(36 + 12) // old slider .25 over 36..84
         dial("TOUCH", .37f)
         dial("LENGTH", .2f)
         dial("NUDGE", .61f)
@@ -144,7 +145,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle { visit += 1 }
         pump()
         waitFor("return to the same recipe") { stored(factory.voice) == scrambled }
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(48)
         assertEquals(.37f, progress("TOUCH"), 1e-6f)
         invokeClick("SAVE PRESET")
         compose.onNode(hasSetTextAction()).performTextReplacement("MY ORBIT")
@@ -174,7 +175,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         waitFor("explicit held model") { stored(factory.voice)?.let {
             it.heldModel == LibrationKeys.MODEL_VERSION && it.macros["HOLD"] == 1f
         } == true }
-        dial("ROOT", .25f)
+        rootTo(36 + 12) // old slider .25 over 36..84
         dial("TOUCH", .37f)
         invokeClick("SCRAMBLE")
         dial("SWARM", .1f)

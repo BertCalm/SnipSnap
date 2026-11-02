@@ -17,20 +17,22 @@ class CausticInstrumentTest {
     private val voice = CausticVoice.ALLOY
 
     @Test
-    fun `native contract has finite controls explicit note and refused HOLD`() {
-        assertEquals(1, CausticInstrument.MODEL_VERSION)
+    fun `legacy native contract retains finite controls explicit note and refused HOLD`() {
+        assertEquals(1, CausticInstrument.LEGACY_MODEL_VERSION)
+        assertEquals(2, CausticInstrument.MODEL_VERSION)
         assertEquals(mapOf("SOURCE" to .5f, "FOCUS" to .19f, "BODY" to 1f, "LENGTH" to 1f, "HOLD" to 0f),
-            CausticInstrument.defaults(voice))
+            CausticInstrument.defaults(voice, 1))
         assertTrue(CausticInstrument.supportsModel(1))
-        assertFalse(CausticInstrument.supportsModel(2))
+        assertTrue(CausticInstrument.supportsModel(2))
+        assertFalse(CausticInstrument.supportsModel(3))
         val settled = CausticInstrument.settled(voice, mapOf("SOURCE" to Float.NaN, "BODY" to 8f,
             "FOCUS" to -1f, "unknown" to .3f))
         assertEquals(.5f, settled.getValue("SOURCE"))
         assertEquals(1f, settled.getValue("BODY"))
         assertEquals(0f, settled.getValue("FOCUS"))
         assertFalse("unknown" in settled)
-        assertFailsWith<IllegalArgumentException> { CausticInstrument.render(voice, mapOf("HOLD" to .01f)) }
-        assertFailsWith<IllegalArgumentException> { CausticInstrument.drumClassFor(voice, mapOf("HOLD" to 1f)) }
+        assertFailsWith<IllegalArgumentException> { CausticInstrument.render(voice, mapOf("HOLD" to .01f), model = 1) }
+        assertFailsWith<IllegalArgumentException> { CausticInstrument.drumClassFor(voice, mapOf("HOLD" to 1f), model = 1) }
         assertFailsWith<IllegalArgumentException> { CausticInstrument.render(voice, midi = 35) }
         assertFailsWith<IllegalArgumentException> { CausticInstrument.render(voice, model = 4) }
         val a = CausticInstrument.scramble(voice, Random(701))

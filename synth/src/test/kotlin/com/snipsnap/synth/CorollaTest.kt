@@ -15,6 +15,19 @@ import kotlin.test.assertTrue
 
 /** Corolla's mechanical claims are measured before the output limiter and loudness process. */
 class CorollaTest {
+    @Test
+    fun `an interrupted render stops instead of finishing beside its replacement`() {
+        // The SYNTH screen interrupts a superseded knob-turn preview; COROLLA's longest renders
+        // run over a second, so it must stop on the flag rather than finish unheard.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Corolla.render(CorollaVoice.TONGUE) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertTrue(Corolla.render(CorollaVoice.TONGUE).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
     private val acousticRate = Dsp.RATE * 4
     private val names = listOf("TUNE", "PULL", "BLOOM", "FIELD", "CONTACT", "CHAMBER", "HOLD")
 

@@ -40,7 +40,7 @@ class ExportWizardModel(
      * any API level, so calling it from the shipped app crashes with
      * `NoClassDefFoundError` the instant EXPANSION or XPN gets written.
      */
-    private val artRenderer: (Kit, File, KitArt.Style) -> ByteArray = KitArt::awtPng,
+    private val artRenderer: (Kit, File, ArtKnobs) -> ByteArray = KitArt::awtPng,
     /**
      * How the expansion's J-Card gets painted, handed to [Inserts.write].
      * Same story as [artRenderer]: the default is the AWT renderer, and
@@ -48,6 +48,12 @@ class ExportWizardModel(
      * second AWT call WRITE KIT reached on the phone, right after the tile.
      */
     private val jCardRenderer: (Kit, File, String?) -> ByteArray = JCard::awtPng,
+    /**
+     * The tile's knobs the wizard opens with: the kit's `art.json`, else the
+     * defaults. EXPORT passes the defaults for the scheme on screen, so a
+     * kit nobody has touched gets that scheme's palette.
+     */
+    artKnobs: ArtKnobs? = ArtSidecar.resolve(kitDir, Schemes.DEFAULT),
 ) {
 
     enum class Stage { READY, WRITING, COMPLETE }
@@ -135,10 +141,10 @@ class ExportWizardModel(
     }
 
     /**
-     * The browser tile for expansion/`.xpn` writes — the Z6.2 prototyping
-     * verdict made waveform the default; null skips artwork entirely.
+     * The browser tile for expansion/`.xpn` writes: the kit's own knobs
+     * from `art.json`, else the defaults; null skips artwork entirely.
      */
-    var artStyle: KitArt.Style? = KitArt.Style.WAVEFORM
+    var artKnobs: ArtKnobs? = artKnobs
 
     /**
      * WRITE KIT. Runs the real export through [Exporters] — same driver as
@@ -159,7 +165,7 @@ class ExportWizardModel(
 
         stage = Stage.WRITING
         return try {
-            val artwork = artStyle
+            val artwork = artKnobs
                 ?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
                 ?.let { artRenderer(kit, kitDir, it) }
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)

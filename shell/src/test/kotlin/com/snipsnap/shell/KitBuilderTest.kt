@@ -869,9 +869,96 @@ class KitBuilderTest {
         assertTrue(forced.far)
         assertTrue(m.pad(2)!!.recipe != null)
 
-        m.untreatPad(1)
+        assertTrue(PadSheet.isDesampled(m.pad(1)!!), "test setup: the de-sample is on top")
+        m.undesamplePad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(before), "back byte-identical")
         assertNull(m.pad(1)!!.recipe)
+        assertNull(m.pad(1)!!.source["desampled"], "the stamp goes with the patch, so MAKE stops saying A PATCH NOW")
+        assertEquals(
+            Copy.DESAMPLE_UNDO_NOTHING,
+            assertFailsWith<IllegalArgumentException> { m.undesamplePad(1) }.message,
+            "a second UNDO has no de-sample left to take off",
+        )
+    }
+
+    /**
+     * UNDO on DE-SAMPLE refuses, touching nothing, whenever the de-sample is not what sits on top:
+     * pedals ride it (NONE is the door then, and afterwards this UNDO lands), a later audio
+     * replacement cleared its stamp, soft hits went on after it, or the bin no longer holds the take.
+     */
+    @Test
+    fun `undesamplePad refuses under pedals, after a later replacement, under soft hits and with an emptied bin`() {
+        fun desampled(name: String): Pair<KitBuilderModel, ByteArray> {
+            val m = KitBuilderModel.create(name, File(temp, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            val capture = File(m.kitDir, m.pad(1)!!.sampleFile).readBytes()
+            m.desamplePad(1, evenIfFar = true)
+            assertTrue(PadSheet.isDesampled(m.pad(1)!!), "test setup: $name is de-sampled")
+            return m to capture
+        }
+        fun refusal(m: KitBuilderModel, expected: String) {
+            val bytes = File(m.kitDir, m.pad(1)!!.sampleFile).readBytes()
+            val pad = m.pad(1)
+            val bin = m.binContents().map { it.file }
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { m.undesamplePad(1) }.message)
+            assertTrue(File(m.kitDir, m.pad(1)!!.sampleFile).readBytes().contentEquals(bytes), "a refusal leaves the audio alone")
+            assertEquals(pad, m.pad(1), "a refusal leaves the pad alone")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal spends no bin entry")
+        }
+
+        val (pedalled, capture) = desampled("UndesamplePedals")
+        pedalled.pedalPad(1, com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f))))
+        refusal(pedalled, Copy.DESAMPLE_UNDO_NOTHING)
+        pedalled.unEraPad(1) // NONE takes the pedals off and keeps the patch
+        assertTrue(PadSheet.isDesampled(pedalled.pad(1)!!), "after NONE the de-sample is on top again")
+        pedalled.undesamplePad(1)
+        assertTrue(File(pedalled.kitDir, pedalled.pad(1)!!.sampleFile).readBytes().contentEquals(capture), "then UNDO gives the capture back")
+
+        val (sent, _) = desampled("UndesampleSent")
+        val other = com.snipsnap.synth.ThumpPatch("Other", com.snipsnap.synth.ThumpVoice.SNARE, com.snipsnap.synth.Thump.defaults(com.snipsnap.synth.ThumpVoice.SNARE))
+        sent.replaceAudio(1, com.snipsnap.synth.PadRecipe(patch = other).toJsonValue()) { other.render() }
+        assertNull(sent.pad(1)!!.source["desampled"], "test setup: a plain-patch write over the de-sample clears its stamp")
+        refusal(sent, Copy.DESAMPLE_UNDO_NOTHING)
+
+        val (ghosted, _) = desampled("UndesampleGhosts")
+        ghosted.addGhostLayers(1)
+        refusal(ghosted, Copy.UNDO_LAYERED)
+
+        val (emptied, _) = desampled("UndesampleEmptied")
+        emptied.emptyBin()
+        refusal(emptied, Copy.DESAMPLE_UNDO_NOT_BINNED)
+    }
+
+    /**
+     * The `desampled` stamp says "this audio is a de-sample's render" (the owner's call,
+     * 2026-11-01): any later audio replacement clears it, with or without a recipe of its own,
+     * and [KitBuilderModel.desamplePad] puts it back straight after its own. After a synth send the
+     * pad is a plain synth pad, so the bin keeps nothing for it.
+     */
+    @Test
+    fun `a later audio replacement clears the de-sample's stamp, and the bin then keeps nothing for it`() {
+        val dir = File(temp, "DesampleStampCleared")
+        val m = KitBuilderModel.create("DesampleStampCleared", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        m.update(1) { it.copy(source = it.source + ("rawSha256" to "abc") + ("bredFrom" to "Elsewhere")) }
+        m.desamplePad(1, evenIfFar = true)
+        m.desamplePad(2, evenIfFar = true)
+        assertTrue(m.pad(1)!!.source["desampled"] != null, "test setup: desamplePad stamps after its own replacement")
+        assertNull(m.pad(1)!!.source["rawSha256"], "test setup: the fingerprint went with the old file")
+
+        val other = com.snipsnap.synth.ThumpPatch("Other", com.snipsnap.synth.ThumpVoice.SNARE, com.snipsnap.synth.Thump.defaults(com.snipsnap.synth.ThumpVoice.SNARE))
+        m.replaceAudio(1, com.snipsnap.synth.PadRecipe(patch = other).toJsonValue()) { other.render() }
+        assertNull(m.pad(1)!!.source["desampled"], "a synth send over a de-sample is a plain synth pad")
+        assertEquals("Elsewhere", m.pad(1)!!.source["bredFrom"], "every other stamp stays")
+        m.replaceAudio(2, null) { it }
+        assertNull(m.pad(2)!!.source["desampled"], "an unlabelled replacement clears it too")
+        assertFalse(PadSheet.isDesampled(m.pad(2)!!), "the patch kept on null no longer reads as a de-sample")
+        m.save()
+        assertTrue(m.binHolds().all { it.keptFor == null }, "a plain synth pad needs nothing from the bin")
+
+        m.desamplePad(1, evenIfFar = true)
+        assertTrue(m.pad(1)!!.source["desampled"] != null, "a fresh DE-SAMPLE stamps again")
     }
 
     @Test
@@ -918,13 +1005,82 @@ class KitBuilderTest {
         assertEquals(spliced.crossfaded, (recipeSplice.entries["crossfaded"] as com.snipsnap.json.JsonValue.Bool).value)
 
         // Whatever was live before the splice (the washed take) is itself
-        // now the newest bin entry - undoable like any other rewrite.
-        m.untreatPad(1)
+        // now the newest bin entry, and the bin keeps it while the pad is spliced.
+        assertTrue(PadSheet.isSpliced(m.pad(1)!!.recipe), "test setup: TAPE SPLICE's own recipe")
+        val preSplice = m.priorTakes(1).first()
+        assertEquals(1, m.binHolds().single { it.entry.file == preSplice.file }.keptFor, "the take before the splice is kept for A01")
+
+        // UNDO SPLICE gives it back.
+        m.unsplicePad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(beforeSplice), "back to the pre-splice audio")
         assertNull(m.pad(1)!!.recipe)
+        assertTrue(m.binHolds().all { it.keptFor == null }, "an unspliced pad needs nothing from the bin")
+        assertEquals(
+            Copy.SPLICE_UNDO_NOTHING,
+            assertFailsWith<IllegalArgumentException> { m.unsplicePad(1) }.message,
+            "a second UNDO has no splice left to take off",
+        )
 
         // Sanity: the original capture is still exactly what it always was.
         assertTrue(originalCapture.samples.contentEquals(tail.samples))
+    }
+
+    /**
+     * UNDO SPLICE refuses, touching nothing, everything its door does not own: MUTATE's own SPLICE
+     * move (its UNDO is on the MUTATE card), soft hits added after the splice, a bin that no longer
+     * holds the take, and a printed pad, whose live recipe is the print and not the splice.
+     */
+    @Test
+    fun `unsplicePad refuses a MUTATE SPLICE, soft hits, an emptied bin and a print, and touches nothing`() {
+        fun spliced(name: String): KitBuilderModel {
+            val m = KitBuilderModel.create(name, File(temp, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            m.treatPad(1, "punched")
+            val live = com.snipsnap.audio.WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+            val prior = com.snipsnap.audio.WavReader.read(m.priorTakes(1).first().file)
+            m.splicePad(1, live, live.frameCount / 3, prior, prior.frameCount / 2)
+            assertTrue(PadSheet.isSpliced(m.pad(1)!!.recipe), "test setup: $name is spliced")
+            return m
+        }
+        fun refusal(m: KitBuilderModel, slot: Int, expected: String) {
+            val bytes = File(m.kitDir, m.pad(slot)!!.sampleFile).readBytes()
+            val pad = m.pad(slot)
+            val bin = m.binContents().map { it.file }
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { m.unsplicePad(slot) }.message)
+            assertTrue(File(m.kitDir, m.pad(slot)!!.sampleFile).readBytes().contentEquals(bytes), "a refusal leaves the audio alone")
+            assertEquals(pad, m.pad(slot), "a refusal leaves the pad alone")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal spends no bin entry")
+        }
+
+        val mutated = spliced("UnspliceMutate")
+        mutated.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        Mutate.apply(mutated, 2, listOf(Mutate.Source("UnspliceMutate:A01", DrumSynth.kick())), Mutate.Mode.SPLICE)
+        assertEquals("SPLICE", MutateSheet.read(mutated.pad(2)!!.recipe)?.mode, "test setup: MUTATE's SPLICE move")
+        assertFalse(PadSheet.isSpliced(mutated.pad(2)!!.recipe), "MUTATE's SPLICE is not TAPE SPLICE")
+        refusal(mutated, 2, Copy.SPLICE_UNDO_NOTHING)
+
+        val ghosted = spliced("UnspliceGhosts")
+        ghosted.addGhostLayers(1)
+        refusal(ghosted, 1, Copy.UNDO_LAYERED)
+        ghosted.clearGhostLayers(1) // the step the refusal names
+        ghosted.unsplicePad(1)
+        assertNull(ghosted.pad(1)!!.recipe, "with SOFT HITS off, the UNDO lands")
+
+        val emptied = spliced("UnspliceEmptied")
+        emptied.emptyBin()
+        refusal(emptied, 1, Copy.SPLICE_UNDO_NOT_BINNED)
+
+        val printed = spliced("UnsplicePrinted")
+        val spliceFile = printed.pad(1)!!.sampleFile
+        BoardSheet.apply(printed, 1, .7f)
+        assertTrue(PrintedPads.has(printed.pad(1)!!.recipe), "test setup: a board printed over the splice")
+        refusal(printed, 1, Copy.SPLICE_UNDO_NOTHING)
+        // THE BIN still asks the pad under the print, which has a door once the print is off.
+        val binned = printed.binContents().map { it.originalName }.toSet()
+        assertTrue(PadSheet.hasOwnWayBack(printed.unprinted(printed.pad(1)!!), spliceFile, binned), "under the print, UNDO SPLICE is the way back")
+        BoardSheet.remove(printed, 1)
+        printed.unsplicePad(1)
+        assertNull(printed.pad(1)!!.recipe, "with the print removed, the UNDO lands")
     }
 
     @Test
@@ -1537,11 +1693,12 @@ class KitBuilderTest {
     }
 
     /**
-     * DE-SAMPLE leaves a plain patch recipe, the shape a synth send leaves, but `snipsnap desample
-     * --undo` reads the bin for the capture, so the `desampled` stamp makes the pad count.
+     * DE-SAMPLE leaves a plain patch recipe, the shape a synth send leaves, but its UNDO (the pad
+     * sheet's, and `snipsnap desample --undo`) reads the bin for the capture, so the `desampled`
+     * stamp makes the pad count.
      */
     @Test
-    fun `a de-sampled pad keeps its capture past the sweep, and desample --undo gives it back`() {
+    fun `a de-sampled pad keeps its capture past the sweep, and its UNDO gives it back`() {
         val dir = File(temp, "BinDesampled")
         val m = KitBuilderModel.create("BinDesampled", dir)
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
@@ -1552,8 +1709,9 @@ class KitBuilderTest {
         assertEquals(1, m.binHolds().single().keptFor, "the capture is kept for A01")
 
         assertEquals(0, sweepEverythingOld(dir))
-        m.untreatPad(1) // what `snipsnap desample --undo` runs
+        m.undesamplePad(1) // what the sheet's UNDO and `snipsnap desample --undo` run
         assertTrue(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(capture), "the capture came back byte for byte")
+        assertNull(m.pad(1)!!.source["desampled"], "and the pad is no longer marked a patch")
     }
 
     @Test

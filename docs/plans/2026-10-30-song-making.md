@@ -206,6 +206,35 @@ clipping.
   - **Test:** the CLI output stays byte-identical, proven by the existing CLI tests.
 - **App, SDK session:** an EXPORT on `ArrangeScreen` calls `SongExport`. It writes where OUT already writes, and offers the WAV to the share sheet the way GROOVE's SHARE ▸ does.
 
+#### Phase 4, as built (2026-11-01): the shared half
+
+- **`SongExport`** (`shell/.../SongExport.kt`) holds what was `ArrangeCommand.run`'s body:
+  - `write(kit, kitDir, plan, destRoot, overwrite, mixdown)` stages the program, writes the `.xpj` with the sections as sequences numbered in plan order and the song slot named, and, when asked, writes the mixdown WAV beside it.
+  - It returns `Written(project, mixdown)`. `Mixdown` carries the file and the `Arranger.Mix`, so a caller can show the length and section starts without rendering again.
+  - `sectionClips(plan)` is the numbering rule on its own.
+- **`snipsnap arrange`** now calls it and prints the same lines. A refusal comes back as the existing `DestinationExists` (from `:kit`), which the CLI turns into its old message.
+- **Changed on purpose:** every destination is checked before anything is written. The CLI used to check the WAV only after the project was written, so `--mixdown` onto a card that already held the WAV refused with half an export already there. A refusal also now names the file actually on disk (`DestinationExists.firstOf`), where the CLI always named the `.xpj` even when only its data folder was left.
+- **Measured:**
+  - A scratch test ran `arrange --mixdown` through `Cli.run` with the old and the new `ArrangeCommand`, and hashed the exit code, stdout, stderr and every file written (the `.xpj`, the WAV, the three staged pad samples). All seven hashes matched. The scratch test was deleted.
+  - `SongExportTest` (4 tests) covers the numbered sequences, the WAV only when asked, the mixdown equal to `Arranger.mixdown`, an existing WAV refusing with nothing written, the refusal naming the data folder when only that is left, and overwrite giving the same bytes.
+  - With the old check order put back alone, `an existing WAV refuses before anything is written` fails ("no project written").
+- **Not done here (done in the app half, below):** the EXPORT button on `ArrangeScreen`. It needs a session with an Android SDK, by the house rule that a screen wired blind is worse than one left for a session that can verify it. It is one call: `SongExport.write(kit, kitDir, plan, destRoot, mixdown = true)` with the plan ARRANGE already holds, then the share sheet for `written.mixdown.file`.
+
+#### Phase 4, app half, as built (2026-11-02)
+
+- **EXPORT** is a third button on `ArrangeScreen`, beside PLAY and REROLL (visible label EXPORT, spoken as "EXPORT SONG"). It writes the song and offers the WAV to the share sheet, in `GrooveScreen.shareBeat`'s shape:
+  - a tap while busy is dropped; the button shows the working ring and PLAY and REROLL wait, so no second render starts beside it;
+  - the write runs off the main thread (`offMain`), `haptics.land()` on success, a failure toast on any exception;
+  - `ShareOut.send(context, wav, ShareOut.WAV_MIME, kit.name)`; when no app takes it, the toast says where the song was kept.
+- **Where files land:** `Exports.dir(context)/<stem>/song/` (the app's external files, `exports/<stem>/song/`), holding `<name>.xpj`, its `<name>_[ProjectData]` folder and `<name>.wav`. `<stem>` is `Names.sanitizeStem(kit.name)`, as GROOVE's `<stem>/beat/` uses.
+- **Three decisions, each the default the handoff suggested (the owner said to take the defaults):**
+  1. Destination is `<stem>/song/`, mirroring GROOVE, not the OUT screen's MPC card layout.
+  2. Re-export passes `overwrite = true` into that app-owned folder, so exporting the same song again replaces it. The toast states where the song is kept rather than warning about a replacement.
+  3. The held mix is reused: `SongExport.write` gained an optional `mix: Arranger.Mix? = null`. ARRANGE passes the mix PLAY already rendered; with none held, the write renders it once and ARRANGE keeps it for PLAY.
+- **Copy:** `ARRANGE_EXPORT_BUSY`, `ARRANGE_EXPORT_FAILED`, `songShared`, `songKept`. All shout and end on a full stop, so none needed an entry in `PersonalityTest`'s `notASentence`; none uses a destroying word, so `ReversalTest` has nothing to answer.
+- **Tests:** `SongExportTest` proves a supplied mix is the one written and that omitting it still renders. `ArrangeScreenTest` presses EXPORT SONG on a three-pad kit with a groove and waits (up to 30 s) for the `.xpj`, its `_[ProjectData]` folder and a readable `.wav` under `exports/<stem>/song/`.
+- **Not verified here:** the session that wrote this had no Gradle run and no emulator (a memory-limited Mac), so nothing below was compiled or run locally; CI's `android-build`, the JVM suites and `emulator-tests` are the check. Nothing was listened to. The share sheet itself, and the "kept at" toast when nothing takes the WAV, are not asserted by the device test.
+
 ### Phase 5. An arrangement you can edit (M pure, then M app)
 
 **Goal:** the Arranger suggests a song, and the user changes it.

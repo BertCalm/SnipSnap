@@ -711,6 +711,9 @@ class PadEngine(preferredSampleRate: Int) {
          * staying under the lag a player hears between hand and pitch.
          */
         const val BEND_GLIDE_MS = 8f
+
+        /** The vibrato depth's glide: a wheel pushed up fades the wobble in, rather than starting it. */
+        const val VIBRATO_GLIDE_MS = 30f
         const val PANIC_FADE_MS = 20f
 
         /** The count-in click's fixed level — a cue meant to sit under the kit, not a mixed-in sound. */

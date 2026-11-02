@@ -61,9 +61,8 @@ class CreaseInstrumentScreenTest : ComposeScreenTest() {
                     appScope = appScope, settings = settings)
             }
         }
-        val expectedRoot = (patch.midi - Crease.MIDI_MIN).toFloat() / (Crease.MIDI_MAX - Crease.MIDI_MIN)
         waitFor("saved CREASE root and excitation") {
-            runCatching { progress("ROOT") == expectedRoot && progress("VELOCITY") == patch.velocity }.getOrDefault(false)
+            runCatching { rootIs(patch.midi) && progress("VELOCITY") == patch.velocity }.getOrDefault(false)
         }
         return shelf
     }
@@ -114,7 +113,7 @@ class CreaseInstrumentScreenTest : ComposeScreenTest() {
         compose.onNodeWithText("KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE.")
             .fetchSemanticsNode()
         compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
-        assertEquals((patch.midi - Crease.MIDI_MIN).toFloat() / (Crease.MIDI_MAX - Crease.MIDI_MIN), progress("ROOT"), .0001f)
+        assertRoot(patch.midi)
         assertEquals(patch.velocity, progress("VELOCITY"), .0001f)
         click("TOUCH LAYERS")
         assertEquals(false, compose.onNodeWithContentDescription("TOUCH LAYERS")

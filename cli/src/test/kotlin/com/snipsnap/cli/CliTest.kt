@@ -20,6 +20,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Thump
@@ -318,6 +319,77 @@ class CliTest {
         )
     }
 
+    /**
+     * --overwrite replaces the kit folder whole (2026-11-01). The old kit's bin and versions describe
+     * the old kit's pads: kept, a new pad on a reused file name would find the old kit's audio as its
+     * own original, and its undo would put a stranger's sound back.
+     */
+    @Test
+    fun `chop --overwrite replaces the whole kit folder, its bin and versions with it`() {
+        val wav = writeBreak(File(temp, "whole.wav"))
+        val out = File(temp, "whole-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Whole").first)
+        val kitDir = File(out, "Whole")
+        KitBuilderModel.open(kitDir).apply {
+            treatPad(1, "crushed")
+            clear(2)
+            save()
+        }
+        File(kitDir, "stray.wav").writeBytes(ByteArray(4))
+        val before = KitBuilderModel.open(kitDir)
+        assertTrue(before.binContents().isNotEmpty() && before.takes().isNotEmpty(), "test setup: the old kit has a bin and versions")
+
+        val (code, stdout, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "Whole", "--overwrite")
+        assertEquals(0, code, stderr)
+        assertContains(stdout, "replaced")
+        val after = KitBuilderModel.open(kitDir)
+        assertTrue(after.binContents().isEmpty(), "the old kit's bin went with it")
+        assertTrue(after.takes().isEmpty(), "and its versions")
+        assertTrue(!File(kitDir, "stray.wav").exists(), "and every other file of the old folder")
+        val (undo, _, undoErr) = cli("treat", kitDir.path, "A01", "--undo")
+        assertNotEquals(0, undo, "a new pad finds nothing of the old kit's to put back: $undoErr")
+    }
+
+    @Test
+    fun `chop treats a folder holding only an old bin as a kit to replace`() {
+        val wav = writeBreak(File(temp, "binonly.wav"))
+        val out = File(temp, "binonly-out")
+        val stale = File(File(out, "BinOnly"), ".bin/1_A01_Kick_01.wav").apply {
+            parentFile.mkdirs()
+            writeBytes(ByteArray(4))
+        }
+        val (code, _, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "BinOnly")
+        assertNotEquals(0, code)
+        assertContains(stderr, "already exists")
+        assertTrue(stale.exists(), "a refused chop touches nothing")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BinOnly", "--overwrite").first)
+        assertTrue(!stale.exists(), "the stale bin went with the old folder")
+    }
+
+    @Test
+    fun `chop --overwrite refuses when its input lives inside the kit it would replace`() {
+        val out = File(temp, "inside-out")
+        val kitDir = File(out, "Inside").apply { mkdirs() }
+        val wav = writeBreak(File(kitDir, "source.wav"))
+        val (code, _, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "Inside", "--overwrite")
+        assertNotEquals(0, code)
+        assertContains(stderr, "inside the kit")
+        assertTrue(wav.isFile, "the input is still there")
+    }
+
+    @Test
+    fun `resample refuses to write over its own source kit`() {
+        val wav = writeBreak(File(temp, "self.wav"))
+        val out = File(temp, "self-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Self").first)
+        val kitDir = File(out, "Self")
+        val kitJson = File(kitDir, "kit.json").readBytes()
+        val (code, _, stderr) = cli("resample", kitDir.path, "--name", "Self", "--out", out.path, "--overwrite")
+        assertNotEquals(0, code)
+        assertContains(stderr, "its own source kit")
+        assertTrue(kitJson.contentEquals(File(kitDir, "kit.json").readBytes()), "the source kit is untouched")
+    }
+
     @Test
     fun `export command fans an existing kit folder out to formats`() {
         val wav = writeBreak(File(temp, "exp.wav"))
@@ -528,7 +600,7 @@ class CliTest {
     }
 
     @Test
-    fun `expansion exports carry the waveform tile by default`() {
+    fun `expansion exports carry the kit's own tile by default`() {
         val wav = writeBreak(File(temp, "tile.wav"))
         val out = File(temp, "tile-out")
         val (code, stdout, stderr) = cli(
@@ -536,7 +608,8 @@ class CliTest {
             "--slices", "8", "--export", "expansion,xpn",
         )
         assertEquals(0, code, "stderr: $stderr")
-        assertContains(stdout, "cover art: waveform tile")
+        // A fresh chop has no art.json, so the tile is the defaults: Bloom.
+        assertContains(stdout, "cover art: bloom tile")
 
         val art = File(out, "card/Expansions/TileKit/TileKit.png")
         assertTrue(art.isFile, "the browser tile landed")
@@ -572,6 +645,34 @@ class CliTest {
         )
         assertEquals(2, clashCode)
         assertContains(clashErr, "contradict")
+    }
+
+    @Test
+    fun `export draws the kit's art knobs and --art overrides only the style`() {
+        val wav = writeBreak(File(temp, "knobs.wav"))
+        val out = File(temp, "knobs-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "KnobKit", "--slices", "8").first)
+        val kitDir = File(out, "KnobKit")
+        com.snipsnap.shell.ArtSidecar.write(
+            kitDir,
+            com.snipsnap.shell.ArtKnobs(
+                com.snipsnap.shell.KitArt.Style.FIELD, com.snipsnap.shell.Palettes.TIDE, null,
+                com.snipsnap.shell.Mark.Variant.SYMBOL,
+            ),
+        )
+        val plain = File(temp, "knobs-plain")
+        val (code, stdout, stderr) = cli("export", kitDir.path, "--export", "expansion", "--out", plain.path)
+        assertEquals(0, code, stderr)
+        assertContains(stdout, "cover art: field tile")
+        val tile = javax.imageio.ImageIO.read(File(plain, "card/Expansions/KnobKit/KnobKit.png"))
+        assertEquals(com.snipsnap.shell.Palettes.TIDE.ground, tile.getRGB(1, 1) and 0xFFFFFF, "the sidecar's palette")
+
+        val ringsOut = File(temp, "knobs-rings")
+        val (rCode, rOut, rErr) = cli("export", kitDir.path, "--export", "expansion", "--art", "rings", "--out", ringsOut.path)
+        assertEquals(0, rCode, rErr)
+        assertContains(rOut, "cover art: rings tile")
+        val ringsTile = javax.imageio.ImageIO.read(File(ringsOut, "card/Expansions/KnobKit/KnobKit.png"))
+        assertEquals(com.snipsnap.shell.Palettes.TIDE.ground, ringsTile.getRGB(1, 1) and 0xFFFFFF, "--art keeps the palette")
     }
 
     @Test
@@ -1515,8 +1616,22 @@ class CliTest {
         assertContains(padOut, "is a thump/kick patch now")
         assertTrue(!before.contentEquals(padFile.readBytes()))
         assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
-        assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)
+        assertTrue(KitStore.load(kitDir).pad(1)!!.source["desampled"] != null, "test setup: the de-sample's stamp")
+        val (undoCode, undoOut, undoErr) = cli("desample", kitDir.path, "A01", "--undo")
+        assertEquals(0, undoCode, "stderr: $undoErr")
+        assertContains(undoOut, "the take before the de-sample came back out of the bin")
         assertTrue(before.contentEquals(padFile.readBytes()))
+        assertNull(KitStore.load(kitDir).pad(1)!!.recipe, "the patch went with the render")
+        assertNull(KitStore.load(kitDir).pad(1)!!.source["desampled"], "and so did the stamp")
+
+        // A pad that was never de-sampled refuses, even with a take of its own in the bin.
+        KitBuilderModel.open(kitDir).apply { treatPad(2, "punched"); save() }
+        val pad2 = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val treated = pad2.readBytes()
+        val (neverCode, _, neverErr) = cli("desample", kitDir.path, "A02", "--undo")
+        assertTrue(neverCode != 0 && com.snipsnap.shell.Copy.DESAMPLE_UNDO_NOTHING in neverErr, "exit $neverCode: $neverErr")
+        assertTrue(treated.contentEquals(pad2.readBytes()), "the refusal pops no stranger's take")
+        assertEquals(1, KitBuilderModel.open(kitDir).priorTakes(2).size, "the treatment's take is still in the bin")
 
         val (badCode, _, badErr) = cli("desample", File(temp, "nowhere").path)
         assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)

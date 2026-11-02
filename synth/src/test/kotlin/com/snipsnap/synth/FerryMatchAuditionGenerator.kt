@@ -42,7 +42,7 @@ object FerryMatchAuditionGenerator {
                 for ((step, match) in listOf(1f, .75f, .5f, .25f, 0f).withIndex()) {
                     val id = "$register-$speed-$step"
                     val patch = FerryPatch("Passage $register $speed match $match", midi = midi,
-                        macros = Ferry.defaults() + mapOf("HANDOFF" to handoff, "MATCH" to match))
+                        model = 2, macros = Ferry.defaults(model = 2) + mapOf("HANDOFF" to handoff, "MATCH" to match))
                     Ferry.clearCache()
                     val coldStart = System.nanoTime()
                     val snip = patch.render()
@@ -83,11 +83,12 @@ object FerryMatchAuditionGenerator {
             }
         }
         File(output, "manifest.json").writeText(Json.write(json(linkedMapOf(
-            "title" to "Ferry MATCH listening", "model" to Ferry.MODEL_VERSION,
+            "title" to "Ferry MATCH listening", "model" to 2,
             "base_commit" to "a5caac7fd6c8a2e6d09ec740c60fb995c6bef368", "entries" to entries,
             "heard" to listOf("Ferry first listen: Yes, clearly.", "Ferry second listen: Clear throughout.",
-                "Ferry Kotlin listen: Same character. (2026-10-30)"),
-            "pending" to listOf("MATCH listening approval", "Phone timing", "SPAN/LOSS/BODY", "HOLD", "Production tail"),
+                "Ferry Kotlin listen: Same character. (2026-10-30)",
+                "Ferry MATCH listen: Clear change, note stays clear. (2026-11-01)"),
+            "pending" to listOf("LOSS listening", "Phone timing", "SPAN/BODY", "HOLD", "Production tail"),
             "timing_scope" to "Complete four-second renders including house output stage; server JVM, not phone timing.",
             "why" to listOf("MATCH changes B's upper-mode tuning, so the graph determines how much energy those modes acquire.",
                 "The aligned setting preserves all nine accepted native PCM renders exactly.",

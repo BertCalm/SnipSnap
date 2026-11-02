@@ -145,9 +145,10 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("ENGINE MERIDIAN. CHOOSE ENGINE").assertExists()
         compose.onNodeWithContentDescription("SWEEP").assertExists()
         assertReadsInFull("MERIDIAN ▾")
-        for (name in listOf("TUNE", "LATITUDE", "LENGTH", "REACH", "SURFACE", "MEMORY", "HOLD", "ROOT", "VELOCITY")) {
+        for (name in listOf("TUNE", "LATITUDE", "LENGTH", "REACH", "SURFACE", "MEMORY", "HOLD", "VELOCITY")) {
             slider(name).assertExists()
         }
+        assertTrue("ROOT stepper row", currentRootOrNull() != null)
         for (factory in MeridianPresets.all()) {
             loadFactory(factory.name)
             assertEquals(factory, draft())
@@ -166,7 +167,7 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
     fun native_edits_save_restore_and_land_held_sound_as_a_finite_authored_pad() {
         val root = show()
         val factory = loadFactory("ROUND THREAD")
-        dial("ROOT", (60 - 36) / 60f)
+        rootTo(60)
         dial("VELOCITY", .43f)
         dial("TUNE", .75f)
         dial("MEMORY", .70f)
@@ -175,7 +176,7 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
             macros = factory.macros + mapOf("TUNE" to .75f, "MEMORY" to .70f)), saved)
         compose.runOnIdle { generation++ }
         pump()
-        waitFor("restored native root") { progress("ROOT") == (60 - 36) / 60f }
+        waitFor("restored native root") { rootIs(60) }
         assertEquals(.43f, progress("VELOCITY"), 1e-6f)
         assertEquals(.75f, progress("TUNE"), 1e-6f)
         assertEquals(.70f, progress("MEMORY"), 1e-6f)

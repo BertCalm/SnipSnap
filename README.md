@@ -165,12 +165,14 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 ### `:synth`
 
 FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
-a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
-HANDOFF and MATCH controls, provisional CLI starting points and actual-engine auditions
+a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes,
+HANDOFF, MATCH and LOSS controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryMatchAudition`; [implementation notes](docs/FERRY.md)
-record the aligned Kotlin listening approval and keep MATCH, tail, HOLD and phone
-acceptance separate. Model-1 saved patches retain their original sound.
+`./gradlew :synth:generateFerryLossAudition`; [implementation notes](docs/FERRY.md)
+record the aligned and MATCH listening approvals. LOSS varies physical decay
+over finite one-to-eight-second observations; the neutral sound and model-1/2
+recipes stay unchanged. LOSS listening, natural tails, HOLD and phone acceptance
+remain separate gates.
 
 CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, and the
 new TUMBLE a tightening cascade of real rebounds. Model 3 adds TUMBLE's passive
@@ -469,18 +471,24 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-CAUSTIC has four finite voices: ALLOY, HOLLOW_MALLET, RUBBED_RING and
-TRAVELLING_CATCHES. A metallic bloom, soft hollow knock, rough pressure swell
-and four spatial catches share SOURCE/FOCUS geometry, voice-specific BODY and
-.5–8-second LENGTH, with saved ROOT and VELOCITY. The owner chose all three
-character-study gestures for native development. Integration passes the
-7,001-test JVM gate; the production ports and new control positions still need
-listening. Native model-1 ALLOY patches and
-archived study models 1–4 retain their interpretation. Eleven starting patches
-and a dry sixteen-pad kit include the four voices. HOLD is reserved.
-Run `./gradlew :synth:generateCausticCharactersAudition :synth:generateCausticKit`
-for the four-voice control study and dual-generation MPC starter. The archived listening
-studies remain unchanged. The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+CAUSTIC's ALLOY, HOLLOW_MALLET, RUBBED_RING and TRAVELLING_CATCHES
+voices share coherent SOURCE/FOCUS paths and voice-specific BODY. Native
+model 2 adds MOTION, real sustained HOLD and onset-preserving
+keygroups, retaining saved ROOT and VELOCITY. Below full HOLD, LENGTH and HOLD
+scale the finite gesture; full HOLD uses a separate periodic render. The new
+held/moving sounds are implemented and unheard; the finite native ports also
+await an explicit listening verdict on the selected study directions. Eleven
+existing model-1 presets and archived study models 1–4 retain their
+interpretation. The earlier finite integration passed its 7,001-test gate;
+the completion passes its focused 124-test and full 8,233-test JVM gates.
+Measured C4 host generation medians
+are .35–1.18 seconds, above the tens-of-ms goal; playback uses generated samples.
+Run `./gradlew :shell:generateCausticCompleteAudition` for 28 clips, four
+real-neighbour seam-context WAVs and four nine-zone MPC/phone keygroups.
+The five completion downloads pass generator readback and PCM24 seam checks;
+the [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
+is published. Physical playback and listening remain separate. The archived listening
+studies remain unchanged. The [retained finite audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
 provides 42 recordings and six downloads, including all four voice families
 and the MPC starter. [Implementation notes](docs/CAUSTIC.md) distinguish
 finite duration classification from sustained-loop support.
@@ -1051,8 +1059,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
-70 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, BORE, ARCO, SCOUR, KEEL and GRAINS round out the lineup —
+74 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1273,12 +1281,14 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-SCOUR, KEEL and LORENTZ have preset rosters, so `snipsnap synth` renders them.
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, plus GRAINS, SNAP and DRAW,
+which sit beside the picker. `:synth` also holds engines that picker does not show.
+LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
-regenerable audition. It remains outside the picker and factory presets.
+regenerable audition. Its provisional sixteen-pad playing bank has three touch
+zones and both MPC program formats; SCAR is a separate aftershock study.
+It remains outside the picker and factory presets.
 
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
 and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and
