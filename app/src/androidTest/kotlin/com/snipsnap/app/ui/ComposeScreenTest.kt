@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.audio.Scales
 import com.snipsnap.shell.Schemes
+import com.snipsnap.synth.SynthCaches
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -62,6 +64,10 @@ abstract class ComposeScreenTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    // The suite runs in one process, so one test's render caches must not outlive it.
+    @After
+    fun dropSynthCaches() = SynthCaches.clearAll()
 
     /**
      * [content], wrapped at [PHONE_WIDTH_DP] with the clock frozen. Every
