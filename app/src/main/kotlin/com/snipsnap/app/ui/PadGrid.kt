@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.LocalHaptics
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
@@ -278,7 +279,7 @@ private fun Modifier.padGesture(
     }
     .pressTracking(
         slot,
-        onPress = { y, height, uptime -> onHit(slot, velocityFromY(y, height), uptime) },
+        onPress = { y, height, pressure, uptime -> onHit(slot, PadFeelStore.shape(velocityFromY(y, height), pressure), uptime) },
         onRelease = { uptime -> onRelease(slot, uptime) },
     )
 

@@ -42,6 +42,7 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -531,9 +532,9 @@ private fun KeyPad(
             .let { m ->
                 if (!enabled) m else m.pressTracking(
                     label,
-                    onPress = { y, height, _ ->
+                    onPress = { y, height, pressure, _ ->
                         down = true
-                        onPress(PadHit.velocityAt((y / height).coerceIn(0f, 1f), 1f))
+                        onPress(PadFeelStore.shape(PadHit.velocityAt((y / height).coerceIn(0f, 1f), 1f), pressure))
                     },
                     onRelease = {
                         down = false
