@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "sampleRate": 44100,
+  "sourceCommit": "8587bb40a878490881f4b53729cb5fee5cf0c862",
+  "sources": [
+    {
+      "id": "snare",
+      "inputFile": "inputs/snare.f32",
+      "inputFrames": 14709,
+      "inputChannels": 1,
+      "inputSha256": "66cc79f86d8fcceeef90763d7f6037da9f455834556964aaaaf74b97a7bf93e0"
+    },
+    {
+      "id": "percussion",
+      "inputFile": "inputs/percussion.f32",
+      "inputFrames": 88200,
+      "inputChannels": 1,
+      "inputSha256": "4d2864234eea51bdd211904a7c73e42476ca04ea4f3b63ea9b55801c1c8b0c2d"
+    },
+    {
+      "id": "pluck",
+      "inputFile": "inputs/pluck.f32",
+      "inputFrames": 88200,
+      "inputChannels": 2,
+      "inputSha256": "944ed383f1188df281254fc83cd39929b7ffa4610bdf6506c0c5607a7612328f"
+    },
+    {
+      "id": "bass",
+      "inputFile": "inputs/bass.f32",
+      "inputFrames": 46450,
+      "inputChannels": 1,
+      "inputSha256": "6ede15b4e765632a3a5855b412355b55b325dede2ef0a7625f32032ee169d6ec"
+    }
+  ]
+}

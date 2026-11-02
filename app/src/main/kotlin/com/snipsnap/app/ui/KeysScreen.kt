@@ -1,9 +1,9 @@
 package com.snipsnap.app.ui
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +26,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -36,18 +36,23 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.PREFS
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
+import com.snipsnap.app.PadFeelStore
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
@@ -57,6 +62,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
+import com.snipsnap.shell.PlayCapture
 import com.snipsnap.shell.Schemes
 import com.snipsnap.xpm.VoiceMode
 import java.io.File
@@ -181,17 +187,33 @@ fun KeysScreen(
     // this screen goes through `midiKeys.allOff()` rather than the
     // player's own, so the sustain pedal is forgotten with the notes:
     // a pedal still "down" after a panic would hold the next key up.
+    // What was just played, by hand or by keyboard, for GRAB.
+    val capture = remember(player) { PlayCapture() }
     val midiKeys = remember(player) {
         MidiKeys(object : MidiKeys.Voice {
-            override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
-            override fun noteOff(note: Int) = player.noteOff(note)
+            override fun noteOn(note: Int, velocity: Float) {
+                if (player.noteOn(note, velocity)) capture.noteOn(note, velocity, System.nanoTime())
+            }
+            override fun noteOff(note: Int) {
+                player.noteOff(note)
+                capture.noteOff(note, System.nanoTime())
+            }
             // Every local silence is mirrored on the wire (the one funnel for
             // midiKeys.allOff()): a local silence that is not mirrored leaves a
             // receiver holding a note whose off will name a different key.
-            override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
+            override fun allOff() { player.allOff(); capture.releaseAll(System.nanoTime()); MidiOut.allNotesOff() }
+            // The wheel or strip bends every voice, MidiKeys' range.
+            override fun bend(ratio: Double) = player.setBend(ratio)
+            // The mod wheel, a vibrato.
+            override fun vibrato(semitones: Float) = player.setVibrato(semitones)
         })
     }
     fun silence() = midiKeys.allOff()
+    // How far the bend wheel bends, remembered between visits: a player who
+    // sets it to a fifth for a lead wants it there next time.
+    val keysPrefs = remember(context) { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+    var bendRange by remember(player) { mutableIntStateOf(keysPrefs.getInt(BEND_RANGE_KEY, MidiKeys.BEND_RANGE_SEMITONES)) }
+    LaunchedEffect(midiKeys, bendRange) { midiKeys.bendRange = bendRange }
     // The LCD's readout: what is plugged in, by name. Empty when nothing
     // is, and never shown at all on a phone that cannot do MIDI. The
     // keyboard is opened and closed with the lifecycle, below, beside the
@@ -201,10 +223,11 @@ fun KeysScreen(
     var midiSupported by remember(player) { mutableStateOf(false) }
 
     // MIDI learn (the LEARN panel): a knob on the player's volume, keys or
-    // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
+    // pads on OCT − and OCT +. A bend learned to VOL is consumed and no
+    // longer bends. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
-    val learnState = rememberMidiLearn(KeysMidi.SCREEN, prefer = KeysMidi::prefer)
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, kinds = KeysMidi::kinds, prefer = KeysMidi::prefer)
     val learn = learnState.learn
     var showLearn by remember { mutableStateOf(false) }
     LaunchedEffect(showLearn) { learnState.showing = showLearn }
@@ -217,6 +240,38 @@ fun KeysScreen(
         if (next == octave) return
         silence()
         octave = next
+    }
+
+    // GRAB: the last sixteen seconds played, as a MIDI file handed to the
+    // share sheet. Written off the main thread; the notes are read here, on it.
+    var grabbing by remember { mutableStateOf(false) }
+    fun grab() {
+        if (grabbing) return
+        val clip = capture.grab(System.nanoTime())
+        if (clip == null) {
+            onToast(Copy.KEYS_GRAB_EMPTY)
+            return
+        }
+        grabbing = true
+        scope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    val name = "SnipSnap ${Names.sanitizeStem(instrument.name)} Grab ${ShareOut.stamp(System.currentTimeMillis())}.mid"
+                    // Channel 1: a melody, not the drum channel MidiGroove writes by default.
+                    MidiGroove.writeTo(File(ShareOut.shareDir(context), name), clip, PlayCapture.DEFAULT_BPM, overwrite = true, channel = 0)
+                }
+                if (ShareOut.send(context, file, "audio/midi", "GRAB")) {
+                    onToast(Copy.keysGrabbed(clip.notes.size, clip.bars))
+                } else {
+                    onToast(Copy.KEYS_GRAB_NO_APP)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onToast(Copy.KEYS_GRAB_FAILED)
+            } finally {
+                grabbing = false
+            }
+        }
     }
 
     val midi = remember(player) { MidiInput(context) }
@@ -233,7 +288,11 @@ fun KeysScreen(
             }
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
-            override fun onDeviceRemoved() = midiKeys.allOff()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learn.releaseAll()
+                midiKeys.allOff()
+            }
         }
     }
 
@@ -267,6 +326,8 @@ fun KeysScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)
@@ -337,7 +398,7 @@ fun KeysScreen(
             }
         }
 
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
+        Column(Modifier.fillMaxWidth().systemGestureExclusion(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
             for (row in GRID_ROWS) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
                     for (slot in row) {
@@ -348,8 +409,23 @@ fun KeysScreen(
                             enabled = covered,
                             // Touch only: these go out over MIDI on the keys channel, and only for a note that sounded locally.
                             // The MidiKeys.Voice above is MIDI in and stays silent.
-                            onPress = { v -> note?.let { if (player.noteOn(it, v)) MidiOut.keysOn(it, v, System.nanoTime()) } },
-                            onRelease = { note?.let { player.noteOff(it); MidiOut.keysOff(it, System.nanoTime()) } },
+                            onPress = { v ->
+                                note?.let {
+                                    if (player.noteOn(it, v)) {
+                                        val now = System.nanoTime()
+                                        capture.noteOn(it, v, now)
+                                        MidiOut.keysOn(it, v, now)
+                                    }
+                                }
+                            },
+                            onRelease = {
+                                note?.let {
+                                    val now = System.nanoTime()
+                                    player.noteOff(it)
+                                    capture.noteOff(it, now)
+                                    MidiOut.keysOff(it, now)
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -357,7 +433,25 @@ fun KeysScreen(
             }
         }
 
+        ActionButton(
+            "GRAB THE LAST 16 SECONDS",
+            scheme,
+            enabled = !grabbing,
+            working = grabbing,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = ::grab,
+        )
+
         if (midiSupported && showLearn) {
+            ActionButton(
+                "BEND ±$bendRange",
+                scheme,
+                enabled = true,
+                onClick = {
+                    bendRange = MidiKeys.nextBendRange(bendRange)
+                    keysPrefs.edit().putInt(BEND_RANGE_KEY, bendRange).apply()
+                },
+            )
             MidiLearnPanel(
                 learnState,
                 KeysMidi.TARGETS,
@@ -396,6 +490,9 @@ internal const val NO_MIDI_DEVICE = "NO MIDI KEYBOARD · PLUG ONE IN OVER USB"
  */
 private const val MIN_VELOCITY = PadHit.SOFTEST
 
+/** The preference holding the bend wheel's range in semitones. */
+private const val BEND_RANGE_KEY = "keys.bendRange"
+
 /** The velocity a synthesized TalkBack click uses — see PlayScreen.kt's own CENTER_VELOCITY. */
 private val CENTER_VELOCITY = PadHit.CENTER
 
@@ -433,24 +530,17 @@ private fun KeyPad(
                 }
             }
             .let { m ->
-                if (!enabled) m else m.pointerInput(label) {
-                    while (true) {
-                        val first = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                        val height = size.height.toFloat().coerceAtLeast(1f)
-                        val t = (first.position.y / height).coerceIn(0f, 1f)
+                if (!enabled) m else m.pressTracking(
+                    label,
+                    onPress = { y, height, pressure, _ ->
                         down = true
-                        onPress(PadHit.velocityAt(t, 1f))
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == first.id } ?: break
-                                if (!change.pressed) break
-                            }
-                        }
+                        onPress(PadFeelStore.shape(PadHit.velocityAt((y / height).coerceIn(0f, 1f), 1f), pressure))
+                    },
+                    onRelease = {
                         down = false
                         onRelease()
-                    }
-                }
+                    },
+                )
             }
             .padding(5.dp),
         contentAlignment = Alignment.BottomStart,

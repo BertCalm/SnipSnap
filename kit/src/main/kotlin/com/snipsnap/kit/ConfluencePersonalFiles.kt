@@ -34,7 +34,7 @@ object ConfluencePersonalFiles {
         require(newVoiceBytes in 1..MAX_VOICE_BYTES) { "incoming personal voice exceeds its bounded source size" }
         val existing = referencedIds(kit)
         require((existing + newVoiceId).distinct().size <= MAX_VOICES) { "personal voice capacity exceeds $MAX_VOICES distinct voices" }
-        val currentBytes = existing.sumOf { id -> safeVoiceLengths(kitDir, id) }
+        val currentBytes = existing.sumOf { id -> safeVoiceLengths(kitDir, id) } + ConfluenceBankFiles.files(kit, kitDir).sumOf { it.second.length() }
         val additional = if (newVoiceId in existing) 0L else newVoiceBytes
         require(currentBytes <= MAX_KIT_BYTES - KIT_METADATA_RESERVE_BYTES - additional) { "personal voice capacity exceeds the native backup byte budget including kit metadata reserve" }
     }
@@ -152,7 +152,7 @@ object ConfluencePersonalFiles {
     private data class Shape(val rate: Int, val channels: Int, val bits: Int, val frames: Long, val format: Int)
 
     /** The same canonical rate/length/little-endian float identity carried by source-based recipes. */
-    private fun canonicalHash(file: File): String {
+    internal fun canonicalHash(file: File): String {
         val snip = WavReader.read(file.readBytes(), maxFrames = WavWriter.MPC_SAMPLE_RATE * 30)
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putInt(snip.sampleRate).putInt(snip.frameCount).array())

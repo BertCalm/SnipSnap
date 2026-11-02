@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performSemanticsAction
@@ -36,6 +37,7 @@ import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -116,7 +118,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         for (voice in TidalVoice.entries) {
             activate(voice.name)
             for (macro in listOf("APPROACH", "PASSAGE", "TILT", "BIND", "TAIL")) button(macro).assertExists()
-            button("ROOT").assertExists()
+            currentRoot()
             button("VELOCITY").assertExists()
             button("TIDAL VARIATION SEED").assertExists()
             button("TIDAL MATERIAL SOURCE").assertIsSelected()
@@ -152,7 +154,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
             midi = 67, velocity = .42f, seed = 9_007_199_254_740_993L, model = 1))
         button("TIDAL ORIGINAL SOURCE").assertIsSelected()
         assertEquals(.35f, progress("PASSAGE"), 1e-6f)
-        dial("ROOT", (64 - Tidal.MIN_MIDI).toFloat() / (Tidal.MAX_MIDI - Tidal.MIN_MIDI))
+        rootTo(64)
         dial("VELOCITY", .31f)
         dial("PASSAGE", .22f)
         button("TIDAL VARIATION SEED").performTextReplacement(Long.MIN_VALUE.toString())
@@ -236,8 +238,9 @@ class TidalSynthScreenTest : ComposeScreenTest() {
     fun queuedPerformanceEditsMergeAndStayWithTheirOriginalVoice() {
         show(TidalPatch("SAME FRAME", TidalVoice.PAIR, emptyMap(),
             midi = 67, velocity = .42f, seed = 9_007_199_254_740_993L, model = 1))
-        val rootEdit = requireNotNull(button("ROOT").fetchSemanticsNode()
-            .config[SemanticsActions.SetProgress].action)
+        assertRoot(67)
+        val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT OCTAVE DOWN", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         val velocityEdit = requireNotNull(button("VELOCITY").fetchSemanticsNode()
             .config[SemanticsActions.SetProgress].action)
         val materialSource = requireNotNull(button("TIDAL MATERIAL SOURCE").fetchSemanticsNode()
@@ -245,13 +248,13 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle {
             // All callbacks came from one composition. Each must edit the last
             // complete recipe rather than replacing it with its captured patch.
-            assertTrue(rootEdit((64 - Tidal.MIN_MIDI).toFloat() / (Tidal.MAX_MIDI - Tidal.MIN_MIDI)))
+            assertTrue(rootEdit())
             assertTrue(velocityEdit(.31f))
             assertTrue(materialSource())
         }
         pump(16)
         val edited = working()
-        assertEquals(64, edited.midi)
+        assertEquals(55, edited.midi)
         assertEquals(.31f, edited.velocity)
         assertEquals(2, edited.model)
         assertEquals(9_007_199_254_740_993L, edited.seed)
@@ -261,7 +264,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle {
             assertTrue(selectStream())
             // A late PAIR event must not be filed under STREAM or overwrite PAIR.
-            assertTrue(rootEdit((72 - Tidal.MIN_MIDI).toFloat() / (Tidal.MAX_MIDI - Tidal.MIN_MIDI)))
+            assertTrue(rootEdit())
         }
         pump(16)
         assertEquals("STREAM", settings["voice"])
@@ -277,17 +280,18 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         val fields = compose.onAllNodes(hasSetTextAction())
         fields[fields.fetchSemanticsNodes().lastIndex].performTextReplacement("FRAME SAVE")
         pump(16)
-        val rootEdit = requireNotNull(button("ROOT").fetchSemanticsNode()
-            .config[SemanticsActions.SetProgress].action)
+        assertRoot(67)
+        val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT OCTAVE DOWN", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         val save = requireNotNull(button("SAVE").fetchSemanticsNode()
             .config[SemanticsActions.OnClick].action)
         compose.runOnIdle {
-            assertTrue(rootEdit((64 - Tidal.MIN_MIDI).toFloat() / (Tidal.MAX_MIDI - Tidal.MIN_MIDI)))
+            assertTrue(rootEdit())
             assertTrue(save())
         }
         waitFor("same-frame TIDAL save") { UserPresets.read(shelf).isNotEmpty() }
         val saved = UserPresets.read(shelf).single().patch as TidalPatch
-        assertEquals(64, saved.midi)
+        assertEquals(55, saved.midi)
         assertEquals(.42f, saved.velocity)
         assertEquals(Long.MIN_VALUE, saved.seed)
         assertEquals(1, saved.model)
@@ -339,7 +343,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
                 UserPresets.read(root) to UserPresets.bin(root)
             })
             compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 1 }
-            button("ROOT").assertDoesNotExist()
+            assertNull(currentRootOrNull())
             button("PASSAGE").assertDoesNotExist()
             button("TIDAL VARIATION SEED").assertDoesNotExist()
             for (action in listOf("SCRAMBLE", "SAVE PRESET", "SEND TO PAD", "SPREAD ACROSS PADS", "AUDITION")) {
@@ -376,7 +380,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         settings["preset.TIDAL.PAIR"] = "NO LONGER ON SHELF"
         show()
         waitFor("missing TIDAL preset cleared") { !settings.containsKey("preset.TIDAL.PAIR") }
-        button("ROOT").assertExists()
+        currentRoot()
         button("TIDAL MATERIAL SOURCE").assertIsSelected()
         dial("PASSAGE", .28f)
         assertEquals(2, draft()!!.model)
@@ -395,14 +399,14 @@ class TidalSynthScreenTest : ComposeScreenTest() {
             compose.onAllNodesWithText("SAVED TIDAL COULD NOT OPEN. CHOOSE A PRESET.")
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        button("ROOT").assertDoesNotExist()
+        assertNull(currentRootOrNull())
         button("SAVE PRESET").assertIsNotEnabled()
         assertEquals(null, draft())
         assertEquals(source, UserPresets.read(shelf).single().patch)
         val factory = TidalPresets.forVoice(TidalVoice.PAIR).first()
         activate("PRESET ${factory.name}")
         waitFor("factory choice after failed shelf read") { draft()?.model == factory.model }
-        button("ROOT").assertExists()
+        assertRoot(factory.midi)
         assertEquals(factory, draft())
     }
 }

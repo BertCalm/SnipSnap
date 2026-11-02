@@ -487,11 +487,13 @@ object PadSheet {
      * Pass the pad underneath any prints ([KitBuilderModel.unprinted]), not the print: a printed
      * pad's NONE removes the print first, and that pad's door is the one that reads the bin.
      *
-     * THE BIN hides BACK on a row a pad keeps only when this is true (the owner's call, 2026-10-31):
+     * THE BIN hides BACK on a row a pad keeps when this is true (the owner's call, 2026-10-31):
      * BACK copies over the pad's audio and leaves its recipe, so where the pad can undo itself, that
      * undo is the honest way back. Everything else a pad can keep an entry for has no such door on
      * the sheet: a SPLICE, a DE-SAMPLE, a round-robin chain, a treatment only the CLI makes. There
-     * BACK is the only way back in the app, so it stays.
+     * BACK is the only way back in the app, so it stays, unless a print covers the pad: THE BIN also
+     * hides BACK on any row whose file a print's saved source names
+     * ([KitBuilderModel.filesUnderPrints], 2026-11-01), and it comes back once the print is removed.
      */
     fun hasOwnWayBack(pad: KitPad, file: String, binned: Set<String>): Boolean {
         if (file !in binned || (file != pad.sampleFile && pad.velocityLayers.none { it.sampleFile == file })) return false

@@ -318,6 +318,77 @@ class CliTest {
         )
     }
 
+    /**
+     * --overwrite replaces the kit folder whole (2026-11-01). The old kit's bin and versions describe
+     * the old kit's pads: kept, a new pad on a reused file name would find the old kit's audio as its
+     * own original, and its undo would put a stranger's sound back.
+     */
+    @Test
+    fun `chop --overwrite replaces the whole kit folder, its bin and versions with it`() {
+        val wav = writeBreak(File(temp, "whole.wav"))
+        val out = File(temp, "whole-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Whole").first)
+        val kitDir = File(out, "Whole")
+        KitBuilderModel.open(kitDir).apply {
+            treatPad(1, "crushed")
+            clear(2)
+            save()
+        }
+        File(kitDir, "stray.wav").writeBytes(ByteArray(4))
+        val before = KitBuilderModel.open(kitDir)
+        assertTrue(before.binContents().isNotEmpty() && before.takes().isNotEmpty(), "test setup: the old kit has a bin and versions")
+
+        val (code, stdout, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "Whole", "--overwrite")
+        assertEquals(0, code, stderr)
+        assertContains(stdout, "replaced")
+        val after = KitBuilderModel.open(kitDir)
+        assertTrue(after.binContents().isEmpty(), "the old kit's bin went with it")
+        assertTrue(after.takes().isEmpty(), "and its versions")
+        assertTrue(!File(kitDir, "stray.wav").exists(), "and every other file of the old folder")
+        val (undo, _, undoErr) = cli("treat", kitDir.path, "A01", "--undo")
+        assertNotEquals(0, undo, "a new pad finds nothing of the old kit's to put back: $undoErr")
+    }
+
+    @Test
+    fun `chop treats a folder holding only an old bin as a kit to replace`() {
+        val wav = writeBreak(File(temp, "binonly.wav"))
+        val out = File(temp, "binonly-out")
+        val stale = File(File(out, "BinOnly"), ".bin/1_A01_Kick_01.wav").apply {
+            parentFile.mkdirs()
+            writeBytes(ByteArray(4))
+        }
+        val (code, _, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "BinOnly")
+        assertNotEquals(0, code)
+        assertContains(stderr, "already exists")
+        assertTrue(stale.exists(), "a refused chop touches nothing")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BinOnly", "--overwrite").first)
+        assertTrue(!stale.exists(), "the stale bin went with the old folder")
+    }
+
+    @Test
+    fun `chop --overwrite refuses when its input lives inside the kit it would replace`() {
+        val out = File(temp, "inside-out")
+        val kitDir = File(out, "Inside").apply { mkdirs() }
+        val wav = writeBreak(File(kitDir, "source.wav"))
+        val (code, _, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "Inside", "--overwrite")
+        assertNotEquals(0, code)
+        assertContains(stderr, "inside the kit")
+        assertTrue(wav.isFile, "the input is still there")
+    }
+
+    @Test
+    fun `resample refuses to write over its own source kit`() {
+        val wav = writeBreak(File(temp, "self.wav"))
+        val out = File(temp, "self-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Self").first)
+        val kitDir = File(out, "Self")
+        val kitJson = File(kitDir, "kit.json").readBytes()
+        val (code, _, stderr) = cli("resample", kitDir.path, "--name", "Self", "--out", out.path, "--overwrite")
+        assertNotEquals(0, code)
+        assertContains(stderr, "its own source kit")
+        assertTrue(kitJson.contentEquals(File(kitDir, "kit.json").readBytes()), "the source kit is untouched")
+    }
+
     @Test
     fun `export command fans an existing kit folder out to formats`() {
         val wav = writeBreak(File(temp, "exp.wav"))

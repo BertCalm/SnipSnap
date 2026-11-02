@@ -222,6 +222,9 @@ fun PropertiesScreen(
             TapeText(Copy.SETUP_HAPTICS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
 
+        // PAD VELOCITY: how a tap becomes a velocity. Its own composable.
+        PadVelocityGroup(scheme)
+
         // MIDI OUT: HAPTICS' two-up toggle again, then where the notes go. A
         // phone with no MIDI gets the one sentence and no switch - a bevel
         // that could not do anything would be a lie.

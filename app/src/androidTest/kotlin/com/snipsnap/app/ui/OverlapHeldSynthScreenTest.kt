@@ -13,6 +13,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -172,17 +175,18 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
         show(heldSource())
         // Capture callbacks from one composition, then invoke all three without
         // allowing a frame between them. Each edit must read the live patch.
-        val rootAction = button("ROOT").fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+        val rootAction = compose.onNodeWithContentDescription("ROOT UP", useUnmergedTree = true).fetchSemanticsNode()
+            .config[SemanticsActions.OnClick].action!!
         val velocityAction = button("VELOCITY").fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
         val saveAction = button("SAVE PRESET").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         compose.runOnIdle {
-            assertTrue(rootAction((64 - Overlap.MIN_MIDI).toFloat() / (Overlap.MAX_MIDI - Overlap.MIN_MIDI)))
+            assertTrue(rootAction())
             assertTrue(velocityAction(.31f))
             assertTrue(saveAction())
         }
         pump(16)
         val saved = finishSave("HELD OVERLAP")
-        assertEquals(64, saved.midi)
+        assertEquals(61, saved.midi)
         assertEquals(.31f, saved.velocity)
         assertEquals(OverlapPlayback.HELD, saved.playback)
         assertEquals(OverlapHeld.VERSION, saved.heldVersion)
@@ -220,7 +224,8 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
         waitForRender("held SPREAD panel") {
             compose.onAllNodes(hasContentDescription("FEWER PADS")).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("ROOT ${Scales.nameOf(copy.midi)}").assertExists()
+        // The synth screen's own stepper readout stays composed beneath the panel.
+        compose.onAllNodesWithText("ROOT ${Scales.nameOf(copy.midi)}").assertCountEquals(2)
         repeat(12) { activate("FEWER PADS") } // Four slots, with the existing A01 left intact.
         activate("SPREAD")
         waitForRender("held SPREAD finite pads") { KitStore.load(entry!!.dir).pad(4) != null }

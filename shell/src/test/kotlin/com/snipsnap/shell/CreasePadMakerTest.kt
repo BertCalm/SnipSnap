@@ -250,7 +250,14 @@ class CreasePadMakerTest {
         val rendered = CreasePadMaker.zoneMidis(legacy).map { CreasePadMaker.renderLayers(legacy, it) }
         CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
         val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
-        assertEquals(expected, actual, "no --touch must retain every original package byte")
+        assertEquals(expected, actual, "no --touch must retain the pinned package bytes")
+        val sidecar = Json.parse(File(dest, "Crease Paper Keys.instrument.json").readText()).obj()
+        assertEquals(JsonValue.Bool(false), sidecar.getValue("explicitNoteOn"))
+        val previousBytes = Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)
+        val previousHash = MessageDigest.getInstance("SHA-256").digest(previousBytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", previousHash,
+            "only the explicit note-on field may differ from the previous sidecar")
     }
 
     @Test

@@ -3,8 +3,8 @@
 Murmur is an original pitched FM/formant engine with six musical roles: BASS,
 KEY, PLUCK, LEAD, CHOIR and METAL. This implementation follows the supplied
 [engineering proposal](MURMUR_SPEC.md). The owner approved all six dry voices after
-the CHOIR air trim; the accepted DSP is frozen at `bb2b9c9a`. The factory bank now
-contains 36 presets, including 24 additions that await owner listening.
+the CHOIR air trim; the accepted DSP is frozen at `bb2b9c9a`. The app bank contains the original 36 presets plus six listening-selected settings.
+The original 24 additions retain their separate pending listening status.
 
 The panel exposes MOUTH, EDGE, BREATH, MOTION, BODY and HOLD. Requested root
 (MIDI 36–96) and excitation velocity (0–1) are separate saved patch fields.
@@ -41,7 +41,9 @@ limitation even when the requested musical root remains intact.
 
 `MurmurPatch` saves the render model, routing, four ratios, spectral-target roster,
 trajectory, direction, reference duration, amplitude-envelope values, macros, root
-and velocity. New patches and presets use model 2, the six-voice identity revision.
+and velocity. New patches use model 3, which retains stronger saved KEY formant targets and a
+beat-period loop plan for low CHOIR HOLD notes. The original 36 presets retain
+model 2; the six listening-selected presets save model 3 explicitly.
 Saved configurations without a `model` field decode as model 1 so earlier recipes
 retain their original rendering behavior. JSON edits and `PadRecipe` replay retain
 the selected model and complete configuration. Seeds are derived with `Dsp.seedFor`;
@@ -74,15 +76,16 @@ remain a separate handoff check.
 
 ## Factory presets and voice comparisons
 
-The audition page opens on the 36-preset bank with this voice allocation:
+The original audition page retains its 36-preset bank. The app also exposes six
+selected settings, for this complete 42-preset allocation:
 
 | Voice | Presets | Intended role |
 |---|---:|---|
 | BASS | 8 | Rounded talking bass |
-| KEY | 4 | Vocal color behind a key strike |
+| KEY | 8 | Vocal color behind a key strike |
 | PLUCK | 4 | Short articulated spectral gesture |
 | LEAD | 8 | Nasal/open expressive tone |
-| CHOIR | 6 | Restrained humming sustain |
+| CHOIR | 8 | Restrained humming sustain |
 | METAL | 6 | FM bite softened by mouth shape |
 
 The original twelve preset recipes remain, with 24 new recipes completing the bank.
@@ -139,3 +142,18 @@ The kit task writes `testkit/SnipSnap Murmur Kit/`, including the native XPM,
 sixteen mono 24-bit WAVs and the recipe-bearing `kit.json` sidecar. Generated audio
 stays out of Git. Neither hardware reconstruction nor speech, text input,
 automatic chords, stereo or live polyphony is included.
+
+## Selected settings and delivery
+
+The four KEY MOTION settings at C4 and lower-air CHOIR at C2/C3 are ordinary
+factory presets. The CHOIR refinement uses BREATH .10; it changes neither the
+other macros nor the longer held source. The original bank and starter remain
+available. FRESH TAPE adds MURMUR SELECTED, with a six-note key run, the four
+selected KEY cases, four voice contrasts and the two selected CHOIR cases.
+Both CHOIR pads play once with an 8 ms saved terminal fade.
+
+`./gradlew --no-daemon :synth:generateMurmurSelectedKit` exports the same starter
+as MPC 3 and MPC 2, sharing sixteen WAVs and editable recipes. See the
+[delivery record](../murmur-luthier/selected-delivery-2026-11-01.md) for layout,
+listening scope, reproduction and validation boundaries. Physical phone/MPC
+playback remains an owner check.

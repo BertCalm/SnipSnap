@@ -18,6 +18,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
@@ -46,8 +47,10 @@ import kotlin.math.sin
  * (NONE over a card treatment, `PadSheet.hasOwnWayBack`), the row has no BACK: BACK would copy the
  * original over the pad's audio, leave its treatment on the card, and use up the original that undo
  * needs. A kept row whose pad has no such door (a SPLICE) keeps BACK, its only way back in the app,
- * and so does a row on the clock. The rows sit in a plain `verticalScroll` column, so every row is in
- * the semantics tree without scrolling.
+ * and so does a row on the clock. And no row whose file a print's saved source names has BACK
+ * (`KitBuilderModel.filesUnderPrints`): BACK would overwrite a file REMOVE restores and checks by
+ * hash, and the print could never come off. The rows sit in a plain `verticalScroll` column, so
+ * every row is in the semantics tree without scrolling.
  *
  * Shown with [LocalReduceMotion] on, as `ComposeScreenTest`'s KDoc asks.
  */
@@ -186,5 +189,34 @@ class TakesBinScreenTest : ComposeScreenTest() {
         waitFor("the BACK on the row on the clock", timeoutMillis = 60_000) { nodes("BRING BACK HIT2.WAV").isNotEmpty() }
         assertTrue("the spliced pad's kept row keeps BACK, its only way back", nodes("BRING BACK HIT3.WAV").isNotEmpty())
         assertTrue("the treated pad's kept row has no BACK: its NONE gives the original back", nodes("BRING BACK HIT1.WAV").isEmpty())
+    }
+
+    @Test
+    fun no_row_under_a_print_has_back() {
+        val cache = InstrumentationRegistry.getInstrumentation().targetContext.cacheDir
+        val dir = File(cache, "takes-bin-print-test-${System.nanoTime()}").apply { mkdirs() }
+        folders += dir
+        hit(dir, "hit1.wav", 240.0)
+        hit(dir, "hit2.wav", 180.0)
+        val pads = listOf(
+            KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.SNARE),
+            KitPad(slot = 2, sampleFile = "hit2.wav", drumClass = DrumClass.KICK),
+        )
+        KitStore.save(Kit(name = "TAKES BIN PRINT TEST", pads = pads, tempoBpm = 92f), dir)
+        val m = KitBuilderModel.open(dir)
+        m.treatPad(1, "crushed") // the first original: on the clock once a newer one sits on it
+        m.treatPad(1, "washed", amount = .6f) // the newest original, kept for A01
+        BoardSheet.apply(m, 1, .7f) // a board over the treated pad: both rows sit under its saved source
+        m.clear(2) // an untreated pad ejected: a row on the clock with nothing over it
+        m.save()
+        val fresh = KitBuilderModel.open(dir)
+        assertEquals("test setup: two rows under the board's source", 2, fresh.binHolds().count { it.entry.originalName == "hit1.wav" })
+        assertTrue("test setup: the board's source names hit1.wav", "hit1.wav" in fresh.filesUnderPrints())
+
+        show(KitShelf.Entry(dir, KitStore.load(dir)), "◄ PADS")
+        val kept = Copy.binKeptFor(PadBanks.tag(1))
+        waitFor("the kept row's \"$kept\"", timeoutMillis = 60_000) { hasText(kept) }
+        waitFor("the BACK on the row with nothing over it", timeoutMillis = 60_000) { nodes("BRING BACK HIT2.WAV").isNotEmpty() }
+        assertTrue("no row under the board has BACK, the older one on the clock included", nodes("BRING BACK HIT1.WAV").isEmpty())
     }
 }

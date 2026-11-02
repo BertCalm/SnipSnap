@@ -83,7 +83,7 @@ The output is the same shape every time, at whichever depth Josh asked for:
    simulated. For gear, DISTIL each reference to one mechanism sentence (gear-modeling.md).
 3. **Sibling check.** Name the two nearest engines in `engine-inventory.md` and the one
    thing they cannot do. If they can do it, propose a voice or preset family instead and say
-   so. The roster is 66 deep and six of the last ten share one mould.
+   so. The roster is 84 deep (recount first: references/engine-inventory.md says how) and most of the newest share one mould.
 4. **Three directions, one strong.** Apply a different operator to each (JUXTAPOSE, STACK,
    SPLICE, COUPLE, MUTATE, INVERT, PORT, DISTIL, CROSS). Score each in one line on gesture
    clarity, novelty against the roster, risk, cost. Say why Strong wins.
@@ -190,7 +190,7 @@ three directions he leans toward, what he loved or hated last time.
 ## Reference map
 
 - [SnipSnap conventions](references/snipsnap-conventions.md): the contract, the checklist, the probes, the discipline, the known spec drift. Always.
-- [Engine inventory](references/engine-inventory.md): 66 engines by family with macros; heavy and thin areas. CONCEIVE (sibling check), GAP SCAN, REVIEW.
+- [Engine inventory](references/engine-inventory.md): 84 engines by family with macros, the export and pedal coverage, heavy and thin areas. CONCEIVE (sibling check), GAP SCAN, REVIEW.
 - [Omnibus mine](references/omnibus-mine.md): the XOceanus map, reusable primitives, coupling vocabulary, doctrines, ports done. MINE, GAP SCAN, CONCEIVE.
 - [DSP catalog](references/dsp-catalog.md): techniques by role with "breaks when", costs, what SnipSnap has, review heuristics, sources. CONCEIVE, REVIEW, MINE.
 - [Combination grammar](references/combination-grammar.md): the operators, the idea-to-DSP translation table, the three-directions discipline, a worked example. CONCEIVE.

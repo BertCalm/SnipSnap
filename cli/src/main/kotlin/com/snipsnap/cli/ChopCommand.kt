@@ -291,8 +291,17 @@ object ChopCommand {
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outRoot = File(opts["--out"] ?: "snipsnap-out")
         val kitDir = File(outRoot, name)
-        if (File(kitDir, "kit.json").exists() && !opts.has("--overwrite")) {
-            throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
+        if (kitDir.exists()) {
+            if (!opts.has("--overwrite")) throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
+            // --overwrite replaces the kit folder whole (2026-11-01), as sculpt and dissect do. The
+            // old kit's bin and versions describe the old kit's pads: left behind, a new pad on a
+            // reused file name would find the old kit's audio as its own original, and its undo
+            // would put a stranger's sound back. The input must not be inside what goes.
+            if (file.canonicalFile.toPath().startsWith(kitDir.canonicalFile.toPath())) {
+                throw CliError("the input is inside the kit it would replace: $file (move it out first)")
+            }
+            if (!kitDir.deleteRecursively()) throw CliError("could not clear $kitDir to replace it")
+            out.println("replaced $kitDir: the old kit, its bin and its versions are gone")
         }
 
         // A fitted kit *is* at the target tempo now - stems and metadata agree.

@@ -245,7 +245,7 @@ object ApsisAuditionGenerator {
         add(Case("passage_default", "Revoiced / bodies emerge", "start",
             "Model 2: less steady-root masking, distinct body colors, and shorter upper-mode memory. Same orbit, C4 and velocity as Original. Judge whether the motion now earns its place.",
             comparison = "before_after", individualMatch = true))
-        for ((index, patch) in ApsisPresets.all().withIndex()) add(Case(
+        for ((index, patch) in ApsisPresets.forVoice(ApsisVoice.PASSAGE).withIndex()) add(Case(
             "preset_${index + 1}", patch.name, "voicings", when (index) {
                 0 -> "One body on a slow, stretched orbit: a sparse encounter and a long interval before its return."
                 1 -> "One close body passes quickly. Compare the attack spacing and color with Slow Apse, at the same C4."

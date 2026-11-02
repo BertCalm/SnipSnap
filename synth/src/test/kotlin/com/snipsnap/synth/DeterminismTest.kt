@@ -12,10 +12,61 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `APSIS saved populations reproduce finite and held material after cold geometry preparation`() {
+        for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (hold in listOf(0f, 1f)) {
+            val patch = ApsisPatch("Population canary", voice,
+                Apsis.defaults(voice) + ("HOLD" to hold), midi = 55, velocity = .61f,
+                config = ApsisConfig(3, Int.MIN_VALUE))
+            val original = patch.render().samples
+            ApsisPopulation.clearPreparationCache()
+            assertContentEquals(original, PadRecipe.fromJsonText(PadRecipe(patch).toJsonText()).render().samples)
+        }
+    }
+
+    // TIDE, SNAP and GYRE had no canary of their own (docs/ENGINE_STANDARD_SCAN_2026_11.md).
+    // Each renders twice from the same recipe, once through a JSON round trip, and must
+    // match byte for byte: a seed taken from the clock or a shared cache would fail here.
+    @Test fun `TIDE renders the same take and the same recipe byte for byte`() {
+        for (voice in TideVoice.entries) {
+            val wander = Tide.defaults(voice).let { d -> if ("WANDER" in d) d + ("WANDER" to .8f) else d }
+            assertContentEquals(Tide.render(voice, wander, take = 1).samples, Tide.render(voice, wander, take = 1).samples, "$voice take 1")
+            val patch = TidePatch("Canary", voice, wander)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice recipe")
+        }
+    }
+
+    @Test fun `SNAP replays a saved table and a drawn envelope byte for byte`() {
+        val table = IntArray(Snap.TABLE_SIZE) { (it * 37 + 11) % 256 }
+        val envelope = IntArray(Draw.ENVELOPE_SIZE) { if (it == 0) 0 else 255 - it * 255 / Draw.ENVELOPE_SIZE }
+        for (voice in SnapVoice.entries) {
+            val patch = SnapPatch("Canary", voice, Snap.defaults(voice), table, envelope.takeIf { voice == SnapVoice.DRAWN })
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice twice")
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice recipe")
+        }
+    }
+
+    @Test fun `GYRE renders every voice and its HOLD top byte for byte`() {
+        for (voice in GyreVoice.entries) {
+            val patch = GyrePatch("Canary", voice, Gyre.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+        val held = GyrePatch("Held canary", GyreVoice.entries.first(), Gyre.defaults(GyreVoice.entries.first()) + ("HOLD" to 1f))
+        assertContentEquals(held.render().samples, held.render().samples, "HOLD top")
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
+    fun `ACCORD retains its accepted voices profiles and saved mechanical history`() {
+        for (reference in AccordPresets.all()) {
+            val patch = reference.copy(sourceSeconds = Accord.MIN_SOURCE_SECONDS)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, patch.name)
         }
     }
 
@@ -27,6 +78,14 @@ class DeterminismTest {
             val original = patch.render()
             Otis.clearCache()
             assertContentEquals(original.samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
+    fun `LORENTZ collision recipes regenerate both voices and finite HOLD exactly`() {
+        for (voice in LorentzVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = LorentzPatch("Collision canary", voice, Lorentz.defaults(voice) + ("HOLD" to hold), velocity = .67f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
         }
     }
 
@@ -255,6 +314,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Held recall canary", voice,
+                Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
+                midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `MERIDIAN regenerates the saved note velocity and contact noise byte for byte`() {
         val patch = MeridianPatch("Swing canary", MeridianVoice.SWEEP,
             mapOf("LATITUDE" to .8f, "MEMORY" to .6f), midi = 51, velocity = .7f, seedContext = 41)
@@ -263,7 +333,7 @@ class DeterminismTest {
 
     @Test
     fun `RIME models preserve complete recipe determinism through velocity and body changes`() {
-        for (model in 1..Rime.MODEL_VERSION) for (voice in RimeVoice.entries) {
+        for (model in 1..Rime.MODEL_VERSION) for (voice in if (model < 6) Rime.LEGACY_VOICES else RimeVoice.entries) {
             val patch = RimePatch("Rime canary", voice, Rime.defaults(voice, model) + ("BODY" to .8f),
                 midi = 53, velocity = .6f, gateSeconds = .25f, seed = 2718, model = model)
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)

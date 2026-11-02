@@ -54,6 +54,7 @@ object Cli {
         |                        band, arrange + mixdown, inserts - one song
         |                        in, a release folder out; every skip named
         |  classify <wav...>     print what the classifier hears in each file
+        |  kitfrom <wav>         KIT FROM ANYTHING: one sound into sixteen pads in a key and a genre
         |  crate <root>          the whole library as a collection: cached
         |                        pad index + class census (--dupes finds
         |                        same-sound files; --pick KICK [--top N]
@@ -374,7 +375,8 @@ object Cli {
         |  --art STYLE       the expansion/xpn browser tile's style (default
         |                    waveform; also rings, grid, slices)
         |  --no-art          skip the browser tile
-        |  --overwrite       replace same-named output
+        |  --overwrite       replace the same-named kit folder whole (its bin
+        |                    and versions go too)
         |
         |export options: --export LIST, --out DIR, --overwrite, --preview,
         |                --art STYLE, --no-art (as above); --no-wear exports
@@ -401,6 +403,7 @@ object Cli {
                 "dig" -> DigCommand.run(args.drop(1), out)
                 "beat" -> BeatCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
+                "kitfrom" -> KitFromCommand.run(args.drop(1), out)
                 "similar" -> SimilarCommand.run(args.drop(1), out)
                 "crate" -> CrateCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)

@@ -241,3 +241,171 @@ SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 Two real captures of yours (a tonal one and a drum-like one, a second or less, 44.1 kHz), the
 one genre to build first, and whether the four bass notes should be root-third-fifth-octave as
 here or a walking shape (root, flat seventh, octave, fifth) for boom bap.
+
+## As built (R0 and R1, 2026-11-01)
+
+`KitFromAnything` (`synth/src/main/kotlin/com/snipsnap/synth/KitFromAnything.kt`), its test,
+`ArrangedPad.muteGroup`, and the CLI verb `kitfrom <wav> [--key] [--genre] [--out] [--name]`.
+Python prototype numbers above; what follows was measured in Kotlin against the real
+classifier, on the same four stand-in sources (the Python prototype's WAVs) × three genres.
+
+**What changed against the design, and why (each one a number the Kotlin run gave):**
+
+1. *Which cycle a source yields is no longer the classifier's TONAL verdict.* `classifyBright`
+   has no TONAL arm, so a nylon pluck at A3 is PERC to the classifier and was forced into a
+   46 ms excerpt holding ten periods; sung at A1 it read 550 Hz (ten times the note). Now the
+   classifier vetoes only the noise classes (hats, clap) and the pitch detector decides: a
+   period at confidence 0.5 or better is a note (the siren's base, the provenance says
+   "pitched"); one at 0.3 or better still shapes the cycle, because any excerpt with a period
+   in it (a snare's 180 Hz body) reads as a harmonic of whatever it is sung at.
+2. *The source's noise is frozen, not stretched.* A short-window stretch walking along the
+   arrival followed its decay; every tile of that noise started loud and died, the open hat
+   read as a 70 ms closed hat and the ride decayed in 110 ms. The noise is now one 1024-point
+   window at the arrival with new seeded phases every frame (`Stretch.freeze`'s idea),
+   stationary by construction, then read faster until half its power is above 2 kHz.
+3. *The colour pressed back onto a note is the envelope, smoothed over a kilohertz.* Five-bin
+   smoothing kept a pitched source's harmonic lines, which carved the new note's own
+   harmonics out: a tone at A3 read 440 Hz. Formants survive the wider smoothing; lines do not.
+4. *The snare has a gentle 7 kHz shelf and more body* (0.8 noise, 0.5 body): the frozen noise
+   is brighter than the Python one, and the techno snare read as an open hat without it.
+
+**Measured, Kotlin, twelve kits, 192 pads, every pad gated:** 183 pass, 8 fail, 1 unmeasured.
+
+| Source | Gates failed |
+|---|---|
+| pluck (pitched 219.8 Hz) | none, in all three genres |
+| bark (forced) | none, in all three genres |
+| snare (forced) | TONE_ROOT and TONE_THIRD in every genre (read 116 to 118 cents sharp at confidence 0.83: the noise-dominated cycle's fundamental is weak, the case the tonal blend exists for); BASS_ROOT unmeasured in techno (no pitch read on a 160 ms note) |
+| sine-sweep kick (forced) | HAT_CLOSED and HAT_OPEN in boom bap only (PERC: at that genre's 5× read speed the sweep's noise does not reach 12 kHz; house and techno read faster and pass) |
+
+The sine sweep's snare and claps, the Python prototype's fallback set, pass in Kotlin: the
+frozen noise is brighter and flatter than the walked stretch was. The test suite asserts the
+agreements above on a pluck preset, a THUMP snare and a formant burst in every genre, ride and
+crash on four sources, the notes and the siren on the pitched source, and that a pure sine
+sweep keeps every pad and names what it failed.
+
+**After the review of PR 826** (each verified before being taken): the fast read is band-limited
+through the repository's windowed-sinc `Resampler`, so nothing folds into a drum's band; the
+whitening runs once per source and every slot freezes its noise from that one window; thirds
+are chosen by semitone interval, not scale index (a pentatonic's third entry is its fourth;
+CHROMATIC takes the minor third); every pad ends in the house 4 ms fade before it is measured
+or written; non-finite samples are refused in words; the pitch gates read a pad faster or
+slower by a power of two so C1 and a 1760 Hz siren both sit inside `Pitch.detect`'s 40 to
+1200 Hz, with a low-key and a high-siren test; and the CLI bounds the read to the 30 s limit
+before decoding, through `WavReader.readCapped`.
+
+**R3, the blend (built 2026-11-01).** A pad whose purist render fails its gate is blended:
+the purist stays, never under half, and a partner joins at `BLEND_SHARE` (0.5: `1 − confidence`
+of a failed gate, capped). A drum's partner is `Desample.nearest` on the purist render itself,
+among the voices kindred to the slot's tag, its distance reported and `far` said when it is
+past `Desample.FAR`; a note's partner is a resonator at the note struck by the pad's own head
+(the RING idea from the QUARRY brief, three modes at 1, 2 and 3); the siren's is a band-limited
+pulse read along the same trajectory. Both halves are peak-matched before mixing so the share is
+a share of level, the pad takes the longer length under the LOOP line, and the blend is gated
+again. The provenance carries `made = blend`, `synth`, `synthShare`, `synthDistance`, the purist
+`gate` and `gateDetail` kept on record, and `gateAfterBlend`. An unmeasured pad is not blended:
+nothing is known to be wrong with it. QUARRY is not yet an engine, so the tonal partner is the
+RING bridge the brief's R2 named. Tests: every failed pad and only those are blended, at exactly
+half, drum partners name a THUMP or SKIN voice with a distance; blending never fails more gates
+than the purist did; a RING partner lands the root on a noise-over-180 Hz source; blends are
+deterministic. Measured and kept as a limit: the sine sweep's blended hats still read SNARE to
+the classifier with the sweep's own noise held at half, and the pad says so in
+`gateAfterBlend`; the cap is the rule, and a louder partner would have been a replacement.
+
+**R0, the recipe (built 2026-11-01).** A derived pad is neither a synth patch nor a captured
+pad's chain; its recipe is the third shape: `{"kitFromAnything": {version, slot, genre, root,
+scale, sourceFile, sourceHash}}`. The kit folder keeps the source as `kitfrom-source.wav`
+beside `kit.json`, and the kit is made from that copy read back, so the recipe's hash is the
+hash of the file in the folder. `KitFromAnything.rerender(recipe, source)` rebuilds the pad,
+blend included, bit for bit (the assembler is deterministic from these alone), and refuses in
+words a source whose hash is not the recipe's. `KitFromAnything.check(dir)` rebuilds every such
+pad in a kit and compares the bytes the house writer would produce with the WAV on disk;
+`kitfrom --check <kit-dir>` prints it pad by pad and exits 1 on a difference. The shell's
+replay door refuses the recipe by name (it belongs to its own source) and `KitDiff` names it.
+QUARRY, when it ships as an engine, will need the same kept-source arrangement; the decision
+is made here once. Tests: JSON round-trip and a wrong shape named; every pad of a sweep kit
+and a pluck kit rebuilt bit for bit, blends included, and no recipe without a kept source; a
+swapped source refused; the CLI keeps the source, gives every pad a recipe, `--check` reports
+sixteen of sixteen identical, and a halved source is caught.
+
+**Still owed:** real capture fixtures, and the listen. Nothing has been heard.
+
+## As built (R4, 2026-11-01)
+
+**What.** A KIT FROM ANYTHING card on the Android pad sheet, beside PAD FROM ANYTHING. The
+source is the pad's own audio, read exactly as MAKE PAD reads it; a fresh capture reaches the
+card by being captured to a pad first (no mic path in this round). The card has the key as
+root and scale chips (the KIT screen's KEY panel layout; it opens on the open kit's key, else
+A minor), three genre chips, and MAKE KIT ▸ <GENRE>. A pad under 50 ms or over 30 s is
+refused with a toast before any work, using the assembler's own limits.
+
+**Where.**
+- `shell/.../KitMaker.kt` (twin of `PadMaker`): the genre list, the default key, `kitName`
+  (MPC-safe through `Names.sanitizeStem`) and `refusal(seconds)`; `KitMakerTest` beside it.
+- `app/.../ui/KitFromCard.kt`: the card, its own composable with explicit parameters. The pad
+  sheet calls it in one line. It is not inlined because SynthScreen met the 256-register dex
+  limit on an inline Column.
+- `app/.../KitShelf.kt` `landKitFrom`: the CLI's flow on the shelf. A fresh name, the source
+  written as `kitfrom-source.wav` and read back, `assemble(..., sourceFile)`,
+  `assembleArranged` with `Balance.apply`, the key and the genre's tempo. The folder is deleted
+  if the assembler throws.
+- `App.kt` `kitFrom`: [texture]'s busy-then-land shape. It leaves the kit on the shelf and
+  puts up the result sheet; it does not open the kit by itself.
+- `app/.../ui/KitFromResultOverlay.kt`: full screen, as SPREAD's panel is. The kit's name, key
+  and tempo; the gate table; one line per blended pad naming its partner, share, distance and
+  the gate after; the count; OPEN KIT (the shelf's `landKit` route) and a back gesture that
+  only closes.
+- `KitFromAnything.describe(result, name, key, genre)` returns a `Report` (`header`,
+  `tableHeader`, `rows`, `rowGates`, `blends`, `summary`, and `lines` in print order). The CLI
+  prints from it and the overlay draws the same strings, so the two cannot disagree.
+
+**Status.** Proposed until the build and the on-device look are run: this round's code is
+written against the CLI's flow and the `PadMaker` precedent, and what compiles and what the
+tests assert is recorded in the PR. Not heard, and not seen on a device.
+
+## As built (desktop round, 2026-11-01): an octave the detector cannot see, and a warning that was wrong
+
+**The octave.** Six stand-in sources from the Sorting Pot one-shots were run through `kitfrom`
+in A minor (a scream, a bottle hit, a phaser kalimba, a synth brass bass in all three genres).
+Five passed every gate with no blend. The bottle hit failed every pitched pad (the siren and
+all eight notes) by +1200 to +1203 cents at confidence 0.86 to 1.00, and only the RING blend
+brought them in. Measured on the real WAV: the source's spectrum peaks at 2040 to 2056 Hz;
+`Pitch.detect` returned 1026 Hz at three window lengths; the cycle `averagedPeriods` produced
+had its two halves correlating at 0.9996, and its first harmonic was 16.8 against 1010 in the
+second. The cause is `Pitch.MAX_HZ` = 1200: at one true period the autocorrelation was 0.83,
+under the detector's 0.85-of-maximum rule, so it took the lag of two periods, and a table of
+two periods read at 55 Hz sounds at 110 Hz.
+
+The fix is in the analysis, so it holds for every pad at once. `subPeriodFactor` asks whether
+the averaged cycle is k equal parts (k = 4, 3, 2) that all correlate with the first at 0.98 or
+better (`SUB_PERIOD_MATCH`); `subPeriod` keeps the harmonics at multiples of k and inverts the
+transform, which is one period exactly and still wraps. The note the analysis reports is the
+detector's reading times k, so the provenance and the siren's base say where the source really
+sounds: the bottle is now 2053.0 Hz, and its siren starts about an octave above where the
+other sources' sirens start. That is a consequence of "the siren starts where the source
+sounds", and the siren's place per genre is still Josh's decision.
+
+Measured after the fix: the bottle kit passes all sixteen gates with no blend (siren worst 3
+cents, bass and tones within 13 cents, confidence 0.86 or better), and `kitfrom --check`
+rebuilds all sixteen pads bit for bit. The five other kits, made before the fix, also still
+rebuild bit for bit under the new code, so the fold changes nothing for a source the detector
+reads correctly. The test is `a source above the detector's range yields one period, not two,
+so the table sounds at the note asked` (`KitFromAnythingTest`, 23 of 23 pass); without the
+fold it fails on the cycle's first harmonic (1.289 against 717.4, measured).
+
+**Known limit.** A source whose true waveform is itself k identical halves to 0.98 would be
+folded. That needs a cycle with only even harmonics, which is rare in a recorded hit, and the
+gate would still read the resulting pad against the note asked.
+
+**The hat warning.** `Preflight` warned "open and closed hats don't share a choke group" on
+every kit made by `kitfrom`, because the ride and the crash are tagged open hat for colour and
+balance and sit in mute group 0 by the `ArrangedPad.muteGroup` override, so the rule saw open
+hats outside the hats' group. The kit and the exported programs were right (verified in the
+exported `.xpm`: A03 and A04 in mute group 1, everything else 0). The rule now reads: every
+closed hat in one non-zero group and at least one open hat in it is OK, naming the open hats
+that ring free by choice ("hats share choke group 1; 6, 7 ring free by choice"); any open hat
+in a different non-zero group, or no shared group at all, still warns. `PreflightTest` 11 of
+11 pass, including one test for the ride and crash and one for the open hat in group 2.
+
+Not heard. The reels are measurements made audible, not judgements: the first six were sent
+to Josh's phone on 2026-11-01 and nothing has come back yet.

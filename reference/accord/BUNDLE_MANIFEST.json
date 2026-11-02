@@ -1,0 +1,193 @@
+{
+  "bundle": "Accord SnipSnap engineering handoff",
+  "version": "1.0",
+  "date": "2026-10-31",
+  "repository_baseline": "d7c2379c16520df2679457679844b56d32777712",
+  "files": [
+    {
+      "path": "Accord-Engine-SnipSnap-Engineering-Spec.md",
+      "bytes": 46521,
+      "sha256": "38fa169e81a8bf1346e18f0e9973306de6e7fc470764d9406a90a1a5c5e0c1b3"
+    },
+    {
+      "path": "README-references.md",
+      "bytes": 5509,
+      "sha256": "184980cdab846bcd2dd684ccba04ad66bd65c4576eb740ba976cf3872c71c72d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2786,
+      "sha256": "59f1e528a7c1d00e9959bbe965312d848c5a92f80e5297419960892c4a23335a"
+    },
+    {
+      "path": "REFERENCE_QA.json",
+      "bytes": 3125,
+      "sha256": "5857dd7d108b57d54ecbfa18ad14fe29c23b1f61ef909b01cdb14a952e0ea11c"
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "bytes": 14305,
+      "sha256": "c298afde371c886d793259d8cd649804b200d7d59f4e90a8b78ccd1ebff3e94b"
+    },
+    {
+      "path": "approved-reference-data.json",
+      "bytes": 7722,
+      "sha256": "335988a14e835bf5bfdbf0f4e3a6d863e11f8edc4fc30d8d1afb05637bf543f9"
+    },
+    {
+      "path": "evidence/acoustic-audit.md",
+      "bytes": 22742,
+      "sha256": "dac8c053f95b24f78154250b7ed73009ffeaf968d640b462ee8c4bb5c70aa38e"
+    },
+    {
+      "path": "evidence/handoff-review.md",
+      "bytes": 11701,
+      "sha256": "431431da0b9560f808c04d21994bcb594df694b903b96a0ba674595579fda545"
+    },
+    {
+      "path": "evidence/mechanics-audit.md",
+      "bytes": 32167,
+      "sha256": "304d7a785bbc299363a669303b17e1fbfa803d46d0a096c68cb7e203062e617f"
+    },
+    {
+      "path": "evidence/repository-audit.md",
+      "bytes": 14525,
+      "sha256": "2a064ec084992fd80361cb17f6a22e388d60ea231c78fec07b457079e2bf8427"
+    },
+    {
+      "path": "reference/mechanics/gathered-events.json",
+      "bytes": 238405,
+      "sha256": "db9031b53412969b70dde12eedf952b73606c3241ef8bfd7b819a183463a4ce4"
+    },
+    {
+      "path": "reference/mechanics/gathered.npz",
+      "bytes": 1515242,
+      "sha256": "0d21db799d14bd061a927dd5149d0de631d6858a44091fe2012ab859b9830fd0"
+    },
+    {
+      "path": "reference/mechanics/mechanics.py",
+      "bytes": 2688,
+      "sha256": "b4c7e36e7e2c44b38f72774075d818741ee5ac75732c4e64c96ab673d9685590"
+    },
+    {
+      "path": "reference/mechanics/probes.py",
+      "bytes": 9110,
+      "sha256": "16bf87d40f0f801266540e727ed3a2a20eb95ac7ba1d13e342c2bcd4d37f1cbb"
+    },
+    {
+      "path": "reference/mechanics/report.json",
+      "bytes": 5197,
+      "sha256": "80c682a4226ee3205f945b0accbe96799b0a3302682c426dba385d8495f680db"
+    },
+    {
+      "path": "reference/mechanics/snipkit.py",
+      "bytes": 13350,
+      "sha256": "b9dad644af4adf86d4c2fe39b169abcce083d854506760cf795e6013616ddf68"
+    },
+    {
+      "path": "reference/mechanics/validate.py",
+      "bytes": 8906,
+      "sha256": "1e20d21b9f857f4dc34cce0d2ca15b7e34ffa6cd655f2f7e2ab4c42de1409602"
+    },
+    {
+      "path": "reference/musicality/brush.wav",
+      "bytes": 785024,
+      "sha256": "54c9c770afce11b52782e4e04b7ef72fbb78a466604f8e699ab79df2f754724b"
+    },
+    {
+      "path": "reference/musicality/render.py",
+      "bytes": 9602,
+      "sha256": "386a04f0cba13ba53ed16266a24b7e2dcb3ab5bbbb82b83157f0eb62b9b732f2"
+    },
+    {
+      "path": "reference/musicality/report.json",
+      "bytes": 11641,
+      "sha256": "58bfeffd7ec1c8e977ee39a1beb58e87cb04d75c6406a79c62bf111bea62b5e5"
+    },
+    {
+      "path": "reference/musicality/tine.wav",
+      "bytes": 785024,
+      "sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951"
+    },
+    {
+      "path": "reference/musicality/wood.wav",
+      "bytes": 785024,
+      "sha256": "4a57bb0dd678322452229300bbeb9c5e46c6bc86af6ead995f3626b483a0bd45"
+    },
+    {
+      "path": "reference/refinement/controls.py",
+      "bytes": 9571,
+      "sha256": "f5b97086ab65caa1613fd68e1508499f35293ddfe8b4a70fb407b6762df16eec"
+    },
+    {
+      "path": "reference/refinement/controls_report.json",
+      "bytes": 5226,
+      "sha256": "2ece3c891f9d777fdd90b0452e6b246493102bf8f3475cb070ab5e24576bb496"
+    },
+    {
+      "path": "reference/refinement/pitch_study.json",
+      "bytes": 227443,
+      "sha256": "5ac0a14b6560152c413c3d38a40ce954b1c4b7951185a472d0545cd6a238c0ae"
+    },
+    {
+      "path": "reference/refinement/qa-results.json",
+      "bytes": 19110,
+      "sha256": "25e082f1ecfebe336ccd24dd22b89e977d3e7ae7a676deec3568f641ac3aed0f"
+    },
+    {
+      "path": "reference/refinement/render.py",
+      "bytes": 8923,
+      "sha256": "54129929ee55de714fb9c8fc612ec4472d278583fbc13e3f9a780c9635f93957"
+    },
+    {
+      "path": "reference/refinement/report.json",
+      "bytes": 139245,
+      "sha256": "1e4324e53234710e88606c04c8890213bae22e266e56eb38c6e5b435c3f488a4"
+    },
+    {
+      "path": "reference/tine-options/bright_edge.wav",
+      "bytes": 899684,
+      "sha256": "1c24ea1faf26a1d3f5fb3375bbeb545af8e012e8b273a1167a8b803ecb536259"
+    },
+    {
+      "path": "reference/tine-options/long_ring.wav",
+      "bytes": 899684,
+      "sha256": "b2d4bdc6707cf872e3e538b347aa7920642ec5568c842cf8f7f765a5422c3f61"
+    },
+    {
+      "path": "reference/tine-options/qa.py",
+      "bytes": 8460,
+      "sha256": "a65e83082ff2846156788a2ec7e9bf18fb7df5b7e4cece7242450949c4fefc48"
+    },
+    {
+      "path": "reference/tine-options/qa_results.json",
+      "bytes": 4415,
+      "sha256": "11cc21f2dde16bf8b4c3289fc4be47b3549af2240d94dbf103e24a06b46782f6"
+    },
+    {
+      "path": "reference/tine-options/render.py",
+      "bytes": 8411,
+      "sha256": "12aba24c8c7b927fe9ec144ee7c28a21d8acd23975592d7bf33e62fd4038d959"
+    },
+    {
+      "path": "reference/tine-options/report.json",
+      "bytes": 14505,
+      "sha256": "a4d0497b2b9f0a71423d1f1829bec19e73da42a0890f901010223e084bc39339"
+    },
+    {
+      "path": "reference/tine-options/soft_attack.wav",
+      "bytes": 899684,
+      "sha256": "1b41ad52492dba6e29434b8f5b6cf50f9021d190996cd5c6c9f5fef938964d08"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 107,
+      "sha256": "3ae259088901a3efbd26918fc6f7d8e23ff29d58a5c02aeb1afb68edf5f65518"
+    },
+    {
+      "path": "verify-references.py",
+      "bytes": 3984,
+      "sha256": "2eb68711f7419b7e627f8c3bf66f0be544f4bd4226f590f01efde8a733cb248b"
+    }
+  ]
+}

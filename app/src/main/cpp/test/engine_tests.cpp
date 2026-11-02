@@ -2099,6 +2099,248 @@ TEST(pad_engine_a_fader_on_a_voice_that_is_gone_is_ignored) {
     CHECK(ended(e).empty());  // and it is not an ending, either
 }
 
+namespace {
+
+/** A mono ramp i/100000 over 60000 frames: the output is the read position, scaled, well inside full scale. */
+std::vector<float> slowRamp() {
+    std::vector<float> v(60000);
+    for (size_t i = 0; i < v.size(); ++i) v[i] = static_cast<float>(i) / 100000.0f;
+    return v;
+}
+
+PadCommand bend(double ratio, float glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetPitch;
+    c.pitch = ratio;
+    c.fadeMs = glideMs;
+    return c;
+}
+
+PadCommand master(float gain, float glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetMaster;
+    c.gainL = gain;
+    c.fadeMs = glideMs;
+    return c;
+}
+
+/** Frames read per output frame between out[i-1] and out[i], on [slowRamp]. */
+double speedAt(const std::vector<float>& out, size_t i) {
+    return (static_cast<double>(out[2 * i]) - static_cast<double>(out[2 * (i - 1)])) * 100000.0;
+}
+
+}  // namespace
+
+TEST(pad_engine_a_bend_slides_a_held_note_without_restarting_it) {
+    // The output is the read position, so a restart would show as a drop
+    // back to frame 0 and a jump as a gap: a bend must be neither, only the
+    // read going faster.
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    auto out = callback(e, 64);
+    CHECK_NEAR(speedAt(out, 63), 1.0, 1e-2);
+    const float before = out[2 * 63];
+
+    e.pushCommand(bend(2.0, 1.0f));  // an octave up over 48 frames
+    out = callback(e, 96);
+    // The first frame carries on from the last one at the old speed (the
+    // step into it was taken before the bend arrived): no restart, no jump.
+    // The glide's first step is the next one.
+    CHECK_NEAR((out[0] - before) * 100000.0, 1.0, 1e-2);
+    CHECK_NEAR(speedAt(out, 1), 1.0 + 1.0 / 48.0, 1e-2);
+    // Half way through the glide it reads half way between the speeds, and
+    // at its end exactly twice as fast; every step on the way is in between.
+    CHECK_NEAR(speedAt(out, 24), 1.5, 3e-2);
+    for (size_t i = 1; i < 96; ++i) {
+        CHECK(speedAt(out, i) > 0.97);
+        CHECK(speedAt(out, i) < 2.03);
+    }
+    CHECK_NEAR(speedAt(out, 95), 2.0, 2e-2);
+
+    // Let go of the wheel: back to the note's own speed, the same way.
+    e.pushCommand(bend(1.0, 1.0f));
+    out = callback(e, 96);
+    CHECK_NEAR(speedAt(out, 95), 1.0, 2e-2);
+    CHECK(ended(e).empty());
+}
+
+TEST(pad_engine_a_bend_holds_for_notes_started_under_it_and_scales_their_own_tune) {
+    // A note struck while the wheel is up starts bent, as on any synth, and
+    // the bend multiplies the speed its key and tune already gave it.
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(bend(1.5, 1.0f));
+    callback(e, 64);
+    e.pushCommand(noteOn(2, 0, 0, 60000, 1.0f, 1.0f, 0.5));
+    auto out = callback(e, 32);
+    CHECK_NEAR(speedAt(out, 31), 0.75, 1e-2);
+}
+
+TEST(pad_engine_a_bent_sine_has_no_click) {
+    // The plan's test: a held note bent up two semitones over the glide a
+    // strip's stream gets, and no sample-to-sample step bigger than the
+    // fastest the bent sine itself can move. A restart, a skipped read or
+    // a discontinuous speed would each be a step far past that bound.
+    std::vector<float> sine(48000);
+    const double w = 2.0 * 3.14159265358979 * 440.0 / kRate;
+    for (size_t i = 0; i < sine.size(); ++i) sine[i] = static_cast<float>(0.5 * std::sin(w * static_cast<double>(i)));
+    PadEngine& e = banked(std::move(sine), 1, kRate);
+    e.pushCommand(noteOn(3, 0, 0, 48000));
+    auto first = callback(e, 100);
+    const double up = std::pow(2.0, 2.0 / 12.0);
+    e.pushCommand(bend(up, 8.0f));
+    auto out = callback(e, 1000);
+    float prev = first[2 * 99];
+    const double bound = 0.5 * w * up * 1.05;
+    double worst = 0.0;
+    for (size_t i = 0; i < 1000; ++i) {
+        worst = std::max(worst, static_cast<double>(std::fabs(out[2 * i] - prev)));
+        prev = out[2 * i];
+    }
+    CHECK(worst < bound);
+    CHECK(worst > 0.5 * w);  // and it did get faster than the unbent sine
+}
+
+TEST(pad_engine_a_bend_that_is_not_a_speed_is_ignored_and_a_huge_one_clamped) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(4, 0, 0, 60000));
+    callback(e, 16);
+    e.pushCommand(bend(std::nan(""), 1.0f));
+    e.pushCommand(bend(0.0, 1.0f));
+    e.pushCommand(bend(-2.0, 1.0f));
+    auto out = callback(e, 32);
+    CHECK_NEAR(speedAt(out, 31), 1.0, 1e-2);
+    e.pushCommand(bend(1e9, 0.0f));
+    out = callback(e, 32);
+    CHECK_NEAR(speedAt(out, 31), PadEngine::kMaxBend, 4e-2);
+}
+
+namespace {
+/** The speed over the 16 frames to i: a float ramp's rounding is ~3e-3 a frame, which a window of 16 divides down. */
+double speedWin(const std::vector<float>& out, size_t i) {
+    return (static_cast<double>(out[2 * i]) - static_cast<double>(out[2 * (i - 16)])) * 100000.0 / 16.0;
+}
+
+PadCommand vibrato(double semitones, float glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetVibrato;
+    c.pitch = semitones;
+    c.fadeMs = glideMs;
+    return c;
+}
+}  // namespace
+
+TEST(pad_engine_vibrato_wobbles_a_held_note_around_its_own_speed_at_the_stated_depth_and_rate) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 16);
+    e.pushCommand(vibrato(0.5, 0.0f));  // half a semitone either way, at once
+    // One period at 5.5 Hz is 8727 frames; read two.
+    std::vector<float> all;
+    for (int block = 0; block < 4; ++block) {
+        auto out = callback(e, 4400);
+        all.insert(all.end(), out.begin(), out.end());
+    }
+    double lo = 1e9, hi = -1e9, mean = 0.0;
+    size_t n = 0;
+    for (size_t i = 16; i < all.size() / 2; ++i, ++n) {
+        const double sp = speedWin(all, i);
+        lo = std::min(lo, sp);
+        hi = std::max(hi, sp);
+        mean += sp;
+    }
+    mean /= static_cast<double>(n);
+    const double top = std::pow(2.0, 0.5 / 12.0);
+    CHECK_NEAR(hi, top, 2e-3);
+    CHECK_NEAR(lo, 1.0 / top, 2e-3);
+    CHECK_NEAR(mean, 1.0, 2e-3);
+    // The rate: one swing up past +1% per period, with hysteresis so the ramp's rounding noise is not counted.
+    int ups = 0;
+    bool armed = true;
+    for (size_t i = 16; i < all.size() / 2; ++i) {
+        const double sp = speedWin(all, i);
+        if (sp < 0.99) armed = true;
+        if (armed && sp > 1.01) { ++ups; armed = false; }
+    }
+    CHECK(ups == 2);  // 17600 frames is just over two periods (8727 each): the swings up peak at 2182 and 10909
+    CHECK(ended(e).empty());
+}
+
+TEST(pad_engine_vibrato_glides_in_and_out_and_leaves_the_note_exactly_as_it_was) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 64);
+    e.pushCommand(vibrato(1.0, 100.0f));  // in over 4800 frames
+    auto out = callback(e, 1200);
+    double early = 0.0;
+    for (size_t i = 16; i < 200; ++i) early = std::max(early, std::fabs(speedWin(out, i) - 1.0));
+    double later = 0.0;
+    for (size_t i = 1000; i < 1200; ++i) later = std::max(later, std::fabs(speedWin(out, i) - 1.0));
+    CHECK(early < 0.002);   // it does not start with a jump
+    CHECK(later > early);   // and it grows
+    // Once the glide is over it is at the full depth asked for, not stuck part way.
+    callback(e, 4000);
+    double full = 0.0;
+    for (int block = 0; block < 3; ++block) {
+        out = callback(e, 3000);
+        for (size_t i = 16; i < 3000; ++i) full = std::max(full, std::fabs(speedWin(out, i) - 1.0));
+    }
+    CHECK_NEAR(full, std::pow(2.0, 1.0 / 12.0) - 1.0, 4e-3);
+    e.pushCommand(vibrato(0.0, 10.0f));
+    callback(e, 960);
+    out = callback(e, 512);
+    for (size_t i = 16; i < 512; ++i) CHECK_NEAR(speedWin(out, i), 1.0, 1e-3);
+}
+
+TEST(pad_engine_vibrato_and_bend_multiply_and_a_bad_depth_is_ignored_or_clamped) {
+    PadEngine& e = banked(slowRamp(), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 60000));
+    callback(e, 16);
+    e.pushCommand(bend(2.0, 0.0f));
+    e.pushCommand(vibrato(std::nan(""), 0.0f));
+    e.pushCommand(vibrato(-1.0, 0.0f));
+    auto out = callback(e, 64);
+    CHECK_NEAR(speedAt(out, 63), 2.0, 2e-2);  // the bend alone: NaN ignored, negative clamped to off
+    e.pushCommand(vibrato(50.0, 0.0f));
+    double hi = 0.0;
+    for (int block = 0; block < 4; ++block) {
+        out = callback(e, 2400);
+        for (size_t i = 16; i < 2400; ++i) hi = std::max(hi, speedWin(out, i));
+    }
+    CHECK_NEAR(hi, 2.0 * std::pow(2.0, PadEngine::kMaxVibratoSemitones / 12.0), 5e-3);
+}
+
+TEST(pad_engine_the_master_gain_glides_the_whole_mix_and_outlives_a_kit_swap) {
+    // Sample 1 is a flat 0.5 / -0.25, so the output is the gain.
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(5, 1, 0, 100));
+    e.pushCommand(noteOn(6, 1, 0, 100, 0.5f, 0.5f));
+    auto out = callback(e, 1);
+    CHECK_NEAR(out[0], 0.75f, 1e-5);
+    e.pushCommand(master(0.2f, 1.0f));
+    out = callback(e, 48);
+    CHECK_NEAR(out[2 * 23], 0.75f * 0.6f, 1e-3);  // half way, a straight line
+    CHECK_NEAR(out[2 * 47], 0.75f * 0.2f, 1e-4);
+    CHECK_NEAR(out[2 * 47 + 1], -0.375f * 0.2f, 1e-4);
+
+    // Not a number leaves it; louder than made is held at made.
+    e.pushCommand(master(std::nanf(""), 1.0f));
+    out = callback(e, 4);
+    CHECK_NEAR(out[0], 0.75f * 0.2f, 1e-4);
+
+    // A new kit keeps the volume: it is the engine's, not the bank's.
+    e.beginBank();
+    std::vector<float> flat(200, 0.5f);
+    e.addSample(std::move(flat), 1, kRate);
+    e.commitBank();
+    callback(e, 8);
+    e.pushCommand(noteOn(7, 0, 0, 200));
+    out = callback(e, 4);
+    CHECK_NEAR(out[0], 0.5f * 0.2f, 1e-4);
+    e.pushCommand(master(3.0f, 0.0f));
+    out = callback(e, 4);
+    CHECK_NEAR(out[2 * 3], 0.5f, 1e-4);
+}
+
 // ---- SPLIT: the engine and the offline render agree -----------------------------
 
 namespace {

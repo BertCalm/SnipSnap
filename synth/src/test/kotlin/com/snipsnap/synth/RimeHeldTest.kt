@@ -15,11 +15,11 @@ class RimeHeldTest {
     }
 
     @Test fun `finite model five preserves all nine accepted recipes exactly`() {
-        for (p in RimePresets.all()) assertContentEquals(p.render().samples, p.copy(model = 5).render().samples, p.name)
+        for (p in RimePresets.legacyEntries().map { it.patch }) assertContentEquals(p.render().samples, p.copy(model = 5).render().samples, p.name)
     }
 
     @Test fun `held cycles close independently with bounded energy pitch and dc across registers`() {
-        for (voice in RimeVoice.entries) for ((midi, body) in listOf(24 to 1f, Rime.rootMidi(voice) to .5f, 96 to 0f)) {
+        for (voice in Rime.LEGACY_VOICES) for ((midi, body) in listOf(24 to 1f, Rime.rootMidi(voice) to .5f, 96 to 0f)) {
             val p = RimePresets.starter(voice).copy(model = 5, midi = midi,
                 macros = Rime.defaults(voice) + mapOf("HOLD" to 1f, "BODY" to body, "EDGE" to 1f, "UNFOLD" to 1f))
             val began = System.nanoTime()

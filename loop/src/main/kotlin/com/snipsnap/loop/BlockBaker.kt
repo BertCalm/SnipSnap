@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Resampler
@@ -39,6 +40,11 @@ object BlockBaker {
     const val TAIL_FADE_MS = 3f
 
     /**
+     * [block] on its own, as if nothing played before or after it: a
+     * pattern's tails fade out at the interval's end instead of carrying.
+     * The grid bakes through the [Neighbourhood] overload; this one is for
+     * a block heard alone.
+     *
      * On the already-fits path, the returned [Snip] aliases the [SampleSource]'s
      * own `FloatArray` with no copy — a caller must not mutate it in place.
      */
@@ -48,9 +54,17 @@ object BlockBaker {
         source: SampleSource,
         /** Asked by a drone's render while it runs; see [SampleSource.drone]. Other blocks never ask. */
         cancelled: () -> Boolean = { false },
-    ): Snip = when (block) {
+    ): Snip = bake(Neighbourhood(block), session, source, cancelled)
+
+    /** One interval of a track, from its [Neighbourhood] ([Arrangement.neighbourhoodAt]). */
+    fun bake(
+        at: Neighbourhood,
+        session: Session,
+        source: SampleSource,
+        cancelled: () -> Boolean = { false },
+    ): Snip = when (val block = at.block) {
         is LoopBlock -> bakeLoop(block, session, source)
-        is PatternBlock -> bakePattern(block, session, source)
+        is PatternBlock -> bakePattern(at.before, block, at.after, session, source)
         is SilenceBlock -> silence(session)
         is DroneBlock -> bakeDrone(block, session, source, cancelled)
     }
@@ -130,26 +144,101 @@ object BlockBaker {
      * mono and picks its own hits. This takes authored steps, keeps stereo, and
      * honours velocity and micro-offsets — a pattern block has to reproduce
      * exactly what the user wrote, every cycle.
+     *
+     * The interval is rendered from three patterns laid on one timeline:
+     * [before] one interval early, [block] at zero, [after] one interval
+     * late. Only this interval's frames are written, but every hit takes
+     * part, which is what makes the boundary disappear
+     * (docs/plans/2026-10-30-song-making.md, phase 3):
+     *
+     * - A hit late in [before] rings on into this interval, so the bar line
+     *   no longer cuts it. Before this, every hit that ran past the
+     *   interval's end was cut off there, and on a loop that was a click
+     *   every cycle (an open hat on the last 16th: a 0.27 step).
+     * - A hit [after] nudges early on its downbeat starts at this interval's
+     *   end, where it was written, instead of losing its head.
+     * - A kit's choke reaches across the boundary: a closed hat on [block]'s
+     *   downbeat stops [before]'s open hat, within one kit, as `KitPreview`
+     *   and `OrbitEngine` already do.
+     *
+     * Neighbouring intervals compute every shared voice the same way, so a
+     * voice split across a boundary joins without a seam. A voice carries
+     * one interval past its own: anything still sounding then fades out over
+     * [TAIL_FADE_MS], the way a voice with no next pattern to carry it fades
+     * at its own interval's end.
      */
-    private fun bakePattern(block: PatternBlock, session: Session, source: SampleSource): Snip {
+    private fun bakePattern(
+        before: PatternBlock?,
+        block: PatternBlock,
+        after: PatternBlock?,
+        session: Session,
+        source: SampleSource,
+    ): Snip {
         val target = session.intervalFrames
-        val out = FloatArray(target * 2)
         val stepFrames = target.toDouble() / session.stepsPerInterval
+        val tailFade = (TAIL_FADE_MS * session.sampleRate / 1000f).roundToInt().coerceAtLeast(1)
+        val pads = HashMap<Pair<String, Int>, Snip?>()
+        val groups = HashMap<String, Map<Int, Int>>()
 
-        for (step in block.steps) {
-            if (step.step >= session.stepsPerInterval) continue
-            val pad = source.pad(block.kit, step.slot) ?: continue
-            val stereo = toStereo(Resampler.resample(pad, session.sampleRate))
+        class Voice(val kit: String, val group: Int, val samples: FloatArray, val start: Int, val gain: Float) {
+            var end = start + samples.size / 2
+            var fade = 0
+            var choked = false
+        }
 
-            val at = (step.step * stepFrames).roundToInt() + step.microOffset
-            if (at >= target) continue
-            val from = if (at < 0) -at else 0
-            val base = (at + from) * 2
-            val room = (target - at - from) * 2
-            val n = minOf(stereo.samples.size - from * 2, room)
-            if (n <= 0) continue
+        val voices = ArrayList<Voice>()
+        // [carried]: whether the next interval bakes this pattern as its
+        // `before`, so its voices may sound one interval past its own end.
+        fun place(pattern: PatternBlock, origin: Int, carried: Boolean) {
+            val cap = origin + target + if (carried) target else 0
+            for (step in pattern.steps) {
+                if (step.step >= session.stepsPerInterval) continue
+                val start = origin + (step.step * stepFrames).roundToInt() + step.microOffset
+                if (start - origin >= target) continue
+                val pad = pads.getOrPut(pattern.kit to step.slot) {
+                    source.pad(pattern.kit, step.slot)?.let { toStereo(Resampler.resample(it, session.sampleRate)) }
+                } ?: continue
+                val group = groups.getOrPut(pattern.kit) { source.muteGroups(pattern.kit) }[step.slot] ?: 0
+                val voice = Voice(pattern.kit, group, pad.samples, start, step.velocity)
+                if (voice.end > cap) {
+                    voice.end = cap
+                    voice.fade = minOf(tailFade, cap - start)
+                }
+                voices += voice
+            }
+        }
+        before?.let { place(it, -target, carried = true) }
+        place(block, 0, carried = after != null)
+        after?.let { place(it, target, carried = true) }
 
-            for (i in 0 until n) out[base + i] += stereo.samples[from * 2 + i] * step.velocity
+        // The kit rule, in the order the hits land: a new voice in a group
+        // chokes everything of the same kit still ringing in it, over
+        // [AutoPlace.CHOKE_FADE] or whatever is left, and a voice already
+        // fading out of a choke keeps the ramp it is on. KitPreview's rule.
+        voices.sortBy { it.start }
+        for ((i, v) in voices.withIndex()) {
+            if (v.group == 0) continue
+            for (j in 0 until i) {
+                val u = voices[j]
+                if (u.kit != v.kit || u.group != v.group || u.choked || u.end <= v.start) continue
+                val len = minOf(AutoPlace.CHOKE_FADE, u.end - v.start)
+                u.end = v.start + len
+                u.fade = len
+                u.choked = true
+            }
+        }
+
+        val out = FloatArray(target * 2)
+        for (v in voices) {
+            val from = maxOf(0, v.start)
+            val to = minOf(target, v.end)
+            val fadeFrom = v.end - v.fade
+            for (f in from until to) {
+                val i = (f - v.start) * 2
+                val g = if (f >= fadeFrom && v.fade > 0) v.gain * ((v.end - f).toFloat() / v.fade) else v.gain
+                out[f * 2] += v.samples[i] * g
+                out[f * 2 + 1] += v.samples[i + 1] * g
+            }
         }
         return Snip(out, 2, session.sampleRate)
     }

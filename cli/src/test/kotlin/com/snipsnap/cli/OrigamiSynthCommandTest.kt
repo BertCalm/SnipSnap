@@ -40,18 +40,18 @@ class OrigamiSynthCommandTest {
                 ), errors.toString())
                 val presets = OrigamiPresets.forVoice(voice)
                 val wavs = requireNotNull(dir.listFiles { file -> file.extension == "wav" }).sortedBy { it.name }
-                assertEquals(2, presets.size, "$voice has two factory choices")
-                assertEquals(presets.size, wavs.size, "$voice --all must render both choices")
+                assertEquals(4, presets.size, "$voice has two reference and two performance choices")
+                assertEquals(presets.size, wavs.size, "$voice --all must render every choice")
                 for ((preset, wav) in presets.zip(wavs)) {
                     assertTrue(wav.name.startsWith("ORIGAMI_${voice.name}_"), wav.name)
                     assertContentEquals(exported(preset), wav.readBytes(),
-                        "${preset.name}: CLI must retain the factory model, seed, velocity and controls")
+                        "${preset.name}: CLI must retain the factory model, seed, velocity, gesture, expression and controls")
                     val actual = WavReader.read(wav)
                     assertEquals(1, actual.channels)
                     assertEquals(44_100, actual.sampleRate)
                     assertTrue(actual.peak() > 0f, "${preset.name}: routed factory audio is silent")
                 }
-                assertTrue("2 rendered into" in output.toString(), output.toString())
+                assertTrue("${presets.size} rendered into" in output.toString(), output.toString())
                 assertFalse("lands with" in output.toString(), "ORIGAMI factory auditions are dry")
             }
         } finally {

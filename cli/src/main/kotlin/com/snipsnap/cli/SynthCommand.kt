@@ -97,6 +97,9 @@ import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
 import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.Ferry
+import com.snipsnap.synth.Lorentz
+import com.snipsnap.synth.LorentzPatch
+import com.snipsnap.synth.LorentzVoice
 import com.snipsnap.synth.FerryPatch
 import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.FerryVoice
@@ -296,8 +299,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
-            throw CliError("--patch is only supported by RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, LATTICE, OHM, FERRY, MERIDIAN and OTIS, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(LorentzPatch.ENGINE, RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
+            throw CliError("--patch is only supported by RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, LATTICE, OHM, FERRY, MERIDIAN, OTIS and LORENTZ, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -342,6 +345,7 @@ object SynthCommand {
             val names = when (engine) {
                 RimePatch.ENGINE -> Rime.macrosFor(RimeVoice.valueOf(voice))
                 OtisPatch.ENGINE -> Otis.macrosFor(OtisVoice.valueOf(voice))
+                LorentzPatch.ENGINE -> Lorentz.macrosFor(LorentzVoice.valueOf(voice))
                 FerryPatch.ENGINE -> Ferry.macrosFor(FerryVoice.valueOf(voice))
                 TidalPatch.ENGINE -> Tidal.macrosFor(TidalVoice.valueOf(voice))
                 ApsisPatch.ENGINE -> Apsis.macrosFor(ApsisVoice.valueOf(voice))
@@ -353,7 +357,7 @@ object SynthCommand {
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
-                else -> throw CliError("--macros is only supported by MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY and PLUCK UPRIGHT, got $engine")
+                else -> throw CliError("--macros is only supported by MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -401,6 +405,7 @@ object SynthCommand {
             when (engine) {
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OtisPatch.ENGINE -> Otis.MIDI_MIN..Otis.MIDI_MAX
+                LorentzPatch.ENGINE -> Lorentz.MIN_MIDI..Lorentz.MAX_MIDI
                 "PLUCK" -> if (voice == "UPRIGHT") 28..52
                     else throw CliError("${noteFlags.joinToString()} for PLUCK requires UPRIGHT")
                 ApsisPatch.ENGINE -> Apsis.MIDI_MIN..Apsis.MIDI_MAX
@@ -575,6 +580,10 @@ object SynthCommand {
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
                 is RimePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is LorentzPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to (midiOverride - Lorentz.MIN_MIDI) / Lorentz.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
                 is PluckPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - 28) / Pluck.TUNE_SEMITONES.toFloat()),
@@ -665,7 +674,9 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is ApsisPatch) {
+            if (withNote is LorentzPatch) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
+            } else if (withNote is ApsisPatch) {
                 withNote.copy(macros = withNote.macros + macroOverrides,
                     config = withNote.config.copy(seedContext = seedOverride ?: withNote.config.seedContext))
             } else if (withNote is OrigamiPatch) {
@@ -696,7 +707,7 @@ object SynthCommand {
                 try {
                     withNote.copy(model = modelOverride ?: withNote.model, macros = withNote.macros + macroOverrides,
                         gateSeconds = secondsOverride ?: withNote.gateSeconds, seed = seedOverride ?: withNote.seed)
-                } catch (e: IllegalArgumentException) { throw CliError("RIME: ${e.message}; use --model 5 for HOLD") }
+                } catch (e: IllegalArgumentException) { throw CliError("RIME: ${e.message}; use --model 5 or 6 for HOLD") }
             } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is MeridianPatch) {
@@ -828,7 +839,7 @@ object SynthCommand {
             val release = opts["--release"]?.toFloatOrNull() ?: if (opts["--release"] == null) RimePadMaker.RELEASE.default
                 else throw IllegalArgumentException("release must be finite seconds")
             RimePadMaker.Spec(chosen.single() as RimePatch, release)
-        } catch (e: IllegalArgumentException) { throw CliError("RIME --instrument: ${e.message}; use --model 5 for HOLD") } else null
+        } catch (e: IllegalArgumentException) { throw CliError("RIME --instrument: ${e.message}; use --model 5 or 6 for HOLD") } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
@@ -874,7 +885,7 @@ object SynthCommand {
                 ?: heldOverlap?.let { SmplChunk((patch as OverlapPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+            if (patch is LorentzPatch || patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }

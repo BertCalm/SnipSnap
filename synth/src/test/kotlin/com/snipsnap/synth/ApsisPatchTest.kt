@@ -97,7 +97,7 @@ class ApsisPatchTest {
 
     @Test
     fun `the six first listen recipes are unique complete and regenerable`() {
-        val presets = ApsisPresets.all()
+        val presets = ApsisPresets.forVoice(ApsisVoice.PASSAGE)
         assertEquals(6, presets.size)
         assertEquals(6, presets.map { it.name }.toSet().size)
         assertEquals(presets, Presets.forVoice("APSIS", "PASSAGE"))

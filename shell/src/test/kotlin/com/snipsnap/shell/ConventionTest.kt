@@ -1247,7 +1247,7 @@ class ConventionTest {
         } else {
             count("README.md's picker count", rootCount.groupValues[1], picker.size)
         }
-        val complement = Regex("""holds engines that picker does not show\. (.+?) have preset rosters""").find(readme)
+        val complement = Regex("""holds engines that picker does not show\. (.+?) (?:have preset rosters|has a preset roster)""").find(readme)
         if (complement == null) {
             problems += "README.md no longer names the rostered engines the picker does not show; move this law with the sentence"
         } else {
@@ -2850,9 +2850,9 @@ class ConventionTest {
             "KIT's pointer coroutine must use the current callback after a kit or strip owner changes.",
         )
         assertTrue(
-            Regex("""currentOnTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+            Regex("""currentOnTap\(slot,\s*PadFeelStore\.shape\(\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\),""")
                 .containsMatchIn(src),
-            "the pad grid is not passing touch-position velocity to its current callback. With STRIKE off, " +
+            "the pad grid is not passing touch-position velocity (through PadFeelStore's modes and curve) to its current callback. With STRIKE off, " +
                 "position must still reach SOFT HITS; a fixed value would make the other layers unreachable.",
         )
         assertTrue(

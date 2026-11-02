@@ -273,6 +273,8 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     FIELD(Place.MAKE, "PHOTO FIELD"),
     /** Record a short vowel into a personal voice; works with or without an open kit. */
     MY_VOICE(Place.MAKE, "MY VOICE"),
+    /** Audition selected recorded passages and keep a source-backed finite texture. */
+    CONFLUENCE_VOICES(Place.MAKE, "CONFLUENCE VOICES", backName = "VOICES"),
     // Behind the gear, from anywhere: opened over whatever is showing.
     SETUP(Place.SHELF, "SETUP"),
     HELP(Place.SHELF, "HELP"),

@@ -1,0 +1,210 @@
+{
+  "status": "Python control-law checks only; acoustic results remain proposed until rendered",
+  "anchors": {
+    "wood": {
+      "exact_acoustic_anchor": true,
+      "amp_gain": 1.0
+    },
+    "tine": {
+      "exact_acoustic_anchor": true,
+      "amp_gain": 1.0
+    },
+    "brush": {
+      "exact_acoustic_anchor": true,
+      "amp_gain": 1.0
+    }
+  },
+  "sweep_cases": 43935,
+  "finite_nonnegative_and_root_ratios_unchanged": true,
+  "extrema": {
+    "width_ms": [
+      0.12,
+      6.75
+    ],
+    "t60": [
+      0.07938160267802423,
+      1.6089090922740021
+    ],
+    "mode_gain": [
+      0.00484149993835207,
+      1.0
+    ],
+    "body_gain": [
+      0.28954797377150704,
+      0.6409991324838756
+    ],
+    "brush": [
+      0.0,
+      0.006187479348965178
+    ],
+    "pulse_gain": [
+      0.4829524870063088,
+      1.1388283833246218
+    ],
+    "amp_gain": [
+      0.0,
+      1.2
+    ]
+  },
+  "velocity_samples": {
+    "wood": [
+      {
+        "velocity": 0.0,
+        "amp_gain": 0.0,
+        "width_ms": 3.1500000000000004,
+        "second_tongue_gain": 0.40529212298509354,
+        "body_gain": 0.45241870901797976,
+        "brush": 0.0,
+        "pulse_gain": 0.8780954309205613
+      },
+      {
+        "velocity": 0.3,
+        "amp_gain": 0.43838329055408687,
+        "width_ms": 2.6783914513141607,
+        "second_tongue_gain": 0.44080742339170803,
+        "body_gain": 0.47088226679212436,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393
+      },
+      {
+        "velocity": 0.75,
+        "amp_gain": 1.0,
+        "width_ms": 2.1,
+        "second_tongue_gain": 0.5,
+        "body_gain": 0.5,
+        "brush": 0.0,
+        "pulse_gain": 1.0
+      },
+      {
+        "velocity": 1.0,
+        "amp_gain": 1.2,
+        "width_ms": 1.4,
+        "second_tongue_gain": 0.6168390299783716,
+        "body_gain": 0.5525854590378239,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218
+      }
+    ],
+    "tine": [
+      {
+        "velocity": 0.0,
+        "amp_gain": 0.0,
+        "width_ms": 1.08,
+        "second_tongue_gain": 0.3080220134686711,
+        "body_gain": 0.28954797377150704,
+        "brush": 0.0,
+        "pulse_gain": 0.8780954309205613
+      },
+      {
+        "velocity": 0.3,
+        "amp_gain": 0.43838329055408687,
+        "width_ms": 0.9183056404505693,
+        "second_tongue_gain": 0.3350136417776981,
+        "body_gain": 0.3013646507469596,
+        "brush": 0.0,
+        "pulse_gain": 0.9249644265435393
+      },
+      {
+        "velocity": 0.75,
+        "amp_gain": 1.0,
+        "width_ms": 0.72,
+        "second_tongue_gain": 0.38,
+        "body_gain": 0.32,
+        "brush": 0.0,
+        "pulse_gain": 1.0
+      },
+      {
+        "velocity": 1.0,
+        "amp_gain": 1.2,
+        "width_ms": 0.48,
+        "second_tongue_gain": 0.4687976627835624,
+        "body_gain": 0.3536546937842073,
+        "brush": 0.0,
+        "pulse_gain": 1.1388283833246218
+      }
+    ],
+    "brush": [
+      {
+        "velocity": 0.0,
+        "amp_gain": 0.0,
+        "width_ms": 6.75,
+        "second_tongue_gain": 0.10537595197612433,
+        "body_gain": 0.5248057024608564,
+        "brush": 0.0028733216714923442,
+        "pulse_gain": 0.4829524870063088
+      },
+      {
+        "velocity": 0.3,
+        "amp_gain": 0.43838329055408687,
+        "width_ms": 5.739410252816058,
+        "second_tongue_gain": 0.11460993008184409,
+        "body_gain": 0.5462234294788643,
+        "brush": 0.002673714588927522,
+        "pulse_gain": 0.5087304345989466
+      },
+      {
+        "velocity": 0.75,
+        "amp_gain": 1.0,
+        "width_ms": 4.5,
+        "second_tongue_gain": 0.13,
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55
+      },
+      {
+        "velocity": 1.0,
+        "amp_gain": 1.2,
+        "width_ms": 3.0,
+        "second_tongue_gain": 0.16037814779437662,
+        "body_gain": 0.6409991324838756,
+        "brush": 0.0020046485073870524,
+        "pulse_gain": 0.6263556108285421
+      }
+    ]
+  },
+  "register_samples": [
+    {
+      "midi": 36,
+      "correction_db": 6.662590280187672,
+      "brush": 0.005168217183913024,
+      "width_ms": 4.5
+    },
+    {
+      "midi": 48,
+      "correction_db": 0.0,
+      "brush": 0.0024,
+      "width_ms": 4.5
+    },
+    {
+      "midi": 60,
+      "correction_db": -0.495396182549136,
+      "brush": 0.0022669473440397794,
+      "width_ms": 2.25
+    },
+    {
+      "midi": 72,
+      "correction_db": -0.75,
+      "brush": 0.0022014622449354707,
+      "width_ms": 1.125
+    }
+  ],
+  "anchor_continuity_max_absolute_difference": {
+    "velocity_.75": 9.731162542436778e-08,
+    "note_C3": 2.5993021068870803e-09
+  },
+  "measured_basis": "Prior C2/C3/C4 BRUSH roughness/direct raw audio RMS ratio",
+  "proposed_shapes": [
+    "velocity amplitude exponent .9 below reference, C1 cubic to1.2 above",
+    "velocity width ratio1.5",
+    "bounded velocity modal gain tilt",
+    "small register/velocity decay changes",
+    "C5 brush correction -.75dB"
+  ],
+  "renderer_contract": "width_ms is final; use fixed reference calibration then amp_gain, no per-velocity normalization",
+  "unchanged": [
+    "all modal ratios",
+    "mechanics",
+    "seed and roughness realization",
+    "event histories"
+  ]
+}

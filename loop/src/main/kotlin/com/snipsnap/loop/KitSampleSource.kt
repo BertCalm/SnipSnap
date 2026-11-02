@@ -62,10 +62,12 @@ class KitSampleSource(private val dir: File) : SampleSource {
      *
      * Those two are cached for the whole life of the source because they
      * feed the bake path, where re-reading a WAV is a missed deadline. A
-     * choke group is asked for only by `OrbitBank.prepare`, which is
-     * off-thread by definition, so it can afford to check whether
-     * `kit.json` has moved under it - and it has to, or toggling choke on
-     * a kit's hats would not be heard until the app was restarted.
+     * choke group is asked for by `OrbitBank.prepare` and, once per kit
+     * per bake, by the grid's pattern bake, which is off the audio thread
+     * except on a cache miss that already decodes WAVs. Both can afford a
+     * stat to check whether `kit.json` has moved under them - and have
+     * to, or toggling choke on a kit's hats would not be heard until the
+     * app was restarted.
      *
      * A snapshot taken while the file was still inside the timestamp's
      * resolution is kept but marked unsettled, so the NEXT ask re-reads

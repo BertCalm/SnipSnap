@@ -19,7 +19,12 @@ internal object RimeHeld {
         val key = patch.copy(name = "Held Rime", macros = patch.macros + ("HOLD" to 1f))
         synchronized(cache) { cache[key]?.let { return it.owned() } }
         val result = build(key)
-        synchronized(cache) { cache[key] = result }
+        synchronized(cache) {
+            cache[key] = result
+            // Moving loops are longer. Bound retained PCM as well as entry count.
+            fun bytes() = cache.values.sumOf { 4L * (it.note.snip.samples.size + it.previousCycle.size + it.cycle.size) }
+            while (cache.size > 1 && bytes() > 32L * 1024 * 1024) cache.remove(cache.keys.first())
+        }
         return result.owned()
     }
 
@@ -35,7 +40,9 @@ internal object RimeHeld {
         val gateSeconds = patch.gateSeconds; val midi = patch.midi
         val m = Rime.settled(voice, patch.macros, patch.model)
         val requestedHz = 440.0 * 2.0.pow((midi - 69) / 12.0)
-        val periods = (requestedHz * .5).roundToInt().coerceAtLeast(1)
+        val moving = Rime.movingHold(m, patch.model)
+        val targetSeconds = if (moving) .6 + 1.4 * m.getValue("UNFOLD") else .5
+        val periods = (requestedHz * targetSeconds).roundToInt().coerceAtLeast(1)
         val cycleFrames = (periods * Dsp.RATE / requestedHz).roundToInt()
         val hz = periods * Dsp.RATE.toDouble() / cycleFrames
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
@@ -44,7 +51,8 @@ internal object RimeHeld {
         val unfold = m.getValue("UNFOLD").toDouble()
         val angle = (m.getValue("ANGLE").toDouble() % 1) * 2 * PI
         val ca = cos(angle); val sa = sin(angle); val cr = cos(PI / 6); val sr = sin(PI / 6)
-        val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge, apertureAngle = angle, apertureLaw = 4)
+        val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge, apertureAngle = angle, apertureLaw = 4,
+            variant = RimeContour.variantFor(voice))
         val resonator = RimeBody(voice, hz, body, rate)
         val reveal = min(1.5, gateSeconds * .72) * unfold.pow(1.6)
         val warmCycles = ceil((reveal + 3 * resonator.t60 + .4) * Dsp.RATE / cycleFrames).toInt().coerceAtLeast(2)
@@ -57,13 +65,19 @@ internal object RimeHeld {
         val noiseAlpha = 1 - exp(-2 * PI * 12000 / rate)
         var rough = 0.0
         repeat(2) { for (i in white.indices) { rough += noiseAlpha * (white[i] - rough); roughCycle[i] = rough } }
-        val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity)
+        val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity) * RimeVoicing.contact(voice)
         var phase = 0.0; var peak = 0.0; var maxEnergy = 0.0
         val gains = DoubleArray(source.bands.size)
         val increments = DoubleArray(gains.size)
         val block = (rate / 1000).coerceAtLeast(1)
-        val attack = when (voice) { RimeVoice.LOOP -> .006; RimeVoice.GLINT -> .003; RimeVoice.VESSEL -> .025 } +
+        val attack = RimeVoicing.attack(voice) +
             (if (source.bands.size > 1) unfold * .008 else 0.0)
+        // One phase-aligned periodic scale envelope per band. Table lookup makes
+        // its control interpolation repeat exactly even for a fractional ms cycle.
+        val motion = if (moving) source.bands.indices.map { b -> FloatArray(1024) { j ->
+            val scale = b.toDouble() / max(1, source.bands.lastIndex)
+            if (b == 0) 1f else (.16 + .84 * (.5 - .5 * cos(2 * PI * (j / 1024.0 - .22 * scale)))).toFloat()
+        } } else emptyList()
         for (i in raw.indices) {
             phase = ((i % cycleSamples).toDouble() * periods / cycleSamples) % 1.0
             if (i % 4096 == 0 && Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("RIME render cancelled")
@@ -78,7 +92,8 @@ internal object RimeHeld {
             // ANGLE rotates the projection and, in model 3, its finite contact aperture.
             val referencePhase = phase - (.035 + .075 * body)
             for (b in source.bands.indices) {
-                val band = source.bands[b]; val gain = gains[b]
+                val band = source.bands[b]
+                val gain = gains[b] * if (moving) band.read(motion[b], (i % cycleSamples).toDouble() / cycleSamples) else 1.0
                 x += gain * band.read(band.x, phase); y += gain * band.read(band.y, phase)
                 dx += gain * band.read(band.dx, phase); dy += gain * band.read(band.dy, phase)
                 run {
@@ -93,7 +108,7 @@ internal object RimeHeld {
             val pressureA = slopeA / sqrt(1 + .3 * slopeA * slopeA)
             val pressureB = slopeB / sqrt(1 + .3 * slopeB * slopeB)
             rough = roughCycle[i % cycleSamples]
-            val friction = .018 * rough
+            val friction = RimeVoicing.friction(voice) * rough
             val contactA = contactGain * (pressureA + friction * abs(pressureA))
             val contactB = contactGain * (pressureB + friction * abs(pressureB))
             val envelope = RimeContour.smooth(t / attack)
@@ -134,15 +149,19 @@ internal object RimeHeld {
         // two unmodified steady cycles then establish the exported loop marker.
         val prefixCycles = ceil((reveal + .12) * Dsp.RATE / cycleFrames).toInt().coerceAtLeast(1)
         val prefix = min(prefixCycles, warmCycles - 1) * cycleFrames
-        val samples = FloatArray(prefix + 3 * cycleFrames)
+        val samples = FloatArray(prefix + (if (moving) 2 else 3) * cycleFrames)
         down.copyInto(samples, 0, 0, prefix + cycleFrames)
         for (i in 0 until cycleFrames) {
             val mix = RimeContour.smooth(i.toDouble() / (cycleFrames - 1))
             samples[prefix + i] = ((1 - mix) * samples[prefix + i] + mix * previous[i]).toFloat()
         }
-        previous.copyInto(samples, prefix + cycleFrames)
-        cycle.copyInto(samples, prefix + 2 * cycleFrames)
-        val note = KeyNote(Snip(samples, 1, Dsp.RATE), (prefix + 2 * cycleFrames).toLong())
+        if (moving) {
+            cycle.copyInto(samples, prefix + cycleFrames)
+        } else {
+            previous.copyInto(samples, prefix + cycleFrames)
+            cycle.copyInto(samples, prefix + 2 * cycleFrames)
+        }
+        val note = KeyNote(Snip(samples, 1, Dsp.RATE), (prefix + (if (moving) 1 else 2) * cycleFrames).toLong())
         return Render(note, previous, cycle, seam, hz, peak, maxEnergy)
     }
 }

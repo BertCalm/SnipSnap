@@ -37,6 +37,10 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
+            midi = 55, velocity = .6f, seed = Long.MIN_VALUE,
+            acousticProfile = AccordAcousticProfile.LONG_RING,
+            initializer = AccordInitializer.PROJECT_SINE_V1, sourceStartCycles = 1.25, sourceSeconds = 1.0),
         ErosionPatch("Crater Test", ErosionVoice.CRATER, velocity = .6f),
         OtisPresets.forVoice(OtisVoice.SQUEEZE).first { it.name == "SHARED KEYS" }.copy(name = "Otis replay", midi = 57, velocity = .6f, seed = -31),
         CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),

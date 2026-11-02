@@ -97,7 +97,7 @@ object OverlapPadMaker {
         val recipe = recipeFile(destRoot, name)
         val sidecar = InstrumentStore.sidecar(destRoot, name)
         if (!overwrite && (recipe.exists() || sidecar.exists())) throw DestinationExists.firstOf(recipe, sidecar)
-        OneNote.writePackage(name, program, samples, destRoot, overwrite)
+        OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         AtomicFile.writeText(recipe, spec.patch.toJsonText())
         return program
     }

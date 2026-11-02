@@ -32,7 +32,7 @@ Changes audition immediately. **SAVE TO KIT** stores the full versioned settings
 
 Old kits open dry without a write. Unknown/damaged live metadata is preserved during ordinary kit edits, shown as unreadable, and played dry until the owner explicitly saves a replacement. `:kit` stores this optional JSON opaquely, while `:shell` validates it using the synth codec; this avoids a circular dependency.
 
-This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE can explicitly opt into these saved settings on its own independent stereo bus. SPLIT, ORBIT transport/audition, instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
+This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE and ORBIT can explicitly opt into these saved settings on their own independent stereo buses. SPLIT, held instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
 
 ## SURFACE → FX
 
@@ -40,7 +40,13 @@ This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNC
 
 The existing mono source/legacy chain feeds Aquarium in stereo. Normal finger release and source changes keep effect history running; focus/background release requests a priority panic and waits for fresh touch frames to resume. Stream preparation/recovery uses the actual device rate. Default dry floating overs remain unchanged; the opted-in wet branch uses Aquarium's accepted input clamp and linked sample-peak protection.
 
-Every SURFACE PRINT now keeps both output channels, including dual-mono dry output. TAPE/PAD receive stereo; a wet print is baked audio, and playing it through KIT FX applies the effect again. The FX tab states this. A minute of 48 kHz stereo print reserves 23.04 MB of floats before recording. No offline tail/fade or replayable PAD wrapper is implied. See the [route and capture contract](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md).
+Every SURFACE PRINT now keeps both output channels, including dual-mono dry output. Its SNIPS file and PAD landing retain stereo; TAPE's editor still folds files to mono on read. The stereo shelf option fixes the earlier landing's mono fold. A wet print is baked audio, and playing it through KIT FX applies the effect again. The FX tab states this. A minute of 48 kHz stereo print reserves 23.04 MB of floats before recording. No offline tail/fade or replayable PAD wrapper is implied. See the [route and capture contract](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md).
+
+## ORBIT → OPEN THE SET → AQUARIUM
+
+**USE KIT FX** saves an explicit opt-in in orbits.json and references the kit's saved PERFORMANCE sound. Both the ring mix and tapped-pad audition use ORBIT's own tempo, on separate processors. An unused route starts dry. Ordinary edits and section changes keep history; RESET TAIL and rewind use the accepted smooth reset, and a new PLAY starts fresh.
+
+BOUNCE renders a fresh turn with the same post-sum processor, then zero input for the chosen 0..30-second FX tail (default 3). It matches fresh playback, not a later live lap's history or changing controls. Taps are excluded. Bypass/all-zero mixes add no tail. The complete print must fit the shelf's three-minute cap, including tail, or it is refused before rendering. SNIPS retains both file channels at the MPC rate; TAPE's editor still reads mono. A wet bounce is baked, may have a seam or cut a long decay, and receives FX again if played through KIT FX. CLIP TO KIT carries notes only. See the [ORBIT and storage contract](superpowers/specs/2026-11-01-aquarium-orbit-design.md).
 
 ## Finite render contract
 

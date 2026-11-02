@@ -4,6 +4,11 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.RimePatch
+import com.snipsnap.synth.Rime
+
+/** MAKE is explicit for old finite notes; an already-held recipe keeps its model. */
+internal fun rimeInstrumentSource(patch: RimePatch): RimePatch =
+    if (patch.model < 5) patch.copy(model = Rime.MODEL_VERSION) else patch
 
 /** Retain UNFOLD's opening in the bench, then loop only its measured sustain. */
 internal class RimeOpeningPreview {

@@ -1,0 +1,424 @@
+{
+  "handoff_data_version": 1,
+  "status": "Extracted approved reference anchors; not a SnipSnap patch schema or Kotlin implementation",
+  "default_voice": "BRUSH",
+  "default_tine_profile": "REFERENCE",
+  "root_midi": 48,
+  "velocity": 0.75,
+  "output_rate": 44100,
+  "internal_rate": 176400,
+  "mechanical_seed": "20261022",
+  "initializer": "REFERENCE_SINE_20261022",
+  "initial_phases_radians": [
+    0.8966527134072003,
+    0.01371931073871436,
+    1.032307611146228,
+    1.6333219162822996,
+    0.8954696745107658,
+    1.7364706805937027,
+    4.686724916365365,
+    2.881533644331152,
+    0.984617281081893,
+    2.197295625035535,
+    4.92245680526012,
+    0.4100143347613006,
+    1.7232504142699445,
+    4.663003291521934,
+    6.222979243758299
+  ],
+  "normalized_rate_offsets": [
+    0.2702849749993048,
+    -0.2162914734369595,
+    0.8923071623543083,
+    -0.8332611591935914,
+    -0.7394243316245537,
+    -1.0,
+    0.7656632647226754,
+    0.5644466614602919,
+    0.21773618789379703,
+    -0.3851930196340212,
+    0.38047645960622606,
+    -0.6053016041020003,
+    -0.11061557259250432,
+    0.4369388347714392,
+    0.36223361477558763
+  ],
+  "source_start_cycles": 8,
+  "source_seconds": 8,
+  "reference_cycles_per_second": 2,
+  "voices": {
+    "BRUSH": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.05
+          ],
+          [
+            2.0,
+            0.13,
+            0.52
+          ],
+          [
+            3.0,
+            0.025,
+            0.29
+          ],
+          [
+            4.0,
+            0.009,
+            0.17
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.35
+          ],
+          [
+            1.5,
+            0.06,
+            0.55
+          ],
+          [
+            2.25,
+            0.018,
+            0.31
+          ],
+          [
+            3.25,
+            0.009,
+            0.19
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55
+      },
+      "reference_wav": "reference/musicality/brush.wav"
+    },
+    "WOOD": {
+      "config": {
+        "width_ms": 2.1,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.48
+          ],
+          [
+            2.0,
+            0.5,
+            0.29
+          ],
+          [
+            3.0,
+            0.24,
+            0.17
+          ],
+          [
+            4.04,
+            0.1,
+            0.1
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.72
+          ],
+          [
+            1.51,
+            0.07,
+            0.22
+          ],
+          [
+            2.29,
+            0.035,
+            0.16
+          ],
+          [
+            3.41,
+            0.018,
+            0.1
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0
+      },
+      "reference_wav": "reference/musicality/wood.wav"
+    },
+    "TINE": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "reference_wav": "reference/musicality/tine.wav"
+    }
+  },
+  "tine_profiles": {
+    "REFERENCE": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "release_seconds": 0.9,
+      "reference_wav": "reference/musicality/tine.wav"
+    },
+    "SOFT_ATTACK": {
+      "config": {
+        "width_ms": 3.2,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "release_seconds": 2.2,
+      "reference_wav": "reference/tine-options/soft_attack.wav"
+    },
+    "BRIGHT_EDGE": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.85,
+            0.4
+          ],
+          [
+            3.0,
+            0.5,
+            0.24
+          ],
+          [
+            5.96,
+            1.5,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "release_seconds": 2.2,
+      "reference_wav": "reference/tine-options/bright_edge.wav"
+    },
+    "LONG_RING": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            2.4899999999999998
+          ],
+          [
+            2.0,
+            0.38,
+            1.2000000000000002
+          ],
+          [
+            3.0,
+            0.2,
+            0.72
+          ],
+          [
+            5.96,
+            0.6,
+            0.78
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            1.8599999999999999
+          ],
+          [
+            1.5,
+            0.035,
+            0.8400000000000001
+          ],
+          [
+            2.42,
+            0.025,
+            0.51
+          ],
+          [
+            3.24,
+            0.012,
+            0.33
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "release_seconds": 2.2,
+      "reference_wav": "reference/tine-options/long_ring.wav"
+    }
+  },
+  "continuous_laws_source": "reference/refinement/controls.py",
+  "archived_experiment": "reference/refinement/render.py retains the diagnostic 6.00 TINE override; do not substitute it for the 5.96 anchors above"
+}

@@ -95,4 +95,27 @@ class LibrationRenderSessionTest {
             worker.join(5_000)
         }
     }
+
+    @Test fun `held cache separates playback models reuses fixed physics and cannot leak mutable audio`() {
+        val finite = note()
+        val held = finite.copy(macros = finite.macros + ("HOLD" to 1f), heldModel = LibrationKeys.MODEL_VERSION)
+        val session = LibrationRenderSession()
+        val first = session.renderTimed(held)
+        assertFalse(first.timing.audioCacheHit)
+        assertContentEquals(held.render().samples, first.snip.samples)
+        val expected = first.snip.samples.copyOf()
+        first.snip.samples.fill(0f)
+        val recalled = session.renderTimed(held.copy(name = "Held renamed", sourceSeconds = .77))
+        assertTrue(recalled.timing.audioCacheHit, "finite LENGTH is inactive for a held orbit")
+        assertContentEquals(expected, recalled.snip.samples)
+        assertTrue(session.renderTimed(held.copy(midi = 48)).timing.populationCacheHit)
+        assertFalse(session.renderTimed(finite).timing.audioCacheHit, "held and finite audio must never share an entry")
+        assertFalse(session.renderTimed(held.copy(macros = held.macros + ("NUDGE" to .97f))).timing.populationCacheHit)
+        val uncached = LibrationRenderSession(maxAudioBytes = 1, maxPopulations = 0)
+        uncached.render(held)
+        val repeated = uncached.renderTimed(held)
+        assertFalse(repeated.timing.audioCacheHit)
+        assertFalse(repeated.timing.populationCacheHit)
+        assertContentEquals(expected, repeated.snip.samples)
+    }
 }
