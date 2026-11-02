@@ -538,6 +538,8 @@ object Copy {
     const val ART_SEED_AUTO = "AUTO"
     /** The picker's mark row heading. */
     const val ART_MARK = "MARK"
+    /** An expansion's picker: which member's sound draws the tile. */
+    const val ART_SEED_KIT = "SEED KIT"
     /** A preview cell while its tile is drawn: a busy line. */
     const val ART_BUSY = "DRAWING…"
     /** The toast when the picker closes on changed knobs. */

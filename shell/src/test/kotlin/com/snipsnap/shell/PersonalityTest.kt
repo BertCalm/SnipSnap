@@ -537,7 +537,7 @@ class PersonalityTest {
      */
     private val notASentence = setOf(
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
-        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY",
+        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
