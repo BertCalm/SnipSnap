@@ -19,7 +19,7 @@ The patch saves `voice`, `midi`, `velocity`, signed 64-bit `seed`, `model`, name
 and macros. MIDI is explicit, from 36 to 72; a separate TUNE knob is unnecessary
 for this first listening API. Model 1 deliberately exposes only HANDOFF and a
 reserved HOLD, an exception to the eventual three-to-six timbral-control shape.
-Model 1 has no MATCH/SPAN/LOSS/BODY controls. Models 2 and 3 add MATCH and LOSS below;
+Model 1 has no MATCH/SPAN/LOSS/BODY controls. Model 2 adds MATCH and model 3 adds LOSS, both below;
 the others still require design and listening. PASSAGE's three provisional recipes
 stay outside the factory roster.
 
