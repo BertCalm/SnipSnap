@@ -84,6 +84,7 @@ import com.snipsnap.app.PREFS
 import com.snipsnap.shell.ArtKnobs
 import com.snipsnap.shell.ArtSidecar
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
@@ -112,7 +113,7 @@ private const val TAG = "ExportScreen"
  * expires while you are still reading teaches the user to tap twice
  * quickly - which is the opposite of what a confirm is for.
  */
-private const val EXPORT_ARM_MS = 15_000L
+internal const val EXPORT_ARM_MS = 15_000L
 
 /**
  * A dub's live state, hoisted to `App()` (see `App.kt`'s `exportSession`)
@@ -253,9 +254,71 @@ fun ExportScreen(
     onShareKit: () -> Unit = {},
     /** ALSO ▸ BEAT WRITERS: the door to BEAT, where bounce, MIDI and chart are written from. */
     onBeatWriters: () -> Unit = {},
+    /** The phone's expansions: with any store at all, EXPORT opens with a KIT / EXPANSION switch at the top. */
+    expansions: ExpansionStore? = null,
+    /** The expansion EXPORT is writing, or null for the kit; an empty id means "the first one there is". */
+    expansionSubject: String? = null,
+    onExpansionSubject: (String?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
+    if (expansions != null && shelfRoot != null) {
+        Column(Modifier.fillMaxSize()) {
+            SubjectSwitch(
+                expansion = expansionSubject != null,
+                onKit = { onExpansionSubject(null) },
+                onExpansion = { if (expansionSubject == null) onExpansionSubject("") },
+            )
+            Box(Modifier.weight(1f)) {
+                if (expansionSubject != null) {
+                    ExpansionExportPanel(expansions, shelfRoot, expansionSubject, appScope, onToast, onNote, onPick = { onExpansionSubject(it) })
+                } else {
+                    KitSubject(entry, session, onSessionChange, appScope, onToast, onNote, onNavigateKits, onAddFromShelf, project, shelfRoot, onShareKit, onBeatWriters)
+                }
+            }
+        }
+        return
+    }
+    KitSubject(entry, session, onSessionChange, appScope, onToast, onNote, onNavigateKits, onAddFromShelf, project, shelfRoot, onShareKit, onBeatWriters)
+}
 
+/** The switch at the top of EXPORT: the open kit, or an expansion of several. */
+@Composable
+private fun SubjectSwitch(expansion: Boolean, onKit: () -> Unit, onExpansion: () -> Unit) {
+    val scheme = LocalScheme.current
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((label, picked, tap) in listOf(Triple(Copy.EXPORT_SUBJECT_KIT, !expansion, onKit), Triple(Copy.EXPORT_SUBJECT_EXPANSION, expansion, onExpansion))) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .raisedBevel(scheme)
+                    .border(if (picked) 2.dp else 0.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+                    .tapeClick(label = label, onClick = tap),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(label, TapeType.pixel, if (picked) scheme.amber.tape else scheme.ink.tape)
+            }
+        }
+    }
+}
+
+/** EXPORT's KIT subject: the open kit's wizard, as EXPORT has always been. */
+@Composable
+private fun KitSubject(
+    entry: KitShelf.Entry?,
+    session: ExportSession?,
+    onSessionChange: (ExportSession?) -> Unit,
+    appScope: CoroutineScope,
+    onToast: (String) -> Unit,
+    onNote: (LandingNote.Note) -> Unit,
+    onNavigateKits: () -> Unit,
+    onAddFromShelf: () -> Unit,
+    project: Project?,
+    shelfRoot: File?,
+    onShareKit: () -> Unit,
+    onBeatWriters: () -> Unit,
+) {
+    val scheme = LocalScheme.current
     if (entry == null) {
         NoKitPanel(Copy.NO_KIT_FOR_EXPORT, project != null, onAddFromShelf, onNavigateKits)
         return

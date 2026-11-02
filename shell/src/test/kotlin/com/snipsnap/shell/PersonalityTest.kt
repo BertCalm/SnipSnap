@@ -542,6 +542,9 @@ class PersonalityTest {
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading, the rename dialog title, and DELETE's confirming question.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE", "EXPANSION_DELETE_CONFIRM",
+        // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
+        "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "CHANGE_ART",
+        "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.

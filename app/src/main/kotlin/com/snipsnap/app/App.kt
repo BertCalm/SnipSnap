@@ -303,6 +303,8 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
 fun App(shelf: KitShelf) {
     // The phone's expansions, beside the shelf's kits: `<files>/expansions`.
     val expansionStore = remember(shelf) { shelf.expansionStore() }
+    // EXPORT's subject: null is the open kit; an expansion's id (or "" for the first) is that expansion.
+    var exportExpansion by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -3717,6 +3719,10 @@ fun App(shelf: KitShelf) {
                                 onRenameKit = ::renameKit,
                                 expansions = expansionStore,
                                 onToast = { dock.say(it) },
+                                onOpenExpansion = { e ->
+                                    exportExpansion = e.id
+                                    goToScreen(AppScreen.EXPORT)
+                                },
                                 binnedCount = binnedCount,
                                 onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
@@ -4297,6 +4303,9 @@ fun App(shelf: KitShelf) {
                             // as one session, over the open project.
                             project = project,
                             shelfRoot = shelf.root,
+                            expansions = expansionStore,
+                            expansionSubject = exportExpansion,
+                            onExpansionSubject = { exportExpansion = it },
                             // SHARE, moved in from KIT's action row: it is an
                             // output. The beat's writers (BOUNCE, MIDI, CHART)
                             // live on BEAT and are listed here as a door.

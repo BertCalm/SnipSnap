@@ -137,6 +137,32 @@ class ExpansionExportTest {
     }
 
     @Test
+    fun `the card gets the folder or the xpn, never both`() {
+        val e = expansion("Card Bound", playable("Kit One", 1))
+        val folder = model(e).write(File(temp, "f"), overwrite = false) as ExpansionExportModel.WriteResult.Done
+        assertEquals(listOf(folder.result.directory), ExpansionExportModel.cardItems(folder.result, ExpansionExportModel.Form.FOLDER))
+        val m = model(e).also { it.form = ExpansionExportModel.Form.XPN }
+        val xpn = m.write(File(temp, "x"), overwrite = false) as ExpansionExportModel.WriteResult.Done
+        assertEquals(listOf(xpn.result.xpn!!), ExpansionExportModel.cardItems(xpn.result, ExpansionExportModel.Form.XPN))
+    }
+
+    @Test
+    fun `the written tile follows a seed change`() {
+        val one = playable("Kit One", 1)
+        val two = playable("Kit Two", 2)
+        val e = expansion("Reseeded", one, two)
+        val index = ExpansionMembers.index(shelf)
+        val seen = mutableListOf<String>()
+        val m = ExpansionExportModel(e, ExpansionMembers.present(e, index), ExpansionMembers.seed(e, index), tileRenderer = { k, d, kn, label ->
+            seen += k.name
+            KitArt.png(k, d, kn, label = label)
+        })
+        m.seed = index.getValue(two)
+        m.write(File(temp, "seed"), overwrite = false)
+        assertEquals("Kit Two", seen.last(), "the tile is drawn from the seed the picker chose")
+    }
+
+    @Test
     fun `an existing folder asks before it is replaced`() {
         val e = expansion("Again", playable("Kit One", 1))
         val root = File(temp, "card")

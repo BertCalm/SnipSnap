@@ -27,7 +27,8 @@ import java.io.IOException
 class ExpansionExportModel(
     private val expansion: Expansion,
     private val members: List<Member>,
-    private val seed: Member?,
+    /** The member whose sound draws the tile; CHANGE ART's SEED KIT row moves it. */
+    var seed: Member?,
     private val tileRenderer: (Kit, File, ArtKnobs, String) -> ByteArray = { k, d, knobs, label -> KitArt.png(k, d, knobs, label = label) },
     private val jCardRenderer: (Kit, File, String?) -> ByteArray = JCard::awtPng,
 ) {
@@ -59,6 +60,14 @@ class ExpansionExportModel(
 
         /** Nothing was written: the expansion is empty, or every member was refused ([skipped] says which and why). */
         data class Nothing(val skipped: List<Pair<String, String>>) : WriteResult
+    }
+
+    companion object {
+        /** What goes onto the card for [form]: the expansion folder, or the one `.xpn` — never both, though the phone holds both. */
+        fun cardItems(result: PackBuilder.Result, form: Form): List<File> = when (form) {
+            Form.FOLDER -> listOf(result.directory)
+            Form.XPN -> listOfNotNull(result.xpn)
+        }
     }
 
     fun write(destRoot: File, overwrite: Boolean): WriteResult {

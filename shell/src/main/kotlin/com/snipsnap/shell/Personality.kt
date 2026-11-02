@@ -577,6 +577,26 @@ object Copy {
     /** DELETE's confirm on an expansion row: a question. */
     const val EXPANSION_DELETE_CONFIRM = "DELETE THIS EXPANSION? ITS KITS STAY ON THE SHELF."
     fun expansionDeleted(name: String): String = "$name IS GONE. ITS KITS STAY ON THE SHELF."
+    // EXPORT's second subject.
+    /** The switch at the top of EXPORT. */
+    const val EXPORT_SUBJECT_KIT = "KIT"
+    const val EXPORT_SUBJECT_EXPANSION = "EXPANSION"
+    /** The row heading over the expansions to choose from. */
+    const val EXPANSION_PICK = "WHICH EXPANSION"
+    /** The members row heading. */
+    const val EXPANSION_MEMBERS = "KITS IN IT"
+    /** The last look at the tile, and its door back into the picker. */
+    const val CHANGE_ART = "CHANGE ART ▸"
+    /** The two forms an expansion writes in. */
+    const val EXPANSION_FORM_FOLDER = "ON-CARD FOLDER"
+    const val EXPANSION_FORM_XPN = "ONE FILE (.XPN)"
+    /** The expansion side's write button. */
+    const val EXPANSION_WRITE = "WRITE EXPANSION"
+    const val EXPANSION_NONE = "NO EXPANSIONS YET. HOLD A KIT ON THE SHELF TO START ONE."
+    const val EXPANSION_TO_PHONE = "GOES TO THE PHONE. PICK A CARD ON THE KIT SIDE TO SEND IT THERE."
+    fun expansionToCard(card: String): String = "GOES TO THE CARD: $card."
+    fun memberSkipped(kit: String, reason: String): String = "$kit SKIPPED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    fun expansionWritten(name: String, kits: Int): String = "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"
