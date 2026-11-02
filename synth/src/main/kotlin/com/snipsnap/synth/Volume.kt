@@ -24,8 +24,9 @@ import kotlin.math.min
  * keeps 16 percent at every rise heard, because it is loudest in its first few milliseconds; the
  * choir keeps 100, 94 and 53 percent at rises of 240, 448 and 640 ms; JANGLE through its amp keeps
  * 100, 97 and 73 percent. That is why the rack's peak-match test excuses this section
- * (FxTest `contractExcluded`): the drum case is the weak half of this pedal by design, and the
- * listening gate asks about it.
+ * (FxTest `contractExcluded`): the drum case is the weak half of this pedal by design. At its gate
+ * (2026-11-02) the owner heard it and found a faded-in snare useful on held sounds only, so nothing
+ * here tries to rescue a drum.
  *
  * Sits after SPIKE and before EQ, and so before the amp on purpose: a fade into DRIVE should
  * bloom, and WAH's envelope follower should ride the swell.

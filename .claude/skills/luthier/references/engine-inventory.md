@@ -172,14 +172,15 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`. The rack has 23 sections in a fixed order (`FxChain.SECTIONS`): speed,
-swell, smear, ghost, spike, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02). The rack has 24 sections in a fixed order (`FxChain.SECTIONS`): speed,
+swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
 vinyl, tape, ensemble, phase, echo, spring, room, motion. The pedal library (`Pedals.kt`) has
-eight pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM) and one board (RIG). Rack
+nine pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
 the pedal brainstorm (`docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`) specs both
-as new sections, not chips over an existing one. A pedal needs its own listening gate, and its
+as new sections, not chips over an existing one. FADE IN (the VOLUME section, character `eased`) passed
+its gate on 2026-11-02; VIBRATO has not been built. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 

@@ -119,6 +119,25 @@ class VolumeTest {
     }
 
     @Test
+    fun `a tap of the FADE IN chip rises over 448 ms, and AMT walks the rise`() {
+        val tap = 0.7f
+        val long = held(2f)
+        assertEquals(setOf("RISE"), Treatments.chain("eased").volume!!.keys, "the eased character set more than RISE")
+        // At AMT 0 the rack drops the section altogether, so no RISE is read: that is a zero rise.
+        fun ms(amount: Float) = Volume.riseFrames(Treatments.chain("eased", amount).volume?.getValue("RISE") ?: 0f, rate, long.frameCount) * 1000f / rate
+        println("VOLUME chip: tap ${"%.1f".format(ms(tap))} ms, AMT 1 ${"%.1f".format(ms(1f))} ms, AMT 0.35 ${"%.1f".format(ms(0.35f))} ms")
+        assertEquals(448f, ms(tap), 0.1f, "a tap no longer rises over the 448 ms the owner chose")
+        assertEquals(640f, ms(1f), 0.1f, "AMT 1 no longer rises over the 640 ms the owner also heard")
+        assertTrue(ms(0.35f) < ms(tap), "a lower AMT did not shorten the rise")
+        assertEquals(0f, ms(0f), "AMT 0 is not dry")
+        // The tap is, sample for sample, the 448 ms clip the owner heard (RISE 0.56).
+        for (pad in listOf(choir, jangle)) {
+            assertContentEquals(Volume.process(pad, mapOf("RISE" to 0.56f)).samples, Treatments.apply("eased", pad, tap).snip.samples, "the tap is not the heard rise")
+        }
+        assertContentEquals(choir.samples, Treatments.apply("eased", choir, 0f).snip.samples, "AMT 0 is not a copy")
+    }
+
+    @Test
     fun `an unknown key is ignored and an out-of-range RISE is clamped`() {
         val base = Volume.process(choir, mapOf("RISE" to 0.5f)).samples
         assertContentEquals(base, Volume.process(choir, mapOf("RISE" to 0.5f, "SPEED" to 0.9f)).samples, "an unknown key moved the fade")

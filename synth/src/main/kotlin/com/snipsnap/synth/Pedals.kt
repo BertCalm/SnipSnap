@@ -37,7 +37,8 @@ enum class PedalSide(val id: String) {
  * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
  * first board, authored as a hypothesis for its own gate; FORGE, the
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
- * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01.
+ * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
+ * volume swell, gated on 2026-11-02.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -144,6 +145,10 @@ object Pedals {
         // everything is heard in; not movable, since a room in front of an amp is not a place. Gated on 2026-11-01
         // (docs/superpowers/specs/2026-10-31-room-section-design-brief.md). Behind MORE: the default row is the owner's five.
         Entry("ROOM", "roomed", character("roomed"), PedalSide.POST, movable = false, gated = true),
+        // A fade-in: the `eased` character, the VOLUME section, whose tap (AMT 0.7) rises over 448 ms. In front of the amp,
+        // where the rack puts it, so a swell into DRIVE blooms; not movable, since the owner heard it only there. Gated on
+        // 2026-11-02 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 4). Behind MORE.
+        Entry("FADE IN", "eased", character("eased"), PedalSide.PRE, movable = false, gated = true),
     )
 
     init {
