@@ -149,6 +149,7 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
@@ -301,6 +302,9 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
  */
 @Composable
 fun App(shelf: KitShelf) {
+    // The phone's expansions, beside the shelf's kits: `<files>/expansions`.
+    val filesDir = LocalContext.current.filesDir
+    val expansionStore = remember(filesDir) { ExpansionStore(java.io.File(filesDir, "expansions")) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -3711,6 +3715,8 @@ fun App(shelf: KitShelf) {
                                 onEmptyRoomsBin = ::emptyRoomsBin,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
+                                expansions = expansionStore,
+                                onToast = { dock.say(it) },
                                 binnedCount = binnedCount,
                                 onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,

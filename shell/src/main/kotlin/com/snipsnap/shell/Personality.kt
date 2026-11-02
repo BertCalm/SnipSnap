@@ -547,6 +547,28 @@ object Copy {
     /** A pick that could not be written to the kit's art.json: this export still uses it. */
     const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
 
+    // Expansions on the phone: born from a held kit, gathered on the shelf.
+    /** The armed kit row's third door. */
+    const val EXPANSION_DOOR = "EXPANSION ▸"
+    /** The sheet the door opens. */
+    const val EXPANSION_SHEET_TITLE = "ADD TO EXPANSION"
+    /** The sheet's first row: start an expansion with this kit. */
+    const val EXPANSION_NEW = "NEW"
+    /** The name dialog's title. */
+    const val EXPANSION_NAME_TITLE = "NAME THE EXPANSION"
+    /** The name dialog's confirm button. */
+    const val EXPANSION_NAME_CONFIRM = "NAME IT"
+    const val EXPANSION_NAME_TAKEN = "ANOTHER EXPANSION HAS THAT NAME."
+    const val EXPANSION_NAME_UNSAFE = "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT OR SPACE."
+    /** The marker on an expansion the held kit is already in. */
+    const val EXPANSION_IN = "IN"
+    /** The art picker's title at birth reads ART FOR <TITLE>. */
+    const val ART_FOR = "ART FOR"
+    const val EXPANSION_SAVE_FAILED = "THE EXPANSION DID NOT SAVE. TRY AGAIN."
+    fun kitJoined(kit: String, expansion: String): String = "$kit IS IN $expansion."
+    fun kitLeft(kit: String, expansion: String): String = "$kit IS OUT OF $expansion."
+    fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
+
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"
 

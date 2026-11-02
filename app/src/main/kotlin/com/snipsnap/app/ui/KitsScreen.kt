@@ -78,6 +78,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
 import com.snipsnap.app.LocalHaptics
+import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.Names as NameRoll
 
 /** How long a first tap on EMPTY THE BIN NOW (rooms bin) stays armed before it disarms itself — `TakesBinScreen.kt`'s own constant, copied verbatim. */
@@ -222,6 +223,14 @@ fun KitsScreen(
      * time, and [SystemClock] would not move with it.
      */
     loadingClock: () -> Long = SystemClock::uptimeMillis,
+    /**
+     * The phone's expansions. Non-null, a held kit's row gains a third door,
+     * EXPANSION, opening [ExpansionFlow]; null (a preview, an older caller),
+     * the row offers RENAME and DELETE as it always has.
+     */
+    expansions: ExpansionStore? = null,
+    /** The dock's line, for what the expansion flow has to say. */
+    onToast: (String) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     // The loading screen's own rule, the dock bar's latch: no words for the
@@ -309,6 +318,7 @@ fun KitsScreen(
     // up regardless of how many rows are armed at once.
     var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    var expansionTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // Which kit rows are armed (DELETE/RENAME revealed), lifted up here
     // rather than kept in KitRow's own remember: cancelling (or dismissing
     // by tapping outside) either dialog below needs to disarm the row that
@@ -577,6 +587,7 @@ fun KitsScreen(
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },
+                            onRequestExpansion = if (expansions != null) ({ expansionTarget = it }) else null,
                             dubStatus = dubStatuses[entry.dir.path] ?: DubStamp.Status.DRAFT,
                             editedAge = editedAges[entry.dir.path],
                         )
@@ -809,6 +820,14 @@ fun KitsScreen(
             )
             // Innermost: Back cancels exactly like CANCEL, never RENAME.
             BackHandler(onBack = cancelRename)
+        }
+        if (expansions != null) {
+            expansionTarget?.let { target ->
+                ExpansionFlow(target, expansions, onToast) {
+                    expansionTarget = null
+                    armedKitDirs = armedKitDirs - target.dir.path
+                }
+            }
         }
     }
 }
@@ -1059,6 +1078,8 @@ private fun KitRow(
     onOpen: (KitShelf.Entry) -> Unit,
     onRequestDelete: (KitShelf.Entry) -> Unit,
     onRequestRename: (KitShelf.Entry) -> Unit,
+    /** The EXPANSION door, when the shelf has expansions to offer; null hides it. */
+    onRequestExpansion: ((KitShelf.Entry) -> Unit)? = null,
     /** What this kit's last dub left behind, read against the card in the phone — see [DubStamp]. */
     dubStatus: DubStamp.Status = DubStamp.Status.DRAFT,
     /** When this kit was last edited, as [Ages] words — null until the shelf's read lands. */
@@ -1140,6 +1161,18 @@ private fun KitRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("DELETE", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
+                }
+                onRequestExpansion?.let { request ->
+                    Box(
+                        Modifier
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = "ADD ${kit.name.uppercase()} TO AN EXPANSION", enabled = !busy) { request(entry) }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                    }
                 }
             }
         } else {
