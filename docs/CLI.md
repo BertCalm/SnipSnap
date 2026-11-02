@@ -48,7 +48,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--export LIST` | comma-separated formats, see below |
 | `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
 | `--art STYLE` / `--no-art` | expansion/`xpn` exports carry a procedural browser tile (`KitArt`) **by default** — the prototyping loop's verdict made `waveform` the standard look, with `rings` the runner-up (`grid` and `slices` also available). `--no-art` skips it |
-| `--overwrite` | replace same-named output |
+| `--overwrite` | replace the same-named kit folder whole: its bin and versions go too, so no new pad can mistake the old kit's audio for its own original. Also replaces same-named export output. Refused when the input file lives inside that folder. |
 
 More than 16 hits doesn't drop slices: placement rounds up to whole banks,
 the core classes claim their bank-A pads, and the rest overflow upward.

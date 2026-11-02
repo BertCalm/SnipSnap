@@ -212,7 +212,7 @@ void PadEngine::apply(const PadCommand& c) {
     // master gain always apply: they belong to the engine, not to a bank, and
     // a volume set while a kit is still loading must still be the volume.
     const bool engineWide = c.type == PadCommand::Type::AllOff || c.type == PadCommand::Type::SetPitch ||
-        c.type == PadCommand::Type::SetMaster;
+        c.type == PadCommand::Type::SetMaster || c.type == PadCommand::Type::SetVibrato;
     const bool stale = !engineWide && (!current_ || c.generation != current_->generation);
     if (stale) {
         if (c.type == PadCommand::Type::NoteOn) ended_.push(c.voiceId);
@@ -297,6 +297,12 @@ void PadEngine::apply(const PadCommand& c) {
             bend_.glideTo(ratio, glideFrames(c.fadeMs));
             return;
         }
+        case PadCommand::Type::SetVibrato: {
+            if (!std::isfinite(c.pitch)) return;
+            const double depth = std::min(std::max(c.pitch, 0.0), kMaxVibratoSemitones);
+            depth_.glideTo(depth, glideFrames(c.fadeMs));
+            return;
+        }
         case PadCommand::Type::SetMaster: {
             // The kit's volume knob: the whole mix, never louder than made.
             if (!std::isfinite(c.gainL)) return;
@@ -318,13 +324,38 @@ void PadEngine::apply(const PadCommand& c) {
     }
 }
 
+void PadEngine::fillPitch(int32_t frames) {
+    const bool vibrating = depth_.ramp > 0 || depth_.target != 0.0;
+    const double w = 2.0 * 3.14159265358979323846 * kVibratoHz / static_cast<double>(sampleRate_);
+    constexpr double kLn2Over12 = 0.05776226504666211;
+    for (int32_t i = 0; i < frames; ++i) {
+        double m = bend_.at(i);
+        if (vibrating) {
+            // 2^(x/12) for a few cents is 1 + x ln2/12 to the second order:
+            // worth the sine once per frame, not a pow().
+            const double x = depth_.at(i) * std::sin(vibratoPhase_ + w * static_cast<double>(i)) * kLn2Over12;
+            m *= 1.0 + x + 0.5 * x * x;
+        }
+        pitchMul_[i] = m;
+    }
+    bend_.advance(frames);
+    if (vibrating) {
+        vibratoPhase_ = std::fmod(vibratoPhase_ + w * static_cast<double>(frames), 2.0 * 3.14159265358979323846);
+        depth_.advance(frames);
+    }
+}
+
 void PadEngine::render(float* out, int32_t numFrames) {
     for (int32_t i = 0; i < numFrames * 2; ++i) out[i] = 0.0f;
-    if (!current_) {
-        bend_.advance(numFrames);
-        return;
+    // In chunks, so the pitch multiplier fits a fixed array on the audio thread.
+    for (int32_t at = 0; at < numFrames; at += kPitchChunk) {
+        const int32_t n = std::min(kPitchChunk, numFrames - at);
+        fillPitch(n);
+        if (current_) renderChunk(out + 2 * at, n);
     }
-    const bool bending = bend_.ramp > 0;
+}
+
+void PadEngine::renderChunk(float* out, int32_t numFrames) {
     for (auto& v : voices_) {
         if (!v.active) continue;
         const BankSample& s = current_->samples[static_cast<size_t>(v.sample)];
@@ -420,11 +451,10 @@ void PadEngine::render(float* out, int32_t numFrames) {
             // read is travelling. Only the step changes sign. The bend
             // scales the step, so a held note slides rather than restarts:
             // the read never jumps, it only travels faster or slower.
-            const double step = std::min(v.inc * (bending ? bend_.at(i) : bend_.target), kMaxSpeed);
+            const double step = std::min(v.inc * pitchMul_[i], kMaxSpeed);
             v.pos += v.reverse ? -step : step;
         }
     }
-    bend_.advance(numFrames);
     // Thirty-two voices at kit levels rarely sum past full scale; when they
     // do, a clamp beats wrapping.
     for (int32_t i = 0; i < numFrames * 2; ++i) {

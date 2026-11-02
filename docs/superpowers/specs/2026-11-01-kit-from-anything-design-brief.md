@@ -328,5 +328,84 @@ and a pluck kit rebuilt bit for bit, blends included, and no recipe without a ke
 swapped source refused; the CLI keeps the source, gives every pad a recipe, `--check` reports
 sixteen of sixteen identical, and a halved source is caught.
 
-**Still owed:** real capture fixtures, the pad sheet door (R4), and the listen. Nothing has been
-heard.
+**Still owed:** real capture fixtures, and the listen. Nothing has been heard.
+
+## As built (R4, 2026-11-01)
+
+**What.** A KIT FROM ANYTHING card on the Android pad sheet, beside PAD FROM ANYTHING. The
+source is the pad's own audio, read exactly as MAKE PAD reads it; a fresh capture reaches the
+card by being captured to a pad first (no mic path in this round). The card has the key as
+root and scale chips (the KIT screen's KEY panel layout; it opens on the open kit's key, else
+A minor), three genre chips, and MAKE KIT ▸ <GENRE>. A pad under 50 ms or over 30 s is
+refused with a toast before any work, using the assembler's own limits.
+
+**Where.**
+- `shell/.../KitMaker.kt` (twin of `PadMaker`): the genre list, the default key, `kitName`
+  (MPC-safe through `Names.sanitizeStem`) and `refusal(seconds)`; `KitMakerTest` beside it.
+- `app/.../ui/KitFromCard.kt`: the card, its own composable with explicit parameters. The pad
+  sheet calls it in one line. It is not inlined because SynthScreen met the 256-register dex
+  limit on an inline Column.
+- `app/.../KitShelf.kt` `landKitFrom`: the CLI's flow on the shelf. A fresh name, the source
+  written as `kitfrom-source.wav` and read back, `assemble(..., sourceFile)`,
+  `assembleArranged` with `Balance.apply`, the key and the genre's tempo. The folder is deleted
+  if the assembler throws.
+- `App.kt` `kitFrom`: [texture]'s busy-then-land shape. It leaves the kit on the shelf and
+  puts up the result sheet; it does not open the kit by itself.
+- `app/.../ui/KitFromResultOverlay.kt`: full screen, as SPREAD's panel is. The kit's name, key
+  and tempo; the gate table; one line per blended pad naming its partner, share, distance and
+  the gate after; the count; OPEN KIT (the shelf's `landKit` route) and a back gesture that
+  only closes.
+- `KitFromAnything.describe(result, name, key, genre)` returns a `Report` (`header`,
+  `tableHeader`, `rows`, `rowGates`, `blends`, `summary`, and `lines` in print order). The CLI
+  prints from it and the overlay draws the same strings, so the two cannot disagree.
+
+**Status.** Proposed until the build and the on-device look are run: this round's code is
+written against the CLI's flow and the `PadMaker` precedent, and what compiles and what the
+tests assert is recorded in the PR. Not heard, and not seen on a device.
+
+## As built (desktop round, 2026-11-01): an octave the detector cannot see, and a warning that was wrong
+
+**The octave.** Six stand-in sources from the Sorting Pot one-shots were run through `kitfrom`
+in A minor (a scream, a bottle hit, a phaser kalimba, a synth brass bass in all three genres).
+Five passed every gate with no blend. The bottle hit failed every pitched pad (the siren and
+all eight notes) by +1200 to +1203 cents at confidence 0.86 to 1.00, and only the RING blend
+brought them in. Measured on the real WAV: the source's spectrum peaks at 2040 to 2056 Hz;
+`Pitch.detect` returned 1026 Hz at three window lengths; the cycle `averagedPeriods` produced
+had its two halves correlating at 0.9996, and its first harmonic was 16.8 against 1010 in the
+second. The cause is `Pitch.MAX_HZ` = 1200: at one true period the autocorrelation was 0.83,
+under the detector's 0.85-of-maximum rule, so it took the lag of two periods, and a table of
+two periods read at 55 Hz sounds at 110 Hz.
+
+The fix is in the analysis, so it holds for every pad at once. `subPeriodFactor` asks whether
+the averaged cycle is k equal parts (k = 4, 3, 2) that all correlate with the first at 0.98 or
+better (`SUB_PERIOD_MATCH`); `subPeriod` keeps the harmonics at multiples of k and inverts the
+transform, which is one period exactly and still wraps. The note the analysis reports is the
+detector's reading times k, so the provenance and the siren's base say where the source really
+sounds: the bottle is now 2053.0 Hz, and its siren starts about an octave above where the
+other sources' sirens start. That is a consequence of "the siren starts where the source
+sounds", and the siren's place per genre is still Josh's decision.
+
+Measured after the fix: the bottle kit passes all sixteen gates with no blend (siren worst 3
+cents, bass and tones within 13 cents, confidence 0.86 or better), and `kitfrom --check`
+rebuilds all sixteen pads bit for bit. The five other kits, made before the fix, also still
+rebuild bit for bit under the new code, so the fold changes nothing for a source the detector
+reads correctly. The test is `a source above the detector's range yields one period, not two,
+so the table sounds at the note asked` (`KitFromAnythingTest`, 23 of 23 pass); without the
+fold it fails on the cycle's first harmonic (1.289 against 717.4, measured).
+
+**Known limit.** A source whose true waveform is itself k identical halves to 0.98 would be
+folded. That needs a cycle with only even harmonics, which is rare in a recorded hit, and the
+gate would still read the resulting pad against the note asked.
+
+**The hat warning.** `Preflight` warned "open and closed hats don't share a choke group" on
+every kit made by `kitfrom`, because the ride and the crash are tagged open hat for colour and
+balance and sit in mute group 0 by the `ArrangedPad.muteGroup` override, so the rule saw open
+hats outside the hats' group. The kit and the exported programs were right (verified in the
+exported `.xpm`: A03 and A04 in mute group 1, everything else 0). The rule now reads: every
+closed hat in one non-zero group and at least one open hat in it is OK, naming the open hats
+that ring free by choice ("hats share choke group 1; 6, 7 ring free by choice"); any open hat
+in a different non-zero group, or no shared group at all, still warns. `PreflightTest` 11 of
+11 pass, including one test for the ride and crash and one for the open hat in group 2.
+
+Not heard. The reels are measurements made audible, not judgements: the first six were sent
+to Josh's phone on 2026-11-01 and nothing has come back yet.

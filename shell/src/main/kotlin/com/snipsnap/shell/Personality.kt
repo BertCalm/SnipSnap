@@ -1917,6 +1917,12 @@ object Copy {
     fun madeNamed(what: String, made: String): String = "$what MADE — $made. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
+    const val KIT_TOO_SHORT = "TOO SHORT TO MAKE A KIT. FEED IT MORE THAN A BLINK."
+    const val KIT_TOO_LONG = "TOO LONG FOR A KIT. TRIM IT UNDER THIRTY SECONDS."
+    /** MAKE KIT's toast: the kit is on the shelf and the result sheet is up; [blended] pads failed their gate and were blended. */
+    fun kitMade(made: String, blended: Int): String = "KIT MADE — $made. $blended OF 16 PADS BLENDED."
+    /** MAKE KIT's refusal when the assembler says the sound cannot be quarried; [reason] is its own sentence. */
+    fun kitRefused(reason: String): String = "CAN'T MAKE A KIT OF THAT — ${reason.uppercase(java.util.Locale.ROOT)}."
 
     // Chop shop.
     /**
@@ -2900,6 +2906,15 @@ object Copy {
     const val KEYS_VOICE_BUSY = "SAVING THE VOICE MODE…"
     /** The toast when KEYS could not rewrite the instrument's descriptors; the button goes back to the mode it had. */
     const val KEYS_VOICE_FAILED = "COULDN'T SAVE THE VOICE MODE."
+    /** The toast when KEYS' GRAB is pressed before anything was played in the last sixteen seconds. */
+    const val KEYS_GRAB_EMPTY = "NOTHING TO GRAB. PLAY SOMETHING FIRST."
+    /** The toast when no app on the phone takes the MIDI file KEYS' GRAB made. */
+    const val KEYS_GRAB_NO_APP = "NO APP ON THIS PHONE TAKES A MIDI FILE."
+    /** The toast when KEYS' GRAB could not write its MIDI file. */
+    const val KEYS_GRAB_FAILED = "COULDN'T WRITE THE GRAB."
+    /** KEYS' GRAB handing its MIDI file to the share sheet. */
+    fun keysGrabbed(notes: Int, bars: Int): String =
+        "GRABBED $notes ${if (notes == 1) "NOTE" else "NOTES"} OVER $bars ${if (bars == 1) "BAR" else "BARS"}. CHOOSE WHERE IT GOES."
     /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
     const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**
@@ -2927,6 +2942,8 @@ object Copy {
     const val DESAMPLE_BUSY = "DE-SAMPLING…"
     /** The dock's line while MAKE PAD renders a new pad out of one hit. */
     const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE KIT quarries one sound into sixteen pads. */
+    const val MAKE_KIT_BUSY = "MAKING THE KIT…"
     /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
     const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
     /** The dock's line while SPREAD writes the pad's sound across a bank. */
