@@ -57,6 +57,7 @@ object KitStore {
             "version" to JsonValue.Num(VERSION.toDouble()),
             "name" to JsonValue.Str(kit.name),
         ).also { root ->
+            kit.id?.let { root["id"] = JsonValue.Str(it) }
             kit.key?.let {
                 root["key"] = JsonValue.Obj(
                     linkedMapOf(
@@ -174,7 +175,7 @@ object KitStore {
             )
         }
         return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear,
-            aquariumPerformance = obj["aquariumPerformance"])
+            aquariumPerformance = obj["aquariumPerformance"], id = (obj["id"] as? JsonValue.Str)?.value)
     }
 
     /** One pad, the inverse of [padToJson] — shared by [fromJson] and, standalone, by a bin tombstone's read-back. */
