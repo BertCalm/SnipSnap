@@ -766,7 +766,10 @@ logcat tag to grab when something is wrong.
   count drops; restore it from DELETED KITS: it comes back. Tap the
   expansion row: EXPORT opens on its EXPANSION side with the tile; CHANGE
   ART, then WRITE EXPANSION, and the folder (or the `.xpn`) lands under the
-  expansion's title, on the card when one is picked.
+  expansion's title, on the card when one is picked. BACKUP carries the
+  expansions too: restore the backup on a phone without them and the toast
+  counts them BACK ON THE SHELF, each around its kits; restore it on the
+  phone it came from and each is named as already there.
 - **ROOMS on the shelf**: after KEEP ROOM, THE SHELF grows a ROOMS
   section under INSTRUMENTS, one row per room with its measurement and
   length. Hold a row: it presses and shows FORGET → BIN; tap it and the

@@ -348,22 +348,32 @@ class KitShelf(val root: File) {
      * BACKUP: every kit on the shelf as one file under [outDir], each its
      * own `.xpn` inside, and the player's presets file riding at the root
      * when there is one (`UserPresets`, the WS5 follow-up: a backup that
-     * comes home merges them back); kits preflight refuses are skipped
-     * and named.
+     * comes home merges them back), and the phone's expansions beside it
+     * (`ExpansionBackup`: a restore rebuilds them around the kits it lands);
+     * kits preflight refuses are skipped and named.
      */
     fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
         outDir.mkdirs()
         val stamp = ShareOut.stamp(nowMillis)
-        return com.snipsnap.kit.KitBackup.backup(
-            root,
-            File(outDir, "SnipSnap Shelf $stamp.zip"),
-            overwrite = true,
-            extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(root)),
-        )
+        val expansions = File(outDir, ".expansions-$stamp.json")
+        try {
+            val extras = linkedMapOf(UserPresets.FILE_NAME to UserPresets.file(root))
+            if (com.snipsnap.shell.ExpansionBackup.write(expansionStore(), root, expansions)) {
+                extras[com.snipsnap.shell.ExpansionBackup.FILE_NAME] = expansions
+            }
+            return com.snipsnap.kit.KitBackup.backup(
+                root,
+                File(outDir, "SnipSnap Shelf $stamp.zip"),
+                overwrite = true,
+                extras = extras,
+            )
+        } finally {
+            expansions.delete()
+        }
     }
 
     /** What [land] brought home: the kits as shelf entries, what was skipped with the reason, and the presets a backup carried. */
-    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int)
+    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int, val expansions: Int = 0)
 
     /**
      * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
@@ -373,8 +383,8 @@ class KitShelf(val root: File) {
      */
     fun land(file: File, displayName: String): Landing {
         root.mkdirs()
-        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
-        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets)
+        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root, expansions = expansionStore())
+        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets, landed.expansions)
     }
 
     /**

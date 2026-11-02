@@ -366,9 +366,10 @@ object Copy {
      */
     fun snipReady(name: String): String = "$name IS READY TO SEND. PICK WHERE IT GOES."
     /** A kit file landed: [landed] kits on the shelf, [presets] under YOURS on SYNTH when a backup brought some home, [skipped] refused - the box ([LandingNote]) names them when there are any. */
-    fun landed(landed: Int, skipped: Int, presets: Int = 0): String =
+    fun landed(landed: Int, skipped: Int, presets: Int = 0, expansions: Int = 0): String =
         "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." +
             (if (presets > 0) " ${countOf(presets, "PRESET", "PRESETS")} UNDER YOURS." else "") +
+            (if (expansions > 0) " ${countOf(expansions, "EXPANSION", "EXPANSIONS")} BACK ON THE SHELF." else "") +
             if (skipped > 0) " $skipped SKIPPED." else ""
     /** The message box's title when a share landed nothing: the file's name and the refuser's words follow. */
     const val NOTHING_LANDED = "NOTHING LANDED."

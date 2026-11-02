@@ -68,6 +68,25 @@ class ExpansionStore(val root: File, private val random: Random = Random.Default
         return e
     }
 
+    /**
+     * An expansion coming home from a backup: its [identifier] kept, so the
+     * MPC still sees the same pack, under [title] or the first free "TITLE 2".
+     * Refused when an expansion with that identifier is already here.
+     */
+    fun adopt(title: String, identifier: String, memberKitIds: List<String>, seedKitId: String?, knobs: ArtKnobs): Expansion {
+        require(list().none { it.identifier == identifier }) { "an expansion with identifier '$identifier' is already here" }
+        val free = Names.freshStem(title) { candidate -> checkTitle(candidate) != NameCheck.Ok }
+        require(checkTitle(free) == NameCheck.Ok) { "expansion title refused: '$free'" }
+        var id: String
+        do {
+            id = freshId()
+        } while (File(root, id).exists())
+        val members = memberKitIds.distinct()
+        val e = Expansion(id, free, identifier, members, seedKitId?.takeIf { it in members } ?: members.firstOrNull(), knobs)
+        write(e)
+        return e
+    }
+
     fun add(id: String, kitId: String): Expansion = update(id) {
         if (kitId in it.memberKitIds) it else it.copy(memberKitIds = it.memberKitIds + kitId, seedKitId = it.seedKitId ?: kitId)
     }

@@ -51,10 +51,10 @@ object ShelfImport {
     }
 
     /** What landed: each kit's name and folder, what was skipped with the reason, and how many presets a backup brought home. */
-    data class Landed(val kits: List<Pair<String, File>>, val skipped: List<String>, val presets: Int = 0)
+    data class Landed(val kits: List<Pair<String, File>>, val skipped: List<String>, val presets: Int = 0, val expansions: Int = 0)
 
     /** What [landZip] found: the kit folders in staging, the skips, and a backup's presets file as text when it carried one. */
-    private data class ZipLanding(val dirs: List<File>, val skipped: List<String>, val presets: String?)
+    private data class ZipLanding(val dirs: List<File>, val skipped: List<String>, val presets: String?, val expansions: String? = null)
 
     /** The staging folder's name under the shelf — hidden from the shelf's own listing (no `kit.json` at its top). */
     const val STAGING_DIR = ".landing"
@@ -116,7 +116,14 @@ object ShelfImport {
      * read it, or when it read as a kit but held none. [maxContainerBytes]
      * is the size past which an MPC container is refused unread.
      */
-    fun land(file: File, displayName: String, shelfRoot: File, maxContainerBytes: Long = MAX_CONTAINER_BYTES): Landed {
+    fun land(
+        file: File,
+        displayName: String,
+        shelfRoot: File,
+        maxContainerBytes: Long = MAX_CONTAINER_BYTES,
+        /** The phone's expansions: a backup that carries some rebuilds them here, around the kits it landed. */
+        expansions: ExpansionStore? = null,
+    ): Landed {
         require(file.isFile) { "no such file: $file" }
         val head = file.inputStream().use { s ->
             val b = ByteArray(SNIFF_BYTES)
@@ -135,12 +142,14 @@ object ShelfImport {
             val kitDirs: List<File>
             val skipped = mutableListOf<String>()
             var presetsText: String? = null
+            var expansionsText: String? = null
             when (sniff(head)) {
                 Kind.XPN -> {
                     val zipped = landZip(file, displayName, staging, maxContainerBytes)
                     kitDirs = zipped.dirs
                     skipped += zipped.skipped
                     presetsText = zipped.presets
+                    expansionsText = zipped.expansions
                 }
                 Kind.MPC3 -> {
                     requireContainerFits(file, displayName, maxContainerBytes)
@@ -161,7 +170,20 @@ object ShelfImport {
             require(kitDirs.isNotEmpty()) {
                 "'$displayName' held no kit" + if (skipped.isNotEmpty()) ": " + skipped.joinToString("; ") else ""
             }
-            val landed = kitDirs.map { moveOntoShelf(it, shelfRoot) }
+            // Each kit's name inside the backup, read before the move may freshen it to "NAME 2":
+            // the expansions file names its members that way.
+            val byBackupName = LinkedHashMap<String, File>()
+            val landed = kitDirs.map { dir ->
+                val backupName = runCatching { KitStore.load(dir).name }.getOrNull()
+                moveOntoShelf(dir, shelfRoot).also { (_, dest) -> backupName?.let { byBackupName[it] = dest } }
+            }
+            // The expansions after the kits, like the presets: they name kits that must be on the shelf.
+            var restoredExpansions = 0
+            if (expansions != null && expansionsText != null) {
+                val r = ExpansionBackup.restore(expansionsText, expansions, byBackupName)
+                restoredExpansions = r.added
+                skipped += r.skipped
+            }
             // The presets after the kits, never before: a landing that
             // fails on a kit brings nothing home, and one whose presets
             // file is not a presets file still lands every kit, naming the
@@ -174,7 +196,7 @@ object ShelfImport {
                     skipped += "${UserPresets.FILE_NAME}: ${e.message ?: "refused"}"
                 }
             }
-            return Landed(landed, skipped, presets)
+            return Landed(landed, skipped, presets, restoredExpansions)
         } finally {
             staging.deleteRecursively()
         }
@@ -223,7 +245,13 @@ object ShelfImport {
                     skipped += "${UserPresets.FILE_NAME}: ${e.message}"
                     null
                 }
-                ZipLanding(r.kits.map { it.directory }, skipped, presets)
+                val expansionsText = try {
+                    KitBackup.extra(file, ExpansionBackup.FILE_NAME)?.toString(Charsets.UTF_8)
+                } catch (e: LimitedRead.TooLargeException) {
+                    skipped += "${ExpansionBackup.FILE_NAME}: ${e.message}"
+                    null
+                }
+                ZipLanding(r.kits.map { it.directory }, skipped, presets, expansionsText)
             }
             xpm -> {
                 val r = XpnImporter.importAll(file, staging)

@@ -1312,14 +1312,17 @@ fun App(shelf: KitShelf) {
                         dock.say(Copy.roomLanded(room.name))
                         return@LaunchedEffect
                     }
-                    val (entries, skipped, presets) = withContext(Dispatchers.IO) { shelf.land(local, name) }
+                    // Under the kit-write lock: a backup coming home writes expansions as well as kits.
+                    val (entries, skipped, presets, expansions) = withContext(Dispatchers.IO) {
+                        KitWrites.mutex.withLock { shelf.land(local, name) }
+                    }
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     // A clean landing keeps its toast; one with skips opens the
                     // box, which names each skipped kit and the door's reason.
                     // A backup's presets are counted in the same line: they
                     // landed under YOURS on SYNTH, which is nowhere near here.
-                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
-                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets))
+                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets, expansions)
+                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets, expansions))
                     // The landing replaces the benches, so an editor that was up
                     // is gone with them; one the history brings back is judged
                     // against this kit by its own verdict.
@@ -2756,7 +2759,7 @@ fun App(shelf: KitShelf) {
                     // How many presets rode along, for the toast: the file is
                     // in the zip byte for byte, so this is the strip's own
                     // count, and a file this build cannot read counts none.
-                    val n = if (r.extras.isEmpty()) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
+                    val n = if (UserPresets.FILE_NAME !in r.extras) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
                     r to n
                 }
                 busy = null

@@ -54,10 +54,10 @@ object LandingNote {
      * toast's one line says it all; else that line as the title, the
      * skips first.
      */
-    fun landed(displayName: String, kits: List<String>, skipped: List<String>, presets: Int = 0): Note? {
+    fun landed(displayName: String, kits: List<String>, skipped: List<String>, presets: Int = 0, expansions: Int = 0): Note? {
         if (skipped.isEmpty()) return null
         val lines = skipped.map { Line("SKIPPED · ${shout(it)}", trouble = true) } + kits.map { Line("LANDED · ${shout(it)}") }
-        return Note(Copy.landed(kits.size, skipped.size, presets), fold(lines))
+        return Note(Copy.landed(kits.size, skipped.size, presets, expansions), fold(lines))
     }
 
     /** BACKUP: null when every kit made it; else the box naming each kit preflight refused and its reason, the packed ones after. [presets] rode along beside them. */
