@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged", "roomed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged", "roomed", "eased",
             ),
             Treatments.names,
         )

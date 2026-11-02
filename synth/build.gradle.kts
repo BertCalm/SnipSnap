@@ -2095,6 +2095,16 @@ tasks.register<JavaExec>("generateWahAudition") {
     args("${rootDir}/testkit/wah-audition")
 }
 
+/** Render VOLUME's (FADE IN's) listening gate (the real section on the snare, the choir and JANGLE, beside SWELL) under testkit/volume-audition/. See VolumeAuditionGenerator. */
+tasks.register<JavaExec>("generateVolumeAudition") {
+    group = "distribution"
+    description = "Render VOLUME's listening gate clips and strips under testkit/volume-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VolumeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/volume-audition")
+}
+
 /** Render the pedal board's Stage 1b listens (short pads through WAH with and without the one-cycle floor, and the FADE IN, VIBRATO and DELAY comparisons) under testkit/pedal-listens/. See PedalListensGenerator. */
 tasks.register<JavaExec>("generatePedalListens") {
     group = "distribution"
