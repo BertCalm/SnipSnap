@@ -1,6 +1,9 @@
 # Caustic completion: design brief
 
-2026-10-31. Status: selected implementation contract, validation pending.
+2026-10-31. Status: implemented at clean checkpoint `c9748aa93`; native audio
+and generated-export checks pass, audition published, full integration and
+corrected direct-test rerun pending. Offline host cost is measured and misses
+the tens-of-ms regeneration goal.
 The four finite native voices are implemented and measured. The owner selected
 their earlier study directions; the native finite ports still await explicit
 listening approval. New sustain, motion and held-key behaviour are unheard.
@@ -96,8 +99,8 @@ implemented by repeatedly playing the tail of the finite recording.
 Each voice needs bounded ongoing excitation appropriate to its gesture.
 Alloy's metallic body, Hollow's short contact, Rubbed's pressure/noise and
 Catches' ordered spatial contacts must retain their distinction at full HOLD.
-The final source shapes and schedules await implementation measurements and
-listening.
+The implemented source shapes and schedules are recorded in the as-built
+section; their listening acceptance remains open.
 
 Render the real zero-state onset and settling trajectory. Obtain the passive
 bank's periodic state from a bounded solve or verified convergence, then render
@@ -106,7 +109,7 @@ filter history must recur before selecting a region. Filter before cropping.
 Measure the kept cycle against an independent preceding/continuing cycle;
 playing one crop twice is not a state-continuation proof. `Keys.seamError`
 must remain below `Keys.MAX_SEAM_ERROR` (`1e-3`), alongside measured pitch and
-state residuals. Do not claim these checks have run yet.
+state residuals. The as-built results identify which checks and cases ran.
 
 Drum-pad HOLD output is a pure loop `Snip`. `CausticInstrument.keyNote` supplies
 an actual onset followed by sustain and a positive `loopStartFrame` for
@@ -119,8 +122,10 @@ release, default .6 seconds. MPC 2 and MPC 3 must preserve those loop bounds.
 ## Compatibility and integration
 
 `CausticInstrument` and `CausticPatch` distinguish native models 1 and 2.
-Missing/null saved native model remains 1; new constructors use 2. The strict
-model-1 core rejects positive HOLD and unsupported MOTION fields. Its earlier
+Missing/null saved native model remains 1; new constructors use 2. Strict
+model-1 saved-patch, CLI and editing boundaries reject unsupported extensions
+unless an explicit editing action promotes the working copy. Low-level
+settled/render helpers retain unknown-key filtering. The earlier
 recipe interpretation and eleven presets remain frozen.
 
 `CausticEditing` can promote an editor working copy on an explicit HOLD,
@@ -138,8 +143,11 @@ ray/pickup pair at every 4× sample. Cache only reusable prepared data, keyed by
 model, geometry, trajectory and resolution. Render state remains note-local;
 any complete-render cache must also include voice, note, velocity and output
 settings. Preparation, held render, filter preroll and all keygroup zones need
-separate cost measurements. The house goal is short-note rerenders in tens of
-milliseconds; no model-2 timing has been established.
+separate cost measurements. The completed isolated host benchmark reports
+48 native calls with three repeats per case, all passing determinism checks.
+C4 group medians span 350–1182 ms across loop and onset-plus-loop paths.
+The house's tens-of-ms regeneration goal is not met. These Java 17 host
+generation timings do not measure phone latency or pre-rendered playback.
 
 The cheapest proof begins with one stationary full-HOLD voice, independently
 checked periodic state and a real onset. Then prove one moving SOURCE/FOCUS
@@ -149,21 +157,52 @@ checks include legacy PCM preservation, zero-extension model-2 equivalence,
 determinism, source/root phase, bounded raw state, independent continuation,
 4×/higher-rate comparisons, control interactions, cancellation and register
 edges. Run the current complete repository gate only after the implementation
-is ready. Build, seam, aliasing, timing and export results remain pending.
+is ready. Native continuation, higher-rate broad-shape, export and host-cost
+checks have completed as recorded below; the full gate and corrected
+direct-test rerun remain pending.
 
 ## Verified, proposed and heard
 
 - **Verified:** canonical conventions, the baseline Caustic/Keys interfaces and
-  current model-2/editing/pad-maker contracts were read at the baseline above.
-  The baseline `:synth:classes` build passed before completion validation.
-- **Proposed:** the new held sources, geometry motion, loop/state and keygroup
-  contracts above. Implementation constants and listening acceptance are open.
-- **Measured:** no completion pitch, seam, state, aliasing, readback or timing
-  results are claimed here. Historical finite-pack measurements remain in
-  [CAUSTIC.md](../../CAUSTIC.md).
+  current model-2/editing/pad-maker contracts were read. The implemented
+  checkpoint is `c9748aa93`, with generated native and held-key artifacts
+  separate from the earlier packs.
+- **Proposed:** held source shapes, trajectory depth and timing are implemented
+  sound-design choices. Listening acceptance remains open.
+- **Measured:** all 78 legacy Float32 stage hashes match the baseline;
+  twenty-seven native audio cases and four parity/silence/cancellation checks
+  pass in the independent Java 21 harness. The Java 17 generated 28-clip and
+  four-keygroup pack exits 0 with both MPC and phone SMPL readback and PCM24
+  seam checks. Publication, browser payload and the 48-call idle host benchmark
+  pass. Full integration and the corrected direct-test rerun remain open. The
+  initial direct run passed 18 of 19 tests; only its FFT onset first-sample
+  assertion changes from exact zero to an absolute `1e-9` tolerance. Exact
+  silence and real-state/continuation guards remain. See [CAUSTIC.md](../../CAUSTIC.md)
+  for scoped results and the inherited Gradle compiler exclusions.
 - **Heard:** the owner preferred Alloy/Fuller Body and selected the three
   character-study directions. Native finite ports still await a listening
   verdict; new moving and sustained sounds and held-key behaviour are unheard.
+
+## As built
+
+The selected PORT direction is implemented for all four voices. Thirty-two
+prepared source/pickup states feed emission windows before the passive bank.
+Alloy/Catches use analytic source terms; Hollow/Rubbed share source FFTs across
+reception kernels. The affine periodic reference is checked against real
+zero-state startup and settling, with three rendered cycles and output filters
+before the final crop. Pad loops and onset-plus-loop keygroup samples remain
+separate products of that render.
+
+The release previews use the production instrument player. The four generated
+C4 keygroups have nine minor-third roots from 48 to 72, a .6-second host
+release and positive loop starts. No new settings have been added to the
+eleven model-1 factory presets. Technical completion does not confer hearing
+approval on the new sources or motion.
+
+The [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
+is deployed from site source `5cfa2c81c8e0a1d4f325d4a28940621c18f36640`
+with the owner's private audience unchanged. Playback/navigation/download
+checks pass at 320–1440 pixels. They do not establish listening acceptance.
 
 ## Why it is built this way
 

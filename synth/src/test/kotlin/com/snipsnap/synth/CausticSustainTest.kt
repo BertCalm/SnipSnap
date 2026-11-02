@@ -111,7 +111,10 @@ class CausticSustainTest {
             assertTrue(held.internal.size >= (held.playedEndFrame + 2 * held.loopFrames + 128) * 4,
                 "$voice MIDI$midi lacks real filter/continuation context")
             assertTrue(held.internal.all { it.isFinite() && abs(it) < 8f })
-            assertEquals(0f, held.internal.first(), "$voice has pre-onset excitation")
+            // Float FFT convolution has a numerical floor before causal support.
+            // This bound is below a 24-bit step; the state and arrival checks
+            // below independently distinguish a real onset from copied sustain.
+            assertTrue(abs(held.internal.first()) < 1e-9f, "$voice has pre-onset excitation")
             assertTrue(d.stateResidual < 1e-4 && d.periodicStateResidual < 1e-8,
                 "$voice MIDI$midi modal closure ${d.stateResidual}/${d.periodicStateResidual}")
             assertTrue(d.rawSeamError < 1e-5 && d.continuationError < 1e-5,

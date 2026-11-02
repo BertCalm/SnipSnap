@@ -453,16 +453,21 @@ describe the six controls, saved format and held-loop constraints.
 
 CAUSTIC's ALLOY, HOLLOW_MALLET, RUBBED_RING and TRAVELLING_CATCHES
 voices share coherent SOURCE/FOCUS paths and voice-specific BODY. Native
-model 2 is being completed with MOTION, real sustained HOLD and onset-preserving
+model 2 adds MOTION, real sustained HOLD and onset-preserving
 keygroups, retaining saved ROOT and VELOCITY. Below full HOLD, LENGTH and HOLD
 scale the finite gesture; full HOLD uses a separate periodic render. The new
-held/moving sounds remain proposed and unheard; the finite native ports also
+held/moving sounds are implemented and unheard; the finite native ports also
 await an explicit listening verdict on the selected study directions. Eleven
-existing model-1 presets and archived study models 1–4 retain their interpretation. The earlier
-finite integration passed its 7,001-test gate; completion validation is pending.
-Run `./gradlew :synth:generateCausticCharactersAudition :synth:generateCausticKit`
-for the four-voice control study and dual-generation MPC starter. The archived listening
-studies remain unchanged. The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+existing model-1 presets and archived study models 1–4 retain their
+interpretation. The earlier finite integration passed its 7,001-test gate;
+the completion's full gate is pending. Measured C4 host generation medians
+are .35–1.18 seconds, above the tens-of-ms goal; playback uses generated samples.
+Run `./gradlew :shell:generateCausticCompleteAudition` for 28 clips, four
+production-player release previews and four nine-zone MPC/phone keygroups.
+The five completion downloads pass generator readback and PCM24 seam checks;
+the [completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
+is published. Physical playback and listening remain separate. The archived listening
+studies remain unchanged. The [retained finite audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
 provides 42 recordings and six downloads, including all four voice families
 and the MPC starter. [Implementation notes](docs/CAUSTIC.md) distinguish
 finite duration classification from sustained-loop support.
