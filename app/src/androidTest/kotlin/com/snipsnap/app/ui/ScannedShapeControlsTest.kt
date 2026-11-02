@@ -217,7 +217,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     }
 
     @Test
-    fun root_velocity_and_length_each_preserve_the_other_saved_fields() {
+    fun velocity_and_length_each_preserve_the_other_saved_fields() {
         val voice = ScannedChainVoice.BLOOM
         val custom = ScannedChainShape.drawn(
             FloatArray(ScannedChain.SHAPE_SIZE) { i -> if (i < 29) .27f else -.08f },
@@ -226,7 +226,8 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
         val original = fixture(voice).copy(shape = custom)
         show(original)
 
-        // ROOT is the SYNTH screen's shared stepper row now, not part of this panel.
+        // ROOT is the shared stepper row drawn by the screen, not by these controls; the screen
+        // tests drive it. What is checked here is that each control keeps the others' saved fields.
         adjust("VELOCITY", .64f)
         assertEquals(original.copy(velocity = .64f), currentPatch)
 

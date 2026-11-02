@@ -120,7 +120,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("ENGINE APSIS. CHOOSE ENGINE").assertExists()
         for (preset in ApsisPresets.forVoice(ApsisVoice.PASSAGE)) {
             press("PRESET ${preset.name}")
-            assertEquals(.5f, progress("ROOT"), 1e-6f)
+            assertRoot(60)
             assertEquals(preset.velocity, progress("VELOCITY"), 1e-6f)
             for ((name, value) in preset.macros) assertEquals(value, progress(name), 1e-6f)
         }
@@ -135,7 +135,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
             press(voice.name)
             for (preset in ApsisPresets.forVoice(voice)) {
                 press("PRESET ${preset.name}")
-                assertEquals((preset.midi - Apsis.MIDI_MIN) / 48f, progress("ROOT"), 1e-6f)
+                assertRoot(preset.midi)
                 assertEquals(preset.velocity, progress("VELOCITY"), 1e-6f)
                 for ((name, value) in preset.macros) assertEquals(value, progress(name), 1e-6f)
             }
@@ -147,12 +147,12 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         val original = ApsisPresets.forVoice(voice).let { if (held) it.last() else it.first() }
             .copy(config = ApsisConfig(3, Int.MIN_VALUE))
         val shelf = show(original, kit = true)
-        dial("ROOT", .25f)
+        rootTo(48)
         dial("VELOCITY", .43f)
         dial("ALIGN", .31f)
         compose.runOnIdle { visit++ }
         pump()
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(48)
         val saved = save(shelf)
         assertEquals(original.copy(name = "MY APSIS", midi = 48, velocity = .43f,
             macros = original.macros + ("ALIGN" to .31f)), saved)
@@ -172,7 +172,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         assertEquals(if (held) DrumClass.LOOP else DrumClass.TONAL, pad.drumClass)
         press("REOPEN PAD RECIPE")
         press("REOPEN A01 ${pad.displayName}")
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(48)
         assertEquals(.43f, progress("VELOCITY"), 1e-6f)
         assertEquals(if (held) 1f else 0f, progress("HOLD"), 1e-6f)
         assertEquals(.31f, progress("ALIGN"), 1e-6f)
@@ -187,13 +187,13 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         val shelf = show(original, kit = true)
         dial("STRETCH", .31f)
         dial("COUPLE", .73f)
-        dial("ROOT", .25f) // MIDI 48.
+        rootTo(48)
         dial("VELOCITY", .43f)
         press("SCRAMBLE")
         val values = Apsis.macrosFor(original.voice).associate { it.name to progress(it.name) }
         compose.runOnIdle { visit++ }
         pump()
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(48)
         assertEquals(.43f, progress("VELOCITY"), 1e-6f)
         for ((name, value) in values) assertEquals(value, progress(name), 1e-6f)
         val saved = save(shelf)
@@ -203,7 +203,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         val mine = compose.onNodeWithText("MY APSIS").fetchSemanticsNode()
         assertTrue(mine.config.getOrNull(SemanticsActions.OnClick)?.action?.invoke() == true)
         pump()
-        assertEquals(.25f, progress("ROOT"), 1e-6f)
+        assertRoot(48)
         press("SEND TO PAD")
         press("A01, EMPTY")
         val dir = requireNotNull(currentEntry).dir
@@ -231,7 +231,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         assertEquals(held.copy(name = patch.name), patch)
         press("REOPEN PAD RECIPE")
         press("REOPEN A01 ${pad.displayName}")
-        assertEquals((55 - 36) / 48f, progress("ROOT"), 1e-6f)
+        assertRoot(55)
         assertEquals(.61f, progress("VELOCITY"), 1e-6f)
         assertEquals(1f, progress("HOLD"), 1e-6f)
     }

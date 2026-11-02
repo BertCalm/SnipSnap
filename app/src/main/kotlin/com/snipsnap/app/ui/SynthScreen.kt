@@ -1514,27 +1514,32 @@ fun SynthScreen(
      * recipe kept (STOOP's source and chord intervals, ORPHICA's grain settings,
      * NACRE's seed), through the same keep path its other performance edits use.
      */
-    fun updateRoot(midi: Int) {
-        // Read the live recipe at the moment of the edit, not the row's snapshot from the
-        // last frame: a response, profile or model change can share a frame with a root
-        // tap, and stepping from the stale copy would undo it (CHAMBER's and ACCORD's
-        // same-frame device tests). Each keep path then re-applies the step to the patch
-        // it holds, so its own state (drafts, saved settings) moves with it.
-        val pair = engine to voice
-        val live = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
-        val control = SynthRoot.of(live) ?: return
-        fun moved(patch: Patch): Patch = SynthRoot.of(patch)?.at(midi) ?: patch
+    fun updateRoot(control: SynthRoot.Control, midi: Int, pair: Pair<Engine, Enum<*>>) {
         when (control) {
             is SynthRoot.Tune -> updateMacro("TUNE", control.tuneFor(midi))
             is SynthRoot.Field -> {
+                // [control] came from the composition that drew the button, and its copy of the
+                // patch is that old. A press can land in the same frame as another edit (the
+                // WIDER RESPONSE choice, a velocity change) or after the voice has changed, so the
+                // root goes onto the patch of [pair], the engine and voice the button was drawn
+                // for, as it stands now, not onto that copy, which would put the other edit back.
+                val onScreen = pair == (engine to voice)
+                val patch = if (onScreen) buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
+                    else loadedPatchesByVoice[pair] ?: return
+                val next = (SynthRoot.of(patch) ?: control).at(midi)
                 touched = true
                 currentPresetByVoice.remove(pair)
-                when (live) {
-                    is OhmPatch -> updateOhmPerformance { moved(it) as OhmPatch }
-                    is MeridianPatch -> keepMeridianPatch(moved(live) as MeridianPatch)
-                    is TidalPatch -> updateTidalPatch(live.voice) { moved(it) as TidalPatch }
-                    is AccordPatch -> updateAccordPatch(live.voice) { moved(it) as AccordPatch }
-                    else -> loadedPatchesByVoice[pair] = moved(live)
+                when (next) {
+                    is OhmPatch -> if (onScreen) updateOhmPerformance { next }
+                    is MeridianPatch -> if (onScreen) keepMeridianPatch(next)
+                    is TidalPatch -> updateTidalPatch(next.voice) { next }
+                    else -> {
+                        loadedPatchesByVoice[pair] = next
+                        // Written now, not on the next frame: a rebuild of the screen in this
+                        // frame reads the drafts before the old one is disposed, and the slider
+                        // this replaced wrote its edit the same way.
+                        SynthDrafts.write(settings, currentDrafts())
+                    }
                 }
             }
         }
@@ -3316,7 +3321,8 @@ fun SynthScreen(
                 val rootControl = if (embouchureRestore.waitsForRecipe(engine, voice)) null
                     else SynthRoot.of(buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)))
                 if (rootControl != null) {
-                    RootStepperRow(rootControl, scheme) { midi -> updateRoot(midi) }
+                    val rootPair = engine to voice
+                    RootStepperRow(rootControl, scheme) { midi -> updateRoot(rootControl, midi, rootPair) }
                 }
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
