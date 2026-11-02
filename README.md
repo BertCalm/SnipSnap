@@ -165,12 +165,14 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 ### `:synth`
 
 FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
-a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
-HANDOFF and MATCH controls, provisional CLI starting points and actual-engine auditions
+a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes,
+HANDOFF, MATCH and LOSS controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryMatchAudition`; [implementation notes](docs/FERRY.md)
-record the aligned Kotlin listening approval and keep MATCH, tail, HOLD and phone
-acceptance separate. Model-1 saved patches retain their original sound.
+`./gradlew :synth:generateFerryLossAudition`; [implementation notes](docs/FERRY.md)
+record the aligned and MATCH listening approvals. LOSS varies physical decay
+over finite one-to-eight-second observations; the neutral sound and model-1/2
+recipes stay unchanged. LOSS listening, natural tails, HOLD and phone acceptance
+remain separate gates.
 
 CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, and the
 new TUMBLE a tightening cascade of real rebounds. Model 3 adds TUMBLE's passive

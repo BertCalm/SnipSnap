@@ -17,7 +17,7 @@ class FerrySynthCommandTest {
         val directory = kotlin.io.path.createTempDirectory("ferry-cli").toFile()
         try {
             val output = ByteArrayOutputStream()
-            assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--preset", "1", "--midi", "57",
+            assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--preset", "1", "--model", "2", "--midi", "57",
                 "--velocity", ".6", "--seed", Long.MIN_VALUE.toString(), "--macros", "HANDOFF=.25,MATCH=.25", "--out", directory.path), PrintStream(output)))
             val recipe = directory.listFiles()!!.single { it.extension == "patch" }
             val saved = Patches.fromJsonText(recipe.readText()) as FerryPatch
@@ -68,6 +68,37 @@ class FerrySynthCommandTest {
             val saved = Patches.fromJsonText(upgraded.listFiles()!!.single { it.extension == "patch" }.readText()) as FerryPatch
             assertEquals(2, saved.model)
             assertEquals(.5f, saved.macros["MATCH"])
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `LOSS exports its finite duration and exact replay only through an explicit saved model upgrade`() {
+        val root = kotlin.io.path.createTempDirectory("ferry-loss-cli").toFile()
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            val legacyFile = File(root, "old.patch").also { it.writeText(FerryPatch("Accepted", model = 2).toJsonText()) }
+            val refused = File(root, "refused")
+            assertEquals(2, Cli.run(arrayOf("synth", "FERRY", "PASSAGE", "--patch", legacyFile.path,
+                "--macros", "LOSS=0", "--out", refused.path), out, out))
+            assertFalse(refused.exists())
+            for ((loss, frames) in listOf("0" to 352800, "1" to 44100)) {
+                val dir = File(root, "loss-$loss")
+                assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--patch", legacyFile.path,
+                    "--model", "3", "--macros", "LOSS=$loss", "--out", dir.path), out))
+                val recipe = dir.listFiles()!!.single { it.extension == "patch" }
+                val saved = Patches.fromJsonText(recipe.readText()) as FerryPatch
+                assertEquals(3, saved.model)
+                assertEquals(loss.toFloat(), saved.macros["LOSS"])
+                val audio = WavReader.read(dir.listFiles()!!.single { it.extension == "wav" })
+                assertEquals(frames, audio.frameCount)
+                val replay = File(dir, "replay")
+                assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--patch", recipe.path, "--out", replay.path), out))
+                assertTrue(audio.samples.contentEquals(WavReader.read(replay.listFiles()!!.single { it.extension == "wav" }).samples))
+                val downgrade = File(dir, "downgrade")
+                assertEquals(2, Cli.run(arrayOf("synth", "FERRY", "PASSAGE", "--patch", recipe.path,
+                    "--model", "2", "--out", downgrade.path), out, out))
+                assertFalse(downgrade.exists())
+            }
         } finally { root.deleteRecursively() }
     }
 }
