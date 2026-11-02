@@ -301,7 +301,7 @@ change.
 1. **Surface and light** (A, F, §2): the bank-level pointer loop, gap ownership, flash by
    velocity, held floor, exclusion rects, immersive. Roadmap P0.6 done for FULL. This alone
    changes the feel: no lost hits, two-thumb rolls, and a light that answers.
-2. **Velocity modes** (B): POS, FULL LVL, 16 LV, the curve, then STRIKE with calibration. Roadmap
+2. **Velocity modes** (B): POS, FULL LVL, 16 LV, the curve, then STRIKE with calibration. *Landed: POS, FULL LVL, AREA and the curve (SOFT, HARD; no sensitivity gain yet), on SETUP; AREA learns the player's touch from the last 32 onsets rather than a calibration screen. 16 LV and STRIKE remain.* Roadmap
    P1.6, the velocity half. STRIKE is the risk and ships behind its own chip.
 3. **PRESS and REPEAT** (C, D, `SetPitch`): CONTACT and SLIDE readers, LEVEL and PITCH
    targets, repeat rates on the display clock. P1.6's note-repeat half; P2.5's sensor
