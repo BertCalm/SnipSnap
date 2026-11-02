@@ -373,6 +373,11 @@ object Corolla {
             for (i in v.indices) v[i] += force[i] * STEP * fraction
         }
         for (sample in 0 until n) {
+            // A knob turn interrupts a superseded SYNTH preview's thread (offMainInterruptible).
+            // COROLLA renders for up to 1.4 s, so it stops here rather than finishing a render
+            // nobody will hear; the check reads a flag and changes no sample.
+            if (sample and 1023 == 0 && Thread.currentThread().isInterrupted)
+                throw java.util.concurrent.CancellationException("COROLLA render no longer wanted")
             if (sample % 64 == 0) {
                 if (probe.opening) {
                     val dt = 64 * STEP
