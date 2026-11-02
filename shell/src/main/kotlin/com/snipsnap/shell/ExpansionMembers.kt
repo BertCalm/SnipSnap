@@ -31,6 +31,21 @@ object ExpansionMembers {
         expansion.seedKitId?.let { index[it] }?.takeIf { it.kitId in expansion.memberKitIds }
             ?: present(expansion, index).firstOrNull()
 
-    /** Ids of kits on the shelf or in its bin: a binned kit can come back, so prune keeps it. */
-    fun liveIds(shelfRoot: File, binDir: File): Set<String> = index(shelfRoot).keys + index(binDir).keys
+    /**
+     * Ids of kits on the shelf or in its bin (a binned kit can come back, so
+     * prune keeps it); null when any kit folder there would not read, because
+     * a shelf that did not read whole cannot say what is gone for good.
+     */
+    fun liveIds(shelfRoot: File, binDir: File): Set<String>? {
+        val ids = HashSet<String>()
+        for (dir in KitStore.list(shelfRoot) + KitStore.list(binDir)) {
+            val kit = runCatching { KitStore.load(dir) }.getOrNull() ?: return null
+            kit.id?.let { ids += it }
+        }
+        return ids
+    }
+
+    /** [ExpansionStore.prune] against [liveIds], or nothing at all (null) when the shelf did not read whole. */
+    fun pruneSafely(store: ExpansionStore, shelfRoot: File, binDir: File): Int? =
+        liveIds(shelfRoot, binDir)?.let { store.prune(it) }
 }

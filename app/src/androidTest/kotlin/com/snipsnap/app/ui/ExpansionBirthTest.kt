@@ -107,6 +107,10 @@ class ExpansionBirthTest : ComposeScreenTest() {
         assertEquals(listOf(KitIds.read(kit.dir)), born.memberKitIds)
         assertEquals(Palettes.RISO, born.knobs.palette)
         waitFor("the birth to be said") { Copy.expansionBorn("NIGHT SHIFT") in toasts }
+        // The shelf's own kit list was read before the kit had an id; the new row must still count it.
+        waitFor("the new expansion's row to count its kit") {
+            compose.onAllNodesWithText("1 KIT", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test

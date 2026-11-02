@@ -541,8 +541,8 @@ class PersonalityTest {
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
-        // The shelf's EXPANSIONS group heading, the rename dialog title, and DELETE's confirming question.
-        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE", "EXPANSION_DELETE_CONFIRM",
+        // The shelf's EXPANSIONS group heading and the rename dialog title.
+        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",

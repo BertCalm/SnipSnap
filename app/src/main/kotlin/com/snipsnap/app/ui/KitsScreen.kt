@@ -330,9 +330,12 @@ fun KitsScreen(
     var expansionTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // The EXPANSIONS group: read off the main thread, again after any change to it.
     var expansionsRevision by remember { mutableIntStateOf(0) }
-    val expansionList by produceState(emptyList<Expansion>(), expansions, expansionsRevision) {
-        value = expansions?.let { store -> offMain { runCatching { store.list() }.getOrDefault(emptyList()) } } ?: emptyList()
+    val expansionView by produceState(emptyList<Expansion>() to emptyMap<String, KitShelf.Entry>(), expansions, expansionsRevision, kits) {
+        value = expansions?.let { store ->
+            offMain { runCatching { store.list() to shelfIds(kits) }.getOrDefault(emptyList<Expansion>() to emptyMap()) }
+        } ?: (emptyList<Expansion>() to emptyMap())
     }
+    val expansionList = expansionView.first
     var armedExpansionIds by remember { mutableStateOf(setOf<String>()) }
     var renameExpansion by remember { mutableStateOf<Expansion?>(null) }
     var deleteExpansion by remember { mutableStateOf<Expansion?>(null) }
@@ -591,7 +594,7 @@ fun KitsScreen(
                             items(expansionList, key = { "expansion:" + it.id }) { e ->
                                 ExpansionRow(
                                     e = e,
-                                    present = presentMembers(e, kits),
+                                    byId = expansionView.second,
                                     armed = e.id in armedExpansionIds,
                                     busy = busy,
                                     onArm = { armedExpansionIds = armedExpansionIds + e.id },

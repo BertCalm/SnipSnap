@@ -574,8 +574,8 @@ object Copy {
     const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
     /** The rename dialog's title for an expansion. */
     const val EXPANSION_RENAME_TITLE = "RENAME EXPANSION"
-    /** DELETE's confirm on an expansion row: a question. */
-    const val EXPANSION_DELETE_CONFIRM = "DELETE THIS EXPANSION? ITS KITS STAY ON THE SHELF."
+    /** DELETE's confirm on an expansion row: an expansion has no bin, and says so; its kits are untouched. */
+    val EXPANSION_DELETE_CONFIRM: String = "DELETE THIS EXPANSION? " + Reversal.goneBut("ITS KITS STAY ON THE SHELF")
     fun expansionDeleted(name: String): String = "$name IS GONE. ITS KITS STAY ON THE SHELF."
     // EXPORT's second subject.
     /** The switch at the top of EXPORT. */

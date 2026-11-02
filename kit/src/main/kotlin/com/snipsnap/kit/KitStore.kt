@@ -21,11 +21,24 @@ object KitStore {
     const val FILE_NAME = "kit.json"
     const val VERSION = 1
 
-    fun save(kit: Kit, dir: File): File {
+    /**
+     * Writes [kit] as the folder's kit.json. A kit that carries no id keeps
+     * the id already on disk: an editor holding the kit it loaded before the
+     * kit joined an expansion ([KitIds]) must not quietly take it out by
+     * saving. [KitIds.forget] is the one way to drop an id, through
+     * [keepExistingId] = false.
+     */
+    fun save(kit: Kit, dir: File, keepExistingId: Boolean = true): File {
         dir.mkdirs()
         require(dir.isDirectory) { "not a directory: $dir" }
         val file = File(dir, FILE_NAME)
-        AtomicFile.writeText(file, Json.write(toJson(kit)) + "\n")
+        val written = if (kit.id == null && keepExistingId) {
+            val onDisk = if (file.isFile) runCatching { (fromJson(Json.parse(file.readText(Charsets.UTF_8))).id) }.getOrNull() else null
+            onDisk?.let { kit.copy(id = it) } ?: kit
+        } else {
+            kit
+        }
+        AtomicFile.writeText(file, Json.write(toJson(written)) + "\n")
         return file
     }
 

@@ -349,6 +349,12 @@ object ShelfImport {
             kitDir.deleteRecursively()
         }
         if (name != kit.name) KitStore.save(kit.copy(name = name), dest)
+        // A copy of a kit already on the shelf (its own backup landing beside it, the same share
+        // received twice) is a new kit: it must not answer to the original's expansion id.
+        kit.id?.let { id ->
+            val taken = KitStore.list(shelfRoot).any { other -> other != dest && runCatching { KitStore.load(other).id }.getOrNull() == id }
+            if (taken) com.snipsnap.kit.KitIds.forget(dest)
+        }
         return name to dest
     }
 

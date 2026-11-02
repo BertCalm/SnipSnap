@@ -73,12 +73,23 @@ class ExpansionMembersTest {
         val b = store.create("Bravo", k1, knobs).also { store.add(it.id, k2) }
         val binned = binIt(d1)
         assertEquals(setOf(k1, k2), ExpansionMembers.liveIds(shelf, bin), "a binned kit is still live: it can come back")
-        assertEquals(0, store.prune(ExpansionMembers.liveIds(shelf, bin)))
+        assertEquals(0, store.prune(ExpansionMembers.liveIds(shelf, bin)!!))
         assertTrue(binned.deleteRecursively())
-        assertEquals(2, store.prune(ExpansionMembers.liveIds(shelf, bin)))
+        assertEquals(2, store.prune(ExpansionMembers.liveIds(shelf, bin)!!))
         assertEquals(emptyList(), store.get(a.id)!!.memberKitIds)
         assertEquals(listOf(k2), store.get(b.id)!!.memberKitIds)
         assertNull(ExpansionMembers.seed(store.get(a.id)!!, ExpansionMembers.index(shelf)), "an empty expansion has no seed")
+    }
+
+    @Test
+    fun `a kit that will not read keeps its memberships`() {
+        val (_, k1) = kit("One", 1)
+        val (d2, k2) = kit("Two", 2)
+        val e = store.create("Pair", k1, knobs).let { store.add(it.id, k2) }
+        File(d2, KitStore.FILE_NAME).writeText("not json")
+        assertNull(ExpansionMembers.liveIds(shelf, bin), "a shelf that did not read whole cannot say what is gone")
+        assertNull(ExpansionMembers.pruneSafely(store, shelf, bin))
+        assertEquals(listOf(k1, k2), store.get(e.id)!!.memberKitIds)
     }
 
     @Test

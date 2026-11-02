@@ -1176,7 +1176,7 @@ fun App(shelf: KitShelf) {
         // empties itself of whatever DELETE put there more than 30 days ago.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }
         // A kit the sweep forgot for good leaves every expansion it was in.
-        withContext(Dispatchers.IO) { runCatching { shelf.pruneExpansions() } }
+        withContext(Dispatchers.IO) { KitWrites.mutex.withLock { runCatching { shelf.pruneExpansions() } } }
         // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
         // always the intent (KitBuilder.kt's own docs), but nothing ever called
         // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected

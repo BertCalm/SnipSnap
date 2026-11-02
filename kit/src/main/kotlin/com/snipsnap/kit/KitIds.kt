@@ -24,6 +24,12 @@ object KitIds {
     /** The id already in the kit's kit.json, or null when there is none or the kit will not read; never writes. */
     fun read(kitDir: File): String? = runCatching { KitStore.load(kitDir).id }.getOrNull()
 
+    /** Drops the kit's id: an imported copy of a kit already on the shelf is a new kit, not a second member under the same id. */
+    fun forget(kitDir: File) {
+        val kit = KitStore.load(kitDir)
+        if (kit.id != null) KitStore.save(kit.copy(id = null), kitDir, keepExistingId = false)
+    }
+
     /** 12 lowercase hex characters. */
     fun fresh(random: Random): String = String(CharArray(12) { HEX[random.nextInt(HEX.length)] })
 }

@@ -11,6 +11,7 @@ fun KitShelf.expansionStore(): ExpansionStore = ExpansionStore(File(root.absolut
  * Drops from every expansion the kits that are gone for good: not on the
  * shelf and not in its bin. Run where the shelf forgets kits for ever (the
  * bin's sweep and EMPTY THE BIN NOW); a kit in the bin stays a member and
- * rejoins on restore.
+ * rejoins on restore, and a shelf with a kit that would not read prunes
+ * nothing. Callers hold [KitWrites.mutex].
  */
-fun KitShelf.pruneExpansions(): Int = expansionStore().prune(ExpansionMembers.liveIds(root, binDir))
+fun KitShelf.pruneExpansions(): Int? = ExpansionMembers.pruneSafely(expansionStore(), root, binDir)

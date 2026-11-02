@@ -119,12 +119,16 @@ internal fun ExpansionExportPanel(
     var picking by remember(model) { mutableStateOf(false) }
     var busy by remember(model) { mutableStateOf(false) }
     var overwriting by remember(model) { mutableStateOf<File?>(null) }
+    // A card copy held back because it would replace something there: the phone write it came from,
+    // so the confirming tap copies only, as a kit's PUT ON CARD does, rather than writing the phone again.
+    var cardPending by remember(model) { mutableStateOf<Pair<List<File>, Int>?>(null) }
     var cardReplacing by remember(model) { mutableStateOf<String?>(null) }
     LaunchedEffect(overwriting, cardReplacing) {
         if (overwriting == null && cardReplacing == null) return@LaunchedEffect
         delay(EXPORT_ARM_MS)
         overwriting = null
         cardReplacing = null
+        cardPending = null
     }
     val card = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(PREF_CARD_TREE, null)?.let { Uri.parse(it) } }
     val tile by produceState<ImageBitmap?>(null, model, tileRevision) {
@@ -133,11 +137,44 @@ internal fun ExpansionExportPanel(
         }
     }
 
+    /** Copies [items] onto [card] and says how it went, as a kit's card copy does. */
+    suspend fun copyOnto(card: Uri, items: List<File>, files: Int) {
+        val copied = offMain { CardWriter.copy(context, card, items) }
+        cardPending = null
+        cardReplacing = null
+        onToast(
+            when {
+                copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
+                copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
+                else -> Copy.DUB_DONE_CARD
+            },
+        )
+        if (copied.contested == 0) {
+            onNote(LandingNote.dubbed(e.title, onCard = true, files = files, where = "${Copy.cardName(card.lastPathSegment)}/${items.first().name}"))
+        }
+    }
+
     fun write() {
         if (busy || model.empty) return
+        val pending = cardPending
+        if (pending != null && card != null) {
+            // The confirm of a held-back card copy: the phone already holds this write.
+            busy = true
+            appScope.launch {
+                try {
+                    copyOnto(card, pending.first, pending.second)
+                } catch (ex: Exception) {
+                    if (ex is CancellationException) throw ex
+                    Log.e(TAG, "write: card copy failed", ex)
+                    onNote(LandingNote.dubFailed())
+                } finally {
+                    busy = false
+                }
+            }
+            return
+        }
         busy = true
         val replace = overwriting != null
-        val replaceOnCard = cardReplacing != null
         appScope.launch {
             try {
                 val result = offMain {
@@ -167,24 +204,14 @@ internal fun ExpansionExportPanel(
                             onNote(LandingNote.dubbed(e.title, onCard = false, files = files, where = items.first().absolutePath))
                         } else {
                             val standing = offMain { CardWriter.preflight(context, card, items) }
-                            if (standing.isNotEmpty() && !replaceOnCard) {
+                            onToast(written)
+                            if (standing.isNotEmpty()) {
+                                // Held back: the next tap copies what the phone now holds, nothing more.
+                                cardPending = items to files
                                 cardReplacing = standing.first().name
-                                onToast(written)
                                 onToast(Copy.dubCardWouldReplace(standing.first().name))
                             } else {
-                                cardReplacing = null
-                                val copied = offMain { CardWriter.copy(context, card, items) }
-                                onToast(written)
-                                onToast(
-                                    when {
-                                        copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
-                                        copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
-                                        else -> Copy.DUB_DONE_CARD
-                                    },
-                                )
-                                if (copied.contested == 0) {
-                                    onNote(LandingNote.dubbed(e.title, onCard = true, files = files, where = "${Copy.cardName(card.lastPathSegment)}/${items.first().name}"))
-                                }
+                                copyOnto(card, items, files)
                             }
                         }
                     }

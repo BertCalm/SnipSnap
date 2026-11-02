@@ -38,19 +38,26 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.kit.KitIds
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Expansion
 import com.snipsnap.shell.Layout
 
-/** An expansion's members that are on the shelf right now, in the order they joined; a binned kit is simply not among [kits]. */
-internal fun presentMembers(e: Expansion, kits: List<KitShelf.Entry>): List<KitShelf.Entry> {
-    val byId = kits.mapNotNull { k -> k.kit.id?.let { it to k } }.toMap()
-    return e.memberKitIds.mapNotNull { byId[it] }
-}
+/**
+ * The shelf's kits by id, read from each kit's own kit.json rather than the
+ * list in hand: that list was read before a kit's first join gave it an id.
+ * Runs off the main thread.
+ */
+internal fun shelfIds(kits: List<KitShelf.Entry>): Map<String, KitShelf.Entry> =
+    kits.mapNotNull { k -> KitIds.read(k.dir)?.let { it to k } }.toMap()
+
+/** An expansion's members that are on the shelf right now, in the order they joined; a binned kit is simply not on the shelf. */
+internal fun presentMembers(e: Expansion, byId: Map<String, KitShelf.Entry>): List<KitShelf.Entry> =
+    e.memberKitIds.mapNotNull { byId[it] }
 
 /** The seed on the shelf: the seed kit when present, else the first present member. */
-internal fun seedMember(e: Expansion, present: List<KitShelf.Entry>): KitShelf.Entry? =
-    present.firstOrNull { it.kit.id == e.seedKitId } ?: present.firstOrNull()
+internal fun seedMember(e: Expansion, byId: Map<String, KitShelf.Entry>): KitShelf.Entry? =
+    e.seedKitId?.takeIf { it in e.memberKitIds }?.let { byId[it] } ?: presentMembers(e, byId).firstOrNull()
 
 /**
  * One expansion on the shelf: its tile (the seed kit drawn with its knobs),
@@ -61,7 +68,7 @@ internal fun seedMember(e: Expansion, present: List<KitShelf.Entry>): KitShelf.E
 @Composable
 internal fun ExpansionRow(
     e: Expansion,
-    present: List<KitShelf.Entry>,
+    byId: Map<String, KitShelf.Entry>,
     armed: Boolean,
     busy: Boolean,
     onArm: () -> Unit,
@@ -72,7 +79,8 @@ internal fun ExpansionRow(
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
-    val seed = seedMember(e, present)
+    val present = presentMembers(e, byId)
+    val seed = seedMember(e, byId)
     val tile by produceState<ImageBitmap?>(null, seed?.dir, e.knobs, e.title) {
         value = seed?.let { s ->
             offMain {

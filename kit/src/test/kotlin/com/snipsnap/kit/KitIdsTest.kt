@@ -57,6 +57,25 @@ class KitIdsTest {
     }
 
     @Test
+    fun `a save that does not know the id keeps the one on disk`() {
+        // An open kit's editor holds the kit it loaded before the kit joined an expansion; its next save must not drop the id.
+        val dir = kitDir()
+        val stale = KitStore.load(dir)
+        val id = KitIds.ensure(dir, Random(5))
+        KitStore.save(stale.copy(name = "Edited"), dir)
+        assertEquals(id, KitIds.read(dir))
+        assertEquals("Edited", KitStore.load(dir).name)
+    }
+
+    @Test
+    fun `forget takes the id away`() {
+        val dir = kitDir()
+        KitIds.ensure(dir, Random(6))
+        KitIds.forget(dir)
+        assertNull(KitIds.read(dir))
+    }
+
+    @Test
     fun `a missing or broken kit has no id to read`() {
         assertNull(KitIds.read(File(temp, "nowhere")))
         val broken = File(temp, "broken").apply { mkdirs() }

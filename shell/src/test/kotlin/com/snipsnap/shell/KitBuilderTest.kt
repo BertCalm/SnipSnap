@@ -370,6 +370,21 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `restoring a take keeps the kit in its expansions`() {
+        val dir = File(temp, "TakeIds")
+        val m = KitBuilderModel.create("TakeIds", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val take = m.takes().first()
+        val id = com.snipsnap.kit.KitIds.ensure(dir)
+        m.restoreTake(take)
+        m.save()
+        assertEquals(id, com.snipsnap.kit.KitIds.read(dir), "a take from before the kit joined an expansion does not take it out")
+    }
+
+    @Test
     fun `restoreTake reattaches the audio that was live when the take was archived, not newer audio squatting on the filename`() {
         val dir = File(temp, "RestoreFidelity")
         val m = KitBuilderModel.create("RestoreFidelity", dir)
