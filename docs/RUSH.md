@@ -27,7 +27,9 @@ board to remove it. **UNDO** reverses the last KEEP or REMOVE, including a switc
 between WIDE and RUSH, and restores that board's amount. Later level, pan,
 tuning and shape changes survive REMOVE and UNDO. Undo is one step; a later
 unrelated audio or recipe edit invalidates it. Remove the active board before
-using generic treatments, changing SOFT HITS, stacking takes or using SPREAD.
+using generic treatments, changing SOFT HITS, stacking takes or using SPREAD,
+and since 2026-11-02 before splicing (SPLICE ▸, TAPE SPLICE) or using
+DE-SAMPLE (MAKE SYNTH, `snipsnap desample`).
 
 This is an offline effect printed into each hit, with fresh state per render.
 It is not a continuous live bus or a seamless-loop processor. Each triggered

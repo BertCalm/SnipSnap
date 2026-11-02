@@ -714,9 +714,13 @@ class KitBuilderModel private constructor(
      * seam-aware crossfade, baked in only when the raw cut would click.
      * Bin-backed like every rewrite ([replaceAudio]): whatever's live now
      * is itself binned first, and [unsplicePad] (the pad sheet's UNDO
-     * SPLICE) gives it back.
+     * SPLICE) gives it back. A printed pad is refused before anything is
+     * read or written (2026-11-02): the splice's recipe would take the
+     * print's place, and REMOVE could not bring the print's source back.
      */
     fun splicePad(slot: Int, head: Snip, headFrames: Int, tail: Snip, tailFrames: Int): com.snipsnap.audio.TapeSplice.Spliced {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSplice(PrintedPads.label(pad.recipe)) }
         val spliced = com.snipsnap.audio.TapeSplice.join(head, headFrames, tail, tailFrames)
         val recipe = com.snipsnap.json.JsonValue.Obj(
             linkedMapOf<String, com.snipsnap.json.JsonValue>(
@@ -823,10 +827,13 @@ class KitBuilderModel private constructor(
      * kindred to the pad's class. A far match ([Far]) is refused unless
      * [evenIfFar]; the match is returned either way it goes ahead. The
      * `desampled` stamp goes on after [replaceAudio], which drops it from
-     * any earlier de-sample.
+     * any earlier de-sample. A printed pad is refused before its audio is
+     * read (2026-11-02): the patch would take the print's place in the
+     * recipe, and REMOVE could not bring the print's source back.
      */
     fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeDesample(PrintedPads.label(pad.recipe)) }
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val match = com.snipsnap.synth.Desample.nearest(
             original,
