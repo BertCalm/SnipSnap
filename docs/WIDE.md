@@ -28,7 +28,11 @@ settings onto the destination pad's own source.
 
 Remove WIDE before changing SOFT HITS, stacking takes or using SPREAD. Those
 actions change the sample inventory that WIDE needs to restore the source.
-Replacing a pad's audio from another screen clears its old WIDE recipe, so the
+Since 2026-11-02, also remove it before splicing (SPLICE ▸, TAPE SPLICE) or
+using DE-SAMPLE (MAKE SYNTH, `snipsnap desample`). Each writes its own recipe
+where WIDE's sits, so REMOVE could not bring the source back; both refuse in
+words, touching nothing. Other screens that replace a pad's audio, such as
+SEND TO PAD or a SURFACE print sent → PAD, clear its old WIDE recipe, so the
 replacement is treated as a new sound.
 
 ## Saved state

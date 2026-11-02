@@ -1793,6 +1793,12 @@ object Copy {
     fun boardRemoveBeforeSoftHits(board: String): String = "REMOVE $board BEFORE CHANGING SOFT HITS."
     fun boardRemoveBeforeStack(board: String): String = "REMOVE $board BEFORE STACK THE TAKES."
     fun boardRemoveBeforeSpread(board: String): String = "REMOVE $board BEFORE SPREAD."
+    /**
+     * TAPE SPLICE and DE-SAMPLE on a printed pad (2026-11-02): each writes its own recipe where the
+     * print's sits, so REMOVE could not bring the print's source back afterwards.
+     */
+    fun boardRemoveBeforeSplice(board: String): String = "REMOVE $board BEFORE SPLICE."
+    fun boardRemoveBeforeDesample(board: String): String = "REMOVE $board BEFORE DE-SAMPLE."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word DONE AGAIN ON $pad, IN $key" +

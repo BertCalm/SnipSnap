@@ -1098,7 +1098,10 @@ refuses a pad the de-sample is no longer on top of (never de-sampled,
 pedals or a print over it, or a later send or other audio replacement,
 which clears the mark), a pad with soft hits on, and an emptied bin.
 The distance is always told; past 0.45 the nearest is a stranger and
-the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
+the pad is refused unless `--force`. A printed pad (a board or AQUARIUM
+over it) is refused, touching nothing, with the pad sheet's words:
+"REMOVE WIDE BEFORE DE-SAMPLE." (2026-11-02). The spec:
+`docs/DESAMPLE.md`.
 On the phone it is the PAD SHEET's DE-SAMPLE card, whose UNDO runs the
 same `undesamplePad` (since 2026-11-01:
 `docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).

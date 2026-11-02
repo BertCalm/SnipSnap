@@ -1094,6 +1094,49 @@ class KitBuilderTest {
         assertFailsWith<IllegalArgumentException> { m.splicePad(1, head, head.frameCount / 2, head, head.frameCount / 2) }
     }
 
+    /**
+     * TAPE SPLICE and DE-SAMPLE refuse a printed pad (a board or AQUARIUM over it), touching nothing,
+     * the way SOFT HITS, STACK and SPREAD already do (2026-11-02). Both write their own recipe through
+     * `replaceAudio`, where the print's wrapper sits: REMOVE would then find no print to take off, and
+     * the source the print keeps could never come back.
+     */
+    @Test
+    fun `splicePad and desamplePad refuse a printed pad, touch nothing, and REMOVE still lands`() {
+        val dir = File(temp, "SplicePrinted")
+        val m = KitBuilderModel.create("SplicePrinted", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.treatPad(1, "punched") // the pad under the print carries a recipe REMOVE must give back
+        val treated = m.pad(1)!!
+        val underPrint = File(dir, treated.sampleFile).readBytes()
+        val printed = BoardSheet.apply(m, 1, .7f)
+        assertTrue(PrintedPads.has(printed.recipe), "test setup: a board printed over the pad")
+        // The print's own stereo render as both takes, so the join itself would go through.
+        val live = com.snipsnap.audio.WavReader.read(File(dir, printed.sampleFile))
+
+        fun files(): Map<String, String> = dir.walkTopDown().filter { it.isFile }.associate { f ->
+            f.relativeTo(dir).path to java.security.MessageDigest.getInstance("SHA-256").digest(f.readBytes())
+                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        }
+        for ((expected, door) in listOf<Pair<String, () -> Unit>>(
+            Copy.boardRemoveBeforeSplice("WIDE") to { m.splicePad(1, live, live.frameCount / 3, live, live.frameCount / 2) },
+            Copy.boardRemoveBeforeDesample("WIDE") to { m.desamplePad(1, evenIfFar = true) },
+        )) {
+            val before = files()
+            val bin = m.binContents().map { it.file }
+            val under = m.filesUnderPrints()
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { door() }.message)
+            assertEquals(printed, m.pad(1), "a refusal leaves the pad and its print's recipe alone")
+            assertEquals(before, files(), "a refusal writes no audio, saved source or undo file")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal bins nothing")
+            assertEquals(under, m.filesUnderPrints(), "the files under the print keep their protection")
+            assertTrue(BoardSheet.canUndo(m, 1), "the print's own UNDO is still there")
+        }
+        val removed = BoardSheet.remove(m, 1)
+        assertEquals(treated.recipe, removed.recipe, "REMOVE still brings the pad under the print back")
+        assertEquals(treated.sampleFile, removed.sampleFile)
+        assertTrue(File(dir, removed.sampleFile).readBytes().contentEquals(underPrint), "byte for byte")
+    }
+
     @Test
     fun `with a key set, a tonal pad retunes on assign and the kick is untouched`() {
         val m = KitBuilderModel.create("OnAssign", File(temp, "OnAssign"))

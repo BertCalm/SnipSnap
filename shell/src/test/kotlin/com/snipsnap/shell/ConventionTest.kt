@@ -2695,6 +2695,50 @@ class ConventionTest {
         )
     }
 
+    /**
+     * A printed pad is refused by SPLICE ▸ and by DE-SAMPLE's MAKE SYNTH in words, on the tap, before
+     * TAPE SPLICE opens and before the search starts (2026-11-02), as SPREAD ▸ refuses one before its
+     * panel opens and SOFT HITS before it writes. Both doors write their own recipe where the print's
+     * sits, so `KitBuilderModel.splicePad` and `desamplePad` refuse a print too; this law keeps a
+     * player from picking two takes and setting a needle only to be refused at COMMIT.
+     *
+     * - SPLICE ▸ goes through `openSplice`, whose body asks `PrintedPads.has(p.recipe)`, toasts
+     *   `Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe))` and returns before `onSplice(slot)`.
+     * - `onDesample` asks the same, toasts `Copy.boardRemoveBeforeDesample(...)` and returns before
+     *   `appScope.launch`.
+     * - In both, the toast and the `return` sit inside the print branch's own `{ }`, and the door
+     *   opens after it closes.
+     */
+    @Test
+    fun `law - SPLICE and MAKE SYNTH refuse a printed pad in words before they open or launch`() {
+        val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
+        val splice = undoButton(code, "\"SPLICE ▸\"")
+        assertTrue(
+            "onClick = ::openSplice" in splice,
+            "SPLICE ▸ does not go through `openSplice`, the door that refuses a printed pad before TAPE SPLICE opens:\n  $splice",
+        )
+        for ((door, line, opens) in listOf(
+            Triple("fun openSplice() {", "Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe))", "onSplice(slot)"),
+            Triple("fun onDesample() {", "Copy.boardRemoveBeforeDesample(PrintedPads.label(p.recipe))", "appScope.launch"),
+        )) {
+            val body = codeOnly(blockAfter(code, door))
+            val ask = body.indexOf("if (PrintedPads.has(p.recipe))")
+            // The toast and the return are looked for inside the print branch's own braces, and the
+            // door must open after that branch ends. A return found anywhere after the toast would
+            // pass on onDesample's next check, the layered one, with the print's return deleted (2026-11-02).
+            val branch = if (ask >= 0) blockAfter(body.substring(ask), "if (PrintedPads.has(p.recipe))") else ""
+            val branchEnd = if (ask >= 0) body.indexOf(branch, ask) + branch.length else -1
+            val toast = branch.indexOf("onToast($line)")
+            val back = if (toast >= 0) branch.indexOf("return", toast) else -1
+            val open = body.indexOf(opens)
+            assertTrue(
+                ask >= 0 && toast >= 0 && back > toast && open > branchEnd,
+                "`$door` does not ask `PrintedPads.has(p.recipe)`, toast `$line` and return before `$opens`, so a " +
+                    "printed pad reaches a door that would write over the print's recipe, or is refused only after the work:\n  $body",
+            )
+        }
+    }
+
     /** The whole `ActionButton(...)` call around [marker], whitespace-normalised. */
     private fun undoButton(code: String, marker: String): String {
         val at = code.indexOf(marker)

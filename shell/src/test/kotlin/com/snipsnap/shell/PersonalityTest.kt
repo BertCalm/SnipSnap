@@ -361,6 +361,30 @@ class PersonalityTest {
     }
 
     /**
+     * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
+     * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
+     * They are functions, so the reflective shout law cannot see them; this holds them by hand.
+     */
+    @Test
+    fun `a print refuses SPLICE and DE-SAMPLE in the words it refuses the other doors with`() {
+        assertEquals("REMOVE WIDE BEFORE SPLICE.", Copy.boardRemoveBeforeSplice("WIDE"))
+        assertEquals("REMOVE AQUARIUM BEFORE DE-SAMPLE.", Copy.boardRemoveBeforeDesample("AQUARIUM"))
+        val lines = listOf(
+            Copy.boardRemoveBeforeSoftHits("RUSH"),
+            Copy.boardRemoveBeforeStack("RUSH"),
+            Copy.boardRemoveBeforeSpread("RUSH"),
+            Copy.boardRemoveBeforeSplice("RUSH"),
+            Copy.boardRemoveBeforeDesample("RUSH"),
+        )
+        assertEquals(lines.size, lines.toSet().size, "each refusal names its own door: $lines")
+        for (line in lines) {
+            assertTrue(line.startsWith("REMOVE RUSH BEFORE "), "the print and the way out lead: $line")
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+    }
+
+    /**
      * Finding 23. SETUP held three settings and answered none of the
      * questions a user actually arrives with. These are the three the app
      * can answer from what it already knows — the format EXPORT will open
