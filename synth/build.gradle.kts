@@ -2095,6 +2095,16 @@ tasks.register<JavaExec>("generateWahAudition") {
     args("${rootDir}/testkit/wah-audition")
 }
 
+/** Render VIBRATO's listening gate (the real section on the snare, the choir and JANGLE, beside TAPE's wobble) under testkit/vibrato-audition/. See VibratoAuditionGenerator. */
+tasks.register<JavaExec>("generateVibratoAudition") {
+    group = "distribution"
+    description = "Render VIBRATO's listening gate clips under testkit/vibrato-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VibratoAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vibrato-audition")
+}
+
 /** Render VOLUME's (FADE IN's) listening gate (the real section on the snare, the choir and JANGLE, beside SWELL) under testkit/volume-audition/. See VolumeAuditionGenerator. */
 tasks.register<JavaExec>("generateVolumeAudition") {
     group = "distribution"

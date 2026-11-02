@@ -749,6 +749,23 @@ class FxTest {
     }
 
     @Test
+    fun `VIBRATO sits after TAPE and before ENSEMBLE, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("tape") + 1, names.indexOf("vibrato"), "VIBRATO is not right after TAPE: $names")
+        assertEquals(names.indexOf("vibrato") + 1, names.indexOf("ensemble"), "VIBRATO is not right before ENSEMBLE: $names")
+
+        val without = FxChain(tape = Tape.defaults())
+        assertTrue(!without.toJsonText().contains("vibrato"), "no vibrato key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(vibrato = Vibrato.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the vibrato section is a no-op in the chain")
+        assertContentEquals(Vibrato.process(snare, Vibrato.defaults()).samples, chained.samples, "the chain's vibrato row does not run Vibrato.process")
+    }
+
+    @Test
     fun `amped exists, sets only valve, and is a bypass at AMT 0`() {
         assertTrue("amped" in Treatments.names)
         val chain = Treatments.chain("amped")
