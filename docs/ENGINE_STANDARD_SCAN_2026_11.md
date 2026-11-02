@@ -107,19 +107,25 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    in the shared `Modes.Bank` made no measurable difference to MURK, MERCURY,
    MERIDIAN, BALLAST, LIBRATION or SCOUR, so this is not a toolkit-wide fix. Other
    engines with long double-precision tails are worth the same 10-minute test.
-2. **Cancellation (read from code, not measured on a phone).** Only FILAMENT,
-   TIDAL, CHAMBER and OPENSKY are handed the screen's cancel check. For every other
-   engine, a render started by an earlier knob position runs to the end on a
-   background thread while the next one starts, so dragging a knob on a 1 s engine
-   can stack several renders. The pattern to copy exists (`Filament.requireActive`,
-   checked every 1,024 frames). Gain: no wasted renders during a drag. Risk: none to
-   the sound. Proof needs a phone.
+2. **Done, 2026-11-02: cancellation. The first reading of this was wrong.** The
+   preview runs through `offMainInterruptible`, which interrupts the render thread when
+   a newer knob position supersedes it, and about a hundred engine files already stop on
+   that interrupt. The cancel lambda that only FILAMENT, TIDAL, CHAMBER and OPENSKY take
+   is a second, additional check. Of the engines that never check the interrupt, only
+   COROLLA is slow (up to 1.4 s); the rest render in under 200 ms, where stopping early
+   saves little. COROLLA now checks every 1,024 samples, and `CorollaTest` proves an
+   interrupted render stops.
 3. **Fast `tanh` (measured share, sound change).** `kotlin.math.tanh` goes through
    `StrictMath.expm1`, which has no fast hardware path. It is 48% of COROLLA, 15% of
    CIRCUIT, 13% of TREFOIL and 9% of PITCHWHEEL, and `tanh(` appears about 120
    times across the synth sources. One shared `Dsp.tanh` with a stated maximum error would serve all of
    them. It changes bytes, so each engine needs an A/B before it moves.
-4. **Diagnostics on the render path (measured share, safe).** TESSERA sums its whole
+4. **Tried and reverted, 2026-11-02 (TESSERA): no gain.** Summing the energy every
+   64th sample removed `passiveEnergy` from the profile, but `Engine.step` rose from 66% to
+   81% and the renders stayed at 1.08 to 1.18 s. The 15% was the profiler attributing
+   inlined work, not separable cost, so the every-sample guard stays. The original
+   finding follows, kept as a record of what the profile suggested.
+   **Diagnostics on the render path (measured share, safe).** TESSERA sums its whole
    energy every sample only to guard against a non-finite value and record a
    maximum (15% of its time). Checking every 64th sample keeps the guard. The same
    look is worth taking in CHAMBER's `renderProbe` and TREFOIL's model-two probe,
