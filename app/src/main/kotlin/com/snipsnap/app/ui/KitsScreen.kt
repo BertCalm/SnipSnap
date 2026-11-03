@@ -882,7 +882,7 @@ fun KitsScreen(
                 ExpansionNameDialog(
                     title = Copy.EXPANSION_RENAME_TITLE,
                     initialName = e.title,
-                    check = { name -> check(name, expansionList, exceptId = e.id) },
+                    check = { name -> nameCheck(name, expansionList, exceptId = e.id) },
                     taken = expansionList.map { it.title }.toSet(),
                     onCancel = cancel,
                     onConfirm = { name -> cancel(); changeExpansions(Copy.kitRenamed(name)) { it.rename(e.id, name) } },
