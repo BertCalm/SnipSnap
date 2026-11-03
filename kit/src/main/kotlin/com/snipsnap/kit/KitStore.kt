@@ -65,7 +65,7 @@ object KitStore {
             ?.sortedBy { it.name.lowercase() }
             ?: emptyList()
 
-    private fun toJson(kit: Kit): JsonValue = JsonValue.Obj(
+    internal fun toJson(kit: Kit): JsonValue = JsonValue.Obj(
         linkedMapOf<String, JsonValue>(
             "version" to JsonValue.Num(VERSION.toDouble()),
             "name" to JsonValue.Str(kit.name),
@@ -81,6 +81,14 @@ object KitStore {
             }
             kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
             kit.aquariumPerformance?.let { root["aquariumPerformance"] = it }
+            kit.robin?.let {
+                root["robin"] = JsonValue.Obj(
+                    linkedMapOf(
+                        "amount" to JsonValue.Num(it.amount.toDouble()),
+                        "takes" to JsonValue.Num(it.takes.toDouble()),
+                    ),
+                )
+            }
             kit.wear?.let {
                 // The ledger only - w is derived from it, never stored.
                 root["wear"] = JsonValue.Obj(
@@ -147,6 +155,14 @@ object KitStore {
             )
         }
         p.recipe?.let { entries["recipe"] = it }
+        p.robin?.let { r ->
+            val robin = linkedMapOf<String, JsonValue>()
+            r.amount?.let { robin["amount"] = JsonValue.Num(it.toDouble()) }
+            robin["takes"] = JsonValue.Num(r.takes.toDouble())
+            robin["seed"] = JsonValue.Num(r.seed.toDouble())
+            robin["follows"] = JsonValue.Bool(r.followsKit)
+            entries["robin"] = JsonValue.Obj(robin)
+        }
         if (p.velocityLayers.isNotEmpty()) {
             entries["layers"] = JsonValue.Arr(
                 p.velocityLayers.map { l ->
@@ -187,13 +203,36 @@ object KitStore {
                 k = w.entries["k"]?.num() ?: WearLedger.DEFAULT_K,
             )
         }
-        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear,
+        val robin = (obj["robin"] as? JsonValue.Obj)?.let { r ->
+            KitRobin(
+                amount = r.entries["amount"]?.num()?.toFloat()?.coerceIn(0f, 1f) ?: KitRobin.DEFAULT_AMOUNT,
+                takes = r.entries["takes"]?.int()?.coerceIn(KitRobin.MIN_TAKES, KitRobin.MAX_TAKES)
+                    ?: KitRobin.DEFAULT_TAKES,
+            )
+        }
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear, robin = robin,
             aquariumPerformance = obj["aquariumPerformance"], id = (obj["id"] as? JsonValue.Str)?.value)
     }
 
     /** One pad, the inverse of [padToJson] — shared by [fromJson] and, standalone, by a bin tombstone's read-back. */
     fun padFromJson(json: JsonValue): KitPad {
         val p = json.obj()
+        val chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
+            ChainInfo(
+                boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
+                    .map { it.long() },
+                cycle = c.entries["cycle"]?.int() ?: 2,
+                zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
+                    val z = zoneJson.obj()
+                    ChainZone(
+                        velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
+                        velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
+                        baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
+                        cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
+                    )
+                },
+            )
+        }
         return KitPad(
             slot = p["slot"]?.int() ?: throw JsonException("pad has no slot"),
             sampleFile = p["sample"]?.str() ?: throw JsonException("pad has no sample"),
@@ -208,22 +247,8 @@ object KitStore {
             cutoff = p["cutoff"]?.num()?.toFloat(),
             resonance = p["resonance"]?.num()?.toFloat(),
             humanize = p["humanize"]?.num()?.toFloat(),
-            chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
-                ChainInfo(
-                    boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
-                        .map { it.long() },
-                    cycle = c.entries["cycle"]?.int() ?: 2,
-                    zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
-                        val z = zoneJson.obj()
-                        ChainZone(
-                            velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
-                            velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
-                            baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
-                            cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
-                        )
-                    },
-                )
-            },
+            chain = chain,
+            robin = robinFromJson(p, chain),
             level = p["level"]?.num()?.toFloat() ?: 0.707946f,
             pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
             tuneCoarse = p["tuneCoarse"]?.int() ?: 0,
@@ -248,5 +273,29 @@ object KitStore {
                 )
             },
         )
+    }
+
+    /**
+     * The pad's own "robin" field, or - for a pad made before that field
+     * existed - the settings synthesized from the legacy bookkeeping: a plain
+     * chain whose recipe says {"robin": {"takes", "seed"}} with no "zones".
+     * Synthesis happens here only; the legacy recipe is left untouched.
+     */
+    private fun robinFromJson(p: Map<String, JsonValue>, chain: ChainInfo?): RobinSettings? {
+        (p["robin"] as? JsonValue.Obj)?.let { r ->
+            val takes = r.entries["takes"]?.int() ?: throw JsonException("robin has no takes")
+            if (takes !in 2..8) throw JsonException("robin takes is 2..8, got $takes")
+            return RobinSettings(
+                amount = r.entries["amount"]?.num()?.toFloat()?.coerceIn(0f, 1f),
+                takes = takes,
+                seed = r.entries["seed"]?.int() ?: 0,
+                followsKit = r.entries["follows"]?.bool() ?: true,
+            )
+        }
+        if (chain == null || chain.zones != null) return null
+        val legacy = ((p["recipe"] as? JsonValue.Obj)?.entries?.get("robin") as? JsonValue.Obj)?.entries ?: return null
+        if ("zones" in legacy) return null
+        val takes = legacy["takes"]?.int()?.takeIf { it in 2..8 } ?: return null
+        return RobinSettings(amount = null, takes = takes, seed = legacy["seed"]?.int() ?: 0, followsKit = false)
     }
 }
