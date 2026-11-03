@@ -18,6 +18,9 @@ import kotlin.math.sqrt
 
 /** A small, reproducible ONSET listening experiment, rendered by the actual JVM engine. */
 object OnsetAuditionGenerator {
+    // This generator preserves the original four-voice comparison and its
+    // historical file names. Model4 extensions have a separate listening study.
+    private const val LEGACY_MODEL_VERSION = 3
     private val blendSteps = listOf(0f, .25f, .5f, .75f, 1f)
     private const val BPM = 104.0
     private const val BARS = 2
@@ -53,7 +56,7 @@ object OnsetAuditionGenerator {
             "usage: OnsetAuditionGenerator [output-directory] [--reference-dir=first-pass-directory]"
         }
         require(args.count { it.startsWith("--reference-dir=") } <= 1) { "pass one reference directory" }
-        check(Onset.MODEL_VERSION >= 3) { "four-voice audition needs an ONSET model 3 renderer" }
+        check(Onset.MODEL_VERSION >= LEGACY_MODEL_VERSION) { "four-voice audition needs an ONSET model 3 renderer" }
         val root = File(directories.firstOrNull() ?: "../testkit/onset-audition")
         require(root.mkdirs() || root.isDirectory) { "could not create ${root.absolutePath}" }
         // Read and preserve the first pass before replacing any current audition metadata.
@@ -67,14 +70,14 @@ object OnsetAuditionGenerator {
         for (voice in voices) {
             for (blend in blendSteps) {
                 val macros = Onset.defaults(voice) + ("BLEND" to blend)
-                val snip = Onset.render(voice, macros)
+                val snip = Onset.render(voice, macros, modelVersion = LEGACY_MODEL_VERSION)
                 validateAudio(snip, "${voice.name} at blend $blend")
                 renders[voice to blend] = snip
                 val id = "${voiceId(voice)}-${blendId(blend)}"
                 val fileId = when (voice) {
                     OnsetVoice.KICK -> "kick-r2-${blendId(blend)}"
                     OnsetVoice.HAT_CLOSED -> id
-                    else -> "${voiceId(voice)}-r${Onset.MODEL_VERSION}-${blendId(blend)}"
+                    else -> "${voiceId(voice)}-r${LEGACY_MODEL_VERSION}-${blendId(blend)}"
                 }
                 clips += writeClip(root, id, "${voiceTitle(voice)} · ${blendTitle(blend, voice)}", voice.name,
                     blend, "hit", voiceDescription(voice), snip, settings(voice, macros), fileId)
@@ -92,7 +95,7 @@ object OnsetAuditionGenerator {
         // One common PCM headroom gain across the three raw bounces preserves their mix balance.
         val beatExportGain = minOf(1f, .99f / beats.values.maxOf { it.peak() }.coerceAtLeast(1e-9f))
         for ((blend, beat) in beats) {
-            val id = "beat-r${Onset.MODEL_VERSION}-${blendId(blend)}"
+            val id = "beat-r${LEGACY_MODEL_VERSION}-${blendId(blend)}"
             clips += writeClip(root, id, "Four-voice beat · ${blendTitle(blend)}", "KIT",
                 blend, "beat", "The same four-voice pattern at 104 BPM. Timing, hit gains and the raw bus gain stay fixed; closed hats choke open hats with a 5 ms fade.",
                 beat, linkedMapOf("voices" to voices.associate { voice ->
@@ -107,11 +110,11 @@ object OnsetAuditionGenerator {
         val sourceIdentity = rendererIdentity()
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1,
-            "rendererVersion" to Onset.MODEL_VERSION,
+            "rendererVersion" to LEGACY_MODEL_VERSION,
             "title" to "ONSET · four-voice audition",
             "subtitle" to "The accepted kick and closed hat, plus a new FM snare and open hat. Real dry SnipSnap renders.",
             "engine" to linkedMapOf(
-                "id" to "ONSET", "version" to Onset.MODEL_VERSION,
+                "id" to "ONSET", "version" to LEGACY_MODEL_VERSION,
                 "voices" to voices.map { it.name },
                 "controls" to listOf("TUNE", "DECAY", "BLEND", "SNAP", "BODY", "EDGE"),
                 "settings" to voices.associate { it.name to settings(it, Onset.defaults(it)) },
@@ -186,8 +189,8 @@ object OnsetAuditionGenerator {
             .99f / source.peak().coerceAtLeast(1e-9f))
         return linkedMapOf(
             "id" to id, "title" to title, "voice" to voice, "blend" to blend,
-            "rendererVersion" to if (voice == "KIT") Onset.MODEL_VERSION else voiceModelVersion(OnsetVoice.valueOf(voice)),
-            "renderEngineVersion" to Onset.MODEL_VERSION,
+            "rendererVersion" to if (voice == "KIT") LEGACY_MODEL_VERSION else voiceModelVersion(OnsetVoice.valueOf(voice)),
+            "renderEngineVersion" to LEGACY_MODEL_VERSION,
             "blendLabel" to blendTitle(blend, if (voice == "KIT") null else OnsetVoice.valueOf(voice)),
             "endpointLabels" to linkedMapOf("electronic" to "Electronic", "algorithmic" to
                 if (voice == "KIT") "Algorithmic" else algorithmLabel(OnsetVoice.valueOf(voice))),
@@ -205,7 +208,7 @@ object OnsetAuditionGenerator {
     }
 
     private fun settings(voice: OnsetVoice, macros: Map<String, Float>): Map<String, Any?> {
-        val s = Onset.settingsFor(voice, macros)
+        val s = Onset.settingsFor(voice, macros, modelVersion = LEGACY_MODEL_VERSION)
         return linkedMapOf(
             "voice" to s.voice.name, "macros" to s.macros, "modelVersion" to s.modelVersion,
             "voiceModelVersion" to voiceModelVersion(voice),
@@ -450,7 +453,7 @@ object OnsetAuditionGenerator {
             "src/test/kotlin/com/snipsnap/synth/OnsetAuditionGenerator.kt",
             "src/test/kotlin/com/snipsnap/synth/OnsetKitExport.kt",
             "src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt")
-        return linkedMapOf("name" to "ONSET audition model ${Onset.MODEL_VERSION}", "implementation" to "SnipSnap JVM renderer",
+        return linkedMapOf("name" to "ONSET audition model $LEGACY_MODEL_VERSION", "implementation" to "SnipSnap JVM renderer",
             "sources" to paths.associateWith { path -> File(path).takeIf { it.isFile }?.let(::sha256) })
     }
 
@@ -460,17 +463,22 @@ object OnsetAuditionGenerator {
     private fun voiceId(voice: OnsetVoice) = when (voice) {
         OnsetVoice.KICK -> "kick"; OnsetVoice.SNARE -> "snare"
         OnsetVoice.HAT_CLOSED -> "hat"; OnsetVoice.HAT_OPEN -> "open-hat"
+        else -> legacyVoiceOnly(voice)
     }
     private fun voiceTitle(voice: OnsetVoice) = when (voice) {
         OnsetVoice.KICK -> "Kick"; OnsetVoice.SNARE -> "Snare"
         OnsetVoice.HAT_CLOSED -> "Closed hat"; OnsetVoice.HAT_OPEN -> "Open hat"
+        else -> legacyVoiceOnly(voice)
     }
     private fun voiceModelVersion(voice: OnsetVoice) = when (voice) {
-        OnsetVoice.KICK -> 2; OnsetVoice.HAT_CLOSED -> 1; else -> Onset.MODEL_VERSION
+        OnsetVoice.KICK -> 2; OnsetVoice.HAT_CLOSED -> 1
+        OnsetVoice.SNARE, OnsetVoice.HAT_OPEN -> LEGACY_MODEL_VERSION
+        else -> legacyVoiceOnly(voice)
     }
     private fun algorithmLabel(voice: OnsetVoice) = when (voice) {
         OnsetVoice.KICK -> "Modal membrane"; OnsetVoice.SNARE -> "FM"
         OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN -> "Resonant noise"
+        else -> legacyVoiceOnly(voice)
     }
     private fun voiceDescription(voice: OnsetVoice): String {
         val identity = when (voice) {
@@ -478,6 +486,7 @@ object OnsetAuditionGenerator {
             OnsetVoice.HAT_CLOSED -> "The unchanged first-pass closed hat: square cluster to resonant noise."
             OnsetVoice.SNARE -> "New snare: THUMP membrane body to two-operator FM, under shared wires. Awaiting owner listening."
             OnsetVoice.HAT_OPEN -> "New open hat: electronic square cluster to resonant noise, with a shared longer decay. Awaiting owner listening."
+            else -> legacyVoiceOnly(voice)
         }
         return "$identity Only BLEND changes across this row; the other five controls stay fixed."
     }
@@ -488,8 +497,11 @@ object OnsetAuditionGenerator {
     }
     private fun referenceBlendTitle(blend: Float) = when (blend) { 0f -> "Electronic"; .5f -> "Hybrid"; else -> "Physical" }
 
+    private fun legacyVoiceOnly(voice: OnsetVoice): Nothing =
+        error("$voice belongs to the model4 extension study, not the legacy four-voice audition")
+
     private fun readme() = """
-        ONSET four-voice audition, model ${Onset.MODEL_VERSION}
+        ONSET four-voice audition, model $LEGACY_MODEL_VERSION
         =====================================
 
         Twenty dry single-hit comparisons: kick, snare, closed hat and open hat at BLEND

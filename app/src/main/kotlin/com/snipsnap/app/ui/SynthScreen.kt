@@ -882,7 +882,8 @@ fun SynthScreen(
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
-                        ?: if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
+                        ?: if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seed.seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
@@ -1048,6 +1049,14 @@ fun SynthScreen(
     LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
         // Temporary model-2 controls must not replace a still-unread YOURS recipe.
         if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        if (engine == Engine.ONSET && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            // Freeze a fresh renderer before leaving only a macro bag behind.
+            // A named YOURS recipe must finish loading before it is replaced.
+            loadedPatchesByVoice[engine to voice] = OnsetPatch(
+                engine.patchDisplayName(voice), voice as OnsetVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1064,7 +1073,7 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
-        else if (patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1676,6 +1685,7 @@ fun SynthScreen(
                     if (mine != null) {
                         val editable = editablePreset(mine)
                         loadedPatchesByVoice[pair] = editable
+                        if (editable is OnsetPatch) macrosByVoice[pair] = Onset.defaults(editable.voice) + editable.macros
                         if (editable is PrismPatch) {
                             macrosByVoice[pair] = Prism.defaults(editable.voice) + editable.macros
                             if (pair == (engine to voice)) prismMotionStudio.selected(editable)
@@ -5476,7 +5486,10 @@ private enum class Engine {
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
         SKIN -> SkinVoice.entries
-        ONSET -> listOf(OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN)
+        ONSET -> listOf(
+            OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
+            OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
+        )
         TINES -> TinesVoice.entries
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
@@ -6092,6 +6105,8 @@ private val OnsetVoice.drumClass: DrumClass
         OnsetVoice.SNARE -> DrumClass.SNARE
         OnsetVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
         OnsetVoice.HAT_OPEN -> DrumClass.HAT_OPEN
+        OnsetVoice.TOM -> DrumClass.TOM
+        OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL -> DrumClass.PERC
     }
 
 private val ThumpVoice.drumClass: DrumClass
@@ -6173,6 +6188,10 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         OnsetVoice.SNARE -> "SNARE"
         OnsetVoice.HAT_CLOSED -> "HAT CL"
         OnsetVoice.HAT_OPEN -> "HAT OP"
+        OnsetVoice.TOM -> "TOM"
+        OnsetVoice.PERC_PLUCK -> "PLUCK"
+        OnsetVoice.PERC_WOOD -> "WOOD"
+        OnsetVoice.PERC_METAL -> "METAL"
     }
     Engine.OBBLIGATO -> "AIR + REED"
     Engine.BALLAST -> (voice as BallastVoice).displayName
