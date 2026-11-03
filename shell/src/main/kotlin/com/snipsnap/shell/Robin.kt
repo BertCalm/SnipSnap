@@ -79,6 +79,7 @@ object Robin {
         require(takes in 2..MAX_TAKES) { "takes is 2..$MAX_TAKES, got $takes" }
         zones?.let { require(it in 2..4) { "zones is 2..4, got $it" } }
         if (zones == null) return applyLegacy(model, slot, RobinSettings(null, takes, seed, followsKit = false))
+        // Zone grids keep `robin = null` on the pad, so they are not robin chains.
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
 
@@ -114,18 +115,14 @@ object Robin {
                     linkedMapOf<String, JsonValue>(
                         "takes" to JsonValue.Num(takes.toDouble()),
                         "seed" to JsonValue.Num(seed.toDouble()),
-                    ).also { r -> zones?.let { r["zones"] = JsonValue.Num(it.toDouble()) } },
+                        "zones" to JsonValue.Num(zones.toDouble()),
+                    ),
                 ),
             ),
         )
         model.replaceAudio(slot, recipe) { original ->
             val rng = Random(seed.toLong() * 31 + slot)
-            val rendered = if (zones == null) {
-                buildList {
-                    add(original)
-                    repeat(takes - 1) { add(variant(original, rng)) }
-                }
-            } else {
+            val rendered = run {
                 val soften = ZONE_SOFTEN.getValue(zones)
                 // Resolved once for the whole grid, not once per zone -
                 // this is layerAt's format probe (a full patch.render(),
@@ -151,19 +148,16 @@ object Robin {
                     }
                 }
             }
-            var at = 0L
-            boundaries = rendered.map { t -> at.also { _ -> at += t.frameCount } }
+            boundaries = sliceStarts(rendered)
             concat(rendered)
         }
-        val zoneList = zones?.let { n ->
-            (0 until n).map { z ->
-                ChainZone(
-                    velStart = if (z == 0) 0 else 128 * z / n,
-                    velEnd = if (z == n - 1) 127 else 128 * (z + 1) / n - 1,
-                    baseSlice = z * takes,
-                    cycle = takes,
-                )
-            }
+        val zoneList = (0 until zones).map { z ->
+            ChainZone(
+                velStart = if (z == 0) 0 else 128 * z / zones,
+                velEnd = if (z == zones - 1) 127 else 128 * (z + 1) / zones - 1,
+                baseSlice = z * takes,
+                cycle = takes,
+            )
         }
         return model.update(slot) {
             it.copy(chain = ChainInfo(boundaries, cycle = takes, zones = zoneList))

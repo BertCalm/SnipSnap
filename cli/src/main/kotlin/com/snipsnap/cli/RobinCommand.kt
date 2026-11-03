@@ -44,6 +44,7 @@ object RobinCommand {
         }
         if (amount != null && zones != null) throw CliError("--amount and --zones don't mix: the grid has its own grading")
         if (amount != null) {
+            if (takes !in 2..Robin.MAX_TAKES) throw CliError("--takes is 2..${Robin.MAX_TAKES}, got $takes")
             val pad = Robin.apply(model, slot, com.snipsnap.kit.RobinSettings(amount, takes, seed, followsKit = false))
             model.save()
             out.println(
