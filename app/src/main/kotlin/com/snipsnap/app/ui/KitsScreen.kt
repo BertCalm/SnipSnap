@@ -78,6 +78,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
 import com.snipsnap.app.LocalHaptics
+import com.snipsnap.shell.Expansion
+import com.snipsnap.app.KitWrites
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
+import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.Names as NameRoll
 
 /** How long a first tap on EMPTY THE BIN NOW (rooms bin) stays armed before it disarms itself — `TakesBinScreen.kt`'s own constant, copied verbatim. */
@@ -222,6 +230,16 @@ fun KitsScreen(
      * time, and [SystemClock] would not move with it.
      */
     loadingClock: () -> Long = SystemClock::uptimeMillis,
+    /**
+     * The phone's expansions. Non-null, a held kit's row gains a third door,
+     * EXPANSION, opening [ExpansionFlow]; null (a preview, an older caller),
+     * the row offers RENAME and DELETE as it always has.
+     */
+    expansions: ExpansionStore? = null,
+    /** The dock's line, for what the expansion flow has to say. */
+    onToast: (String) -> Unit = {},
+    /** An expansion row tapped: EXPORT opens with it as the subject. */
+    onOpenExpansion: (Expansion) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     // The loading screen's own rule, the dock bar's latch: no words for the
@@ -309,6 +327,28 @@ fun KitsScreen(
     // up regardless of how many rows are armed at once.
     var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    var expansionTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // The EXPANSIONS group: read off the main thread, again after any change to it.
+    var expansionsRevision by remember { mutableIntStateOf(0) }
+    val expansionView by produceState(emptyList<Expansion>() to emptyMap<String, KitShelf.Entry>(), expansions, expansionsRevision, kits) {
+        value = expansions?.let { store ->
+            offMain { runCatching { store.list() to shelfIds(kits) }.getOrDefault(emptyList<Expansion>() to emptyMap()) }
+        } ?: (emptyList<Expansion>() to emptyMap())
+    }
+    val expansionList = expansionView.first
+    var armedExpansionIds by remember { mutableStateOf(setOf<String>()) }
+    var renameExpansion by remember { mutableStateOf<Expansion?>(null) }
+    var deleteExpansion by remember { mutableStateOf<Expansion?>(null) }
+    val expansionScope = rememberCoroutineScope()
+    /** Runs one change to the store off the main thread under the kit-write lock, says [said] on success, and rereads the group. */
+    fun changeExpansions(said: String, change: (ExpansionStore) -> Unit) {
+        val store = expansions ?: return
+        expansionScope.launch {
+            val ok = offMain { KitWrites.mutex.withLock { runCatching { change(store) }.isSuccess } }
+            onToast(if (ok) said else Copy.EXPANSION_SAVE_FAILED)
+            expansionsRevision++
+        }
+    }
     // Which kit rows are armed (DELETE/RENAME revealed), lifted up here
     // rather than kept in KitRow's own remember: cancelling (or dismissing
     // by tapping outside) either dialog below needs to disarm the row that
@@ -547,6 +587,24 @@ fun KitsScreen(
                                 )
                             }
                         }
+                        if (expansionList.isNotEmpty()) {
+                            item(key = "expansions-header") {
+                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            }
+                            items(expansionList, key = { "expansion:" + it.id }) { e ->
+                                ExpansionRow(
+                                    e = e,
+                                    byId = expansionView.second,
+                                    armed = e.id in armedExpansionIds,
+                                    busy = busy,
+                                    onArm = { armedExpansionIds = armedExpansionIds + e.id },
+                                    onDisarm = { armedExpansionIds = armedExpansionIds - e.id },
+                                    onOpen = onOpenExpansion,
+                                    onRequestRename = { renameExpansion = it },
+                                    onRequestDelete = { deleteExpansion = it },
+                                )
+                            }
+                        }
                         item(key = "kits-header") {
                             TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
@@ -577,6 +635,7 @@ fun KitsScreen(
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },
+                            onRequestExpansion = if (expansions != null) ({ expansionTarget = it }) else null,
                             dubStatus = dubStatuses[entry.dir.path] ?: DubStamp.Status.DRAFT,
                             editedAge = editedAges[entry.dir.path],
                         )
@@ -809,6 +868,36 @@ fun KitsScreen(
             )
             // Innermost: Back cancels exactly like CANCEL, never RENAME.
             BackHandler(onBack = cancelRename)
+        }
+        if (expansions != null) {
+            expansionTarget?.let { target ->
+                ExpansionFlow(target, expansions, onToast) {
+                    expansionTarget = null
+                    armedKitDirs = armedKitDirs - target.dir.path
+                    expansionsRevision++
+                }
+            }
+            renameExpansion?.let { e ->
+                val cancel = { renameExpansion = null; armedExpansionIds = armedExpansionIds - e.id }
+                ExpansionNameDialog(
+                    title = Copy.EXPANSION_RENAME_TITLE,
+                    initialName = e.title,
+                    check = { name -> check(name, expansionList, exceptId = e.id) },
+                    taken = expansionList.map { it.title }.toSet(),
+                    onCancel = cancel,
+                    onConfirm = { name -> cancel(); changeExpansions(Copy.kitRenamed(name)) { it.rename(e.id, name) } },
+                    confirmLabel = "RENAME",
+                )
+                BackHandler(onBack = cancel)
+            }
+            deleteExpansion?.let { e ->
+                val cancel = { deleteExpansion = null; armedExpansionIds = armedExpansionIds - e.id }
+                ExpansionDeleteConfirm(
+                    onCancel = cancel,
+                    onConfirm = { cancel(); changeExpansions(Copy.expansionDeleted(e.title)) { it.delete(e.id) } },
+                )
+                BackHandler(onBack = cancel)
+            }
         }
     }
 }
@@ -1059,6 +1148,8 @@ private fun KitRow(
     onOpen: (KitShelf.Entry) -> Unit,
     onRequestDelete: (KitShelf.Entry) -> Unit,
     onRequestRename: (KitShelf.Entry) -> Unit,
+    /** The EXPANSION door, when the shelf has expansions to offer; null hides it. */
+    onRequestExpansion: ((KitShelf.Entry) -> Unit)? = null,
     /** What this kit's last dub left behind, read against the card in the phone — see [DubStamp]. */
     dubStatus: DubStamp.Status = DubStamp.Status.DRAFT,
     /** When this kit was last edited, as [Ages] words — null until the shelf's read lands. */
@@ -1090,7 +1181,8 @@ private fun KitRow(
                         enabled = !busy || armed,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onLongClickLabel = "RENAME OR DELETE",
+                        // The same words as the legend under the shelf, so the sighted and the spoken app agree.
+                        onLongClickLabel = if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE",
                         onLongClick = { onArm() },
                         onClick = { if (armed) onDisarm() else onOpen(entry) },
                     )
@@ -1140,6 +1232,18 @@ private fun KitRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("DELETE", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
+                }
+                onRequestExpansion?.let { request ->
+                    Box(
+                        Modifier
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = "ADD ${kit.name.uppercase()} TO AN EXPANSION", enabled = !busy) { request(entry) }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                    }
                 }
             }
         } else {

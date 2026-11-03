@@ -366,9 +366,10 @@ object Copy {
      */
     fun snipReady(name: String): String = "$name IS READY TO SEND. PICK WHERE IT GOES."
     /** A kit file landed: [landed] kits on the shelf, [presets] under YOURS on SYNTH when a backup brought some home, [skipped] refused - the box ([LandingNote]) names them when there are any. */
-    fun landed(landed: Int, skipped: Int, presets: Int = 0): String =
+    fun landed(landed: Int, skipped: Int, presets: Int = 0, expansions: Int = 0): String =
         "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." +
             (if (presets > 0) " ${countOf(presets, "PRESET", "PRESETS")} UNDER YOURS." else "") +
+            (if (expansions > 0) " ${countOf(expansions, "EXPANSION", "EXPANSIONS")} BACK ON THE SHELF." else "") +
             if (skipped > 0) " $skipped SKIPPED." else ""
     /** The message box's title when a share landed nothing: the file's name and the refuser's words follow. */
     const val NOTHING_LANDED = "NOTHING LANDED."
@@ -538,12 +539,65 @@ object Copy {
     const val ART_SEED_AUTO = "AUTO"
     /** The picker's mark row heading. */
     const val ART_MARK = "MARK"
+    /** An expansion's picker: which member's sound draws the tile. */
+    const val ART_SEED_KIT = "SEED KIT"
     /** A preview cell while its tile is drawn: a busy line. */
     const val ART_BUSY = "DRAWING…"
     /** The toast when the picker closes on changed knobs. */
     const val ART_SET = "ART SET."
     /** A pick that could not be written to the kit's art.json: this export still uses it. */
     const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
+
+    // Expansions on the phone: born from a held kit, gathered on the shelf.
+    /** The armed kit row's third door. */
+    const val EXPANSION_DOOR = "EXPANSION ▸"
+    /** The sheet the door opens. */
+    const val EXPANSION_SHEET_TITLE = "ADD TO EXPANSION"
+    /** The sheet's first row: start an expansion with this kit. */
+    const val EXPANSION_NEW = "NEW"
+    /** The name dialog's title. */
+    const val EXPANSION_NAME_TITLE = "NAME THE EXPANSION"
+    /** The name dialog's confirm button. */
+    const val EXPANSION_NAME_CONFIRM = "NAME IT"
+    const val EXPANSION_NAME_TAKEN = "ANOTHER EXPANSION HAS THAT NAME."
+    const val EXPANSION_NAME_UNSAFE = "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT OR SPACE."
+    /** The marker on an expansion the held kit is already in. */
+    const val EXPANSION_IN = "IN"
+    /** The art picker's title at birth reads ART FOR <TITLE>. */
+    const val ART_FOR = "ART FOR"
+    const val EXPANSION_SAVE_FAILED = "THE EXPANSION DID NOT SAVE. TRY AGAIN."
+    fun kitJoined(kit: String, expansion: String): String = "$kit IS IN $expansion."
+    fun kitLeft(kit: String, expansion: String): String = "$kit IS OUT OF $expansion."
+    fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
+    /** The shelf's group heading over the expansions. */
+    const val EXPANSIONS_HEADING = "EXPANSIONS"
+    /** An expansion row whose kits are all gone or binned. */
+    const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
+    /** The rename dialog's title for an expansion. */
+    const val EXPANSION_RENAME_TITLE = "RENAME EXPANSION"
+    /** DELETE's confirm on an expansion row: an expansion has no bin, and says so; its kits are untouched. */
+    val EXPANSION_DELETE_CONFIRM: String = "DELETE THIS EXPANSION? " + Reversal.goneBut("ITS KITS STAY ON THE SHELF")
+    fun expansionDeleted(name: String): String = "$name IS GONE. ITS KITS STAY ON THE SHELF."
+    // EXPORT's second subject.
+    /** The switch at the top of EXPORT. */
+    const val EXPORT_SUBJECT_KIT = "KIT"
+    const val EXPORT_SUBJECT_EXPANSION = "EXPANSION"
+    /** The row heading over the expansions to choose from. */
+    const val EXPANSION_PICK = "WHICH EXPANSION"
+    /** The members row heading. */
+    const val EXPANSION_MEMBERS = "KITS IN IT"
+    /** The last look at the tile, and its door back into the picker. */
+    const val CHANGE_ART = "CHANGE ART ▸"
+    /** The two forms an expansion writes in. */
+    const val EXPANSION_FORM_FOLDER = "ON-CARD FOLDER"
+    const val EXPANSION_FORM_XPN = "ONE FILE (.XPN)"
+    /** The expansion side's write button. */
+    const val EXPANSION_WRITE = "WRITE EXPANSION"
+    const val EXPANSION_NONE = "NO EXPANSIONS YET. HOLD A KIT ON THE SHELF TO START ONE."
+    const val EXPANSION_TO_PHONE = "GOES TO THE PHONE. PICK A CARD ON THE KIT SIDE TO SEND IT THERE."
+    fun expansionToCard(card: String): String = "GOES TO THE CARD: $card."
+    fun memberSkipped(kit: String, reason: String): String = "$kit SKIPPED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    fun expansionWritten(name: String, kits: Int): String = "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"
@@ -561,7 +615,7 @@ object Copy {
      * thing. No full stop: like ROOMS' legend and the grid's own, this is
      * furniture that stays on screen, not a line the app says once.
      */
-    const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
+    const val SHELF_LEGEND = "HOLD A KIT TO RENAME, DELETE OR ADD TO AN EXPANSION"
 
     // ---- SETUP's answers (September UAT, finding 23) ----
 

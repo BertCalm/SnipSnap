@@ -304,6 +304,10 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
  */
 @Composable
 fun App(shelf: KitShelf) {
+    // The phone's expansions, beside the shelf's kits: `<files>/expansions`.
+    val expansionStore = remember(shelf) { shelf.expansionStore() }
+    // EXPORT's subject: null is the open kit; an expansion's id (or "" for the first) is that expansion.
+    var exportExpansion by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -1180,6 +1184,8 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted kits (Task 4): the shelf's own bin
         // empties itself of whatever DELETE put there more than 30 days ago.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }
+        // A kit the sweep forgot for good leaves every expansion it was in.
+        withContext(Dispatchers.IO) { KitWrites.mutex.withLock { runCatching { shelf.pruneExpansions() } } }
         // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
         // always the intent (KitBuilder.kt's own docs), but nothing ever called
         // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected
@@ -1315,14 +1321,17 @@ fun App(shelf: KitShelf) {
                         dock.say(Copy.roomLanded(room.name))
                         return@LaunchedEffect
                     }
-                    val (entries, skipped, presets) = withContext(Dispatchers.IO) { shelf.land(local, name) }
+                    // Under the kit-write lock: a backup coming home writes expansions as well as kits.
+                    val (entries, skipped, presets, expansions) = withContext(Dispatchers.IO) {
+                        KitWrites.mutex.withLock { shelf.land(local, name) }
+                    }
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     // A clean landing keeps its toast; one with skips opens the
                     // box, which names each skipped kit and the door's reason.
                     // A backup's presets are counted in the same line: they
                     // landed under YOURS on SYNTH, which is nowhere near here.
-                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
-                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets))
+                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets, expansions)
+                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets, expansions))
                     // The landing replaces the benches, so an editor that was up
                     // is gone with them; one the history brings back is judged
                     // against this kit by its own verdict.
@@ -2799,7 +2808,7 @@ fun App(shelf: KitShelf) {
                     // How many presets rode along, for the toast: the file is
                     // in the zip byte for byte, so this is the strip's own
                     // count, and a file this build cannot read counts none.
-                    val n = if (r.extras.isEmpty()) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
+                    val n = if (UserPresets.FILE_NAME !in r.extras) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
                     r to n
                 }
                 busy = null
@@ -3760,6 +3769,12 @@ fun App(shelf: KitShelf) {
                                 onEmptyRoomsBin = ::emptyRoomsBin,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
+                                expansions = expansionStore,
+                                onToast = { dock.say(it) },
+                                onOpenExpansion = { e ->
+                                    exportExpansion = e.id
+                                    goToScreen(AppScreen.EXPORT)
+                                },
                                 binnedCount = binnedCount,
                                 onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
@@ -4341,6 +4356,9 @@ fun App(shelf: KitShelf) {
                             // as one session, over the open project.
                             project = project,
                             shelfRoot = shelf.root,
+                            expansions = expansionStore,
+                            expansionSubject = exportExpansion,
+                            onExpansionSubject = { exportExpansion = it },
                             // SHARE, moved in from KIT's action row: it is an
                             // output. The beat's writers (BOUNCE, MIDI, CHART)
                             // live on BEAT and are listed here as a door.

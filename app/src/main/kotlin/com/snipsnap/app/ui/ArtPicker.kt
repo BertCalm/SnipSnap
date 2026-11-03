@@ -38,6 +38,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitArt
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mark
+import com.snipsnap.shell.Member
 import com.snipsnap.shell.Palettes
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.TileSound
@@ -77,10 +78,10 @@ internal class ArtPreviews(private val render: (ArtKnobs) -> ImageBitmap) {
         @OptIn(ExperimentalCoroutinesApi::class)
         private val DRAWING = Dispatchers.IO.limitedParallelism(2)
 
-        /** Previews of [kit] through the phone's own renderer, its pads read once for every preview. */
-        fun forKit(assets: AssetManager, kit: Kit, kitDir: File): ArtPreviews {
+        /** Previews of [kit] captioned [label] through the phone's own renderer, its pads read once for every preview. */
+        fun forKit(assets: AssetManager, kit: Kit, kitDir: File, label: String = kit.name): ArtPreviews {
             val pads by lazy { TileSound.pads(kit, kitDir) }
-            return ArtPreviews { knobs -> AndroidKitArt.bitmap(kit, pads, knobs, PREVIEW_SIZE, assets = assets).asImageBitmap() }
+            return ArtPreviews { knobs -> AndroidKitArt.bitmap(kit, pads, knobs, PREVIEW_SIZE, label, assets = assets).asImageBitmap() }
         }
     }
 }
@@ -97,6 +98,11 @@ private sealed class Preview {
  * with the knobs at hand, then the palette, seed pad and mark. Every tap
  * hands [onKnobs] the changed set and the sheet stays open; the caller
  * saves it.
+ *
+ * An expansion's picker passes its title as [label] (the tile's caption)
+ * and its present members as [seedKits]: a SEED KIT row then chooses
+ * which member's sound draws the tile, handed to [onSeedKit]; [kit] is
+ * the current seed.
  */
 @Composable
 internal fun ArtPickerSheet(
@@ -105,17 +111,30 @@ internal fun ArtPickerSheet(
     knobs: ArtKnobs,
     onKnobs: (ArtKnobs) -> Unit,
     onDismiss: () -> Unit,
+    label: String = kit.name,
+    seedKits: List<Member> = emptyList(),
+    onSeedKit: (Member) -> Unit = {},
+    title: String = Copy.ART_SHEET_TITLE,
 ) {
-    BottomSheet(Copy.ART_SHEET_TITLE, onDismiss) {
-        ArtPickerContent(kit, kitDir, knobs, onKnobs, Modifier.weight(1f))
+    BottomSheet(title, onDismiss) {
+        ArtPickerContent(kit, kitDir, knobs, onKnobs, label, seedKits, onSeedKit, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun ArtPickerContent(kit: Kit, kitDir: File, knobs: ArtKnobs, onKnobs: (ArtKnobs) -> Unit, modifier: Modifier) {
+private fun ArtPickerContent(
+    kit: Kit,
+    kitDir: File,
+    knobs: ArtKnobs,
+    onKnobs: (ArtKnobs) -> Unit,
+    label: String,
+    seedKits: List<Member>,
+    onSeedKit: (Member) -> Unit,
+    modifier: Modifier,
+) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
-    val previews = remember(kit, kitDir) { ArtPreviews.forKit(context.assets, kit, kitDir) }
+    val previews = remember(kit, kitDir, label) { ArtPreviews.forKit(context.assets, kit, kitDir, label) }
     Column(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -126,6 +145,14 @@ private fun ArtPickerContent(kit: Kit, kitDir: File, knobs: ArtKnobs, onKnobs: (
                     StyleCell(previews, knobs.copy(style = style), picked = style == knobs.style, scheme, Modifier.weight(1f)) {
                         onKnobs(knobs.copy(style = style))
                     }
+                }
+            }
+        }
+        if (seedKits.isNotEmpty()) {
+            ChipRow(Copy.ART_SEED_KIT, scheme) {
+                for (m in seedKits) {
+                    val name = m.kit.name.uppercase()
+                    Chip(name, "${Copy.ART_SEED_KIT}: $name", picked = m.dir == kitDir, scheme) { onSeedKit(m) }
                 }
             }
         }
