@@ -489,10 +489,6 @@ private fun storedEmbouchurePatch(settings: Map<String, String>, voice: Embouchu
     }
 
 /**
- * What SYNTH restores for EMBOUCHURE when it reopens (BRASS GROW is a different saved model with
- * different controls, so its recipe must come back whole).
- */
-/**
  * Manual AUDITION: knob turns render quietly and only AUDITION plays (the owner's call,
  * 2026-11-03). Each preview render takes a request number; AUDITION plays at once when the
  * newest request has landed, otherwise it is remembered as [pending] and the render that
@@ -514,6 +510,10 @@ private class ManualAudition {
     fun tap(play: () -> Unit) { if (landed == requested) play() else pending = true }
 }
 
+/**
+ * What SYNTH restores for EMBOUCHURE when it reopens (BRASS GROW is a different saved model with
+ * different controls, so its recipe must come back whole).
+ */
 private class EmbouchureRestore(
     settings: Map<String, String>,
     seededPresets: Map<Pair<Engine, Enum<*>>, String>,
