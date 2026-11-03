@@ -1873,6 +1873,7 @@ fun SynthScreen(
         }
         val previewJob = coroutineContext[Job]
         renderSynthPreview(
+            label = "${engine.name} $voice",
             debounceMillis = MACRO_DEBOUNCE_MS,
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
