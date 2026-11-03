@@ -165,9 +165,11 @@ class ExportWizardModel(
 
         stage = Stage.WRITING
         return try {
-            val artwork = artKnobs
-                ?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
-                ?.let { artRenderer(kit, kitDir, it) }
+            val drawnWith = artKnobs?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
+            val artwork = drawnWith?.let { artRenderer(kit, kitDir, it) }
+            // The first tile that goes out fixes an untouched kit's knobs: until now it followed the
+            // scheme on screen, and a scheme switch would have redrawn the next export's tile.
+            if (drawnWith != null && ArtSidecar.read(kitDir) == null) ArtSidecar.write(kitDir, drawnWith)
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
             // The expansion's own paper, the same pair `snipsnap export`
             // has always put there (`Inserts`). Until this, the CLI wrote
