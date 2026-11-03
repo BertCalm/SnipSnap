@@ -171,4 +171,16 @@ where each landed:
 - **MPC 3 humanize is left alone.** It is a setting the person chose; round
   robin does not change or zero it.
 
-**For the owner:** see "Owner answers" below.
+**Owner answers (2026-11-03):**
+
+- **Pads follow the kit.** A round-robin pad nobody adjusted on its own
+  follows the kit's amount and take count: changing the kit setting
+  re-renders every such pad, and one undo brings the whole kit back. A pad
+  someone set by hand keeps its own setting. So a pad stores whether it
+  overrides, not just a copy of the numbers.
+- **Edits still work on a round-robin pad.** SHAPE, TUNE, treatments and
+  Aquarium all work. The edit lands on the original, and the takes re-render
+  from it. Today's "Undo round-robin before using …" refusals go away for
+  pads `Robin` made. This means the pad keeps its original (and its synth
+  patch and recipe) alongside the robin bookkeeping, instead of replacing
+  the recipe as `Robin.apply` does today.
