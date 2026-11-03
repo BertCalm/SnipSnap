@@ -2067,6 +2067,22 @@ class CliTest {
         val (bzCode, _, bzErr) = cli("robin", kitDir.path, "A01", "--zones", "9")
         assertTrue(bzCode != 0)
         assertContains(bzErr, "zones")
+
+        // --amount renders on the dial and records typed settings; --undo still restores.
+        val (aCode, aOut, aErr) = cli("robin", kitDir.path, "A01", "--amount", "0.6", "--takes", "5", "--seed", "2")
+        assertEquals(0, aCode, "stderr: $aErr")
+        assertContains(aOut, "amount 0.6")
+        val dialed = KitStore.load(kitDir).pad(1)!!
+        assertEquals(5, dialed.chain!!.sliceCount)
+        assertEquals(com.snipsnap.kit.RobinSettings(0.6f, 5, 2, followsKit = false), dialed.robin)
+        assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "dial undo is byte-identical too")
+        val (baCode, _, baErr) = cli("robin", kitDir.path, "A01", "--amount", "1.5")
+        assertTrue(baCode != 0)
+        assertContains(baErr, "amount")
+        val (bxCode, _, bxErr) = cli("robin", kitDir.path, "A01", "--amount", "0.5", "--zones", "3")
+        assertTrue(bxCode != 0)
+        assertContains(bxErr, "zones")
     }
 
     @Test

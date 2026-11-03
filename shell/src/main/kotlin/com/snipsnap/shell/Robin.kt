@@ -6,6 +6,8 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ChainInfo
 import com.snipsnap.kit.ChainZone
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.RobinSettings
+import com.snipsnap.kit.isRobinChain
 import java.util.Random
 
 /**
@@ -76,6 +78,7 @@ object Robin {
     ): KitPad {
         require(takes in 2..MAX_TAKES) { "takes is 2..$MAX_TAKES, got $takes" }
         zones?.let { require(it in 2..4) { "zones is 2..4, got $it" } }
+        if (zones == null) return applyLegacy(model, slot, RobinSettings(null, takes, seed, followsKit = false))
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
 
@@ -167,6 +170,81 @@ object Robin {
         }
     }
 
+    /**
+     * The typed door (single-zone only): renders [settings] on the amount
+     * dial and keeps the pad's own recipe, so a synth pad stays a synth pad.
+     * A null amount is the legacy robin (today's [variant], bookkeeping
+     * recipe), kept byte-identical for the CLI and replay.
+     */
+    fun apply(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
+        val amount = settings.amount ?: return applyLegacy(model, slot, settings)
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
+        var boundaries: List<Long> = emptyList()
+        model.replaceAudio(slot, pad.recipe) { original ->
+            val rng = Random(settings.seed.toLong() * 31 + slot)
+            val rendered = RobinVariation.takes(original, settings.takes, amount, rng)
+            boundaries = sliceStarts(rendered)
+            concat(rendered)
+        }
+        return model.update(slot) {
+            it.copy(chain = ChainInfo(boundaries, cycle = settings.takes, zones = null), robin = settings)
+        }
+    }
+
+    /** Today's render: legacy bookkeeping recipe, the 3-draw [variant] stream. */
+    private fun applyLegacy(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
+        val takes = settings.takes
+        val seed = settings.seed
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
+        var boundaries: List<Long> = emptyList()
+        val recipe = JsonValue.Obj(
+            linkedMapOf<String, JsonValue>(
+                "robin" to JsonValue.Obj(
+                    linkedMapOf<String, JsonValue>(
+                        "takes" to JsonValue.Num(takes.toDouble()),
+                        "seed" to JsonValue.Num(seed.toDouble()),
+                    ),
+                ),
+            ),
+        )
+        model.replaceAudio(slot, recipe) { original ->
+            val rng = Random(seed.toLong() * 31 + slot)
+            val rendered = buildList {
+                add(original)
+                repeat(takes - 1) { add(variant(original, rng)) }
+            }
+            boundaries = sliceStarts(rendered)
+            concat(rendered)
+        }
+        return model.update(slot) {
+            it.copy(chain = ChainInfo(boundaries, cycle = takes, zones = null), robin = settings)
+        }
+    }
+
+    private fun sliceStarts(rendered: List<Snip>): List<Long> {
+        var at = 0L
+        return rendered.map { t -> at.also { _ -> at += t.frameCount } }
+    }
+
+    /** Undo then apply: new settings over the same original. Only a robin chain qualifies. */
+    fun rerender(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.isRobinChain) { "pad $slot isn't a round-robin chain - nothing to re-render" }
+        undo(model, slot)
+        return apply(model, slot, settings)
+    }
+
+    /** Take one (slice 0 of the chain WAV) is the original, for previews. */
+    fun original(model: KitBuilderModel, slot: Int): Snip {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val chain = requireNotNull(pad.chain) { "pad $slot isn't a round-robin chain" }
+        val whole = com.snipsnap.audio.WavReader.read(java.io.File(model.kitDir, pad.sampleFile))
+        val end = (chain.boundaries.getOrNull(1) ?: whole.frameCount.toLong()).toInt()
+        return Snip(whole.samples.copyOfRange(0, end * whole.channels), whole.channels, whole.sampleRate)
+    }
+
     /** The single take back out of the bin, byte-identical; the chain cleared. */
     fun undo(model: KitBuilderModel, slot: Int): KitPad {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -175,7 +253,10 @@ object Robin {
             ?: throw IllegalArgumentException(
                 "nothing to restore for pad $slot - the bin holds no earlier take of it",
             )
-        return model.update(slot) { it.copy(chain = null, recipe = null) }
+        // Only pure legacy bookkeeping (a lone "robin" key) is dropped; a
+        // kept patch recipe belongs to the pad.
+        val bookkeeping = pad.recipe?.entries?.keys == setOf("robin")
+        return model.update(slot) { it.copy(chain = null, robin = null, recipe = if (bookkeeping) null else it.recipe) }
     }
 
     private fun variant(original: Snip, rng: Random): Snip {

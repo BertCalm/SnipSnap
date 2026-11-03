@@ -6,7 +6,7 @@ import java.io.File
 import java.io.PrintStream
 
 /**
- * `snipsnap robin <kit-dir> <pad> [--takes N] [--seed S]` — round robin
+ * `snipsnap robin <kit-dir> <pad> [--amount 0..1] [--takes N] [--seed S] [--zones Z]` — round robin
  * for a pad that has one take: seeded subtle variants rendered into a
  * chain WAV, the MPC 3 cycling a take per hit (Slice Motion), the MPC 2
  * playing take one — the untouched original, deliberately first.
@@ -15,7 +15,7 @@ import java.io.PrintStream
 object RobinCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
-        val opts = Options.parse(args, valued = setOf("--takes", "--seed", "--zones"), boolean = setOf("--undo"))
+        val opts = Options.parse(args, valued = setOf("--takes", "--seed", "--zones", "--amount"), boolean = setOf("--undo"))
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError(
                 "robin wants a kit and a pad: snipsnap robin <kit-dir> A01 [--takes 3] [--seed 7]",
@@ -37,6 +37,23 @@ object RobinCommand {
         val takes = opts.int("--takes") ?: Robin.DEFAULT_TAKES
         val seed = opts.int("--seed") ?: 0
         val zones = opts.int("--zones")
+        val amount = opts["--amount"]?.let {
+            val a = it.toFloatOrNull() ?: throw CliError("--amount wants a number 0..1, got '$it'")
+            if (!(a in 0f..1f)) throw CliError("--amount is 0..1, got $it")
+            a
+        }
+        if (amount != null && zones != null) throw CliError("--amount and --zones don't mix: the grid has its own grading")
+        if (amount != null) {
+            val pad = Robin.apply(model, slot, com.snipsnap.kit.RobinSettings(amount, takes, seed, followsKit = false))
+            model.save()
+            out.println(
+                "pad $padArg is a round-robin chain of $takes takes (amount " +
+                    "${String.format(java.util.Locale.ROOT, "%.2f", amount).trimEnd('0').trimEnd('.')}, seed $seed) - " +
+                    "take one untouched, the rest seeded variants on the dial",
+            )
+            out.println("  ${pad.sampleFile} is now the chain; the pad's patch is kept. undo: --undo")
+            return 0
+        }
         val pad = Robin.apply(model, slot, takes = takes, seed = seed, zones = zones)
         model.save()
         if (zones != null) {

@@ -825,6 +825,14 @@ a robin'd pad on the Live III audibly alternates takes (pending the
 HH1.4 slice-chunk capture; until then the hardware plays take one, the
 declared fallback).
 
+`--amount A` (0..1) renders the takes on the amount dial instead
+(RobinVariation: level, pitch, start trim and a tone tilt all scale
+together, the same random draws at every position) and **keeps the
+pad's recipe**, so a synth pad stays a synth pad; the settings ride
+the kit sidecar and `--undo` restores the single take byte-identical.
+Without `--amount` the output is byte-identical to the original robin.
+`--amount` and `--zones` don't combine.
+
 `--zones Z` (2..4) renders the **full velocity × round-robin grid**
 from that one take — the PSK corpus scheme. The chain becomes
 dynamics-graded, soft→hard: each zone gets `--takes` takes of a graded

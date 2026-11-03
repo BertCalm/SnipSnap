@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.RobinSettings
 import java.io.File
 import kotlin.math.abs
 import kotlin.test.AfterTest
@@ -292,5 +293,88 @@ class RobinTest {
         val card = File(temp, "ship-card")
         com.snipsnap.kit.Mpc3Exporter.exportTrack(loaded, m.kitDir, card)
         assertTrue(card.walkTopDown().any { it.extension == "xtd" }, "a chained kit exports")
+    }
+
+    private fun sha(f: File): String =
+        java.security.MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString("") { "%02x".format(it) }
+
+    private fun synthModel(name: String): KitBuilderModel {
+        val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
+        val m = KitBuilderModel.create(name, File(temp, name))
+        m.assign(1, patch.render(), DrumClass.TONAL)
+        m.update(1) { it.copy(recipe = com.snipsnap.synth.PadRecipe(patch = patch).toJsonValue()) }
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        return m
+    }
+
+    @Test fun `a synth pad keeps its patch under round robin`() {
+        val m = synthModel("Keep")
+        val before = m.pad(1)!!.recipe
+        assertTrue(before != null, "fixture carries a patch")
+        val pad = Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        assertEquals(before, pad.recipe)
+        assertEquals(RobinSettings(0.6f, 6), pad.robin)
+        assertEquals(6, pad.chain!!.cycle)
+        assertEquals(6, pad.chain!!.sliceCount)
+    }
+
+    @Test fun `off restores the original bytes and keeps the patch`() {
+        val m = synthModel("Off")
+        val file = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val bytes = file.readBytes()
+        val recipe = m.pad(1)!!.recipe
+        assertTrue(recipe != null, "fixture carries a patch")
+        Robin.apply(m, 1, RobinSettings(0.4f, 4))
+        assertTrue(!bytes.contentEquals(file.readBytes()))
+        val pad = Robin.undo(m, 1)
+        assertTrue(bytes.contentEquals(file.readBytes()), "original bytes back")
+        assertEquals(recipe, pad.recipe)
+        assertEquals(null, pad.robin)
+        assertEquals(null, pad.chain)
+    }
+
+    @Test fun `legacy apply is byte-identical to before`() {
+        val m = model("Legacy")
+        val pad = Robin.apply(m, 1, takes = 3, seed = 7)
+        assertEquals(LEGACY_SHA, sha(File(m.kitDir, pad.sampleFile)))
+        assertEquals(RobinSettings(null, 3, 7, false), pad.robin)
+        assertEquals(JsonValueRobinKeys, pad.recipe!!.entries.keys)
+        // undo of pure legacy bookkeeping clears the recipe, as before
+        assertEquals(null, Robin.undo(m, 1).recipe)
+    }
+
+    @Test fun `rerender with new settings changes takes but not take one`() {
+        val m = model("Rerender")
+        val file = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val original = WavReader.read(file)
+        val a = Robin.apply(m, 1, RobinSettings(0.5f, 4))
+        assertEquals(4, a.chain!!.cycle)
+        val b = Robin.rerender(m, 1, RobinSettings(0.5f, 8))
+        assertEquals(8, b.chain!!.cycle)
+        assertEquals(8, b.chain!!.sliceCount)
+        val chained = WavReader.read(file)
+        val n = original.frameCount * original.channels
+        for (i in 0 until n) {
+            assertTrue(abs(original.samples[i] - chained.samples[i]) <= 2f / 32767f, "take one differs at $i")
+        }
+        assertEquals(RobinSettings(0.5f, 8), b.robin)
+        assertFailsWith<IllegalArgumentException>("not a robin chain") { Robin.rerender(m, 2, RobinSettings(0.5f, 4)) }
+    }
+
+    @Test fun `the original reads back from take one`() {
+        val m = model("Orig")
+        val original = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+        Robin.apply(m, 1, RobinSettings(0.9f, 5))
+        val back = Robin.original(m, 1)
+        assertEquals(original.frameCount, back.frameCount)
+        for (i in original.samples.indices) {
+            assertTrue(abs(original.samples[i] - back.samples[i]) <= 2f / 32767f, "sample $i")
+        }
+    }
+
+    private companion object {
+        const val LEGACY_SHA = "87d932c93b26c9b1bf1195f7b4780106323538193d86a41d37b34ce2d1ae3a70"
+        val JsonValueRobinKeys = setOf("robin")
     }
 }
