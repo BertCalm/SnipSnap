@@ -74,8 +74,8 @@ interface ArtCanvas {
  * the CLI `art` verb regenerates every style in one command so the owner
  * can judge them on screen.
  *
- * [draw] is the actual rendering — every style, the caption, the
- * hairline — expressed purely against [ArtCanvas]. Nothing it calls
+ * [draw] is the actual rendering — every style, the kit name in its
+ * zone, the mark — expressed purely against [ArtCanvas]. Nothing it calls
  * touches `java.awt`/`javax.imageio`: those only enter through [render]/
  * [png] below, the AWT adapter this class, the CLI, and every test here
  * have always used. `:app`'s Android renderer calls [draw] directly with
@@ -303,7 +303,7 @@ object KitArt {
     // ---- the AWT adapter — java.awt lives here and in the font cache below, nowhere else ----
 
     /**
-     * Public, not private: [JCard] reuses [waveform] against its own
+     * Public, not private: [JCard] reuses [waveformStrip] against its own
      * [Graphics2D], and the CLI's `mark` verb draws [Mark] through it.
      */
     class AwtCanvas(private val g: Graphics2D) : ArtCanvas {

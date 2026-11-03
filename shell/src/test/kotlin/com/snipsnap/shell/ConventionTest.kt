@@ -4212,7 +4212,7 @@ class ConventionTest {
         // 2. :app main — no AWT, no direct call to an AWT entry point.
         val appFiles = ktFiles(appMain)
         assertTrue(appFiles.isNotEmpty(), "scan found no :app sources, so it is broken rather than the code being clean")
-        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render)|Lineage\.\w+)\b|\bJCard::awtPng\b""")
+        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render|awtPng)|Lineage\.\w+)\b|\b(?:JCard|KitArt)::awtPng\b""")
         val strayApp = mutableListOf<String>()
         for (f in appFiles) {
             val code = stripCommentsAndStrings(f.readText())
