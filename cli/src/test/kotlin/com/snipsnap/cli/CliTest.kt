@@ -2041,11 +2041,6 @@ class CliTest {
         assertEquals(4, chained!!.sliceCount)
         assertTrue(padFile.readBytes().size > before.size * 3, "four takes ride in the WAV")
 
-        // A chained pad refuses the other audio doors with a pointer home.
-        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
-        assertTrue(guardCode != 0)
-        assertContains(guardErr, "robin --undo")
-
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "undo is byte-identical")
         assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain)
@@ -2061,6 +2056,12 @@ class CliTest {
         val grid = KitStore.load(kitDir).pad(1)!!.chain!!
         assertEquals(6, grid.sliceCount)
         assertEquals(3, grid.zones!!.size)
+
+        // A zone-grid chain refuses the other audio doors with a pointer home (a plain robin chain lifts instead).
+        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
+        assertTrue(guardCode != 0)
+        assertContains(guardErr, "robin --undo")
+
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "grid undo is byte-identical too")
 

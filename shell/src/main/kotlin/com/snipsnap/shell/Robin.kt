@@ -253,6 +253,39 @@ object Robin {
         return model.update(slot) { it.copy(chain = null, robin = null, recipe = if (bookkeeping) null else it.recipe) }
     }
 
+    /**
+     * Run [block] - any audio edit - on a robin pad's original. A robin chain is lifted
+     * ([undo]: the single take back, chain cleared), [block] edits it, and the takes are
+     * re-rendered from the edited result with the settings the pad had before. The pad is
+     * re-read after [block], so a recipe it wrote is kept. If [block] throws, the takes are
+     * put back from whatever is on the pad and the error propagates. Any other pad: just [block].
+     */
+    fun <T> around(model: KitBuilderModel, slot: Int, block: () -> T): T {
+        val before = model.pad(slot)
+        if (before == null || !before.isRobinChain) return block()
+        val settings = checkNotNull(before.robin)
+        undo(model, slot)
+        val result = try {
+            block()
+        } catch (t: Throwable) {
+            try {
+                relay(model, slot, settings)
+            } catch (again: Throwable) {
+                t.addSuppressed(again)
+            }
+            throw t
+        }
+        relay(model, slot, settings)
+        return result
+    }
+
+    /** Re-render the takes of the pad as it now stands, keeping a recipe the edit wrote over the legacy bookkeeping one. */
+    private fun relay(model: KitBuilderModel, slot: Int, settings: RobinSettings) {
+        val edited = model.pad(slot)?.recipe
+        apply(model, slot, settings)
+        if (edited != null) model.update(slot) { it.copy(recipe = edited) }
+    }
+
     private fun variant(original: Snip, rng: Random): Snip {
         // Draw all three before any early return, so the rng stream (and
         // with it every later take) never depends on this take's values.

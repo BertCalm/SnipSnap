@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
@@ -179,7 +180,14 @@ object RecipeReplay {
         prints: ((String) -> com.snipsnap.audio.Dust.Print?)? = null,
     ): Done {
         val word = KitDiff.recipeName(recipe)
-        return when (val p = plan(recipe)) {
+        val plan = plan(recipe)
+        // A round-robin pad replays on its original and the takes re-render. The robin's own deal is
+        // the exception: it replaces the chain, so it is not wrapped (and a chained pad still refuses it).
+        if (plan !is Plan.RobinDeal && plan !is Plan.Refused && model.pad(slot)?.isRobinChain == true) {
+            val done = Robin.around(model, slot) { apply(model, slot, recipe, padName, aquariumRenderer, prints) }
+            return Done(model.pad(slot) ?: done.pad, done.toast)
+        }
+        return when (val p = plan) {
             is Plan.Refused -> throw IllegalArgumentException(p.reason)
             is Plan.Era -> Done(model.eraPad(slot, p.era, p.amount), Copy.replayed(word, padName))
             is Plan.Character -> Done(model.characterPad(slot, p.name, p.amount), Copy.replayed(word, padName))

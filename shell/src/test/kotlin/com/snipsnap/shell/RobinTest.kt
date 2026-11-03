@@ -98,7 +98,8 @@ class RobinTest {
     @Test
     fun `the guards hold - no door rewrites a chain and robin refuses bad shapes`() {
         val m = model("Guards")
-        Robin.apply(m, 1, takes = 2, seed = 1)
+        // A zone-grid chain is not a robin chain the edits can lift (RobinEditsTest covers the lifted ones).
+        Robin.apply(m, 1, takes = 2, seed = 1, zones = 2)
 
         assertFailsWith<IllegalArgumentException>("re-robin refused") { Robin.apply(m, 1) }
         assertFailsWith<IllegalArgumentException>("treat refused") { m.treatPad(1, "crushed") }

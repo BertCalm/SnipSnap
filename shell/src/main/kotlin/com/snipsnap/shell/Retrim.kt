@@ -4,6 +4,7 @@ import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import java.io.File
 import java.util.Locale
 
@@ -132,7 +133,7 @@ sealed class Retrim {
             val name = tapeName(pad)
                 ?: return Refused(if (pad.source["origin"] == "chop") Copy.RETRIM_OLD_CHOP else Copy.RETRIM_NO_TAPE)
             if (pad.velocityLayers.isNotEmpty()) return Refused(Copy.RETRIM_LAYERED)
-            if (pad.chain != null) return Refused(Copy.RETRIM_CHAINED)
+            if (pad.chain != null && !pad.isRobinChain) return Refused(Copy.RETRIM_CHAINED)
             if ('/' in name || '\\' in name) return Refused(Copy.RETRIM_TAPE_GONE)
             val file = File(snipsDir, name)
             if (!file.isFile) return Refused(Copy.RETRIM_TAPE_GONE)
