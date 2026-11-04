@@ -1,5 +1,9 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.mpc3.Mpc3TrackWriter
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipEntry
@@ -18,6 +22,13 @@ import java.util.zip.ZipOutputStream
  * `[Previews]/` the way real packs pair them, and the on-card `manifest`
  * beside the XML. A kit preflight refuses to pack is **skipped and named
  * with the reason**, backup-style — packs never pretend.
+ *
+ * Instruments ride the same tile: a keygroup package the shop made (MAKE
+ * INSTRUMENT, the `keys` verb), named by its `.instrument.json` sidecar,
+ * lands as `Programs/<Name>.xpm` with its looped WAVs under
+ * `Samples/<Name>/`, the kits' own layout. The program is the package's
+ * own `.xpm`, copied as it is, and every WAV keeps the root and sustain
+ * loop it was written with.
  */
 object PackBuilder {
 
@@ -26,8 +37,12 @@ object PackBuilder {
         val directory: File,
         /** The one-file archive, when asked for. */
         val xpn: File?,
+        /** The kits packed, by name. */
         val packed: List<String>,
+        /** Kits and instruments left out, by name, with the reason. */
         val skipped: List<Pair<String, String>>,
+        /** The instruments packed, by name. */
+        val instruments: List<String> = emptyList(),
     )
 
     fun build(
@@ -44,8 +59,10 @@ object PackBuilder {
          * along without this module knowing how to draw one.
          */
         extraFiles: Map<String, ByteArray> = emptyMap(),
+        /** Instrument packages to pack beside the kits, each named by its `.instrument.json` sidecar. */
+        instruments: List<File> = emptyList(),
     ): Result {
-        require(kitDirs.isNotEmpty()) { "a pack needs at least one kit" }
+        require(kitDirs.isNotEmpty() || instruments.isNotEmpty()) { "a pack needs at least one kit or instrument" }
 
         val dest = File(File(destRoot, ExpansionWriter.EXPANSIONS_DIR), meta.title)
         if (dest.exists() && !overwrite) {
@@ -89,7 +106,13 @@ object PackBuilder {
             }
             packed += kit.name
         }
-        if (packed.isEmpty()) {
+        val programNames = File(dest, "Programs").list().orEmpty().map { it.removeSuffix(".xpm").lowercase() }.toHashSet()
+        val packedInstruments = mutableListOf<String>()
+        for (sidecar in instruments) {
+            val (name, refusal) = packInstrument(sidecar, dest, programNames, withPreviews)
+            if (refusal == null) packedInstruments += name else skipped += name to refusal
+        }
+        if (packed.isEmpty() && packedInstruments.isEmpty()) {
             dest.deleteRecursively()
             throw IOException(
                 "nothing packable: " + skipped.joinToString("; ") { "'${it.first}' - ${it.second}" },
@@ -135,8 +158,68 @@ object PackBuilder {
             null
         }
 
-        return Result(dest, xpn, packed, skipped)
+        return Result(dest, xpn, packed, skipped, packedInstruments)
     }
+
+    /**
+     * One instrument package into the pack at [dest]: its name, and the reason it was left
+     * out or null when it was packed. [InstrumentStore.read] has already proved every sample is there and stays in
+     * its folder. Program names are compared without case, the way the MPC's browser
+     * shows them.
+     */
+    private fun packInstrument(sidecar: File, dest: File, programNames: MutableSet<String>, withPreviews: Boolean): Pair<String, String?> {
+        val fallback = sidecar.name.removeSuffix(InstrumentStore.SUFFIX)
+        val instrument = try {
+            InstrumentStore.read(sidecar)
+        } catch (e: Exception) {
+            return fallback to "the instrument could not be read: ${e.message}"
+        }
+        val name = instrument.name
+        if (!Names.isMpcSafe(name)) return name to "the name is not MPC-safe"
+        val folder = sidecar.parentFile
+        val xpm = File(File(folder, Mpc3TrackWriter.trackDataDirName(name)), "$name.xpm")
+        if (!xpm.isFile) return name to "its keygroup program (${xpm.name}) is missing"
+        if (!programNames.add(name.lowercase())) return name to "a program called '$name' is already in this pack"
+        val samplesDir = File(dest, "Samples/$name").apply { mkdirs() }
+        for (rel in instrument.sampleFiles) {
+            val source = File(folder, rel)
+            source.copyTo(File(samplesDir, source.name), overwrite = true)
+        }
+        xpm.copyTo(File(File(dest, "Programs").apply { mkdirs() }, xpm.name), overwrite = true)
+        if (withPreviews) {
+            val previews = File(dest, "[Previews]").apply { mkdirs() }
+            WavWriter.write(File(previews, xpm.name + ".wav"), instrumentPreview(instrument, folder))
+        }
+        return name to null
+    }
+
+    /**
+     * The middle zone held for a few seconds: its headline sample, wrapped at its
+     * sustain loop until [PREVIEW_SECONDS], the way a held key sounds.
+     */
+    internal fun instrumentPreview(instrument: InstrumentStore.Instrument, folder: File): Snip {
+        val zone = instrument.zones.sortedBy { it.rootNote }.let { it[it.size / 2] }
+        val layer = zone.playableLayers.last()
+        val source = WavReader.read(File(folder, layer.sample))
+        val channels = source.channels
+        val frames = source.samples.size / channels
+        val want = (PREVIEW_SECONDS * source.sampleRate).toInt()
+        val loop = layer.loopStartFrame.toInt()
+        if (loop <= 0 || loop >= frames || frames >= want) {
+            val keep = minOf(frames, want)
+            return Snip(source.samples.copyOf(keep * channels), channels, source.sampleRate)
+        }
+        val out = FloatArray(want * channels)
+        var frame = 0
+        while (frame < want) {
+            val from = if (frame < frames) frame else loop + (frame - frames) % (frames - loop)
+            for (c in 0 until channels) out[frame * channels + c] = source.samples[from * channels + c]
+            frame++
+        }
+        return Snip(out, channels, source.sampleRate)
+    }
+
+    private const val PREVIEW_SECONDS = 4f
 
     /** 2020-01-01T00:00:00 UTC — the same stamp `XpnPackager` uses. */
     private const val FIXED_TIME = 1_577_836_800_000L
