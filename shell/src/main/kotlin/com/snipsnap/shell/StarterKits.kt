@@ -6,6 +6,7 @@ import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
+import com.snipsnap.synth.ChordStabs
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.ConfluenceVoiceBank
 import com.snipsnap.synth.SkinKits
@@ -472,6 +473,12 @@ object StarterKits {
                 pad.copy(softVariants = Velocity.variantsAt(pad.snip, recipe?.patch, recipe?.fx, count = 2))
             }
         },
+        Starter(
+            "chord-stabs", "CHORD STABS",
+            "Every chord in C minor, one per pad: triads, then sevenths. Hit a progression.",
+            seeded = false,
+            key = KeySpec.parse("Cm"),
+        ) { ChordStabs.kit(KeySpec.parse("Cm")) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
