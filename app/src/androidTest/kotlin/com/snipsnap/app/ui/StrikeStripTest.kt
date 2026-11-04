@@ -10,6 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -24,6 +26,7 @@ import com.snipsnap.kit.KitLayer
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.StrikeStrip
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -61,6 +64,10 @@ class StrikeStripTest : ComposeScreenTest() {
 
     private fun fader() = button("STRIKE STRENGTH")
     private fun pad() = compose.onNodeWithContentDescription("PAD A01: SNARE")
+
+    private fun stateOf(label: String): String =
+        button(label).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription)
+            ?: error("\"$label\" has no stateDescription")
 
     @Test
     fun named_layer_highlight_follows_hits_and_does_not_move_with_a_returning_thumb() {
@@ -113,6 +120,33 @@ class StrikeStripTest : ComposeScreenTest() {
         val bounds = pad().fetchSemanticsNode().boundsInRoot
         val density = compose.density.density
         assertTrue("pad keeps a 48dp touch target", bounds.width >= 48f * density && bounds.height >= 48f * density)
+    }
+
+    /**
+     * Side, return and volume do nothing while the strip is off, so each says it waits for STRIKE
+     * (what a screen reader hears where a sighted player sees the quieter ink). They are dimmed,
+     * not disabled: a tap while the strip is off still lands and is still there when it comes on.
+     */
+    @Test
+    fun the_settings_behind_strike_say_they_wait_for_it_and_keep_their_value() {
+        show()
+        val waits = "takes effect when STRIKE is on"
+        val behind = listOf("STRIKE THUMB SIDE", "STRIKE ON RELEASE", "STRIKE CHANGES VOLUME")
+        for (label in behind) assertTrue("$label should say it waits for STRIKE", stateOf(label).endsWith(waits))
+        assertEquals("STRIKE itself never waits on the strip it turns on", "STRIKE OFF", stateOf("STRIKE STRIP"))
+
+        button("STRIKE ON RELEASE").performClick()
+        pump()
+        assertTrue("a tap while the strip is off is not swallowed", state.returns)
+        button("STRIKE ON RELEASE").assertIsSelected()
+        assertEquals("RETURN, $waits", stateOf("STRIKE ON RELEASE"))
+
+        button("STRIKE STRIP").performClick()
+        pump()
+        for (label in behind) assertFalse("$label still says it waits once STRIKE is on", stateOf(label).endsWith(waits))
+        assertEquals("RETURN", stateOf("STRIKE ON RELEASE"))
+        button("STRIKE ON RELEASE").assertIsSelected()
+        assertEquals("STRIKE ON", stateOf("STRIKE STRIP"))
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.snipsnap.kit.KitPad
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class StrikeStripTest {
@@ -15,6 +16,34 @@ class StrikeStripTest {
         for (velocity in listOf(0.2f, 0.6f, 1f)) {
             assertEquals(StrikeStrip.Hit(velocity, velocity), StrikeStrip.hit(velocity, false, 0f, false))
         }
+    }
+
+    /**
+     * Part of the premise of the quieter controls: with the strip off, neither strength nor volume
+     * changes a hit. Those are the only two settings `StrikeStrip.hit` takes; the thumb side is
+     * read only to place the fader, which the app draws only when the strip is on. VOL (and the
+     * strength RETURN resets) are drawn in the quiet ink while STRIKE is off because of this; the
+     * day either started to matter off, that ink would be telling the player something false.
+     * The last assertion keeps the loop from passing on a strip that ignores its settings always.
+     */
+    @Test
+    fun `with the strip off no strength or volume setting changes the hit`() {
+        for (velocity in listOf(0.2f, 0.6f, 1f)) {
+            for (strength in listOf(0f, 0.5f, 1f, Float.NaN)) {
+                for (volume in listOf(false, true)) {
+                    assertEquals(
+                        StrikeStrip.Hit(velocity, velocity),
+                        StrikeStrip.hit(velocity, false, strength, volume),
+                        "strip off: touch $velocity, strength $strength, volume $volume must leave the hit alone",
+                    )
+                }
+            }
+        }
+        assertNotEquals(
+            StrikeStrip.hit(0.6f, true, 0f, true),
+            StrikeStrip.hit(0.6f, true, 1f, true),
+            "strip on: strength has to change the hit, or the settings above prove nothing",
+        )
     }
 
     @Test
