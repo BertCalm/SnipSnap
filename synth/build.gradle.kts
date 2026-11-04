@@ -303,6 +303,18 @@ tasks.register<JavaExec>("generateUprightKit") {
     args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
+/** SING's continuous traction beside the preserved three contact gestures. */
+tasks.register<JavaExec>("generateCairnSingAudition") {
+    group = "distribution"
+    description = "Render four Cairn voices, SING pressure controls, real HOLD continuations and dry phrases."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnSingAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnSingOutput").orNull ?: "${rootDir}/testkit/cairn-sing")
+    providers.gradleProperty("cairnSingLegacyRoots").orNull?.split(";")?.forEach { args("--legacy-root", it) }
+}
+
 /** Continuing KNOCK/ANSWER gestures, preserved beside the first finite audition. */
 tasks.register<JavaExec>("generateCairnHoldAudition") {
     group = "distribution"

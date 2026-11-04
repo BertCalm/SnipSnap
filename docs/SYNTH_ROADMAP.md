@@ -139,6 +139,18 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
+**Cairn SING listening gate (2026-11-04).** Model 4 adds a fourth role: one soft
+contact opens into sustained, smooth pitched rubbing. A bounded regenerative-energy
+analogy drives six stone/body modes; the maintained two-second stroke continues
+without another knock. All 35 focused tests pass, including nine SING tests,
+243 control points in finite/held regimes, independent energy/RK4 probes and a
+separately warmed acoustic reference. The full nine-module JVM gate passes (8,439 tests). The native audition
+contains 81 comparisons and two dry phrases, with 39 independently checked held cases.
+All 480 earlier comparison WAVs replay byte for byte. The earlier three voice versions retain their rendering.
+SING listening, phone/MPC acceptance, factory recipes and app controls remain
+open; GRIND and VESSEL wait for their own designs. See [CAIRN_SING.md](CAIRN_SING.md)
+and the [four-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/sing/).
+
 **Cairn three-voice listening gate (2026-10-31).** The owner approved the
 KNOCK/ANSWER HOLD direction. Model 3 adds TUMBLE: one launch becomes a tightening
 cascade through gravity, drag and energy-losing rebounds. It shares the modal
