@@ -16,10 +16,10 @@ import kotlin.test.assertTrue
 
 class NacreSynthCommandTest {
     @Test
-    fun `all finite PEARL auditions use provisional recipes and preserve note energy and seed`() {
+    fun `all finite PEARL auditions use factory recipes and preserve note energy and seed`() {
         val dir = kotlin.io.path.createTempDirectory("nacre-cli").toFile()
         try {
-            assertTrue(Presets.forVoice("NACRE", "PEARL").isEmpty())
+            assertEquals(NacrePresets.forVoice(NacreVoice.PEARL), Presets.forVoice("NACRE", "PEARL"))
             val output = ByteArrayOutputStream()
             assertEquals(0, SynthCommand.run(
                 listOf("NACRE", "PEARL", "--all", "--midi", "57", "--velocity", ".35", "--out", dir.path),
