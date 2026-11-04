@@ -438,9 +438,14 @@ object ArcoAuditionGenerator {
 
     // ---- the files ----------------------------------------------------------
 
+    /**
+     * `--quick` as a second argument writes the BUZZ card alone (R2's: the clips, the manifest and the page), skipping the R1 cards and their
+     * re-render check, so the page can be proved to run in a minute rather than rebuilt whole.
+     */
     @JvmStatic
     fun main(args: Array<String>) {
-        val root = File(args.firstOrNull() ?: "../testkit/arco-audition")
+        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/arco-audition")
+        val quick = "--quick" in args
         root.mkdirs()
         var count = 0
         val sections = mutableListOf<Section>()
@@ -448,6 +453,12 @@ object ArcoAuditionGenerator {
         fun write(dir: String, id: String, snip: Snip) {
             WavWriter.write(File(File(root, dir), "$id.wav"), snip, WavWriter.BitDepth.PCM_16)
             count++
+        }
+
+        if (quick) {
+            sections += buzzSection(::write)
+            writePage(root, sections, loops, count)
+            return
         }
 
         checkReRender()
@@ -576,11 +587,70 @@ object ArcoAuditionGenerator {
             )
         }
 
+        // R2: the sixth knob, last, after the voices' own cards.
+        sections += buzzSection(::write)
+
+        for (voice in ArcoVoice.entries) check(File(File(root, voice.name), "loop.wav").isFile) { "the surface's ${voice.name} loop was not written" }
+        writePage(root, sections, loops, count)
+    }
+
+    // ---- BUZZ (R2) --------------------------------------------------------------
+
+    /** The BUZZ steps the page plays: off, low, middle, top. */
+    private val BUZZ_LEVELS = listOf(0f, 0.25f, 0.5f, 1f)
+
+    /** The two notes of each voice the BUZZ steps are played at: the root and the middle of TUNE. */
+    private val BUZZ_TUNES = listOf(0f, 0.5f)
+
+    /** How many times the LOOP is played end to end on the BUZZ card, so the wrap is heard twice. */
+    private const val BUZZ_LOOP_PASSES = 3
+
+    /**
+     * BUZZ, the sixth knob (R2): per voice, the held note (three seconds of bow, the pass rule's length, so the buzz is heard on a sustained
+     * string and not only on an onset) at the root and the middle of TUNE at BUZZ 0, 0.25, 0.5 and 1, every other knob at its default; then
+     * the LOOP at BUZZ 0 and at 0.5, each played [BUZZ_LOOP_PASSES] times end to end, so the wrap goes by twice. Every clip is levelled like
+     * every other clip on the page, so the buzz is heard as a change in the sound and not in the volume.
+     */
+    private fun buzzSection(write: (String, String, Snip) -> Unit): Section {
+        val groups = mutableListOf<Group>()
+        for (voice in ArcoVoice.entries) {
+            for (tune in BUZZ_TUNES) {
+                val midi = Arco.midiFor(voice, tune)
+                val clips = BUZZ_LEVELS.map { b ->
+                    val id = voice.name.lowercase() + "_t" + (tune * 100).roundToInt() + "_buzz_" + (b * 100).roundToInt()
+                    write("BUZZ", id, AuditionLevel.level(Arco.render(voice, mapOf("TUNE" to tune, "HOLD" to HELD_HOLD, "BUZZ" to b))))
+                    Clip(id, "BUZZ " + fmt(b), if (b == 0f) "off: the note as it was before BUZZ" else "the held note at BUZZ " + fmt(b))
+                }
+                groups += Group(voice.name + ", " + noteName(midi) + ", " + f1(HELD_SECONDS) + " S OF BOW", key = true, clips = clips)
+            }
+            val loops = listOf(0f, 0.5f).map { b ->
+                val loop = Arco.render(voice, mapOf("HOLD" to 1f, "BUZZ" to b)).samples
+                val passes = FloatArray(loop.size * BUZZ_LOOP_PASSES)
+                for (k in 0 until BUZZ_LOOP_PASSES) loop.copyInto(passes, k * loop.size)
+                val id = voice.name.lowercase() + "_loop_buzz_" + (b * 100).roundToInt()
+                write("BUZZ", id, AuditionLevel.level(Snip(passes, channels = 1, sampleRate = Dsp.RATE)))
+                Clip(id, "LOOP " + DOT + " BUZZ " + fmt(b), "the LOOP played $BUZZ_LOOP_PASSES times end to end: listen at the two wraps" + if (b > 0f) ", and for the buzz repeating every pass" else "")
+            }
+            groups += Group(voice.name + ", THE LOOP, " + noteName(Arco.midiFor(voice, Arco.defaults(voice).getValue("TUNE"))), key = true, clips = loops)
+        }
+        return Section(
+            id = "BUZZ", display = "BUZZ",
+            body = "the sixth knob: a loose bridge rattling against the box, by analogy. Off at 0, louder and coarser as it rises",
+            readout = listOf(
+                "BUZZ 0, .25, .50, 1 " + DOT + " HOLD " + fmt(HELD_HOLD) + " (" + f1(HELD_SECONDS) + " S OF BOW)",
+                "THE ROOT AND THE MIDDLE OF TUNE " + DOT + " EVERY OTHER KNOB AT ITS DEFAULT",
+                "THE LOOP AT BUZZ 0 AND .50, " + BUZZ_LOOP_PASSES + " TIMES END TO END",
+            ),
+            groups = groups,
+        )
+    }
+
+    /** The manifest and the page, for the whole run or for `--quick`'s BUZZ card alone. */
+    private fun writePage(root: File, sections: List<Section>, loops: StringBuilder, count: Int) {
         // The manifest is the only place the clip list lives; every clip in it must be a file on disk.
         for (section in sections) for (group in section.groups) for (clip in group.clips) {
             check(File(File(root, section.id), clip.id + ".wav").isFile) { "the manifest lists ${section.id}/${clip.id}.wav and it was not written" }
         }
-        for (voice in ArcoVoice.entries) check(File(File(root, voice.name), "loop.wav").isFile) { "the surface's ${voice.name} loop was not written" }
 
         File(root, "manifest.json").writeText(
             "{\"surfaceAfter\":\"STAB\",\"voices\": [\n" + sections.joinToString(",\n") { sectionJson(it) } + "\n],\"loops\": [$loops]}\n",

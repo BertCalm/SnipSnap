@@ -41,6 +41,10 @@ import kotlin.random.Random
  * finished peak would pass [Arco.PEAK_CAP] ([Arco.finished], [Arco.liftDbFor]). Nothing is turned
  * down at the top.
  *
+ * BUZZ (R2, the sixth knob) is a loose bridge rattling by analogy: the part of the string's wave above a threshold, referenced to
+ * the note's own level, multiplied by noise, before the box ([Arco.buzzed]). It is off by default and exactly off at 0, and in a LOOP
+ * its noise repeats with the loop, so the loop still closes. Nobody has heard it.
+ *
  * What is *not* modelled, on purpose (the design's "Simplifications the model makes, stated"):
  * the string's stiffness and its dispersion (the partials are exactly harmonic), a bow's width
  * (a point), the hair's rosin as a state (the friction table is memoryless, so there is no
@@ -117,12 +121,17 @@ object Arco {
     /** HOLD's default: 0.85 s of bow, a note rather than a LOOP at every TUNE (see [drumClassFor]). */
     const val DEFAULT_HOLD = 0.4f
 
+    /**
+     * The six knobs. BUZZ (R2) is last and off by default, so a patch saved before it existed loads at 0 ([settled] fills it) and
+     * renders as it always did: see [DEFAULT_BUZZ].
+     */
     fun macrosFor(voice: ArcoVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
         MacroSpec("BOW", DEFAULT_BOW),
         MacroSpec("GRIP", DEFAULT_GRIP, neutral = 0.5f),
         MacroSpec("BODY", DEFAULT_BODY),
         MacroSpec("HOLD", DEFAULT_HOLD),
+        MacroSpec("BUZZ", DEFAULT_BUZZ),
     )
 
     fun defaults(voice: ArcoVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -894,6 +903,103 @@ object Arco {
         return Finished(out, lift)
     }
 
+    // ---- BUZZ: the chien, by analogy --------------------------------------------
+
+    /**
+     * BUZZ's default: off, and exactly off. At 0 [buzzed] hands back the very buffer it was given, so a render at BUZZ 0 (or a patch saved
+     * before BUZZ existed, which [settled] fills with 0) is the code before BUZZ, sample for sample: every preset, the kit and
+     * ArcoFrozenR1cTest's copy are untouched (ArcoBuzzTest holds the presets' and the defaults' SHA-256 from before the change).
+     */
+    const val DEFAULT_BUZZ = 0f
+
+    /**
+     * How BUZZ makes the string rattle: a loose bridge foot knocking the soundboard whenever the string swings past a level, the
+     * hurdy-gurdy's chien by analogy (the design's first sixth-slot candidate; the research pass, `2026-11-04-arco-research.md` section 4).
+     * The shape is [Terra]'s contact buzz (and `Tines.kalimba`'s): only the part of the wave above a threshold rattles, and that excess is
+     * multiplied by noise and added back. Two things are ARCO's own.
+     *  - The threshold is referenced to the render's own level: the raw string's RMS while the bow is on it ([bowOnLevel]), or over the
+     *    kept loop of a LOOP. Never an absolute number on an un-normalised buffer (TERRA's 0.12), so a quiet note and a loud one buzz alike.
+     *  - It falls as BUZZ rises, from [BUZZ_THRESHOLD_FROM] times that RMS at the bottom of the knob to [BUZZ_THRESHOLD_TO] at the top, while
+     *    the noise's gain rises as BUZZ times [BUZZ_GAIN]: low on the knob only the peaks of the wave rattle, a sizzle at the slip; at the top
+     *    most of the wave does. Both move the same way, so the buzz's energy rises at every step (ArcoBuzzTest).
+     *
+     * The law was chosen by measurement against the other the research named, a fixed threshold at the RMS with TERRA's gain of 0.45
+     * (ArcoBuzzTest's law comparison prints all four crossings; the design record's "R2: BUZZ, as built" has the table). Measured on the
+     * one-shot, as the RMS of the change over the note's (the house's "every macro changes the sound" measure, whose bar is 0.1 at the 0.9
+     * setting), at CELLO C2 and C3 and ERHU D4 and C5: TERRA's law moves a note by only 0.007 to 0.011 at BUZZ 0.25 and 0.026 to 0.038 at 0.9,
+     * under the house's own bar, and the falling law at TERRA's gain does no better (0.005 to 0.008, and 0.043 to 0.058). So the gain is
+     * ARCO's own, 3.0. At that gain the fixed law moves a note by 0.048 to 0.070 at 0.25 and 0.183 to 0.281 at 1 (about 12 dB of travel from
+     * the low setting to the top); the falling law by 0.033 to 0.052 at 0.25 and 0.305 to 0.438 at 1 (about 20 dB). The falling law is the one
+     * here: both pass the proxy bars at 0.25 and 0.5 and both are monotone, but only the falling one keeps the bottom of the knob to the
+     * peaks of the wave, a burst at the slip once a period (the chien's rhythm, by analogy), and lets the top be a real rattle. Its margin at
+     * 0.25 is thin at ERHU D4 (0.033 against the proxy's 0.03). Listening values: nobody has heard any of it.
+     *
+     * Not the real thing, said plainly: a chien knocks once a period, in step with the string, and can period-double (Padilla and Gibiat,
+     * Forum Acusticum 2005). This is hiss shaped by the wave: bounded, one pass over the buffer, and able to repeat with a loop. The
+     * period-locked knock is WHEEL's research, in R3.
+     */
+    const val BUZZ_THRESHOLD_FROM = 1.5f
+    const val BUZZ_THRESHOLD_TO = 0.5f
+    const val BUZZ_GAIN = 3.0f
+
+    /**
+     * A threshold law: [thresholdFrom] and [thresholdTo] times the reference RMS at the bottom and the top of the knob, the noise's gain
+     * [gain] times BUZZ, and whether a LOOP reads its noise from a table one loop long ([loopTable]; false is the control that runs the
+     * noise free, which does not close). The engine plays [BUZZ_LAW]; the others exist for the tests that measure against it.
+     */
+    internal class BuzzLaw(val thresholdFrom: Float, val thresholdTo: Float, val gain: Float, val loopTable: Boolean = true)
+
+    internal val BUZZ_LAW = BuzzLaw(BUZZ_THRESHOLD_FROM, BUZZ_THRESHOLD_TO, BUZZ_GAIN)
+
+    /** The threshold at [buzz], as a multiple of the reference RMS. */
+    internal fun buzzThreshold(buzz: Float, law: BuzzLaw = BUZZ_LAW): Float = Dsp.lin(buzz, law.thresholdFrom, law.thresholdTo)
+
+    /** The buzz's noise seed for [voice]: fixed, so a render is a pure function of its macros. */
+    internal fun buzzSeed(voice: ArcoVoice): Int = Dsp.seedFor("ARCO", "BUZZ", voice.name)
+
+    /** The RMS of [raw] from [from] up to [until] (clamped to the buffer), in Double. */
+    internal fun rmsOf(raw: FloatArray, from: Int, until: Int): Float {
+        val a = from.coerceIn(0, raw.size)
+        val b = until.coerceIn(a, raw.size)
+        if (b <= a) return 0f
+        var acc = 0.0
+        for (i in a until b) acc += raw[i].toDouble() * raw[i]
+        return sqrt(acc / (b - a)).toFloat()
+    }
+
+    /** A one-shot's reference level: the raw string's RMS while the bow is on it (the stroke included, the ramp and the stop not). */
+    internal fun bowOnLevel(raw: FloatArray, voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int = RATE * Dsp.OVERSAMPLE): Float =
+        rmsOf(raw, 0, gateFor(voice, hz, macros, rate, null).holdN)
+
+    /**
+     * [raw] with the chien at [buzz]: every sample whose magnitude is over [buzzThreshold] times [level] gets that excess times a noise
+     * sample times [BuzzLaw.gain] times [buzz] added to it. At [buzz] 0 or under (and for a NaN) it returns [raw] itself, the same array, not a
+     * copy and not a pass at zero gain: that is what keeps BUZZ 0 the code before BUZZ to the bit. Otherwise [raw] is never changed.
+     *
+     * The noise is [Dsp.Noise] from [buzzSeed]. With [period] 0 it runs free, one draw per sample (a one-shot). With [period] over 0 it is a
+     * table of [period] draws read at `(i - phase) mod period`, so the buzz repeats exactly every [period] samples from anywhere in the
+     * buffer: a LOOP passes its loop's raw length and the raw sample its kept window starts at, and the stretch stays as periodic with the
+     * loop as the string under it is (the box, the band limit, the decimator and the high-pass that follow are linear and settle in the
+     * warm-up). The excess is never more than the sample itself, so the result is at most `1 + gain * buzz` times the string's own peak.
+     */
+    internal fun buzzed(
+        raw: FloatArray, voice: ArcoVoice, buzz: Float, level: Float,
+        period: Int = 0, phase: Int = 0, law: BuzzLaw = BUZZ_LAW,
+    ): FloatArray {
+        if (!(buzz > 0f)) return raw
+        val threshold = buzzThreshold(buzz, law) * level
+        val gain = law.gain * buzz
+        val noise = Dsp.Noise(buzzSeed(voice))
+        val table = if (period > 0) FloatArray(period) { noise.next() } else null
+        val out = raw.copyOf()
+        for (i in out.indices) {
+            val n = if (table != null) table[Math.floorMod(i - phase, period)] else noise.next()
+            val a = abs(out[i])
+            if (a > threshold) out[i] += (a - threshold) * n * gain
+        }
+        return out
+    }
+
     // ---- the length of a note: one place --------------------------------------
 
     /** The classifier's own length rule: past this a render's duration alone reads LOOP. */
@@ -944,6 +1050,11 @@ object Arco {
     /**
      * SCRAMBLE: [Dsp.scrambleNear] around a factory preset (or [near]), then HOLD capped short of a LOOP.
      * GRIP and BOW need no clamp: the mappings confine them to speaking values.
+     *
+     * BUZZ is not rolled: it is handed back as the seed has it (0 around a factory preset or at temperature 1, [near]'s own otherwise), and it
+     * is kept out of [Dsp.scrambleNear]'s map altogether, because that map draws one number per key in order: with BUZZ in it every roll after
+     * the first would have drawn different numbers for the other five knobs than it did before BUZZ existed. ArcoBuzzTest holds the five
+     * knobs' draws to a frozen copy of this function as it was.
      */
     fun scramble(voice: ArcoVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
@@ -952,8 +1063,9 @@ object Arco {
             temperature >= 1f -> base
             else -> base + ArcoPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
         }
-        val rolled = Dsp.scrambleNear(seed, temperature, random).toMutableMap()
+        val rolled = Dsp.scrambleNear(seed - "BUZZ", temperature, random).toMutableMap()
         rolled["HOLD"] = rolled.getValue("HOLD").coerceAtMost(SCRAMBLE_HOLD_CEILING)
+        rolled["BUZZ"] = seed.getValue("BUZZ").coerceIn(0f, 1f)
         return rolled
     }
 
@@ -1163,8 +1275,12 @@ object Arco {
      *
      * Checked, not assumed: the kept stretch is compared with itself one loop later ([Keys.seamError], the
      * Organ's bar), because the loop played twice is tautologically periodic.
+     *
+     * BUZZ (R2) goes on the converged stretch, after the last pass and never into the pitch estimator, with its noise read from a table one
+     * loop long that starts where the kept window starts ([buzzed]), and its threshold referenced to the RMS of that kept window: the buzz
+     * repeats with the loop, so the seam is the string's own. At BUZZ 0 the stretch is handed on untouched. [law] is for tests.
      */
-    internal fun renderLoopMeasured(voice: ArcoVoice, macros: Map<String, Float>): LoopRender {
+    internal fun renderLoopMeasured(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW): LoopRender {
         val m = settled(macros, voice)
         val target = frequencyFor(voice, m.getValue("TUNE"))
         val plan = planLoop(target)
@@ -1180,13 +1296,19 @@ object Arco {
             tuned *= ratio
             raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
+        val loopRaw = plan.frames * over
+        val buzz = m.getValue("BUZZ")
+        val strung = if (!(buzz > 0f)) raw else buzzed(
+            raw, voice, buzz, rmsOf(raw, warm * over, warm * over + loopRaw),
+            period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
+        )
         val body = m.getValue("BODY")
-        return loopFrom(conditionedWithBody(raw, voice, body, rate), voice, body, warm, plan.frames)
+        return loopFrom(conditionedWithBody(strung, voice, body, rate), voice, body, warm, plan.frames)
     }
 
     /** The loop, refused by name if its corner cannot close: a click shipped silently is the worse failure. */
-    internal fun renderLoop(voice: ArcoVoice, macros: Map<String, Float>): FloatArray {
-        val r = renderLoopMeasured(voice, macros)
+    internal fun renderLoop(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW): FloatArray {
+        val r = renderLoopMeasured(voice, macros, law)
         require(r.seam < Keys.MAX_SEAM_ERROR) {
             "ARCO $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}: the loop does not close (seam %.2e, bar %.0e)"
                 .format(java.util.Locale.ROOT, r.seam, Keys.MAX_SEAM_ERROR)
@@ -1200,12 +1322,21 @@ object Arco {
      * One note: [renderLoop] at HOLD's top step, else the bow at the note's exact pitch finished by [finished], the one place BODY, the level and the lift are worked out. The render is a pure function of [macros] and its
      * length is the string's own at every BODY (the box is cut to it and the lift runs on a buffer of the same length), so [renderFrames] and [drumClassFor] stay closed form.
      */
-    fun render(voice: ArcoVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(voice: ArcoVoice, macros: Map<String, Float> = emptyMap()): Snip = render(voice, macros, BUZZ_LAW)
+
+    /**
+     * [render] with BUZZ played by [law]: tests measure the engine's law against another this way. A one-shot's buzz goes on the bowed
+     * string after the vibrato and before the box, its noise running free, its threshold referenced to [bowOnLevel]; at BUZZ 0 the string
+     * goes on untouched.
+     */
+    internal fun render(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw): Snip {
         val m = settled(macros, voice)
-        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, law), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE"))
         val rate = RATE * Dsp.OVERSAMPLE
         val raw = bow(voice, hz, m, rate)
-        return Snip(finished(raw, voice, m.getValue("BODY"), rate), channels = 1, sampleRate = RATE)
+        val buzz = m.getValue("BUZZ")
+        val strung = if (!(buzz > 0f)) raw else buzzed(raw, voice, buzz, bowOnLevel(raw, voice, hz, m, rate), law = law)
+        return Snip(finished(strung, voice, m.getValue("BODY"), rate), channels = 1, sampleRate = RATE)
     }
 }

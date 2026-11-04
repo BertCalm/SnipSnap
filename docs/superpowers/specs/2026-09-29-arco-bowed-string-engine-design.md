@@ -27,6 +27,9 @@ lift on the plain's own gain (R1g); the roadmap row exists, as S20
 the "heard" paragraphs. The paragraphs "R1a, as built" to "R1h heard" under
 "Phasing and gates" hold the state as built, and a sentence below that
 describes ARCO's BODY as R1c's climbing box carries its own note.
+*Extended (R2, 2026-11-04): BUZZ is built as the sixth macro, off by default; see "R2: BUZZ, as
+built" at the end of this file. The rest of R2 is researched, not built
+([`2026-11-04-arco-research.md`](2026-11-04-arco-research.md)).*
 *Extended (R1j, 2026-10-13): the paragraphs now run on to "R1j heard", which
 records that CELLO C2 and F#2 were put to a second page and the lift at
 C2 to G#2 left as built.*
@@ -2747,3 +2750,136 @@ scan, the tarab against TUNE, cost, "what the spec promised versus what
 it renders"; **Appendices E–G** are its transcription and test as run.
 The numbers quoted in "The physics, measured" are copied from those
 tables.
+
+## R2: BUZZ, as built (2026-11-04)
+
+The owner asked for ARCO's round two on 2026-11-04, then narrowed it the same day to research
+([`2026-11-04-arco-research.md`](2026-11-04-arco-research.md)), read it, and said "proceed as
+recommended" for **BUZZ alone**: the sixth macro (decision 10's first candidate), and nothing else of R2
+(no SARANGI, no held keygroup, no one-shot instrument). This section is what shipped. Nothing in it has
+been heard.
+
+**What shipped.** `MacroSpec("BUZZ", 0f)` is ARCO's sixth knob, after HOLD, in both voices
+(`Arco.macrosFor`). The rest is in `Arco.kt`'s block "BUZZ: the chien, by analogy":
+
+* **The shape** is TERRA's contact buzz (`Terra.applyBuzz`, and `Tines.kalimba`'s): the part of the wave
+  above a threshold, times noise, added back. It runs on the **raw string at 176.4 kHz**, after the bow and
+  the vibrato and **before the box**, so the box colours the rattle (a chien knocks the soundboard) and the
+  band limit and the decimator take its top, as TERRA's oversampled buzz does (`Arco.buzzed`).
+* **The threshold is referenced to the render's own level**: the raw string's RMS while the bow is on it
+  for a one-shot (`Arco.bowOnLevel`: the stroke included, the ramp and the stop not), and over the kept
+  loop window for a LOOP. Never TERRA's absolute 0.12.
+* **The law** falls with the knob: the threshold is `lin(BUZZ, 1.5, 0.5)` times that RMS, and the noise's
+  gain is `3.0 * BUZZ` (`BUZZ_THRESHOLD_FROM`, `BUZZ_THRESHOLD_TO`, `BUZZ_GAIN`). Chosen by measurement,
+  below.
+* **Exactly off at 0.** `Arco.buzzed` returns the very array it was given at BUZZ 0 or under (and for a
+  NaN), and `render` and `renderLoopMeasured` skip even the level measurement then. Every factory preset
+  now names `"BUZZ" to 0.0f` (ArcoPresetsTest's rule that a preset names every macro); a patch saved before
+  BUZZ has no key, and `settled` fills 0.
+* **SCRAMBLE never rolls it.** `Arco.scramble` keeps BUZZ out of `Dsp.scrambleNear`'s map, which draws one
+  number per key in order, and hands back the seed's value (0 around a preset or at temperature 1, the near
+  patch's own otherwise), so the other five knobs' draws and the random stream are the ones they were.
+* **The LOOP.** After the retune has converged (never into the pitch estimator), the noise is read from a
+  table of `Dsp.Noise` draws one loop long at `(i - warm) mod loopRaw`, so the buzz repeats exactly with the
+  loop from anywhere in the stretch; the box, band limit, decimator and high-pass after it are linear and
+  settle in the warm-up. `Arco.renderLoop` keeps its refusal by name. `LoopPadMaker`, which renders ARCO
+  zones at HOLD's top, goes through the same path and was not changed.
+* **Determinism.** The noise seed is `Dsp.seedFor("ARCO", "BUZZ", voice)`, free-running in a one-shot and
+  tabled in a LOOP, so a render is still a pure function of its macros (a new `DeterminismTest` canary at
+  BUZZ 0.5 and 1, one-shot and loop, both voices, each differing from BUZZ 0).
+* **The audition** has a BUZZ card (`ArcoAuditionGenerator`, after the voices' cards; `--quick` writes it
+  alone): per voice the three-second held note at the root and the middle of TUNE at BUZZ 0, 0.25, 0.5 and 1,
+  and the LOOP at BUZZ 0 and 0.5, each played three times end to end.
+
+**Nothing moved at 0, measured.** A throwaway probe on the code before the change (`d78489ba`) printed the
+SHA-256 of every preset's render and of each voice's default note and default LOOP (20 renders);
+`ArcoBuzzTest` holds today's renders to those hashes, with the BUZZ key at 0 and with it absent (20 of 20
+match), and `ArcoFrozenR1cTest` passes untouched.
+
+**The threshold law, chosen by measurement.** How far BUZZ moves a one-shot, as the RMS of the change over
+the note's (ArcoProductTest's "every macro changes the sound" measure, whose house bar is 0.1 at the 0.9
+setting), at CELLO C2 and C3 and ERHU D4 and C5, the range over the four notes:
+
+| law | BUZZ 0.25 | 0.5 | 0.9 | 1 |
+|---|---|---|---|---|
+| fixed at 1.0 times RMS, gain 0.45 (TERRA's) | 0.007 to 0.011 (-43 to -40 dB) | 0.015 to 0.021 | **0.026 to 0.038** | 0.029 to 0.042 |
+| falling 1.5 to 0.5, gain 0.45 | 0.005 to 0.008 | 0.015 to 0.021 | **0.043 to 0.058** | 0.054 to 0.072 |
+| fixed at 1.0, gain 3.0 | 0.048 to 0.070 (-26 to -23 dB) | 0.095 to 0.140 | 0.166 to 0.250 | 0.183 to 0.281 (-15 to -11 dB) |
+| **falling 1.5 to 0.5, gain 3.0 (shipped)** | **0.033 to 0.052** (-30 to -26 dB) | 0.095 to 0.140 | 0.258 to 0.361 | 0.305 to 0.438 (-10 to -7 dB) |
+
+At TERRA's gain neither law reaches the house's own bar at 0.9 (bold), so the gain is ARCO's own. At 3.0
+both laws pass the stated proxy bars (0.03 at 0.25 and 0.06 at 0.5, set before the measurement, a statement
+about numbers and not about hearing) and both are monotone. **The falling law ships** because it keeps the
+low end of the knob to the peaks of the wave, so the noise comes as a burst at the slip once a period (the
+chien's rhythm, by analogy: proposed, not measured as a burst), and it gives the knob about 20 dB of travel
+from 0.25 to the top against the fixed law's 12, so BUZZ 1 is a real rattle. Its margin at 0.25 is thin at
+ERHU D4 (0.033 against 0.03).
+
+**Monotone, measured.** The energy between a LOOP's harmonics (Goertzel at the bins of the K whole periods,
+the rest of the energy against the whole), at BUZZ 0 / 0.1 / 0.25 / 0.5 / 0.75 / 1: CELLO C2 -70.6 / -41.4 /
+-30.0 / -19.6 / -13.0 / -8.6 dB; CELLO C3 -69.3 / -41.8 / -30.4 / -20.0 / -13.4 / -9.1; ERHU D4 -74.3 /
+-42.2 / -31.5 / -21.5 / -15.1 / -10.9; ERHU C5 -69.1 / -39.0 / -28.4 / -18.8 / -12.3 / -7.7. For scale only:
+BORE's one-shot carries -42 dB between its harmonics and its frozen loop -80 dB (the roadmap's S19 row).
+
+**The LOOP closes, measured.** R1b's own grid of 225 loops (every TUNE step of both voices at the defaults,
+GRIP 0, GRIP 1, BODY 0 and BODY 1), every one at BUZZ 1, the worst seam per row: CELLO 3.83e-6 (defaults),
+2.84e-6 (GRIP 0), 3.23e-5 (GRIP 1), 6.54e-6 (BODY 0), 1.98e-6 (BODY 1); ERHU 2.67e-6, 2.28e-6, **3.07e-4**
+(GRIP 1, step 17), 3.43e-6 and 1.74e-6; the bar is 1e-3. The highest seams are the string's own, not the
+buzz's: the six highest at BUZZ 1 against the same loops at BUZZ 0 read 3.07e-4 against 3.27e-4 (ERHU step 17,
+GRIP 1), and 3.23e-5, 2.60e-5, 1.59e-5, 1.44e-5 and 1.36e-5 against 3.70e-5, 3.15e-5, 2.11e-5, 1.60e-5 and
+1.25e-5 (CELLO steps 8, 7, 5, 6 and 9, GRIP 1). ArcoProductTest's "every macro changes the sound" now walks
+BUZZ too: 0.9 moves the default note by 0.325 (CELLO) and 0.361 (ERHU), against its bar of 0.1. The control: CELLO C3 at BUZZ 1 closes at
+2.26e-7 with the noise one loop long and opens to **2.78e-1** with the same noise running free (the research
+pass's Python stand-in predicted the free-running failure). Through `LoopPadMaker` (unchanged), every zone of
+a BUZZ 1 patch renders and passes its own join check (`wrapRatio`, bar 2.0): CELLO's nine zones C2 to C4 at
+0.00 to 0.73 and ERHU's seven, D#4 to A5, at 0.01 to 0.74 (`ArcoBuzzLoopPadTest`).
+
+**Bounded, measured.** Every corner of the other five knobs (TUNE, BOW, GRIP and BODY at 0 and 1, HOLD at 0
+and 0.95) at BUZZ 0.5 and 1, 128 one-shots: finite, the mean under 0.005, the length `Arco.renderFrames`'s
+(BUZZ never moves a note's length, so `drumClassFor` stays closed form), finished peaks 0.588 to 0.990 (CELLO)
+and 0.537 to 0.990 (ERHU), and the buzzed raw string at most 2.376 against the bound of `(1 + 3.0 * BUZZ)` times
+the bow's 1.25.
+
+**What did not work.** TERRA's numbers: at its gain of 0.45 the buzz moves a bowed note by a hundredth of the
+note at 0.25 and stays under the house's bar at 0.9, under either law. A free-running noise in the LOOP:
+2.78e-1, a click every wrap.
+
+**Disclosed, not fixed.** At BUZZ 1 many corners reach `Dsp.levelTo`'s 0.99 ceiling (the noise's crest),
+where levelTo turns the whole note down to hold the peak, so a buzzing note can sit a little under the
+loudness target; how much was not measured. A one-shot's reference is its bow-on RMS, scratch included, and a
+LOOP's is its steady window's, so a one-shot and its own loop buzz a little differently. A LOOP's buzz repeats
+every two seconds by construction, which may itself be heard as a loop.
+
+**What it cost.** `Arco.kt` (the knob, the block, the two call sites, the scramble line), `ArcoPresets.kt`
+(BUZZ 0 named in the sixteen presets, no value changed), `DeterminismTest` (one canary), `ArcoAuditionGenerator`
+(the BUZZ card and `--quick`), a new `ArcoBuzzTest` and a new shell `ArcoBuzzLoopPadTest`. One more pass over
+the raw buffer per render when BUZZ is on; not timed on its own. No app change is needed: the SYNTH screen
+builds ARCO's sliders from `Arco.macrosFor` and takes defaults, scramble and render from the same object, so a
+sixth slider labelled BUZZ appears on the phone with no `:app` edit (not checked on a device).
+
+**Why it is built this way.**
+
+1. **Before the box, at the oversampled rate.** A chien rattles against the soundboard, so the box should
+   colour the rattle; and noise added before the band limit and the decimator is the one place where its top
+   cannot fold back into the audible band.
+2. **A threshold on the note's own level.** The bow's raw level differs from note to note and knob to knob;
+   a threshold on the note's own RMS makes BUZZ 0.5 mean the same thing at C2 and at A5.
+3. **The noise repeats with the loop.** The measurement is blunt: the same buzz with free noise opens the seam
+   to 2.78e-1, and with a table one loop long it is 2.26e-7. That one rule is what lets BUZZ live in a LOOP
+   and in anything built from one.
+4. **Exactly nothing at 0.** The same buffer, not a copy and not a pass at zero gain, so every saved sound and
+   ArcoFrozenR1cTest are the code before BUZZ by construction, and the hashes prove it.
+5. **The risky decision** is the gain: 3.0 is ARCO's own, set to clear a proxy bar, and the owner's ear on the
+   BUZZ card is the only real test of whether 0.25 is audible and 1 is too much.
+
+**Ledger.**
+
+* *Verified:* `Terra.applyBuzz`'s shape and gate; `Dsp.scrambleNear` draws one number per key; the SYNTH screen
+  reads ARCO through `macrosFor`, `defaults`, `scramble` and `render`; `LoopPadMaker` renders ARCO at HOLD's
+  top through `Arco.render`.
+* *Measured (Kotlin: ArcoBuzzTest, ArcoBuzzLoopPadTest, DeterminismTest):* the 20 hashes; the four-law table;
+  the between-harmonics rows; the 225-loop grid at BUZZ 1 and its control; the 128 corners; 800 scramble rolls
+  matching a frozen copy of the old function.
+* *Proposed:* the law and the gain (listening values), the burst-once-a-period reading of the falling
+  threshold, the proxy bars.
+* *Heard:* nothing. The BUZZ card is where the owner hears it.
