@@ -369,21 +369,27 @@ class KitShelf(val root: File) {
         return Entry(source.dir, model.kit) to moved
     }
 
+    /** A kit-wide round robin stopped part way; [entry] is the kit re-read from disk as it now stands. */
+    class RobinStopped(val entry: Entry, cause: Throwable) : RuntimeException(cause.message, cause)
+
     /**
-     * ROUND ROBIN for the whole kit: [action] (`RobinKit.on/set/off`) runs on
-     * a freshly opened model and the kit is saved only when it returns. Its
-     * loops aren't atomic, so a throw mid-kit leaves a half-converted model
-     * that is simply dropped: kit.json on disk stays what it was (a stray
-     * take wav at worst, which nothing references).
+     * ROUND ROBIN for the whole kit: [run] is one of `RobinKit.onSaving/setSaving/offSaving`
+     * on the kit's folder. Its pad loops aren't atomic and every step writes WAVs and bin
+     * entries at once, so a stop leaves some pads converted; RobinKit saves the model as it
+     * stands (kit.json matching the files, the switch left ON so OFF can undo what was dealt)
+     * and this rethrows [RobinStopped] with the kit re-read from disk.
      */
     fun robin(
         source: Entry,
-        action: (com.snipsnap.shell.KitBuilderModel) -> com.snipsnap.shell.RobinKit.Result,
+        run: (File) -> com.snipsnap.shell.RobinKit.Result,
     ): Pair<Entry, com.snipsnap.shell.RobinKit.Result> {
-        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
-        val result = action(model)
-        model.save()
-        return Entry(source.dir, model.kit) to result
+        val result = try {
+            run(source.dir)
+        } catch (e: com.snipsnap.shell.RobinKit.Stopped) {
+            val now = try { KitStore.load(source.dir) } catch (_: Exception) { source.kit }
+            throw RobinStopped(Entry(source.dir, now), e.cause ?: e)
+        }
+        return Entry(source.dir, KitStore.load(source.dir)) to result
     }
 
     /**

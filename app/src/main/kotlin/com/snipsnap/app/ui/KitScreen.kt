@@ -1113,7 +1113,7 @@ fun KitScreen(
                 // is an output, so it sits with the other outputs.
 
                 KitRobinRow(
-                    robin = kit.robin, kitKey = kit.name, busy = busy, scheme = scheme,
+                    robin = kit.robin, kitKey = entry.dir, busy = busy, scheme = scheme,
                     onOn = onRobinOn, onSet = onRobinSet, onOff = onRobinOff,
                 )
 

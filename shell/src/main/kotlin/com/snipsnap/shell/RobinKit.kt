@@ -101,4 +101,43 @@ object RobinKit {
         model.setRobin(null)
         return Result(changed, emptyMap())
     }
+
+    /** [action] stopped part way; the kit on disk was saved as it stood and is consistent. */
+    class Stopped(cause: Throwable) : RuntimeException(cause.message, cause)
+
+    /**
+     * Open the kit in [kitDir], run [action], save. The pad loops aren't atomic and every step
+     * writes its WAVs and bin entries at once, so a throw leaves some pads converted. Each step
+     * updates the model right after its own disk write, so the model matches disk between pads:
+     * on failure [onFailure] runs (it sets the kit's switch so what was dealt can be undone) and
+     * the model is saved as it stands, then [Stopped] carries the original error out. kit.json
+     * therefore always describes the files, never a half-converted kit it doesn't know about.
+     */
+    fun runSaving(kitDir: File, onFailure: (KitBuilderModel) -> Unit = {}, action: (KitBuilderModel) -> Result): Result {
+        val model = KitBuilderModel.open(kitDir)
+        val result = try {
+            action(model)
+        } catch (t: Throwable) {
+            try {
+                onFailure(model)
+                model.save()
+            } catch (again: Throwable) {
+                t.addSuppressed(again)
+            }
+            throw Stopped(t)
+        }
+        model.save()
+        return result
+    }
+
+    /** [on] on the kit in [kitDir], saved. A stop keeps the switch ON so OFF can undo what was dealt. */
+    fun onSaving(kitDir: File): Result =
+        runSaving(kitDir, onFailure = { it.setRobin(it.kit.robin ?: KitRobin()) }) { on(it) }
+
+    /** [set] on the kit in [kitDir], saved. A stop keeps the new settings; pads that lag are re-dealt by the next ON or SET. */
+    fun setSaving(kitDir: File, settings: KitRobin): Result =
+        runSaving(kitDir, onFailure = { it.setRobin(settings) }) { set(it, settings) }
+
+    /** [off] on the kit in [kitDir], saved. A stop leaves the switch ON for the pads still chained. */
+    fun offSaving(kitDir: File): Result = runSaving(kitDir) { off(it) }
 }

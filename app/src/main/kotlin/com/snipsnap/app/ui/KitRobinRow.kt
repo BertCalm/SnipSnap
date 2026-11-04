@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
 /**
  * The kit-wide ROUND ROBIN row on the KIT screen: the switch, the kit's AMOUNT and TAKES
  * (what every pad that follows the kit is dealt), and UNDO for the last dial change. UNDO is
- * only offered once the dial has moved, and re-deals from the stored previous settings (the
+ * shown only once the dial has moved, and re-deals from the stored previous settings (the
  * deal is deterministic, so that restores the old bytes). The work itself is the caller's.
  */
 @Composable
@@ -44,6 +44,7 @@ internal fun KitRobinRow(
     // and follow it through the effect below.
     var pendingAmount by remember(kitKey) { mutableFloatStateOf(robin?.amount ?: KitRobin.DEFAULT_AMOUNT) }
     var pendingTakes by remember(kitKey) { mutableIntStateOf(robin?.takes ?: KitRobin.DEFAULT_TAKES) }
+    val classColor = scheme.amber.tape
     val liveRobin by rememberUpdatedState(robin)
     LaunchedEffect(robin) {
         robin?.let {
@@ -51,14 +52,39 @@ internal fun KitRobinRow(
             pendingTakes = it.takes
         }
     }
-    val classColor = scheme.amber.tape
+
+    // The change in flight: what was asked for and the UNDO to put back if it didn't land.
+    // Settled once the work is over (busy is down); a refused or failed change
+    // that left the kit's settings elsewhere puts the dial and UNDO back as they were.
+    var attempt by remember(kitKey) { mutableStateOf<KitRobin?>(null) }
+    var attemptPrevious by remember(kitKey) { mutableStateOf<KitRobin?>(null) }
+    LaunchedEffect(busy, robin, attempt) {
+        // The caller raises its busy flag in the same step as the callback, so the first frame
+        // after a submit already reads busy (or the work is already over).
+        if (!busy && attempt != null) {
+            if (robin != attempt) {
+                previous = attemptPrevious
+                robin?.let {
+                    pendingAmount = it.amount
+                    pendingTakes = it.takes
+                }
+            }
+            attempt = null
+        }
+    }
+
+    fun submit(next: KitRobin, undoAfter: KitRobin?, undoIfFailed: KitRobin?) {
+        attempt = next
+        attemptPrevious = undoIfFailed
+        previous = undoAfter
+        onSet(next)
+    }
 
     fun commit() {
         val current = liveRobin ?: return
         val next = KitRobin(pendingAmount, pendingTakes)
         if (next == current) return
-        previous = current
-        onSet(next)
+        submit(next, undoAfter = current, undoIfFailed = previous)
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -71,15 +97,15 @@ internal fun KitRobinRow(
                     if (on) onOff() else onOn()
                 },
             )
-            ActionButton(
-                "UNDO", scheme, enabled = !busy && on && previous != null,
-                accessibilityLabel = "KIT ROUND ROBIN UNDO", modifier = Modifier.weight(1f),
-                onClick = {
-                    val back = previous ?: return@ActionButton
-                    previous = null
-                    onSet(back)
-                },
-            )
+            // Only offered once the dial has moved.
+            val back = previous
+            if (on && back != null) {
+                ActionButton(
+                    "UNDO", scheme, enabled = !busy,
+                    accessibilityLabel = "KIT ROUND ROBIN UNDO", modifier = Modifier.weight(1f),
+                    onClick = { submit(back, undoAfter = null, undoIfFailed = back) },
+                )
+            }
         }
         StepperSlider(
             label = "AMOUNT",

@@ -2991,12 +2991,13 @@ fun App(shelf: KitShelf) {
     }
 
     /**
-     * Kit-wide ROUND ROBIN: [action] (`RobinKit.on/set/off`) runs off the main thread under the
-     * kit write lock on the job board. Nothing is saved unless it returns, so a throw mid-kit
-     * leaves kit.json as it was and `open` is not replaced; the toast says so.
+     * Kit-wide ROUND ROBIN: [run] (`RobinKit.onSaving/setSaving/offSaving`) runs off the main
+     * thread under the kit write lock on the job board. A stop part way leaves some pads
+     * converted and the kit saved to match; `open` and the shelf are refreshed from disk and the
+     * toast says to turn it off to get the originals back.
      */
     fun robinKit(
-        action: (com.snipsnap.shell.KitBuilderModel) -> com.snipsnap.shell.RobinKit.Result,
+        run: (java.io.File) -> com.snipsnap.shell.RobinKit.Result,
         say: (com.snipsnap.shell.RobinKit.Result) -> String,
     ) {
         val source = open ?: return
@@ -3005,11 +3006,15 @@ fun App(shelf: KitShelf) {
         scope.launch {
             try {
                 val (entry, result) = try {
-                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.robin(source, action) } }
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.robin(source, run) } }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "robinKit: failed", e)
+                    (e as? KitShelf.RobinStopped)?.let { stopped ->
+                        if (open?.dir == source.dir) open = stopped.entry
+                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                    }
                     dock.say(Copy.ROBIN_KIT_FAILED)
                     return@launch
                 }
@@ -3023,14 +3028,14 @@ fun App(shelf: KitShelf) {
     }
 
     // The dock holds one line, so the loops note rides the same line as the count.
-    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.on(it) }) { r ->
+    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.onSaving(it) }) { r ->
         val loops = r.skipped.values.any { it == com.snipsnap.shell.RobinKit.Skip.LOOP }
         Copy.robinKitOn(r.changed.size) + if (loops) " " + Copy.ROBIN_SKIPPED_LOOPS else ""
     }
 
-    fun robinKitSet(settings: com.snipsnap.kit.KitRobin) = robinKit({ com.snipsnap.shell.RobinKit.set(it, settings) }) { "" }
+    fun robinKitSet(settings: com.snipsnap.kit.KitRobin) = robinKit({ com.snipsnap.shell.RobinKit.setSaving(it, settings) }) { "" }
 
-    fun robinKitOff() = robinKit({ com.snipsnap.shell.RobinKit.off(it) }) { Copy.ROBIN_KIT_OFF }
+    fun robinKitOff() = robinKit({ com.snipsnap.shell.RobinKit.offSaving(it) }) { Copy.ROBIN_KIT_OFF }
 
     // Shared by the place and stage rows, the dock's door and the system
     // Back fallback below — one reset, one navigation, so they can never

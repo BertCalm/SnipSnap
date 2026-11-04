@@ -45,7 +45,8 @@ import kotlin.math.sin
 /**
  * The kit-wide ROUND ROBIN row, wired the way App wires it: KitShelf.robin does the work off the
  * main thread and the row's callbacks hand it RobinKit.on/set/off. The rules are RobinKitTest's;
- * these check the row's wiring, UNDO, and that a failing action never reaches the disk.
+ * these check the row's wiring, UNDO, a refused change putting the dial back, and that a stop
+ * part way hands back a kit that matches its files.
  */
 @RunWith(AndroidJUnit4::class)
 class KitScreenRobinTest : ComposeScreenTest() {
@@ -54,6 +55,7 @@ class KitScreenRobinTest : ComposeScreenTest() {
     private var entryState by mutableStateOf<KitShelf.Entry?>(null)
     private var busyState by mutableStateOf(false)
     @Volatile private var failure: Throwable? = null
+    @Volatile private var refuse = false
 
     @After
     fun cleanUp() {
@@ -85,13 +87,16 @@ class KitScreenRobinTest : ComposeScreenTest() {
         return KitShelf.Entry(dir, kit)
     }
 
-    private fun run(shelf: KitShelf, action: (com.snipsnap.shell.KitBuilderModel) -> RobinKit.Result) {
+    private fun run(shelf: KitShelf, work: (File) -> RobinKit.Result) {
         val source = entryState ?: return
         busyState = true
         appScope.launch {
             try {
-                val (entry, _) = shelf.robin(source, action)
+                val (entry, _) = shelf.robin(source, work)
                 entryState = entry
+            } catch (e: KitShelf.RobinStopped) {
+                entryState = e.entry
+                failure = e
             } catch (e: Throwable) {
                 failure = e
             } finally {
@@ -107,9 +112,9 @@ class KitScreenRobinTest : ComposeScreenTest() {
             val e = entryState!!
             KitRobinRow(
                 robin = e.kit.robin, kitKey = e.dir, busy = busyState, scheme = LocalScheme.current,
-                onOn = { run(shelf) { RobinKit.on(it) } },
-                onSet = { s -> run(shelf) { RobinKit.set(it, s) } },
-                onOff = { run(shelf) { RobinKit.off(it) } },
+                onOn = { run(shelf) { RobinKit.onSaving(it) } },
+                onSet = { s -> run(shelf) { if (refuse) error("refused") else RobinKit.setSaving(it, s) } },
+                onOff = { run(shelf) { RobinKit.offSaving(it) } },
             )
         }
     }
@@ -141,7 +146,7 @@ class KitScreenRobinTest : ComposeScreenTest() {
 
     private fun settled() {
         waitFor("the kit work to finish", timeoutMillis = 60_000) { !busyState }
-        failure?.let { throw AssertionError("the kit work failed", it) }
+        if (!refuse) failure?.let { if (it !is KitShelf.RobinStopped) throw AssertionError("the kit work failed", it) }
     }
 
     private fun saved(entry: KitShelf.Entry): Kit = KitStore.load(entry.dir)
@@ -155,7 +160,7 @@ class KitScreenRobinTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
 
-        assertTrue("UNDO waits for a dial change", nodes("KIT ROUND ROBIN UNDO").single().config.getOrNull(SemanticsProperties.Disabled) != null)
+        assertTrue("UNDO waits for a dial change", nodes("KIT ROUND ROBIN UNDO").isEmpty())
         activate("KIT ROUND ROBIN, OFF")
         settled()
         waitFor("the kit switched on") { entryState?.kit?.robin != null }
@@ -174,7 +179,7 @@ class KitScreenRobinTest : ComposeScreenTest() {
         settled()
         waitFor("amount back") { entryState?.kit?.robin?.amount == KitRobin.DEFAULT_AMOUNT }
         assertArrayEquals("UNDO restores the 60 render byte for byte", at60, bytesOf(entry, 1))
-        assertTrue("UNDO is spent", nodes("KIT ROUND ROBIN UNDO").single().config.getOrNull(SemanticsProperties.Disabled) != null)
+        assertTrue("UNDO is spent", nodes("KIT ROUND ROBIN UNDO").isEmpty())
     }
 
     @Test
@@ -198,23 +203,45 @@ class KitScreenRobinTest : ComposeScreenTest() {
     }
 
     @Test
-    fun aFailureMidKitNeverReachesTheDisk() {
+    fun aStopPartWayHandsBackAKitThatMatchesItsFiles() {
         val entry = kit()
-        val before = saved(entry)
         val shelf = KitShelf(entry.dir.parentFile!!)
-        try {
-            shelf.robin(entry) { model ->
-                RobinKit.on(model)
-                error("boom after the whole kit was dealt")
-            }
-            fail("the failure should surface")
-        } catch (e: IllegalStateException) {
-            assertEquals("boom after the whole kit was dealt", e.message)
+        // Pad 2 is a loop (skipped); a third pad with no file stops the deal after pad 1.
+        val broken = KitPad(slot = 3, sampleFile = "gone3.wav", drumClass = DrumClass.KICK)
+        val withBroken = entry.kit.copy(pads = entry.kit.pads + broken)
+        KitStore.save(withBroken, entry.dir)
+        val stopped = try {
+            shelf.robin(KitShelf.Entry(entry.dir, withBroken)) { RobinKit.onSaving(it) }
+            null
+        } catch (e: KitShelf.RobinStopped) {
+            e
         }
-        val after = saved(entry)
-        assertEquals("kit.json is as it was", before, after)
-        assertNull(after.robin)
-        assertFalse(after.pad(1)!!.isRobinChain)
-        assertNotNull(after.pad(1))
+        assertNotNull("the deal should stop at pad 3", stopped)
+        val kit = stopped!!.entry.kit
+        assertNotNull("the switch reads ON so OFF can undo what was dealt", kit.robin)
+        assertTrue(kit.pad(1)!!.isRobinChain)
+        assertEquals("disk and the handed-back entry agree", KitStore.load(entry.dir), kit)
+        val (afterOff, _) = shelf.robin(stopped.entry) { RobinKit.offSaving(it) }
+        assertNull(afterOff.kit.robin)
+        assertFalse(afterOff.kit.pad(1)!!.isRobinChain)
+    }
+
+    @Test
+    fun aRefusedDialChangePutsTheDialBackAndKeepsUndoHidden() {
+        val entry = kit()
+        show(entry)
+        activate("KIT ROUND ROBIN, OFF")
+        settled()
+        waitFor("on") { entryState?.kit?.robin != null }
+        // Wire only the dial to a change that fails before touching anything.
+        val shelf = KitShelf(entry.dir.parentFile!!)
+        refuse = true
+        dial("KIT ROUND ROBIN AMOUNT", 1f)
+        settled()
+        waitFor("the dial back at 60") {
+            nodes("KIT ROUND ROBIN AMOUNT").single().config.getOrNull(SemanticsProperties.StateDescription) == "60"
+        }
+        assertTrue("no UNDO for a change that never landed", nodes("KIT ROUND ROBIN UNDO").isEmpty())
+        assertNotNull(shelf)
     }
 }
