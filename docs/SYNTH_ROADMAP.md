@@ -1248,6 +1248,19 @@ the diagnostic and verification contracts. **Awaiting the owner's listening
 verdict.** The material settings, preset names and sonic acceptance remain
 provisional.
 
+SCOUR is an impact that builds ([SCOUR](SCOUR.md), and
+[its spec](superpowers/specs/2026-10-26-scour-engine-engineering-spec.md)): a roller
+spins up against a free body while shot rains on it faster and harder, each shot dents
+the surface, the upper partials climb with the dented fraction, and one slam lands on
+the hardened body, which rings. PLATE, PANE, SHEET (an octave down, a thunder sheet)
+and BEAM (a struck girder) share TUNE, BUILD, RPM, SHOT, HARDEN and HOLD; HOLD sets the
+ring and never loops. Sixteen dry presets, `SynthKits.scour()` (forty-eight pads over
+three banks, with builds cut for 120 and 90 BPM), the SCOUR FRESH TAPE starter and the
+phone picker are included. `generateScourAudition` and `generateScourKit` write the
+listening page and the MPC kit. The owner has heard rounds R1 to R5 and accepted the
+voices and both extra kit banks; SCOUR has not been heard through a phone speaker or an
+MPC, and the picker entry has not been played on a device.
+
 SUTURE follows as S29, ported from [the supplied engineering specification](SUTURE_SPEC.md).
 BLOOM, THREAD, CLOSE, MURMUR, STRAIN and SHELL share a pitched bronze vessel,
 elastic cords, wooden eyelets, bounded stitch closure, aperture-dependent
