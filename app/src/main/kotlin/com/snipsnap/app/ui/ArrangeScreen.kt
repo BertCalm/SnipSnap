@@ -28,11 +28,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MixVoice
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -40,10 +44,15 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.Names
 import com.snipsnap.shell.Arranger
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.SongExport
+import kotlinx.coroutines.CancellationException
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -64,7 +73,9 @@ import kotlinx.coroutines.withContext
  * (`Arranger.mixdown`, full synthesis through every pad) is not: it only
  * ever runs once PLAY is first pressed, cached per plan so REROLL (a new
  * seed) is what invalidates it, matching the CLI's own `--mixdown` being
- * an opt-in flag rather than something `arrange` does unasked.
+ * an opt-in flag rather than something `arrange` does unasked. EXPORT hands
+ * that cached mix to `SongExport` when there is one (and keeps the one it
+ * had to render, for PLAY).
  *
  * Every section states the rule that picked its clip
  * ([Arranger.Section.reason]) — tap a row to read it in the LCD readout
@@ -86,6 +97,8 @@ fun ArrangeScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val haptics = LocalHaptics.current
     val kitDir = entry.dir
     val kit = entry.kit
 
@@ -115,6 +128,8 @@ fun ArrangeScreen(
     // reroll (a new `plan` value) is what throws this cache out.
     var mix by remember(plan) { mutableStateOf<Arranger.Mix?>(null) }
     var mixing by remember(plan) { mutableStateOf(false) }
+    // EXPORT is writing; PLAY and REROLL wait, so no second render starts beside it.
+    var exporting by remember(kitDir) { mutableStateOf(false) }
 
     var voice by remember(kitDir) { mutableStateOf<MixVoice?>(null) }
     var playing by remember(kitDir) { mutableStateOf(false) }
@@ -148,7 +163,7 @@ fun ArrangeScreen(
             playMix(cached)
             return
         }
-        if (mixing) return
+        if (mixing || exporting) return
         mixing = true
         scope.launch {
             val built = withContext(Dispatchers.IO) { runCatching { Arranger.mixdown(kit, kitDir, currentPlan) } }
@@ -166,8 +181,47 @@ fun ArrangeScreen(
         }
     }
 
+    // EXPORT: the song as an MPC project and a WAV under
+    // exports/<kit>/song/, then the WAV to the share sheet - GROOVE's
+    // SHARE shape (`shareBeat`). The folder is the app's own, so a second
+    // export of the same song writes over the first. The mix PLAY already
+    // rendered is handed through so the song is not rendered twice; when
+    // there is none yet, the write renders it and it is kept for PLAY.
+    fun exportSong() {
+        val currentPlan = plan ?: return
+        if (exporting || mixing) return
+        exporting = true
+        onToast(Copy.ARRANGE_EXPORT_BUSY)
+        val held = mix
+        scope.launch {
+            try {
+                val stem = Names.sanitizeStem(kit.name)
+                val written = offMain {
+                    val root = Exports.dir(context) ?: throw IOException("external storage unavailable")
+                    SongExport.write(kit, kitDir, currentPlan, File(File(root, stem), "song"), overwrite = true, mixdown = true, mix = held)
+                }
+                val wav = written.mixdown!!
+                // Kept for PLAY unless a REROLL has since put another plan on screen.
+                if (plan === currentPlan && mix == null) mix = wav.mix
+                haptics.land()
+                val where = "exports/$stem/song"
+                if (ShareOut.send(context, wav.file, ShareOut.WAV_MIME, kit.name)) {
+                    onToast(Copy.songShared(wav.file.name, where))
+                } else {
+                    onToast(Copy.songKept(where))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("ArrangeScreen", "exportSong: failed", e)
+                onToast(Copy.ARRANGE_EXPORT_FAILED)
+            } finally {
+                exporting = false
+            }
+        }
+    }
+
     fun reroll() {
-        if (loading || mixing) return
+        if (loading || mixing || exporting) return
         stopPlayback()
         seed++
     }
@@ -264,16 +318,25 @@ fun ArrangeScreen(
                     ActionButton(
                         if (playing) "■ STOP" else if (mixing) Copy.ARRANGE_MIXING else "► PLAY",
                         scheme,
-                        enabled = !mixing,
+                        enabled = !mixing && (playing || !exporting),
                         modifier = Modifier.weight(1f),
                         onClick = ::togglePlay,
                     )
                     ActionButton(
                         "REROLL ⚄",
                         scheme,
-                        enabled = !loading && !mixing,
+                        enabled = !loading && !mixing && !exporting,
                         modifier = Modifier.weight(1f),
                         onClick = ::reroll,
+                    )
+                    ActionButton(
+                        "EXPORT",
+                        scheme,
+                        enabled = !loading && !mixing && !exporting,
+                        working = exporting,
+                        accessibilityLabel = "EXPORT SONG",
+                        modifier = Modifier.weight(1f),
+                        onClick = ::exportSong,
                     )
                 }
                 TapeText(

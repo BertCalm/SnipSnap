@@ -72,7 +72,12 @@ object WickAuditionGenerator {
         for ((index, case) in cases.withIndex()) {
             val began = System.nanoTime()
             try {
-                val probe = Wick.inspect(case.voice, case.macros, case.midi, case.velocity, case.options)
+                // A source choice is saved recipe state. Rendering only the voice/macros
+                // would silently give every Hollow Reed / Rubbed Glass preset Warm Wire.
+                val patch = case.preset ?: WickPatch(case.title.take(14), case.voice, case.macros,
+                    case.midi, case.velocity, case.options.rattleSource ?: Wick.RattleSource.WARM_WIRE)
+                val probe = Wick.inspect(case.voice, case.macros, case.midi, case.velocity, case.options,
+                    rattleSource = patch.rattleSource)
                 val elapsed = (System.nanoTime() - began) / 1e6
                 val native = Snip(probe.samples, 1, Dsp.RATE)
                 val matched = AuditionLevel.level(native)
@@ -195,13 +200,13 @@ object WickAuditionGenerator {
                     }
                 }
                 if (case.kind == "defaults") {
-                    val repeat = Wick.inspect(case.voice, case.macros, case.midi, case.velocity, case.options)
+                    val repeat = Wick.inspect(case.voice, case.macros, case.midi, case.velocity, case.options,
+                        rattleSource = patch.rattleSource)
                     val deterministic = repeat.raw.contentEquals(probe.raw) && repeat.samples.contentEquals(probe.samples)
                     metrics["deterministic"] = deterministic
                     if (!deterministic) localFailures += "repeated render was not deterministic"
                 }
 
-                val patch = case.preset ?: WickPatch(case.title.take(14), case.voice, case.macros, case.midi, case.velocity)
                 val isDiagnostic = case.options.disableCascade || case.options.constantAvailability || case.options.gainOnly ||
                     case.options.legacyBubbleEnvelope || case.options.legacyRattleEnvelope
                 val patchFile = if (isDiagnostic) null else "patches/${case.id}.json"
@@ -401,13 +406,14 @@ object WickAuditionGenerator {
             "${note(midi)} · ${if (reference) "Earlier repeated hits" else "Connected body"}",
             "RATTLE at MIDI $midi, velocity 1: SPARK 65%, FEED 50%, CASCADE 65%, TIMBRE 45%, RECOVERY 65%, HOLD off. " +
                 (if (reference) "Earlier response from revision 3b77d8b, reproduced by the explicit legacy-envelope diagnostic option."
-                else "Connected-body candidate at identical controls. Listen for continuity through the internal movement; the owner's listening verdict is pending."),
+                else "Earlier connected-body response at identical controls. Both historical examples retain the previous folded-FM body; the accepted Warm Wire default is auditioned separately."),
             "comparison", WickVoice.RATTLE, "rattle-cohesion", "RATTLE · repeated hits and connected body", cohesionControls, midi,
-            options = Wick.Options(legacyRattleEnvelope = reference), comparison = "rattle-cohesion-$midi",
+            options = Wick.Options(legacyRattleEnvelope = reference, rattleSource = Wick.RattleSource.CURRENT), comparison = "rattle-cohesion-$midi",
             variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) RATTLE_REFERENCE_REVISION else null,
         ))
         val variations = WickPresets.all().filterNot {
-            it.macros == Wick.defaults(it.voice) && it.midi == Wick.rootMidi(it.voice) && it.velocity == 1f
+            it.macros == Wick.defaults(it.voice) && it.midi == Wick.rootMidi(it.voice) && it.velocity == 1f &&
+                (it.voice != WickVoice.RATTLE || it.rattleSource == Wick.RattleSource.WARM_WIRE)
         }
         for (preset in variations) add(Case(
             "preset_${slug(preset.name)}", preset.name,
@@ -592,12 +598,12 @@ object WickAuditionGenerator {
         else -> "Four corners of the interaction, with companion controls at BUBBLE defaults."
     }
 
-    private fun options(options: Wick.Options): Map<String, Any?> = linkedMapOf(
+    private fun options(options: Wick.Options): Map<String, Any?> = linkedMapOf<String, Any?>(
         "disableCascade" to options.disableCascade, "constantAvailability" to options.constantAvailability,
         "gainOnly" to options.gainOnly, "oversample" to options.oversample,
         "legacyBubbleEnvelope" to options.legacyBubbleEnvelope,
         "legacyRattleEnvelope" to options.legacyRattleEnvelope,
-    )
+    ).apply { options.rattleSource?.let { this["rattleSource"] = it.name } }
 
     /** Descriptive PCM evidence only; a higher floor or gentler rise does not prove musical cohesion. */
     private fun bodyContinuity(samples: FloatArray, held: Boolean): Map<String, Any?> {

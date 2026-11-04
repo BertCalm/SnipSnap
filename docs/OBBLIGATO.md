@@ -17,6 +17,16 @@ three native velocity zones at .3, .6 and .8 produce 48 samples; the softer
 zones retain peak matching to the main strike. MPC 3 and MPC 2 exports, editable
 SnipSnap recipes, the pad map and the row-walk demo share those settings.
 
+In SnipSnap, choose **NEW KIT ▸ STARTERS → OBBLIGATO**. Selection renders the
+approved sixteen-pad kit and opens PADS. The four relationship rows retain all
+three native velocity layers and saved recipes, so each main strike remains
+editable after reopening the kit.
+
+The starter integration check renders through the menu's saved ID, reopens all
+sixteen recipes and 48 velocity samples, and regenerates a main strike from each
+relationship within PCM24 quantization. The stable menu IDs and documented
+rosters also pass their focused checks.
+
 The approved candidate's JVM, Android and native CI checks passed in
 [run 41213483185](https://github.com/BertCalm/SnipSnap/actions/runs/41213483185).
 Acceptance and regenerated-kit checks are reported separately from that result.
@@ -27,7 +37,11 @@ models 1–10 retain their raw audio and PCM24 exports; omitted-model loading al
 retains legacy audio through patch and nested pad-recipe decoding. An independent
 audit of all 48 kit samples measured root errors below 3.4 cents and complete
 finite endings. MPC sample references, browser playback, downloads and mobile
-layout pass. The new kit ZIP is 24,582,424 bytes; broader testing is separate.
+layout pass. The new kit ZIP is 24,582,424 bytes.
+
+The acceptance change merged in [PR #789](https://github.com/BertCalm/SnipSnap/pull/789),
+and its complete JVM, Android and native CI checks passed in
+[run 41268192337](https://github.com/BertCalm/SnipSnap/actions/runs/41268192337).
 
 ## Earlier listening history
 

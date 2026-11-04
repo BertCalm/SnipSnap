@@ -133,4 +133,16 @@ class MidiGrooveTest {
             )
         }.also { assertTrue("no notes" in it.message!!) }
     }
+
+    @Test
+    fun `a clip can be written on another channel than the drums`() {
+        val clip = com.snipsnap.mpc3.Mpc3Clip("MELODY", 1, listOf(com.snipsnap.mpc3.Mpc3Note(60, 0L, 0.5f, 480L)))
+        val drums = MidiGroove.write(clip, 120f)
+        val keys = MidiGroove.write(clip, 120f, channel = 0)
+        fun has(bytes: ByteArray, status: Int) = (0 until bytes.size - 2).any { bytes[it] == status.toByte() && bytes[it + 1] == 60.toByte() }
+        assertTrue(has(drums, 0x99) && !has(drums, 0x90))
+        assertTrue(has(keys, 0x90) && !has(keys, 0x99))
+        assertFailsWith<IllegalArgumentException> { MidiGroove.write(clip, 120f, channel = 16) }
+        assertEquals(60, MidiGroove.read(keys, "KEYS").clip.notes.single().note, "and it reads back")
+    }
 }

@@ -7,15 +7,16 @@ excitation; repeated pulses deplete that availability, which recovers over
 time. This is an articulation model, not a claim of physical energy conservation.
 
 The supplied [engineering specification](WICK_SPEC.md) is preserved as the
-proposal. This listening round implements **PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE**, twenty-five
-provisional recipes and a dry sixteen-pad kit. RATTLE
-and the proposed 36-preset library await the owner's listening verdict.
+proposal. This listening round implements **PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE**, twenty-seven
+provisional recipes and a dry sixteen-pad kit. The owner accepted three RATTLE
+bodies; the proposed full 36-preset library remains separate future work.
 Numerical checks do not establish that the cascade is musically convincing.
 
-The current [RATTLE source study](WICK_RATTLE_SOURCES.md) compares Warm wire,
-Hollow reed and Rubbed glass with the connected-body reference. It keeps the
-gate movement fixed while choosing a different underlying tone. These explicit
-diagnostic recipes do not replace ordinary RATTLE patches or accepted voices.
+The accepted [RATTLE bodies](WICK_RATTLE_PATCHES.md) are normal saved patches:
+Warm wire is the new default, with Hollow reed and Rubbed glass as alternate
+sources. The retained [source comparison](WICK_RATTLE_SOURCES.md) preserves the
+accepted audio and earlier body. Existing saved RATTLE JSON without a body
+field retains its earlier source; new patches save their choice explicitly.
 
 ## Controls and recipes
 
@@ -76,26 +77,31 @@ RECOVERY .35 and HOLD 0. The four recipes are **Metal Flash**, **Single Glint**,
 RATTLE targets a pitched strike followed by clustered pulses that weaken under
 repeated feeding and recover between admissions. Its controlled default is
 SPARK .65, FEED .50, CASCADE .65, TIMBRE .45, RECOVERY .65 and HOLD 0, rooted
-at MIDI 60. **Recovering Rattle**, **Depleted Rattle**, **Small Rattle** and
-**Held Rattle** are provisional listening recipes. The dense supplied setting
-is retained as Depleted Rattle. See the [design notes](WICK_RATTLE.md).
+at MIDI 60. **Warm Wire**, **Hollow Reed** and **Rubbed Glass** save the three
+accepted source choices at those controls. **Depleted Rattle**, **Small Rattle**
+and **Held Rattle** use Warm wire with their existing control settings. The dense
+supplied setting is retained as Depleted Rattle. See the
+[saved-body integration](WICK_RATTLE_PATCHES.md) and original
+[design notes](WICK_RATTLE.md).
 
 After the first RATTLE audition, the owner described the result as one voice
-being hit repeatedly and asked for a more cohesive character. The current
-revision keeps the same controls and reserve network while softening openings
+being hit repeatedly and asked for a more cohesive character. The earlier
+cohesion revision kept the controls and reserve network while softening openings
 and retaining more of the primary body between pulses. The opening comparison
 plays **Earlier separate hits** and **Connected body** at C3/C4/C5 with matching
 controls. `legacyRattleEnvelope=true` reproduces the earlier response as an
 explicit diagnostic recipe; ordinary RATTLE patches use the new response.
-The five accepted voices retain their render paths. See the
+Both sides retain the earlier source through an explicit `CURRENT` override;
+this is a historical envelope comparison. The five accepted voices retain their render paths. See the
 [cohesion revision](WICK_RATTLE_COHESION.md) for its evidence and limits.
 
 `WickPresets` is deliberately outside the shared factory roster, Android picker
-and starter menu pending listening. The CLI, patch/recipe decoder and native
+and starter menu pending their separate integration. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen
-dry pads with regenerable recipes: each voice at C3/C4 plus Held Bubbles,
-Held Breath, Held Flicker and Held Rattle. The twenty-five-recipe library is
-larger than the kit; ten exact library recipes and six transposed default
+dry pads with regenerable recipes: the five other voices at C3/C4, all three
+RATTLE bodies at C4, and Held Bubbles, Held Breath and Held Rattle. Held Flicker
+remains available in the library and audition. The twenty-seven-recipe library is
+larger than the kit; eleven exact library recipes and five transposed default
 variations occupy its sixteen pads.
 
 ```sh
@@ -153,7 +159,10 @@ Implementation measurements and checks are recorded beside the generated
 manifest and on the audition page. PLUCK, the revised BUBBLE direction, WOOD
 and the three-voice phrases have received positive listening feedback. BREATH is now accepted as a working voice.
 FLICKER is also accepted as a working voice. The first RATTLE response was
-judged too much like repeated hits; the connected-body revision awaits listening. The short-window classifier can
+judged too much like repeated hits. After the cohesion revision, the owner asked
+for a different underlying tone, liked the three source alternatives, and
+approved Warm wire as default with Hollow reed and Rubbed glass as saved variants.
+The short-window classifier can
 mislabel a late BREATH swell when the window ends before any real decay;
 its raw label and direct envelope evidence are retained in diagnostics.
 The source names, constants, voice settings and proposed release identity are

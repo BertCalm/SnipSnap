@@ -17,7 +17,6 @@ import com.snipsnap.synth.CreaseTouchKeys
 import com.snipsnap.synth.CreaseVoice
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
-import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.CancellationException
@@ -224,14 +223,13 @@ class CreasePadMakerTest {
     }
 
     @Test
-    fun `default single layer retains approved audio and current package metadata bytes`() {
+    fun `default single layer retains the approved package audio names and all metadata bytes`() {
         // SHA256s from the published 3fb2c43c Paper Keys instrument, not this implementation. The nine WAVs are
         // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
         // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
         // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
-        // pair, the .xpm's program-level voice tags).
-        // The sidecar also records explicitNoteOn=false for descriptor round trips;
-        // this schema addition leaves the nine WAVs and both MPC descriptors unchanged.
+        // pair, the .xpm's program-level voice tags). The sidecar was re-pinned once more when it began carrying
+        // explicitNoteOn.
         val expected = mapOf(
             "Crease Paper Keys.instrument.json" to "4123f312c6f2ef3376e86bd30252aed2634b87ea87c414da37162d2da88d30d1",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
@@ -251,16 +249,15 @@ class CreasePadMakerTest {
         assertEquals(1, legacy.layerCount)
         val rendered = CreasePadMaker.zoneMidis(legacy).map { CreasePadMaker.renderLayers(legacy, it) }
         CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
-        val instrument = InstrumentStore.list(dest).single().second
-        assertEquals(VoiceMode.POLY, instrument.voiceMode)
-        assertFalse(instrument.explicitNoteOn)
+        val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
+        assertEquals(expected, actual, "no --touch must retain the pinned package bytes")
         val sidecar = Json.parse(File(dest, "Crease Paper Keys.instrument.json").readText()).obj()
         assertEquals(JsonValue.Bool(false), sidecar.getValue("explicitNoteOn"))
-        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
-            sha(Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)),
-            "removing only the added trigger field restores the previous sidecar byte hash")
-        val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
-        assertEquals(expected, actual, "default capture retains the published WAVs and current descriptor schema")
+        val previousBytes = Json.write(JsonValue.Obj(sidecar - "explicitNoteOn")).toByteArray(Charsets.UTF_8)
+        val previousHash = MessageDigest.getInstance("SHA-256").digest(previousBytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992", previousHash,
+            "only the explicit note-on field may differ from the previous sidecar")
     }
 
     @Test
@@ -423,9 +420,7 @@ class CreasePadMakerTest {
     private fun rms(samples: FloatArray, start: Int, end: Int): Double =
         sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))
 
-    private fun sha(file: File): String = sha(file.readBytes())
-
-    private fun sha(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun sha(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
         .joinToString("") { "%02x".format(it.toInt() and 255) }
 
     private fun harmonicPower(samples: FloatArray, hz: Double, start: Int): DoubleArray {

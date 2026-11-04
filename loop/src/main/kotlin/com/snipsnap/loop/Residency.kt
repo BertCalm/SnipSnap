@@ -16,11 +16,14 @@ import java.util.concurrent.atomic.AtomicReference
  * more distinct blocks than that, so [retain] is not an optimisation; without
  * it an 840-interval cycle would try to hold every block at once.
  *
- * Keying the cache by [Block] does more work than it looks like. Blocks are
- * data classes, so swapping a track's block produces a value that simply is
- * not in the map and gets baked on demand, while every untouched block stays
- * cached — block-swap invalidation falls out of equality rather than needing
- * its own bookkeeping.
+ * Keying the cache by what a block bakes from ([Neighbourhood]) does more
+ * work than it looks like. Blocks are data classes, so swapping a track's
+ * block produces a value that simply is not in the map and gets baked on
+ * demand, while every untouched block stays cached — block-swap
+ * invalidation falls out of equality rather than needing its own
+ * bookkeeping. A pattern's key also holds the patterns either side of it,
+ * whose tails and early hits it carries, so a swap next to a pattern
+ * re-bakes that pattern too, and nothing further away.
  *
  * The cache is stamped with [Session.intervalFrames], not keyed by [Block]
  * alone. `putIfAbsent(key, BlockBaker.bake(...))` evaluates its argument
@@ -58,8 +61,14 @@ class Residency(
     private val droneExecutor: Executor = executor,
 ) {
 
-    /** A block stamped with the interval length it was baked for. */
-    private data class CacheKey(val block: Block, val intervalFrames: Int)
+    /**
+     * What an interval bakes from, stamped with the interval length it was
+     * baked for. A pattern's key carries its neighbours ([Neighbourhood]),
+     * so a swap next to a pattern re-keys it as a swap of the pattern would.
+     */
+    private data class CacheKey(val at: Neighbourhood, val intervalFrames: Int) {
+        val block: Block get() = at.block
+    }
 
     private val current = AtomicReference(initial)
 
@@ -89,9 +98,9 @@ class Residency(
     fun buffersFor(interval: Int): List<Snip> {
         val s = current.get()
         return s.tracks.map { track ->
-            val block = Arrangement.blockAt(track, interval)
-            val key = CacheKey(block, s.intervalFrames)
-            if (block is DroneBlock) {
+            val at = Arrangement.neighbourhoodAt(track, interval)
+            val key = CacheKey(at, s.intervalFrames)
+            if (at.block is DroneBlock) {
                 // A drone is seconds of render, not tens of milliseconds
                 // (docs/superpowers/specs/2026-09-25-resin-drone-design.md,
                 // probe finding 3). Baked here it would stall every track on
@@ -104,7 +113,7 @@ class Residency(
                     silenceFor(s)
                 }
             } else {
-                baked.getOrPut(key) { BlockBaker.bake(block, s, source) }
+                baked.getOrPut(key) { BlockBaker.bake(at, s, source) }
             }
         }
     }
@@ -142,7 +151,7 @@ class Residency(
                 try {
                     if (isLive(s) && !baked.containsKey(key)) {
                         var stopped = false
-                        val snip = BlockBaker.bake(key.block, s, source) {
+                        val snip = BlockBaker.bake(key.at, s, source) {
                             (!isLive(s)).also { if (it) stopped = true }
                         }
                         // Checked again at the end: a slice that waited on another
@@ -169,8 +178,8 @@ class Residency(
     fun prefetch(interval: Int) {
         val s = current.get()
         for (track in s.tracks) {
-            val block = Arrangement.blockAt(track, interval)
-            val key = CacheKey(block, s.intervalFrames)
+            val at = Arrangement.neighbourhoodAt(track, interval)
+            val key = CacheKey(at, s.intervalFrames)
             if (baked.containsKey(key)) continue
             if (key.block is DroneBlock) {
                 // A drone can take longer than an interval to render, and
@@ -186,7 +195,7 @@ class Residency(
                 // but there is no reason to spend a bake on a length nothing
                 // will ever read.
                 if (current.get().intervalFrames == s.intervalFrames) {
-                    baked.putIfAbsent(key, BlockBaker.bake(block, s, source))
+                    baked.putIfAbsent(key, BlockBaker.bake(at, s, source))
                 }
             }
         }
@@ -231,7 +240,7 @@ class Residency(
         val wanted = LinkedHashSet<CacheKey>()
         for (i in intervals) {
             for (track in session.tracks) {
-                val key = CacheKey(Arrangement.blockAt(track, i), session.intervalFrames)
+                val key = CacheKey(Arrangement.neighbourhoodAt(track, i), session.intervalFrames)
                 if (!baked.containsKey(key)) wanted += key
             }
         }
@@ -254,7 +263,7 @@ class Residency(
                         // playing and the one on its way in.
                         val live = session.intervalFrames == current.get().intervalFrames ||
                             session.intervalFrames == incoming.get()?.intervalFrames
-                        if (live) baked.putIfAbsent(key, BlockBaker.bake(key.block, session, source))
+                        if (live) baked.putIfAbsent(key, BlockBaker.bake(key.at, session, source))
                     } finally {
                         // In a finally, so a bake that throws releases the
                         // waiter. Without it one bad sample file hangs the
@@ -285,9 +294,9 @@ class Residency(
         val next = incoming.get()
         val keep = HashSet<CacheKey>()
         for (i in intervals) {
-            for (track in s.tracks) keep.add(CacheKey(Arrangement.blockAt(track, i), s.intervalFrames))
+            for (track in s.tracks) keep.add(CacheKey(Arrangement.neighbourhoodAt(track, i), s.intervalFrames))
             if (next != null) {
-                for (track in next.tracks) keep.add(CacheKey(Arrangement.blockAt(track, i), next.intervalFrames))
+                for (track in next.tracks) keep.add(CacheKey(Arrangement.neighbourhoodAt(track, i), next.intervalFrames))
             }
         }
         baked.keys.retainAll(keep)

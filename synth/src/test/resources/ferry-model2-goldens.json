@@ -1,0 +1,38 @@
+{
+  "source_commit": "0abbf9c9959c6f9d114235832be73ce0b90f10a3",
+  "encoding": "raw IEEE-754 Float samples, little endian",
+  "cases": [
+    {
+      "midi": 36,
+      "velocity": 1.0,
+      "handoff": 0.25,
+      "match": 0.0,
+      "seed": "7",
+      "float_le_sha256": "0f11b9dc80d463e8a556eecd6751729f9134f29133db30709adce1fcb44ad741"
+    },
+    {
+      "midi": 48,
+      "velocity": 0.6,
+      "handoff": 0.5,
+      "match": 0.25,
+      "seed": "-9223372036854775808",
+      "float_le_sha256": "b34ee996b3b6a388814c004f72fc19d530a70e0827a34c702f839a066d2d30ae"
+    },
+    {
+      "midi": 72,
+      "velocity": 0.25,
+      "handoff": 1.0,
+      "match": 0.5,
+      "seed": "9223372036854775807",
+      "float_le_sha256": "295bc0ac70acf240f52370d06caf407a113f062a736e33c2a1a4e1b0b94c561a"
+    },
+    {
+      "midi": 57,
+      "velocity": 0.8,
+      "handoff": 0.75,
+      "match": 0.75,
+      "seed": "9007199254740993",
+      "float_le_sha256": "a789b64b806090b5c4a06e0074bda5763f78cfebd3f3cf1b2a3634cb5365f7c2"
+    }
+  ]
+}

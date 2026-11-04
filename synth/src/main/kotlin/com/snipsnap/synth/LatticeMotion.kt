@@ -53,6 +53,8 @@ internal object LatticeMotion {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, Plan>?): Boolean = size > CACHE_LIMIT
     }
 
+    internal fun clearCache() = synchronized(cache) { cache.clear() }
+
     fun timeScale(speed: Float): Double {
         require(speed.isFinite() && speed in 0f..1f) { "TRACE SPEED must be finite in 0..1" }
         // Preserve an exact identity clock for the accepted reference, without roundoff.

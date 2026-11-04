@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -24,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -243,27 +241,25 @@ fun TitleBar(
         // skeleton it made a finished app look like an abandoned prototype.
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
-        // `weight(1f, fill = false)`: the right-hand cluster is measured first
-        // and the wordmark takes what it leaves, so a long project name
-        // ellipsises itself and never pushes SNIPSNAP to an ellipsis.
+        // The lockup is measured first, at its own width, and the right-hand
+        // cluster takes what it leaves (`weight(1f, fill = false)`); inside
+        // that cluster the project name is the weighted child, so it is the
+        // one thing that gives on a crowded bar: clipped at 140 dp, then
+        // ellipsised, never the mark and never the chips.
+        MarkLockup(height = Layout.MARK_CAP_H.dp)
         Row(
             Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // `.wordmark-square`: the page's tilted square before the name.
-            Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
-            TapeText("SNIPSNAP", TapeType.displayBig, scheme.titleInk.tape)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
-                // The bar clips the name at 140 dp; the accessible name is the whole of it.
+                // The accessible name is the whole of it.
                 val fullName = projectName.uppercase()
                 TapeText(
                     fullName,
                     TapeType.pixel,
                     scheme.titleInk.tape,
-                    Modifier.widthIn(max = 140.dp).semantics { contentDescription = fullName },
+                    Modifier.weight(1f, fill = false).widthIn(max = 140.dp).semantics { contentDescription = fullName },
                 )
             }
             if (onNote != null) {

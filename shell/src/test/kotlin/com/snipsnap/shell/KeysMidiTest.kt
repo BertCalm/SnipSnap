@@ -6,6 +6,7 @@ import com.snipsnap.shell.MidiBinding.Mode
 import com.snipsnap.shell.MidiBinding.Source
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -13,7 +14,7 @@ class KeysMidiTest {
     private val fold = "usb:944:1:1:1:def"
 
     private fun learn(learn: MidiLearn, target: String, event: Event) {
-        learn.arm(target, KeysMidi.prefer(target))
+        learn.arm(target, KeysMidi.prefer(target), KeysMidi.kinds(target))
         learn.handle(event, fold) { null }
     }
 
@@ -60,6 +61,26 @@ class KeysMidiTest {
         assertEquals(31 / 127f, next.step(Event.Control(0, 7, 31), volume = 1f).volume!!, 1e-6f)
         val octave = MidiBinding(Source(fold, Kind.NOTE, 0, 60), KeysMidi.OCT_UP, Mode.TRIGGER)
         assertEquals(octave, KeysMidi.settle(octave), "only VOL changes")
+    }
+
+    @Test fun `bend brushed while OCT + waits is not learned, and a strip can still drive VOL`() {
+        val learn = MidiLearn()
+        learn.arm(KeysMidi.OCT_UP, KeysMidi.prefer(KeysMidi.OCT_UP), KeysMidi.kinds(KeysMidi.OCT_UP))
+        assertFalse(learn.handle(Event.PitchBend(0, 3000), fold) { null }.consumed)
+        assertEquals(KeysMidi.OCT_UP, learn.armed, "still waiting for a key, pad or button")
+        learn(learn, KeysMidi.VOLUME, Event.ChannelPressure(0, 100))
+        assertEquals(Kind.CHANNEL_PRESSURE, learn.bindings.single { it.target == KeysMidi.VOLUME }.source.kind)
+    }
+
+    @Test fun `an octave button whose release was lost steps again after releaseAll`() {
+        val learn = MidiLearn()
+        learn(learn, KeysMidi.OCT_UP, Event.Control(0, 21, 127))
+        learn.handle(Event.Control(0, 21, 0), fold) { null }
+        assertEquals(1, learn.step(Event.Control(0, 21, 127)).octaveStep)
+        // The cable comes out with the button held: its release never arrives.
+        assertEquals(0, learn.step(Event.Control(0, 21, 127)).octaveStep)
+        learn.releaseAll()
+        assertEquals(1, learn.step(Event.Control(0, 21, 127)).octaveStep)
     }
 
     @Test fun `the octave stays inside the grid's range, as the buttons do`() {

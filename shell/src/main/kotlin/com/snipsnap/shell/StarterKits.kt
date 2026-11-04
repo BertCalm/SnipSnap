@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.ArrangedPad
+import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
@@ -39,6 +40,7 @@ import java.io.File
 object StarterKits {
     const val CONFLUENCE_ID = "confluence-wordless"
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
+    const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
     class Starter internal constructor(
         /** Stable machine id. */
@@ -121,6 +123,18 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "obbligato", "OBBLIGATO",
+            "Flute and reed share the lead across four relationships, with soft, medium and strong strikes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.obbligato() },
+        Starter(
+            "accord", "ACCORD",
+            "Brushed wood and ringing tines. Sixteen finite pitched performances with shared mechanical timing.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.accord() },
+        Starter(
             "otis", "OTIS",
             "Organ, steam pipe, blues harmonica and shared Squeeze chords. Sixteen finite performances.",
             seeded = false,
@@ -160,6 +174,15 @@ object StarterKits {
             prepare = { dir -> ConfluenceVoiceBank.bundled().writePortableBank(File(dir, CONFLUENCE_BANK_DIR), overwrite = true) },
         ) { ConfluenceVoiceBank.bundled().arrangedPads() },
         Starter(
+            CONFLUENCE_VOICES_ID, "CONFLUENCE VOICES",
+            "Nine selected Yaman, kulning and khöömei passages, with pairs, groups and a short answer.",
+            seeded = false,
+            prepare = { dir ->
+                val bank = ConfluenceSelectedWorkshop.bank
+                bank.writePortableBank(ConfluenceBankFiles.bankDirectory(dir, bank.manifestSha256))
+            },
+        ) { ConfluenceSelectedWorkshop.starterPads() },
+        Starter(
             "circuit", "CIRCUIT",
             "Three breaths, moving accents, and canyon answers in C minor pentatonic.",
             seeded = false,
@@ -173,7 +196,7 @@ object StarterKits {
         ) { SynthKits.thaw() },
         Starter(
             "scour", "SCOUR",
-            "Metal, glass and thunder-sheet impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            "Metal, glass, thunder-sheet and girder impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scour() },
@@ -231,6 +254,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.rime() },
+        Starter(
+            "rime-complete", "RIME COMPLETE",
+            "All six contour voices, with three native velocity layers per pad.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.rimeComplete() },
         Starter(
             "filament", "FILAMENT",
             "Glass threads, pulsing routes and blooming curls in C minor pentatonic.",
@@ -339,6 +368,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
+        Starter(
+            "murmur-selected", "MURMUR SELECTED",
+            "Selected vowel keys, four voice contrasts and lower-air choir at C2 and C3.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.murmurSelected() },
         Starter(
             "scanned-chain", "SCANNED CHAIN",
             "Moving shapes become plucks, metal and growing tones in C minor pentatonic.",

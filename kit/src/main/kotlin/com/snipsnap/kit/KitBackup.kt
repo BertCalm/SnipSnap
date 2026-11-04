@@ -102,10 +102,13 @@ object KitBackup {
                     }
                     val xpn = File(temp, "${kit.name}.xpn")
                     val native = File(temp, "${kit.name}.native.zip")
+                    val bankNative = File(temp, "${kit.name}.banks.zip")
                     val sources: File?
+                    val banks: File?
                     try {
                         XpnPackager.write(kit, dir, xpn, Exporters.defaultMeta(kit), overwrite = true)
                         sources = KitBackupNative.write(kit, dir, xpn, native)
+                        banks = KitBackupBanks.write(kit, dir, xpn, bankNative)
                     } catch (e: IllegalArgumentException) {
                         // Source metadata has a bounded portable form. An
                         // oversized kit must be named, not cost every other
@@ -118,6 +121,11 @@ object KitBackup {
                     zip.closeEntry()
                     sources?.let { source ->
                         zip.putNextEntry(ZipEntry(KitBackupNative.entryName("${kit.name}.xpn")))
+                        source.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                    banks?.let { source ->
+                        zip.putNextEntry(ZipEntry(KitBackupBanks.entryName("${kit.name}.xpn")))
                         source.inputStream().use { it.copyTo(zip) }
                         zip.closeEntry()
                     }
@@ -193,11 +201,18 @@ object KitBackup {
                 // the archive declares: a backup may come from a stranger.
                 val names = LinkedHashSet<String>()
                 val nativeEntries = LinkedHashMap<String, java.util.zip.ZipEntry>()
+                val bankEntries = LinkedHashMap<String, java.util.zip.ZipEntry>()
                 val all = zip.entries()
                 var entryCount = 0
                 while (all.hasMoreElements()) {
                     val e = all.nextElement()
-                    require(++entryCount <= MAX_KITS * 2 + 256) { "${backupFile.name} declares too many backup entries - refused" }
+                    require(++entryCount <= MAX_KITS * 3 + 256) { "${backupFile.name} declares too many backup entries - refused" }
+                    if (e.name.startsWith(KitBackupBanks.PREFIX)) {
+                        val sibling = e.name.removePrefix(KitBackupBanks.PREFIX).removeSuffix(".zip")
+                        require(!e.isDirectory && e.name.endsWith(".xpn.zip") && SafePath.isSafe(sibling)) { "unsafe selected-bank backup entry: ${e.name}" }
+                        require(bankEntries.put(sibling, e) == null && bankEntries.size <= MAX_KITS) { "duplicate or excessive selected-bank backup entries" }
+                        continue
+                    }
                     if (e.name.startsWith(KitBackupNative.PREFIX)) {
                         val sibling = e.name.removePrefix(KitBackupNative.PREFIX).removeSuffix(".zip")
                         require(!e.isDirectory && e.name.endsWith(".xpn.zip") && SafePath.isSafe(sibling)) { "unsafe native source backup entry: ${e.name}" }
@@ -213,6 +228,7 @@ object KitBackup {
                 }
                 require(names.isNotEmpty()) { "no .xpn kits inside ${backupFile.name} - not a SnipSnap backup?" }
                 require(nativeEntries.keys.all { it in names }) { "native source backup entry has no sibling XPN" }
+                require(bankEntries.keys.all { it in names }) { "selected-bank backup entry has no sibling XPN" }
                 for (name in names.sorted()) {
                     val entry = zip.getEntry(name) ?: throw IllegalArgumentException("${backupFile.name} lost '$name' between listing and reading")
                     val xpn = File(temp, File(entry.name).name)
@@ -249,11 +265,24 @@ object KitBackup {
                                 } }
                             }
                         }
+                        val bankNative = bankEntries[name]?.let { bankEntry ->
+                            File.createTempFile("banks-", ".zip", temp).also { file ->
+                                zip.getInputStream(bankEntry).use { input -> file.outputStream().use { output ->
+                                    KitBackupNative.copyBudgeted(input, output, KitBackupBanks.MAX_ARCHIVE_BYTES, "selected-bank source archive for $name", budget)
+                                } }
+                            }
+                        }
                         results += XpnImporter.importWithNativeSources(xpn, destRoot, overwrite, budget) { imported, staging ->
-                            if (native == null) {
+                            val personal = if (native == null) {
                                 require(ConfluencePersonalFiles.referencedIds(imported).isEmpty()) { "personal voice backup is missing its native source archive" }
                                 imported
                             } else KitBackupNative.restore(native, xpn, imported, staging, budget)
+                            val restored = if (bankNative == null) {
+                                require(ConfluenceBankFiles.fingerprints(personal).isEmpty()) { "selected-bank backup is missing its native source archive" }
+                                personal
+                            } else KitBackupBanks.restore(bankNative, xpn, personal, staging, budget)
+                            ConfluenceBankFiles.requireImportable(restored, staging)
+                            restored
                         }
                     } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
                         // Same reasoning as the extraction catch above - a

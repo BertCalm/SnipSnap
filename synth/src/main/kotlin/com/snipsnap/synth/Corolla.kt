@@ -342,7 +342,7 @@ object Corolla {
                 // passive structural/magnetic links and answering petals.
                 val delta = q[j] - q[i]
                 val maxTravel = 4.0 / w0
-                val f = spring[e] * maxTravel * tanh(delta / maxTravel)
+                val f = spring[e] * maxTravel * FastMath.tanh(delta / maxTravel)
                 val damping = .00018 * w0 * (v[j] - v[i])
                 force[i] += f + (if (spring[e] > 0) damping else 0.0)
                 force[j] -= f + (if (spring[e] > 0) damping else 0.0)
@@ -373,6 +373,11 @@ object Corolla {
             for (i in v.indices) v[i] += force[i] * STEP * fraction
         }
         for (sample in 0 until n) {
+            // A knob turn interrupts a superseded SYNTH preview's thread (offMainInterruptible).
+            // COROLLA renders for up to 1.4 s, so it stops here rather than finishing a render
+            // nobody will hear; the check reads a flag and changes no sample.
+            if (sample and 1023 == 0 && Thread.currentThread().isInterrupted)
+                throw java.util.concurrent.CancellationException("COROLLA render no longer wanted")
             if (sample % 64 == 0) {
                 if (probe.opening) {
                     val dt = 64 * STEP

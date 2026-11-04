@@ -216,6 +216,70 @@ class ExportWizardTest {
      * a blank one, a duplicate pasted from its neighbour, one too long for
      * the row, or one that stops shouting the way the rest of TapeOS does.
      */
+    // ---- the tile's knobs ----
+
+    private fun tileUnder(root: File, kit: Kit): ByteArray =
+        root.walkTopDown().first { it.isFile && it.name == "${kit.name}.png" }.readBytes()
+
+    @Test
+    fun `the sidecar round trip changes no bytes`() {
+        val (kit, dir) = makeKit("Roundtrip")
+        val a = ExportWizardModel(kit, dir)
+        a.setFormat(ExportFormat.EXPANSION)
+        val destA = File(temp, "rt-a")
+        assertTrue(a.write(destA) is ExportWizardModel.WriteResult.Done)
+        ArtSidecar.write(dir, a.artKnobs!!)
+        val b = ExportWizardModel(kit, dir)
+        b.setFormat(ExportFormat.EXPANSION)
+        val destB = File(temp, "rt-b")
+        assertTrue(b.write(destB) is ExportWizardModel.WriteResult.Done)
+        assertTrue(tileUnder(destA, kit).contentEquals(tileUnder(destB, kit)), "the same knobs, read back from disk, write the same tile")
+    }
+
+    @Test
+    fun `the first tile written fixes an untouched kit's knobs`() {
+        // An untouched kit takes the on-screen scheme's palette; once a tile has gone out, a scheme
+        // switch must not change the next export's tile (the spec's no-churn anti-goal).
+        val (kit, dir) = makeKit("Untouched")
+        assertEquals(null, ArtSidecar.read(dir))
+        val tide = ArtKnobs.default(Schemes.TIDE)
+        val first = ExportWizardModel(kit, dir, artKnobs = tide)
+        first.setFormat(ExportFormat.EXPANSION)
+        assertTrue(first.write(File(temp, "drift-a")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(tide, ArtSidecar.read(dir), "the knobs the tile was drawn with are now the kit's")
+        // The screen now opens on the sidecar, whatever the scheme.
+        assertEquals(tide, ArtSidecar.read(dir) ?: ArtKnobs.default(Schemes.RISO))
+    }
+
+    @Test
+    fun `a format that writes no tile leaves an untouched kit untouched`() {
+        val (kit, dir) = makeKit("NoTile")
+        val m = ExportWizardModel(kit, dir, artKnobs = ArtKnobs.default(Schemes.TIDE))
+        m.setFormat(ExportFormat.SFZ)
+        assertTrue(m.write(File(temp, "drift-sfz")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(null, ArtSidecar.read(dir))
+    }
+
+    @Test
+    fun `the caller's knobs and then the sidecar's pick the tile`() {
+        val (kit, dir) = makeKit("Picked")
+        val seen = mutableListOf<ArtKnobs>()
+        val spy: (Kit, File, ArtKnobs) -> ByteArray = { k, d, knobs -> seen += knobs; KitArt.awtPng(k, d, knobs) }
+        val chosen = ArtKnobs(KitArt.Style.RIBBON, Palettes.SAGE, 2, Mark.Variant.LOCKUP)
+        val w = ExportWizardModel(kit, dir, artRenderer = spy, artKnobs = chosen)
+        w.setFormat(ExportFormat.EXPANSION)
+        assertTrue(w.write(File(temp, "picked")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(listOf(chosen), seen, "the knobs the caller opened the wizard with")
+
+        ArtSidecar.write(dir, ArtKnobs(KitArt.Style.FIELD, Palettes.RISO, null, Mark.Variant.SYMBOL))
+        seen.clear()
+        val fromDisk = ExportWizardModel(kit, dir, artRenderer = spy)
+        fromDisk.setFormat(ExportFormat.EXPANSION)
+        assertTrue(fromDisk.write(File(temp, "picked-disk")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(KitArt.Style.FIELD, seen.single().style)
+        assertEquals(Palettes.RISO, seen.single().palette)
+    }
+
     // ---- finding 18: a second dub to the same place asks first ----
 
     @Test

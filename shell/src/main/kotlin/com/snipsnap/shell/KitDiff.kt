@@ -127,6 +127,9 @@ object KitDiff {
             return "$word ${(applied.amount * 100).roundToInt()}%"
         }
         MutateSheet.read(recipe)?.let { return "MUTATED: ${it.word}" }
+        runCatching { com.snipsnap.synth.KitFromAnything.Recipe.fromJsonValue(recipe) }.getOrNull()?.let {
+            return "KIT FROM ANYTHING ${it.slot.label.uppercase()} (${it.genre.label.uppercase()}, ${it.key.label.uppercase()})"
+        }
         OutsideSheet.read(recipe)?.let { return "OUTSIDE: ${it.move}" }
         val e = recipe.entries
         (e["robin"] as? JsonValue.Obj)?.let { r ->

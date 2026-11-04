@@ -1,0 +1,821 @@
+{
+  "format": "snipsnap-confluence-selected-bank",
+  "schema": 1,
+  "id": "selected-passages-v1",
+  "version": 1,
+  "preparationVersion": 1,
+  "textContent": "UNKNOWN",
+  "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3",
+  "preparedRegionPolicy": "Actual Kotlin loader verifies raw canonical PCM hash, reconstructs declared playback conditioning and derives a separate prepared PCM hash. Saved ConfluenceRecipe regions reference that prepared hash; raw assets remain unchanged.",
+  "assets": [
+    {
+      "path": "SOURCE-ATTRIBUTION.txt",
+      "bytes": 2468,
+      "sha256": "c89c78cb01475f836a718608bea178cb55448da75ebf38cc6d496dec7920abfe",
+      "kind": "notice"
+    },
+    {
+      "path": "licenses/CC-BY-4.0.txt",
+      "bytes": 18657,
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "kind": "license"
+    },
+    {
+      "path": "licenses/CC0-1.0.txt",
+      "bytes": 7048,
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "kind": "license"
+    },
+    {
+      "path": "voices/khoomei-01.wav",
+      "bytes": 1551540,
+      "sha256": "c20de66da69323679f0cc9a5498e3277a80e9526ab647f874af54c9678434845",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/khoomei-02.wav",
+      "bytes": 692558,
+      "sha256": "4cc930926373c82e64af4c0983571bf8608ee39aef75c81b48db4b9513427e8e",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/kulning-01.wav",
+      "bytes": 963140,
+      "sha256": "ea47e566433ae01c2d4d375260e03d2abe8033412375f25590d1fb632eed7fba",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/kulning-02.wav",
+      "bytes": 526832,
+      "sha256": "2a882c96e61da11f5a90ad9cdaa970679f6f591ac8f95c219c06d7f5ddc80952",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/kulning-03.wav",
+      "bytes": 685244,
+      "sha256": "f45e828877c889fe5e0f3ee451bb6ca4d9f7dd5c2b1fa41cdbf2bfb9d48bfe91",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/yaman-01.wav",
+      "bytes": 1535294,
+      "sha256": "ec072ce410428fddc4cd9b99204404b1d335b7e4946d627fd62736ac9187ba08",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/yaman-02.wav",
+      "bytes": 1400436,
+      "sha256": "0345ea8daf90db06094280e4db32a99290431df8c7965c26d8f274f6814d105b",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/yaman-03.wav",
+      "bytes": 1568852,
+      "sha256": "842e9803779d358a665df695ce9f330c38898a1b758076ff57b46c81601753e5",
+      "kind": "audio"
+    },
+    {
+      "path": "voices/yaman-04.wav",
+      "bytes": 1854938,
+      "sha256": "06dc324b25a0d88a624b5c7bf7d407a6057e7100d9039ce2a3a956659b306357",
+      "kind": "audio"
+    }
+  ],
+  "licenses": [
+    {
+      "id": "CC-BY-4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "path": "licenses/CC-BY-4.0.txt"
+    },
+    {
+      "id": "CC0-1.0",
+      "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "path": "licenses/CC0-1.0.txt"
+    }
+  ],
+  "sources": [
+    {
+      "id": "hindustani-yaman",
+      "title": "Yaman — a solo ālāp",
+      "tradition": "HINDUSTANI SINGING",
+      "performerCredit": "Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.",
+      "sourceUrl": "https://freesound.org/people/sankalp/sounds/193920/",
+      "licenseId": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceAcquisitionKind": "public-high-quality-lossy-preview",
+      "originalDownloaded": false,
+      "listeningFileSha256": "eb1e810fb29b79817ec5f48eccff81f18a4188836ca0b89284703bc8a48ee8a9",
+      "listeningFileUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/hindustani-yaman-preview.mp3",
+      "modifications": "Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.",
+      "styleClaimNote": "Tradition, performance and location descriptions follow source metadata; no independent cultural/performance authentication."
+    },
+    {
+      "id": "swedish-kulning",
+      "title": "Kulning på kor — herding calls",
+      "tradition": "SWEDISH KULNING",
+      "performerCredit": "Anna Moraeus and Jemt-Kersti Andersson · recorded by Matts Arnberg, Dalarna, 1954. Swedish Performing Arts Agency / Centre for Swedish Folk Music and Jazz Research.",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kulning_p%C3%A5_kor_-_SMV_-_SVA_BB_5345_13.wav",
+      "licenseId": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourceAcquisitionKind": "original-archival-WAV-via-verified-lossless-FLAC",
+      "originalDownloaded": true,
+      "listeningFileSha256": "18f2f0c0b448203ae56c5a765204b64fd36e589912ffd0ae4c3b6966453dc099",
+      "listeningFileUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/swedish-kulning.flac",
+      "modifications": "Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.",
+      "styleClaimNote": "Tradition, performance and location descriptions follow source metadata; no independent cultural/performance authentication."
+    },
+    {
+      "id": "khoomei",
+      "title": "Khöömei — an overtone demonstration",
+      "tradition": "THROAT-SINGING TECHNIQUE",
+      "performerCredit": "Shared by nemaavla. The source page does not name the performer.",
+      "sourceUrl": "https://freesound.org/people/nemaavla/sounds/240916/",
+      "licenseId": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourceAcquisitionKind": "public-high-quality-lossy-preview",
+      "originalDownloaded": false,
+      "listeningFileSha256": "0c5e61b4cb8c2bb7559d9cb25742c15e5473d7c11cba35f8f14adf106e816be5",
+      "listeningFileUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/khoomei-preview.mp3",
+      "modifications": "Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.",
+      "styleClaimNote": "Tradition, performance and location descriptions follow source metadata; no independent cultural/performance authentication."
+    }
+  ],
+  "voices": [
+    {
+      "id": "yaman-01",
+      "title": "Yaman 01",
+      "sourceId": "hindustani-yaman",
+      "assetPath": "voices/yaman-01.wav",
+      "fileSha256": "ec072ce410428fddc4cd9b99204404b1d335b7e4946d627fd62736ac9187ba08",
+      "canonicalPcmSha256": "1a636454fd24af8bd120bb135cf439a8fa7dfa96b235568b35cbd62a6bf552a6",
+      "frames": 511750,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 9.195220947265625,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "7b64f8ed-9fc8-4dde-a80e-0eef60043eb9",
+        "sourceId": "hindustani-yaman",
+        "fileSha256": "ec072ce410428fddc4cd9b99204404b1d335b7e4946d627fd62736ac9187ba08",
+        "canonicalPcmSha256": "1a636454fd24af8bd120bb135cf439a8fa7dfa96b235568b35cbd62a6bf552a6",
+        "frames": 511750,
+        "approvedSelection": {
+          "startSeconds": 2.0577008312285257,
+          "endSeconds": 13.662007117146597,
+          "browserDurationSeconds": 344.591542,
+          "manifestDurationSeconds": 344.633469,
+          "createdAt": "2026-10-26T09:27:59.981Z",
+          "updatedAt": "2026-10-26T09:27:59.981Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 90745,
+          "endFrame": 602495,
+          "startSeconds": 2.0577097505668935,
+          "endSeconds": 13.66201814058957,
+          "startAdjustmentSeconds": 8.919338367885388e-06,
+          "endAdjustmentSeconds": 1.1023442972657449e-05,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "yaman-02",
+      "title": "Yaman 02",
+      "sourceId": "hindustani-yaman",
+      "assetPath": "voices/yaman-02.wav",
+      "fileSha256": "0345ea8daf90db06094280e4db32a99290431df8c7965c26d8f274f6814d105b",
+      "canonicalPcmSha256": "9b4b4409021454f4ebb6957dd09900c73caa8a7d6abdd4082dbf23fd403683cf",
+      "frames": 466797,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 19.71476173400879,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "dae043c3-7be5-4385-b426-34af265881eb",
+        "sourceId": "hindustani-yaman",
+        "fileSha256": "0345ea8daf90db06094280e4db32a99290431df8c7965c26d8f274f6814d105b",
+        "canonicalPcmSha256": "9b4b4409021454f4ebb6957dd09900c73caa8a7d6abdd4082dbf23fd403683cf",
+        "frames": 466797,
+        "approvedSelection": {
+          "startSeconds": 15.240170144285832,
+          "endSeconds": 25.825155368026014,
+          "browserDurationSeconds": 344.591542,
+          "manifestDurationSeconds": 344.633469,
+          "createdAt": "2026-10-26T09:28:40.004Z",
+          "updatedAt": "2026-10-26T09:28:40.004Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 672092,
+          "endFrame": 1138889,
+          "startSeconds": 15.240181405895692,
+          "endSeconds": 25.825147392290248,
+          "startAdjustmentSeconds": 1.1261609859758437e-05,
+          "endAdjustmentSeconds": -7.975735766052594e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "yaman-03",
+      "title": "Yaman 03",
+      "sourceId": "hindustani-yaman",
+      "assetPath": "voices/yaman-03.wav",
+      "fileSha256": "842e9803779d358a665df695ce9f330c38898a1b758076ff57b46c81601753e5",
+      "canonicalPcmSha256": "0bfb363f20be764409134678a54ec04d7d2e168573a58aac5d6d4a6072683e88",
+      "frames": 522936,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 17.904672622680664,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "a41016cc-82f7-4a91-b76d-d20a764fd6f7",
+        "sourceId": "hindustani-yaman",
+        "fileSha256": "842e9803779d358a665df695ce9f330c38898a1b758076ff57b46c81601753e5",
+        "canonicalPcmSha256": "0bfb363f20be764409134678a54ec04d7d2e168573a58aac5d6d4a6072683e88",
+        "frames": 522936,
+        "approvedSelection": {
+          "startSeconds": 26.992698789267017,
+          "endSeconds": 38.8506568788858,
+          "browserDurationSeconds": 344.591542,
+          "manifestDurationSeconds": 344.633469,
+          "createdAt": "2026-10-26T09:28:47.398Z",
+          "updatedAt": "2026-10-26T09:28:47.398Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 1190378,
+          "endFrame": 1713314,
+          "startSeconds": 26.992698412698413,
+          "endSeconds": 38.85065759637188,
+          "startAdjustmentSeconds": -3.7656860385482105e-07,
+          "endAdjustmentSeconds": 7.17486081214247e-07,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "yaman-04",
+      "title": "Yaman 04",
+      "sourceId": "hindustani-yaman",
+      "assetPath": "voices/yaman-04.wav",
+      "fileSha256": "06dc324b25a0d88a624b5c7bf7d407a6057e7100d9039ce2a3a956659b306357",
+      "canonicalPcmSha256": "b3336564aae9ecc044bde92e4abdb494f0d12c5306800a2db44dc78d6137a09e",
+      "frames": 618298,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 9.338859558105469,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 4410,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "28bb24f7-4555-45dd-8a13-4f9f188cfbe8",
+        "sourceId": "hindustani-yaman",
+        "fileSha256": "06dc324b25a0d88a624b5c7bf7d407a6057e7100d9039ce2a3a956659b306357",
+        "canonicalPcmSha256": "b3336564aae9ecc044bde92e4abdb494f0d12c5306800a2db44dc78d6137a09e",
+        "frames": 618298,
+        "approvedSelection": {
+          "startSeconds": 169.45462691222184,
+          "endSeconds": 183.47499667661978,
+          "browserDurationSeconds": 344.591542,
+          "manifestDurationSeconds": 344.633469,
+          "createdAt": "2026-10-26T09:29:23.799Z",
+          "updatedAt": "2026-10-26T09:29:23.799Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 7472949,
+          "endFrame": 8091247,
+          "startSeconds": 169.45462585034014,
+          "endSeconds": 183.47498866213152,
+          "startAdjustmentSeconds": -1.061881704345069e-06,
+          "endAdjustmentSeconds": -8.014488258822894e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "kulning-01",
+      "title": "Kulning på kor 01",
+      "sourceId": "swedish-kulning",
+      "assetPath": "voices/kulning-01.wav",
+      "fileSha256": "ea47e566433ae01c2d4d375260e03d2abe8033412375f25590d1fb632eed7fba",
+      "canonicalPcmSha256": "8c0a3bf5592f081cdcc1c61f6a203fcf13f0afa7218c4d1da98a89adaffab18f",
+      "frames": 321032,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 6.454727649688721,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "9bd95a4d-7b8a-4194-b644-d45a7c10ff2e",
+        "sourceId": "swedish-kulning",
+        "fileSha256": "ea47e566433ae01c2d4d375260e03d2abe8033412375f25590d1fb632eed7fba",
+        "canonicalPcmSha256": "8c0a3bf5592f081cdcc1c61f6a203fcf13f0afa7218c4d1da98a89adaffab18f",
+        "frames": 321032,
+        "approvedSelection": {
+          "startSeconds": 2.6506090413837535,
+          "endSeconds": 9.930242568410504,
+          "browserDurationSeconds": 50.56,
+          "manifestDurationSeconds": 50.56,
+          "createdAt": "2026-10-26T09:30:00.569Z",
+          "updatedAt": "2026-10-26T09:30:00.569Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 116892,
+          "endFrame": 437924,
+          "startSeconds": 2.650612244897959,
+          "endSeconds": 9.930249433106576,
+          "startAdjustmentSeconds": 3.203514205463165e-06,
+          "endAdjustmentSeconds": 6.864696072028664e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "kulning-02",
+      "title": "Kulning på kor 02",
+      "sourceId": "swedish-kulning",
+      "assetPath": "voices/kulning-02.wav",
+      "fileSha256": "2a882c96e61da11f5a90ad9cdaa970679f6f591ac8f95c219c06d7f5ddc80952",
+      "canonicalPcmSha256": "50ba03fe42e3dd4e37500383e33193c4c04b5bc6cf7a79b7bc977ffd6498ae0f",
+      "frames": 175596,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 7.162403583526611,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "5e9083fc-3f85-45ff-8921-158309e68d96",
+        "sourceId": "swedish-kulning",
+        "fileSha256": "2a882c96e61da11f5a90ad9cdaa970679f6f591ac8f95c219c06d7f5ddc80952",
+        "canonicalPcmSha256": "50ba03fe42e3dd4e37500383e33193c4c04b5bc6cf7a79b7bc977ffd6498ae0f",
+        "frames": 175596,
+        "approvedSelection": {
+          "startSeconds": 10.046445517015707,
+          "endSeconds": 14.0282100657518,
+          "browserDurationSeconds": 50.56,
+          "manifestDurationSeconds": 50.56,
+          "createdAt": "2026-10-26T09:30:20.179Z",
+          "updatedAt": "2026-10-26T09:30:20.179Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 443048,
+          "endFrame": 618644,
+          "startSeconds": 10.046439909297051,
+          "endSeconds": 14.028208616780045,
+          "startAdjustmentSeconds": -5.607718655653571e-06,
+          "endAdjustmentSeconds": -1.448971755024786e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "kulning-03",
+      "title": "Kulning på kor 03",
+      "sourceId": "swedish-kulning",
+      "assetPath": "voices/kulning-03.wav",
+      "fileSha256": "f45e828877c889fe5e0f3ee451bb6ca4d9f7dd5c2b1fa41cdbf2bfb9d48bfe91",
+      "canonicalPcmSha256": "5c133ef3c1e57475878d5858d42ffba1ef9386577eb62e38e336252ccff4a36e",
+      "frames": 228400,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 7.844698429107666,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "ebe472e0-6e9d-4106-b17d-aff5a0a5bfc9",
+        "sourceId": "swedish-kulning",
+        "fileSha256": "f45e828877c889fe5e0f3ee451bb6ca4d9f7dd5c2b1fa41cdbf2bfb9d48bfe91",
+        "canonicalPcmSha256": "5c133ef3c1e57475878d5858d42ffba1ef9386577eb62e38e336252ccff4a36e",
+        "frames": 228400,
+        "approvedSelection": {
+          "startSeconds": 14.403120909685866,
+          "endSeconds": 19.582276668848166,
+          "browserDurationSeconds": 50.56,
+          "manifestDurationSeconds": 50.56,
+          "createdAt": "2026-10-26T09:30:40.321Z",
+          "updatedAt": "2026-10-26T09:30:40.321Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 635178,
+          "endFrame": 863578,
+          "startSeconds": 14.40312925170068,
+          "endSeconds": 19.582267573696146,
+          "startAdjustmentSeconds": 8.342014814033405e-06,
+          "endAdjustmentSeconds": -9.09515201996669e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Arithmetic average of original channels to mono.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "khoomei-01",
+      "title": "Khöömei 01",
+      "sourceId": "khoomei",
+      "assetPath": "voices/khoomei-01.wav",
+      "fileSha256": "c20de66da69323679f0cc9a5498e3277a80e9526ab647f874af54c9678434845",
+      "canonicalPcmSha256": "c743efad133e7304bee86c062d09b5df20e5f62b72f27a586e7ad89a8d509a9f",
+      "frames": 517165,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 1.3053241968154907,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "66492e79-fea0-4ec6-bde4-bd4d890e3657",
+        "sourceId": "khoomei",
+        "fileSha256": "c20de66da69323679f0cc9a5498e3277a80e9526ab647f874af54c9678434845",
+        "canonicalPcmSha256": "c743efad133e7304bee86c062d09b5df20e5f62b72f27a586e7ad89a8d509a9f",
+        "frames": 517165,
+        "approvedSelection": {
+          "startSeconds": 0,
+          "endSeconds": 11.727087480270626,
+          "browserDurationSeconds": 12.536848,
+          "manifestDurationSeconds": 12.564898,
+          "createdAt": "2026-10-26T09:27:27.847Z",
+          "updatedAt": "2026-10-26T09:27:27.847Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 0,
+          "endFrame": 517165,
+          "startSeconds": 0.0,
+          "endSeconds": 11.727097505668935,
+          "startAdjustmentSeconds": 0.0,
+          "endAdjustmentSeconds": 1.002539830885496e-05,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Original mono channel retained.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    },
+    {
+      "id": "khoomei-02",
+      "title": "Khöömei 02",
+      "sourceId": "khoomei",
+      "assetPath": "voices/khoomei-02.wav",
+      "fileSha256": "4cc930926373c82e64af4c0983571bf8608ee39aef75c81b48db4b9513427e8e",
+      "canonicalPcmSha256": "b1c36cba53332b0992ece80ce2cdfcae909b924fa106fe0d6bf403839e31d852",
+      "frames": 230838,
+      "textContent": "UNKNOWN",
+      "mode": "TEXTURE",
+      "referenceMidi": null,
+      "conditioning": {
+        "gain": 1.3053241968154907,
+        "fadeInFrames": 220,
+        "fadeOutFrames": 220,
+        "policy": "Separate playback variant only. One constant gain chosen as min(0.16/rawRMS,0.8/rawSamplePeak), then explicit half-cosine edge envelopes; no pitch/timing processing. Yaman04 has a declared100ms release because the approved raw crop ends while active; remaining edges are5ms. Raw WAV bytes are retained unchanged."
+      },
+      "provenance": {
+        "selectionId": "83dff24e-ba9d-4e29-b13a-74167301ac3b",
+        "sourceId": "khoomei",
+        "fileSha256": "4cc930926373c82e64af4c0983571bf8608ee39aef75c81b48db4b9513427e8e",
+        "canonicalPcmSha256": "b1c36cba53332b0992ece80ce2cdfcae909b924fa106fe0d6bf403839e31d852",
+        "frames": 230838,
+        "approvedSelection": {
+          "startSeconds": 6.448961798999647,
+          "endSeconds": 11.6833725831024,
+          "browserDurationSeconds": 12.546873,
+          "manifestDurationSeconds": 12.564898,
+          "createdAt": "2026-10-26T09:31:33.312Z",
+          "updatedAt": "2026-10-26T09:31:33.312Z"
+        },
+        "nativeDecodedSelection": {
+          "startFrame": 284399,
+          "endFrame": 515237,
+          "startSeconds": 6.448956916099773,
+          "endSeconds": 11.683378684807256,
+          "startAdjustmentSeconds": -4.882899873770441e-06,
+          "endAdjustmentSeconds": 6.101704855154821e-06,
+          "rounding": "Nearest 44.1kHz frame independently at each edge; no zero-crossing snap, new trim, or fade."
+        },
+        "modifications": [
+          "Decoded exact approved listening file; MP3 origins remain lossy-source derivatives.",
+          "Cropped to the user-approved interval with nearest-sample edge rounding.",
+          "Original mono channel retained.",
+          "Encoded mono 44.1kHz PCM24 with disclosed quantization. No resampling required."
+        ],
+        "processing": {
+          "normalization": false,
+          "gainAdjustment": false,
+          "cleanup": false,
+          "fades": false,
+          "dcRemoval": false,
+          "denoise": false,
+          "pitchShift": false,
+          "timeStretch": false,
+          "repetition": false
+        },
+        "approvedSelectionManifestSha256": "cfad8187ff01a0c54b721a170b8e4c82ecc35fa7518b551e567128c7075d50b3"
+      }
+    }
+  ],
+  "presets": [
+    {
+      "id": "yaman-duo",
+      "title": "YAMAN TWO PARTS",
+      "description": "2 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "yaman-01"
+      ],
+      "parts": 2,
+      "profile": "UNISON",
+      "seconds": 14,
+      "seed": 15720,
+      "macros": {
+        "CROWD": 0.1428571492433548,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "kulning-duo",
+      "title": "KULNING TWO PARTS",
+      "description": "2 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "kulning-01"
+      ],
+      "parts": 2,
+      "profile": "UNISON",
+      "seconds": 10,
+      "seed": 15821,
+      "macros": {
+        "CROWD": 0.1428571492433548,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "khoomei-duo",
+      "title": "KHÖÖMEI TWO PARTS",
+      "description": "2 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "khoomei-02"
+      ],
+      "parts": 2,
+      "profile": "UNISON",
+      "seconds": 8,
+      "seed": 15922,
+      "macros": {
+        "CROWD": 0.1428571492433548,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "yaman-four",
+      "title": "YAMAN FOUR PARTS",
+      "description": "4 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "yaman-03"
+      ],
+      "parts": 4,
+      "profile": "UNISON",
+      "seconds": 15,
+      "seed": 16023,
+      "macros": {
+        "CROWD": 0.4285714328289032,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "kulning-four",
+      "title": "KULNING FOUR PARTS",
+      "description": "4 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "kulning-03"
+      ],
+      "parts": 4,
+      "profile": "UNISON",
+      "seconds": 8,
+      "seed": 16124,
+      "macros": {
+        "CROWD": 0.4285714328289032,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "khoomei-four",
+      "title": "KHÖÖMEI FOUR PARTS",
+      "description": "4 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "khoomei-01"
+      ],
+      "parts": 4,
+      "profile": "UNISON",
+      "seconds": 14,
+      "seed": 16225,
+      "macros": {
+        "CROWD": 0.4285714328289032,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0,
+        "SPACE": 0.18
+      }
+    },
+    {
+      "id": "kulning-response",
+      "title": "KULNING ANSWER",
+      "description": "2 processed parts from the approved recorded passage(s), using native TEXTURE chronological playback. Small duration changes are varispeed; these are layered recordings, not newly generated singers. Complete selected regions and a finite room tail.",
+      "voiceIds": [
+        "kulning-02",
+        "kulning-03"
+      ],
+      "parts": 2,
+      "profile": "RESPONSE",
+      "seconds": 14,
+      "seed": 16326,
+      "macros": {
+        "CROWD": 0.1428571492433548,
+        "REGISTER": 0,
+        "DIVERGENCE": 0.08,
+        "RESPONSE": 0.35,
+        "SPACE": 0.18
+      }
+    }
+  ]
+}

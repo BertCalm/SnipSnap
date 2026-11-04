@@ -68,6 +68,7 @@ import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
 import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
@@ -86,6 +87,7 @@ import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.KeysMidi
 import com.snipsnap.shell.KitMidi
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
@@ -263,7 +265,9 @@ fun KitScreen(
     val haptics = LocalHaptics.current
     val host = rememberPadHost(hosts, entry.dir)
     val player = host.engine
-    DisposableEffect(host) { onDispose { host.revertPerformance() } }
+    // Leaving puts the kit's volume back where it was made, so the beat
+    // that may keep playing through this engine is not left turned down.
+    DisposableEffect(host) { onDispose { host.revertPerformance(); player.setMasterGain(1f) } }
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
@@ -455,9 +459,10 @@ fun KitScreen(
         }
     }
 
-    // MIDI learn (the footer's LEARN): a key, pad or button on MIDI MAP or
-    // PANIC, through `:shell`'s KitMidi. Learned controls are consumed before
-    // MidiPads sees them, so a pad on PANIC no longer plays a pad too.
+    // MIDI learn (the footer's LEARN): a knob on the kit's volume, a key,
+    // pad or button on MIDI MAP or PANIC, through `:shell`'s KitMidi.
+    // Learned controls are consumed before MidiPads sees them, so a pad on
+    // PANIC no longer plays a pad too.
     val learnState = rememberMidiLearn(KitMidi.SCREEN, kinds = KitMidi::kinds) { KitMidi.prefer(it) }
     var showLearn by remember { mutableStateOf(false) }
     // The panel shows only while a keyboard is plugged in; when the last one
@@ -465,12 +470,17 @@ fun KitScreen(
     // keyboard sends on connecting cannot be learned unasked.
     val learnShown = showLearn && midiDevices.isNotEmpty()
     LaunchedEffect(learnShown) { learnState.showing = learnShown }
+    // A knob learned to VOL: the whole kit, on KEYS' volume law. Not
+    // saved: each visit starts with the kit as it was made.
+    var volume by remember(host) { mutableStateOf(1f) }
+    LaunchedEffect(host, volume) { player.setMasterGain(KeysMidi.gain(volume)) }
 
     val onMidi by rememberUpdatedState<(MidiWire.Event, String?) -> Unit>({ event, device ->
         learnState.heard(event)
-        val result = learnState.learn.handle(event, device) { null }
-        learnState.learned(result.learned)
+        val result = learnState.learn.handle(event, device) { if (it == KitMidi.VOLUME) volume else null }
+        learnState.learned(result.learned, KitMidi::settle)
         val change = KitMidi.changes(result.actions)
+        change.volume?.let { volume = it }
         if (change.panic) panic()
         repeat(change.mapSteps) { stepMidiMap() }
         if (!result.consumed) {
@@ -1662,7 +1672,7 @@ private fun PadCell(
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
                     held = true
-                    currentOnTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
+                    currentOnTap(slot, PadFeelStore.shape(PadHit.velocityAt(down.position.y, size.height.toFloat()), down.pressure))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))

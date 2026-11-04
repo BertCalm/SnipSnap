@@ -177,6 +177,20 @@ class InstrumentStoreTest {
     }
 
     @Test
+    fun `a standalone false trigger overrides a stale NoteOn XPM`() {
+        val data = File(temp, "Standalone_[TrackData]").apply { mkdirs() }
+        val program = KeygroupProgram("Standalone",
+            listOf(Keygroup(0, 127, 60, listOf(VelocityLayer("note", 100, 0, 127)))))
+        File(data, "Standalone.xpm").writeText("<TriggerMode>2</TriggerMode>")
+        InstrumentStore.write(temp, program.name, program, data.name)
+
+        val sidecar = InstrumentStore.sidecar(temp, program.name)
+        assertEquals(false, Json.parse(sidecar.readText()).obj().getValue("explicitNoteOn").bool())
+        assertEquals(false, InstrumentStore.read(sidecar).explicitNoteOn,
+            "a standalone sidecar write must not inherit the stale XPM's trigger")
+    }
+
+    @Test
     fun `an instrument becomes the program that wrote it`() {
         val root = File(temp, "Round").apply { mkdirs() }
         val program = KeygroupProgram(

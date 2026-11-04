@@ -110,9 +110,9 @@ class SynthScreenTest : ComposeScreenTest() {
         settings["preset.OHM.STRING"] = "Gather"
         show()
         button("OHM GATHER").assertIsSelected()
-        assertEquals((57 - 48) / 24f, progress("NOTE"), .0001f)
+        assertEquals((57 - 48) / 24f, progress("ROOT"), .0001f)
 
-        adjust("NOTE", (64 - 48) / 24f)
+        adjust("ROOT", (64 - 48) / 24f)
         adjust("VELOCITY", .35f)
         adjust("COMMUNE", .73f)
         button("OHM STEADY").performSemanticsAction(SemanticsActions.OnClick) { it() }
@@ -129,7 +129,7 @@ class SynthScreenTest : ComposeScreenTest() {
             compose.onAllNodesWithTag("ohm-synth-generation-$generation").fetchSemanticsNodes().size == 1
         }
         button("OHM STEADY").assertIsSelected()
-        assertEquals((64 - 48) / 24f, progress("NOTE"), .0001f)
+        assertEquals((64 - 48) / 24f, progress("ROOT"), .0001f)
         assertEquals(.35f, progress("VELOCITY"), .0001f)
         assertEquals(.73f, progress("COMMUNE"), .0001f)
         compose.runOnIdle {

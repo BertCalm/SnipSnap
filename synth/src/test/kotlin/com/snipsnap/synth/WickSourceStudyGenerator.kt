@@ -13,8 +13,9 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * A source-selection audition, not a replacement preset bank. Each body runs through
- * RATTLE's unchanged gate network. Source recipes keep the diagnostic choice explicit.
+ * The accepted RATTLE bodies beside their preserved earlier source. Every body runs
+ * through the unchanged gate network. Accepted notes export ordinary saved patches;
+ * earlier-source and phrase recipes retain explicit reconstruction evidence.
  */
 object WickSourceStudyGenerator {
     private const val REFERENCE_REVISION = "5cd0741219089f71e826a7761df8e576a1dbf81f"
@@ -22,16 +23,16 @@ object WickSourceStudyGenerator {
     private const val ASSEMBLY_GAIN = .25f
     private const val BPM = 100
     private val labels = mapOf(
-        Wick.RattleSource.CURRENT to "Current body",
+        Wick.RattleSource.CURRENT to "Previous body",
         Wick.RattleSource.WARM_WIRE to "Warm wire",
         Wick.RattleSource.HOLLOW_REED to "Hollow reed",
         Wick.RattleSource.RUBBED_GLASS to "Rubbed glass",
     )
     private val descriptions = mapOf(
-        Wick.RattleSource.CURRENT to "The connected RATTLE reference, with its folded FM source.",
-        Wick.RattleSource.WARM_WIRE to "A rounded harmonic body, shaped toward a soft wire or string tone.",
-        Wick.RattleSource.HOLLOW_REED to "A hollow odd-harmonic body, shaped toward a soft reed tone.",
-        Wick.RattleSource.RUBBED_GLASS to "A pitched body with quiet half-order color, shaped toward rubbed glass.",
+        Wick.RattleSource.CURRENT to "The preserved earlier connected RATTLE body, with its folded FM source.",
+        Wick.RattleSource.WARM_WIRE to "The accepted default: a rounded harmonic body, shaped toward a soft wire or string tone.",
+        Wick.RattleSource.HOLLOW_REED to "An accepted saved variant: a hollow odd-harmonic body, shaped toward a soft reed tone.",
+        Wick.RattleSource.RUBBED_GLASS to "An accepted saved variant: a pitched body with quiet half-order color, shaped toward rubbed glass.",
     )
     private data class Note(val beat: Double, val midi: Int, val velocity: Float)
     private val score = listOf(
@@ -106,6 +107,8 @@ object WickSourceStudyGenerator {
             val events = notes.mapIndexed { index, (note, at, rendered) -> linkedMapOf<String, Any?>(
                 "index" to index, "beat" to note.beat, "onsetFrame" to at, "midi" to note.midi,
                 "velocity" to note.velocity, "sourceFrames" to rendered.probe.raw.size,
+                "patch" to WickPatch(labels.getValue(source).take(14), WickVoice.RATTLE, macros(),
+                    note.midi, note.velocity, source).toJsonValue(),
                 "options" to options(source), "macros" to macros(), "gateEventsEqualCurrent" to true,
                 "sourceRawFile" to savePhraseSource(root, source, note, rendered.probe),
                 "sourceRawExportGain" to RAW_GAIN,
@@ -115,7 +118,7 @@ object WickSourceStudyGenerator {
                 "source" to source.name, "sampleRate" to Dsp.RATE, "bpm" to BPM, "bars" to 2,
                 "scoreFrames" to scoreFrames, "outputFrames" to frames, "assemblyGain" to ASSEMBLY_GAIN,
                 "events" to events,
-                "assembly" to "Call Wick.inspect for each event with the saved macros, MIDI, velocity and diagnostic options. Sum probe.raw at onsetFrame at fixed gain 0.25, retaining complete note tails. Apply AuditionLevel only to the completed phrase. No per-note normalization or extra velocity multiplication.",
+                "assembly" to "Decode each event's ordinary patch, then call Wick.inspect with its voice, macros, MIDI, velocity and saved rattleSource; the explicit options preserve the same source-study provenance. Sum probe.raw at onsetFrame at fixed gain 0.25, retaining complete note tails. Apply AuditionLevel only to the completed phrase. No per-note normalization or extra velocity multiplication.",
                 "state" to "Each scored note starts a new gate network; its FEED and cascade remain active inside that note. This finite phrase does not share reserve state between scored notes and does not claim a seamless score loop.",
             )
             val measured = linkedMapOf<String, Any?>(
@@ -130,7 +133,7 @@ object WickSourceStudyGenerator {
                 descriptions.getValue(source) + " The same eight notes at 100 BPM, with full finite tails and one common assembly gain.", recipe)
         }
         val groups = listOf(
-            Triple("source-register", "Four bodies · same movement", "Compare Current body, Warm wire, Hollow reed and Rubbed glass at C4, then C3 and C5. Controls, velocities and gate event schedules are held fixed. The three new bodies are source studies, not accepted voice replacements."),
+            Triple("source-register", "Accepted bodies · same movement", "Warm wire is now the RATTLE default; Hollow reed and Rubbed glass are saved variants. Compare them with the preserved Previous body at C4, then C3 and C5. Controls, velocities and gate event schedules are held fixed. Accepted notes include ordinary patch downloads."),
             Triple("source-held", "Four bodies · held movement", "The same recovering gate movement with four different continuous bodies. Each HOLD clip is independently converged and supplies its genuine preceding-period context."),
             Triple("source-phrases", "Four bodies · same short phrase", "An identical eight-note, two-bar phrase at 100 BPM. Native assemblies preserve playing velocity; only complete phrases are loudness matched."),
         ).map { (id, title, description) -> linkedMapOf("id" to id, "title" to title, "description" to description,
@@ -138,9 +141,9 @@ object WickSourceStudyGenerator {
         check(entries.size == 20 && entries.all { it["status"] == "ready" })
         writeJson(File(root, "source-study.json"), linkedMapOf(
             "format" to "wick-source-study-v1", "generatedAt" to Instant.now().toString(),
-            "status" to "requires-owner-listening", "referenceRevision" to REFERENCE_REVISION,
+            "status" to "accepted-bodies", "referenceRevision" to REFERENCE_REVISION,
             "sampleRate" to Dsp.RATE, "channels" to 1, "oversampling" to 4,
-            "scope" to "Three diagnostic source alternatives plus the unchanged connected RATTLE reference. The other five voices and ordinary RATTLE patches are unchanged. These names describe synthetic tonal analogies, not physical instrument models.",
+            "scope" to "Warm wire is the accepted RATTLE default, with Hollow reed and Rubbed glass saved as ordinary patch variants. The previous connected body remains an exact reference. The other five voices are unchanged. Names describe synthetic tonal analogies, not physical instrument models.",
             "audioNote" to "Matched PCM16 previews use AuditionLevel on the complete clip. Native and common-gain raw PCM24 are retained locally. Held contexts contain an independently synthesized preceding period and current period at the matched export gain.",
             "clipCount" to entries.size, "renderSeconds" to (System.nanoTime() - started) / 1e9,
             "groups" to groups, "entries" to entries,
@@ -211,10 +214,22 @@ object WickSourceStudyGenerator {
             metrics["seamContextFrames"] = pcm.size
             metrics["seamLoopStartFrame"] = start
         }
-        val recipeFile = "recipes/$id.json"
-        val patch = midi?.let { WickPatch(labels.getValue(source).take(14), WickVoice.RATTLE, macros(held), midi, velocity ?: 1f) }
-        writeJson(File(root, recipeFile), sequenceRecipe ?: linkedMapOf(
-            "format" to "wick-diagnostic-recipe-v1", "description" to "Call Wick.inspect with this patch and the explicit diagnostic source option. This is not a normal saved patch.",
+        val patch = midi?.let { WickPatch(labels.getValue(source).take(14), WickVoice.RATTLE,
+            macros(held), midi, velocity ?: 1f, source) }
+        val ordinaryPatch = source != Wick.RattleSource.CURRENT && patch != null
+        val patchFile = if (ordinaryPatch) "patches/$id.json" else null
+        val recipeFile = if (ordinaryPatch) null else "recipes/$id.json"
+        if (patchFile != null) {
+            val accepted = requireNotNull(patch)
+            File(root, patchFile).also { it.parentFile.mkdirs() }.writeText(accepted.toJsonText())
+            val restored = WickPatch.fromJsonText(File(root, patchFile).readText())
+            check(restored == accepted && restored.render().samples.contentEquals(samples)) {
+                "$id ordinary patch does not reproduce the accepted source-study audio"
+            }
+            metrics["normalPatchReplayExact"] = true
+        }
+        if (recipeFile != null) writeJson(File(root, recipeFile), sequenceRecipe ?: linkedMapOf(
+            "format" to "wick-diagnostic-recipe-v1", "description" to "The preserved earlier body. Call Wick.inspect with this patch and the explicit diagnostic source option.",
             "patch" to patch?.toJsonValue(), "options" to options(source), "referenceRevision" to REFERENCE_REVISION,
         ))
         val diagnostics = probe?.diagnostics?.let { d -> linkedMapOf<String, Any?>(
@@ -237,7 +252,8 @@ object WickSourceStudyGenerator {
             "groupId" to groupId, "group" to group, "midi" to midi, "velocity" to velocity,
             "macros" to if (kind == "pattern") emptyMap<String, Float>() else macros(held), "options" to options(source),
             "loop" to held, "file" to file, "nativeFile" to nativeFile, "rawFile" to rawFile,
-            "patchFile" to null, "recipeFile" to recipeFile,
+            "patchFile" to patchFile, "patch" to if (ordinaryPatch) patch?.toJsonValue() else null,
+            "recipeFile" to recipeFile,
             "sequenceRecipeFile" to if (kind == "pattern") recipeFile else null,
             "diagnosticsFile" to diagnosticsFile, "seamContextFile" to seamContextFile,
             "metrics" to metrics, "diagnostics" to diagnostics, "status" to "ready", "failures" to emptyList<String>(),

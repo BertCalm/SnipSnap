@@ -130,6 +130,8 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 **Gate:** JANGLE: a pedal-steel swell with no pick? With DRIVE after it, a bloom? Different from SWELL side by side? Hiss? First the free listen: the BLOOM board exists today.
 
+**Gate result (2026-11-02):** the owner listened to the real section on JANGLE, the choir and the snare, each beside SWELL, at rises of 240, 448 and 640 ms (levelled to one loudness). JANGLE: yes, a pedal-steel swell with no pick. Different from SWELL: yes, keep both. The quiet start: clean. A faded-in snare: useful on held sounds only. A tap: 448 ms, which sets `eased` to RISE 0.8 (a tap is AMT 0.7, so 0.8 x 0.7 = 0.56, 448 ms; AMT 100 is the 640 ms also heard). Built as the VOLUME section, `Volume.kt`; FALL was left out (nobody asked for it, and the rack's end-fade already shapes a pad's tail). Measured, peak kept relative to the dry pad: the snare 16 percent at every rise heard, the choir 100, 94 and 53 percent at 240, 448 and 640 ms, JANGLE through its amp 100, 97 and 73 percent. Nothing tries to rescue a drum: the lift is capped at 12 dB and the section is excused from the rack's peak-match test.
+
 **Verifiers:** buildable with fixes (0.85): slot is spike, volume, eq; cap the lift. New (0.85). Worth 4: both audiences at effort S; the chip word and the drum case hold it off 5.
 
 ### 5. CHOKE (section, saved key `hush`), worth 4

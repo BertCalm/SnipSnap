@@ -103,6 +103,8 @@ import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.BoardRecipe
+import com.snipsnap.synth.ObliterateBoard
 import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.synth.Pedals
 import com.snipsnap.synth.AquariumEditor
@@ -120,6 +122,7 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Spread
+import com.snipsnap.shell.KitMaker
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
@@ -255,6 +258,13 @@ fun PadSheetScreen(
     onOpenBox: (String?) -> Unit = {},
     /** Told how many STRIKE FX layers an AUDITION rendered, before it plays them: a test's proof the button ran. */
     onStrikeHeard: (Int) -> Unit = {},
+    /**
+     * KIT FROM ANYTHING's door: the base name for the new kit, the pad's own audio, the key and
+     * the genre. The app writes the kit on its own busy line and shows the result sheet over
+     * everything; nothing is written here, which is why the six on-device suites that draw this
+     * sheet without an app around it need not pass one.
+     */
+    onKitFrom: (String, Snip, com.snipsnap.audio.KeySpec, com.snipsnap.synth.KitFromAnything.Genre) -> Unit = { _, _, _, _ -> },
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -333,7 +343,10 @@ fun PadSheetScreen(
         mutableStateOf(boardApplied?.type ?: BoardType.WIDE)
     }
     var pendingBoardAmount by remember(entry.dir, slot, pad.sampleFile, boardApplied?.amount, selectedBoardType) {
-        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.DEFAULT_AMOUNT)
+        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.defaultAmount(selectedBoardType))
+    }
+    var pendingObliterate by remember(entry.dir, slot, pad.sampleFile, boardApplied?.obliterate, selectedBoardType) {
+        mutableStateOf(boardApplied?.obliterate ?: ObliterateBoard.Settings())
     }
     var boardUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var boardAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
@@ -403,9 +416,10 @@ fun PadSheetScreen(
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     // The pad's newest bin entry, the one its undo restores (`refreshPadAudio`).
     // `binDaysLeft` is non-null exactly when the bin holds one, which is all the
-    // six "is it in the bin?" checks below read. `binKept`: a pad still needs that
-    // entry, so no sweep takes it and the provenance line says so instead of a
-    // count; `binDaysLeft` is then 0 and never drawn.
+    // eight "is it in the bin?" checks below read (the UNDO doors' handlers ask
+    // it too). `binKept`: a pad still needs that entry, so no sweep takes it
+    // and the provenance line says so instead of a count; `binDaysLeft` is
+    // then 0 and never drawn.
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
     var binKept by remember(model) { mutableStateOf(false) }
 
@@ -734,7 +748,8 @@ fun PadSheetScreen(
      * Bug fix (tab-switch data loss): launched into [appScope], not this
      * composable's own `scope` — same fix, same reason, as [applySmear]'s
      * own KDoc: this is a real audio-rewriting op (GHOSTS/EJECT/UNDO/
-     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/PASTE), so a cancelled `scope`
+     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/UNDO SPLICE/DE-SAMPLE's UNDO/PASTE),
+     * so a cancelled `scope`
      * could abandon the write before it starts, or let it land on disk
      * while losing `onKitUpdated`/the toast — this function's own opening
      * line. [onSuccess] is a generic callback most callers only use to
@@ -1388,6 +1403,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToHear = if (original) 0f else pendingBoardAmount
         val typeToHear = selectedBoardType
+        val recipeToHear = BoardRecipe(typeToHear, amountToHear, pendingObliterate.takeIf { typeToHear == BoardType.OBLITERATE })
         applyingSegment = null
         busy = true
         boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${typeToHear.name}"
@@ -1404,7 +1420,7 @@ fun PadSheetScreen(
                             current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
                             "This pad changed. Open it again before hearing ${typeToHear.name}"
                         }
-                        BoardSheet.preview(fresh, targetSlot, amountToHear, typeToHear)
+                        BoardSheet.preview(fresh, targetSlot, recipeToHear)
                     }
                 }
                 // The DSP may finish after pad navigation, a model reload or
@@ -1433,6 +1449,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToKeep = pendingBoardAmount
         val typeToKeep = selectedBoardType
+        val recipeToKeep = BoardRecipe(typeToKeep, amountToKeep, pendingObliterate.takeIf { typeToKeep == BoardType.OBLITERATE })
         val activeName = BoardSheet.read(p.recipe)?.type?.name ?: typeToKeep.name
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         applyingSegment = null
@@ -1453,7 +1470,7 @@ fun PadSheetScreen(
                         current.recipe == p.recipe && current.velocityLayers == p.velocityLayers
                     ) {
                         when (action) {
-                            "KEEP" -> BoardSheet.apply(f, targetSlot, amountToKeep, typeToKeep)
+                            "KEEP" -> BoardSheet.apply(f, targetSlot, recipeToKeep)
                             "REMOVE" -> BoardSheet.remove(f, targetSlot)
                             "UNDO" -> BoardSheet.undo(f, targetSlot)
                             else -> error("Unknown board action")
@@ -2086,6 +2103,63 @@ fun PadSheetScreen(
             return
         }
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+    }
+
+    /**
+     * UNDO SPLICE, MUTATE's UNDO for TAPE SPLICE: the take the splice binned
+     * comes back and the splice's recipe comes off
+     * ([KitBuilderModel.unsplicePad]). With nothing to undo (no TAPE SPLICE on
+     * the live pad, a print over it, no earlier take in the bin, or soft hits
+     * on) the button is dimmed, not disabled, and a tap says which
+     * ([PadSheet.spliceUndoRefusal]), asked of the live pad, never the one
+     * under a print.
+     */
+    fun onUnsplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.spliceUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNSPLICED) }) { mm -> mm.unsplicePad(slot) }
+    }
+
+    /**
+     * SPLICE ▸: a printed pad is refused on the tap, before TAPE SPLICE
+     * opens, the way SPREAD ▸ refuses one before its panel (2026-11-02).
+     * A splice writes its own recipe where the print's sits, so REMOVE could
+     * not bring the print's source back. `KitBuilderModel.splicePad` refuses
+     * it too, but only at COMMIT, after the takes are picked and the needle set.
+     */
+    fun openSplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe)))
+            return
+        }
+        onSplice(slot)
+    }
+
+    /**
+     * DE-SAMPLE's UNDO, in the MAKE box's DE-SAMPLE row: the take the
+     * de-sample binned comes back, and the patch and the `desampled` stamp
+     * come off ([KitBuilderModel.undesamplePad]). Dimmed, not disabled, when
+     * the de-sample is not what sits on top of the live pad (pedals riding it
+     * - NONE comes first - a later replacement, a print), when the bin holds
+     * no earlier take, or with soft hits on; a tap says which
+     * ([PadSheet.desampleUndoRefusal]).
+     */
+    fun onUndesample() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.desampleUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
@@ -2862,6 +2936,19 @@ fun PadSheetScreen(
     }
 
     /**
+     * MAKE KIT: the pad's own audio, the card's key and genre, handed to the app. The two
+     * refusals a thumb can cause are told here, before any work; the app owns the busy line
+     * and says the rest.
+     */
+    fun onMakeKit(key: com.snipsnap.audio.KeySpec, genre: com.snipsnap.synth.KitFromAnything.Genre) {
+        if (busy) return
+        val source = snip ?: return
+        val p = model?.kit?.pad(slot) ?: return
+        KitMaker.refusal(source.durationSeconds)?.let { onToast(it); return }
+        onKitFrom(KitMaker.kitName(p.displayName), source, key, genre)
+    }
+
+    /**
      * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
      * patch riding it as a recipe. A far match is named, not taken.
      *
@@ -2881,6 +2968,12 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        // A print first, as SOFT HITS and SPREAD ask it (2026-11-02): the patch would
+        // take the print's place in the recipe, and REMOVE could not bring its source back.
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeDesample(PrintedPads.label(p.recipe)))
+            return
+        }
         if (p.velocityLayers.isNotEmpty()) {
             onToast(Copy.MUTATE_NEEDS_ONE)
             return
@@ -3442,6 +3535,8 @@ fun PadSheetScreen(
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
+                obliterate = pendingObliterate,
+                onObliterateChange = { update -> pendingObliterate = update(pendingObliterate) },
                 applied = boardApplied,
                 canUndo = boardUndoAvailable,
                 chainPad = pad.chain != null,
@@ -3838,9 +3933,25 @@ fun PadSheetScreen(
             )
         }
 
+        KitFromCard(scheme, entry.kit.key, busy, working = false, onMake = ::onMakeKit)
+
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            // The header row MUTATE's and OUTSIDE's cards draw, with DE-SAMPLE's own
+            // UNDO. Dimmed, not disabled, when it cannot act: a tap says why
+            // (onUndesample). Named in full for TalkBack: MAKE holds five doors, so a
+            // bare UNDO would not say whose it is.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                ActionButton(
+                    "UNDO",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null,
+                    accessibilityLabel = "UNDO DE-SAMPLE",
+                    onClick = ::onUndesample,
+                )
+            }
             val away = pad.source["desampled"]
             TapeText(
                 if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
@@ -3929,14 +4040,32 @@ fun PadSheetScreen(
             // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
             // pad's file has at least one recoverable prior take," the
             // same signal `refreshPadAudio` computes for the undo buttons.
-            ActionButton(
-                "SPLICE ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = binDaysLeft == null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onSplice(slot) },
-            )
+            //
+            // UNDO SPLICE shares the row, half each (a weight inside a Row,
+            // not the Column trap GRAIN ▸'s comment describes). Always drawn
+            // and dimmed when it cannot act, so the sheet does not rearrange
+            // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
+            // nothing. Its own label, not a bare UNDO: this foot is always
+            // composed, so a second "UNDO" would sit beside the open box's.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
+                ActionButton(
+                    "SPLICE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = binDaysLeft == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::openSplice,
+                )
+                ActionButton(
+                    "UNDO SPLICE",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onUnsplice,
+                )
+            }
             // Same history, same dimming rule as SPLICE ▸ - plus dimmed
             // when the pad already has layers, since STACK wants a
             // single-sample pad to build on. Still tappable: the screen
@@ -4379,6 +4508,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX ROOM",
         )
         StepperSlider(
             label = "SLAP",
@@ -4389,6 +4519,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
@@ -4448,6 +4579,10 @@ internal fun StepperSlider(
     onFractionChange: (Float) -> Unit,
     onFractionCommit: () -> Unit,
     labelWidth: Dp = 44.dp,
+    // What TalkBack says and what the tests look up. Defaults to the printed label; a
+    // section whose label repeats one already on the sheet qualifies it here, the way
+    // its buttons do, so a screen never carries two controls with the same spoken name.
+    accessibilityLabel: String = label,
 ) {
     // The gesture loop below runs once, keyed on Unit — rememberUpdatedState
     // is what keeps it calling this recomposition's callbacks instead of
@@ -4479,7 +4614,7 @@ internal fun StepperSlider(
                 // adjust gesture a real target, the "ideally adjustable"
                 // half of finding 4, not just its label+state floor.
                 .semantics {
-                    contentDescription = label
+                    contentDescription = accessibilityLabel
                     stateDescription = valueText
                     if (enabled) {
                         progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
@@ -4688,6 +4823,8 @@ private fun HitLabelCard(
 private fun BoardCard(
     type: BoardType,
     amount: Float,
+    obliterate: ObliterateBoard.Settings,
+    onObliterateChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
     applied: BoardSheet.Applied?,
     canUndo: Boolean,
     chainPad: Boolean,
@@ -4721,7 +4858,11 @@ private fun BoardCard(
             }
         }
         TapeText(
-            if (type == BoardType.WIDE) "WIDE · STEREO CHARACTER" else "RUSH · SWELL & MOTION",
+            when (type) {
+                BoardType.WIDE -> "WIDE · STEREO CHARACTER"
+                BoardType.RUSH -> "RUSH · SWELL & MOTION"
+                BoardType.OBLITERATE -> "OBLITERATE · HALO & DESTRUCTION"
+            },
             TapeType.pixel, scheme.ink.tape, maxLines = 2,
         )
         TapeText(
@@ -4731,6 +4872,7 @@ private fun BoardCard(
                 selectedIsActive -> "${type.name} kept at ${(applied!!.amount * 100).roundToInt()}%"
                 applied != null -> "${applied.type.name} is active. KEEP replaces it from the original."
                 type == BoardType.WIDE -> "Hear a wider sound before keeping it"
+                type == BoardType.OBLITERATE -> "Hear the octave halo, fuzz and chopped fragments before keeping them"
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,
@@ -4748,6 +4890,9 @@ private fun BoardCard(
             // This card is staged. KEEP is the only amount commit.
             onFractionCommit = {},
         )
+        if (type == BoardType.OBLITERATE) {
+            ObliterateBoardControls(obliterate, onObliterateChange, busy, color, scheme)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
                 "HEAR ORIGINAL", scheme, enabled = !busy, dimmed = chainPad,
@@ -4778,6 +4923,55 @@ private fun BoardCard(
             )
         }
     }
+}
+
+@Composable
+private fun ObliterateBoardControls(
+    settings: ObliterateBoard.Settings,
+    onChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
+    busy: Boolean,
+    color: Color,
+    scheme: Scheme,
+) {
+    var clockOpen by remember { mutableStateOf(false) }
+    StepperSlider(
+        label = "SHIMMER", labelWidth = 76.dp,
+        fraction = (settings.shimmerMix * 2).toFloat(),
+        valueText = "${(settings.shimmerMix * 100).roundToInt()}%",
+        fillColor = color, scheme = scheme, enabled = !busy,
+        onFractionChange = { fraction -> onChange { current -> current.copy(shimmerMix = (fraction * 50).roundToInt() / 100.0) } },
+        onFractionCommit = {},
+    )
+    TapeText("${settings.bpm.roundToInt()} BPM · 1/${settings.division} · ${if (settings.pitched) "OCTAVE" else "ROOM"}",
+        TapeType.pixelSmall, scheme.ink2.tape)
+    ActionButton("CLOCK & PATTERN", scheme, enabled = !busy, lit = clockOpen,
+        onClick = { clockOpen = !clockOpen })
+    if (clockOpen) {
+        StepperSlider(label = "BPM", fraction = ((settings.bpm - 40) / 200).toFloat(),
+            valueText = settings.bpm.roundToInt().toString(), fillColor = color, scheme = scheme,
+            enabled = !busy, onFractionChange = { fraction -> onChange { current -> current.copy(bpm = (40 + fraction * 200).roundToInt().toDouble()) } },
+            onFractionCommit = {})
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (division in listOf(4, 8, 16, 32)) {
+                ActionButton("1/$division", scheme, enabled = !busy, lit = settings.division == division,
+                    accessibilityLabel = "OBLITERATE division 1/$division", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(division = division) } })
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (pitched in listOf(true, false)) {
+                val label = if (pitched) "OCTAVE" else "ROOM"
+                ActionButton(label, scheme, enabled = !busy, lit = settings.pitched == pitched,
+                    accessibilityLabel = "OBLITERATE $label", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(pitched = pitched) } })
+            }
+        }
+        ActionButton("NEW PATTERN", scheme, enabled = !busy,
+            onClick = { onChange { current -> current.copy(seed = (current.seed + 1) and 0xffff_ffffL) } })
+        TapeText("Pattern ${settings.seed}. Changes stay staged until KEEP.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+    }
+    TapeText("AMT zero is the original. Below 35%, the whole effect blends in. Inputs up to 9 seconds.",
+        TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
 }
 
 @Composable

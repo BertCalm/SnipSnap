@@ -7,6 +7,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ConfluencePersonalFiles
+import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
@@ -70,10 +71,12 @@ object Breed {
         // voice whose rendered audio is crossed through B's effects rack.
         // Validate that immutable source closure before publishing the child.
         ConfluencePersonalFiles.requireImportable(a, aDir)
+        ConfluenceBankFiles.requireImportable(a, aDir)
 
         val rng = Random(seed.toLong())
         val model = KitBuilderModel.create(name, destDir)
         ConfluencePersonalFiles.copyReferenced(a, aDir, destDir)
+        ConfluenceBankFiles.copyReferenced(a, aDir, destDir)
         model.setKey(a.key)
         model.setTempo(a.tempoBpm)
         val crossed = mutableListOf<Int>()

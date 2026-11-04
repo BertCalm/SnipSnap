@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 enum class FerryVoice { PASSAGE }
 
@@ -14,11 +15,12 @@ enum class FerryVoice { PASSAGE }
  * silent. HANDOFF changes reciprocal links, not independently excited layers.
  * Model 2 adds MATCH: B's upper modes move up by at most 6 cents. The
  * shared fundamental is retained. At MATCH=1
- * the model-1 sound is unchanged, including seeded excitation. SPAN/LOSS/BODY
- * and seamless HOLD remain later rounds. Finite gestures retain TONAL metadata.
+ * the model-1 sound is unchanged, including seeded excitation. SPAN/BODY
+ * remain later rounds. Model 3 adds LOSS to the physical damping, with the
+ * approved four-second sound at its neutral setting. HOLD remains unavailable.
  */
 object Ferry {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val MAX_MISTUNE_CENTS = 6.0
     const val DEFAULT_MIDI = 48
     const val MIN_MIDI = 36
@@ -27,7 +29,7 @@ object Ferry {
     const val DURATION_SECONDS = 4
     const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val CACHE_SIZE = 32
-    private data class Key(val midi: Int, val handoffBits: Int, val matchBits: Int)
+    private data class Key(val midi: Int, val handoffBits: Int, val matchBits: Int, val lossBits: Int)
     private val compiled = object : LinkedHashMap<Key, FerryNetwork.Compiled>(CACHE_SIZE, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, FerryNetwork.Compiled>?) = size > CACHE_SIZE
     }
@@ -37,6 +39,7 @@ object Ferry {
         require(supportsModel(model)) { "unsupported ferry model $model" }
         return listOf(MacroSpec("HANDOFF", .5f, neutral = .5f)) +
             (if (model >= 2) listOf(MacroSpec("MATCH", 1f, neutral = 1f)) else emptyList()) +
+            (if (model >= 3) listOf(MacroSpec("LOSS", .5f, neutral = .5f)) else emptyList()) +
             MacroSpec("HOLD", 0f)
     }
     fun supportsModel(model: Int) = model in 1..MODEL_VERSION
@@ -44,13 +47,21 @@ object Ferry {
         macrosFor(voice, model).associate { it.name to it.default }
     internal fun settled(macros: Map<String, Float>, model: Int = MODEL_VERSION): Map<String, Float> {
         require(model != 1 || "MATCH" !in macros) { "FERRY MATCH requires model 2" }
+        require(model >= 3 || "LOSS" !in macros) { "FERRY LOSS requires model 3" }
         return defaults(model = model).mapValues { (name, default) ->
-        (macros[name]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)
+            (macros[name]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)
         }.also { require(it.getValue("HOLD") == 0f) { "FERRY is finite; HOLD must be 0" } }
     }
 
     /** Shape range for listening: B's upper modes, with all fundamentals unchanged. */
     internal fun mistuneCents(match: Float) = MAX_MISTUNE_CENTS * (1.0 - match)
+
+    /** Positive amplitude losses: lower half reaches 0.5x, upper half reaches 4x. */
+    internal fun lossScale(loss: Float): Double =
+        if (loss <= .5f) 2.0.pow(2.0 * loss - 1.0) else 4.0.pow(2.0 * loss - 1.0)
+
+    /** A bounded prototype observation horizon, not a claim of physical silence. */
+    internal fun outputFrames(loss: Float) = (DURATION_SECONDS * Dsp.RATE / lossScale(loss)).roundToInt()
 
     /** .25/.5/1 preserve the approved slow/normal/fast rates .35/1/3.5. */
     internal fun pace(handoff: Float): Double = when {
@@ -65,10 +76,11 @@ object Ferry {
         return DrumClass.TONAL
     }
 
-    internal fun plan(midi: Int, handoff: Float, match: Float = 1f): FerryNetwork.Compiled {
-        val key = Key(midi, handoff.toRawBits(), match.toRawBits())
+    internal fun plan(midi: Int, handoff: Float, match: Float = 1f, loss: Float = .5f): FerryNetwork.Compiled {
+        val key = Key(midi, handoff.toRawBits(), match.toRawBits(), loss.toRawBits())
         synchronized(compiled) { compiled[key]?.let { return it } }
-        val result = FerryNetwork.Compiled(FerryNetwork.build(midi, pace(handoff), mistuneCents = mistuneCents(match)), INTERNAL_RATE)
+        val result = FerryNetwork.Compiled(FerryNetwork.build(midi, pace(handoff),
+            mistuneCents = mistuneCents(match), lossScale = lossScale(loss)), INTERNAL_RATE)
         synchronized(compiled) { return compiled.getOrPut(key) { result } }
     }
     internal fun clearCache() = synchronized(compiled) { compiled.clear() }
@@ -102,9 +114,11 @@ object Ferry {
         require(velocity.isFinite() && velocity in 0f..1f) { "FERRY velocity must be finite and in 0..1" }
         require(voice == FerryVoice.PASSAGE)
         val m = settled(macros, model)
-        if (velocity == 0f) return Snip(FloatArray(DURATION_SECONDS * Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
-        val raw = plan(midi, m.getValue("HANDOFF"), m["MATCH"] ?: 1f)
-            .render(initial(velocity, seed), DURATION_SECONDS * INTERNAL_RATE)
+        val loss = m["LOSS"] ?: .5f
+        val frames = outputFrames(loss)
+        if (velocity == 0f) return Snip(FloatArray(frames), channels = 1, sampleRate = Dsp.RATE)
+        val raw = plan(midi, m.getValue("HANDOFF"), m["MATCH"] ?: 1f, loss)
+            .render(initial(velocity, seed), frames * Dsp.OVERSAMPLE)
         return Snip(finish(raw), channels = 1, sampleRate = Dsp.RATE)
     }
 

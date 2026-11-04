@@ -16,6 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,6 +32,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
@@ -81,7 +86,7 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
             TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "OPEN A KIT FOR NEW PADS. MY VOICE CAN KEEP A PERSONAL SOURCE FIRST.",
                 TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
-        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS)) {
+        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS, Bench.CONFLUENCE_VOICES)) {
             MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
         }
         if (onMyVoice != null) MakeRow("MY VOICE ▸", "A SHORT VOWEL INTO A PERSONAL VOICE. KEPT ON THIS PHONE.", scheme, onMyVoice)
@@ -115,7 +120,9 @@ private const val MAKE_ROW_H = 72
  * MAKE ▸ INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left in the
  * shelf's `Instruments/`, each row opening KEYS. The rows were the
  * shelf's; only where the list is shown moved (plan §3.6) — the files
- * are still written beside the kits.
+ * are still written beside the kits. With [expansions], each row also
+ * carries EXPANSION ▸, which packs the instrument into an expansion beside
+ * its kits ([InstrumentExpansionFlow]).
  */
 @Composable
 fun InstrumentsBench(
@@ -123,9 +130,16 @@ fun InstrumentsBench(
     backLabel: String,
     onOpen: (KitShelf.InstrumentEntry) -> Unit,
     onBack: () -> Unit,
+    expansions: ExpansionStore? = null,
+    onToast: (String) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
+    var expanding by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
     BackHandler(onBack = onBack)
+    val target = expanding
+    if (target != null && expansions != null) {
+        InstrumentExpansionFlow(target, expansions, onToast) { expanding = null }
+    }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier
@@ -170,7 +184,7 @@ fun InstrumentsBench(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
-                    InstrumentRow(entry, onOpen)
+                    InstrumentRow(entry, onOpen, onExpansion = expansions?.let { { expanding = entry } })
                 }
             }
         }
@@ -180,25 +194,43 @@ fun InstrumentsBench(
 /** The empty list's one line: where an instrument comes from. */
 private const val NO_INSTRUMENTS = "NO INSTRUMENTS YET. SYNTH'S MAKE INSTRUMENT, OR A PAD SHEET'S, PUTS ONE HERE."
 
-/** One instrument: its name, zones and root, and KEYS ▸. Moved from the shelf unchanged. */
+/** One instrument: its name, zones and root, and KEYS ▸; EXPANSION ▸ beside it when [onExpansion] is given. */
 @Composable
-private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.InstrumentEntry) -> Unit) {
+private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.InstrumentEntry) -> Unit, onExpansion: (() -> Unit)? = null) {
     val scheme = LocalScheme.current
     val i = entry.instrument
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
-            .tapeClick(label = "OPEN ${i.name.uppercase()}") { onOpen(entry) }
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .raisedBevel(scheme),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(i.name, TapeType.markerBig, scheme.ink.tape)
-            val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
-            TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
+        Row(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .tapeClick(label = "OPEN ${i.name.uppercase()}") { onOpen(entry) }
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                TapeText(i.name, TapeType.markerBig, scheme.ink.tape)
+                val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
+                TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
+            }
+            TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
+        if (onExpansion != null) {
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .tapeClick(label = "ADD ${i.name.uppercase()} TO AN EXPANSION", onClick = onExpansion)
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(Copy.EXPANSION_DOOR, TapeType.pixelSmall, scheme.amber.tape)
+            }
+        }
     }
 }

@@ -522,6 +522,20 @@ class ObbligatoTest {
     }
 
     @Test
+    fun `HOLD at its top is a longer finite note with a release, not a loop`() {
+        // HOLD sets the held part to 2 + 3 HOLD seconds before a 0.75 s release; at 1 that is 5.75 s,
+        // ending in silence and filed TONAL. There is no loop at the top step, and none is claimed.
+        val top = Obbligato.render(Obbligato.defaults() + ("HOLD" to 1f))
+        assertEquals(5.75, top.durationSeconds.toDouble(), 2.0 / Dsp.RATE, "HOLD 1 is ${top.durationSeconds} s")
+        assertTrue(top.samples.all { it.isFinite() })
+        val tail = top.samples.copyOfRange(top.samples.size - Dsp.RATE / 50, top.samples.size)
+        val tailRms = sqrt(tail.sumOf { it.toDouble() * it } / tail.size)
+        val bodyRms = sqrt(top.samples.sumOf { it.toDouble() * it } / top.samples.size)
+        assertTrue(tailRms < bodyRms * .01, "HOLD 1 does not release: last 20 ms at ${tailRms / bodyRms} of the note")
+        assertEquals(com.snipsnap.audio.DrumClass.TONAL, Obbligato.drumClassFor())
+    }
+
+    @Test
     fun `muting either player changes the survivor only when reciprocal response is active`() {
         val controls = macros(3f / 7f, hold = 1f)
         val coupled = Obbligato.probe(controls, seed = 23)

@@ -134,7 +134,7 @@ object CausticCharactersAuditionGenerator {
             "voices" to families.map { linkedMapOf("voice" to it.voice, "title" to it.title, "path" to "caustic-${it.slug}.zip") },
         )
         val manifest = linkedMapOf<String, Any?>(
-            "schema" to 1, "title" to "CAUSTIC / Native voices", "model" to CausticInstrument.MODEL_VERSION,
+            "schema" to 1, "title" to "CAUSTIC / Native voices", "model" to 1,
             "description" to "Four permanent native voices. Compare their playing gestures, then move SOURCE, FOCUS, BODY and LENGTH.",
             "generatedAt" to Instant.now().toString(), "sourceRevision" to revision,
             "voices" to families.map { linkedMapOf("id" to it.voice, "slug" to it.slug, "title" to it.title,
@@ -150,7 +150,7 @@ object CausticCharactersAuditionGenerator {
         writeManifest(root, manifest)
         diagnostics(root, manifest)
         File(root, "README.txt").writeText("""
-            CAUSTIC / Four native voices, model ${CausticInstrument.MODEL_VERSION}
+            CAUSTIC / Four native voices, model 1
 
             These recordings come from ordinary Kotlin CausticPatch.render(), including
             its native house finish. Renderer-level WAVs receive no extra leveling.
@@ -188,8 +188,8 @@ object CausticCharactersAuditionGenerator {
 
     private fun cases(): List<Case> = families.flatMap { family ->
         val voice = CausticVoice.valueOf(family.voice)
-        val defaults = CausticInstrument.defaults(voice)
-        val base = CausticPatch(family.title, voice, defaults, midi = 60, velocity = .75f, model = CausticInstrument.MODEL_VERSION)
+        val defaults = CausticInstrument.defaults(voice, model = 1)
+        val base = CausticPatch(family.title, voice, defaults, midi = 60, velocity = .75f, model = 1)
         val id = family.slug
         val rootId = "$id-c4"
         val output = mutableListOf<Case>()

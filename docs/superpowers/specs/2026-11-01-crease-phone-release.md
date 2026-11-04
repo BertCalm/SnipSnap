@@ -146,14 +146,18 @@ activity is intentionally absent. An x86_64 emulator build additionally uses
 
 ## Disclosed limits and next decision
 
-The accepted sound and the refined cache need the owner's phone listening
-pass. Test short taps, long holds, repeated presses, ending choice, background
-and headphones. Record phone model, Android version and audio route before
-claiming device latency or output quality. No MPC release trigger was added.
+Josh subsequently confirmed **“Works in the app”** after the instructions for
+the separate SnipSnap Crease Study APK. Record this as owner-reported successful
+phone operation of the C4 study. The installed build, device model, Android
+version and audio route were not specified. Individual stress checks and a
+quantified latency or sound-quality verdict were not supplied. Host/emulator
+receipts above retain their original scope; no MPC release trigger was added.
 
-This one C4 cache nearly fills the PCM budget. Do not multiply it across a
-keyboard or velocity bank. A successful phone pass is the prerequisite for
-measuring a smaller representation and a bounded multi-key budget.
+The phone-functionality checkpoint is now owner-confirmed. The next recommended
+DSP experiment is reducing the cache's PCM memory while preserving the accepted
+voice and existing accuracy limits. This one C4 cache nearly fills 32 MiB; do
+not multiply it across notes or velocities. Prove a smaller representation and
+state a bounded multi-key budget before integration into the main keys player.
 
 ## Why it is built this way
 

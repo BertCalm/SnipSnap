@@ -69,7 +69,7 @@ object MurmurAuditionGenerator {
     )
 
     private val groups = linkedMapOf(
-        "first-listen" to ("${MurmurPresets.all().size}-preset bank" to "The expanded original dry bank: 8 BASS, 4 KEY, 4 PLUCK, 8 LEAD, 6 CHOIR and 6 METAL. The six dry voices are approved; the 24 added presets and the complete bank await listening review. Settings, roots and held behavior are shown on each card."),
+        "first-listen" to ("${MurmurPresets.original().size}-preset bank" to "The expanded original dry bank: 8 BASS, 4 KEY, 4 PLUCK, 8 LEAD, 6 CHOIR and 6 METAL. The six dry voices are approved; the 24 added presets and the complete bank await listening review. Settings, roots and held behavior are shown on each card."),
         "defaults" to ("Compare six voices" to "Owner-approved model 2 voices after the CHOIR air trim, at the same C4 root and velocity 1. Each retains its own defaults and full articulation. This reference remains available while reviewing the expanded preset bank."),
         "voice-before-after" to ("Before / after · full gestures" to "Each voice alternates model 1 (previously published) and model 2 (revised). Same C4, velocity 1 and default macro settings; each model keeps its full gesture. Model 1 is rendered again with its saved algorithm, with the original source revision linked below."),
         "held-before-after" to ("Before / after · settled sustain" to "The same six model pairs with HOLD 1. The original attack is absent: compare sustained source color and mouth shaping beyond note length or onset speed. Repeat the settled buffer and check each clip's measured duration."),
@@ -93,7 +93,7 @@ object MurmurAuditionGenerator {
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/murmur-audition")
         val compactCount = cases(false).size
         val fullCount = cases(true).size
-        val factoryPresets = MurmurPresets.all()
+        val factoryPresets = MurmurPresets.original()
         val cases = cases(full)
         check(cases.map { it.id }.distinct().size == cases.size) { "Duplicate audition IDs" }
         root.mkdirs()
@@ -265,7 +265,7 @@ object MurmurAuditionGenerator {
     }
 
     private fun cases(full: Boolean): List<Case> = buildList {
-        for (p in MurmurPresets.all()) add(Case("preset_${slug(p.name)}", "first-listen", p.name,
+        for (p in MurmurPresets.original()) add(Case("preset_${slug(p.name)}", "first-listen", p.name,
             "Original dry ${p.voice.name.lowercase()} preset at ${note(p.midi)}. Bank settings and names await listening review." +
                 if (Murmur.isLoop(p.macros.getValue("HOLD"))) " Settled sustain only; repeat to inspect the wrap." else "", p))
         for (voice in MurmurVoice.entries) add(case("default_${voice.name.lowercase()}", "defaults", voice,

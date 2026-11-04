@@ -33,7 +33,13 @@ class OrbitEngine(
     private val sink: AudioSink,
     val blockFrames: Int = DEFAULT_BLOCK_FRAMES,
     initialSolo: Int? = null,
+    private val processor: OutputProcessor? = null,
 ) {
+    /** One owner thread. Receives the final stereo sum, including silent tail blocks. */
+    fun interface OutputProcessor {
+        fun process(block: FloatArray, bpm: Float, restart: Boolean)
+    }
+
     init {
         // Before the buffer below is allocated, not after: a property
         // initializer runs ahead of an `init` block further down the file,
@@ -124,6 +130,9 @@ class OrbitEngine(
     private val block = FloatArray(blockFrames * 2)
     private val voices = ArrayList<Voice>()
     private val due = ArrayList<Scheduled>()
+    // Finite rendering stops source activity here, then feeds zero input
+    // through the same processor. Live playback has no source endpoint.
+    private var sourceEndFrame = Long.MAX_VALUE
 
     /**
      * Frames played since the start.
@@ -162,7 +171,8 @@ class OrbitEngine(
 
     private fun playOne() {
         pending.getAndSet(null)?.let { current.set(it) }
-        if (rewindRequested.getAndSet(false)) {
+        val rewound = rewindRequested.getAndSet(false)
+        if (rewound) {
             frame.set(0)
             voices.clear()
         }
@@ -170,6 +180,7 @@ class OrbitEngine(
         val (set, bank, solo) = current.get()
         val from = frame.get()
         val until = from + blockFrames
+        val sourceUntil = min(until, sourceEndFrame)
         block.fill(0f)
 
         // A block is a slice of wall-clock time and a section boundary does
@@ -182,8 +193,8 @@ class OrbitEngine(
         // A set with no arrangement takes this loop exactly once, with
         // `local == at` and `shift == 0` - the code it ran before.
         var at = from
-        while (at < until) {
-            val edge = min(until, OrbitClock.nextBoundary(set, at))
+        while (at < sourceUntil) {
+            val edge = min(sourceUntil, OrbitClock.nextBoundary(set, at))
             val local = OrbitClock.localFrame(set, at)
             // Back to the transport's own numbering, which is what a voice
             // offset inside this block is measured against.
@@ -222,6 +233,11 @@ class OrbitEngine(
             at = edge
         }
         mixVoices()
+        if (sourceUntil < until) {
+            block.fill(0f, ((sourceUntil - from).coerceAtLeast(0) * 2).toInt())
+            voices.clear()
+        }
+        processor?.process(block, set.bpm, rewound)
 
         sink.write(block)
         frame.set(until)
@@ -524,20 +540,24 @@ class OrbitEngine(
          * Play [frames] of [set] offline into a [Snip] — the bounce, the
          * preview, and the way a test listens without a device.
          */
-        fun render(set: OrbitSet, bank: OrbitBank, frames: Int, blockFrames: Int = DEFAULT_BLOCK_FRAMES): Snip {
+        fun render(set: OrbitSet, bank: OrbitBank, frames: Int, blockFrames: Int = DEFAULT_BLOCK_FRAMES,
+                   processor: OutputProcessor? = null, tailFrames: Int = 0): Snip {
             require(frames >= 0) { "frames must not be negative: $frames" }
-            require(frames <= MAX_RENDER_FRAMES) {
-                "frames past what a stereo buffer holds: $frames > $MAX_RENDER_FRAMES"
+            require(tailFrames >= 0) { "tailFrames must not be negative: $tailFrames" }
+            val total = frames.toLong() + tailFrames
+            require(total <= MAX_RENDER_FRAMES) {
+                "frames and tail past what a stereo buffer holds: $total > $MAX_RENDER_FRAMES"
             }
             // Both lengths answered for before either is allocated.
             requireBlockFrames(blockFrames)
-            val sink = CollectingSink(set.sampleRate, frames * 2)
-            val engine = OrbitEngine(set, bank, sink, blockFrames)
+            val sink = CollectingSink(set.sampleRate, total.toInt() * 2)
+            val engine = OrbitEngine(set, bank, sink, blockFrames, processor = processor)
+            engine.sourceEndFrame = frames.toLong()
             // Divided before it is added to, so no block size can carry the
             // sum past an `Int`: `(frames + blockFrames - 1)` overflows for
             // a large frame count and a large block, and a negative block
             // count renders nothing at all.
-            val blocks = frames / blockFrames + if (frames % blockFrames == 0) 0 else 1
+            val blocks = (total / blockFrames + if (total % blockFrames == 0L) 0 else 1).toInt()
             engine.runFor(blocks)
             return Snip(sink.samples, 2, set.sampleRate)
         }

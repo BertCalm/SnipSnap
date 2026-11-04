@@ -1,20 +1,30 @@
 package com.snipsnap.app
 
+import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.ArtCanvas
+import com.snipsnap.shell.ArtFill
+import com.snipsnap.shell.ArtFont
+import com.snipsnap.shell.ArtKnobs
+import com.snipsnap.shell.ArtPath
 import com.snipsnap.shell.KitArt
-import com.snipsnap.shell.Scheme
-import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.PadSound
+import com.snipsnap.shell.TileSound
+import com.snipsnap.shell.TextAnchor
 import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
  * The Android half of [KitArt.draw] — the browser-tile cover art
- * (WAVEFORM/GRID/SLICES/RINGS, `:shell`'s [ArtCanvas] contract) painted
+ * (every tile style, `:shell`'s [ArtCanvas] contract) painted
  * with `android.graphics` instead of `java.awt`/`javax.imageio`, neither
  * of which exists on Android at any API level. [KitArt.render]/
  * [KitArt.png] stay exactly as they were — AWT, used by `:cli` and the
@@ -32,25 +42,19 @@ object AndroidKitArt {
     /**
      * Renders [kit]'s cover art and returns PNG bytes — the same contract
      * [KitArt.png] has, so this drops straight into
-     * `ExportWizardModel.artRenderer: (Kit, File, KitArt.Style) -> ByteArray`.
+     * `ExportWizardModel.artRenderer: (Kit, File, ArtKnobs) -> ByteArray`.
+     * [assets] is where the bundled faces live on the phone; see [AndroidFonts].
      */
     fun png(
         kit: Kit,
         kitDir: File,
-        style: KitArt.Style,
-        scheme: Scheme = Schemes.DEFAULT,
-        seed: Int = 0,
+        knobs: ArtKnobs,
         size: Int = KitArt.DEFAULT_SIZE,
         label: String = kit.name,
+        assets: AssetManager,
     ): ByteArray {
-        // ARGB_8888: KitArt.draw's own first call is a full-canvas
-        // fillRect (the LCD background), so the bitmap starts fully
-        // opaque regardless of config - ARGB_8888 is just the config
-        // every other bitmap path in :app already uses.
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = bitmap(kit, kitDir, knobs, size, label, assets)
         try {
-            val canvas = Canvas(bitmap)
-            KitArt.draw(AndroidCanvas(canvas), kit, kitDir, style, scheme, seed, size, label)
             val out = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             return out.toByteArray()
@@ -60,18 +64,60 @@ object AndroidKitArt {
     }
 
     /**
+     * The tile as a [Bitmap], for the art picker's previews: what [png]
+     * encodes, without the round trip through PNG bytes. The caller owns
+     * (and recycles, or hands to Compose) the bitmap.
+     */
+    fun bitmap(
+        kit: Kit,
+        kitDir: File,
+        knobs: ArtKnobs,
+        size: Int = KitArt.DEFAULT_SIZE,
+        label: String = kit.name,
+        assets: AssetManager,
+    ): Bitmap = bitmap(kit, TileSound.pads(kit, kitDir), knobs, size, label, assets)
+
+    /** [bitmap] from [pads] already read, so the picker decodes a kit's WAVs once for all its previews. */
+    fun bitmap(
+        kit: Kit,
+        pads: List<PadSound>,
+        knobs: ArtKnobs,
+        size: Int = KitArt.DEFAULT_SIZE,
+        label: String = kit.name,
+        assets: AssetManager,
+    ): Bitmap {
+        // ARGB_8888: KitArt.draw's own first call is a full-canvas fillRect
+        // (the palette's ground), so the bitmap starts fully opaque.
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        KitArt.draw(AndroidCanvas(Canvas(bitmap), assets), kit, pads, knobs, size, label)
+        return bitmap
+    }
+
+    /**
      * [ArtCanvas] against a live [android.graphics.Canvas]. `colorRgb` is
      * packed `0xRRGGBB` with no alpha channel — Android's `Color` ints are
      * ARGB, so every fill/stroke ORs in `0xFF000000` to force full
      * opacity; without it every draw would be fully transparent (alpha 0)
-     * and the tile would come out blank.
+     * and the tile would come out blank. [assets] resolves [ArtFont]s
+     * through [AndroidFonts].
      */
-    internal class AndroidCanvas(private val canvas: Canvas) : ArtCanvas {
+    internal class AndroidCanvas(private val canvas: Canvas, private val assets: AssetManager) : ArtCanvas {
         private val fillPaint = Paint().apply { style = Paint.Style.FILL }
+        private val shapePaint = Paint().apply {
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+        private val textPaint = Paint().apply { isAntiAlias = true }
         private val strokePaint = Paint().apply {
             style = Paint.Style.STROKE
             isAntiAlias = true
             strokeCap = Paint.Cap.ROUND
+        }
+        private val pathStrokePaint = Paint().apply {
+            style = Paint.Style.STROKE
+            isAntiAlias = true
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
         }
 
         override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
@@ -90,6 +136,91 @@ object AndroidKitArt {
             // inputs, not pixel-identical to the AWT one - see this file's
             // class doc.
             canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), startDeg, sweepDeg, false, strokePaint)
+        }
+
+        override fun fillPolygon(xs: FloatArray, ys: FloatArray, colorRgb: Int) {
+            require(xs.size == ys.size && xs.size >= 3) { "a polygon needs matching xs/ys with at least three points" }
+            val path = Path()
+            path.moveTo(xs[0], ys[0])
+            for (i in 1 until xs.size) path.lineTo(xs[i], ys[i])
+            path.close()
+            shapePaint.color = (0xFF000000.toInt()) or colorRgb
+            canvas.drawPath(path, shapePaint)
+        }
+
+        override fun drawText(text: String, font: ArtFont, sizePx: Float, x: Float, baselineY: Float, anchor: TextAnchor, colorRgb: Int) {
+            textPaint.typeface = AndroidFonts.typeface(assets, font)
+            textPaint.textSize = sizePx
+            textPaint.textAlign = when (anchor) {
+                TextAnchor.START -> Paint.Align.LEFT
+                TextAnchor.MIDDLE -> Paint.Align.CENTER
+                TextAnchor.END -> Paint.Align.RIGHT
+            }
+            textPaint.color = (0xFF000000.toInt()) or colorRgb
+            canvas.drawText(text, x, baselineY, textPaint)
+        }
+
+        override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float {
+            textPaint.typeface = AndroidFonts.typeface(assets, font)
+            textPaint.textSize = sizePx
+            return textPaint.measureText(text)
+        }
+
+        override fun fillPath(path: ArtPath, fill: ArtFill) {
+            painted(shapePaint, fill) { canvas.drawPath(androidPath(path), it) }
+        }
+
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill) {
+            pathStrokePaint.strokeWidth = strokeWidth
+            painted(pathStrokePaint, fill) { canvas.drawPath(androidPath(path), it) }
+        }
+
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill) {
+            painted(shapePaint, fill) { canvas.drawCircle(cx, cy, r, it) }
+        }
+
+        /** Sets [paint]'s colour or shader and alpha for one draw, then clears the shader so the next solid fill is solid. */
+        private inline fun painted(paint: Paint, fill: ArtFill, draw: (Paint) -> Unit) {
+            when (fill) {
+                is ArtFill.Solid -> {
+                    paint.shader = null
+                    paint.color = (0xFF000000.toInt()) or fill.rgb
+                }
+                is ArtFill.Linear -> {
+                    paint.color = 0xFF000000.toInt()
+                    paint.shader = LinearGradient(
+                        fill.x0, fill.y0, fill.x1, fill.y1,
+                        (0xFF000000.toInt()) or fill.rgb0, (0xFF000000.toInt()) or fill.rgb1, Shader.TileMode.CLAMP,
+                    )
+                }
+                is ArtFill.Radial -> {
+                    paint.color = 0xFF000000.toInt()
+                    paint.shader = RadialGradient(
+                        fill.cx, fill.cy, fill.r.coerceAtLeast(0.001f),
+                        (0xFF000000.toInt()) or fill.inner, (0xFF000000.toInt()) or fill.outer, Shader.TileMode.CLAMP,
+                    )
+                }
+            }
+            paint.alpha = (fill.alpha.coerceIn(0f, 1f) * 255).toInt()
+            try {
+                draw(paint)
+            } finally {
+                paint.shader = null
+                paint.alpha = 255
+            }
+        }
+
+        private fun androidPath(path: ArtPath): Path {
+            val p = Path()
+            for (s in path.segments) {
+                when (s) {
+                    is ArtPath.Segment.Move -> p.moveTo(s.x, s.y)
+                    is ArtPath.Segment.Line -> p.lineTo(s.x, s.y)
+                    is ArtPath.Segment.Quad -> p.quadTo(s.cx, s.cy, s.x, s.y)
+                    ArtPath.Segment.Close -> p.close()
+                }
+            }
+            return p
         }
     }
 }

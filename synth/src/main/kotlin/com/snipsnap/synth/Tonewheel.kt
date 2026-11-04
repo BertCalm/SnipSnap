@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -107,6 +108,13 @@ object Tonewheel {
             MacroSpec("DIRT", if (voice == TonewheelVoice.FULL) 0.3f else 0.1f),
         ) + bars.mapIndexed { i, level -> MacroSpec("BAR${i + 1}", level) }
     }
+
+    /**
+     * Every TONEWHEEL pad files as TONAL: pitched notes through a filter, never judged
+     * from a render. The phone's picker and the starter kit both read this rule.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun drumClassFor(voice: TonewheelVoice, macros: Map<String, Float> = emptyMap()): DrumClass = DrumClass.TONAL
 
     fun defaults(voice: TonewheelVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }

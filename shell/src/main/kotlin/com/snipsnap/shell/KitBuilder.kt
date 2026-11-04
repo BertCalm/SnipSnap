@@ -16,7 +16,11 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import java.util.Locale
 
-/** [KitBuilderModel.nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+/**
+ * [KitBuilderModel.nextStem]'s bound, past the names THE BIN holds, which it adds on. A kit holds
+ * 128 pads, so this is ample headroom over the live pads; the bin's names are counted separately,
+ * because a slot replaced again and again leaves one there each time for as long as the bin keeps it.
+ */
 private const val MAX_STEM_ATTEMPTS = 999
 
 /**
@@ -643,13 +647,18 @@ class KitBuilderModel private constructor(
         // The imported audition's fingerprint describes the previous WAV.
         // Keep its provenance, but never carry that current-file claim onto
         // regenerated or treated audio; exporters fingerprint the new file.
+        // The `desampled` stamp says "this audio is a de-sample's render", so it
+        // goes with the render (the owner's call, 2026-11-01): a synth send, SNAP,
+        // a paste or any rewrite over a de-sample leaves a pad DE-SAMPLE's UNDO no
+        // longer owns ([PadSheet.isDesampled]). [desamplePad] stamps again
+        // straight after its own replacement.
         // An unlabelled audio replacement also cannot retain a printed inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
         return update(slot) {
             it.copy(
                 recipe = recipe ?: it.recipe?.takeUnless(PrintedPads::has),
-                source = it.source - "rawSha256",
+                source = it.source - "rawSha256" - "desampled",
             )
         }
     }
@@ -704,10 +713,14 @@ class KitBuilderModel private constructor(
      * from [tailFrames] onward — [com.snipsnap.audio.TapeSplice.join]'s own
      * seam-aware crossfade, baked in only when the raw cut would click.
      * Bin-backed like every rewrite ([replaceAudio]): whatever's live now
-     * is itself binned first, so the splice is undoable from THE BIN like
-     * any other pad rewrite.
+     * is itself binned first, and [unsplicePad] (the pad sheet's UNDO
+     * SPLICE) gives it back. A printed pad is refused before anything is
+     * read or written (2026-11-02): the splice's recipe would take the
+     * print's place, and REMOVE could not bring the print's source back.
      */
     fun splicePad(slot: Int, head: Snip, headFrames: Int, tail: Snip, tailFrames: Int): com.snipsnap.audio.TapeSplice.Spliced {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSplice(PrintedPads.label(pad.recipe)) }
         val spliced = com.snipsnap.audio.TapeSplice.join(head, headFrames, tail, tailFrames)
         val recipe = com.snipsnap.json.JsonValue.Obj(
             linkedMapOf<String, com.snipsnap.json.JsonValue>(
@@ -720,6 +733,24 @@ class KitBuilderModel private constructor(
         )
         replaceAudio(slot, recipe) { spliced.snip }
         return spliced
+    }
+
+    /**
+     * UNDO SPLICE: the take [splicePad] binned when it joined comes back out of the bin and the
+     * splice's recipe comes off, through [untreatPad], the way `Mutate.undo` and `OutsideSheet.undo`
+     * do it. After two splices that take is the first splice's result. The recipe the pad had before
+     * the splice was overwritten by it, so the pad reads untreated afterwards. A splice adds no
+     * source stamp, so there is none to clear.
+     *
+     * Refuses, touching nothing, with the pad sheet's own words ([PadSheet.spliceUndoRefusal], asked
+     * of the live pad): no TAPE SPLICE on the pad (MUTATE's SPLICE move, or a print over the splice),
+     * no earlier take of its file in the bin, or soft hits added after the splice. A chain is
+     * refused by [untreatPad].
+     */
+    fun unsplicePad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        PadSheet.spliceUndoRefusal(pad, binned = binHoldsTakeOf(pad))?.let { throw IllegalArgumentException(it) }
+        return untreatPad(slot)
     }
 
     /**
@@ -791,13 +822,18 @@ class KitBuilderModel private constructor(
     /**
      * DE-SAMPLE: the pad replaced by the nearest synth patch's own render,
      * the patch riding the pad as its recipe so the sound is a synth pad
-     * from here on - bin-backed like every rewrite. The search starts on
-     * the voices kindred to the pad's class. A far match ([Far]) is
-     * refused unless [evenIfFar]; the match is returned either way it
-     * goes ahead.
+     * from here on - bin-backed like every rewrite, and [undesamplePad]
+     * gives the take before it back. The search starts on the voices
+     * kindred to the pad's class. A far match ([Far]) is refused unless
+     * [evenIfFar]; the match is returned either way it goes ahead. The
+     * `desampled` stamp goes on after [replaceAudio], which drops it from
+     * any earlier de-sample. A printed pad is refused before its audio is
+     * read (2026-11-02): the patch would take the print's place in the
+     * recipe, and REMOVE could not bring the print's source back.
      */
     fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeDesample(PrintedPads.label(pad.recipe)) }
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val match = com.snipsnap.synth.Desample.nearest(
             original,
@@ -810,6 +846,28 @@ class KitBuilderModel private constructor(
         update(slot) { it.copy(source = it.source + mapOf("desampled" to "%.2f".format(java.util.Locale.ROOT, match.distance))) }
         return match
     }
+
+    /**
+     * DE-SAMPLE's UNDO (the pad sheet's, and `snipsnap desample --undo`): the take [desamplePad]
+     * binned comes back out of the bin, the patch comes off ([untreatPad]; a bare patch has no
+     * pedals for the undo to keep) and so does the `desampled` stamp, so the MAKE strip, the grid
+     * marker and the bin's hold all stop counting the pad as a patch. After two de-samples that take
+     * is the first one's render. The recipe the pad had before the de-sample was overwritten by it.
+     *
+     * Refuses, touching nothing, with the pad sheet's own words ([PadSheet.desampleUndoRefusal],
+     * asked of the live pad) whenever the de-sample is not what sits on top ([PadSheet.isDesampled]:
+     * pedals ride it, a later replacement cleared its stamp, a print covers it), when the bin holds
+     * no earlier take of its file, or with soft hits on. A chain is refused by [untreatPad].
+     */
+    fun undesamplePad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        PadSheet.desampleUndoRefusal(pad, binned = binHoldsTakeOf(pad))?.let { throw IllegalArgumentException(it) }
+        untreatPad(slot)
+        return update(slot) { it.copy(source = it.source - "desampled") }
+    }
+
+    /** Whether the bin holds an earlier take under [pad]'s main file: what the pad sheet's `binDaysLeft != null` asks. */
+    private fun binHoldsTakeOf(pad: KitPad): Boolean = binContents().any { it.originalName == pad.sampleFile }
 
     /**
      * Age one pad through a Time Machine era — every file it references
@@ -1408,8 +1466,9 @@ class KitBuilderModel private constructor(
      * before it: when the entry a claimant would read is an eject record, it keeps nothing rather
      * than falling back to the entry underneath. Every eject writes a tombstone ([moveToBin]) and
      * every treatment bins without, so such an entry is a record of an ejected pad, and a new pad on
-     * a reused file name (an EVIL TWINS reroll) must not pin a stranger's sound, nor the sound under
-     * it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
+     * a reused file name (an EVIL TWINS reroll handed one out before 2026-11-01, and bins and kits
+     * from then still hold such names; [nextStem] no longer does) must not pin a stranger's sound,
+     * nor the sound under it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
      * VERSIONS ([restoreTake]) copies an eject record back without consuming it, so a pad it makes
      * live again can be reading its own eject record, and its original then leaves with that
      * tombstone. Every other entry keeps the clock: [keepDays] after it went in.
@@ -1474,6 +1533,46 @@ class KitBuilderModel private constructor(
             under = PrintedPads.sourcePad(kitDir, under)
         }
         return under
+    }
+
+    /**
+     * Every file name a print's saved source names, at every level under every print THE BIN could
+     * still bring back: each live printed pad, and each ejected one whose tombstone BACK can
+     * reinstate. REMOVE (and the print's own UNDO) restores those files and first checks each one
+     * by hash (`PrintedPadStore.requireRestoreSafe`), so BACK on a bin row under one of these names
+     * would overwrite a file the print then refuses to restore, for good. THE BIN shows no BACK on
+     * such a row (the owner's call, 2026-11-01); once the print is removed, the name leaves this set
+     * and BACK comes back. Throws when a saved source will not read, as [unprinted] does, with
+     * [binHolds]' one exception: an ejected print whose tombstone the sweep at [nowMillis] takes
+     * anyway is skipped when its source will not read, so it cannot drop THE BIN to its fallback
+     * when the kept set itself built.
+     */
+    fun filesUnderPrints(keepDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Set<String> {
+        val names = HashSet<String>()
+        // One print's names, whole or not at all: a walk that fails partway (a print over a print
+        // whose inner source will not read) must not leave the levels it did read behind.
+        fun walk(top: KitPad): Set<String> {
+            val found = HashSet<String>()
+            var under = top
+            val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
+            while (PrintedPads.has(under.recipe)) {
+                require(seen.add(under.recipe!!)) { "pad ${top.slot}'s prints loop back on themselves" }
+                under = PrintedPads.sourcePad(kitDir, under)
+                found += under.sampleFile
+                under.velocityLayers.mapTo(found) { it.sampleFile }
+            }
+            return found
+        }
+        kit.pads.forEach { names += walk(it) }
+        val keepMs = (keepDays * DAY_MS).toLong()
+        for (entry in binContents()) {
+            val snapshot = entry.padSnapshot ?: continue
+            // binHolds' saturating clock, and its rule: a tombstone leaving at nowMillis anyway
+            // holds nothing past it, so a print in it that will not read is skipped, not thrown.
+            val purgeAt = if (keepMs > 0 && entry.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else entry.binnedAtMillis + keepMs
+            names += if (purgeAt < nowMillis) runCatching { walk(snapshot) }.getOrDefault(emptySet()) else walk(snapshot)
+        }
+        return names
     }
 
     /**
@@ -1550,26 +1649,48 @@ class KitBuilderModel private constructor(
 
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 
+    /**
+     * A file stem for a new pad on [slot] that nothing else answers to: no live pad plays it, no
+     * file sits there, and THE BIN holds nothing under it. The bin counts because its undo doors
+     * read by name ([restoreFromBin] by name): a new pad on a binned name would find a stranger's
+     * audio as its own "original", and an EVIL TWINS reroll, which clears bank B and names the new
+     * twins at once, did exactly that until 2026-11-01. Once the bin lets the entry go, the name is
+     * free again. [binHolds]' tombstone guard still covers bins and kits from before that.
+     */
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
+        val binned = binnedNames()
         // Bounded, not `while (true)`: the loop only terminates because the
         // formatted counter varies from n to n, an invariant Locale.ROOT
         // restores today but does not itself guarantee. A kit holds 128
-        // pads, so 999 candidates is ample headroom; if every one of them
-        // still collides — the invariant broken again, or genuinely 999
-        // takers of one stem — this fails loudly instead of hanging the
-        // caller (an onClick, in production) forever.
-        for (n in 1..MAX_STEM_ATTEMPTS) {
+        // pads, so 999 candidates is ample headroom over the live pads, and
+        // every name the bin holds is added on top: a pad replaced on one
+        // slot a thousand times inside the bin's days still finds a name.
+        // If every candidate still collides (the invariant broken again),
+        // this fails loudly instead of hanging the caller (an onClick, in
+        // production) forever.
+        val attempts = MAX_STEM_ATTEMPTS + binned.size
+        for (n in 1..attempts) {
             val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
-                File(kitDir, "$stem.wav").exists()
+                File(kitDir, "$stem.wav").exists() ||
+                "$stem.wav".lowercase(Locale.ROOT) in binned
             if (!taken) return stem
         }
         throw IllegalStateException(
-            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
-                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+            "couldn't find a free stem for '$base' after $attempts attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, attempts))}')",
         )
     }
+
+    /**
+     * Every `originalName` THE BIN holds, lower-cased: [binContents]' names without reading a
+     * tombstone, for [nextStem], which only needs to know a name is spoken for.
+     */
+    private fun binnedNames(): Set<String> =
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) && !f.name.endsWith(".json", ignoreCase = true) }
+            ?.map { BIN_NAME.find(it.name)!!.groupValues[2].lowercase(Locale.ROOT) }
+            ?.toSet() ?: emptySet()
 
     private fun deleteIfUnreferenced(pad: KitPad) {
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()
@@ -1662,11 +1783,13 @@ class KitBuilderModel private constructor(
          * wrapper ([PrintedPads]) keeps its source in its own store. A plain synth render, a
          * [com.snipsnap.synth.PadRecipe] with a patch and no pedals and no treatment, re-renders
          * from the patch, and no undo door reads the bin for it — unless DE-SAMPLE made it: the
-         * recipe is the same, but [desamplePad] stamps `desampled` and `snipsnap desample --undo`
-         * brings the capture back out of the bin, so a de-sampled pad counts. A synth send over it
-         * keeps the stamp, so the bin then keeps the render that send replaced, which is what
-         * `--undo` would restore. "Any recipe but these", not a list of recipe readers, so a
-         * treatment added later is kept without anyone adding it here.
+         * recipe is the same, but [desamplePad] stamps `desampled` and its UNDO ([undesamplePad],
+         * the pad sheet's and `snipsnap desample --undo`) brings the take before it back out of the
+         * bin, so a de-sampled pad counts. Any later audio replacement drops the stamp
+         * ([replaceAudio], the owner's call, 2026-11-01), so a synth send over a de-sampled pad
+         * leaves a plain synth pad that keeps nothing, and what the de-sample replaced goes on the
+         * bin's clock. "Any recipe but these", not a list of recipe readers, so a treatment added
+         * later is kept without anyone adding it here.
          */
         internal fun dependsOnBin(pad: KitPad): Boolean {
             if (pad.chain != null) return true

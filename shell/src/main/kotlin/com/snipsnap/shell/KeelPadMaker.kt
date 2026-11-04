@@ -23,8 +23,8 @@ import java.io.File
  *
  * Zones render one at a time through [renderZone], so a caller can show
  * progress as each lands; [assemble] and [export] never render, the same
- * division [ResinPadMaker] draws. KEEL has no picker entry yet (spec
- * section 17, R4), so nothing in the app calls this.
+ * division [ResinPadMaker] draws. SYNTH's MAKE INSTRUMENT calls it
+ * (`HeldSpec.Keel`), one zone at a time.
  */
 object KeelPadMaker {
 

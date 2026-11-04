@@ -48,7 +48,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--export LIST` | comma-separated formats, see below |
 | `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
 | `--art STYLE` / `--no-art` | expansion/`xpn` exports carry a procedural browser tile (`KitArt`) **by default** — the prototyping loop's verdict made `waveform` the standard look, with `rings` the runner-up (`grid` and `slices` also available). `--no-art` skips it |
-| `--overwrite` | replace same-named output |
+| `--overwrite` | replace the same-named kit folder whole: its bin and versions go too, so no new pad can mistake the old kit's audio for its own original. Also replaces same-named export output. Refused when the input file lives inside that folder. |
 
 More than 16 hits doesn't drop slices: placement rounds up to whole banks,
 the core classes claim their bank-A pads, and the rest overflow upward.
@@ -548,10 +548,15 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
 long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
-whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
+whole note feeding them, HEAD off), `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
-peak).
+peak) and `roomed` (a drum room: AMT 70, the pad sheet's tap, is ROOM at its
+defaults, a live room with the mic about 1.35 m back; AMT moves only the mic, so
+AMT 100 puts it about 2.3 m back in the same room, lower AMT closer, and AMT 0
+none) and `eased` (a fade-in, the VOLUME section: the pad rises from silence on a smooth
+curve, 448 ms at AMT 70, the pad sheet's tap, 640 ms at AMT 100, shorter below and none at
+AMT 0; for held sounds, a snare keeps only about 16 percent of its peak under it).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -566,7 +571,8 @@ re-rendered from the patch instead, the `pre` and `amp` picks in front of its
 own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
-fixed there), `delayed` (after the amp), and
+fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), `eased` (in front of the amp, fixed
+there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -587,8 +593,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`
-and `delayed`), of which the row draws five, the user's choice and the same
+DELAY · ROOM · FADE IN — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed`, `roomed` and `eased`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);
@@ -913,6 +919,44 @@ the phone reads, the shelf lists it under INSTRUMENTS, and KEYS plays
 it on the 4×4 — root on A01, chromatic or a scale, octaves either way,
 a looped pad holding while the finger does.
 
+### `kitfrom <wav>` — kit from anything
+
+One sound into sixteen pads in a key and a style. Purist: every pad is
+the source and only the source, transformed. `--key Am` (any spelling
+`chop --key` reads; A minor if unsaid), `--genre house | techno |
+boom-bap` (house if unsaid), `--out <dir>`, `--name <name>`,
+`--overwrite`. The layout is fixed: kick A01, snare A02, closed hat
+A03, open hat A04 (the two hats choke each other and nothing else
+does), clap A05, ride A06, crash A07, siren A08, four bass notes A09 to
+A12 and four tones A13 to A16 at the key's root, third, fifth and
+octave. Three tricks make every drum from any sound: the source read
+faster for the hats, the ride and the crash; its single cycle sung at a
+drum pitch for the kick's body, the snare's body, the siren and every
+note; its arrival whitened into noise for the snare and the clap. The
+tempo written to the kit is the genre's. The table it prints is the
+gate every pad was held to and what the gate measured: the five slots
+the classifier has a class for must classify as that class, the ride
+and crash by centroid and decay, the siren by its pitch trajectory read
+in order, the notes by their root. A pad that fails its gate is
+*blended*: the purist render stays, never under half, and a partner
+chosen to sound like it joins at half, the nearest THUMP or SKIN patch
+to the purist render for a drum (its de-sample distance printed, "far"
+when it is a stranger), a resonator at the note struck by the pad's own
+head for a bass or tone, a band-limited pulse along the same trajectory
+for the siren. The blend is gated again and the table says what joined
+and what the gate said afterwards; the pad's provenance keeps the purist
+verdict on record beside it. A pad the probe cannot read says
+`unmeasured`, never `fail`, and stays purist. The kit folder keeps the
+source as `kitfrom-source.wav` beside `kit.json`, the kit is made from
+that copy read back, and every pad carries a recipe (`kitFromAnything`:
+slot, genre, key, the source file and its hash) that rebuilds it from the
+folder alone; `kitfrom --check <kit-dir>` rebuilds every such pad and
+says, pad by pad, whether the WAV on disk is the rebuild byte for byte
+(exit 1 on a difference, and a swapped source is refused in words). The
+recipe cannot be pasted onto another pad: it belongs to its own source,
+and COPY LAST TREATMENT says so. Design and numbers:
+`docs/superpowers/specs/2026-11-01-kit-from-anything-design-brief.md`.
+
 ### `retune <kit-dir> <pad>` — the spectral retune
 
 Where `--key` on `chop` moves a whole pad by one coarse/fine offset (so
@@ -1051,9 +1095,19 @@ macros. A `.wav` prints the patch (`--out patch.json` writes it); a kit
 pad becomes the patch's own render with the patch as its recipe — a
 synth pad from here on, editable and breedable — bin-backed, `--undo`
 byte-identical, the search starting on the voices kindred to the pad's
-class. The distance is always told; past 0.45 the nearest is a stranger
-and the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
-On the phone it is the PAD SHEET's DE-SAMPLE card.
+class. `--undo` is `KitBuilderModel.undesamplePad`: it gives back the
+take before the de-sample and clears the pad's `desampled` mark. It
+refuses a pad the de-sample is no longer on top of (never de-sampled,
+pedals or a print over it, or a later send or other audio replacement,
+which clears the mark), a pad with soft hits on, and an emptied bin.
+The distance is always told; past 0.45 the nearest is a stranger and
+the pad is refused unless `--force`. A printed pad (a board or AQUARIUM
+over it) is refused, touching nothing, with the pad sheet's words:
+"REMOVE WIDE BEFORE DE-SAMPLE." (2026-11-02). The spec:
+`docs/DESAMPLE.md`.
+On the phone it is the PAD SHEET's DE-SAMPLE card, whose UNDO runs the
+same `undesamplePad` (since 2026-11-01:
+`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
 
 ### `arrange <kit-dir>` — songs, not loops
 
@@ -1148,20 +1202,31 @@ lands under `NAME 2`, and the bin rides minus what has expired.
 
 ### `art <kit-dir>` — procedural cover tiles
 
-Cover art drawn from the kit itself — its waveforms, its class colours,
-its name in the built-in 5×7 pixel face — on the scheme's dark LCD.
-Deterministic: same kit, same parameters, same bytes.
+The expansion browser's tile, drawn from the kit's own sound: a field
+from one pad's audio (or every pad's, for the per-pad styles), the kit
+name set in a bundled face inside the style's name zone, and the
+SnipSnap mark bottom-right. Deterministic per platform: same kit, same
+knobs, same bytes.
 
-Four styles: `waveform` (all the pads end to end, each in its class
-colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
-per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
-picks one of the eight TapeOS schemes (`vent`, the default, `dusk`,
-`phosphor`, `opensky`, `tide`, `memo`, `riso` or `sage`; the
-words come from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
-sets the square edge (default 600), `--out DIR` says where the PNGs
-land. **No `--style` renders every style side by side** — the
-prototyping loop is one command per look. The winning direction becomes
-the expansion/`.xpn` export default (Z6.3).
+Eight styles in one family. From the seed pad: `bloom` (its loudness
+wrapped round a six-petal flower, the name in the hole — the default),
+`ridges` (its windows stacked as ridge lines that fade back), `field` (a
+dot grid that swells with its loudness, the name on a band), `ribbon`
+(its attack as one glowing stroke). From every pad: `waveform` (the pads
+end to end as one river, class colours blending), `grid` (the 4×4 bank,
+each pad a small bloom of its own sound), `slices` (one wedge per pad
+round a wheel), `rings` (seeded glowing arcs — `--seed N` reshuffles).
+
+The knobs start from the kit's own `art.json` (what the phone's art
+picker saves) and each flag overrides one: `--palette` (`vent`, `dusk`,
+`phosphor`, `opensky`, `tide`, `memo`, `riso`, `sage` — one per scheme;
+`--scheme` picks a scheme's palette), `--seed-pad N` (which pad draws
+the field; the longest by default), `--mark symbol|lockup|stacked`
+(stacked by default). `--size PX` sets the square edge (default 600),
+`--out DIR` says where the PNGs land. **No `--style` renders all eight
+side by side** — the prototyping loop is one command per look. Exports
+(`export`, `chop --export`, `pack`, `sidea`, `album`) draw the same
+knobs; `--art STYLE` there overrides only the style.
 
 ### `doctor <kit-dir>` — the mix doctor
 
@@ -1405,3 +1470,7 @@ exports (copy the contents of snipsnap-out/card onto the card):
 
 The groove really is 92 BPM; the kick really does land on A01. Every
 number in that table is the classifier being auditable in public.
+
+### LORENTZ finite collisions
+
+`snipsnap synth LORENTZ FUSE --preset 1 --out <dir>` renders the rounded voice; use `LORENTZ LORENTZ` for the tearing voice. `--all` renders all six anchors for that voice. `--macros` accepts TUNE, CAPACITOR, GAP, IMPACT, WELD and HOLD. `--midi` sets TUNE over MIDI 24..48; it cannot be combined with a TUNE macro override. `--velocity` changes contact and level, and `.patch` sidecars retain every setting for `--patch` replay. HOLD extends a finite decay and does not export a held instrument. Only engine model 3 is currently supported by saved LORENTZ patches.

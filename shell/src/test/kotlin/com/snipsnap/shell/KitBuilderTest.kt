@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -367,6 +368,21 @@ class KitBuilderTest {
         assertTrue(m.dirty)
         assertEquals(1, m.kit.pads.size, "rolled back to the one-pad take")
         assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
+    }
+
+    @Test
+    fun `restoring a take keeps the kit in its expansions`() {
+        val dir = File(temp, "TakeIds")
+        val m = KitBuilderModel.create("TakeIds", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val take = m.takes().first()
+        val id = com.snipsnap.kit.KitIds.ensure(dir)
+        m.restoreTake(take)
+        m.save()
+        assertEquals(id, com.snipsnap.kit.KitIds.read(dir), "a take from before the kit joined an expansion does not take it out")
     }
 
     @Test
@@ -868,9 +884,96 @@ class KitBuilderTest {
         assertTrue(forced.far)
         assertTrue(m.pad(2)!!.recipe != null)
 
-        m.untreatPad(1)
+        assertTrue(PadSheet.isDesampled(m.pad(1)!!), "test setup: the de-sample is on top")
+        m.undesamplePad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(before), "back byte-identical")
         assertNull(m.pad(1)!!.recipe)
+        assertNull(m.pad(1)!!.source["desampled"], "the stamp goes with the patch, so MAKE stops saying A PATCH NOW")
+        assertEquals(
+            Copy.DESAMPLE_UNDO_NOTHING,
+            assertFailsWith<IllegalArgumentException> { m.undesamplePad(1) }.message,
+            "a second UNDO has no de-sample left to take off",
+        )
+    }
+
+    /**
+     * UNDO on DE-SAMPLE refuses, touching nothing, whenever the de-sample is not what sits on top:
+     * pedals ride it (NONE is the door then, and afterwards this UNDO lands), a later audio
+     * replacement cleared its stamp, soft hits went on after it, or the bin no longer holds the take.
+     */
+    @Test
+    fun `undesamplePad refuses under pedals, after a later replacement, under soft hits and with an emptied bin`() {
+        fun desampled(name: String): Pair<KitBuilderModel, ByteArray> {
+            val m = KitBuilderModel.create(name, File(temp, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            val capture = File(m.kitDir, m.pad(1)!!.sampleFile).readBytes()
+            m.desamplePad(1, evenIfFar = true)
+            assertTrue(PadSheet.isDesampled(m.pad(1)!!), "test setup: $name is de-sampled")
+            return m to capture
+        }
+        fun refusal(m: KitBuilderModel, expected: String) {
+            val bytes = File(m.kitDir, m.pad(1)!!.sampleFile).readBytes()
+            val pad = m.pad(1)
+            val bin = m.binContents().map { it.file }
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { m.undesamplePad(1) }.message)
+            assertTrue(File(m.kitDir, m.pad(1)!!.sampleFile).readBytes().contentEquals(bytes), "a refusal leaves the audio alone")
+            assertEquals(pad, m.pad(1), "a refusal leaves the pad alone")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal spends no bin entry")
+        }
+
+        val (pedalled, capture) = desampled("UndesamplePedals")
+        pedalled.pedalPad(1, com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f))))
+        refusal(pedalled, Copy.DESAMPLE_UNDO_NOTHING)
+        pedalled.unEraPad(1) // NONE takes the pedals off and keeps the patch
+        assertTrue(PadSheet.isDesampled(pedalled.pad(1)!!), "after NONE the de-sample is on top again")
+        pedalled.undesamplePad(1)
+        assertTrue(File(pedalled.kitDir, pedalled.pad(1)!!.sampleFile).readBytes().contentEquals(capture), "then UNDO gives the capture back")
+
+        val (sent, _) = desampled("UndesampleSent")
+        val other = com.snipsnap.synth.ThumpPatch("Other", com.snipsnap.synth.ThumpVoice.SNARE, com.snipsnap.synth.Thump.defaults(com.snipsnap.synth.ThumpVoice.SNARE))
+        sent.replaceAudio(1, com.snipsnap.synth.PadRecipe(patch = other).toJsonValue()) { other.render() }
+        assertNull(sent.pad(1)!!.source["desampled"], "test setup: a plain-patch write over the de-sample clears its stamp")
+        refusal(sent, Copy.DESAMPLE_UNDO_NOTHING)
+
+        val (ghosted, _) = desampled("UndesampleGhosts")
+        ghosted.addGhostLayers(1)
+        refusal(ghosted, Copy.UNDO_LAYERED)
+
+        val (emptied, _) = desampled("UndesampleEmptied")
+        emptied.emptyBin()
+        refusal(emptied, Copy.DESAMPLE_UNDO_NOT_BINNED)
+    }
+
+    /**
+     * The `desampled` stamp says "this audio is a de-sample's render" (the owner's call,
+     * 2026-11-01): any later audio replacement clears it, with or without a recipe of its own,
+     * and [KitBuilderModel.desamplePad] puts it back straight after its own. After a synth send the
+     * pad is a plain synth pad, so the bin keeps nothing for it.
+     */
+    @Test
+    fun `a later audio replacement clears the de-sample's stamp, and the bin then keeps nothing for it`() {
+        val dir = File(temp, "DesampleStampCleared")
+        val m = KitBuilderModel.create("DesampleStampCleared", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        m.update(1) { it.copy(source = it.source + ("rawSha256" to "abc") + ("bredFrom" to "Elsewhere")) }
+        m.desamplePad(1, evenIfFar = true)
+        m.desamplePad(2, evenIfFar = true)
+        assertTrue(m.pad(1)!!.source["desampled"] != null, "test setup: desamplePad stamps after its own replacement")
+        assertNull(m.pad(1)!!.source["rawSha256"], "test setup: the fingerprint went with the old file")
+
+        val other = com.snipsnap.synth.ThumpPatch("Other", com.snipsnap.synth.ThumpVoice.SNARE, com.snipsnap.synth.Thump.defaults(com.snipsnap.synth.ThumpVoice.SNARE))
+        m.replaceAudio(1, com.snipsnap.synth.PadRecipe(patch = other).toJsonValue()) { other.render() }
+        assertNull(m.pad(1)!!.source["desampled"], "a synth send over a de-sample is a plain synth pad")
+        assertEquals("Elsewhere", m.pad(1)!!.source["bredFrom"], "every other stamp stays")
+        m.replaceAudio(2, null) { it }
+        assertNull(m.pad(2)!!.source["desampled"], "an unlabelled replacement clears it too")
+        assertFalse(PadSheet.isDesampled(m.pad(2)!!), "the patch kept on null no longer reads as a de-sample")
+        m.save()
+        assertTrue(m.binHolds().all { it.keptFor == null }, "a plain synth pad needs nothing from the bin")
+
+        m.desamplePad(1, evenIfFar = true)
+        assertTrue(m.pad(1)!!.source["desampled"] != null, "a fresh DE-SAMPLE stamps again")
     }
 
     @Test
@@ -917,13 +1020,82 @@ class KitBuilderTest {
         assertEquals(spliced.crossfaded, (recipeSplice.entries["crossfaded"] as com.snipsnap.json.JsonValue.Bool).value)
 
         // Whatever was live before the splice (the washed take) is itself
-        // now the newest bin entry - undoable like any other rewrite.
-        m.untreatPad(1)
+        // now the newest bin entry, and the bin keeps it while the pad is spliced.
+        assertTrue(PadSheet.isSpliced(m.pad(1)!!.recipe), "test setup: TAPE SPLICE's own recipe")
+        val preSplice = m.priorTakes(1).first()
+        assertEquals(1, m.binHolds().single { it.entry.file == preSplice.file }.keptFor, "the take before the splice is kept for A01")
+
+        // UNDO SPLICE gives it back.
+        m.unsplicePad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(beforeSplice), "back to the pre-splice audio")
         assertNull(m.pad(1)!!.recipe)
+        assertTrue(m.binHolds().all { it.keptFor == null }, "an unspliced pad needs nothing from the bin")
+        assertEquals(
+            Copy.SPLICE_UNDO_NOTHING,
+            assertFailsWith<IllegalArgumentException> { m.unsplicePad(1) }.message,
+            "a second UNDO has no splice left to take off",
+        )
 
         // Sanity: the original capture is still exactly what it always was.
         assertTrue(originalCapture.samples.contentEquals(tail.samples))
+    }
+
+    /**
+     * UNDO SPLICE refuses, touching nothing, everything its door does not own: MUTATE's own SPLICE
+     * move (its UNDO is on the MUTATE card), soft hits added after the splice, a bin that no longer
+     * holds the take, and a printed pad, whose live recipe is the print and not the splice.
+     */
+    @Test
+    fun `unsplicePad refuses a MUTATE SPLICE, soft hits, an emptied bin and a print, and touches nothing`() {
+        fun spliced(name: String): KitBuilderModel {
+            val m = KitBuilderModel.create(name, File(temp, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            m.treatPad(1, "punched")
+            val live = com.snipsnap.audio.WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+            val prior = com.snipsnap.audio.WavReader.read(m.priorTakes(1).first().file)
+            m.splicePad(1, live, live.frameCount / 3, prior, prior.frameCount / 2)
+            assertTrue(PadSheet.isSpliced(m.pad(1)!!.recipe), "test setup: $name is spliced")
+            return m
+        }
+        fun refusal(m: KitBuilderModel, slot: Int, expected: String) {
+            val bytes = File(m.kitDir, m.pad(slot)!!.sampleFile).readBytes()
+            val pad = m.pad(slot)
+            val bin = m.binContents().map { it.file }
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { m.unsplicePad(slot) }.message)
+            assertTrue(File(m.kitDir, m.pad(slot)!!.sampleFile).readBytes().contentEquals(bytes), "a refusal leaves the audio alone")
+            assertEquals(pad, m.pad(slot), "a refusal leaves the pad alone")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal spends no bin entry")
+        }
+
+        val mutated = spliced("UnspliceMutate")
+        mutated.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        Mutate.apply(mutated, 2, listOf(Mutate.Source("UnspliceMutate:A01", DrumSynth.kick())), Mutate.Mode.SPLICE)
+        assertEquals("SPLICE", MutateSheet.read(mutated.pad(2)!!.recipe)?.mode, "test setup: MUTATE's SPLICE move")
+        assertFalse(PadSheet.isSpliced(mutated.pad(2)!!.recipe), "MUTATE's SPLICE is not TAPE SPLICE")
+        refusal(mutated, 2, Copy.SPLICE_UNDO_NOTHING)
+
+        val ghosted = spliced("UnspliceGhosts")
+        ghosted.addGhostLayers(1)
+        refusal(ghosted, 1, Copy.UNDO_LAYERED)
+        ghosted.clearGhostLayers(1) // the step the refusal names
+        ghosted.unsplicePad(1)
+        assertNull(ghosted.pad(1)!!.recipe, "with SOFT HITS off, the UNDO lands")
+
+        val emptied = spliced("UnspliceEmptied")
+        emptied.emptyBin()
+        refusal(emptied, 1, Copy.SPLICE_UNDO_NOT_BINNED)
+
+        val printed = spliced("UnsplicePrinted")
+        val spliceFile = printed.pad(1)!!.sampleFile
+        BoardSheet.apply(printed, 1, .7f)
+        assertTrue(PrintedPads.has(printed.pad(1)!!.recipe), "test setup: a board printed over the splice")
+        refusal(printed, 1, Copy.SPLICE_UNDO_NOTHING)
+        // THE BIN still asks the pad under the print, which has a door once the print is off.
+        val binned = printed.binContents().map { it.originalName }.toSet()
+        assertTrue(PadSheet.hasOwnWayBack(printed.unprinted(printed.pad(1)!!), spliceFile, binned), "under the print, UNDO SPLICE is the way back")
+        BoardSheet.remove(printed, 1)
+        printed.unsplicePad(1)
+        assertNull(printed.pad(1)!!.recipe, "with the print removed, the UNDO lands")
     }
 
     @Test
@@ -935,6 +1107,49 @@ class KitBuilderTest {
         val head = com.snipsnap.audio.WavReader.read(File(dir, pad.sampleFile))
         m.addGhostLayers(1)
         assertFailsWith<IllegalArgumentException> { m.splicePad(1, head, head.frameCount / 2, head, head.frameCount / 2) }
+    }
+
+    /**
+     * TAPE SPLICE and DE-SAMPLE refuse a printed pad (a board or AQUARIUM over it), touching nothing,
+     * the way SOFT HITS, STACK and SPREAD already do (2026-11-02). Both write their own recipe through
+     * `replaceAudio`, where the print's wrapper sits: REMOVE would then find no print to take off, and
+     * the source the print keeps could never come back.
+     */
+    @Test
+    fun `splicePad and desamplePad refuse a printed pad, touch nothing, and REMOVE still lands`() {
+        val dir = File(temp, "SplicePrinted")
+        val m = KitBuilderModel.create("SplicePrinted", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.treatPad(1, "punched") // the pad under the print carries a recipe REMOVE must give back
+        val treated = m.pad(1)!!
+        val underPrint = File(dir, treated.sampleFile).readBytes()
+        val printed = BoardSheet.apply(m, 1, .7f)
+        assertTrue(PrintedPads.has(printed.recipe), "test setup: a board printed over the pad")
+        // The print's own stereo render as both takes, so the join itself would go through.
+        val live = com.snipsnap.audio.WavReader.read(File(dir, printed.sampleFile))
+
+        fun files(): Map<String, String> = dir.walkTopDown().filter { it.isFile }.associate { f ->
+            f.relativeTo(dir).path to java.security.MessageDigest.getInstance("SHA-256").digest(f.readBytes())
+                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        }
+        for ((expected, door) in listOf<Pair<String, () -> Unit>>(
+            Copy.boardRemoveBeforeSplice("WIDE") to { m.splicePad(1, live, live.frameCount / 3, live, live.frameCount / 2) },
+            Copy.boardRemoveBeforeDesample("WIDE") to { m.desamplePad(1, evenIfFar = true) },
+        )) {
+            val before = files()
+            val bin = m.binContents().map { it.file }
+            val under = m.filesUnderPrints()
+            assertEquals(expected, assertFailsWith<IllegalArgumentException> { door() }.message)
+            assertEquals(printed, m.pad(1), "a refusal leaves the pad and its print's recipe alone")
+            assertEquals(before, files(), "a refusal writes no audio, saved source or undo file")
+            assertEquals(bin, m.binContents().map { it.file }, "a refusal bins nothing")
+            assertEquals(under, m.filesUnderPrints(), "the files under the print keep their protection")
+            assertTrue(BoardSheet.canUndo(m, 1), "the print's own UNDO is still there")
+        }
+        val removed = BoardSheet.remove(m, 1)
+        assertEquals(treated.recipe, removed.recipe, "REMOVE still brings the pad under the print back")
+        assertEquals(treated.sampleFile, removed.sampleFile)
+        assertTrue(File(dir, removed.sampleFile).readBytes().contentEquals(underPrint), "byte for byte")
     }
 
     @Test
@@ -1180,6 +1395,62 @@ class KitBuilderTest {
     private fun sweepEverythingOld(dir: File): Int =
         KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
 
+    /**
+     * The kit in [dir] as a build from before 2026-11-01 left it, when a new pad could take a name
+     * the bin still held: each slot in [names] is moved onto that name, its file with it. Saved and
+     * reopened, as an old kit arrives. `nextStem` no longer hands such names out, but bins and kits
+     * from before still hold them, and [KitBuilderModel.binHolds]' tombstone guard is for those.
+     */
+    private fun fromBeforeNamesSkippedTheBin(dir: File, names: Map<Int, String>): KitBuilderModel {
+        val kit = KitStore.load(dir)
+        val moved = kit.pads.map { pad ->
+            val name = names[pad.slot] ?: return@map pad
+            assertTrue(File(dir, pad.sampleFile).renameTo(File(dir, name)), "test setup: slot ${pad.slot} takes $name")
+            pad.copy(sampleFile = name)
+        }
+        KitStore.save(kit.copy(pads = moved), dir)
+        return KitBuilderModel.open(dir)
+    }
+
+    @Test
+    fun `a new pad never takes a name the bin still holds, and the name comes free once the bin lets it go`() {
+        val dir = File(temp, "StemPastBin")
+        val m = KitBuilderModel.create("StemPastBin", dir)
+        val first = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        m.clear(1)
+        val second = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        assertNotEquals(first, second, "the bin still holds the first kick under its name")
+
+        m.remixBankB(seed = 5)
+        val twin = m.pad(17)!!.sampleFile
+        m.remixBankB(seed = 6)
+        assertNotEquals(twin, m.pad(17)!!.sampleFile, "a reroll's new twin passes the old twin's name, which the bin holds")
+        assertTrue(m.binContents().any { it.originalName == twin }, "test setup: the old twin's eject record is in the bin")
+        assertFailsWith<IllegalArgumentException>("the new twin's NONE finds nothing of the old twin's") { m.untreatPad(17) }
+
+        m.emptyBin()
+        m.clear(1)
+        assertEquals(first, m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile, "once the bin lets the first kick go, its name is free again")
+    }
+
+    /**
+     * A slot replaced again and again leaves one name in the bin each time, for as long as the bin
+     * keeps it, so nextStem's bound counts those names on top of its own: a thousand replacements
+     * inside the bin's days still find a name rather than throwing.
+     */
+    @Test
+    fun `a slot replaced a thousand times inside the bin's days still finds a name`() {
+        val dir = File(temp, "StemBound")
+        val m = KitBuilderModel.create("StemBound", dir)
+        val first = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        val base = first.removeSuffix("_01.wav")
+        assertTrue(first.endsWith("_01.wav"), "test setup: the first name is $first")
+        m.clear(1)
+        val bin = File(dir, KitBuilderModel.BIN_DIR)
+        for (n in 2..999) File(bin, String.format(java.util.Locale.ROOT, "%d_%s_%02d.wav", n, base, n)).writeBytes(ByteArray(0))
+        assertEquals("${base}_1000.wav", m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile, "past all 999 names the bin holds")
+    }
+
     /** Re-stamps one bin entry, tombstone and all, for a test where two entries need different ages. */
     private fun restamp(entry: KitBuilderModel.BinEntry, millis: Long) {
         val bin = entry.file.parentFile
@@ -1338,8 +1609,8 @@ class KitBuilderTest {
     }
 
     /**
-     * EVIL TWINS rerolled: the old twins are ejected with tombstones, and the new twins take their
-     * file names and carry recipes the rule counts. Only an eject writes a tombstone, so an entry
+     * EVIL TWINS rerolled in a kit from before 2026-11-01: the old twins are ejected with tombstones,
+     * and the new twins took their file names and carry recipes the rule counts. Only an eject writes a tombstone, so an entry
      * with one is a record of an ejected pad, never a live pad's original, and a new pad on the same
      * name must not pin a stranger's sound forever. A torn tombstone still says so: the guard asks
      * whether the file is there, not whether it parses.
@@ -1351,18 +1622,20 @@ class KitBuilderTest {
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
         m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
         m.remixBankB(seed = 5)
-        val names = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }.map { it.sampleFile }
+        val old = m.kit.pads.filter { it.slot > 16 }.associate { it.slot to it.sampleFile }
+        val names = old.toSortedMap().values.toList()
         m.remixBankB(seed = 6)
         m.save()
-        val twins = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }
-        assertEquals(names, twins.map { it.sampleFile }, "test setup: the reroll reused every name")
+        val reused = fromBeforeNamesSkippedTheBin(dir, old)
+        val twins = reused.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }
+        assertEquals(names, twins.map { it.sampleFile }, "test setup: the new twins play the old twins' names")
         assertTrue(twins.all { KitBuilderModel.dependsOnBin(it) }, "test setup: the new twins carry recipes the rule counts")
-        val ejected = m.binContents()
+        val ejected = reused.binContents()
         assertEquals(names.sorted(), ejected.map { it.originalName }.sorted())
         assertTrue(ejected.all { it.padSnapshot != null }, "test setup: every entry is an eject record")
         File(ejected.first().file.parentFile, "${ejected.first().file.name}.json").writeText("{ torn")
 
-        assertTrue(m.binHolds().all { it.keptFor == null }, "a stranger's eject record is never kept for a new pad on its name")
+        assertTrue(reused.binHolds().all { it.keptFor == null }, "a stranger's eject record is never kept for a new pad on its name")
         assertEquals(names.size, sweepEverythingOld(dir))
         assertEquals(0, File(dir, KitBuilderModel.BIN_DIR).listFiles()?.size ?: 0, "the eject records left with their tombstones")
     }
@@ -1370,7 +1643,8 @@ class KitBuilderTest {
     /**
      * The guard comes after "newest": a live pad whose newest entry is an eject record keeps
      * nothing, never the entry underneath it. Here the first twin was era'd, so its own original
-     * sits under its eject record, and the reroll's new twin plays the same name.
+     * sits under its eject record, and the reroll's new twin plays the same name (a kit from before
+     * 2026-11-01, when a reroll could hand it out).
      */
     @Test
     fun `a new pad whose newest entry is an eject record keeps nothing, not the entry under it`() {
@@ -1380,14 +1654,14 @@ class KitBuilderTest {
         m.remixBankB(seed = 5)
         val name = m.pad(17)!!.sampleFile
         m.eraPad(17, "tape", 1f) // the first twin's original goes in with no tombstone
-        m.remixBankB(seed = 6) // its eject record goes in on top, and the new twin takes the name
+        m.remixBankB(seed = 6) // its eject record goes in on top
         m.save()
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
-        val (eject, original) = m.binContents().filter { it.originalName == name }
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name)) // and the new twin plays the name
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: the new twin counts")
+        val (eject, original) = reused.binContents().filter { it.originalName == name }
         assertTrue(eject.padSnapshot != null && original.padSnapshot == null, "test setup: the newest is the eject record")
 
-        val hold = m.binHolds().single { it.entry.file == original.file }
+        val hold = reused.binHolds().single { it.entry.file == original.file }
         assertNull(hold.keptFor, "the new twin must not pin the old twin's original")
         assertEquals(eject.binnedAtMillis + 30 * dayMs, hold.purgeAtMillis, "it rides its own eject record's tombstone instead")
     }
@@ -1397,7 +1671,8 @@ class KitBuilderTest {
      * went in before it. When that is an earlier eject record (a reroll's), the tombstone keeps
      * nothing, and an eject record is never stretched by a later one either. The first twin's own
      * original then leaves with the first twin's eject record, and the second twin's NONE refuses
-     * rather than playing the first twin's sound.
+     * rather than playing the first twin's sound. The second twin plays the first's name, as a kit
+     * from before 2026-11-01 could.
      */
     @Test
     fun `a tombstone never reaches past an earlier eject record, and never stretches it`() {
@@ -1407,26 +1682,27 @@ class KitBuilderTest {
         m.remixBankB(seed = 5)
         val name = m.pad(17)!!.sampleFile
         m.treatPad(17, "crushed") // the first twin's own original, no tombstone
-        m.remixBankB(seed = 6) // the first twin's eject record; the second twin takes the name
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        m.clear(17) // the second twin's eject record, its slot left empty for BACK
+        m.remixBankB(seed = 6) // the first twin's eject record
         m.save()
-        val (secondEject, firstEject, firstOriginal) = m.binContents()
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name)) // the second twin plays the name
+        reused.clear(17) // the second twin's eject record, its slot left empty for BACK
+        reused.save()
+        val (secondEject, firstEject, firstOriginal) = reused.binContents()
         assertTrue(secondEject.padSnapshot != null && firstEject.padSnapshot != null && firstOriginal.padSnapshot == null, "test setup")
         val now = System.currentTimeMillis()
         restamp(secondEject, now - dayMs)
         restamp(firstEject, now - 40 * dayMs)
         restamp(firstOriginal, now - 50 * dayMs)
-        val holds = m.binHolds().associateBy { it.entry.binnedAtMillis }
+        val holds = reused.binHolds().associateBy { it.entry.binnedAtMillis }
         assertEquals(now - 10 * dayMs, holds.getValue(now - 40 * dayMs).purgeAtMillis, "the first eject record keeps its own clock")
         assertEquals(now - 10 * dayMs, holds.getValue(now - 50 * dayMs).purgeAtMillis, "the first original rides the first eject record, not the second")
 
         assertEquals(2, KitBuilderModel.open(dir).purgeBin(nowMillis = now), "both go in the same sweep")
-        val left = m.binContents().single()
+        val left = reused.binContents().single()
         assertEquals(now - dayMs, left.binnedAtMillis, "only the second eject record is left")
-        m.restoreFromBin(left) // BACK: the second twin, with its copied recipe
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: BACK brought the second twin back")
-        assertFailsWith<IllegalArgumentException>("NONE refuses rather than playing a stranger's sound") { m.untreatPad(17) }
+        reused.restoreFromBin(left) // BACK: the second twin, with its copied recipe
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: BACK brought the second twin back")
+        assertFailsWith<IllegalArgumentException>("NONE refuses rather than playing a stranger's sound") { reused.untreatPad(17) }
     }
 
     /** An untreated pad's tombstone needs nothing from the bin, so the leftover under it keeps its own 30 days. */
@@ -1451,8 +1727,8 @@ class KitBuilderTest {
 
     /**
      * A GHOSTS-layered twin gets no pad snapshot BACK could reinstate, but its eject is still
-     * marked, so the next twin on the same name keeps nothing of it and its NONE refuses once the
-     * sweep has taken the old twin's audio, rather than playing it.
+     * marked, so the next twin on the same name (a kit from before 2026-11-01) keeps nothing of it
+     * and its NONE refuses once the sweep has taken the old twin's audio, rather than playing it.
      */
     @Test
     fun `a layered pad's eject is marked, so a new pad on its name keeps nothing of it`() {
@@ -1464,22 +1740,23 @@ class KitBuilderTest {
         m.addGhostLayers(17) // a twin keeps its stamp under GHOSTS, so the reroll still takes it
         m.remixBankB(seed = 6)
         m.save()
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
-        val ejected = m.binContents()
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name))
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: the new twin counts")
+        val ejected = reused.binContents()
         assertTrue(ejected.size >= 2 && ejected.all { it.padSnapshot == null }, "test setup: the layered twin's files, no pad to reinstate")
 
-        assertTrue(m.binHolds().all { it.keptFor == null }, "the new twin keeps nothing of the old one")
+        assertTrue(reused.binHolds().all { it.keptFor == null }, "the new twin keeps nothing of the old one")
         assertEquals(ejected.size, sweepEverythingOld(dir))
-        assertFailsWith<IllegalArgumentException> { m.unEraPad(17) }
+        assertFailsWith<IllegalArgumentException> { reused.unEraPad(17) }
     }
 
     /**
-     * DE-SAMPLE leaves a plain patch recipe, the shape a synth send leaves, but `snipsnap desample
-     * --undo` reads the bin for the capture, so the `desampled` stamp makes the pad count.
+     * DE-SAMPLE leaves a plain patch recipe, the shape a synth send leaves, but its UNDO (the pad
+     * sheet's, and `snipsnap desample --undo`) reads the bin for the capture, so the `desampled`
+     * stamp makes the pad count.
      */
     @Test
-    fun `a de-sampled pad keeps its capture past the sweep, and desample --undo gives it back`() {
+    fun `a de-sampled pad keeps its capture past the sweep, and its UNDO gives it back`() {
         val dir = File(temp, "BinDesampled")
         val m = KitBuilderModel.create("BinDesampled", dir)
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
@@ -1490,8 +1767,9 @@ class KitBuilderTest {
         assertEquals(1, m.binHolds().single().keptFor, "the capture is kept for A01")
 
         assertEquals(0, sweepEverythingOld(dir))
-        m.untreatPad(1) // what `snipsnap desample --undo` runs
+        m.undesamplePad(1) // what the sheet's UNDO and `snipsnap desample --undo` run
         assertTrue(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(capture), "the capture came back byte for byte")
+        assertNull(m.pad(1)!!.source["desampled"], "and the pad is no longer marked a patch")
     }
 
     @Test

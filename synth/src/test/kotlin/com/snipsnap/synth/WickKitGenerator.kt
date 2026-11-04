@@ -17,7 +17,8 @@ object WickKitGenerator {
         check(root.isDirectory || root.mkdirs())
         work.deleteRecursively()
         try {
-            val kit = KitAssembler.assembleArranged("SnipSnap Wick Prototype Kit", SynthKits.wick(), work)
+            val arrangement = SynthKits.wick()
+            val kit = KitAssembler.assembleArranged("SnipSnap Wick Prototype Kit", arrangement, work)
             val result = Mpc3Exporter.exportTrack(kit, work, destination, overwrite = true, mpc2Twin = true)
             // The MPC files omit SnipSnap's editable recipes. Keep the original
             // kit folder and its referenced WAVs beside the native export.
@@ -29,6 +30,25 @@ object WickKitGenerator {
                 File(source, pad.sampleFile).isFile &&
                     pad.recipe?.let { PadRecipe.fromJsonValue(it).patch is WickPatch } == true
             }) { "Source kit must preserve sixteen WICK recipes and their original WAVs" }
+            val restoredPatches = restored.pads.map { pad ->
+                PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).patch as WickPatch
+            }
+            val arrangedPatches = arrangement.map { pad ->
+                PadRecipe.fromJsonValue(requireNotNull(requireNotNull(pad).recipe)).patch as WickPatch
+            }
+            check(restoredPatches == arrangedPatches) { "Source kit changed a saved WICK patch" }
+            check(restored.pads.map { it.displayName } == restoredPatches.map { it.name }) {
+                "Source kit must identify each WICK pad by its saved patch name"
+            }
+            check(restoredPatches.subList(10, 13).map { it.rattleSource } == listOf(
+                Wick.RattleSource.WARM_WIRE, Wick.RattleSource.HOLLOW_REED, Wick.RattleSource.RUBBED_GLASS,
+            ) && restoredPatches.subList(10, 13).all { it.voice == WickVoice.RATTLE && it.midi == 60 }) {
+                "A11-A13 must preserve the three accepted C4 RATTLE bodies as normal patches"
+            }
+            check(restoredPatches.last().let {
+                it.voice == WickVoice.RATTLE && it.rattleSource == Wick.RattleSource.WARM_WIRE &&
+                    Wick.isLoop(it.macros.getValue("HOLD"))
+            }) { "A16 must preserve the held warm-wire RATTLE patch" }
             val archive = File(root, "SnipSnap-Wick-Prototype-Kit.zip")
             ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                 destination.walkTopDown().filter { it.isFile }.sortedBy { it.relativeTo(destination).invariantSeparatorsPath }.forEach { file ->

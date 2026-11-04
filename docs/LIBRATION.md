@@ -5,8 +5,10 @@ Kotlin synthesis path. It implements GATHER, TWINS and DEPARTURE for an initial 
 study. Model 3 develops those three voices into twelve finite presets, playability
 comparisons, musical phrases and a sixteen-pad layered MPC starter. The owner accepted
 the control revision and musical bank. The three voices and twelve presets now enter
-the phone's SYNTH picker and FRESH TAPE starter list. Phone playtesting and MPC hardware
-acceptance remain open.
+the phone's SYNTH picker and FRESH TAPE starter list. The owner accepted finite
+phone/MPC behavior on 2026-10-31. The separately versioned
+[held instrument](LIBRATION_HOLD.md) adds recurring sustain without changing this
+finite kernel or the twelve presets.
 
 The engine, complete patch JSON and native velocity rendering live in `:synth`.
 The audition uses actual Kotlin renders, retained source, exact recipes, trajectory
@@ -290,6 +292,11 @@ the glue; it cannot establish phone latency or listening acceptance.
 
 ### Hardware acceptance
 
+The owner reported on 2026-10-31 that phone and MPC playback are fine and
+authorized the next milestone. This is owner listening and playability acceptance
+of the finite instrument. No device model, OS version or phone timing report was
+provided, so the report does not establish measured render latency.
+
 Load the [published starter](https://libration-snipsnap-audition.bertcalm.chatgpt.site/libration-mpc-starter.zip)
 with its adjacent TrackData folder. On MPC3 set the project to 96 BPM and play the
 embedded four-bar clip. On MPC2 load the `.xpm` inside TrackData and play the pads.
@@ -323,16 +330,19 @@ passed, including native velocity layers, saved performance fields, export
 read-back and the current picker/catalogue conventions.
 
 Phone UI tests and the opt-in benchmark compiled; neither was executed locally
-without a connected device. Physical phone timing and MPC hardware acceptance
-remain unverified. The approved `Libration.kt` renderer remains SHA-256
+without a connected device. Physical phone timing remains unmeasured. The owner
+subsequently accepted phone/MPC behavior as recorded above. The approved
+`Libration.kt` renderer remains SHA-256
 `033ba2696d06cc6ff81c1f9ed9c3665a662ac56b4b1b581c2d0f62529ac4239c`.
 
 ## Remaining scope
 
-HOLD is saved as zero and positive HOLD values are explicitly refused. The instrument
-does not claim to export a sustained instrument or seamless loop. The six-design,
-36-preset roster, physical-phone profiling results, faster fresh previews and MPC hardware
-acceptance remain later work. The general audio classifier's duration rule calls these long
+The original finite kernel still refuses positive HOLD and the twelve presets
+continue to save HOLD zero. Explicit `heldModel=1` patches route HOLD one to the
+new [continuous held renderer](LIBRATION_HOLD.md); NOTE routes to the unchanged
+finite kernel. The original sixteen-pad starter remains finite. The six-design,
+36-preset expansion, physical-phone profiling and faster fresh renders remain
+later work. The general audio classifier's duration rule calls long finite
 examples LOOP; their engine intent is TONAL and their WAVs play once.
 
 ## Evidence ledger
@@ -348,8 +358,9 @@ examples LOOP; their engine intent is TONAL and their WAVs play once.
   WAV formats, browser behavior and cloud JVM render cost. Artifact manifests and
   verification reports contain the measurements and methods.
 - Proposed: preset roles, musical usefulness and the names' material associations.
-- Heard: the owner accepted the control revision and twelve-preset musical bank.
-  MPC hardware playback and physical-phone behavior await owner checks.
+- Heard: the owner accepted the control revision and twelve-preset musical bank,
+  then reported phone and MPC behavior acceptable on 2026-10-31. Hardware model,
+  OS details and measured phone latency were not supplied.
 
 ## Why it is built this way
 

@@ -1,5 +1,7 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.DrumClass
+
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -62,6 +64,19 @@ object Fathom {
             MacroSpec("TUNE", 0.35f), MacroSpec("GLIDE", 0f), MacroSpec("DRIVE", 0.4f),
             MacroSpec("CUTOFF", 0.5f), MacroSpec("DECAY", 0.45f), MacroSpec("RATIO", 0.25f),
         )
+    }
+
+    /**
+     * How a FATHOM pad is filed: DEEP and GRIND as KICK, GLASS as PERC. A bass pad
+     * this low sits where an MPC program keeps its kick, and the classifier files
+     * DEEP and GRIND there on its own (FathomPresetsTest keeps every preset inside
+     * that region); GLASS's FM bite reads as a pitched hit. The phone's picker and
+     * [SynthKits.fathom] both read this, so the two cannot disagree.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun drumClassFor(voice: FathomVoice, macros: Map<String, Float> = emptyMap()): DrumClass = when (voice) {
+        FathomVoice.DEEP, FathomVoice.GRIND -> DrumClass.KICK
+        FathomVoice.GLASS -> DrumClass.PERC
     }
 
     fun defaults(voice: FathomVoice): Map<String, Float> =

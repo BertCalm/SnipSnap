@@ -1,19 +1,258 @@
-# Caustic: four finite voices
+# Caustic: four voices and instrument completion
 
 Caustic turns an ordinary source into a position-dependent singing body through
-reflected paths. The native instrument now develops four gestures within the
-same CAUSTIC engine: ALLOY, HOLLOW_MALLET, RUBBED_RING and
-TRAVELLING_CATCHES. SOURCE and FOCUS retain the circular geometry; BODY changes
-the contact or pressure appropriate to the voice, and LENGTH shapes a finite
-gesture. Root and excitation velocity remain explicit saved fields. HOLD is
-reserved. The working name has not been checked for release.
+reflected paths. ALLOY, HOLLOW_MALLET, RUBBED_RING and TRAVELLING_CATCHES are
+the four implemented finite voices. The owner selected the earlier study
+directions; the production ports still await an explicit listening verdict.
+Native model 2 develops them into sustained instruments with moving
+source/pickup geometry and onset-preserving keygroups. The implementation and
+generated instrument pack are built and validated by the full JVM gate.
+The completion audition is published. Its new held and moving sounds remain
+unheard. Root and excitation velocity
+remain explicit saved fields. The working name has not been checked for release.
 
-## Native character expansion
+## Model-2 completion: as built
+
+Status: implemented and generated on 2026-10-31 from clean source `c9748aa93`.
+Native audio, publication and offline generation-cost checks are complete;
+the 8,233-test nine-module gate passes on merged source `d572c36a2` against
+upstream `e4e7b2932`. Listening and physical device/MPC acceptance remain open.
+The
+[completion design brief](superpowers/specs/2026-10-31-caustic-completion.md)
+records the selected design and proof requirements. Older measurements below
+belong to their named finite-model revisions.
+
+The characteristic gesture is **contact → singing body → recurring moving
+concentration → played release**. Each voice keeps its established finite
+character. A bounded ongoing source or contact pattern drives its passive
+body during HOLD; a longer decay alone does not constitute sustain.
+
+### Six controls
+
+| Control | Model-2 default | Meaning |
+| --- | --- | --- |
+| SOURCE | .5 | The existing illumination/source-distance control. Motion varies the actual source geometry around this setting. |
+| FOCUS | .19 | The existing finite pickup band. Motion carries it through positions around this setting. |
+| BODY | ALLOY 1; Hollow/Rubbed .5; Catches 0 | Voice-specific excitation/contact pressure or metallic fullness, retaining the finite reference positions. |
+| LENGTH | 1 | Finite gesture and release scale below full HOLD; planned loop span at full HOLD. |
+| MOTION | 0 | Exact stationary geometry at zero; positive values move prepared reflection paths before modal excitation. |
+| HOLD | 0 | Below 1, lengthens actual source and modal release by up to four seconds. At 1, selects a genuinely sustained periodic render. |
+
+For `0 <= HOLD < 1`, the finite duration contract is
+`.5 + 7.5 * LENGTH + 4 * HOLD` seconds. The renderer uses the corresponding
+internal effective LENGTH, so this changes the gesture and release rather
+than appending silence or replaying a fixed note. At HOLD=1, a separate
+pitch-preserving loop plan determines the frame count. The loop is always
+filed as LOOP; long finite notes can also retain duration-based LOOP metadata.
+
+### Reflection motion and sustained state
+
+```text
+bounded voice source/contact + periodic SOURCE/FOCUS trajectory
+  → smoothly weighted emission windows through prepared reflection states
+  → signed causal path delays and pickup/modal participation
+  → shared passive modal body
+  → continuous native filtering and decimation
+  → pure sustain loop, or real onset followed by that sustain region
+```
+
+Motion changes the coherent excitation received by the body. Source windows
+are sent through their own prepared path responses and combined before the
+passive bank; this preserves each state's signed delay contribution. It is a
+musical emission-window approximation to changing geometry, not a full
+moving-wave or Doppler solver. Motion at zero introduces no background drift.
+The circular boundary remains a two-dimensional, single-reflection model.
+Positive MOTION uses 32 prepared trajectory states. SOURCE varies by
+`.24 * MOTION * sin(phase)` and FOCUS by `.18 * MOTION * sin(phase)`, each
+clipped to 0–1. MOTION sets excursion; LENGTH selects the loop span.
+
+The passive bank's affine one-period map supplies an exact periodic reference.
+The actual onset evolves from zero with causal path history. A settling
+predictor selects a prefix, then the renderer checks three genuinely rendered
+cycles for modal-state and sample continuation, extending the prefix if
+necessary up to its 24-cycle cap. Output filters run before the crop. The
+continuation reference is real rendered context rather than a duplicated loop.
+
+| Voice | Implemented full-HOLD excitation |
+| --- | --- |
+| ALLOY | Continuous harmonic pressure with four restrained metallic rearticulations per loop. |
+| HOLLOW_MALLET | Four soft contacts per loop driving six low/odd modes. |
+| RUBBED_RING | Ongoing rough harmonic/noise pressure, periodic seeded texture and a real pressure-rise onset. |
+| TRAVELLING_CATCHES | Four weighted spatial contacts per loop feeding the same linear metallic body before one output stage. |
+
+The planner targets roughly .65–1 second through LENGTH. It fits note periods
+in groups of four to integer output frames and records the fitted pitch.
+These source shapes and timing choices are implemented musical proposals;
+their sonic acceptance remains open.
+
+### Drum pads and held instruments
+
+Full-HOLD drum pads receive a pure loop `Snip`. Held keygroups receive a
+`KeyNote` containing the actual onset and a positive `loopStartFrame`. These
+are different playback contracts: the keygroup must not start by replaying an
+already-settled loop as a pretend attack.
+
+`CausticPadMaker` captures up to nine minor-third roots around the saved note,
+covering its two-octave neighbourhood within MIDI 36–84. Near the register
+edges it uses fewer roots and includes the clipped boundary. Each root has
+one captured velocity layer. The saved source patch retains its original
+HOLD value; zone rendering requests full sustain without mutating that recipe.
+The existing instrument player supplies live note velocity gain and a separate
+.1–1.5-second note-off release, default .6 seconds. The generated C4 instruments
+each contain nine roots from MIDI 48 to 72. Both MPC formats and the phone
+SMPL reader pass their writer/readback checks, including positive onset/loop
+markers and host release. The merged exporter explicitly uses
+`spanKeyboard=false`, retaining the documented narrow ranges after the
+upstream default changed to full-keyboard coverage.
+
+### Compatibility and cost
+
+The eleven existing factory presets and archived native JSON remain model 1.
+Missing or null native `model` still decodes as 1. Model-1 saved patches reject
+positive HOLD and unsupported MOTION fields. CLI/editing boundaries preserve
+that model unless an explicit extension request promotes the working copy.
+Low-level `settled`/render helpers retain the existing unknown-key filtering;
+they do not all reject unknown fields. New
+native patches default to model 2. Explicit HOLD, MOTION or INSTRUMENT actions
+can promote an editor working copy; ordinary replay does not upgrade the
+source patch, and stale stored controls cannot request promotion.
+Live ROOT drafting retains the upstream fix in `1807cacbb`; this completion
+does not add a separate ROOT fix.
+
+At model-2 MOTION=0 and HOLD=0, the compatibility target is exact earlier
+finite PCM. This must be checked independently of the legacy model-1 canaries.
+The archived `CausticRecipe` models 1–4 remain a separate format.
+
+Prepared geometry stays outside the audio loop. A moving render reuses its
+32 states during source-window interpolation. The trajectory LRU holds six
+tables; reception bases have an 8 MiB cache budget. The geometry key includes
+SOURCE, FOCUS, MOTION and resolution; reception also depends on fitted pitch
+and internal rate. Audio/filter state belongs to the note. Alloy and Catches
+use analytic source-term routing; Hollow and Rubbed share source FFT work
+across reception kernels. Independent reference paths remain available for
+comparison. The measured host costs below include preparation, audio and
+finishing. Phone latency remains unmeasured; historical finite timings do not
+establish the model-2 cost.
+
+### Measured offline generation
+
+The isolated 48-call benchmark ran on 2026-10-31 at approximately 23:45 UTC;
+its summary was extracted and reviewed on 2026-11-02. It used Java 17.0.21,
+four allocated cores, `-XX:ActiveProcessorCount=4 -Xms1g -Xmx2g`, and no
+concurrent Gradle or native renders. It timed the public native call, including
+preparation/audio/finish, with hashing and file I/O excluded. At C4, velocity
+.75, full HOLD and default other controls, each path ran three times with no
+separate warm-up. All 48 calls passed; repeated Float32 hashes match. Only
+production immutable geometry/reception/FFT plans are reused, not cached audio.
+
+| Voice | MOTION 0 loop / keyNote median ms | MOTION 1 loop / keyNote median ms |
+| --- | --- | --- |
+| ALLOY | 1182 / 979 | 1078 / 931 |
+| HOLLOW_MALLET | 350 / 351 | 545 / 554 |
+| RUBBED_RING | 542 / 517 | 1082 / 1031 |
+| TRAVELLING_CATCHES | 709 / 710 | 842 / 787 |
+
+These repeated-call host medians do not meet the house goal of regeneration
+in tens of milliseconds. They measure offline generation, with the first call
+potentially including class loading/JIT. Playback uses the pre-rendered
+instrument buffers. No real-time rendering or phone latency claim follows.
+The per-call measurements and runtime context are embedded under
+`productionLatency` in the [completion evidence aggregate](evidence/caustic-completion-2026-10-31.json).
+
+### Why it is built this way
+
+- The four finite voices remain the anchors. Sustaining them extends the
+  selected study directions without replacing saved finite notes.
+- Motion enters before the resonator. Moving only a finished note's gain would
+  leave the reflection pattern and spectral excitation unchanged.
+- Drum loops and keygroup samples have different starts. Keeping a real onset
+  makes a held key feel played while the drum pad receives a reusable loop.
+- Modal and filter continuation are checked before cropping. A quiet join
+  alone would not prove that the resonator state or repeated gesture closes.
+- Versioned working-copy promotion preserves old recipes while making a new
+  HOLD, MOTION or INSTRUMENT action explicit and reproducible.
+
+### Completion evidence ledger
+
+- **Heard:** the owner preferred Alloy/Fuller Body and selected the three
+  character-study directions for development. Native finite ports still await
+  a listening verdict; new sustain, motion and held-key behaviour are unheard.
+- **Verified:** baseline `d7c2379c1` and clean implementation/generation
+  checkpoint `c9748aa93`. All four voices have model-2 HOLD, motion, real-onset
+  keygroup rendering and explicit editor promotion. The eleven original
+  presets remain model 1; earlier listening artifacts are unchanged. Completed
+  integration validation uses merged source `d572c36a2`; published media
+  remains the clean `c9748aa93` generation.
+- **Proposed:** held articulation, motion excursion and cycle timing are
+  implemented sound-design choices awaiting listening. Their implementation
+  does not establish the owner's acceptance.
+- **Measured:** the generated pack, native audio and 48-call host benchmark
+  pass. The measured generation cost misses the tens-of-ms goal. The complete
+  nine-module JVM gate passes 8,233 tests with zero failures/errors/skips on
+  merged `d572c36a2`. The pre-merge focused Gradle gate passes 124 tests;
+  publication and browser payload checks pass.
+  The earlier 7,001-test result below applies to the finite expansion.
+
+| Completion check | Evidence and source scope |
+| --- | --- |
+| Legacy preservation | All 78 Float32 stage hashes match the `d7c2379c1` baseline: seventeen ALLOY cases and nine character defaults, each at three stages. The post-merge check at `d572c36a2` also retains all 78 hashes exactly. |
+| Native audio | An independent Java 21.0.13+9 harness passes twenty-seven audio cases plus four normal/probe parity, silence and cancellation checks. Coverage includes all voices at C2/C4/C6, full motion, velocity and the Catches BODY=0/LENGTH=.15165251 corner. This matrix is not the JDK 17 Gradle gate. |
+| Pitch, bounds and continuation | Worst measured pitch error is 12.2813 cents, minimum confidence .8448, maximum relative DC `8.06e-9`, raw peak .12663 and conditioned continuation error `1.354e-5`. These are measured cases, not an exhaustive chromatic guarantee. |
+| Higher-rate comparison | In that Java 21 matrix, 4× versus 16× normalized log-band spectral TV is `8.63e-6` for Alloy, `6.25e-6` for Catches, `1.50e-4` for Hollow and `.00414` for Rubbed. Noisy characters have rate-dependent seeded texture; this is broad-shape evidence, not isolated alias subtraction. |
+| Generated pack | At `c9748aa93`, twenty-eight clips produce 56 native/matched WAVs plus four real-neighbour seam-context WAVs. Each context contains the actual preceding, kept and following cycles. Five ZIPs contain four nine-zone keygroups and a portable C4 comparison. Expanded payload is 78,182,796 bytes; the largest ZIP is 16,255,824 bytes. |
+| Output and export | The Temurin 17.0.21+9 generator exits 0. Native peak is at most .9900; maximum reported house seam is `6.01e-12`. All five ZIP CRCs and all 36 zones pass MPC 2, MPC 3, phone SMPL and PCM24 seam/readback checks. |
+| Published audition | [Completion page](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/), site source `5cfa2c81c8e0a1d4f325d4a28940621c18f36640`, terminal deployment succeeded with the owner's private audience retained. The complete site contains 268 files and 213,394,966 expanded bytes. |
+| Browser payload | Widths 320–1440, all 28 clip routes and named references, mode-offset/rapid switching, keyboard playback, replay, load failure/retry, download bytes and root/bare-path navigation pass. These checks exercise exported recordings, not browser synthesis. |
+| Focused Gradle gate | At pre-merge `981a7d93f`, 124 tests pass on Temurin 17.0.21+9: 94 synth, 20 shell and 10 CLI, zero failures/errors/skips, exit 0 in 5m 14s. |
+| Full JVM gate | At `d572c36a219f2cf36957b3b5a05749ebe4fcde8c`, against upstream `e4e7b2932`, all nine JVM modules pass 8,233 tests with zero failures, errors or skips on Temurin 17.0.21+9. This includes 4,521 synth, 1,915 shell and 274 CLI tests. Exit 0; wall time 2h 45m 24s. |
+| Merged build scope | The same successful run assembles debug and Android test APKs with four native ABIs. The debug APK is 69,407,847 bytes, SHA-256 `5843e4a00af34c4bb8888b7ad13426225362e043f30bfc37a1dfad358984a451`; test APK SHA-256 is `66ac1949a3f914f4555174a9ebdf50f93f52a109c2228959aa93bb52f781f3b3`. Android instrumentation is packaged, not executed; `:app:test` is outside the nine-module JVM gate. |
+| Compiler configuration | The existing Gradle configuration excludes `Filament::synthesize` and `CausticInstrument::synthesize` from C2 compilation. This work does not add exclusions. The initial standalone JDK 17 check without those flags passed 18/19; the corrected assertion is covered by the passing focused Gradle run. No corrected standalone rerun result is claimed. |
+
+The initial direct-test failure demanded an exactly zero first sample after
+FFT onset routing. Only that test assertion now uses an absolute `1e-9`
+tolerance, −180 dB and approximately 42 dB below a 24-bit sample step. Real
+zero-state evolution, independent continuation and exact zero-effort silence
+guards remain unchanged. This test-only correction does not change DSP or
+the published audio. It passes the focused and full Gradle gates under the
+repository's existing compiler configuration. Those passing gates remain
+separate from the original standalone no-exclusion runtime check.
+
+`CausticPadMakerTest` exercises preview and actual player note-off/release.
+The four additional published evidence WAVs are real-neighbour seam context,
+not production-player release captures. The published audio and packages
+remain the original `c9748aa93` artifacts; no regeneration is implied by the
+later integration merge.
+
+The [completion evidence aggregate](evidence/caustic-completion-2026-10-31.json)
+records the separate native-harness, generator, Gradle and publication scopes.
+The native audio summary is `qa-summary.json` from the completion
+probe. Neither native metrics nor exported file readback substitutes for
+listening or a physical phone/MPC check.
+
+### Listen or reproduce the completion pack
+
+The [published completion audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/complete/)
+contains all 28 recordings and five downloads. Four additional evidence WAVs
+retain the actual preceding, kept and following cycles; they are not note-off
+previews. The earlier finite page remains available
+through its history link.
+
+```text
+./gradlew --no-daemon :shell:generateCausticCompleteAudition
+```
+
+This writes `testkit/caustic-complete-audition/`, including native and matched
+recordings, complete model-2 recipes, four real-neighbour seam-context WAVs and
+the five portable downloads. Native files are the actual renderer output;
+matched copies use `AuditionLevel` once per complete preview. The browser
+plays exported recordings and does not synthesize live control changes.
+
+## Finite model-1 instrument and retained evidence
 
 The owner heard the three character-study candidates as distinct and chose to
-develop all three. That verdict applies to the study recordings. The Kotlin
-ports, their intermediate controls and their native output conditioning still
-need the owner's listening verdict.
+develop all three. That approval applies to the study directions; the native
+finite ports are implemented and measured, with listening acceptance still
+open. The contracts and evidence below document that retained model-1 baseline.
 
 | Native voice | Characteristic gesture | BODY reference position |
 | --- | --- | --- |
@@ -105,8 +344,9 @@ do not increase the engine count or claim a held instrument export.
 ### Expansion evidence ledger
 
 - **Heard:** the owner heard distinct Hollow Mallet, Rubbed Ring and Travelling
-  Catches study gestures and requested native development of all three. The
-  production ports and new control positions have not yet been heard.
+  Catches study gestures and requested native development. The production
+  ports and new control positions still await a listening verdict. New
+  model-2 held/moving sounds are separate, unheard listening candidates.
 - **Verified:** the shared CAUSTIC geometry, saved root/velocity contract,
   original native model 1 and archived models 1–4 were read at `53366f9c` before
   this expansion. The published pack and completed build stage use clean source
@@ -198,9 +438,10 @@ TONAL/LOOP filing, following the existing authored-instrument approach used
 for low ARCO notes. The measured heuristic result remains in diagnostics;
 it is not presented as universally safe drum classification.
 
-The production ports still need listening, phone performance and MPC hardware
-load/play checks. HOLD, live moving geometry and held keygroup export remain
-outside this finite expansion.
+The finite production ports still need listening, phone performance and MPC
+hardware load/play checks. Model-2 HOLD, moving geometry and held keygroup
+export are covered by the completion contract above, not by these finite-pack
+measurements.
 
 ## Character listening study
 
@@ -256,9 +497,9 @@ approved the fuller-body direction after finding the Bloom/Deep tail variants
 indistinguishable. Those references remain available alongside the new voices;
 the broader moving-geometry design remains later work.
 
-## Listen and reproduce
+## Retained finite listening packs
 
-The published [four-voice native audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+The published [four-voice finite audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
 contains 42 recordings, native patches and all six downloads. It uses a
 companion site so the original listening archive can keep its recordings
 within the hosting limit. All 275 earlier non-navigation files remain exact;
@@ -268,7 +509,7 @@ The companion's 139 files match the generated payload except four documented
 HTML/history-link metadata files. Its audio and native patch hashes remain
 unchanged. The browser checks above exercise that payload.
 
-Reproduce the current four-voice comparison with:
+Reproduce the retained four-voice finite comparison with:
 
 ```text
 ./gradlew --no-daemon :synth:generateCausticCharactersAudition
@@ -500,12 +741,12 @@ phone budgets or a sonic acceptance verdict.
 
 ## Later work
 
-Deformation, SCATTER, exact-stop ORBIT, verified sustained HOLD, further
-voices, the broader preset bank and held keygroup export remain later work.
-The finite instrument includes native patch/kit registration and the phone
-picker. Phone latency and the new kit's hardware load/play check remain
-device verification, separate from JVM and export-reader checks. No real-time
-ray-traced engine is required for this sample workflow.
+Surface deformation, SCATTER, a broader voice/preset bank and a full moving-wave
+solver remain outside the current completion. Sustained HOLD, SOURCE/FOCUS
+motion and onset-preserving keygroups are the current model-2 work. Phone
+latency, hardware load/play and listening to the new held sounds remain
+separate from numerical and export-reader checks. No real-time ray-traced
+engine is required for this sample workflow.
 
 ## Original native model-1 evidence
 

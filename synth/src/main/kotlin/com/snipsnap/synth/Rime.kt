@@ -6,24 +6,35 @@ import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import kotlin.math.*
 
-enum class RimeVoice { LOOP, GLINT, VESSEL }
+enum class RimeVoice { LOOP, GLINT, VESSEL, REED, FILIGREE, CRUST }
 
-/** Contour instrument. Saved models 1–4 retain their finite rendering laws. */
+/** Contour instrument. Saved models 1–5 retain their rendering laws. */
 object Rime {
-    const val MODEL_VERSION = 5
+    const val MODEL_VERSION = 6
+    val LEGACY_VOICES = listOf(RimeVoice.LOOP, RimeVoice.GLINT, RimeVoice.VESSEL)
     const val HOLD_THRESHOLD = .85f
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
-    fun rootMidi(voice: RimeVoice): Int = when (voice) { RimeVoice.LOOP -> 36; RimeVoice.GLINT -> 60; RimeVoice.VESSEL -> 48 }
-    fun gateSeconds(voice: RimeVoice): Float = when (voice) { RimeVoice.LOOP -> .8f; RimeVoice.GLINT -> 1.2f; RimeVoice.VESSEL -> 2.6f }
+    fun rootMidi(voice: RimeVoice): Int = when (voice) {
+        RimeVoice.LOOP -> 36; RimeVoice.GLINT, RimeVoice.FILIGREE -> 60
+        RimeVoice.VESSEL, RimeVoice.REED, RimeVoice.CRUST -> 48
+    }
+    fun gateSeconds(voice: RimeVoice): Float = when (voice) {
+        RimeVoice.LOOP -> .8f; RimeVoice.GLINT, RimeVoice.CRUST -> 1.2f
+        RimeVoice.VESSEL -> 2.6f; RimeVoice.REED -> 1.6f; RimeVoice.FILIGREE -> 3f
+    }
     fun defaults(voice: RimeVoice, model: Int = MODEL_VERSION): Map<String, Float> {
         require(model in 1..MODEL_VERSION) { "unsupported RIME model $model" }
+        require(model >= 6 || voice in LEGACY_VOICES) { "RIME $voice requires model 6" }
         if (model == 1) return RimeV1.defaults(voice)
         val values = when (voice) {
             RimeVoice.LOOP -> listOf(.46f, .22f, .20f, .10f, .25f)
             RimeVoice.GLINT -> listOf(.82f, .72f, if (model >= 3) .15f else .65f, .35f, .55f)
             RimeVoice.VESSEL -> listOf(.85f, .48f, .25f, .85f, .85f)
+            RimeVoice.REED -> listOf(.66f, .50f, .12f, .25f, .52f)
+            RimeVoice.FILIGREE -> listOf(.90f, .50f, .10f, .80f, .45f)
+            RimeVoice.CRUST -> listOf(1f, .90f, .10f, .45f, .35f)
         }
         return (TIMBRAL.zip(values) + ("HOLD" to 0f)).toMap()
     }
@@ -39,6 +50,8 @@ object Rime {
         return values
     }
     fun isLoop(macros: Map<String, Float>): Boolean = (macros["HOLD"] ?: 0f) >= HOLD_THRESHOLD
+    /** Model 6 derives the saved adaptation: UNFOLD 60–100 repeats scale motion. */
+    fun movingHold(macros: Map<String, Float>, model: Int): Boolean = model >= 6 && (macros["UNFOLD"] ?: 0f) >= .60f
     internal fun extendedGate(gate: Float, hold: Float): Float = gate + (4f - gate) * (hold / HOLD_THRESHOLD).coerceIn(0f, 1f)
     fun drumClassFor(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), gateSeconds: Float = gateSeconds(voice), model: Int = MODEL_VERSION): DrumClass {
         val m = settled(voice, macros, model)
@@ -81,7 +94,10 @@ object Rime {
             val m = settled(voice, macros, model)
             require(gateSeconds.isFinite() && gateSeconds in .15f..4f) { "RIME gateSeconds must be .15..4" }
             require(!isLoop(m)) { "use RimeHeld for periodic HOLD diagnostics" }
-            return inspect(voice, m + ("HOLD" to 0f), midi, velocity, extendedGate(gateSeconds, m.getValue("HOLD")), seed, options, 4)
+            if (voice in LEGACY_VOICES || m.getValue("HOLD") > 0f) {
+                return inspect(voice, m + ("HOLD" to 0f), midi, velocity, extendedGate(gateSeconds, m.getValue("HOLD")), seed, options,
+                    if (voice in LEGACY_VOICES) 4 else 6)
+            }
         }
         if (model == 1) {
             val old = RimeV1.inspect(voice, macros, midi, velocity, gateSeconds, seed,
@@ -102,7 +118,8 @@ object Rime {
         val ca = cos(angle); val sa = sin(angle)
         val cr = cos(PI / 6); val sr = sin(PI / 6)
         val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge,
-            apertureAngle = if (model >= 3) angle else null, apertureLaw = max(3, model))
+            apertureAngle = if (model >= 3) angle else null, apertureLaw = if (model >= 4) 4 else 3,
+            variant = RimeContour.variantFor(voice))
         val resonator = RimeBody(voice, hz, body, rate)
         val release = .06 + .12 * body
         val duration = min(8.0, gateSeconds + release + max(.25, resonator.t60 * 1.25))
@@ -113,15 +130,15 @@ object Rime {
         val noise = Dsp.Noise(Dsp.seedFor("RIME", min(model, 3), seed, midi, "friction"))
         var rough = 0.0
         val noiseAlpha = 1 - exp(-2 * PI * 12000 / rate)
-        val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity)
+        val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity) * RimeVoicing.contact(voice)
         var phase = 0.0; var peak = 0.0; var maxEnergy = 0.0
         val trace = mutableListOf<Trace>()
         val gains = DoubleArray(source.bands.size)
         val increments = DoubleArray(gains.size)
         val block = (rate / 1000).coerceAtLeast(1)
-        val attack = when (voice) { RimeVoice.LOOP -> .006; RimeVoice.GLINT -> .003; RimeVoice.VESSEL -> .025 } +
+        val attack = RimeVoicing.attack(voice) +
             (if (source.bands.size > 1) unfold * .008 else 0.0)
-        val decay = when (voice) { RimeVoice.LOOP -> 1.0; RimeVoice.GLINT -> 2.1; RimeVoice.VESSEL -> .3 }
+        val decay = RimeVoicing.decay(voice)
         val step = hz / rate
         for (i in raw.indices) {
             if (i % 4096 == 0 && Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("RIME render cancelled")
@@ -151,7 +168,7 @@ object Rime {
             val pressureA = slopeA / sqrt(1 + .3 * slopeA * slopeA)
             val pressureB = slopeB / sqrt(1 + .3 * slopeB * slopeB)
             rough += noiseAlpha * (noise.next() - rough)
-            val friction = if (options.friction) .018 * rough else 0.0
+            val friction = if (options.friction) RimeVoicing.friction(voice) * rough else 0.0
             val contactA = contactGain * (pressureA + friction * abs(pressureA))
             val contactB = contactGain * (pressureB + friction * abs(pressureB))
             val envelope = RimeContour.smooth(t / attack) * exp(-decay * min(t, gateSeconds.toDouble()) / gateSeconds) *
@@ -210,10 +227,18 @@ internal class RimeBody(voice: RimeVoice, hz: Double, body: Double, rate: Int) {
     val t60: Double = decaySeconds(voice, body)
     companion object {
         fun decaySeconds(voice: RimeVoice, body: Double): Double = (.09 + 1.20 * body.pow(1.5)) *
-            when (voice) { RimeVoice.LOOP -> .65; RimeVoice.GLINT -> .8; RimeVoice.VESSEL -> 1.35 }
+            when (voice) {
+                RimeVoice.LOOP -> .65; RimeVoice.GLINT -> .8; RimeVoice.VESSEL -> 1.35
+                RimeVoice.REED -> .95; RimeVoice.FILIGREE -> .85; RimeVoice.CRUST -> .65
+            }
     }
     init {
-        val ratios = doubleArrayOf(1.0, 2.0, 3.0, 5.0, 7.0, 11.0, 13.0, 17.0)
+        val ratios = when (voice) {
+            RimeVoice.REED -> doubleArrayOf(1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 15.0, 19.0)
+            RimeVoice.FILIGREE -> doubleArrayOf(1.0, 2.0, 4.0, 7.0, 10.0, 14.0, 19.0, 23.0)
+            RimeVoice.CRUST -> doubleArrayOf(1.0, 2.0, 3.0, 6.0, 9.0, 13.0, 17.0, 23.0)
+            else -> doubleArrayOf(1.0, 2.0, 3.0, 5.0, 7.0, 11.0, 13.0, 17.0)
+        }
         val offsets = doubleArrayOf(0.0, -2.0, 3.5, -4.0, 5.0, -6.0, 7.0, -8.0)
         val ringingOffsets = doubleArrayOf(0.0, .20, -.30, .45, -.55, .65, -.75, .85)
         val a = doubleArrayOf(.55, .45, .35, 1.10, .90, .60, .45, .30)

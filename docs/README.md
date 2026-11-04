@@ -1,5 +1,16 @@
 # Which document to trust
 
+**Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
+BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
+Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)
+separates the approved Python direction, passed focused/output/rate probes,
+final SDK builds and the 8,010-test JVM gate at `00a1f9ff` from the three
+software-emulator functional tests at `fac839f0`. The final rebuilt APK has not
+been device-executed; native listening and phone performance remain open.
+Sustained HOLD remains unsupported. It records the exact ART setup and its
+limits. The complete frozen reference bundle is retained
+under [`reference/accord`](../reference/accord/README.md).
+
 **Rime.** [`RIME.md`](RIME.md) records the preserved finite bank, versioned HOLD,
 attack-plus-loop MPC instruments and phone integration. The remaining three
 voices and expanded library await the original specification.
@@ -137,7 +148,9 @@ the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved s
 replay and export contracts. The [first performance backend](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md)
 connects PadEngine playback and stereo PRINT. The [KIT PERFORMANCE panel](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md)
 adds live controls and saved kit settings. [SURFACE → FX](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md)
-adds an explicit per-kit route and stereo PRINT. Remaining routes and physical-device checks follow
+adds an explicit per-kit route and stereo PRINT. [ORBIT's route](superpowers/specs/2026-11-01-aquarium-orbit-design.md)
+adds the ring mix, independent tap audition, a fresh bounce with a chosen tail,
+and stereo shelf storage for ORBIT and SURFACE. Remaining routes and physical-device checks follow
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)

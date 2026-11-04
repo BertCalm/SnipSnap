@@ -1,8 +1,9 @@
 package com.snipsnap.synth
 
 /**
- * Twenty-five provisional WICK recipes for the listening review. They stay
- * outside [Presets], the phone picker and FRESH TAPE until that review.
+ * Twenty-seven WICK recipes, including the three accepted RATTLE bodies. The library
+ * stays outside [Presets], the phone picker and FRESH TAPE while the full bank and
+ * device acceptance remain open.
  * The dry engine supplies the identity; none needs a landing FX chain.
  */
 object WickPresets {
@@ -46,7 +47,9 @@ object WickPresets {
             "CASCADE" to .80f, "TIMBRE" to .95f, "RECOVERY" to .40f),
         p(WickVoice.FLICKER, "Held Flicker", "SPARK" to .50f, "FEED" to .55f,
             "CASCADE" to .70f, "TIMBRE" to .75f, "RECOVERY" to .45f, "HOLD" to 1f),
-        p(WickVoice.RATTLE, "Recovering Rattle"),
+        p(WickVoice.RATTLE, "Warm Wire"),
+        p(WickVoice.RATTLE, "Hollow Reed").copy(rattleSource = Wick.RattleSource.HOLLOW_REED),
+        p(WickVoice.RATTLE, "Rubbed Glass").copy(rattleSource = Wick.RattleSource.RUBBED_GLASS),
         p(WickVoice.RATTLE, "Depleted Rattle", "SPARK" to .75f, "FEED" to .80f,
             "CASCADE" to .85f, "TIMBRE" to .65f, "RECOVERY" to .65f),
         p(WickVoice.RATTLE, "Small Rattle", "SPARK" to .45f, "FEED" to .25f,

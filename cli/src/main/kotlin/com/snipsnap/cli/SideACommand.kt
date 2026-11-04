@@ -62,11 +62,13 @@ object SideACommand {
         }
         File(tapeDir, "tracklist.txt").writeText(tracklist)
 
-        // The cover: the first kit's waveform tile wearing the tape's title.
+        // The cover: the first kit's own tile (its art.json, else the defaults) wearing the tape's title.
         val firstKit = KitStore.load(kitDirs.first())
         File(tapeDir, "cover.png").writeBytes(
             com.snipsnap.shell.KitArt.png(
-                firstKit, kitDirs.first(), com.snipsnap.shell.KitArt.Style.WAVEFORM, label = title,
+                firstKit, kitDirs.first(),
+                Exports.artKnobs(kitDirs.first(), style = null),
+                label = title,
             ),
         )
 

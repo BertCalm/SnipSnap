@@ -61,6 +61,8 @@ import com.snipsnap.app.ui.AppJobs
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
+import com.snipsnap.app.ui.KitFromMade
+import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
 import com.snipsnap.app.ui.CaptureSheet
@@ -83,6 +85,7 @@ import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MyVoiceScreen
+import com.snipsnap.app.ui.ConfluenceVoicesScreen
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
@@ -222,7 +225,7 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
  * SPLIT, VERSIONS, PAD CAPTURE, SONG), so they come from the model either way.
  */
-private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.MY_VOICE)
+private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.MY_VOICE, Bench.CONFLUENCE_VOICES)
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -301,6 +304,10 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
  */
 @Composable
 fun App(shelf: KitShelf) {
+    // The phone's expansions, beside the shelf's kits: `<files>/expansions`.
+    val expansionStore = remember(shelf) { shelf.expansionStore() }
+    // EXPORT's subject: null is the open kit; an expansion's id (or "" for the first) is that expansion.
+    var exportExpansion by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -380,6 +387,9 @@ fun App(shelf: KitShelf) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
+    // PAD VELOCITY (SETUP): how a tap becomes a velocity. Read here, at start,
+    // so every pad agrees with the saved choice before SETUP is ever opened.
+    remember(context) { PadFeelStore.init(context) }
     // REDUCED MOTION: the system's own "remove animations", kept current while
     // the app is up (it can change under us; see `rememberReduceMotion`). The
     // drawings that loop (the busy bar, the spinner) read it through
@@ -467,6 +477,9 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
+    // KIT FROM ANYTHING's result sheet: the kit just written and the words about it, up until
+    // it is closed or the kit is opened. Null otherwise.
+    var kitFromMade by remember { mutableStateOf<KitFromMade?>(null) }
     // The job a screen is carrying on its own (Split, and a recording being
     // read in TAPE and CHOP), reported through `LocalBusySink` and gone when
     // the screen is. Work that outlives its screen is not reported here: the
@@ -1171,6 +1184,8 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted kits (Task 4): the shelf's own bin
         // empties itself of whatever DELETE put there more than 30 days ago.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }
+        // A kit the sweep forgot for good leaves every expansion it was in.
+        withContext(Dispatchers.IO) { KitWrites.mutex.withLock { runCatching { shelf.pruneExpansions() } } }
         // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
         // always the intent (KitBuilder.kt's own docs), but nothing ever called
         // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected
@@ -1306,14 +1321,17 @@ fun App(shelf: KitShelf) {
                         dock.say(Copy.roomLanded(room.name))
                         return@LaunchedEffect
                     }
-                    val (entries, skipped, presets) = withContext(Dispatchers.IO) { shelf.land(local, name) }
+                    // Under the kit-write lock: a backup coming home writes expansions as well as kits.
+                    val (entries, skipped, presets, expansions) = withContext(Dispatchers.IO) {
+                        KitWrites.mutex.withLock { shelf.land(local, name) }
+                    }
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     // A clean landing keeps its toast; one with skips opens the
                     // box, which names each skipped kit and the door's reason.
                     // A backup's presets are counted in the same line: they
                     // landed under YOURS on SYNTH, which is nowhere near here.
-                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
-                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets))
+                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets, expansions)
+                    if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets, expansions))
                     // The landing replaces the benches, so an editor that was up
                     // is gone with them; one the history brings back is judged
                     // against this kit by its own verdict.
@@ -1604,6 +1622,46 @@ fun App(shelf: KitShelf) {
                 },
             )
             open = entry
+        }
+    }
+
+    /**
+     * KIT FROM ANYTHING, from the pad sheet: the pad's own audio quarried into a kit of
+     * sixteen on the shelf ([KitShelf.landKitFrom]), then the result sheet over whatever is on
+     * screen. The kit does not open by itself: OPEN KIT on the sheet does that
+     * ([landKit]); closing it leaves the user where they were, with the kit on the shelf.
+     * [texture]'s busy-then-land shape. A source the assembler refuses is told in its own
+     * words; anything else is logged and the toast is the generic failure line.
+     */
+    fun kitFrom(base: String, source: com.snipsnap.audio.Snip, key: com.snipsnap.audio.KeySpec, genre: com.snipsnap.synth.KitFromAnything.Genre) {
+        if (busy != null) return
+        busy = Busy(Copy.MAKE_KIT_BUSY)
+        scope.launch {
+            val made = try {
+                withContext(Dispatchers.IO) {
+                    val (entry, result) = shelf.landKitFrom(base, source, key, genre)
+                    KitFromMade(
+                        entry,
+                        com.snipsnap.synth.KitFromAnything.describe(result, entry.kit.name, key, genre),
+                        com.snipsnap.shell.KitMaker.genreLabel(genre),
+                    )
+                }
+            } catch (e: IllegalArgumentException) {
+                busy = null
+                Log.e(TAG, "kitFrom: refused", e)
+                dock.say(Copy.kitRefused(e.message ?: "NOTHING TO QUARRY"))
+                return@launch
+            } catch (e: Exception) {
+                busy = null
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "kitFrom: failed", e)
+                dock.say(Copy.actionFailed("KIT"))
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            busy = null
+            dock.say(Copy.kitMade(made.entry.kit.name, made.report.blends.size))
+            kitFromMade = made
         }
     }
 
@@ -2750,7 +2808,7 @@ fun App(shelf: KitShelf) {
                     // How many presets rode along, for the toast: the file is
                     // in the zip byte for byte, so this is the strip's own
                     // count, and a file this build cannot read counts none.
-                    val n = if (r.extras.isEmpty()) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
+                    val n = if (UserPresets.FILE_NAME !in r.extras) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
                     r to n
                 }
                 busy = null
@@ -3711,6 +3769,12 @@ fun App(shelf: KitShelf) {
                                 onEmptyRoomsBin = ::emptyRoomsBin,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
+                                expansions = expansionStore,
+                                onToast = { dock.say(it) },
+                                onOpenExpansion = { e ->
+                                    exportExpansion = e.id
+                                    goToScreen(AppScreen.EXPORT)
+                                },
                                 binnedCount = binnedCount,
                                 onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
@@ -4027,6 +4091,7 @@ fun App(shelf: KitShelf) {
                                     // reloads for. Bumping the same counter
                                     // here covers all three with one wire.
                                     onShelfAssetWritten = { roomsRevision++ },
+                                    onKitFrom = ::kitFrom,
                                 )
                             }
                         }
@@ -4291,6 +4356,9 @@ fun App(shelf: KitShelf) {
                             // as one session, over the open project.
                             project = project,
                             shelfRoot = shelf.root,
+                            expansions = expansionStore,
+                            expansionSubject = exportExpansion,
+                            onExpansionSubject = { exportExpansion = it },
                             // SHARE, moved in from KIT's action row: it is an
                             // output. The beat's writers (BOUNCE, MIDI, CHART)
                             // live on BEAT and are listed here as a door.
@@ -4565,6 +4633,18 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
+                        top == Bench.CONFLUENCE_VOICES -> {
+                            val voiceEntry = open
+                            ConfluenceVoicesScreen(
+                                entry = voiceEntry,
+                                appScope = scope,
+                                onToast = { dock.say(it) },
+                                onKitUpdated = { updated ->
+                                    if (open?.dir == voiceEntry?.dir) open = open?.copy(kit = updated)
+                                    scope.launch { kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) } }
+                                },
+                            )
+                        }
                         top == Bench.MY_VOICE -> {
                             val voiceEntry = open
                             MyVoiceScreen(
@@ -4585,6 +4665,8 @@ fun App(shelf: KitShelf) {
                             backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
+                            expansions = expansionStore,
+                            onToast = { dock.say(it) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,
@@ -4657,6 +4739,14 @@ fun App(shelf: KitShelf) {
                     onHelp = { gearOpen = false; landOn(AppScreen.HELP) },
                     onMidi = { gearOpen = false; landOn(AppScreen.MIDI) },
                     onDismiss = { gearOpen = false },
+                )
+            }
+            kitFromMade?.let { made ->
+                KitFromResultOverlay(
+                    made = made,
+                    scheme = scheme,
+                    onOpen = { kitFromMade = null; landKit(made.entry) },
+                    onClose = { kitFromMade = null },
                 )
             }
             benchNote?.let { stamp ->

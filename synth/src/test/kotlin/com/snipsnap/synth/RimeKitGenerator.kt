@@ -30,14 +30,15 @@ object RimeKitGenerator {
         println("RIME kit: ${result.archive.absolutePath}; 16 pads, 48 samples, MPC 3 and MPC 2")
     }
 
-    fun generate(root: File): Bundle {
+    fun generate(root: File, complete: Boolean = false): Bundle {
         root.mkdirs()
         val work = File(root, ".rime-kit-work")
         check(!work.exists() || work.deleteRecursively())
         try {
-            val kit = KitAssembler.assembleArranged(RimeKits.NAME, SynthKits.rime(), work,
+            val name = if (complete) "SnipSnap Rime Complete" else RimeKits.NAME
+            val kit = KitAssembler.assembleArranged(name, if (complete) SynthKits.rimeComplete() else SynthKits.rime(), work,
                 key = KeySpec.parse("Cminpent"), tempoBpm = BPM)
-            val destination = File(root, RimeKits.NAME)
+            val destination = File(root, name)
             val clip = Mpc3Clip("Rime Four Bars", 4, hits.map {
                 Mpc3Note(Mpc3Note.noteFor(it.slot), (it.beat * Mpc3Clip.PULSES_PER_BEAT).roundToLong(), DEMO_VELOCITY)
             })
@@ -48,7 +49,7 @@ object RimeKitGenerator {
             check(!(xtd + xpm).blocked()) { "MPC read-back failed: ${xtd + xpm}" }
             val exported = KitStore.load(data)
             check(exported.pads.size == 16 && exported.pads.all { it.velocityLayers.size == 3 })
-            val patches = RimeKits.patches()
+            val patches = if (complete) RimeKits.completePatches() else RimeKits.patches()
             val velocities = listOf(RimeKits.SOFT_VELOCITY, RimeKits.MID_VELOCITY, RimeKits.MAIN_VELOCITY)
             val pads = exported.pads.sortedBy { it.slot }.map { pad ->
                 val patch = patches[pad.slot-1]
@@ -61,7 +62,7 @@ object RimeKitGenerator {
                             "sha256" to sha(File(data,layer.sampleFile)))
                     })
             }
-            File(destination,"pad-map.json").writeText(Json.write(json(mapOf("engine" to "RIME", "model" to RimePresets.BANK_MODEL,
+            File(destination,"pad-map.json").writeText(Json.write(json(mapOf("engine" to "RIME", "model" to if (complete) Rime.MODEL_VERSION else RimePresets.BANK_MODEL,
                 "tempoBpm" to BPM,"pads" to pads,"findings" to (xtd+xpm).map { it.message }))))
             File(destination,"README.txt").writeText("""RIME musical bank — sixteen finite pads
 
@@ -82,7 +83,8 @@ All sounds are dry, finite one-shots. No seamless HOLD or rack effects are used.
 MPC 3 and MPC 2 files pass the repository's read-back checks.
 Hardware and phone acceptance still require owner listening and loading.
 """)
-            val archive = File(root,"SnipSnap-Rime-Kit.zip")
+            if (complete) File(destination,"README.txt").writeText("RIME COMPLETE / six voices\n\nSixteen finite pads, each with three native velocity layers, in C minor pentatonic.\nMPC 3: keep ${kit.name}.xtd beside ${data.name}/. MPC 2: load ${data.name}/${kit.name}.xpm.\nSet the MPC project tempo to $BPM BPM to match the included four-bar pattern. The track does not set project tempo.\nThe separate original RIME kit retains the accepted sixteen-pad bank.\npad-map.json records full per-zone recipes and WAV checksums; kit.json retains editable phone recipes.\nHardware and sonic acceptance remain pending.\n")
+            val archive = File(root,if (complete) "SnipSnap-Rime-Complete-Kit.zip" else "SnipSnap-Rime-Kit.zip")
             ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                 destination.walkTopDown().filter { it.isFile }.sortedBy { it.path }.forEach { file ->
                     zip.putNextEntry(ZipEntry(destination.name+"/"+file.relativeTo(destination).invariantSeparatorsPath).also { it.time=0 })

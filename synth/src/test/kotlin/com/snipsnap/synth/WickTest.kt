@@ -358,8 +358,12 @@ class WickTest {
         }
         for (midi in listOf(48, 60, 72)) {
             val probe = Wick.inspect(WickVoice.RATTLE, midi = midi)
+            // This pair isolates the historical envelope revision at its original source.
+            // Normal RATTLE now uses the accepted Warm wire body, checked for pitch and decay below.
+            val connectedReference = Wick.inspect(WickVoice.RATTLE, midi = midi,
+                options = Wick.Options(rattleSource = Wick.RattleSource.CURRENT))
             val repeated = Wick.inspect(WickVoice.RATTLE, midi = midi,
-                options = Wick.Options(legacyRattleEnvelope = true))
+                options = Wick.Options(legacyRattleEnvelope = true, rattleSource = Wick.RattleSource.CURRENT))
             val wanted = Keys.midiHz(midi)
             val body = Snip(probe.raw, 1, Dsp.RATE)
             val measured = FineTuning.measuredHz(body, wanted, .05f, .25f)
@@ -376,7 +380,9 @@ class WickTest {
                 "RATTLE MIDI$midi pulse color obscures the playing pitch: ${detected.hz} Hz, confidence ${detected.confidence}")
             assertTrue(rootShare > .10, "RATTLE MIDI$midi underlying root is only a spectral trace: $rootShare")
             assertTrue(rootAdmissions.size >= 3, "RATTLE MIDI$midi default never develops a repeated pitched gesture")
-            val connectedProfile = profile(probe.raw)
+            assertEquals(connectedReference.diagnostics.events, probe.diagnostics.events,
+                "RATTLE MIDI$midi source promotion changed the recovering gate movement")
+            val connectedProfile = profile(connectedReference.raw)
             val repeatedProfile = profile(repeated.raw)
             println("WICK RATTLE MIDI$midi body floor/median, contrast dB and positive-rise/median: connected $connectedProfile / repeated $repeatedProfile")
             assertTrue(connectedProfile.first > repeatedProfile.first + .15,

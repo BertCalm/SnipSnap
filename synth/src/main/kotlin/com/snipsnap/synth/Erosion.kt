@@ -5,7 +5,7 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class ErosionVoice { ARC, CRATER }
+enum class ErosionVoice { ARC, CRATER, SCAR }
 
 /**
  * Charge -> irregular discharge -> delayed collapse -> thinning dust.
@@ -22,8 +22,11 @@ object Erosion {
     private val controls = listOf("TUNE", "VOLTAGE", "FEED", "FLUID", "SLAG")
 
     fun macrosFor(voice: ErosionVoice): List<MacroSpec> {
-        val values = if (voice == ErosionVoice.ARC) listOf(.5f, .65f, .35f, .6f, .08f)
-            else listOf(.5f, .3f, .5f, .6f, .65f)
+        val values = when (voice) {
+            ErosionVoice.ARC -> listOf(.5f, .65f, .35f, .6f, .08f)
+            ErosionVoice.CRATER -> listOf(.5f, .3f, .5f, .6f, .65f)
+            ErosionVoice.SCAR -> listOf(.45f, .45f, .35f, .65f, .35f)
+        }
         return controls.zip(values).map { (name, value) -> MacroSpec(name, value) }
     }
     fun defaults(voice: ErosionVoice) = macrosFor(voice).associate { it.name to it.default }
@@ -36,14 +39,16 @@ object Erosion {
     private fun map(x: Float, lo: Double, hi: Double) = lo * (hi / lo).pow(x.toDouble())
 
     data class Event(val seconds: Double, val energy: Double, val variation: Double)
+    data class ScarStages(val clusterEnd: Double, val aftershockStart: Double, val reservedEnergy: Double)
     data class Trace(val events: List<Event>, val reservoir: Double, val charge: Double,
-                     val emitted: Double, val supplySeconds: Double) {
+                     val emitted: Double, val supplySeconds: Double, val scarStages: ScarStages? = null) {
         val conservationError get() = abs(1.0 - reservoir - charge - emitted)
     }
 
     /** Audio controls never alter the random sequence or the charge trajectory. */
-    internal fun schedule(voice: ErosionVoice, macros: Map<String, Float>): Trace {
+    internal fun schedule(voice: ErosionVoice, macros: Map<String, Float>, scarAftershock: Boolean = true): Trace {
         val m = settled(voice, macros)
+        if (voice == ErosionVoice.SCAR) return scarSchedule(m, scarAftershock)
         val noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, voice.name, "schedule"))
         val tau = map(m.getValue("FEED"), .018, .14)
         val threshold = map(m.getValue("VOLTAGE"), .012, .00065) *
@@ -74,17 +79,65 @@ object Erosion {
     }
 
     /**
+     * SCAR spends one budget in two separated releases. Its 12% aftershock
+     * reserve is withheld from the original reservoir, never added energy.
+     * The gap exceeds the longest collapse kernel, so the audio can recover.
+     * The optional ablation removes only reserve release for causal listening.
+     */
+    private fun scarSchedule(m: Map<String, Float>, aftershock: Boolean): Trace {
+        val noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, "SCAR", "schedule"))
+        val feed = m.getValue("FEED").toDouble()
+        val clusterEnd = .025 + .100 * feed
+        val afterStart = clusterEnd + .095 + .100 * feed
+        val afterDuration = .048 + .088 * feed
+        val threshold = map(m.getValue("VOLTAGE"), .012, .00065)
+        val recoveryTime = map(m.getValue("VOLTAGE"), .0018, .00018)
+        val reserve = .12
+        val events = arrayListOf(Event(0.0, .30, noise.next().toDouble()))
+        var reservoir = .70
+        var charge = 0.0
+        var emitted = .30
+        var recovery = 0
+        var target = threshold * (1 + .3 * noise.next())
+        fun phase(start: Double, duration: Double, budget: Double) {
+            val tau = duration / 6
+            for (tick in 0 until ceil(duration * CLOCK).toInt()) {
+                val t = tick.toDouble() / CLOCK
+                val transfer = min(reservoir, budget * (exp(-t / tau) - exp(-(t + 1.0 / CLOCK) / tau)))
+                reservoir -= transfer
+                charge += transfer
+                if (recovery > 0) recovery--
+                else if (charge >= target) {
+                    val energy = .9 * charge
+                    charge -= energy
+                    emitted += energy
+                    events += Event(start + t, energy, noise.next().toDouble())
+                    recovery = max(1, (CLOCK * recoveryTime * (1 + .25 * noise.next())).roundToInt())
+                    target = threshold * (1 + .3 * noise.next())
+                }
+            }
+        }
+        // Begin after the initial crack; no two events share an onset.
+        phase(1.0 / CLOCK, clusterEnd - 1.0 / CLOCK, .58)
+        recovery = 0
+        if (aftershock) phase(afterStart, afterDuration, reserve)
+        return Trace(events, reservoir, charge, emitted, afterStart + afterDuration,
+            ScarStages(clusterEnd, afterStart, reserve))
+    }
+
+    /**
      * Evaluate continuous kernels at exact event ages. Rounding each event
      * to a different sample at 4x/8x otherwise changes the experiment itself.
      * Velocity widens the contact and lowers the fluid centers; schedule and
      * energy accounting stay fixed, so soft layers retain the same gesture.
      */
     internal fun source(voice: ErosionVoice, macros: Map<String, Float> = emptyMap(),
-                        velocity: Float = 1f, rate: Int = Dsp.RATE * 4): FloatArray {
+                        velocity: Float = 1f, rate: Int = Dsp.RATE * 4,
+                        scarAftershock: Boolean = true): FloatArray {
         require(rate == Dsp.RATE * 4 || rate == Dsp.RATE * 8) { "EROSION supports 4x and 8x probes" }
         val m = settled(voice, macros)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
-        val trace = schedule(voice, m)
+        val trace = schedule(voice, m, scarAftershock)
         val frames = ceil((trace.supplySeconds + .12) * Dsp.RATE).toInt()
         val sparks = FloatArray(frames * (rate / Dsp.RATE))
         val body = FloatArray(sparks.size)
@@ -145,14 +198,14 @@ object Erosion {
         return body
     }
 
-    internal fun finish(raw: FloatArray): FloatArray {
+    internal fun finish(raw: FloatArray, level: Boolean = true, removeMean: Boolean = true): FloatArray {
         val buf = raw.copyOf()
         Tide.bandLimit(buf, Dsp.RATE * Dsp.OVERSAMPLE)
         val out = Dsp.decimate(buf, Dsp.RATE)
-        val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
+        val mean = if (removeMean) out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1) else 0.0
         val hp = Dsp.OnePole(Dsp.RATE)
         for (i in out.indices) { val x = (out[i] - mean).toFloat(); out[i] = x - hp.lp(x, 20f) }
-        Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        if (level) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return out
     }

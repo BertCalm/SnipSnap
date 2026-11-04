@@ -13,7 +13,7 @@ object RimeHoldAuditionGenerator {
         val manifestFile = File(root, "manifest.json")
         val manifest = LinkedHashMap(Json.parse(manifestFile.readText()).obj())
         val entries = manifest.getValue("clips").arr().filter { it.obj()["section"]?.str() != "hold" }.toMutableList()
-        for (voice in RimeVoice.entries) for (unfold in listOf(0f, 1f)) {
+        for (voice in Rime.LEGACY_VOICES) for (unfold in listOf(0f, 1f)) {
             val p = RimePresets.starter(voice).copy(model = 5, macros = Rime.defaults(voice) + mapOf("HOLD" to 1f, "UNFOLD" to unfold))
             val began = System.nanoTime()
             val r = RimeHeld.render(p)

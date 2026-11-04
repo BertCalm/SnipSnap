@@ -250,6 +250,48 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * KIT FROM ANYTHING: [source] (a pad's own audio) quarried into sixteen
+     * pads in [key] and [genre] and landed on the shelf as a brand-new kit,
+     * [landPhotoKit]'s shape and the CLI's flow (`KitFromCommand`): the
+     * source is kept in the folder as [com.snipsnap.synth.KitFromAnything.SOURCE_FILE]
+     * and the kit is made from THAT copy read back, so every pad's recipe
+     * hashes the file on disk and `kitfrom --check` can rebuild it. Throws
+     * [IllegalArgumentException] in words for a source the assembler refuses,
+     * after deleting the folder it started, so a refusal leaves no half-kit
+     * on the shelf. Seconds-long; the caller shows a busy line.
+     */
+    fun landKitFrom(
+        base: String,
+        source: com.snipsnap.audio.Snip,
+        key: com.snipsnap.audio.KeySpec,
+        genre: com.snipsnap.synth.KitFromAnything.Genre,
+    ): Pair<Entry, com.snipsnap.synth.KitFromAnything.Result> {
+        root.mkdirs()
+        val name = freshName(base)
+        val dir = File(root, name)
+        dir.mkdirs()
+        val kept = File(dir, com.snipsnap.synth.KitFromAnything.SOURCE_FILE)
+        try {
+            com.snipsnap.audio.WavWriter.write(kept, source)
+            // read back through the bounded reader like every other :app read; the file is the one just
+            // written, so a source the assembler would refuse as too long arrives here already capped
+            // and is refused in words by assemble
+            val readBack = WavReader.readCapped(kept, com.snipsnap.synth.KitFromAnything.MAX_SOURCE_SECONDS + 0.5f).snip
+            val result = com.snipsnap.synth.KitFromAnything.assemble(
+                readBack, key, genre, sourceFile = com.snipsnap.synth.KitFromAnything.SOURCE_FILE,
+            )
+            val kit = com.snipsnap.kit.KitAssembler.assembleArranged(
+                name, com.snipsnap.kit.Balance.apply(result.pads), dir, key = key, tempoBpm = genre.style.bpm,
+            )
+            return Entry(dir, kit) to result
+        } catch (e: Throwable) {
+            // Not a kit yet: the folder this call made, and only it, goes.
+            dir.deleteRecursively()
+            throw e
+        }
+    }
+
+    /**
      * KEY: set or clear [source]'s key - metadata in `kit.json`, nothing
      * retuned by itself - and hand back the entry with the kit re-read.
      */
@@ -348,22 +390,32 @@ class KitShelf(val root: File) {
      * BACKUP: every kit on the shelf as one file under [outDir], each its
      * own `.xpn` inside, and the player's presets file riding at the root
      * when there is one (`UserPresets`, the WS5 follow-up: a backup that
-     * comes home merges them back); kits preflight refuses are skipped
-     * and named.
+     * comes home merges them back), and the phone's expansions beside it
+     * (`ExpansionBackup`: a restore rebuilds them around the kits it lands);
+     * kits preflight refuses are skipped and named.
      */
     fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
         outDir.mkdirs()
         val stamp = ShareOut.stamp(nowMillis)
-        return com.snipsnap.kit.KitBackup.backup(
-            root,
-            File(outDir, "SnipSnap Shelf $stamp.zip"),
-            overwrite = true,
-            extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(root)),
-        )
+        val expansions = File(outDir, ".expansions-$stamp.json")
+        try {
+            val extras = linkedMapOf(UserPresets.FILE_NAME to UserPresets.file(root))
+            if (com.snipsnap.shell.ExpansionBackup.write(expansionStore(), root, expansions)) {
+                extras[com.snipsnap.shell.ExpansionBackup.FILE_NAME] = expansions
+            }
+            return com.snipsnap.kit.KitBackup.backup(
+                root,
+                File(outDir, "SnipSnap Shelf $stamp.zip"),
+                overwrite = true,
+                extras = extras,
+            )
+        } finally {
+            expansions.delete()
+        }
     }
 
     /** What [land] brought home: the kits as shelf entries, what was skipped with the reason, and the presets a backup carried. */
-    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int)
+    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int, val expansions: Int = 0)
 
     /**
      * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
@@ -373,8 +425,8 @@ class KitShelf(val root: File) {
      */
     fun land(file: File, displayName: String): Landing {
         root.mkdirs()
-        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
-        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets)
+        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root, expansions = expansionStore())
+        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets, landed.expansions)
     }
 
     /**

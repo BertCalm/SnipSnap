@@ -208,9 +208,12 @@ PadEngine::Voice& PadEngine::freeVoice() {
 void PadEngine::apply(const PadCommand& c) {
     // A command for another bank (queued across a kit swap) is honest
     // silence: a NoteOn is reported ended so the allocator lets it go, a
-    // Stop is moot (the swap silenced every voice), AllOff always applies.
-    const bool stale = c.type != PadCommand::Type::AllOff &&
-        (!current_ || c.generation != current_->generation);
+    // Stop is moot (the swap silenced every voice). AllOff, the bend and the
+    // master gain always apply: they belong to the engine, not to a bank, and
+    // a volume set while a kit is still loading must still be the volume.
+    const bool engineWide = c.type == PadCommand::Type::AllOff || c.type == PadCommand::Type::SetPitch ||
+        c.type == PadCommand::Type::SetMaster || c.type == PadCommand::Type::SetVibrato;
+    const bool stale = !engineWide && (!current_ || c.generation != current_->generation);
     if (stale) {
         if (c.type == PadCommand::Type::NoteOn) ended_.push(c.voiceId);
         return;
@@ -285,6 +288,28 @@ void PadEngine::apply(const PadCommand& c) {
             }
             return;
         }
+        case PadCommand::Type::SetPitch: {
+            // A bend wheel or strip. Starting from wherever the last glide
+            // got to, so a stream of these (a strip springing back sends
+            // dozens) is one continuous movement and never a jump.
+            if (!std::isfinite(c.pitch) || c.pitch <= 0.0) return;
+            const double ratio = std::min(std::max(c.pitch, 1.0 / kMaxBend), kMaxBend);
+            bend_.glideTo(ratio, glideFrames(c.fadeMs));
+            return;
+        }
+        case PadCommand::Type::SetVibrato: {
+            if (!std::isfinite(c.pitch)) return;
+            const double depth = std::min(std::max(c.pitch, 0.0), kMaxVibratoSemitones);
+            depth_.glideTo(depth, glideFrames(c.fadeMs));
+            return;
+        }
+        case PadCommand::Type::SetMaster: {
+            // The kit's volume knob: the whole mix, never louder than made.
+            if (!std::isfinite(c.gainL)) return;
+            const double gain = std::min(std::max(static_cast<double>(c.gainL), 0.0), 1.0);
+            master_.glideTo(gain, glideFrames(c.fadeMs));
+            return;
+        }
         case PadCommand::Type::Stop:
         case PadCommand::Type::AllOff: {
             if (c.type == PadCommand::Type::AllOff) aquarium_.panic();
@@ -299,9 +324,38 @@ void PadEngine::apply(const PadCommand& c) {
     }
 }
 
+void PadEngine::fillPitch(int32_t frames) {
+    const bool vibrating = depth_.ramp > 0 || depth_.target != 0.0;
+    const double w = 2.0 * 3.14159265358979323846 * kVibratoHz / static_cast<double>(sampleRate_);
+    constexpr double kLn2Over12 = 0.05776226504666211;
+    for (int32_t i = 0; i < frames; ++i) {
+        double m = bend_.at(i);
+        if (vibrating) {
+            // 2^(x/12) for a few cents is 1 + x ln2/12 to the second order:
+            // worth the sine once per frame, not a pow().
+            const double x = depth_.at(i) * std::sin(vibratoPhase_ + w * static_cast<double>(i)) * kLn2Over12;
+            m *= 1.0 + x + 0.5 * x * x;
+        }
+        pitchMul_[i] = m;
+    }
+    bend_.advance(frames);
+    if (vibrating) {
+        vibratoPhase_ = std::fmod(vibratoPhase_ + w * static_cast<double>(frames), 2.0 * 3.14159265358979323846);
+        depth_.advance(frames);
+    }
+}
+
 void PadEngine::render(float* out, int32_t numFrames) {
     for (int32_t i = 0; i < numFrames * 2; ++i) out[i] = 0.0f;
-    if (!current_) return;
+    // In chunks, so the pitch multiplier fits a fixed array on the audio thread.
+    for (int32_t at = 0; at < numFrames; at += kPitchChunk) {
+        const int32_t n = std::min(kPitchChunk, numFrames - at);
+        fillPitch(n);
+        if (current_) renderChunk(out + 2 * at, n);
+    }
+}
+
+void PadEngine::renderChunk(float* out, int32_t numFrames) {
     for (auto& v : voices_) {
         if (!v.active) continue;
         const BankSample& s = current_->samples[static_cast<size_t>(v.sample)];
@@ -394,8 +448,11 @@ void PadEngine::render(float* out, int32_t numFrames) {
             out[2 * i + 1] += r * v.gainR * v.fade;
             // The interpolation above is positional, not directional: the
             // four taps around `pos` are the same four whichever way the
-            // read is travelling. Only the step changes sign.
-            v.pos += v.reverse ? -v.inc : v.inc;
+            // read is travelling. Only the step changes sign. The bend
+            // scales the step, so a held note slides rather than restarts:
+            // the read never jumps, it only travels faster or slower.
+            const double step = std::min(v.inc * pitchMul_[i], kMaxSpeed);
+            v.pos += v.reverse ? -step : step;
         }
     }
     // Thirty-two voices at kit levels rarely sum past full scale; when they
@@ -404,6 +461,20 @@ void PadEngine::render(float* out, int32_t numFrames) {
         if (out[i] > 1.0f) out[i] = 1.0f;
         else if (out[i] < -1.0f) out[i] = -1.0f;
     }
+}
+
+void PadEngine::applyMaster(float* out, int32_t numFrames) {
+    // Last, after the Aquarium bus: a volume knob turns the kit down, it
+    // does not drive the bus's effects any softer, so the tone stays the
+    // tone. The print takes what this leaves, which is what was heard.
+    if (master_.ramp > 0 || master_.target != 1.0) {
+        for (int32_t i = 0; i < numFrames; ++i) {
+            const float g = static_cast<float>(master_.at(i));
+            out[2 * i] *= g;
+            out[2 * i + 1] *= g;
+        }
+    }
+    master_.advance(numFrames);
 }
 
 void PadEngine::takeCommands() {
@@ -451,6 +522,7 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
         const int32_t next = applyDue(cursor, numFrames);
         render(out + 2 * cursor, next - cursor);
         aquarium_.process(out + 2 * cursor, next - cursor);
+        applyMaster(out + 2 * cursor, next - cursor);
         cursor = next;
     }
     // What is still waiting is due in a later block: count this one off.

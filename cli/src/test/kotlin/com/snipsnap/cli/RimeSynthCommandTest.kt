@@ -40,11 +40,11 @@ class RimeSynthCommandTest {
         } finally { root.deleteRecursively() }
     }
 
-    @Test fun `all renders the three named musical presets for a RIME voice`() {
+    @Test fun `all renders the six named musical presets for a RIME voice`() {
         val root=createTempDirectory("rime-cli-bank").toFile()
         try {
             assertEquals(0,SynthCommand.run(listOf("RIME","GLINT","--all","--out",root.path),PrintStream(ByteArrayOutputStream())))
-            assertEquals(3,root.listFiles()!!.count { it.extension=="wav" })
+            assertEquals(6,root.listFiles()!!.count { it.extension=="wav" })
         } finally { root.deleteRecursively() }
     }
 

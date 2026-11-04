@@ -113,6 +113,32 @@ class OrphicaHeldTest {
     }
 
     @Test
+    fun `the full HOLD loop meets the seam bar against the cycle the process really played before it`() {
+        // Keys.seamError over the 256 frames before the loop start: what plays before the wrap (the end of
+        // the loop) against what the circular process really played there (the end of the turn before it,
+        // evaluated on its own). The exported pad is that loop ([Orphica.render] returns [cycle]).
+        for (config in listOf(
+            OrphicaConfig(hold = 1f, seed = 91743L),
+            OrphicaConfig(material = OrphicaMaterial.STEEL, mode = OrphicaMode.SCATTER, grainSizeMs = 120f,
+                grainRateHz = 100f, scatter = 1f, fracture = 1f, hold = 1f, seed = Long.MIN_VALUE),
+        )) {
+            val held = Orphica.heldMaterial(config)
+            val frames = held.frameCount
+            for (channel in 0..1) {
+                val preceding = FloatArray(frames) { held.cycle[it * 2 + channel] }
+                val loop = FloatArray(frames) { held.nextCycle[it * 2 + channel] }
+                val seam = Keys.seamError(preceding + loop, frames)
+                println("ORPHICA HOLD ${config.material} ${config.mode} channel $channel seam $seam")
+                assertTrue(seam.isFinite() && seam < Keys.MAX_SEAM_ERROR, "${config.material} ${config.mode} channel $channel seam $seam")
+                // The measure can fail: the same loop entered a quarter of a cycle late does not close.
+                val late = FloatArray(frames) { loop[(it + frames / 4) % frames] }
+                assertTrue(Keys.seamError(preceding + late, frames) > Keys.MAX_SEAM_ERROR,
+                    "${config.material} ${config.mode} channel $channel: a misplaced loop start still passes the seam bar")
+            }
+        }
+    }
+
+    @Test
     fun `held material keeps the requested MIDI root and audible seeded articulation`() {
         for (material in OrphicaMaterial.entries) for (midi in listOf(36, 60, 84)) {
             val config = OrphicaConfig(material = material, mode = OrphicaMode.SCATTER, midi = midi, hold = 1f, fracture = .5f)

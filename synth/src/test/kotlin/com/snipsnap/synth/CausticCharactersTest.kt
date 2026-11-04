@@ -35,21 +35,21 @@ class CausticCharactersTest {
     private val rate = CausticInstrument.RATE
 
     @Test
-    fun `new voices retain finite controls with explicit defaults and refuse positive HOLD`() {
+    fun `model one character voices retain their finite controls and refuse positive HOLD`() {
         for (voice in voices) {
             val body = if (voice == CausticVoice.TRAVELLING_CATCHES) 0f else .5f
             assertEquals(mapOf("SOURCE" to .5f, "FOCUS" to .19f, "BODY" to body,
-                "LENGTH" to 1f, "HOLD" to 0f), CausticInstrument.defaults(voice), "$voice defaults")
+                "LENGTH" to 1f, "HOLD" to 0f), CausticInstrument.defaults(voice, 1), "$voice defaults")
             assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "HOLD"),
-                CausticInstrument.macrosFor(voice).map { it.name })
+                CausticInstrument.macrosFor(voice, 1).map { it.name })
             assertEquals(.5, CausticInstrument.durationSeconds(voice, mapOf("LENGTH" to 0f)))
             assertEquals(8.0, CausticInstrument.durationSeconds(voice))
             for (hold in listOf(.01f, 1f)) {
                 val macros = mapOf("HOLD" to hold)
-                assertFailsWith<IllegalArgumentException>("$voice HOLD$hold render") { CausticInstrument.render(voice, macros) }
-                assertFailsWith<IllegalArgumentException> { CausticInstrument.probe(voice, macros, seconds = .01) }
-                assertFailsWith<IllegalArgumentException> { CausticInstrument.durationSeconds(voice, macros) }
-                assertFailsWith<IllegalArgumentException> { CausticInstrument.drumClassFor(voice, macros) }
+                assertFailsWith<IllegalArgumentException>("$voice HOLD$hold render") { CausticInstrument.render(voice, macros, model = 1) }
+                assertFailsWith<IllegalArgumentException> { CausticInstrument.probe(voice, macros, seconds = .01, model = 1) }
+                assertFailsWith<IllegalArgumentException> { CausticInstrument.durationSeconds(voice, macros, model = 1) }
+                assertFailsWith<IllegalArgumentException> { CausticInstrument.drumClassFor(voice, macros, model = 1) }
             }
         }
     }

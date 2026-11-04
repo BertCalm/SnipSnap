@@ -53,6 +53,7 @@ data class FerryPatch(
                 if (!number.isFinite() || number !in 0.0..1.0) throw JsonException("FERRY $key must be finite and in 0..1")
                 if (key == "HOLD" && number != 0.0) throw JsonException("FERRY is finite; HOLD must be 0")
                 if (key == "MATCH" && model == 1) throw JsonException("FERRY MATCH requires model 2")
+                if (key == "LOSS" && model < 3) throw JsonException("FERRY LOSS requires model 3")
             }
             return Patches.decode(value, ENGINE, { name -> FerryVoice.entries.firstOrNull { it.name == name } }) { name, voice, macros ->
                 FerryPatch(name, voice, macros, midi, velocity.toFloat(), seed, model)

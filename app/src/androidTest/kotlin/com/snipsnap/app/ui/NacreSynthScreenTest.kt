@@ -88,8 +88,7 @@ class NacreSynthScreenTest : ComposeScreenTest() {
             for ((name, value) in preset.macros) {
                 if (name != "HOLD") assertEquals(value, progress(name), .00001f)
             }
-            assertEquals((preset.midi - Nacre.MIN_MIDI).toFloat() / (Nacre.MAX_MIDI - Nacre.MIN_MIDI),
-                progress("ROOT"), .00001f)
+            assertRoot(preset.midi)
             assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
         }
         assertFiniteControls()
@@ -111,9 +110,9 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         assertFiniteControls()
 
         dial("BLOOM", .54f)
-        dial("ROOT", .25f)
-        dial("VELOCITY", .27f)
         val expectedMidi = Nacre.MIN_MIDI + (Nacre.MAX_MIDI - Nacre.MIN_MIDI) / 4
+        rootTo(expectedMidi)
+        dial("VELOCITY", .27f)
         waitFor("complete saved harp after edits") {
             draft(settings)?.let { it.model == model && it.midi == expectedMidi &&
                 it.velocity == .27f && it.macros["BLOOM"] == .54f } == true
@@ -126,7 +125,7 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle { generation++ }
         pump()
         assertEquals(.54f, progress("BLOOM"), .00001f)
-        assertEquals(.25f, progress("ROOT"), .00001f)
+        assertRoot(expectedMidi)
         assertEquals(.27f, progress("VELOCITY"), .00001f)
         compose.runOnIdle { assertEquals(edited, draft(settings)) }
     }

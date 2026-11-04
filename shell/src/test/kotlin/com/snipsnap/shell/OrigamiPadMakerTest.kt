@@ -9,6 +9,7 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.mpc3.Mpc3Project
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.OrigamiKeys
@@ -18,6 +19,8 @@ import com.snipsnap.synth.OrigamiVoice
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.CancellationException
+import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
 import kotlin.io.path.createTempDirectory
 import kotlin.math.PI
 import kotlin.math.sin
@@ -45,7 +48,7 @@ class OrigamiPadMakerTest {
         }
 
     @Test
-    fun `finite recipes remain intact while the keyboard spans only C3 through C5`() {
+    fun `finite recipes remain intact while sampled roots cover C3 through C5`() {
         val spec = OrigamiPadMaker.Spec(patch, releaseSeconds = .9f)
         assertEquals(patch, spec.patch)
         assertEquals(.9f, spec.releaseSeconds)
@@ -71,13 +74,17 @@ class OrigamiPadMakerTest {
             val program = OrigamiPadMaker.export("MY PAPER", spec, notes, dir)
             val data = File(dir, Mpc3TrackWriter.trackDataDirName(program.name))
             assertTrue(File(dir, "${program.name}.xty").isFile)
-            val native = Mpc3TrackWriter().keygroupPayloadText(program)
             val compatibility = File(data, "${program.name}.xpm").readText()
-            assertTrue("\"LoopMode\": 1" in native)
             assertTrue("<SliceLoop>1</SliceLoop>" in compatibility)
             assertTrue(Regex("<VolumeRelease>0\\.9(?:0*)</VolumeRelease>").containsMatchIn(compatibility))
-            val nativeZones = Json.parse(native).obj().getValue("data").obj().getValue("program").obj()
+            // Read the packaged descriptors: the assembly helper intentionally retains
+            // its sampled span while the shared exporter extends outer keyboard zones.
+            val nativeZones = Mpc3Project.read(File(dir, "${program.name}.xty")).tracks.single()
+                .getValue("program").obj()
                 .getValue("drum").obj().getValue("instruments").arr().take(9)
+            val xmlZones = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(File(data, "${program.name}.xpm")).getElementsByTagName("Instrument")
+            assertEquals(9, xmlZones.length)
             for (zone in nativeZones) {
                 assertEquals(2, zone.obj().getValue("triggerMode").int(), "MPC must wait for key-up")
                 val envelope = zone.obj().getValue("synthSection").obj().getValue("ampEnvelope").obj()
@@ -87,6 +94,8 @@ class OrigamiPadMakerTest {
             val (sidecar, instrument) = InstrumentStore.list(dir).single()
             assertEquals(.9f, instrument.release)
             assertEquals(program.keygroups.map { it.rootNote }, instrument.zones.map { it.rootNote })
+            assertEquals(listOf(0..49, 50..52, 53..55, 56..58, 59..61, 62..64, 65..67, 68..70, 71..127),
+                instrument.zones.map { it.lowNote..it.highNote })
             for ((index, zone) in instrument.zones.withIndex()) {
                 val wav = File(sidecar.parentFile, zone.sample)
                 val audio = WavReader.read(wav)
@@ -98,8 +107,19 @@ class OrigamiPadMakerTest {
                 assertEquals(sheet, WavReader.readSmpl(wav))
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, notes[index].snip, smpl = sheet) }
                 assertContentEquals(expected.toByteArray(), wav.readBytes())
-                assertTrue("\"LoopStart\": ${zone.loopStartFrame}" in native)
                 assertTrue("<SliceLoopStart>${zone.loopStartFrame}</SliceLoopStart>" in compatibility)
+                val nativeZone = nativeZones[index].obj()
+                assertEquals(zone.lowNote, nativeZone.getValue("lowNote").int())
+                assertEquals(zone.highNote, nativeZone.getValue("highNote").int())
+                val nativeLayer = nativeZone.getValue("layersv").arr().first().obj()
+                assertEquals(zone.rootNote, nativeLayer.getValue("rootNote").int())
+                val slice = nativeLayer.getValue("sliceInfo").obj()
+                assertEquals(zone.frameCount, slice.getValue("End").long())
+                assertEquals(zone.loopStartFrame, slice.getValue("LoopStart").long())
+                assertEquals(1, slice.getValue("LoopMode").int())
+                val xmlZone = xmlZones.item(index) as Element
+                assertEquals(zone.lowNote, xmlZone.getElementsByTagName("LowNote").item(0).textContent.toInt())
+                assertEquals(zone.highNote, xmlZone.getElementsByTagName("HighNote").item(0).textContent.toInt())
                 val hit = KeyHit.resolve(instrument, zone.rootNote, .5f) { file ->
                     instrument.zones.singleOrNull { it.sample == file }?.frameCount
                 }!!
@@ -112,6 +132,8 @@ class OrigamiPadMakerTest {
             // The outer zones stretch to the keyboard's ends, so keys past the authored span still sound.
             assertTrue(KeyHit.resolve(instrument, 47, 1f) { 500L } != null)
             assertTrue(KeyHit.resolve(instrument, 73, 1f) { 500L } != null)
+            assertTrue(KeyHit.resolve(instrument, 0, 1f) { 500L } != null)
+            assertTrue(KeyHit.resolve(instrument, 127, 1f) { 500L } != null)
         } finally {
             dir.deleteRecursively()
         }

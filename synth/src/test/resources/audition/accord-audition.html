@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Accord native audition · SnipSnap</title>
+  <style>
+    :root { color-scheme: light; --paper:#f4f0e8; --card:#fffdf8; --ink:#253129; --muted:#667066; --line:#d8ddd2; --green:#3d624b; --warm:#89593e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:var(--green); text-underline-offset:.2em; }
+    button,select,a,audio { -webkit-tap-highlight-color:transparent; }
+    :focus-visible { outline:3px solid var(--warm); outline-offset:4px; }
+    .wrap { max-width:1080px; margin:auto; padding:48px 28px 36px; }
+    .eyebrow { margin:0 0 20px; color:var(--green); font-size:.72rem; font-weight:750; letter-spacing:.17em; text-transform:uppercase; }
+    header { display:grid; grid-template-columns:1fr auto; gap:24px; border-bottom:1px solid var(--line); padding-bottom:32px; }
+    h1 { font:500 clamp(2.25rem,6vw,4.3rem)/1.05 Georgia,"Times New Roman",serif; letter-spacing:-.045em; margin:0 0 17px; }
+    .intro { max-width:670px; margin:0 0 12px; font-size:1.04rem; }
+    .subtle { color:var(--muted); }
+    .byline { margin:0; color:var(--muted); font-size:.86rem; }
+    .mark { display:flex; align-items:flex-end; gap:5px; height:93px; align-self:center; padding:0 8px; }
+    .mark i { display:block; width:7px; height:42px; border-radius:5px; background:var(--green); opacity:.78; transform-origin:50% 0; }
+    .mark i:nth-child(3n) { height:65px; transform:rotate(-11deg); background:var(--warm); }
+    .mark i:nth-child(3n+1) { height:52px; transform:rotate(8deg); }
+    .controls { display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:18px; margin:28px 0 14px; }
+    .control label { display:block; margin-bottom:7px; font-size:.73rem; font-weight:750; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+    select { width:100%; border:1px solid #b7c4b8; border-radius:8px; background:var(--card); color:var(--ink); padding:11px 34px 11px 12px; min-height:45px; font:inherit; font-size:.93rem; }
+    #summary { min-height:1.6em; margin:0 0 22px; color:var(--muted); font-size:.87rem; }
+    .section-note { margin:0 0 24px; max-width:790px; color:var(--muted); font-size:.91rem; }
+    #clips { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px; }
+    .clip { border:1px solid var(--line); border-radius:12px; background:var(--card); padding:21px; min-width:0; }
+    .clip-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .clip h2 { font-size:1.08rem; font-weight:680; line-height:1.35; margin:0 0 6px; }
+    .tag { display:inline-block; border-radius:4px; background:#e8eee4; color:var(--green); white-space:nowrap; padding:3px 7px; font-size:.68rem; font-weight:750; letter-spacing:.035em; }
+    .meta { margin:0 0 13px; color:var(--muted); font-size:.79rem; }
+    .description { margin:0 0 17px; font-size:.9rem; }
+    audio { width:100%; display:block; height:42px; margin:4px 0 8px; }
+    .level-note { margin:0 0 14px; color:var(--muted); font-size:.72rem; }
+    .links { display:flex; flex-wrap:wrap; align-items:center; gap:8px 15px; font-size:.78rem; }
+    details { margin-top:15px; border-top:1px solid var(--line); padding-top:10px; font-size:.79rem; }
+    summary { cursor:pointer; color:var(--muted); }
+    dl { display:grid; grid-template-columns:auto 1fr; gap:4px 13px; margin:12px 0 0; }
+    dt { color:var(--muted); } dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .empty { grid-column:1/-1; padding:38px 22px; border:1px dashed #afbaad; border-radius:10px; color:var(--muted); }
+    .loading { margin:16px 0; }
+    footer { display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-top:32px; padding-top:20px; border-top:1px solid var(--line); font-size:.78rem; color:var(--muted); }
+    footer p { margin:0; max-width:670px; }
+    @media(max-width:700px) { .wrap { padding:30px 18px; } header { grid-template-columns:1fr; gap:4px; } .mark { display:none; } .controls { grid-template-columns:1fr 1fr; gap:12px; } .control:last-child { grid-column:1/-1; } #clips { grid-template-columns:1fr; } .clip { padding:19px; } }
+    @media(prefers-reduced-motion:no-preference) { .clip { animation:arrive .2s ease-out; } @keyframes arrive { from { opacity:.5; transform:translateY(3px); } to { opacity:1; transform:none; } } }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <p class="eyebrow">SnipSnap / Engine studies</p>
+  <header>
+    <div>
+      <h1>Accord native audition</h1>
+      <p class="intro">Fifteen independent contacts find their timing through one shared support. Start with BRUSH, then compare the wooden catches and TINE profiles.</p>
+      <p class="byline">Native Kotlin renders; finite performances, HOLD unsupported.</p>
+    </div>
+    <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </header>
+  <div class="controls" aria-label="Audition filters">
+    <div class="control"><label for="section">Listen for</label><select id="section" disabled><option>Loading sections…</option></select></div>
+    <div class="control"><label for="voice">Voice</label><select id="voice" disabled><option>All voices</option></select></div>
+    <div class="control"><label for="level">Playback level</label><select id="level" disabled><option value="raw">Native level</option><option value="matched">Level matched comparison</option></select></div>
+  </div>
+  <p id="summary" role="status" aria-live="polite">Loading the native audition…</p>
+  <p class="section-note" id="section-note">Keep playback volume fixed for touch comparisons. Only one clip plays at a time. Recorded level differences are part of the instrument.</p>
+  <div id="clips" aria-label="Audio clips"></div>
+  <noscript><p class="empty">Enable JavaScript to browse the audition. The generated audio, recipes and diagnostics are also available directly in this folder.</p></noscript>
+  <footer>
+    <p>These are finite notes with captured releases. A LOOP classifier label describes duration and does not promise a seamless wrap. Listening decides whether the native port preserves the accepted sound.</p>
+    <a id="archive" hidden>Download audition</a>
+  </footer>
+</main>
+<script>
+window.ACCORD_MANIFEST = /*ACCORD_MANIFEST*/null;
+(() => {
+  'use strict';
+  const byId = id => document.getElementById(id);
+  const section = byId('section'), voice = byId('voice'), level = byId('level');
+  const container = byId('clips'), summary = byId('summary');
+  const players = new Set();
+  const sectionLabels = {
+    voices:'Voices', profiles:'TINE profiles', 'tine-profiles':'TINE profiles',
+    notes:'Notes and registers', register:'Notes and registers', velocity:'Touch', touch:'Touch',
+    controls:'Controls', interactions:'Control interactions', mechanics:'Mechanical comparisons',
+    comparisons:'Mechanical comparisons', 'mechanical-comparisons':'Mechanical comparisons'
+  };
+  const title = value => String(value || '').replace(/[_-]/g,' ').replace(/\b\w/g,c => c.toUpperCase());
+  const sectionName = value => sectionLabels[value] || title(value);
+  const element = (tag, text, className) => {
+    const e = document.createElement(tag);
+    if (text != null) e.textContent = String(text);
+    if (className) e.className = className;
+    return e;
+  };
+  const relative = value => {
+    if (typeof value !== 'string') return null;
+    const s = value.trim();
+    if (!s || s.startsWith('/') || /^[a-z][a-z\d+.-]*:/i.test(s) || s.includes('\\') || s.split('/').includes('..')) return null;
+    return s;
+  };
+  const finite = value => value != null && value !== '' && Number.isFinite(Number(value));
+  const number = (value, digits=3) => finite(value) ? Number(value).toFixed(digits) : null;
+  const noteName = midi => {
+    if (!finite(midi)) return null;
+    const n = Math.round(Number(midi));
+    return ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'][((n%12)+12)%12] + (Math.floor(n/12)-1);
+  };
+  function addLink(parent, text, path) {
+    const href = relative(path);
+    if (!href) return;
+    const a = element('a',text); a.href = href; parent.append(a);
+  }
+  function pauseAll(except) { players.forEach(p => { if (p !== except) p.pause(); }); }
+  function render(clips) {
+    pauseAll(); players.clear(); container.replaceChildren();
+    const visible = clips.filter(c => (section.value === 'all' || c.section === section.value) &&
+      (voice.value === 'all' || c.voice === voice.value));
+    summary.textContent = visible.length + (visible.length === 1 ? ' recording' : ' recordings') +
+      ' · ' + (section.value === 'all' ? 'All sections' : sectionName(section.value));
+    byId('section-note').textContent = ['velocity','touch'].includes(section.value)
+      ? 'Keep playback volume fixed. These clips retain their native touch levels; the comparison option never levels individual touches.'
+      : 'Keep playback volume fixed for touch comparisons. Native level retains the instrument’s gain law; level matching is available only for designated comparisons.';
+    if (!visible.length) { container.append(element('p','No recordings match these filters. Try another voice or section.','empty')); return; }
+    for (const clip of visible) {
+      const card = element('article',null,'clip');
+      const heading = element('div',null,'clip-top');
+      heading.append(element('h2',clip.title || clip.id || 'Recording'));
+      heading.append(element('span',clip.voice === 'BRUSH' ? 'BRUSH · DEFAULT' : clip.voice || 'ACCORD','tag'));
+      card.append(heading);
+      const parts = [sectionName(clip.section),noteName(clip.midi)];
+      if (clip.profile && clip.profile !== 'BASE') parts.push(title(clip.profile));
+      if (finite(clip.velocity)) parts.push('Touch '+number(clip.velocity,2));
+      if (clip.metrics && finite(clip.metrics.seconds)) parts.push(number(clip.metrics.seconds,1)+' s');
+      card.append(element('p',parts.filter(Boolean).join(' · '),'meta'));
+      if (clip.description) card.append(element('p',clip.description,'description'));
+      const raw = relative(clip.raw), matched = relative(clip.matched);
+      const useMatched = level.value === 'matched' && matched;
+      const src = useMatched ? matched : raw;
+      if (src) {
+        const audio = element('audio'); audio.controls = true; audio.preload = 'none'; audio.src = src;
+        audio.setAttribute('aria-label',String(clip.title || clip.id || 'Accord recording'));
+        audio.addEventListener('play',() => pauseAll(audio)); players.add(audio); card.append(audio);
+        card.append(element('p',useMatched ? 'Level matched comparison' : matched ? 'Native level' : 'Native level · recorded dynamics retained','level-note'));
+      } else card.append(element('p','The audio file is unavailable for this recording.','subtle'));
+      const links = element('div',null,'links');
+      addLink(links,'Download WAV',src);
+      card.append(links);
+      const m = clip.metrics || {};
+      if (Object.keys(m).length || clip.recipe || clip.diagnostics || clip.plot) {
+        const details = element('details'); details.append(element('summary','Measurements and replay'));
+        const dl = element('dl');
+        const measurements = [['Peak',number(m.peak)],['RMS',number(m.rms)],['Loudness',number(m.loudness)],
+          ['DC',number(m.dc,6)],['Frames',finite(m.frames) ? Number(m.frames).toLocaleString() : null],
+          ['Classified',m.classified],['Raw peak',number(m.rawPeak)]];
+        for (const [key,value] of measurements) if (value != null) { dl.append(element('dt',key),element('dd',value)); }
+        if (dl.childNodes.length) details.append(dl);
+        const references = element('div',null,'links'); references.style.marginTop = '12px';
+        addLink(references,'Saved recipe',clip.recipe); addLink(references,'Diagnostics',clip.diagnostics);
+        addLink(references,'Contact timing and phase',clip.plot);
+        details.append(references); card.append(details);
+      }
+      container.append(card);
+    }
+  }
+  async function start() {
+    try {
+      let manifest = window.ACCORD_MANIFEST;
+      if (!manifest) {
+        const response = await fetch('manifest.json');
+        if (!response.ok) throw new Error('Manifest response '+response.status);
+        manifest = await response.json();
+      }
+      if (!manifest || !Array.isArray(manifest.clips)) throw new Error('No clip list');
+      const clips = manifest.clips;
+      const sections = [...new Set(clips.map(c => c.section).filter(Boolean))];
+      section.replaceChildren(new Option('All sections','all'),...sections.map(s => new Option(sectionName(s),s)));
+      const voices = [...new Set(clips.map(c => c.voice).filter(Boolean))];
+      voice.replaceChildren(new Option('All voices','all'),...voices.map(v => new Option(v,v)));
+      section.value = sections.includes('voices') ? 'voices' : 'all';
+      voice.value = 'all';
+      section.disabled = false; voice.disabled = false; level.disabled = false;
+      const archive = relative(manifest.archive || manifest.downloadZip);
+      if (archive) { byId('archive').href = archive; byId('archive').hidden = false; }
+      for (const control of [section,voice,level]) control.addEventListener('change',() => render(clips));
+      render(clips);
+    } catch (error) {
+      summary.textContent = 'The audition manifest could not be loaded.';
+      container.append(element('p','Open the generated index.html from its audition folder. If its embedded manifest is missing, serve that folder through a local web server.','empty'));
+      console.error('Accord audition:',error);
+    }
+  }
+  start();
+})();
+</script>
+</body>
+</html>

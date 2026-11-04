@@ -8,6 +8,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RimeOpeningPreviewTest {
+    @Test fun savedHeldModelSurvivesInstrumentCreationWhileFiniteNotesUpgradeExplicitly() {
+        val old = RimePatch("Saved hold",RimeVoice.VESSEL,Rime.defaults(RimeVoice.VESSEL,5)+("HOLD" to 1f),
+            53,.37f,.4f,2718,5)
+        assertSame(old,rimeInstrumentSource(old))
+        assertEquals(old.toJsonText(),rimeInstrumentSource(old).toJsonText())
+        val finite = old.copy(model=4,macros=old.macros+("HOLD" to 0f))
+        assertEquals(finite.copy(model=6),rimeInstrumentSource(finite))
+    }
+
     @Test fun openingPlaysOnceAndOnlyItsOwnSustainRepeats() {
         val preview = RimeOpeningPreview()
         val patch = RimePatch("Held contour", RimeVoice.LOOP,

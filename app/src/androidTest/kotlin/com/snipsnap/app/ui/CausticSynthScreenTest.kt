@@ -7,7 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
@@ -36,7 +36,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,13 +93,83 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         .config[SemanticsProperties.ProgressBarRangeInfo].current
 
     private fun assertFiniteControls() {
-        compose.onNodeWithText("FINITE NOTE · LENGTH SETS DECAY · HOLD RESERVED.").assertExists()
-        compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).assertIsNotEnabled()
+        compose.onNodeWithText("ORIGINAL FINITE NOTE · MOVE HOLD OR MOTION TO EXPLORE FURTHER.").assertExists()
+        compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).assertIsEnabled()
+        compose.onNodeWithContentDescription("MOTION", useUnmergedTree = true).assertIsEnabled()
         val hold = compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).fetchSemanticsNode()
-        assertNull(hold.config.getOrNull(SemanticsActions.SetProgress))
+        assertTrue(hold.config.getOrNull(SemanticsActions.SetProgress) != null)
         assertEquals(0f, progress("HOLD"), .00001f)
-        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
         compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()
+    }
+
+    @Test
+    fun a_deliberate_motion_edit_expands_only_the_working_recipe_and_survives_immediate_recreation() {
+        val root = shelf()
+        val original = CausticPatch("Original ring", CausticVoice.RUBBED_RING,
+            mapOf("BODY" to .6f, "LENGTH" to 0f), midi = 55, velocity = .37f, model = 1)
+        val before = original.toJsonText()
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to original.voiceName)
+        SynthDrafts.write(settings, listOf(original))
+        show(root, settings)
+        assertFiniteControls()
+        val adjust = compose.onNodeWithContentDescription("MOTION", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+        compose.runOnIdle { assertTrue(adjust(.55f)); generation++ }
+        pump()
+        waitFor("expanded Caustic motion draft") {
+            SynthDrafts.read(settings).any { it is CausticPatch && it.model == 2 && it.macros["MOTION"] == .55f }
+        }
+        assertEquals(.55f, progress("MOTION"), .00001f)
+        assertEquals(.37f, progress("VELOCITY"), .00001f)
+        assertRoot(55)
+        assertEquals(before, original.toJsonText())
+    }
+
+    @Test
+    fun making_keys_is_an_explicit_expansion_and_opening_the_sheet_writes_no_package() {
+        val root = shelf()
+        val original = CausticPatch("Original keys", CausticVoice.ALLOY,
+            mapOf("LENGTH" to 0f), midi = 55, velocity = .4f, model = 1)
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to "ALLOY")
+        SynthDrafts.write(settings, listOf(original))
+        show(root, settings)
+        press("MAKE INSTRUMENT")
+        compose.onNodeWithContentDescription("RELEASE").assertIsEnabled()
+        compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
+        compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
+        compose.onNodeWithText("KEEPS THE ARRIVAL, THEN REPEATS THE VESSEL WHILE HELD. KEY TOUCH CHANGES VOLUME.").assertExists()
+        waitFor("working source expanded for keys") { SynthDrafts.read(settings).any { it is CausticPatch && it.model == 2 } }
+        assertEquals(1, original.model)
+        val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
+        assertTrue(!instruments.exists() || instruments.listFiles().isNullOrEmpty())
+    }
+
+    @Test
+    fun explicit_hold_places_a_gated_whole_cycle_with_the_complete_saved_recipe() {
+        val root = shelf()
+        val kitDir = File(root, "held-kit").apply { mkdirs() }
+        val kit = Kit(name = "CAUSTIC HELD", pads = emptyList())
+        KitStore.save(kit, kitDir)
+        val patch = CausticPatch("Held vessel", CausticVoice.ALLOY,
+            mapOf("HOLD" to 1f, "MOTION" to .4f, "LENGTH" to 0f), midi = 60, velocity = .43f, model = 2)
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to "ALLOY")
+        SynthDrafts.write(settings, listOf(patch))
+        show(root, settings, KitShelf.Entry(kitDir, kit))
+        press("SEND TO PAD")
+        press("A01, EMPTY")
+        waitFor("gated Caustic cycle", timeoutMillis = 180_000) {
+            KitBuilderModel.open(kitDir).pad(1)?.let { it.loop && !it.oneShot } == true
+        }
+        val pad = KitBuilderModel.open(kitDir).pad(1)!!
+        val placed = PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).patch as CausticPatch
+        assertEquals(2, placed.model)
+        assertEquals(60, placed.midi)
+        assertEquals(.43f, placed.velocity)
+        assertEquals(1f, placed.macros.getValue("HOLD"))
+        assertEquals(.4f, placed.macros.getValue("MOTION"))
+        assertEquals(DrumClass.LOOP, pad.drumClass)
+        assertTrue(pad.loop && !pad.oneShot)
     }
 
     @Test
@@ -119,8 +188,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.macros.getValue("BODY"), progress("BODY"), .00001f)
             val midi = 48 + index * 3
             val velocity = .3f + index * .1f
-            dial("ROOT", (midi - CausticInstrument.MIDI_MIN).toFloat() /
-                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN))
+            rootTo(midi)
             dial("VELOCITY", velocity)
             dial("LENGTH", 0f)
             waitFor("independent $voice draft") {
@@ -133,8 +201,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         for ((index, voice) in CausticVoice.entries.withIndex()) {
             press(labels.getValue(voice))
             val midi = 48 + index * 3
-            assertEquals((midi - CausticInstrument.MIDI_MIN).toFloat() /
-                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN), progress("ROOT"), .00001f)
+            assertRoot(midi)
             assertEquals(.3f + index * .1f, progress("VELOCITY"), .00001f)
             assertEquals(CausticPresets.forVoice(voice).first().macros.getValue("BODY"), progress("BODY"), .00001f)
             assertEquals(0f, progress("LENGTH"), .00001f)
@@ -165,8 +232,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             assertEquals(factory.macros.getValue(macro), progress(macro), .00001f)
         }
 
-        dial("ROOT", (57 - CausticInstrument.MIDI_MIN).toFloat() /
-            (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN))
+        rootTo(57)
         dial("VELOCITY", .43f)
         dial("SOURCE", .68f)
         dial("BODY", .62f)
@@ -178,7 +244,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         // carries ROOT, VELOCITY and the native model when MAKE is recreated.
         compose.runOnIdle { generation++ }
         pump()
-        waitFor("the restored Caustic root") { progress("ROOT") == (57 - 36) / 48f }
+        waitFor("the restored Caustic root") { rootIs(57) }
         assertEquals(.43f, progress("VELOCITY"), .00001f)
         assertEquals(.68f, progress("SOURCE"), .00001f)
         assertFiniteControls()
@@ -251,7 +317,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             "macro.CAUSTIC.ALLOY.SOURCE" to ".33", "macro.CAUSTIC.ALLOY.HOLD" to "1.0")
         SynthDrafts.write(settings, listOf(patch))
         show(root, settings)
-        waitFor("restored explicit Caustic root") { progress("ROOT") == (69 - 36) / 48f }
+        waitFor("restored explicit Caustic root") { rootIs(69) }
         assertEquals(.37f, progress("VELOCITY"), .00001f)
         assertEquals(.33f, progress("SOURCE"), .00001f)
         assertFiniteControls()

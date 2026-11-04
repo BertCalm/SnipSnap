@@ -38,7 +38,7 @@ class RimeTest {
     }
 
     @Test fun `model four preserves the preferred first half and all three starters sample exactly`() {
-        for (voice in RimeVoice.entries) {
+        for (voice in Rime.LEGACY_VOICES) {
             val original = RimePresets.starter(voice).copy(model = 3)
             assertContentEquals(original.render().samples, original.copy(model = 4).render().samples, "$voice starter")
             for (angle in listOf(0f, .25f, .5f, 1f)) {
@@ -49,7 +49,7 @@ class RimeTest {
     }
 
     @Test fun `angle return gives the weak middle more overtone range and stays continuous at anchors`() {
-        for (voice in RimeVoice.entries) {
+        for (voice in Rime.LEGACY_VOICES) {
             val p = RimePresets.starter(voice)
             fun at(angle: Float, model: Int = 4, gate: Float = p.gateSeconds) =
                 p.copy(macros = p.macros + ("ANGLE" to angle), gateSeconds = gate, model = model).render().samples
@@ -321,16 +321,16 @@ class RimeTest {
     }
 
     @Test fun `high edge agrees with a higher rate reference without friction noise`() {
-        for(midi in listOf(36,72,96)) {
-            val macros=Rime.defaults(RimeVoice.GLINT)+mapOf("DETAIL" to 1f,"EDGE" to 1f,"UNFOLD" to .5f)
-            val a=Rime.inspect(RimeVoice.GLINT,macros,midi,1f,.6f,options=Rime.Options(friction=false))
-            val b=Rime.inspect(RimeVoice.GLINT,macros,midi,1f,.6f,options=Rime.Options(oversample=8,friction=false))
+        for(voice in RimeVoice.entries) for(midi in listOf(36,72,96)) {
+            val macros=Rime.defaults(voice)+mapOf("DETAIL" to 1f,"EDGE" to 1f,"UNFOLD" to .5f)
+            val a=Rime.inspect(voice,macros,midi,1f,.6f,options=Rime.Options(friction=false))
+            val b=Rime.inspect(voice,macros,midi,1f,.6f,options=Rime.Options(oversample=8,friction=false))
             val n=min(a.raw.size,b.raw.size)
             val error=(4096 until n-4096).sumOf{(a.raw[it]-b.raw[it].toDouble()).pow(2)}
             val energy=(4096 until n-4096).sumOf{b.raw[it].toDouble().pow(2)}
             val db=10*log10(error/energy)
-            println("RIME 4x/8x MIDI $midi residual $db dB")
-            assertTrue(db < -30,"4x/8x reference residual $db dB at $midi")
+            println("RIME $voice 4x/8x MIDI $midi residual $db dB")
+            assertTrue(db < -30,"$voice 4x/8x reference residual $db dB at $midi")
         }
     }
 }
