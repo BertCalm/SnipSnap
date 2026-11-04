@@ -586,6 +586,8 @@ object Copy {
     const val EXPANSION_PICK = "WHICH EXPANSION"
     /** The members row heading. */
     const val EXPANSION_MEMBERS = "KITS IN IT"
+    /** The instruments row heading: what MAKE INSTRUMENT made, packed as keygroups beside the kits. */
+    const val EXPANSION_INSTRUMENTS = "INSTRUMENTS IN IT"
     /** The last look at the tile, and its door back into the picker. */
     const val CHANGE_ART = "CHANGE ART ▸"
     /** The two forms an expansion writes in. */
@@ -596,8 +598,11 @@ object Copy {
     const val EXPANSION_NONE = "NO EXPANSIONS YET. HOLD A KIT ON THE SHELF TO START ONE."
     const val EXPANSION_TO_PHONE = "GOES TO THE PHONE. PICK A CARD ON THE KIT SIDE TO SEND IT THERE."
     fun expansionToCard(card: String): String = "GOES TO THE CARD: $card."
+    /** The expansion side's arm-to-replace line, naming the button it asks for again. */
+    fun expansionWouldOverwrite(what: String): String = "$what IS ALREADY THERE. $EXPANSION_WRITE AGAIN TO WRITE OVER IT."
     fun memberSkipped(kit: String, reason: String): String = "$kit SKIPPED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    fun expansionWritten(name: String, kits: Int): String = "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}."
+    fun expansionWritten(name: String, kits: Int, instruments: Int = 0): String =
+        "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}" + (if (instruments > 0) ", ${countOf(instruments, "INSTRUMENT", "INSTRUMENTS")}" else "") + "."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"

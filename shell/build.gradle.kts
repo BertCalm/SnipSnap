@@ -355,3 +355,35 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
 }
+
+/** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */
+tasks.register<JavaExec>("scanLoopInstruments") {
+    group = "verification"
+    description = "Measure each HOLD-loop engine's loop as a keys instrument (wrap, pitch, steadiness) under testkit/loop-instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LoopInstrumentScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory expansion of the new held instruments (MERCURY, KEEL, LoopPadMaker's qualifiers). See InstrumentPackGenerator. */
+tasks.register<JavaExec>("generateInstrumentPack") {
+    group = "distribution"
+    description = "Render the new held instruments and pack them as one MPC expansion (.xpn) under testkit/loop-instruments-pack/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments-pack") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory instruments again, one expansion per engine, from the packages generateInstrumentPack left. */
+tasks.register<JavaExec>("splitInstrumentPack") {
+    group = "distribution"
+    description = "Pack the rendered new held instruments one expansion per engine under testkit/loop-instruments-pack/By engine/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/loop-instruments-pack", "--split")
+}

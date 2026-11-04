@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import com.snipsnap.kit.Names
 import com.snipsnap.shell.ArtKnobs
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Expansion
+import com.snipsnap.shell.ExpansionMembers
 import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Names as NameRoll
@@ -70,11 +72,18 @@ internal fun ExpansionFlow(entry: KitShelf.Entry, store: ExpansionStore, onToast
     var stage by remember(entry) { mutableStateOf<Stage>(Stage.Sheet) }
     var revision by remember { mutableIntStateOf(0) }
     val kitName = entry.kit.name
-    val loaded by produceState<Pair<List<Expansion>, String?>?>(null, revision) {
-        value = offMain { store.list() to KitIds.read(entry.dir) }
+    // The expansions, this kit's id, and the ids on the shelf now: the sheet counts only kits that are here.
+    val loaded by produceState<Triple<List<Expansion>, String?, Set<String>>?>(null, revision) {
+        value = offMain {
+            val shelfIds = entry.dir.parentFile?.let { ExpansionMembers.index(it).keys }.orEmpty()
+            Triple(store.list(), KitIds.read(entry.dir), shelfIds)
+        }
     }
     val expansions = loaded?.first.orEmpty()
     val kitId = loaded?.second
+    val onShelf = loaded?.third.orEmpty()
+    // One birth per picker: a second CLOSE landing before the first has finished must not try again.
+    var born by remember(entry) { mutableStateOf(false) }
 
     when (val s = stage) {
         Stage.Sheet -> BottomSheet(Copy.EXPANSION_SHEET_TITLE, onDone) {
@@ -85,7 +94,7 @@ internal fun ExpansionFlow(entry: KitShelf.Entry, store: ExpansionStore, onToast
                 SheetRow(Copy.EXPANSION_NEW, null, marked = false) { stage = Stage.Naming }
                 for (e in expansions) {
                     val member = kitId != null && kitId in e.memberKitIds
-                    SheetRow(e.title, Copy.countOf(e.memberKitIds.size, "KIT", "KITS"), marked = member) {
+                    SheetRow(e.title, Copy.countOf(e.memberKitIds.count { it in onShelf }, "KIT", "KITS"), marked = member) {
                         scope.launch {
                             // Join or leave is decided from the store as it is now, inside the lock, not
                             // from the list on screen: a second tap can land before that list reloads.
@@ -117,20 +126,26 @@ internal fun ExpansionFlow(entry: KitShelf.Entry, store: ExpansionStore, onToast
                 }
             }
         }
-        Stage.Naming -> ExpansionNameDialog(
-            title = Copy.EXPANSION_NAME_TITLE,
-            initialName = "",
-            check = { name -> check(name, expansions, exceptId = null) },
-            taken = expansions.map { it.title }.toSet(),
-            onCancel = { stage = Stage.Sheet },
-            onConfirm = { name -> stage = Stage.Picking(name, ArtKnobs.default(scheme)) },
-        )
+        Stage.Naming -> {
+            ExpansionNameDialog(
+                title = Copy.EXPANSION_NAME_TITLE,
+                initialName = "",
+                check = { name -> nameCheck(name, expansions, exceptId = null) },
+                taken = expansions.map { it.title }.toSet(),
+                onCancel = { stage = Stage.Sheet },
+                onConfirm = { name -> stage = Stage.Picking(name, ArtKnobs.default(scheme)) },
+            )
+            // Back is CANCEL: the sheet comes back, nothing is named.
+            BackHandler { stage = Stage.Sheet }
+        }
         is Stage.Picking -> ArtPickerSheet(
             kit = entry.kit,
             kitDir = entry.dir,
             knobs = s.knobs,
             onKnobs = { stage = s.copy(knobs = it) },
             onDismiss = {
+                if (born) return@ArtPickerSheet
+                born = true
                 scope.launch {
                     val ok = offMain {
                         KitWrites.mutex.withLock {
@@ -147,8 +162,85 @@ internal fun ExpansionFlow(entry: KitShelf.Entry, store: ExpansionStore, onToast
     }
 }
 
+/**
+ * EXPANSION ▸ on an instrument: [ExpansionFlow]'s sheet for MAKE ▸ INSTRUMENTS.
+ * NEW names an expansion and starts it with this instrument (no kit yet, so
+ * no art picker: the default art until a kit joins); any other row joins or
+ * leaves, by the name the instrument's sidecar carries. Packed beside the
+ * kits as a keygroup program when the expansion is written.
+ */
+@Composable
+internal fun InstrumentExpansionFlow(entry: KitShelf.InstrumentEntry, store: ExpansionStore, onToast: (String) -> Unit, onDone: () -> Unit) {
+    val scheme = LocalScheme.current
+    val scope = rememberCoroutineScope()
+    var naming by remember(entry) { mutableStateOf(false) }
+    var revision by remember { mutableIntStateOf(0) }
+    val name = entry.instrument.name
+    val expansions by produceState<List<Expansion>>(emptyList(), revision) { value = offMain { store.list() } }
+
+    if (naming) {
+        ExpansionNameDialog(
+            title = Copy.EXPANSION_NAME_TITLE,
+            initialName = "",
+            check = { title -> nameCheck(title, expansions, exceptId = null) },
+            taken = expansions.map { it.title }.toSet(),
+            onCancel = { naming = false },
+            onConfirm = { title ->
+                scope.launch {
+                    val ok = offMain {
+                        KitWrites.mutex.withLock {
+                            runCatching { store.createForInstrument(title, name, ArtKnobs.default(scheme)) }.isSuccess
+                        }
+                    }
+                    onToast(if (ok) Copy.expansionBorn(title) else Copy.EXPANSION_SAVE_FAILED)
+                    onDone()
+                }
+            },
+        )
+        return
+    }
+    BottomSheet(Copy.EXPANSION_SHEET_TITLE, onDone) {
+        Column(
+            Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            SheetRow(Copy.EXPANSION_NEW, null, marked = false) { naming = true }
+            for (e in expansions) {
+                val facts = Copy.countOf(e.memberKitIds.size, "KIT", "KITS") + " · " +
+                    Copy.countOf(e.instrumentNames.size, "INSTRUMENT", "INSTRUMENTS")
+                SheetRow(e.title, facts, marked = name in e.instrumentNames) {
+                    scope.launch {
+                        // Decided from the store inside the lock, as a kit's join is: a second tap can land first.
+                        val joined: Boolean? = offMain {
+                            KitWrites.mutex.withLock {
+                                runCatching {
+                                    if (store.get(e.id)?.instrumentNames?.contains(name) == true) {
+                                        store.removeInstrument(e.id, name)
+                                        false
+                                    } else {
+                                        store.addInstrument(e.id, name)
+                                        true
+                                    }
+                                }.getOrNull()
+                            }
+                        }
+                        onToast(
+                            when (joined) {
+                                null -> Copy.EXPANSION_SAVE_FAILED
+                                true -> Copy.kitJoined(name, e.title)
+                                false -> Copy.kitLeft(name, e.title)
+                            },
+                        )
+                        revision++
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Whether [name] can name an expansion beside [existing]: the store's own rule, read from the list already in hand. */
-internal fun check(name: String, existing: List<Expansion>, exceptId: String?): ExpansionStore.NameCheck = when {
+internal fun nameCheck(name: String, existing: List<Expansion>, exceptId: String?): ExpansionStore.NameCheck = when {
     !Names.isMpcSafe(name) -> ExpansionStore.NameCheck.Unsafe
     existing.any { it.id != exceptId && it.title.equals(name, ignoreCase = true) } -> ExpansionStore.NameCheck.Taken
     else -> ExpansionStore.NameCheck.Ok

@@ -689,11 +689,11 @@ class MicSessionService : Service() {
         val title = if (source == Source.INSIDE) Copy.APP_AUDIO_ARMED else Copy.SESSION_ARMED
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_mark_symbol)
             .setOngoing(true)
             .addAction(
                 Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_btn_speak_now),
+                    Icon.createWithResource(this, R.drawable.ic_mark_symbol),
                     "SNIP",
                     snipPending,
                 ).build(),

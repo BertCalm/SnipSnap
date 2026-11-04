@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.OnBackPressedDispatcherOwner
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -38,6 +40,7 @@ class ExpansionBirthTest : ComposeScreenTest() {
     private val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "birth-${System.nanoTime()}")
     private val store = ExpansionStore(File(root, "expansions"))
     private val toasts = mutableListOf<String>()
+    private var backOwner: OnBackPressedDispatcherOwner? = null
 
     @After
     fun cleanUp() {
@@ -54,6 +57,7 @@ class ExpansionBirthTest : ComposeScreenTest() {
 
     private fun show(kit: KitShelf.Entry) {
         setPhoneContent {
+            backOwner = LocalOnBackPressedDispatcherOwner.current
             CompositionLocalProvider(LocalReduceMotion provides true) {
                 KitsScreen(
                     kits = listOf(kit),
@@ -111,6 +115,55 @@ class ExpansionBirthTest : ComposeScreenTest() {
         waitFor("the new expansion's row to count its kit") {
             compose.onAllNodesWithText("1 KIT", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun backOnTheNameDialogReturnsToTheSheet() {
+        val kit = entry("TIDAL")
+        show(kit)
+        openTheDoor(kit)
+        press(Copy.EXPANSION_NEW)
+        assertTrue(compose.onAllNodesWithText(Copy.EXPANSION_NAME_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.runOnUiThread { backOwner!!.onBackPressedDispatcher.onBackPressed() }
+        pump()
+        assertTrue("the dialog is gone", compose.onAllNodesWithText(Copy.EXPANSION_NAME_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        assertTrue("the sheet is back", compose.onAllNodesWithText(Copy.EXPANSION_SHEET_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        assertEquals(emptyList<Any>(), store.list())
+    }
+
+    @Test
+    fun closingThePickerTwiceBearsOneExpansion() {
+        val kit = entry("TIDAL")
+        show(kit)
+        openTheDoor(kit)
+        press(Copy.EXPANSION_NEW)
+        compose.onNode(hasSetTextAction()).performTextReplacement("TWICE")
+        pump()
+        press(Copy.EXPANSION_NAME_CONFIRM)
+        waitFor("the picker") { compose.onAllNodesWithText("${Copy.ART_FOR} TWICE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        button("CLOSE").performSemanticsAction(SemanticsActions.OnClick)
+        runCatching { button("CLOSE").performSemanticsAction(SemanticsActions.OnClick) }
+        pump()
+        waitFor("the birth") { Copy.expansionBorn("TWICE") in toasts }
+        pump(500)
+        assertEquals(1, store.list().size)
+        assertTrue("no failure after the birth: $toasts", Copy.EXPANSION_SAVE_FAILED !in toasts)
+    }
+
+    @Test
+    fun theSheetCountsOnlyKitsOnTheShelf() {
+        val kit = entry("TIDAL")
+        val id = KitIds.ensure(kit.dir)
+        store.create("HALF", id, ArtKnobs.default(Schemes.DEFAULT)).let { store.add(it.id, "a-kit-now-gone") }
+        show(kit)
+        openTheDoor(kit)
+        waitFor("the sheet's row") {
+            compose.onAllNodesWithText("HALF", useUnmergedTree = true).fetchSemanticsNodes().size >= 2
+        }
+        pump(500)
+        // The shelf's own group behind the sheet says 1 KIT too; the sheet must not count the kit that is gone.
+        assertTrue("the sheet counts a kit that is not on the shelf",
+            compose.onAllNodesWithText("2 KITS", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
     }
 
     @Test

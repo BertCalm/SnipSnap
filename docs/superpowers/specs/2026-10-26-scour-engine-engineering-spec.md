@@ -6,9 +6,11 @@ listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, th
 kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C)
 Status: R1 to R5 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1 to R4 auditions; the R5 page is published and not yet heard.
+renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
+on the R5 page).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. The phone's synth picker and a docs page remain.
+voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1); a docs
+page remains.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -428,7 +430,8 @@ Nothing below exists yet. Names grep at `f931efc6`.
   (the brief names no gear, so the blocklist needs no new terms); leave `PROTOTYPES`.
 - [ ] R4: `SynthKits.scour()`, `ScourKitGenerator.kt` and `generateScourKit`, docs
   (`docs/SCOUR.md`, a `docs/SYNTH_ROADMAP.md` row, the README engine count, "As built" here).
-- [ ] Deferred: the app picker (`app/.../SynthScreen.kt`), for a session with an Android SDK.
+- [x] The app picker (`app/.../SynthScreen.kt`) was deferred for a session with an Android SDK. It landed on the
+  default branch with #840 (As built: R5.1).
 
 ## 15. Probes and auditions
 
@@ -593,7 +596,7 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
 | the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
 | BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
-| bank B now varies enough, and BEAM sounds like a struck girder | heard? | the R5 page |
+| bank B now varies enough, and BEAM sounds like a struck girder | heard: bank B varied enough, yes; bank C as it is, yes; BEAM into a drop, yes; "a struck girder" | the R5 page (As built: R5) |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -1135,6 +1138,15 @@ same round, the owner said yes, with its own bank C.
   four notes.
 - SHEET's lowest octave on a phone speaker or an MPC is still unheard.
 
+### Heard on the R5 page (the owner, 2026-11-01)
+
+| Question | Answer |
+|---|---|
+| Is bank B varied enough now? | yes |
+| Would you load bank C as it is? | yes |
+| Would you reach for BEAM into a drop? | yes |
+| What does BEAM sound like to you? | a struck girder |
+
 ### Why R5 is built this way
 
 1. **Variation where the owner heard sameness.** The note named the pads, not the sound of SHEET, so the
@@ -1143,3 +1155,23 @@ same round, the owner said yes, with its own bank C.
    alike when they share a note and a short build. That is why the hits moved up the scale.
 3. **A beam is the sparse end of the family.** PLATE crowds, PANE is glassy, SHEET rumbles. BEAM's few,
    widely spaced modes are a clang, and it gets the same listening-point treatment for its note.
+
+## As built: R5.1, on the phone (2026-11-01)
+
+After the R5 listen the owner chose to put SCOUR on the phone's synth picker. The default branch already had it:
+#840 (`779f40a5`) put BORE, ARCO, SCOUR and KEEL on the picker together, so this spec records that change and does
+not repeat it.
+
+- **Where it sits.** After RIME, between ARCO and KEEL, so the picker's arrows reach it last. The catalogue files
+  it under PADS & FX and BELLS & MALLETS, described as "Shot-blasted plates that build to a slam, then ring".
+- **Its root.** `SynthRoot` (#837) gives every SCOUR voice a ROOT and OCT stepper through TUNE, using
+  `Scour.midiFor`.
+- **What it gives.** Factory presets browse by voice through `Presets`, which rosters SCOUR's sixteen. "Reopen in
+  the synth" can open the SCOUR starter's 48 pads, since it lists any pad whose engine and voice the picker knows.
+- **`MODEL_VERSION` stays 1.** Its comment no longer says that no saved SCOUR sound exists: a sound saved from the
+  phone regenerates through it, as the presets and the starter's pads do.
+
+### Disclosed, not fixed
+
+- SCOUR has not been opened on a phone yet. The app compiles and its emulator tests run in CI, not in the
+  sessions that built the engine.
