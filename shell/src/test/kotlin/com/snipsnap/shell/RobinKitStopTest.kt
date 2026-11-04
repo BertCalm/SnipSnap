@@ -40,7 +40,11 @@ class RobinKitStopTest {
         return k.pads.associate { it.slot to File(dir, it.sampleFile).readBytes() }
     }
 
-    /** The bin row holding [slot]'s original goes missing, so lifting that pad's chain throws; the returned call puts it back. */
+    /**
+     * The bin row holding [slot]'s original goes missing and its chain WAV stops reading, so neither the
+     * bin nor take one can give the original back and lifting that pad's chain throws (a lost row alone
+     * no longer does: undo then cuts take one from the chain). The returned call puts both back.
+     */
     private fun loseBinnedOriginal(dir: File, slot: Int): () -> Unit {
         val model = KitBuilderModel.open(dir)
         val name = model.pad(slot)!!.sampleFile
@@ -48,7 +52,13 @@ class RobinKitStopTest {
         assertTrue(rows.isNotEmpty(), "the bin holds pad $slot's original")
         val saved = rows.map { it.file to it.file.readBytes() }
         rows.forEach { it.file.delete() }
-        return { saved.forEach { (f, b) -> f.writeBytes(b) } }
+        val chain = File(dir, name)
+        val chainBytes = chain.readBytes()
+        chain.writeBytes("not a wav".toByteArray())
+        return {
+            saved.forEach { (f, b) -> f.writeBytes(b) }
+            chain.writeBytes(chainBytes)
+        }
     }
 
     /** kit.json agrees with the WAV for every pad: a chain's boundaries fit its file and match its cycle; a plain pad is the original. */

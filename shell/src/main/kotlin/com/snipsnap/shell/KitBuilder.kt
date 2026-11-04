@@ -1303,7 +1303,33 @@ class KitBuilderModel private constructor(
         }
         kit = restored
         dirty = true
-        return restored
+        reconcileRobins()
+        return kit
+    }
+
+    /**
+     * After [restoreTake]: a robin pad whose file no longer holds its chain is dealt again. Turning
+     * round robin off (or re-dealing it) copies the original over the chain without binning the
+     * chain, so the bin often has only the single original to bring back for a take saved with round
+     * robin on: kit.json then names takes the WAV does not have. Re-dealing that original with the
+     * take's own settings is deterministic, so the chain comes back as it was saved, and the
+     * original goes into the bin as the newest row, where [Robin.undo] looks for it. A chain that
+     * still fits its file is left alone; an unreadable file is left to the doors that read it.
+     */
+    private fun reconcileRobins() {
+        for (pad in kit.pads.filter { it.isRobinChain }) {
+            val frames = try {
+                com.snipsnap.xpm.WavInfo.read(File(kitDir, pad.sampleFile)).frameCount
+            } catch (e: java.io.IOException) {
+                continue
+            } catch (e: IllegalArgumentException) {
+                continue
+            }
+            if (Robin.fits(pad.chain!!, frames)) continue
+            update(pad.slot) { Robin.lifted(it) }
+            Robin.apply(this, pad.slot, pad.robin!!)
+            update(pad.slot) { it.copy(recipe = pad.recipe) }
+        }
     }
 
     /**
@@ -1516,6 +1542,14 @@ class KitBuilderModel private constructor(
             for (name in filesOf(pad)) {
                 val entry = newest[name]?.takeIf { it.file !in ejected } ?: continue
                 keptFor.merge(entry.file, pad.slot, ::minOf)
+            }
+            // A robin chain's undo brings back its newest row, the original; the pad it leaves then
+            // reads the row under that one when its own undo (an edit made on the original) needs it.
+            if (pad.isRobinChain && dependsOnBin(Robin.lifted(pad))) {
+                val under = entries.filter { it.originalName == pad.sampleFile }
+                if (under.firstOrNull()?.file !in ejected) {
+                    under.getOrNull(1)?.takeIf { it.file !in ejected }?.let { keptFor.merge(it.file, pad.slot, ::minOf) }
+                }
             }
         }
         val purgeAt = entries.associateTo(HashMap()) { it.file to clock(it) }

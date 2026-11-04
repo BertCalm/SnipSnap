@@ -21,6 +21,16 @@ import java.nio.ByteOrder
  * folder exporter, the `.xpn` packager, the pack builder's sidecar and the
  * read-back, so they cannot disagree.
  */
+/**
+ * Take one of robin pad [pad]'s chain in [kitDir] as a WAV file's bytes - the untouched original,
+ * cut exactly as the `.xpm` exports cut it ([RobinSplit]): the chain's own PCM bytes under a plain
+ * header for 16/24-bit PCM, a re-encode otherwise. What `Robin.undo` lands when the bin has lost it.
+ */
+fun robinTakeOne(pad: KitPad, kitDir: File): ByteArray {
+    require(pad.isRobinChain) { "pad ${pad.slot} isn't a round-robin chain" }
+    return RobinSplit.takeOne(pad, File(kitDir, pad.sampleFile))
+}
+
 internal object RobinSplit {
 
     /** Layers per pad in the format. */
@@ -49,6 +59,9 @@ internal object RobinSplit {
             val stem = takeStem("", pad, n)
             stem to File(samplesDir, "$stem.wav").readBytes()
         }
+
+    /** Take one of [pad]'s chain in [chainFile], as WAV bytes. */
+    fun takeOne(pad: KitPad, chainFile: File): ByteArray = cut(pad, chainFile).first().first
 
     private fun cut(pad: KitPad, chainFile: File): List<Pair<ByteArray, Long>> {
         val chain = requireNotNull(pad.chain)
@@ -105,9 +118,11 @@ internal object RobinSplit {
 
     private operator fun IntArray.component5() = this[4]
 
+    /** A plain 44-byte header over [data], with the RIFF pad byte an odd data size needs - the shape WavWriter writes. */
     private fun pcmWav(f: Pcm, data: ByteArray): ByteArray {
-        val b = ByteBuffer.allocate(44 + data.size).order(ByteOrder.LITTLE_ENDIAN)
-        b.put("RIFF".toByteArray(Charsets.US_ASCII)).putInt(36 + data.size).put("WAVE".toByteArray(Charsets.US_ASCII))
+        val pad = data.size % 2
+        val b = ByteBuffer.allocate(44 + data.size + pad).order(ByteOrder.LITTLE_ENDIAN)
+        b.put("RIFF".toByteArray(Charsets.US_ASCII)).putInt(36 + data.size + pad).put("WAVE".toByteArray(Charsets.US_ASCII))
         b.put("fmt ".toByteArray(Charsets.US_ASCII)).putInt(16).putShort(1).putShort(f.channels.toShort())
             .putInt(f.rate).putInt(f.rate * f.blockAlign).putShort(f.blockAlign.toShort()).putShort(f.bits.toShort())
         b.put("data".toByteArray(Charsets.US_ASCII)).putInt(data.size).put(data)

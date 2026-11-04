@@ -3475,12 +3475,10 @@ fun PadSheetScreen(
                 stopAquariumPreview()
                 val whole = chainSnip
                 val chain = pad.chain
+                // Robin.take clamps the window to the audio: a kit.json that names more takes than
+                // the WAV holds plays what is there, never reads past the end.
                 val heard = if (whole != null && chain != null && pad.isRobinChain) {
-                    val window = chain.window(hitCount++ % chain.cycle, whole.frameCount.toLong())
-                    Snip(
-                        whole.samples.copyOfRange(window.first.toInt() * whole.channels, (window.last.toInt() + 1) * whole.channels),
-                        whole.channels, whole.sampleRate,
-                    )
+                    Robin.take(whole, chain, hitCount++ % chain.cycle) ?: snip
                 } else {
                     snip
                 }

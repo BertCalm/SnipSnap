@@ -236,22 +236,53 @@ object Robin {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         val chain = requireNotNull(pad.chain) { "pad $slot isn't a round-robin chain" }
         val whole = com.snipsnap.audio.WavReader.read(java.io.File(model.kitDir, pad.sampleFile))
-        val end = (chain.boundaries.getOrNull(1) ?: whole.frameCount.toLong()).toInt()
-        return Snip(whole.samples.copyOfRange(0, end * whole.channels), whole.channels, whole.sampleRate)
+        return take(whole, chain, 0) ?: whole
     }
 
-    /** The single take back out of the bin, byte-identical; the chain cleared. */
+    /**
+     * Take [i] of [chain] cut out of [whole], the chain's decoded WAV. The window is clamped to the
+     * audio, so a kit.json whose boundaries run past the file (a WAV swapped under it) plays what is
+     * there rather than throwing; null when nothing of that take is left to play.
+     */
+    fun take(whole: Snip, chain: ChainInfo, i: Int): Snip? {
+        if (i !in chain.boundaries.indices) return null
+        val frames = whole.frameCount.toLong()
+        val w = chain.window(i, frames)
+        val from = w.first.coerceIn(0L, frames)
+        val to = (w.last + 1).coerceIn(from, frames)
+        if (to <= from) return null
+        val ch = whole.channels
+        return Snip(whole.samples.copyOfRange((from * ch).toInt(), (to * ch).toInt()), ch, whole.sampleRate)
+    }
+
+    /** [pad] as [undo] leaves it: chain and settings cleared, a lone legacy bookkeeping recipe dropped, a kept patch recipe kept. */
+    internal fun lifted(pad: KitPad): KitPad {
+        val bookkeeping = pad.recipe?.entries?.keys == setOf("robin")
+        return pad.copy(chain = null, robin = null, recipe = if (bookkeeping) null else pad.recipe)
+    }
+
+    /**
+     * Whether [chain]'s boundaries fit a WAV of [frames] frames: every take starts inside it. A single
+     * take copied over a chain (the original alone) never fits, since take two starts where it ends.
+     */
+    internal fun fits(chain: ChainInfo, frames: Long): Boolean = chain.boundaries.last() < frames
+
+    /**
+     * The single take back, the chain cleared: out of the bin byte-identical, or - when the bin no
+     * longer holds it (EMPTY THE BIN, the sweep) - cut from the chain itself, since a robin chain's
+     * take one is the untouched original ([robinTakeOne]: byte-faithful for 16/24-bit PCM).
+     */
     fun undo(model: KitBuilderModel, slot: Int): KitPad {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain != null) { "pad $slot isn't a round-robin chain - nothing to undo" }
-        model.restoreFromBin(pad.sampleFile)
-            ?: throw IllegalArgumentException(
-                "nothing to restore for pad $slot - the bin holds no earlier take of it",
-            )
-        // Only pure legacy bookkeeping (a lone "robin" key) is dropped; a
-        // kept patch recipe belongs to the pad.
-        val bookkeeping = pad.recipe?.entries?.keys == setOf("robin")
-        return model.update(slot) { it.copy(chain = null, robin = null, recipe = if (bookkeeping) null else it.recipe) }
+        if (model.restoreFromBin(pad.sampleFile) == null) {
+            // A velocity grid's slice 0 is its softest zone and a foreign chain's is someone's take:
+            // only a robin chain's take one is the original.
+            require(pad.isRobinChain) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
+            val one = com.snipsnap.kit.robinTakeOne(pad, model.kitDir)
+            com.snipsnap.kit.AtomicFile.writeBytes(java.io.File(model.kitDir, pad.sampleFile), one)
+        }
+        return model.update(slot) { lifted(it) }
     }
 
     /**
