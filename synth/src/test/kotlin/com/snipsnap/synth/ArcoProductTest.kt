@@ -1332,6 +1332,14 @@ class ArcoProductTest {
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
      */
+    /**
+     * BUZZ's own bar in the test below (R2). The owner heard the first build's BUZZ and set its top at that build's 0.4 ("For Buzz we need to
+     * recalibrate. 40 is probably the top of the range.", 2026-11-04), which moves a note by 0.066 to 0.100 at the four notes ArcoBuzzTest reads, so the
+     * house's 0.1 at the 0.9 setting is over what the owner wants the knob to do at all. The bar is 0.04, about half of what BUZZ 0.9 does at the default
+     * notes (0.078 at CELLO and 0.081 at ERHU, measured), so a knob that went dead still fails.
+     */
+    private val BUZZ_MOVES_AT_LEAST = 0.04
+
     @Test
     fun `every macro changes the sound, BODY too, and an unknown key does not`() {
         for (voice in ArcoVoice.entries) {
@@ -1347,7 +1355,10 @@ class ArcoProductTest {
                 Arco.render(voice, Arco.defaults(voice) + ("BODY" to 1f)).samples,
             )
             println("ARCO macros $voice: " + diffs.entries.joinToString(" ") { "${it.key} ${f(it.value, 3)}" } + ", BODY 0 against 1 ${f(bodyEnds, 3)}")
-            for ((name, diff) in diffs) assertTrue(diff > 0.1, "$voice $name did nothing (${f(diff, 4)})")
+            for ((name, diff) in diffs) {
+                val bar = if (name == "BUZZ") BUZZ_MOVES_AT_LEAST else 0.1
+                assertTrue(diff > bar, "$voice $name did nothing (${f(diff, 4)}, bar $bar)")
+            }
             assertTrue(bodyEnds > 0.3, "$voice: BODY from 0 to 1 moves the note by only ${f(bodyEnds, 4)}: a dead knob")
         }
     }

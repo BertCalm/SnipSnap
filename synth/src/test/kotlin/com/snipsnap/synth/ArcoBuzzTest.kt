@@ -27,9 +27,10 @@ import kotlin.test.assertTrue
  *  - **A LOOP still closes with BUZZ at its top.** R1b's own grid of 225 loops (every TUNE step of both voices at the defaults, GRIP 0, GRIP 1,
  *    BODY 0 and BODY 1), at BUZZ 1, under the Organ's bar. The noise is read from a table one loop long, so the buzz repeats with the loop;
  *    the control is the same loop with the noise running free, which does not close.
- *  - **Monotone, and audible at the low and middle settings** by a stated proxy (nobody has listened): the energy between the harmonics of a
- *    LOOP rises at every step of BUZZ, and a one-shot moves by at least [AUDIBLE_AT_QUARTER] of the note at BUZZ 0.25 and [AUDIBLE_AT_HALF] at
- *    0.5. The two threshold laws the research named are measured side by side and printed.
+ *  - **Monotone, and audible at the low settings** by a stated proxy: the energy between the harmonics of a LOOP rises at every step of BUZZ,
+ *    and a one-shot moves by at least [AUDIBLE_AT_QUARTER] of the note at BUZZ 0.25 and more at every step. The laws are measured side by side.
+ *  - **The owner's top.** The owner heard the first build and wrote "For Buzz we need to recalibrate. 40 is probably the top of the range."
+ *    (2026-11-04), so BUZZ 1 is that build's 0.4, held to the bit, one-shot and LOOP.
  *  - **Bounded at every corner** of the other five knobs, at BUZZ 0.5 and 1: finite, unclipped, DC-free, the length unchanged.
  */
 class ArcoBuzzTest {
@@ -280,7 +281,7 @@ class ArcoBuzzTest {
     @Test
     fun `the control - with the noise running free the same loop does not close`() {
         val m = Arco.defaults(ArcoVoice.CELLO) + mapOf("HOLD" to 1f, "BUZZ" to 1f)
-        val free = Arco.BuzzLaw(Arco.BUZZ_THRESHOLD_FROM, Arco.BUZZ_THRESHOLD_TO, Arco.BUZZ_GAIN, loopTable = false)
+        val free = Arco.BuzzLaw(Arco.BUZZ_THRESHOLD_FROM, Arco.BUZZ_THRESHOLD_TO, Arco.BUZZ_GAIN, loopTable = false, top = Arco.BUZZ_TOP, curve = Arco.BUZZ_CURVE)
         val tabled = Arco.renderLoopMeasured(ArcoVoice.CELLO, m)
         val loose = Arco.renderLoopMeasured(ArcoVoice.CELLO, m, free)
         println("ARCO BUZZ loop control CELLO C3 at BUZZ 1: seam ${e(tabled.seam)} with the noise one loop long, ${e(loose.seam)} with it running free (bar ${e(Keys.MAX_SEAM_ERROR)})")
@@ -291,12 +292,11 @@ class ArcoBuzzTest {
     // ---- monotone, audible, and the two laws --------------------------------------
 
     /**
-     * The proxy bars for "audible at the low and middle settings": how far BUZZ moves a one-shot, as a share of the note (ArcoProductTest's measure,
-     * whose own bar is 0.1 at the 0.9 setting). 0.03 is -30 dB and 0.06 is -24 dB of noise against the note. A statement about numbers, chosen before
-     * the laws were measured, not about hearing: the owner's ear is the gate.
+     * The proxy bar for "audible at the low settings": how far BUZZ moves a one-shot at 0.25, as a share of the note (ArcoProductTest's measure).
+     * 0.03 is -30 dB of noise against the note. A statement about numbers, chosen before the laws were measured, not about hearing: the owner's ear
+     * set the top of the range (2026-11-04), and the curve of the knob is what keeps 0.25 over this bar.
      */
     private val AUDIBLE_AT_QUARTER = 0.03
-    private val AUDIBLE_AT_HALF = 0.06
 
     private val BUZZ_STEPS = listOf(0f, 0.1f, 0.25f, 0.5f, 0.75f, 1f)
 
@@ -321,27 +321,27 @@ class ArcoBuzzTest {
             }
             println("ARCO BUZZ between the harmonics $voice midi ${Arco.midiFor(voice, tune)}: " + BUZZ_STEPS.zip(dbs).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d, 1)} dB" })
             for (i in 1 until dbs.size) {
-                assertTrue(dbs[i] > dbs[i - 1] + 1.0, "$voice tune $tune: BUZZ ${BUZZ_STEPS[i]} is not more between the harmonics than ${BUZZ_STEPS[i - 1]} (${dbs[i]} against ${dbs[i - 1]} dB)")
+                assertTrue(dbs[i] > dbs[i - 1] + 0.2, "$voice tune $tune: BUZZ ${BUZZ_STEPS[i]} is not more between the harmonics than ${BUZZ_STEPS[i - 1]} (${dbs[i]} against ${dbs[i - 1]} dB)")
             }
         }
     }
 
     /**
-     * The two laws the research pass named, measured on the engine: [Arco.BUZZ_LAW] (the threshold falling from 1.5 to 0.5 times the note's RMS
-     * as BUZZ rises, ARCO's gain) and TERRA's (a threshold at the RMS, TERRA's gain of 0.45), with the other two crossings (each law at the other's
-     * gain) so the law and the gain can be told apart. The measure is the house's for "a macro changes the sound" at 0.25, 0.5, 0.9 and 1, on the
-     * root and the default note of each voice. The engine's law must meet the proxy bars at 0.25 and 0.5 and the house's bar at 0.9, and rise at
-     * every step; the printed lines are the comparison the design record quotes.
+     * The engine's law ([Arco.BUZZ_LAW]: the knob bent onto the drive, `drive = 0.4 * BUZZ^0.3`, then the threshold falling from 1.5 to 0.5 times the
+     * note's RMS and the gain 3.0 times the drive) beside the first build's ([Arco.BUZZ_LAW_V1], the knob straight onto the drive, which the owner heard
+     * as too much past 0.4) and TERRA's (a threshold at the RMS, TERRA's gain of 0.45), so the recalibration and the choice of gain can both be read.
+     * The measure is the house's for "a macro changes the sound", on the root and the default note of each voice. The engine's law must clear the
+     * low-end proxy bar at 0.25 and rise at every step. The first build's middle bar (0.06 at 0.5) is retired: the owner's ear put the top of the range
+     * at a level (0.066 to 0.100) not far over it, so a middle bar would be a second top. The printed lines are the comparison the design record quotes.
      */
     @Test
-    fun `BUZZ moves a one-shot at the low and middle settings, and the two laws side by side`() {
+    fun `BUZZ moves a one-shot at the low and middle settings, and the laws side by side`() {
         val laws = listOf(
-            "falling 1.5 to 0.5, gain ${Arco.BUZZ_GAIN} (the engine's)" to Arco.BUZZ_LAW,
+            "drive 0.4 x BUZZ^0.3, falling 1.5 to 0.5, gain ${Arco.BUZZ_GAIN} (the engine's)" to Arco.BUZZ_LAW,
+            "the first build's: the knob onto the drive" to Arco.BUZZ_LAW_V1,
             "fixed 1.0, gain 0.45 (TERRA's)" to Arco.BuzzLaw(1f, 1f, 0.45f),
-            "falling 1.5 to 0.5, gain 0.45" to Arco.BuzzLaw(Arco.BUZZ_THRESHOLD_FROM, Arco.BUZZ_THRESHOLD_TO, 0.45f),
-            "fixed 1.0, gain ${Arco.BUZZ_GAIN}" to Arco.BuzzLaw(1f, 1f, Arco.BUZZ_GAIN),
         )
-        val levels = listOf(0.25f, 0.5f, 0.9f, 1f)
+        val levels = listOf(0.25f, 0.4f, 0.5f, 0.75f, 0.9f, 1f)
         for (voice in ArcoVoice.entries) for (tune in TUNES) {
             val base = Arco.defaults(voice) + ("TUNE" to tune)
             val plain = Arco.render(voice, base).samples
@@ -350,12 +350,32 @@ class ArcoBuzzTest {
                 println("ARCO BUZZ law $voice midi ${Arco.midiFor(voice, tune)} [$name]: " + levels.zip(moves).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d)} (${f(20 * log10(d), 1)} dB)" })
                 if (law === Arco.BUZZ_LAW) {
                     assertTrue(moves[0] >= AUDIBLE_AT_QUARTER, "$voice tune $tune: BUZZ 0.25 moves the note by ${moves[0]}, under $AUDIBLE_AT_QUARTER")
-                    assertTrue(moves[1] >= AUDIBLE_AT_HALF, "$voice tune $tune: BUZZ 0.5 moves the note by ${moves[1]}, under $AUDIBLE_AT_HALF")
-                    assertTrue(moves[2] > 0.1, "$voice tune $tune: BUZZ 0.9 moves the note by ${moves[2]}, under the house's 0.1")
                     for (i in 1 until moves.size) assertTrue(moves[i] > moves[i - 1], "$voice tune $tune: BUZZ ${levels[i]} moves the note less than ${levels[i - 1]}")
                 }
             }
         }
+    }
+
+    /**
+     * The recalibration's promise, held to the bit: the engine's BUZZ 1 is the first build's BUZZ 0.4 (the same drive, so the same threshold, 1.1 times
+     * the RMS, and the same gain, 1.2), one-shot and LOOP, both voices, at the root and the default note. The control: the engine's BUZZ 0.4 is not it.
+     */
+    @Test
+    fun `BUZZ 1 is the first build's 0 point 4, to the bit`() {
+        assertEquals(0.4f, Arco.buzzDrive(1f), "the drive at BUZZ 1")
+        assertEquals(Arco.buzzDrive(0.4f, Arco.BUZZ_LAW_V1), Arco.buzzDrive(1f), "the first build's drive at 0.4")
+        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+            val base = Arco.defaults(voice) + ("TUNE" to tune)
+            val now = Arco.render(voice, base + ("BUZZ" to 1f)).samples
+            assertContentEquals(Arco.render(voice, base + ("BUZZ" to 0.4f), Arco.BUZZ_LAW_V1).samples, now, "$voice tune $tune: BUZZ 1 is not the first build's 0.4")
+            assertTrue(!now.contentEquals(Arco.render(voice, base + ("BUZZ" to 0.4f)).samples), "control: the engine's BUZZ 0.4 is its BUZZ 1")
+            val loop = base + ("HOLD" to 1f)
+            assertContentEquals(
+                Arco.render(voice, loop + ("BUZZ" to 0.4f), Arco.BUZZ_LAW_V1).samples, Arco.render(voice, loop + ("BUZZ" to 1f)).samples,
+                "$voice tune $tune: the LOOP at BUZZ 1 is not the first build's at 0.4",
+            )
+        }
+        println("ARCO BUZZ recalibration: the drive at BUZZ 0.25 / 0.5 / 0.75 / 1 is " + listOf(0.25f, 0.5f, 0.75f, 1f).joinToString(" / ") { f(Arco.buzzDrive(it).toDouble()) })
     }
 
     // ---- bounded ----------------------------------------------------------------
@@ -391,7 +411,7 @@ class ArcoBuzzTest {
             val raw = Arco.bow(c.voice, hz, m)
             val strung = Arco.buzzed(raw, c.voice, m.getValue("BUZZ"), Arco.bowOnLevel(raw, c.voice, hz, m))
             val rawPeak = strung.maxOf { abs(it) }
-            val bound = (1f + Arco.BUZZ_GAIN * m.getValue("BUZZ")) * Strings.Bow.RAW_PEAK_CEILING
+            val bound = (1f + Arco.BUZZ_GAIN * Arco.buzzDrive(m.getValue("BUZZ"))) * Strings.Bow.RAW_PEAK_CEILING
             if (rawPeak > bound) p += "raw peak $rawPeak over $bound"
             Result(c, p, peak, rawPeak)
         }.toList()

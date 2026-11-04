@@ -928,20 +928,24 @@ object Arco {
      * multiplied by noise and added back. Two things are ARCO's own.
      *  - The threshold is referenced to the render's own level: the raw string's RMS while the bow is on it ([bowOnLevel]), or over the
      *    kept loop of a LOOP. Never an absolute number on an un-normalised buffer (TERRA's 0.12), so a quiet note and a loud one buzz alike.
-     *  - It falls as BUZZ rises, from [BUZZ_THRESHOLD_FROM] times that RMS at the bottom of the knob to [BUZZ_THRESHOLD_TO] at the top, while
-     *    the noise's gain rises as BUZZ times [BUZZ_GAIN]: low on the knob only the peaks of the wave rattle, a sizzle at the slip; at the top
-     *    most of the wave does. Both move the same way, so the buzz's energy rises at every step (ArcoBuzzTest).
+     *  - It falls as the buzz's drive rises, from [BUZZ_THRESHOLD_FROM] times that RMS at no drive to [BUZZ_THRESHOLD_TO] at a drive of 1, while
+     *    the noise's gain rises as the drive times [BUZZ_GAIN]: low on the knob only the peaks of the wave rattle, a sizzle at the slip; higher,
+     *    more of the wave does. Both move the same way, so the buzz's energy rises at every step (ArcoBuzzTest).
+     *  - The knob is not the drive: the drive is [BUZZ_TOP] times BUZZ to the power [BUZZ_CURVE] ([buzzDrive]), so the knob's whole travel
+     *    is the first [BUZZ_TOP] of the law's (the recalibration below).
      *
      * The law was chosen by measurement against the other the research named, a fixed threshold at the RMS with TERRA's gain of 0.45
-     * (ArcoBuzzTest's law comparison prints all four crossings; the design record's "R2: BUZZ, as built" has the table). Measured on the
-     * one-shot, as the RMS of the change over the note's (the house's "every macro changes the sound" measure, whose bar is 0.1 at the 0.9
-     * setting), at CELLO C2 and C3 and ERHU D4 and C5: TERRA's law moves a note by only 0.007 to 0.011 at BUZZ 0.25 and 0.026 to 0.038 at 0.9,
-     * under the house's own bar, and the falling law at TERRA's gain does no better (0.005 to 0.008, and 0.043 to 0.058). So the gain is
-     * ARCO's own, 3.0. At that gain the fixed law moves a note by 0.048 to 0.070 at 0.25 and 0.183 to 0.281 at 1 (about 12 dB of travel from
-     * the low setting to the top); the falling law by 0.033 to 0.052 at 0.25 and 0.305 to 0.438 at 1 (about 20 dB). The falling law is the one
-     * here: both pass the proxy bars at 0.25 and 0.5 and both are monotone, but only the falling one keeps the bottom of the knob to the
-     * peaks of the wave, a burst at the slip once a period (the chien's rhythm, by analogy), and lets the top be a real rattle. Its margin at
-     * 0.25 is thin at ERHU D4 (0.033 against the proxy's 0.03). Listening values: nobody has heard any of it.
+     * (ArcoBuzzTest's law comparison prints them; the design record's "R2: BUZZ, as built" has the tables). Measured on the one-shot, as the
+     * RMS of the change over the note's (the house's "every macro changes the sound" measure), at CELLO C2 and C3 and ERHU D4 and C5: at a
+     * drive of 0.25 and 0.9 TERRA's law moves a note by only 0.007 to 0.011 and 0.026 to 0.038, so the gain is ARCO's own, 3.0; and the falling
+     * law keeps the bottom of the knob to the peaks of the wave, a burst at the slip once a period (the chien's rhythm, by analogy).
+     *
+     * **Recalibrated after the owner heard it (2026-11-04).** The first build ran the knob straight onto the drive (BUZZ 1 was a drive of 1,
+     * moving a note by 0.305 to 0.438). The owner played CELLO's root and ERHU's middle at BUZZ 0, 0.25, 0.5 and 1 and wrote "For Buzz we need
+     * to recalibrate. 40 is probably the top of the range." So BUZZ 1 is now that build's 0.4, the same threshold (1.1 times the RMS) and gain
+     * (1.2) to the bit. A straight 0.4 scale would put BUZZ 0.25 at the old 0.1, which moves ERHU D4 by 0.010, a third of the low-end proxy bar
+     * (0.03), so the map bends: `drive = 0.4 * BUZZ^0.3` puts BUZZ 0.25 at a drive of 0.264 (0.035 to 0.056 over the four notes), 0.5 at
+     * 0.325, 0.75 at 0.367 and 1 at 0.4 (0.066 to 0.100). Listening values: the owner's ear set the top; the curve is set by the proxy.
      *
      * Not the real thing, said plainly: a chien knocks once a period, in step with the string, and can period-double (Padilla and Gibiat,
      * Forum Acusticum 2005). This is hiss shaped by the wave: bounded, one pass over the buffer, and able to repeat with a loop. The
@@ -951,17 +955,33 @@ object Arco {
     const val BUZZ_THRESHOLD_TO = 0.5f
     const val BUZZ_GAIN = 3.0f
 
-    /**
-     * A threshold law: [thresholdFrom] and [thresholdTo] times the reference RMS at the bottom and the top of the knob, the noise's gain
-     * [gain] times BUZZ, and whether a LOOP reads its noise from a table one loop long ([loopTable]; false is the control that runs the
-     * noise free, which does not close). The engine plays [BUZZ_LAW]; the others exist for the tests that measure against it.
-     */
-    internal class BuzzLaw(val thresholdFrom: Float, val thresholdTo: Float, val gain: Float, val loopTable: Boolean = true)
+    /** The drive at BUZZ 1: the first build's 0.4, the top of the range the owner heard (see the recalibration above). */
+    const val BUZZ_TOP = 0.4f
 
-    internal val BUZZ_LAW = BuzzLaw(BUZZ_THRESHOLD_FROM, BUZZ_THRESHOLD_TO, BUZZ_GAIN)
+    /** How the knob bends onto the drive: under 1, so the low end still moves a note audibly (BUZZ 0.25 is a drive of 0.264). */
+    const val BUZZ_CURVE = 0.3f
+
+    /**
+     * A threshold law: [thresholdFrom] and [thresholdTo] times the reference RMS at a drive of 0 and 1, the noise's gain [gain] times the drive,
+     * the drive [top] times BUZZ to the power [curve] ([buzzDrive]), and whether a LOOP reads its noise from a table one loop long ([loopTable];
+     * false is the control that runs the noise free, which does not close). The engine plays [BUZZ_LAW]; [BUZZ_LAW_V1] is the first build's (the
+     * knob straight onto the drive), kept so a test holds BUZZ 1 to its 0.4; the others exist for the tests that measure against it.
+     */
+    internal class BuzzLaw(
+        val thresholdFrom: Float, val thresholdTo: Float, val gain: Float, val loopTable: Boolean = true,
+        val top: Float = 1f, val curve: Float = 1f,
+    )
+
+    internal val BUZZ_LAW = BuzzLaw(BUZZ_THRESHOLD_FROM, BUZZ_THRESHOLD_TO, BUZZ_GAIN, top = BUZZ_TOP, curve = BUZZ_CURVE)
+
+    /** The first build's law, the knob straight onto the drive: its 0.4 is [BUZZ_LAW]'s 1, to the bit. */
+    internal val BUZZ_LAW_V1 = BuzzLaw(BUZZ_THRESHOLD_FROM, BUZZ_THRESHOLD_TO, BUZZ_GAIN)
+
+    /** The drive at [buzz]: [BuzzLaw.top] times [buzz] to the [BuzzLaw.curve] (the knob itself for a curve of 1 and a top of 1). */
+    internal fun buzzDrive(buzz: Float, law: BuzzLaw = BUZZ_LAW): Float = law.top * (if (law.curve == 1f) buzz else buzz.pow(law.curve))
 
     /** The threshold at [buzz], as a multiple of the reference RMS. */
-    internal fun buzzThreshold(buzz: Float, law: BuzzLaw = BUZZ_LAW): Float = Dsp.lin(buzz, law.thresholdFrom, law.thresholdTo)
+    internal fun buzzThreshold(buzz: Float, law: BuzzLaw = BUZZ_LAW): Float = Dsp.lin(buzzDrive(buzz, law), law.thresholdFrom, law.thresholdTo)
 
     /** The buzz's noise seed for [voice]: fixed, so a render is a pure function of its macros. */
     internal fun buzzSeed(voice: ArcoVoice): Int = Dsp.seedFor("ARCO", "BUZZ", voice.name)
@@ -982,14 +1002,14 @@ object Arco {
 
     /**
      * [raw] with the chien at [buzz]: every sample whose magnitude is over [buzzThreshold] times [level] gets that excess times a noise
-     * sample times [BuzzLaw.gain] times [buzz] added to it. At [buzz] 0 or under (and for a NaN) it returns [raw] itself, the same array, not a
+     * sample times [BuzzLaw.gain] times the drive ([buzzDrive]) added to it. At [buzz] 0 or under (and for a NaN) it returns [raw] itself, the same array, not a
      * copy and not a pass at zero gain: that is what keeps BUZZ 0 the code before BUZZ to the bit. Otherwise [raw] is never changed.
      *
      * The noise is [Dsp.Noise] from [buzzSeed]. With [period] 0 it runs free, one draw per sample (a one-shot). With [period] over 0 it is a
      * table of [period] draws read at `(i - phase) mod period`, so the buzz repeats exactly every [period] samples from anywhere in the
      * buffer: a LOOP passes its loop's raw length and the raw sample its kept window starts at, and the stretch stays as periodic with the
      * loop as the string under it is (the box, the band limit, the decimator and the high-pass that follow are linear and settle in the
-     * warm-up). The excess is never more than the sample itself, so the result is at most `1 + gain * buzz` times the string's own peak.
+     * warm-up). The excess is never more than the sample itself, so the result is at most `1 + gain * drive` times the string's own peak.
      */
     internal fun buzzed(
         raw: FloatArray, voice: ArcoVoice, buzz: Float, level: Float,
@@ -997,7 +1017,7 @@ object Arco {
     ): FloatArray {
         if (!(buzz > 0f)) return raw
         val threshold = buzzThreshold(buzz, law) * level
-        val gain = law.gain * buzz
+        val gain = law.gain * buzzDrive(buzz, law)
         val noise = Dsp.Noise(buzzSeed(voice))
         val table = if (period > 0) FloatArray(period) { noise.next() } else null
         val out = raw.copyOf()
