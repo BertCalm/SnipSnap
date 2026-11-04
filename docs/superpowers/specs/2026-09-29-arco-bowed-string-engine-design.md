@@ -2771,7 +2771,9 @@ been heard.
   loop window for a LOOP. Never TERRA's absolute 0.12.
 * **The law** falls with the knob: the threshold is `lin(BUZZ, 1.5, 0.5)` times that RMS, and the noise's
   gain is `3.0 * BUZZ` (`BUZZ_THRESHOLD_FROM`, `BUZZ_THRESHOLD_TO`, `BUZZ_GAIN`). Chosen by measurement,
-  below.
+  below. *(Recalibrated after the owner heard it: the law now runs on a drive of `0.4 * BUZZ^0.3`, not on
+  BUZZ itself; see "Recalibrated, heard" at the end of this section. The first build's numbers below are kept
+  as they were measured.)*
 * **Exactly off at 0.** `Arco.buzzed` returns the very array it was given at BUZZ 0 or under (and for a
   NaN), and `render` and `renderLoopMeasured` skip even the level measurement then. Every factory preset
   now names `"BUZZ" to 0.0f` (ArcoPresetsTest's rule that a preset names every macro); a patch saved before
@@ -2805,7 +2807,7 @@ setting), at CELLO C2 and C3 and ERHU D4 and C5, the range over the four notes:
 | fixed at 1.0 times RMS, gain 0.45 (TERRA's) | 0.007 to 0.011 (-43 to -40 dB) | 0.015 to 0.021 | **0.026 to 0.038** | 0.029 to 0.042 |
 | falling 1.5 to 0.5, gain 0.45 | 0.005 to 0.008 | 0.015 to 0.021 | **0.043 to 0.058** | 0.054 to 0.072 |
 | fixed at 1.0, gain 3.0 | 0.048 to 0.070 (-26 to -23 dB) | 0.095 to 0.140 | 0.166 to 0.250 | 0.183 to 0.281 (-15 to -11 dB) |
-| **falling 1.5 to 0.5, gain 3.0 (shipped)** | **0.033 to 0.052** (-30 to -26 dB) | 0.095 to 0.140 | 0.258 to 0.361 | 0.305 to 0.438 (-10 to -7 dB) |
+| **falling 1.5 to 0.5, gain 3.0 (the first build; recalibrated below)** | **0.033 to 0.052** (-30 to -26 dB) | 0.095 to 0.140 | 0.258 to 0.361 | 0.305 to 0.438 (-10 to -7 dB) |
 
 At TERRA's gain neither law reaches the house's own bar at 0.9 (bold), so the gain is ARCO's own. At 3.0
 both laws pass the stated proxy bars (0.03 at 0.25 and 0.06 at 0.5, set before the measurement, a statement
@@ -2882,7 +2884,47 @@ sixth slider labelled BUZZ appears on the phone with no `:app` edit (not checked
   matching a frozen copy of the old function.
 * *Proposed:* the law and the gain (listening values), the burst-once-a-period reading of the falling
   threshold, the proxy bars.
-* *Heard:* nothing. The BUZZ card is where the owner hears it.
+* *Heard:* nothing. The BUZZ card is where the owner hears it. *(Since heard: below.)*
+
+**Recalibrated, heard (2026-11-04).** The owner played the BUZZ card's clips, CELLO's root (`cello_t0`) and
+ERHU's middle (`erhu_t50`) at BUZZ 0, 0.25, 0.5 and 1, and wrote (HEARD): **"For Buzz we need to recalibrate.
+40 is probably the top of the range."** So the knob's whole travel is now the first build's 0 to 0.4:
+
+* **The map.** The law runs on a drive, `drive = BUZZ_TOP * BUZZ^BUZZ_CURVE = 0.4 * BUZZ^0.3` (`Arco.buzzDrive`):
+  the threshold is `lin(drive, 1.5, 0.5)` times the RMS and the gain `3.0 * drive`. BUZZ 1 is a drive of 0.4, the
+  first build's 0.4 to the bit (threshold 1.1 times the RMS, gain 1.2; `ArcoBuzzTest` holds a one-shot and a LOOP
+  at both voices' root and middle to the first build's 0.4, sample for sample, with the first build's law kept as
+  `BUZZ_LAW_V1`). BUZZ 0 is still the same buffer handed back: the 20 hashes and `ArcoFrozenR1cTest` pass unchanged.
+* **Why it bends.** A straight 0.4 scale would put BUZZ 0.25 at the first build's 0.1, which moves ERHU D4 by
+  0.010, a third of the low-end proxy bar of 0.03. Measured on the first build's law between 0.1 and 0.4, ERHU D4
+  (the quietest of the four notes) crosses 0.03 near a drive of 0.24 (0.0288 at 0.229, 0.0307 at 0.240), so the
+  curve was set to put BUZZ 0.25 at 0.264 (0.0352 there): `0.25^0.3 = 0.66`. BUZZ 0.5 is a drive of 0.325, 0.75
+  is 0.367, 1 is 0.400. The curve is steep at the very bottom on purpose (BUZZ 0.1 is already a drive of 0.20).
+* **The numbers** (the RMS of the change over the note's, the house's "every macro changes the sound" measure):
+
+  | note | BUZZ 0.25 | 0.5 | 0.75 | 1 |
+  |---|---|---|---|---|
+  | CELLO C2 | 0.056 (-25.0 dB) | 0.074 | 0.088 | 0.100 (-20.0 dB) |
+  | CELLO C3 | 0.043 (-27.3 dB) | 0.059 | 0.071 | 0.082 (-21.8 dB) |
+  | ERHU D4 | 0.035 (-29.1 dB) | 0.048 | 0.058 | 0.066 (-23.6 dB) |
+  | ERHU C5 | 0.045 (-26.9 dB) | 0.062 | 0.074 | 0.085 (-21.4 dB) |
+
+  Monotone at every step at all four notes; the low end clears 0.03 everywhere (0.035 at its lowest). The first
+  build's middle proxy bar (0.06 at 0.5) is retired: the owner's top sits at 0.066 to 0.100, not far over it, so a
+  middle bar would be a second top. The travel from 0.25 to 1 is about 5 to 6 dB, where the first build's was
+  about 20: that is the owner's range. Between a LOOP's harmonics (R1's loop, vibrato off): CELLO C2 -70.6 /
+  -29.3 / -26.3 / -24.5 / -23.1 dB at BUZZ 0 / 0.25 / 0.5 / 0.75 / 1.
+* **House bar.** ArcoProductTest's "every macro changes the sound" bar for BUZZ is 0.04 now, not the house's 0.1:
+  the owner's top moves a note less than 0.1, and BUZZ 0.9 moves the default notes by 0.078 (CELLO) and 0.081 (ERHU).
+* **Loops at the new top.** R1b's 225 loops at BUZZ 1, with the shipped loop vibrato: worst 3.90e-5 (CELLO, step 8,
+  GRIP 1) and 3.22e-4 (ERHU, step 17, GRIP 1), every other row's worst at most 5.17e-6; the free-noise control still
+  opens to 1.04e-2. Through `LoopPadMaker` every zone's join reads 0.03 at most. 128 corners: finished peaks 0.448 to
+  0.990, the buzzed raw string at most 1.180.
+* **For the owner to confirm**: `generateArcoAudition --args="<dir> --buzz-v2"` writes the same two notes at BUZZ
+  0, 0.25, 0.5, 0.75 and 1 as "ARCO cello_t0 BUZZ v2 0.50.wav" and so on; the page's BUZZ card has the 0.75 step too.
+* *Ledger:* HEARD, the owner's verdict on the first build. MEASURED, the table and the loops above (ArcoBuzzTest,
+  ArcoProductTest, ArcoBuzzLoopPadTest). PROPOSED, the curve's 0.3 (set by the proxy, not by ear). Not heard: the
+  recalibrated knob.
 
 ## R2: vibrato in the loop (2026-11-04)
 
@@ -2979,9 +3021,14 @@ CRY, R1's loop, the SNAPPED one and the HUMAN one, each three times end to end a
 5. **The risk** is that the drift repeats every two seconds and is heard as a repeat of its own; the A/B is
    where the owner says.
 
+**Heard (2026-11-04, after the build).** The owner played the A/B (ENDLESS DRAW and ENDLESS CRY, each old,
+snapped and humanised, three times end to end) and wrote: **"Humanized is best."** That is the variant that
+ships (`Arco.LOOP_VIBRATO` is HUMAN), so nothing changes; SNAPPED stays only as the A/B's middle clip.
+
 **Ledger.**
 
-* *Heard:* the owner's verdict above, on R1's loops. The new loops are not heard.
+* *Heard:* the owner's verdict on R1's loops ("Sounds a bit cheap, try the vibrato fix. Mechanical sounding."),
+  and on the A/B, "Humanized is best", which picks the shipped variant.
 * *Measured (Kotlin: ArcoLoopVibratoTest, ArcoProductTest, ArcoLoopFuzzTest, ArcoPresetsTest, ArcoFrozenR1cTest,
   ArcoBuzzLoopPadTest):* the periodicity, the 450 seams, the spreads, the means, the cost, the frozen controls,
   the loop instrument's joins.

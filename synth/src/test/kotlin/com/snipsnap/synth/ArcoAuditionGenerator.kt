@@ -459,6 +459,10 @@ object ArcoAuditionGenerator {
             writeLoopsAb(root)
             return
         }
+        if ("--buzz-v2" in args) {
+            writeBuzzV2(root)
+            return
+        }
         if (quick) {
             sections += buzzSection(::write)
             writePage(root, sections, loops, count)
@@ -601,7 +605,7 @@ object ArcoAuditionGenerator {
     // ---- BUZZ (R2) --------------------------------------------------------------
 
     /** The BUZZ steps the page plays: off, low, middle, top. */
-    private val BUZZ_LEVELS = listOf(0f, 0.25f, 0.5f, 1f)
+    private val BUZZ_LEVELS = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
 
     /** The two notes of each voice the BUZZ steps are played at: the root and the middle of TUNE. */
     private val BUZZ_TUNES = listOf(0f, 0.5f)
@@ -639,9 +643,9 @@ object ArcoAuditionGenerator {
         }
         return Section(
             id = "BUZZ", display = "BUZZ",
-            body = "the sixth knob: a loose bridge rattling against the box, by analogy. Off at 0, louder and coarser as it rises",
+            body = "the sixth knob: a loose bridge rattling against the box, by analogy. Off at 0, louder and coarser as it rises; recalibrated so the top is where the owner put it",
             readout = listOf(
-                "BUZZ 0, .25, .50, 1 " + DOT + " HOLD " + fmt(HELD_HOLD) + " (" + f1(HELD_SECONDS) + " S OF BOW)",
+                "BUZZ 0, .25, .50, .75, 1 (RECALIBRATED: 1 IS THE FIRST BUILD'S .40) " + DOT + " HOLD " + fmt(HELD_HOLD) + " (" + f1(HELD_SECONDS) + " S OF BOW)",
                 "THE ROOT AND THE MIDDLE OF TUNE " + DOT + " EVERY OTHER KNOB AT ITS DEFAULT",
                 "THE LOOP AT BUZZ 0 AND .50, " + BUZZ_LOOP_PASSES + " TIMES END TO END",
             ),
@@ -670,6 +674,23 @@ object ArcoAuditionGenerator {
             }
         }
         println("wrote $written loop A/B files under ${root.absolutePath}")
+    }
+
+    /**
+     * `--buzz-v2`: the recalibrated BUZZ for the owner to confirm, as plain files in [root] (no page): the two notes the owner heard the first
+     * build on (CELLO's root, cello_t0, and ERHU's middle, erhu_t50), the three-second held note at BUZZ 0, 0.25, 0.5, 0.75 and 1, levelled as the
+     * page levels them, named "ARCO cello_t0 BUZZ v2 0.50.wav" and so on.
+     */
+    private fun writeBuzzV2(root: File) {
+        root.mkdirs()
+        var written = 0
+        for ((voice, tune) in listOf(ArcoVoice.CELLO to 0f, ArcoVoice.ERHU to 0.5f)) for (b in BUZZ_LEVELS) {
+            val tag = voice.name.lowercase() + "_t" + (tune * 100).roundToInt()
+            val file = File(root, "ARCO $tag BUZZ v2 " + "%.2f".format(Locale.ROOT, b) + ".wav")
+            WavWriter.write(file, AuditionLevel.level(Arco.render(voice, mapOf("TUNE" to tune, "HOLD" to HELD_HOLD, "BUZZ" to b))), WavWriter.BitDepth.PCM_16)
+            written++
+        }
+        println("wrote $written BUZZ v2 clips under ${root.absolutePath}")
     }
 
     /** The manifest and the page, for the whole run or for `--quick`'s BUZZ card alone. */
