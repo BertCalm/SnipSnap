@@ -118,14 +118,24 @@ class ArcoBuzzTest {
         "ERHU DEFAULT LOOP" to "5fea0f9f71fc22742ec33efdcd56bec61d7930501a2be8f2bbe9f4f458b4c408",
     )
 
+    /**
+     * A render as BUZZ left it: a one-shot exactly as the engine plays it, and a LOOP with R2's loop vibrato (the owner's later request, a separate
+     * change on purpose) turned off, because the vibrato moves every loop and the hashes are of the loops before it. The one-shots have no such
+     * switch: nothing after BUZZ touches them.
+     */
+    private fun asBuzzLeftIt(voice: ArcoVoice, macros: Map<String, Float>): FloatArray =
+        if (Arco.isLoop(Arco.settled(macros, voice).getValue("HOLD"))) Arco.render(voice, macros, Arco.BUZZ_LAW, Arco.LoopVibrato.OFF).samples
+        else Arco.render(voice, macros).samples
+
     @Test
     fun `at BUZZ 0 every preset, each default note and each default loop is the code before BUZZ, sample for sample`() {
         val checked = mutableListOf<String>()
         for (p in ArcoPresets.all()) {
             val key = "${p.voice} ${p.name}"
             assertEquals(0f, p.macros.getValue("BUZZ"), "$key: a factory preset is written at BUZZ 0")
-            assertEquals(before.getValue(key), sha(p.render().samples), "$key changed")
-            assertEquals(before.getValue(key), sha(Arco.render(p.voice, p.macros - "BUZZ").samples), "$key, saved before BUZZ (no key), changed")
+            assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros)), "$key changed")
+            assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros - "BUZZ")), "$key, saved before BUZZ (no key), changed")
+            if (!Arco.isLoop(p.macros.getValue("HOLD"))) assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
             checked += key
         }
         for (v in ArcoVoice.entries) {
@@ -133,7 +143,7 @@ class ArcoBuzzTest {
             val loop = "$v DEFAULT LOOP"
             assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v)).samples), "$note changed")
             assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v) - "BUZZ").samples), "$note, with no BUZZ key, changed")
-            assertEquals(before.getValue(loop), sha(Arco.render(v, Arco.defaults(v) + ("HOLD" to 1f)).samples), "$loop changed")
+            assertEquals(before.getValue(loop), sha(asBuzzLeftIt(v, Arco.defaults(v) + ("HOLD" to 1f))), "$loop changed")
             checked += note
             checked += loop
         }
@@ -142,8 +152,10 @@ class ArcoBuzzTest {
         val p = ArcoPresets.all().first()
         assertNotEquals(before.getValue("${p.voice} ${p.name}"), sha(Arco.render(p.voice, p.macros + ("BUZZ" to 0.25f)).samples), "control: BUZZ 0.25 rendered the BUZZ 0 hash")
         val v = ArcoVoice.ERHU
-        assertNotEquals(before.getValue("$v DEFAULT LOOP"), sha(Arco.render(v, Arco.defaults(v) + mapOf("HOLD" to 1f, "BUZZ" to 0.25f)).samples), "control: a loop at BUZZ 0.25 rendered the BUZZ 0 hash")
-        println("ARCO BUZZ 0: ${checked.size} renders match their hashes from before BUZZ (16 presets, with and without the key, and each voice's default note and loop)")
+        assertNotEquals(before.getValue("$v DEFAULT LOOP"), sha(asBuzzLeftIt(v, Arco.defaults(v) + mapOf("HOLD" to 1f, "BUZZ" to 0.25f))), "control: a loop at BUZZ 0.25 rendered the BUZZ 0 hash")
+        // and the loop as shipped (with R2's loop vibrato) is not the loop before BUZZ: the switch above is needed, and the loop moved on purpose.
+        assertNotEquals(before.getValue("$v DEFAULT LOOP"), sha(Arco.render(v, Arco.defaults(v) + ("HOLD" to 1f)).samples), "control: the shipped loop has no vibrato")
+        println("ARCO BUZZ 0: ${checked.size} renders match their hashes from before BUZZ (16 presets, with and without the key, and each voice's default note and loop; loops with R2's loop vibrato off)")
     }
 
     @Test
@@ -291,14 +303,21 @@ class ArcoBuzzTest {
     /** The root and the default note of each voice (CELLO C2 and C3, ERHU D4 and C5). */
     private val TUNES = listOf(0f, 0.5f)
 
+    /**
+     * Monotone, read between the harmonics of R1's loop (the LOOP with R2's loop vibrato off, [Arco.LoopVibrato.OFF]): a frozen string puts almost
+     * nothing there, so what rises is the buzz alone. Since R2 the shipped loop's vibrato spreads each harmonic into sidebands (about -16 dB of the loop
+     * at CELLO C2), which would hide BUZZ's low steps; and a sample-by-sample difference of two shipped loops is no measure either, because BUZZ moves
+     * where [Siren.bestCut] cuts the loop, so the two are the same loop rotated (a first try read -13 dB at BUZZ 0.1 and +3 dB at 1 that way). The
+     * one-shot law test below is the measure on the sound as it ships.
+     */
     @Test
     fun `BUZZ is monotone - the energy between a loop's harmonics rises at every step`() {
         for (voice in ArcoVoice.entries) for (tune in TUNES) {
             val hz = Arco.frequencyFor(voice, tune)
             val periods = Arco.planLoop(hz).periods
+            val base = Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)
             val dbs = BUZZ_STEPS.map { b ->
-                val loop = Arco.renderLoopMeasured(voice, Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f, "BUZZ" to b)).loop
-                betweenHarmonicsDb(loop, periods)
+                betweenHarmonicsDb(Arco.renderLoopMeasured(voice, base + ("BUZZ" to b), loopVibrato = Arco.LoopVibrato.OFF).loop, periods)
             }
             println("ARCO BUZZ between the harmonics $voice midi ${Arco.midiFor(voice, tune)}: " + BUZZ_STEPS.zip(dbs).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d, 1)} dB" })
             for (i in 1 until dbs.size) {

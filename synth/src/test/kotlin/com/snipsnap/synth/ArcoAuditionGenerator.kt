@@ -455,6 +455,10 @@ object ArcoAuditionGenerator {
             count++
         }
 
+        if ("--loops-ab" in args) {
+            writeLoopsAb(root)
+            return
+        }
         if (quick) {
             sections += buzzSection(::write)
             writePage(root, sections, loops, count)
@@ -558,7 +562,7 @@ object ArcoAuditionGenerator {
             render("loop", mapOf("HOLD" to 1f))
             groups += Group(
                 "THE LOOP STEP", key = false,
-                clips = listOf(Clip("loop", "HOLD 1 (LOOP)", "a seamless whole-period loop: dry, no vibrato, a steady bow; turn the page's REPEAT on to hear the wrap, or hold it on the surface")),
+                clips = listOf(Clip("loop", "HOLD 1 (LOOP)", "a seamless whole-period loop: dry, a steady bow with a vibrato fitted to the loop (R2); turn the page's REPEAT on to hear the wrap, or hold it on the surface")),
             )
             val loopMidi = Arco.midiFor(voice, defaults.getValue("TUNE"))
             if (loops.isNotEmpty()) loops.append(",")
@@ -643,6 +647,29 @@ object ArcoAuditionGenerator {
             ),
             groups = groups,
         )
+    }
+
+    /**
+     * `--loops-ab`: the owner's A/B for R2's loop vibrato, as plain files in [root] (no page): ENDLESS DRAW and ENDLESS CRY, each loop as it was
+     * (R1's, no vibrato), with the plain swing snapped to the loop, and with the humanised swing that ships, each written three times end to end
+     * and levelled alike, named "<preset> 1 old", "2 snapped" and "3 humanised" so the three sort in that order.
+     */
+    private fun writeLoopsAb(root: File) {
+        val kinds = listOf("1 old" to Arco.LoopVibrato.OFF, "2 snapped" to Arco.LoopVibrato.SNAPPED, "3 humanised" to Arco.LoopVibrato.HUMAN)
+        var written = 0
+        for (name in listOf("ENDLESS DRAW", "ENDLESS CRY")) {
+            val preset = ArcoPresets.all().single { it.name == name }
+            for ((tag, kind) in kinds) {
+                val loop = Arco.renderLoopMeasured(preset.voice, preset.macros, loopVibrato = kind)
+                val passes = FloatArray(loop.loop.size * BUZZ_LOOP_PASSES)
+                for (k in 0 until BUZZ_LOOP_PASSES) loop.loop.copyInto(passes, k * loop.loop.size)
+                val file = File(root, "$name $tag.wav")
+                WavWriter.write(file, AuditionLevel.level(Snip(passes, channels = 1, sampleRate = Dsp.RATE)), WavWriter.BitDepth.PCM_16)
+                println("ARCO loops A/B: ${file.name}, a ${f3(loop.loop.size.toFloat() / Dsp.RATE)} s loop three times, seam ${"%.2e".format(Locale.ROOT, loop.seam)}")
+                written++
+            }
+        }
+        println("wrote $written loop A/B files under ${root.absolutePath}")
     }
 
     /** The manifest and the page, for the whole run or for `--quick`'s BUZZ card alone. */

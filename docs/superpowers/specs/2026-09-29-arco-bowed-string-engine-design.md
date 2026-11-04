@@ -2883,3 +2883,107 @@ sixth slider labelled BUZZ appears on the phone with no `:app` edit (not checked
 * *Proposed:* the law and the gain (listening values), the burst-once-a-period reading of the falling
   threshold, the proxy bars.
 * *Heard:* nothing. The BUZZ card is where the owner hears it.
+
+## R2: vibrato in the loop (2026-11-04)
+
+**What the owner heard (HEARD, 2026-11-04).** ENDLESS DRAW and ENDLESS CRY, R1's two LOOP presets, each
+two-second loop played three times end to end: **"Sounds a bit cheap, try the vibrato fix. Mechanical
+sounding."** The first time anyone has listened to an ARCO loop. It is the verdict BORE's identical
+periodic loop got ("a cheap keyboard", BORE's Round 1.6), and the fix is the one the research pass proposed
+(`2026-11-04-arco-research.md`, section 6 C and decision 2), which keeps the loop a whole-period loop and
+never crossfades. It deliberately changes every LOOP's sound; no one-shot changes.
+
+**What changed.** A LOOP now carries a vibrato (`Arco.loopVibrato`), put on the converged stretch after the
+retune (the estimator never sees it) and before BUZZ and the box, the order a one-shot has. It is the
+one-shot's tape vibrato (the finished string read back through a swinging delay, a four-point cubic, now one
+shared `cubicAt` that the R1b bit-identity test still holds) with every movement in it a whole number of
+cycles per loop, so the delay returns to where it started at the wrap:
+
+* **Rate**: the whole number of cycles nearest `VIBRATO_HZ` (6.1 Hz) in the loop, 12 in every loop the
+  grid holds, so 5.98 to 6.00 Hz (5.9913 Hz in CELLO C3's 2.0029 s loop).
+* **Depth**: `VIBRATO_MAX_CENTS`, 10 cents, the one-shot's full depth. The one-shot scales its vibrato by how
+  long the bow is on the string (none at 0.6 s or less, all of it from 1.5 s), and a LOOP is a note held
+  for good, so it sits at the top of that scale.
+* **Two variants**, `Arco.LoopVibrato`: SNAPPED, the plain sine at the fitted rate; and HUMAN, `VIBRATO_HUMAN`'s
+  amounts (the rate drifting by up to 7 percent, the depth by up to 18, the swing leaning by 6, swelling in
+  over half a second) with each drift a sum of sines at whole cycles per loop: 1, 2 and 3 for the rate (0.5,
+  1.0 and 1.5 Hz in a 2 s loop, entering as a phase so it integrates to nothing over the loop) and 1, 2 and 4
+  for the depth, in place of the one-shot's 0.21 to 1.37 Hz, which do not fit a two-second loop. So no two of
+  a loop's twelve swings are alike, and the twelve come round again each loop. **HUMAN ships**
+  (`Arco.LOOP_VIBRATO`): it closes everywhere SNAPPED does. OFF is R1's loop, sample for sample, kept as the
+  frozen tests' reference and the A/B's "old".
+
+**Measured.**
+
+* *It repeats with the loop*: the swing one loop later differs by at most 1.6e-13 (both variants, four loop
+  lengths), against 1.18 to 1.35 for the one-shot's free 6.1 Hz sine.
+* *The loop still closes*, R1b's own grid of 225 loops (every TUNE step at the defaults, GRIP 0, GRIP 1, BODY 0
+  and BODY 1), once per variant, under the bar of 1e-3: SNAPPED worst 3.93e-5 (CELLO, step 7, GRIP 1) and
+  3.30e-4 (ERHU, step 17, GRIP 1); HUMAN worst 4.07e-5 (CELLO, step 8, GRIP 1) and 3.38e-4 (ERHU, step 17,
+  GRIP 1). The same cells with no vibrato read 3.15e-5, 3.70e-5 and 3.27e-4: the seam is the string's own.
+  Every other row's worst is at most 5.12e-6. ArcoLoopFuzzTest's 180 loops (defaults, a random corner, BODY 0.75 and
+  BODY 1) close at worst 6.61e-6 (CELLO) and 3.55e-6 (ERHU); the two presets at 8.82e-8 (ENDLESS DRAW) and
+  4.18e-8 (ENDLESS CRY).
+* *It swings like the held note*: read in 70 ms windows over three copies, the shipped loop's spread is 9.14
+  cents (CELLO C3) and 9.30 (ERHU C5) against the held 3 s note's 8.52 and 7.90, and R1's loop's 0.99 and 0.59.
+* *Its mean pitch is the note's*: the same windows' mean moves by 0.01 and 0.08 cents against R1's loop; the
+  loop's played pitch by FFT is -0.69 to +0.18 cents and by autocorrelation -0.04 to +0.10 at six notes (the
+  bar is 5); and the power-weighted centre of the fundamental's sidebands over one loop sits 0.00 c from the
+  plan with no vibrato and -0.47 to +0.04 c with it (largest at ERHU A5). That last spread is read as the box
+  colouring the sidebands unevenly, not as a pitch change (INFERRED: the windowed mean does not move); the bar
+  there is 1 cent.
+* *It costs*: R1's loop renders in 285 ms at CELLO C3 and 394 ms at ERHU C5, the shipped loop in 366 and 475 ms
+  (median of three, one thread): about 80 ms more a loop, the humanised swing's few sines at every raw sample.
+* *Through the loop instrument*: `LoopPadMaker`, unchanged, renders every zone of a BUZZ 1 patch with the
+  vibrato on with a clean join (its `wrapRatio` at most 1.36, at ERHU D#4, against its bar of 2.0; the seam
+  bar is met inside the engine).
+
+**One-shots and the non-LOOP presets did not move, proved.** ArcoFrozenR1cTest's one-shot comparisons are
+untouched and pass (every TUNE step of both voices at BODY 0, 0.25 and 0.5, the 48 one-shot corners and the six
+one-shot presets at or under the knee, 0 differing samples); ArcoBuzzTest holds the fourteen one-shot presets,
+through the patch, and both default notes to their SHA-256 from before BUZZ, and the two LOOP presets and default
+loops, with the vibrato off, to theirs.
+
+**Tests that froze the old LOOP, and what was done to each.**
+
+* ArcoFrozenR1cTest: one constant, `R1_LOOP = LoopVibrato.OFF`, on the engine side of every LOOP comparison (the
+  frozen pipeline untouched), and a new control: the loop as shipped differs from the frozen loop in every sample
+  (88326 of 88326 at CELLO, 88242 of 88242 at ERHU) and with the vibrato off in none.
+* ArcoProductTest: "a LOOP carries no vibrato" became "a LOOP carries the loop vibrato, R1's loop is flat" (R1's
+  loop under 2 cents of spread, the shipped one over 5 and under 15, the mean within a cent).
+* ArcoBodyLiftTest: the loop it rebuilds from the engine's pieces takes the vibrato as one more piece.
+* ArcoBuzzTest: its hashes of the loops are read with the vibrato off (they are the loops before BUZZ), with a
+  control that the shipped loop is not that hash; its "between the harmonics" measure is read on R1's loop, since
+  the vibrato's own sidebands put about -16 dB between the harmonics of the shipped loop and would hide BUZZ's
+  low steps. A second measure tried on the shipped loop (the difference between the loop at BUZZ b and at 0) did
+  not work and was dropped: BUZZ moves where the loop is cut, so the two are the same loop rotated.
+* The kit's two LOOP pads, A15 and A16, were regenerated (`generateArcoKit`); the regeneration left the other
+  fourteen pads' WAVs and the program byte for byte as committed, one more check that no one-shot moved.
+
+**The A/B for the owner.** `generateArcoAudition --args="<dir> --loops-ab"` writes, for ENDLESS DRAW and ENDLESS
+CRY, R1's loop, the SNAPPED one and the HUMAN one, each three times end to end at the same level, named
+"<preset> 1 old", "2 snapped" and "3 humanised".
+
+**Why it is built this way.**
+
+1. **Fitted, not crossfaded.** A vibrato whose rate is a whole number of cycles per loop reads the same places of
+   the string on both sides of the wrap, so the loop closes as the bare string does; a free 6.1 Hz vibrato misses
+   the bar by 50 to 270 times (the research pass's stand-in). The retune and the seam bar still decide.
+2. **Humanised, because the complaint was "mechanical".** A perfectly regular swing is itself mechanical; the
+   human variant drifts the rate and the depth within the loop, and each drift is also whole cycles per loop, so
+   nothing that moves is free to break the seam.
+3. **After the retune, before the box.** The estimator measures the bare string's periods, and the vibrato keeps
+   them (the delay returns over a loop); the box and BUZZ follow in a one-shot's order, so a loop and a held note
+   are built the same way.
+4. **Full depth.** A LOOP is a note held past the point where the one-shot's vibrato reaches its full 10 cents.
+5. **The risk** is that the drift repeats every two seconds and is heard as a repeat of its own; the A/B is
+   where the owner says.
+
+**Ledger.**
+
+* *Heard:* the owner's verdict above, on R1's loops. The new loops are not heard.
+* *Measured (Kotlin: ArcoLoopVibratoTest, ArcoProductTest, ArcoLoopFuzzTest, ArcoPresetsTest, ArcoFrozenR1cTest,
+  ArcoBuzzLoopPadTest):* the periodicity, the 450 seams, the spreads, the means, the cost, the frozen controls,
+  the loop instrument's joins.
+* *Proposed:* the drift frequencies and the full depth (listening values), the reading of the sideband centre's
+  spread as colour rather than pitch.
