@@ -9,8 +9,8 @@ the Python harness and in two Kotlin scratch probes (section 20). The owner has 
 renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
 on the R5 page).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1); a docs
-page remains.
+voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1), and its docs
+page is `docs/SCOUR.md`.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
