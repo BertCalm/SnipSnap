@@ -355,3 +355,14 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
 }
+
+/** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */
+tasks.register<JavaExec>("scanLoopInstruments") {
+    group = "verification"
+    description = "Measure each HOLD-loop engine's loop as a keys instrument (wrap, pitch, steadiness) under testkit/loop-instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LoopInstrumentScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
