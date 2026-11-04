@@ -21,6 +21,11 @@ import java.io.File
  * `SnipSnap New Keys.xpn` under the first argument. Engine names after it limit the
  * pack to those engines. Run via `./gradlew :shell:generateInstrumentPack`. Nothing here
  * has been heard: the pack is for the owner's listen on the MPC.
+ *
+ * `--split` after the folder renders nothing: it packs the `Instruments/` already there
+ * once more, one expansion per engine (`SnipSnap Keys THAW.xpn` and so on, under
+ * `By engine/`), because the whole pack is too large to hand over in one file. Run via
+ * `./gradlew :shell:splitInstrumentPack`.
  */
 object InstrumentPackGenerator {
 
@@ -30,6 +35,7 @@ object InstrumentPackGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         val out = File(args.firstOrNull() ?: "../testkit/loop-instruments-pack").also { it.mkdirs() }
+        if (args.getOrNull(1) == "--split") return split(out)
         val only = args.drop(1).map { it.uppercase() }.toSet()
         fun wanted(engine: String) = only.isEmpty() || engine in only
         val instruments = File(out, "Instruments").also { it.deleteRecursively(); it.mkdirs() }
@@ -81,5 +87,24 @@ object InstrumentPackGenerator {
         println("packed ${result.instruments.size} instruments into ${result.directory.absolutePath} and ${result.xpn?.absolutePath}")
         result.skipped.forEach { (name, why) -> println("skipped $name: $why") }
         failed.forEach { println("not made: $it") }
+    }
+
+    /** One expansion per engine from the packages already under [out]'s `Instruments/`, keyed by the name's first word. */
+    private fun split(out: File) {
+        val instruments = File(out, "Instruments")
+        val sidecars = InstrumentStore.list(instruments).map { it.first }
+        check(sidecars.isNotEmpty()) { "nothing to split: run generateInstrumentPack first" }
+        val dest = File(out, "By engine").also { it.deleteRecursively(); it.mkdirs() }
+        for ((engine, group) in sidecars.groupBy { it.name.substringBefore(' ') }.toSortedMap()) {
+            val meta = ExpansionMeta(
+                title = "SnipSnap Keys $engine",
+                identifier = "app.snipsnap.keys.${engine.lowercase()}",
+                description = "Held keys instruments from SnipSnap's $engine engine.",
+            )
+            val result = PackBuilder.build(emptyList(), dest, meta, asXpn = true, overwrite = true, instruments = group)
+            val mb = (result.xpn?.length() ?: 0L) / 1e6
+            println("%-24s %2d instruments  %6.1f MB".format(meta.title, result.instruments.size, mb))
+            result.skipped.forEach { (name, why) -> println("  skipped $name: $why") }
+        }
     }
 }

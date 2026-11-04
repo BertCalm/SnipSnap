@@ -377,3 +377,13 @@ tasks.register<JavaExec>("generateInstrumentPack") {
     maxHeapSize = "3g"
     args(listOf("${rootDir}/testkit/loop-instruments-pack") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
 }
+
+/** The factory instruments again, one expansion per engine, from the packages generateInstrumentPack left. */
+tasks.register<JavaExec>("splitInstrumentPack") {
+    group = "distribution"
+    description = "Pack the rendered new held instruments one expansion per engine under testkit/loop-instruments-pack/By engine/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/loop-instruments-pack", "--split")
+}
