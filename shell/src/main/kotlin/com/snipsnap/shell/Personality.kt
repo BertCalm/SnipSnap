@@ -1862,6 +1862,12 @@ object Copy {
     fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN."
     fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
 
+    // ---- ROUND ROBIN, WHOLE KIT ----
+    fun robinKitOn(pads: Int): String = "ROUND ROBIN ON $pads PADS."
+    const val ROBIN_KIT_OFF = "ROUND ROBIN OFF. YOUR ORIGINALS ARE BACK."
+    const val ROBIN_SKIPPED_LOOPS = "LONG LOOPS LEFT AS THEY ARE."
+    const val ROBIN_FOREIGN = "THIS PAD ALREADY CHAINS ITS OWN TAKES."
+
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =
         "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."

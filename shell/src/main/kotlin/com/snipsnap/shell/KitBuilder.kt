@@ -254,6 +254,13 @@ class KitBuilderModel private constructor(
         dirty = true
     }
 
+    /** Set or clear the kit-wide round-robin defaults that following pads read. */
+    fun setRobin(robin: com.snipsnap.kit.KitRobin?) {
+        if (kit.robin == robin) return
+        kit = kit.copy(robin = robin)
+        dirty = true
+    }
+
     /** Store a complete live snapshot without rewriting or printing any sample. */
     fun setAquariumPerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings) {
         val value = settings.toJsonValue()
