@@ -366,3 +366,14 @@ tasks.register<JavaExec>("scanLoopInstruments") {
     maxHeapSize = "3g"
     args(listOf("${rootDir}/testkit/loop-instruments") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
 }
+
+/** The factory expansion of the new held instruments (MERCURY, KEEL, LoopPadMaker's qualifiers). See InstrumentPackGenerator. */
+tasks.register<JavaExec>("generateInstrumentPack") {
+    group = "distribution"
+    description = "Render the new held instruments and pack them as one MPC expansion (.xpn) under testkit/loop-instruments-pack/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments-pack") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}

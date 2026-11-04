@@ -23,10 +23,13 @@ import kotlin.math.sqrt
  * would repeat. Three readings decide whether it can be an instrument:
  *
  *  - **wrap:** the loop is played end to start, and the energy of the second
- *    difference across the join is compared with the same measure everywhere else
- *    in the clip. Near 1 is a seamless wrap; a click shows as a large ratio.
+ *    difference in a 32-sample window across the join is compared with the 95th
+ *    percentile of the same window everywhere else in the clip. At or under 1 the
+ *    join is an ordinary moment of the sound; a click stands out above all of them.
  *  - **pitch:** [Pitch.detect] against the note asked for, in cents; a keys
- *    instrument must play the key pressed.
+ *    instrument must play the key pressed. A reading a whole number of octaves
+ *    away is reported as an octave to check by ear, not a failure: a weak
+ *    fundamental fools the detector the same way.
  *  - **steady:** the spread between the 10th and 90th percentile of 50 ms RMS
  *    windows, in dB. A held tone stays within a few dB; a rhythmic loop does not.
  *
@@ -36,15 +39,19 @@ import kotlin.math.sqrt
  */
 object LoopInstrumentScan {
 
-    /** HOLD-loop engines without a held instrument on 2026-11-04 (MERCURY and KEEL were wired the same day). */
+    /**
+     * HOLD-loop engines without a held instrument on 2026-11-04 (MERCURY and KEEL were
+     * wired the same day). OVEN has no HOLD macro, and SHOAL's factory voices are WOOD,
+     * which refuses HOLD loops by design, so neither is a candidate.
+     */
     val CANDIDATES = listOf(
         "AEROSTAT", "ALLOY", "APSIS", "ARCO", "BORE", "CAIRN", "CIRCUIT", "CISTERN", "COROLLA",
-        "EMBOUCHURE", "FLOTILLA", "LACQUER", "MURK", "MURMUR", "NIMBUS", "OVEN", "PITCHWHEEL",
-        "RELAY", "REVEL", "SCOUR", "SHOAL", "SKITTER", "SPOOL", "STOOP", "SUTURE", "TANGLE",
+        "EMBOUCHURE", "FLOTILLA", "LACQUER", "MURK", "MURMUR", "NIMBUS", "PITCHWHEEL",
+        "RELAY", "REVEL", "SCOUR", "SKITTER", "SPOOL", "STOOP", "SUTURE", "TANGLE",
         "TESSERA", "THAW", "UNDERTOW", "WICK",
     )
 
-    const val MAX_WRAP_RATIO = 3.0
+    val MAX_WRAP_RATIO = LoopPadMaker.MAX_WRAP_RATIO
     const val MAX_CENTS = 25.0
     const val MIN_CONFIDENCE = .5f
     const val MAX_SPREAD_DB = 6.0
@@ -54,9 +61,12 @@ object LoopInstrumentScan {
                val hz: Float?, val cents: Double?, val confidence: Float?, val spreadDb: Double, val levelDb: Double) {
         val wrapOk get() = wrap <= MAX_WRAP_RATIO
         val pitchOk get() = cents != null && abs(cents) <= MAX_CENTS && (confidence ?: 0f) >= MIN_CONFIDENCE
+        /** A whole number of octaves off, within [MAX_CENTS]: the right note class, an octave to check by ear. */
+        val octaveOff get() = cents != null && !pitchOk && abs(cents) >= 600 &&
+            abs(cents - 1200.0 * Math.round(cents / 1200.0)) <= MAX_CENTS && (confidence ?: 0f) >= MIN_CONFIDENCE
         val steadyOk get() = spreadDb <= MAX_SPREAD_DB
         val audible get() = levelDb > -60.0
-        val ok get() = wrapOk && pitchOk && steadyOk && audible
+        val ok get() = wrapOk && (pitchOk || octaveOff) && steadyOk && audible
     }
 
     class Row(val engine: String, val voice: String, val preset: String, val zones: List<Zone>, val failure: String? = null) {
@@ -64,8 +74,10 @@ object LoopInstrumentScan {
         fun why(): String = failure ?: buildList {
             if (zones.any { !it.audible }) add("silent")
             if (zones.any { !it.wrapOk }) add("wrap clicks (worst ${"%.1f".format(zones.maxOf { it.wrap })}x)")
-            if (zones.any { !it.pitchOk }) add("pitch " + zones.joinToString("/") { z ->
+            if (zones.any { !it.pitchOk && !it.octaveOff }) add("pitch " + zones.joinToString("/") { z ->
                 z.cents?.let { "%+.0fc".format(it) } ?: "none" })
+            else if (zones.any { it.octaveOff }) add("octave to check by ear (" + zones.joinToString("/") { z ->
+                z.cents?.let { "%+.0fc".format(it) } ?: "none" } + ")")
             if (zones.any { !it.steadyOk }) add("pulses (spread up to ${"%.0f".format(zones.maxOf { it.spreadDb })} dB)")
         }.joinToString("; ").ifEmpty { "passes" }
     }
@@ -117,28 +129,8 @@ object LoopInstrumentScan {
         val pitch = Pitch.detect(Snip(mono, 1, snip.sampleRate), fromSec = 0f, windowSec = .5f)
         val want = Keys.midiHz(midi)
         val cents = pitch?.let { 1200.0 * ln(it.hz.toDouble() / want) / ln(2.0) }
-        return Zone(midi, mono.size.toDouble() / snip.sampleRate, ms, snip.channels, wrapRatio(mono),
+        return Zone(midi, mono.size.toDouble() / snip.sampleRate, ms, snip.channels, LoopPadMaker.wrapRatio(mono),
             pitch?.hz, cents, pitch?.confidence, spreadDb(mono, snip.sampleRate), rmsDb(mono, 0, mono.size))
-    }
-
-    /**
-     * Second-difference energy across the end-to-start join, over the same measure in
-     * the rest of the clip. A loop that wraps cleanly reads near 1; a click reads high.
-     */
-    fun wrapRatio(s: FloatArray): Double {
-        val n = s.size
-        if (n < 2048) return Double.POSITIVE_INFINITY
-        fun at(i: Int) = s[((i % n) + n) % n].toDouble()
-        fun d2(i: Int): Double { val d = at(i + 1) - 2 * at(i) + at(i - 1); return d * d }
-        val half = 16
-        var join = 0.0
-        for (i in n - half until n + half) join += d2(i)
-        join /= 2 * half
-        var body = 0.0
-        var count = 0
-        for (i in half until n - half) { body += d2(i); count++ }
-        body /= count
-        return if (body <= 0.0) (if (join <= 0.0) 1.0 else Double.POSITIVE_INFINITY) else join / body
     }
 
     /** The 10th to 90th percentile spread of 50 ms RMS windows, in dB. */
