@@ -81,4 +81,28 @@ class RobinBackupTest {
         val landed = XpnImporter.import(xpn, File(temp, "in"), robin = Robin.dealer)
         assertSameRobins(shelf, landed.directory)
     }
+
+    @Test
+    fun `a program folder export keeps its round robin and its history`() {
+        val shelf = shelf()
+        val kit = KitStore.load(shelf.dir)
+        val folder = com.snipsnap.kit.KitExporter.exportProgramFolder(kit, shelf.dir, File(temp, "sd")).directory
+        val zipFile = File(temp, "folder.zip")
+        java.util.zip.ZipOutputStream(zipFile.outputStream()).use { zip ->
+            for (file in folder.listFiles()!!.filter { it.isFile }.sortedBy { it.name }) {
+                zip.putNextEntry(java.util.zip.ZipEntry("Drums/${file.name}"))
+                file.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        val landed = XpnImporter.import(zipFile, File(temp, "landed"), robin = Robin.dealer)
+        assertEquals(DrumClass.SNARE, landed.kit.pad(1)!!.drumClass, "kit.json history came along")
+        val before = KitStore.load(shelf.dir)
+        for (slot in 1..2) {
+            val pad = landed.kit.pad(slot)!!
+            assertEquals(before.pad(slot)!!.robin, pad.robin)
+            assertEquals(before.pad(slot)!!.chain, pad.chain)
+            assertContentEquals(shelf.chains.getValue(slot), File(landed.directory, pad.sampleFile).readBytes())
+        }
+    }
 }

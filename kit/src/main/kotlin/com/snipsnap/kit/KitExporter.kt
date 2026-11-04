@@ -225,7 +225,10 @@ object KitExporter {
         // The readers do not yet reconstruct Slice Motion and its per-zone
         // anchor windows. Keep chain exports on their existing program/audio
         // import path instead of claiming editable history we cannot match.
-        if (kit.pads.any { it.chain != null }) {
+        // A robin pad split into take files is not such a chain: it is
+        // described as the importer lands it (take one, its original, with
+        // its settings) and the importer deals the rest again.
+        if (kit.pads.any { it.chain != null && slots.getOrNull(it.slot - 1)?.cycleLayers == null }) {
             val old = File(samplesDir, KitStore.FILE_NAME)
             if (old.exists() && (!old.isFile || !old.delete())) {
                 throw IOException("could not remove unsupported chain history sidecar: $old")
@@ -234,9 +237,11 @@ object KitExporter {
         }
         val exported = kit.copy(pads = kit.pads.map { pad ->
             val slot = requireNotNull(slots[pad.slot - 1]) { "missing exported slot ${pad.slot}" }
-            val sampleFile = "${slot.sampleName}.wav"
+            // A split robin pad lands as its take one under the name before `_RR1` (XpnImporter).
+            val takeOne = slot.cycleLayers?.first()?.sampleName
+            val sampleFile = takeOne?.let { "${it.removeSuffix("_RR1").ifBlank { it }}.wav" } ?: "${slot.sampleName}.wav"
             val sha256 = MessageDigest.getInstance("SHA-256")
-            File(samplesDir, sampleFile).inputStream().use { input ->
+            File(samplesDir, takeOne?.let { "$it.wav" } ?: sampleFile).inputStream().use { input ->
                 val buffer = ByteArray(8192)
                 while (true) {
                     val count = input.read(buffer)
@@ -248,6 +253,7 @@ object KitExporter {
                 .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
             pad.copy(
                 sampleFile = sampleFile,
+                chain = if (takeOne != null) null else pad.chain,
                 velocityLayers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
                     KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
                         displayName = pad.velocityLayers.getOrNull(index)?.displayName)

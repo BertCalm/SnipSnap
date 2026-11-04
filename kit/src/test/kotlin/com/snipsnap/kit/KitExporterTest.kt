@@ -302,4 +302,44 @@ class KitExporterTest {
         assertEquals("A01_Kick_01", slots[0]!!.sampleName)
         assertEquals(null, slots[0]!!.cycleLayers)
     }
+
+    @Test
+    fun `a program folder with a robin pad keeps its kit json history and settings`() {
+        val robin = robinKit(6)
+        WavWriter.write(File(kitDir, "A02_Snare_01.wav"), DrumSynth.snare())
+        val recipe = com.snipsnap.json.JsonValue.Obj(mapOf("verb" to com.snipsnap.json.JsonValue.Str("crushed")))
+        val kit = robin.copy(pads = robin.pads.map { it.copy(displayName = "MY KICK", recipe = recipe) } +
+            KitPad(2, "A02_Snare_01.wav", displayName = "MY SNARE", drumClass = DrumClass.SNARE))
+        val result = KitExporter.exportProgramFolder(kit, kitDir, sd)
+
+        val sidecar = File(result.directory, KitStore.FILE_NAME)
+        assertTrue(sidecar.isFile, "a robin pad no longer costs the whole kit its history")
+        val described = KitStore.load(result.directory).pad(1)!!
+        assertEquals(null, described.chain, "described as the importer lands it: its original")
+        assertEquals(RobinSettings(0.5f, 6), described.robin)
+        assertEquals("A01_Kick_01.wav", described.sampleFile)
+
+        // Zipped and imported: history and settings back, the takes dealt again.
+        val zipFile = File(temp, "folder.zip")
+        java.util.zip.ZipOutputStream(zipFile.outputStream()).use { zip ->
+            for (file in result.directory.listFiles()!!.filter { it.isFile }.sortedBy { it.name }) {
+                zip.putNextEntry(java.util.zip.ZipEntry("Robin Kit/${file.name}"))
+                file.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        val landed = XpnImporter.import(zipFile, File(temp, "landed"), robin = RobinFixture.dealer())
+        val pad = landed.kit.pad(1)!!
+        assertEquals("MY KICK", pad.displayName)
+        assertEquals(recipe, pad.recipe)
+        assertEquals(RobinSettings(0.5f, 6), pad.robin)
+        assertEquals(6, pad.chain!!.cycle)
+        assertEquals("MY SNARE", landed.kit.pad(2)!!.displayName)
+    }
+
+    @Test
+    fun `an xtd export with a robin chain still leaves history behind`() {
+        val (slots, _) = KitExporter.buildSlots(robinKit(4), kitDir, File(temp, "track"))
+        assertEquals(null, KitExporter.writeSidecar(robinKit(4), slots, File(temp, "track")), "a whole chain has no sidecar reader yet")
+    }
 }

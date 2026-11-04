@@ -228,7 +228,27 @@ object XpnImporter {
             // pad's original and the rest are dealt again (dealRobins), so every take comes back.
             val instrumentBySlot = instruments.associateBy { if (zeroBased) it.number + 1 else it.number }
             val robinMetadata = XpnRobin.read(zip, entries, programEntry.name, programBytes, budget)
-            val robinBySlot = robinMetadata?.pads?.associateBy { it.slot }.orEmpty()
+
+            // Only the selected program's own adjacent sidecar may restore
+            // history; a different kit.json elsewhere in a pack has no claim.
+            val sidecarName = programEntry.name.substringBeforeLast('/', "")
+                .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
+            val sidecars = entries.filter { it.name == sidecarName }
+            require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
+            val sidecarText = sidecars.singleOrNull()?.let { entry ->
+                zip.getInputStream(entry).use {
+                    com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
+                }.toString(Charsets.UTF_8)
+            }
+            // A program folder's kit.json describes a split robin pad as its original with settings
+            // (KitExporter.writeSidecar); ImportSidecar binds it by checksum once it has landed. A
+            // sidecar that will not parse is refused by ImportSidecar below, in its own words.
+            val sidecarRobins = sidecarText?.let { text ->
+                runCatching { KitStore.fromJsonText(text) }.getOrNull()?.pads.orEmpty()
+                    .filter { it.chain == null && it.robin != null && instrumentBySlot[it.slot]?.let(::isCycle) == true }
+                    .map { XpnRobin.Pad(it.slot, instrumentBySlot.getValue(it.slot).layers.first().sampleName, sha256 = "", it.robin!!) }
+            }.orEmpty()
+            val robinBySlot = (sidecarRobins + robinMetadata?.pads.orEmpty()).associateBy { it.slot }
             for (rp in robinBySlot.values) {
                 val inst = requireNotNull(instrumentBySlot[rp.slot]) { "round-robin metadata names pad ${rp.slot}, which the program does not have" }
                 require(isCycle(inst) && inst.layers.first().sampleName.equals(rp.take, ignoreCase = true)) {
@@ -315,6 +335,7 @@ object XpnImporter {
                 }
 
                 for (rp in robinBySlot.values) {
+                    if (rp.sha256.isEmpty()) continue // a sidecar's: bound by its own rawSha256
                     val take = SafePath.child(staging, "${instrumentBySlot.getValue(rp.slot).layers.first().sampleName}.wav")
                     require(XpnSourceMetadata.sha256(take) == rp.sha256) { "round-robin metadata hash differs for pad ${rp.slot}'s take one" }
                 }
@@ -402,17 +423,6 @@ object XpnImporter {
                 }
                 require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-                // Only the selected program's own adjacent sidecar may restore
-                // history; a different kit.json elsewhere in a pack has no claim.
-                val sidecarName = programEntry.name.substringBeforeLast('/', "")
-                    .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
-                val sidecars = entries.filter { it.name == sidecarName }
-                require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
-                val sidecarText = sidecars.singleOrNull()?.let { entry ->
-                    zip.getInputStream(entry).use {
-                        com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
-                    }.toString(Charsets.UTF_8)
-                }
                 val restored = ImportSidecar.restore(Kit(kitName, pads, robin = robinMetadata?.kit), sidecarText, staging, sidecarName)
                 val published = beforePublish?.invoke(restored, staging) ?: renderedBankSources(renderedPersonalSources(restored))
                 // After the backup's own checks, which bind each robin pad to the original it landed.
