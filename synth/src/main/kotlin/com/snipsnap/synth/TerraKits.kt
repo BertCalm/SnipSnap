@@ -38,7 +38,10 @@ object TerraKits {
         vararg macros: Pair<String, Float>,
     ): ArrangedPad {
         val patch = TerraPatch(patchName, voice, macros.toMap())
-        return ArrangedPad(patch.render(), drumClass, PadRecipe(patch).toJsonValue())
+        val snip = patch.render()
+        // Two softer strikes under the hard one (StrikeVelocity), so the MPC
+        // switches sound, not just level, with how hard the pad is hit.
+        return ArrangedPad(snip, drumClass, PadRecipe(patch).toJsonValue(), softVariants = Velocity.variantsAt(snip, patch, count = 2))
     }
 
     /**

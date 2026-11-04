@@ -466,11 +466,17 @@ object Velocity {
         is CausticPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
+        // A harder stick or beater: more upper modes, a deeper bend, a
+        // brighter click (StrikeVelocity). SKIN's snare, hats, ride and
+        // shaker are noise through filters or wires, which that contact law
+        // does not describe, so they keep their brightness macro or soften().
+        is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
+        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
-        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
-        is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
+        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch,
+        is SnapPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null
     }
