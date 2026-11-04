@@ -182,8 +182,9 @@ object RecipeReplay {
         val word = KitDiff.recipeName(recipe)
         val plan = plan(recipe)
         // A round-robin pad replays on its original and the takes re-render. The robin's own deal is
-        // the exception: it replaces the chain, so it is not wrapped (and a chained pad still refuses it).
-        if (plan !is Plan.RobinDeal && plan !is Plan.Refused && model.pad(slot)?.isRobinChain == true) {
+        // the exceptions: the deal replaces the chain and a STRIKE FX bank's layers cannot share a pad with one,
+        // so neither is wrapped (the chained pad refuses both).
+        if (plan !is Plan.RobinDeal && plan !is Plan.StrikeFx && plan !is Plan.Refused && model.pad(slot)?.isRobinChain == true) {
             val done = Robin.around(model, slot) { apply(model, slot, recipe, padName, aquariumRenderer, prints) }
             return Done(model.pad(slot) ?: done.pad, done.toast)
         }

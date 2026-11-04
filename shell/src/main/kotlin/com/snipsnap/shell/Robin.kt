@@ -22,7 +22,8 @@ import java.util.Random
  * (which is the untouched original, deliberately first).
  *
  * Bin-backed like every treatment: undo pulls the single take back out
- * byte-identical and clears the chain.
+ * byte-identical and clears the chain. Every other audio edit works on a
+ * robin pad: [around] lifts the chain, edits the original, re-renders the takes.
  */
 object Robin {
 
@@ -266,7 +267,7 @@ object Robin {
         val settings = checkNotNull(before.robin)
         undo(model, slot)
         val result = try {
-            block()
+            block().also { checkRenderable(model, slot) }
         } catch (t: Throwable) {
             try {
                 relay(model, slot, settings)
@@ -277,6 +278,14 @@ object Robin {
         }
         relay(model, slot, settings)
         return result
+    }
+
+    /** The backstop: an edit that left the pad in a shape the takes cannot render from fails like any other failed edit. */
+    private fun checkRenderable(model: KitBuilderModel, slot: Int) {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("pad $slot is gone - nothing to re-render the takes from")
+        require(pad.chain == null && pad.velocityLayers.isEmpty()) {
+            "pad $slot can't keep its round-robin takes after that edit - it is layered or chained"
+        }
     }
 
     /** Re-render the takes of the pad as it now stands, keeping a recipe the edit wrote over the legacy bookkeeping one. */

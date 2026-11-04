@@ -146,9 +146,10 @@ class KitBuilderModel private constructor(
      * caller names the treatment left behind (`Retrim.treatmentLeft`) in
      * the toast. A velocity-layered pad (GHOSTS, or STACK THE TAKES — the
      * model can't tell them apart, and either rides on the old file) and a
-     * round-robin chain (its boundaries index the old file) are refused,
-     * the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
-     * says so before TAPE ever opens. [save] archives a take, so UNDO on
+     * chain round robin did not make (its boundaries index the old file) are
+     * refused, the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
+     * says so before TAPE ever opens. A round-robin pad's chain is lifted, the
+     * original re-cut, and the takes re-rendered ([Robin.around]). [save] archives a take, so UNDO on
      * the sheet is the TAKES room, as for every other replacement.
      */
     fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
@@ -416,6 +417,7 @@ class KitBuilderModel private constructor(
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNoChain(pad, "adding soft hits to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
@@ -675,7 +677,7 @@ class KitBuilderModel private constructor(
      * same shape as [smearPad] in every rule: restore-first when the bin
      * holds the original (so re-dusting, or dusting an aged pad, never
      * stacks), amount 0 takes an existing dust off and touches an
-     * undusted pad not at all, layers and chains refused, bin-backed
+     * undusted pad not at all, layers and foreign chains refused (a robin pad is lifted, dusted, re-rendered), bin-backed
      * through [replaceAudio].
      */
     fun dustPad(slot: Int, amount: Float, tape: String, print: com.snipsnap.audio.Dust.Print?): KitPad {
