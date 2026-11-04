@@ -370,6 +370,23 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * ROUND ROBIN for the whole kit: [action] (`RobinKit.on/set/off`) runs on
+     * a freshly opened model and the kit is saved only when it returns. Its
+     * loops aren't atomic, so a throw mid-kit leaves a half-converted model
+     * that is simply dropped: kit.json on disk stays what it was (a stray
+     * take wav at worst, which nothing references).
+     */
+    fun robin(
+        source: Entry,
+        action: (com.snipsnap.shell.KitBuilderModel) -> com.snipsnap.shell.RobinKit.Result,
+    ): Pair<Entry, com.snipsnap.shell.RobinKit.Result> {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        val result = action(model)
+        model.save()
+        return Entry(source.dir, model.kit) to result
+    }
+
+    /**
      * SHARE: [source] packed as one `.xpn` under [outDir] (the share
      * cache), ready for the chooser. Preflight refuses a broken kit in
      * words, the same way EXPORT would. The file is named through

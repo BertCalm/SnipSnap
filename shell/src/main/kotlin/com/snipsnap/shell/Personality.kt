@@ -1863,7 +1863,9 @@ object Copy {
     fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
 
     // ---- ROUND ROBIN, WHOLE KIT ----
-    fun robinKitOn(pads: Int): String = "ROUND ROBIN ON $pads PADS."
+    fun robinKitOn(pads: Int): String = "ROUND ROBIN ON ${countOf(pads, "PAD", "PADS")}."
+    const val ROBIN_KIT_BUSY = "DEALING THE TAKES…"
+    const val ROBIN_KIT_FAILED = "ROUND ROBIN FAILED. THE KIT IS AS YOU LEFT IT."
     const val ROBIN_KIT_OFF = "ROUND ROBIN OFF. YOUR ORIGINALS ARE BACK."
     const val ROBIN_SKIPPED_LOOPS = "LONG LOOPS LEFT AS THEY ARE."
     const val ROBIN_FOREIGN = "THIS PAD ALREADY CHAINS ITS OWN TAKES."

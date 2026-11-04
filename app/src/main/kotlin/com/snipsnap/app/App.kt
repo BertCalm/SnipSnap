@@ -2990,6 +2990,48 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * Kit-wide ROUND ROBIN: [action] (`RobinKit.on/set/off`) runs off the main thread under the
+     * kit write lock on the job board. Nothing is saved unless it returns, so a throw mid-kit
+     * leaves kit.json as it was and `open` is not replaced; the toast says so.
+     */
+    fun robinKit(
+        action: (com.snipsnap.shell.KitBuilderModel) -> com.snipsnap.shell.RobinKit.Result,
+        say: (com.snipsnap.shell.RobinKit.Result) -> String,
+    ) {
+        val source = open ?: return
+        if (busy != null) return
+        val job = jobs.begin(Busy(Copy.ROBIN_KIT_BUSY))
+        scope.launch {
+            try {
+                val (entry, result) = try {
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.robin(source, action) } }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "robinKit: failed", e)
+                    dock.say(Copy.ROBIN_KIT_FAILED)
+                    return@launch
+                }
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                say(result).takeIf { it.isNotEmpty() }?.let { dock.say(it) }
+            } finally {
+                job.end()
+            }
+        }
+    }
+
+    // The dock holds one line, so the loops note rides the same line as the count.
+    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.on(it) }) { r ->
+        val loops = r.skipped.values.any { it == com.snipsnap.shell.RobinKit.Skip.LOOP }
+        Copy.robinKitOn(r.changed.size) + if (loops) " " + Copy.ROBIN_SKIPPED_LOOPS else ""
+    }
+
+    fun robinKitSet(settings: com.snipsnap.kit.KitRobin) = robinKit({ com.snipsnap.shell.RobinKit.set(it, settings) }) { "" }
+
+    fun robinKitOff() = robinKit({ com.snipsnap.shell.RobinKit.off(it) }) { Copy.ROBIN_KIT_OFF }
+
     // Shared by the place and stage rows, the dock's door and the system
     // Back fallback below — one reset, one navigation, so they can never
     // drift apart on which overlay/hand-off state a departure must clear.
@@ -4138,6 +4180,9 @@ fun App(shelf: KitShelf) {
                                 onSetKey = ::setKey,
                                 onSavePerformance = ::savePerformance,
                                 onInKey = ::inKey,
+                                onRobinOn = ::robinKitOn,
+                                onRobinSet = ::robinKitSet,
+                                onRobinOff = ::robinKitOff,
                                 onTwins = ::evilTwins,
                                 onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                 bankRequest = kitBankRequest,

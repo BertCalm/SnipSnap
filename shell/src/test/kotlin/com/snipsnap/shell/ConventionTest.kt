@@ -650,10 +650,10 @@ class ConventionTest {
             file = "KitShelf.kt",
             text = "val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)",
             category = KitWriteCategory.CALLER_GUARANTEED,
-            count = 3,
-            justification = "shared by setKey/evilTwins/inKey (three byte-identical open() lines — see this " +
-                "entry's `count`). None of the three takes a lock itself, but every call site in App.kt " +
-                "(::setKey, ::evilTwins, ::inKey) wraps the ENTIRE shelf call — open, mutate, and save alike — " +
+            count = 4,
+            justification = "shared by setKey/evilTwins/inKey/robin (four byte-identical open() lines — see this " +
+                "entry's `count`). None of the four takes a lock itself, but every call site in App.kt " +
+                "(::setKey, ::evilTwins, ::inKey, ::robinKit) wraps the ENTIRE shelf call — open, mutate, and save alike — " +
                 "in `KitWrites.mutex.withLock` before ever calling into KitShelf. Verified by reading each " +
                 "caller, not assumed from a naming convention: this is a caller-guarantees pattern a scan local " +
                 "to KitShelf.kt cannot see, which is exactly why it needs an explicit, reviewed entry instead of " +
@@ -851,7 +851,7 @@ class ConventionTest {
         val file: String,
         val text: String,
         val category: String,
-        /** How many distinct unguarded sites in [file] share this exact [text] — KitShelf.kt's setKey and evilTwins both save via the byte-identical line `model.save()`, so file+text alone can't tell them apart; this makes a THIRD one added later fail loudly instead of riding along on this entry. */
+        /** How many distinct unguarded sites in [file] share this exact [text] — KitShelf.kt's setKey and evilTwins both save via the byte-identical line `model.save()`, so file+text alone can't tell them apart; this makes a FOURTH one added later fail loudly instead of riding along on this entry. */
         val count: Int = 1,
         val justification: String,
     )
@@ -870,9 +870,9 @@ class ConventionTest {
             file = "KitShelf.kt",
             text = normalizeSpan("model.save()"),
             category = KitSaveCategory.CALLER_GUARANTEED,
-            count = 2,
-            justification = "setKey and evilTwins (two byte-identical `model.save()` lines — see this entry's " +
-                "`count`). Neither takes a lock itself, but every call site in App.kt (::setKey, ::evilTwins) " +
+            count = 3,
+            justification = "setKey, evilTwins and robin (three byte-identical `model.save()` lines — see this entry's " +
+                "`count`). None takes a lock itself, but every call site in App.kt (::setKey, ::evilTwins, ::robinKit) " +
                 "wraps the ENTIRE shelf call — open, mutate, and save alike — in `KitWrites.mutex.withLock` " +
                 "before ever calling into KitShelf, the same caller-guarantees shape Law 5 already allowlists " +
                 "these same two opens under.",

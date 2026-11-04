@@ -4905,7 +4905,7 @@ private fun KnobRow(
 // ---------- toggles ----------
 
 @Composable
-private fun ToggleChip(
+internal fun ToggleChip(
     label: String,
     engaged: Boolean,
     color: Color,
