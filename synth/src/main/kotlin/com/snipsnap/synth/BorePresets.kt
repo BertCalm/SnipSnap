@@ -26,6 +26,9 @@ package com.snipsnap.synth
  *    took a default note to 0.10 s at C3 ([Bore.TONGUE_SEED]); the roster has
  *    not been re-laid out for it, so a low stab is now possible and unauthored.
  *  - HOLD at 1.0 is a LOOP, rendered dry and seamless.
+ *  - OVERBLOW (FLUTE only, round two) is 0 on every factory preset: the presets were authored, and
+ *    heard, before it existed, and their sound is frozen by `BoreFrozenSoundTest`. A cracked note is the
+ *    player's gesture to ask for, not a preset's default.
  *
  * Names are plain words: no maker, no model, no phone-book instrument.
  */
@@ -42,14 +45,14 @@ object BorePresets {
     fun all(): List<BorePatch> = BoreVoice.entries.flatMap { forVoice(it) }
 
     private val flutePresets = listOf(
-        p(BoreVoice.FLUTE, "BREATHY", "TUNE" to 0.5f, "BREATH" to 0.95f, "LIP" to 0.25f, "CHIFF" to 0.3f, "HOLD" to 0.4f),
-        p(BoreVoice.FLUTE, "CLEAN TONE", "TUNE" to 0.45f, "BREATH" to 0.3f, "LIP" to 0.55f, "CHIFF" to 0.2f, "HOLD" to 0.5f),
-        p(BoreVoice.FLUTE, "SOFT SWELL", "TUNE" to 0.4f, "BREATH" to 0.2f, "LIP" to 0.3f, "CHIFF" to 0f, "HOLD" to 0.6f),
-        p(BoreVoice.FLUTE, "HARD TONGUE", "TUNE" to 0.5f, "BREATH" to 0.6f, "LIP" to 0.6f, "CHIFF" to 1f, "HOLD" to 0.2f),
-        p(BoreVoice.FLUTE, "LOW REGISTER", "TUNE" to 0.1f, "BREATH" to 0.5f, "LIP" to 0.35f, "CHIFF" to 0.4f, "HOLD" to 0.5f),
-        p(BoreVoice.FLUTE, "HIGH AIR", "TUNE" to 0.9f, "BREATH" to 0.85f, "LIP" to 0.75f, "CHIFF" to 0.5f, "HOLD" to 0.3f),
-        p(BoreVoice.FLUTE, "LONG NOTE", "TUNE" to 0.55f, "BREATH" to 0.5f, "LIP" to 0.5f, "CHIFF" to 0.3f, "HOLD" to 0.9f),
-        p(BoreVoice.FLUTE, "STEADY LOOP", "TUNE" to 0.5f, "BREATH" to 0.6f, "LIP" to 0.5f, "CHIFF" to 0.3f, "HOLD" to 1f),
+        p(BoreVoice.FLUTE, "BREATHY", "TUNE" to 0.5f, "BREATH" to 0.95f, "LIP" to 0.25f, "CHIFF" to 0.3f, "HOLD" to 0.4f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "CLEAN TONE", "TUNE" to 0.45f, "BREATH" to 0.3f, "LIP" to 0.55f, "CHIFF" to 0.2f, "HOLD" to 0.5f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "SOFT SWELL", "TUNE" to 0.4f, "BREATH" to 0.2f, "LIP" to 0.3f, "CHIFF" to 0f, "HOLD" to 0.6f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "HARD TONGUE", "TUNE" to 0.5f, "BREATH" to 0.6f, "LIP" to 0.6f, "CHIFF" to 1f, "HOLD" to 0.2f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "LOW REGISTER", "TUNE" to 0.1f, "BREATH" to 0.5f, "LIP" to 0.35f, "CHIFF" to 0.4f, "HOLD" to 0.5f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "HIGH AIR", "TUNE" to 0.9f, "BREATH" to 0.85f, "LIP" to 0.75f, "CHIFF" to 0.5f, "HOLD" to 0.3f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "LONG NOTE", "TUNE" to 0.55f, "BREATH" to 0.5f, "LIP" to 0.5f, "CHIFF" to 0.3f, "HOLD" to 0.9f, "OVERBLOW" to 0f),
+        p(BoreVoice.FLUTE, "STEADY LOOP", "TUNE" to 0.5f, "BREATH" to 0.6f, "LIP" to 0.5f, "CHIFF" to 0.3f, "HOLD" to 1f, "OVERBLOW" to 0f),
     )
 
     private val saxPresets = listOf(

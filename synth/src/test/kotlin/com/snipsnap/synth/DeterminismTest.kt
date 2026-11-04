@@ -476,13 +476,17 @@ class DeterminismTest {
     // a held one-shot by a length search (bestLength, an argmax over correlations) and a settle rule
     // (settledFrame) - all deterministic or a saved recipe would not regenerate. One per voice, one-shot and LOOP.
     @Test
-    fun `BORE is byte-identical across renders, both voices, one-shot and loop`() {
+    fun `BORE is byte-identical across renders, both voices, one-shot and loop, and an overblown FLUTE`() {
         for (voice in BoreVoice.entries) {
             val shot = BorePatch("Canary", voice, Bore.defaults(voice))
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
             val loop = BorePatch("Canary", voice, Bore.defaults(voice) + ("HOLD" to 1f))
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
+        // OVERBLOW (R2) cracks a FLUTE one-shot to its upper register at a moment set by the knob: the crack's sample and the
+        // jet's glide are pure functions of the macros and the gate, so an overblown note regenerates too.
+        val cracked = BorePatch("Canary", BoreVoice.FLUTE, Bore.defaults(BoreVoice.FLUTE) + ("OVERBLOW" to 0.6f))
+        assertContentEquals(cracked.render().samples, cracked.render().samples, "FLUTE overblown")
     }
 
     // ARCO has no seed at all (a bow needs no noise: the render is a pure function of the macros), so this

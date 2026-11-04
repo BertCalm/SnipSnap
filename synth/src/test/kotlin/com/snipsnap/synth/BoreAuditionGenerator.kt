@@ -36,6 +36,11 @@ import kotlin.math.roundToInt
  * shipped one and a stronger one, so its strength is a choice made by ear. The clips are one-shots; a LOOP
  * is cut from a one-shot, so it has the same rasp and voicing ([Bore.RASP_DRIVE], [Bore.VOICE_LOW_DB]).
  *
+ * The newest section comes first: OVERBLOW (round two), FLUTE's crack to its upper register. Each of FLUTE's one-shot presets
+ * at two notes (G4 and G5), with the knob at 0, .25, .5, .75 and 1; each clip's description carries where that very note cracks
+ * and the pitch its octave settles on, measured on the raw blow. A LOOP plays without the crack, so the LOOP presets are not in it.
+ * `--args="<dir> quick"` writes this section alone, with the page, for a fast look.
+ *
  * Nothing in BORE has been heard by anyone when this is first run: it is the gate that decides
  * whether the measured engine is a woodwind. The page says so.
  */
@@ -65,6 +70,40 @@ object BoreAuditionGenerator {
         root.mkdirs()
         var count = 0
         val sections = StringBuilder()
+        val quick = args.getOrNull(1) == "quick"
+
+        // OVERBLOW (round two): FLUTE's crack, the newest question, first.
+        val overblowDir = File(root, "OVERBLOW")
+        val overblowSteps = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+        val overblowNotes = listOf("G4" to 7f / 24, "G5" to 19f / 24)
+        val overblowGroups = BorePresets.forVoice(BoreVoice.FLUTE).filter { !Bore.isLoop(it.macros.getValue("HOLD")) }.map { preset ->
+            val clips = overblowNotes.flatMap { (note, tune) ->
+                overblowSteps.map { overblow ->
+                    val m = preset.macros + mapOf("TUNE" to tune, "OVERBLOW" to overblow)
+                    val id = preset.name.lowercase().replace(' ', '_') + "_" + note.lowercase() + "_" + (overblow * 100).roundToInt()
+                    WavWriter.write(File(overblowDir, "$id.wav"), AuditionLevel.level(Bore.render(BoreVoice.FLUTE, m)), WavWriter.BitDepth.PCM_16)
+                    count++
+                    Clip(id, "$note OVERBLOW ${fmt(overblow)}", overblowLine(m))
+                }
+            }
+            Group(preset.name, key = preset.name in OVERBLOW_KEY_PRESETS, clips = clips)
+        }
+        sections.append(
+            sectionJson(
+                id = "OVERBLOW", display = "OVERBLOW",
+                body = "FLUTE's sixth knob, round two: a hard blow cracking the note up to its octave. The knob is when: 0 never, a little near the end of the note, 1 from the first sample. Is the crack a gesture you would play, or a mistake?",
+                readout = listOf(
+                    "FLUTE ONLY " + DOT + " EACH ONE-SHOT PRESET AT G4 AND G5",
+                    "OVERBLOW 0, .25, .50, .75, 1 " + DOT + " A LOOP NEVER CRACKS",
+                ),
+                groups = overblowGroups,
+            ),
+        )
+        if (quick) {
+            writePage(root, sections, count)
+            return
+        }
+        sections.append(",\n")
 
         val phrase = listOf(7f / 24, 0.5f, 19f / 24)
         // The reed's loop: cut from the held middle of a long one-shot, beside the one-shot it is cut from.
@@ -351,11 +390,40 @@ object BoreAuditionGenerator {
             )
         }
 
+        writePage(root, sections, count)
+    }
+
+    /** The manifest the page builds itself from, and the page. */
+    private fun writePage(root: File, sections: StringBuilder, count: Int) {
         File(root, "manifest.json").writeText("{\"voices\": [\n$sections\n]}\n")
         val page = BoreAuditionGenerator::class.java.getResourceAsStream("/audition/bore-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+    }
+
+    /** The two presets the OVERBLOW section asks about first: the plainest tone and the hardest tongue. */
+    private val OVERBLOW_KEY_PRESETS = setOf("CLEAN TONE", "HARD TONGUE")
+
+    /**
+     * What an OVERBLOW clip does, measured on the raw blow of the very macros it renders: where the note cracks, and the
+     * octave's pitch once it has had a quarter second to settle (when the note lasts that long after the crack).
+     */
+    private fun overblowLine(macros: Map<String, Float>): String {
+        val m = Bore.settled(macros, BoreVoice.FLUTE)
+        val overblow = m.getValue("OVERBLOW")
+        if (overblow <= 0f) return "no crack: the preset as it plays"
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val hz = Bore.frequencyFor(BoreVoice.FLUTE, m.getValue("TUNE"))
+        val raw = Bore.blow(BoreVoice.FLUTE, Bore.tunedHz(BoreVoice.FLUTE, hz), m, rate)
+        val attackN = (Bore.attackSeconds(m.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
+        val holdN = (Bore.holdSeconds(m.getValue("HOLD")) * rate).toInt()
+        val crack = Bore.crackFrame(BoreVoice.FLUTE, m, attackN, holdN)!!.toFloat() / rate
+        val breath = (attackN + holdN).toFloat() / rate
+        val settled = if (breath - crack >= 0.35f) {
+            ", the octave %+.1f cents".format(java.util.Locale.ROOT, BoreMeasure.cents(raw, 2 * hz, crack + 0.25f, breath))
+        } else ", too near the end to settle on the octave"
+        return "cracks at %.2f s of a %.2f s breath%s".format(java.util.Locale.ROOT, crack, breath, settled)
     }
 
     /**
