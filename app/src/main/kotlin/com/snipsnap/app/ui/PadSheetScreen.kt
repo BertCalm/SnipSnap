@@ -262,6 +262,8 @@ fun PadSheetScreen(
     onOpenBox: (String?) -> Unit = {},
     /** Told how many STRIKE FX layers an AUDITION rendered, before it plays them: a test's proof the button ran. */
     onStrikeHeard: (Int) -> Unit = {},
+    /** Told the sound a ▶ HIT is about to play: a test's proof which take a robin pad dealt. */
+    onHeard: (Snip) -> Unit = {},
     /**
      * KIT FROM ANYTHING's door: the base name for the new kit, the pad's own audio, the key and
      * the genre. The app writes the kit on its own busy line and shows the result sheet over
@@ -380,6 +382,7 @@ fun PadSheetScreen(
     remember(entry.dir, slot, pad.robin) {
         robinDraft.amount = pad.robin?.amount ?: kitRobin?.amount ?: KitRobin.DEFAULT_AMOUNT
         robinDraft.takes = pad.robin?.takes ?: kitRobin?.takes ?: KitRobin.DEFAULT_TAKES
+        robinDraft.amountMoved = false
     }
     var robinAmountMoved by remember(entry.dir, slot, pad.robin) { mutableStateOf(false) }
     var aquariumOpen by remember(entry.dir, slot) { mutableStateOf(false) }
@@ -438,6 +441,10 @@ fun PadSheetScreen(
     // cleared with it.
     var padJob by remember(model) { mutableStateOf<String?>(null) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
+    // A robin pad's whole chain, for ▶ HIT to deal a take per hit the way the MPC does (PadHit.resolve);
+    // `snip` stays take one, the sound every edit and preview works from. Null for any other pad.
+    var chainSnip by remember(model) { mutableStateOf<Snip?>(null) }
+    var hitCount by remember(model, slot, pad.robin, pad.chain) { mutableIntStateOf(0) }
     // The pad's newest bin entry, the one its undo restores (`refreshPadAudio`).
     // `binDaysLeft` is non-null exactly when the bin holds one, which is all the
     // eight "is it in the bin?" checks below read (the UNDO doors' handlers ask
@@ -543,11 +550,13 @@ fun PadSheetScreen(
         val p = m.kit.pad(slot)
         if (p == null) {
             snip = null
+            chainSnip = null
             binDaysLeft = null
             binKept = false
             auditionOnRefresh = false
             return
         }
+        var loadedChain: Snip? = null
         val (loadedSnip, daysLeft, kept) = offMain {
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
@@ -558,6 +567,14 @@ fun PadSheetScreen(
                 else WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
                 if (PrintedPads.has(p.recipe)) decoded else Cleanup.toMono(decoded)
             }.getOrNull()
+            loadedChain = if (p.isRobinChain) {
+                runCatching {
+                    val whole = WavReader.readCapped(File(m.kitDir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
+                    if (PrintedPads.has(p.recipe)) whole else Cleanup.toMono(whole)
+                }.getOrNull()
+            } else {
+                null
+            }
             // Newest first, so the first under the pad's file is the entry
             // `restoreFromBin(name)` restores. Its hold is the one the bin
             // screen and the launch sweep read: kept for a pad, or the
@@ -566,6 +583,7 @@ fun PadSheetScreen(
             Triple(s, hold?.let { it.daysLeft(System.currentTimeMillis()) ?: 0 }, hold?.keptFor != null)
         }
         snip = loadedSnip
+        chainSnip = loadedChain
         binDaysLeft = daysLeft
         binKept = kept
         // A refresh that couldn't decode the file consumes the play
@@ -649,10 +667,8 @@ fun PadSheetScreen(
             try {
                 val before = offMain {
                     val take = KitWrites.mutex.withLock {
-                        builtModel.binContents()
-                            .filter { it.originalName == p.sampleFile }
-                            .maxByOrNull { it.binnedAtMillis }
-                            ?.file
+                        // A robin pad's newest row is its own original; Robin.beforeTake picks the one under it.
+                        Robin.beforeTake(builtModel, p.slot)?.file
                     }
                     take?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
                 }
@@ -1346,9 +1362,8 @@ fun PadSheetScreen(
      * than a chip that is quietly grey.
      *
      * Same fresh-model shape, sample-identity guard and [model] swap as
-     * [applyTreatment] — see its KDoc. A round-robin pad refuses from
-     * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
-     * does today; that is the card's existing gap, not this action's.
+     * [applyTreatment] — see its KDoc. A round-robin pad is lifted by
+     * [KitBuilderModel.unEraPad] itself ([Robin.around]), so it un-treats like any pad.
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. [KitBuilderModel.unEraPad]
@@ -1446,13 +1461,8 @@ fun PadSheetScreen(
                             current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
                             "This pad changed. Open it again before hearing ${typeToHear.name}"
                         }
-                        if (current.isRobinChain) {
-                            // Take one is the original; a print on top has hidden the pre-print sound.
-                            check(!PrintedPads.has(current.recipe)) { Copy.ROBIN_HEAR_PRINTED }
-                            BoardSheet.previewFrom(Robin.original(fresh, targetSlot), recipeToHear)
-                        } else {
-                            BoardSheet.preview(fresh, targetSlot, recipeToHear)
-                        }
+                        // A robin pad previews from take one's pre-print sound (PrintedPadStore.preview).
+                        BoardSheet.preview(fresh, targetSlot, recipeToHear)
                     }
                 }
                 // The DSP may finish after pad navigation, a model reload or
@@ -1502,13 +1512,13 @@ fun PadSheetScreen(
                         current.recipe == p.recipe && current.velocityLayers == p.velocityLayers
                     ) {
                         // A robin pad's board lands on the original and the takes re-render from it.
-                        Robin.around(f, targetSlot) {
-                            when (action) {
-                                "KEEP" -> BoardSheet.apply(f, targetSlot, recipeToKeep)
-                                "REMOVE" -> BoardSheet.remove(f, targetSlot)
-                                "UNDO" -> BoardSheet.undo(f, targetSlot)
-                                else -> error("Unknown board action")
-                            }
+                        // UNDO never reaches a robin pad (its button explains, see onUndo); only KEEP and
+                        // REMOVE run around the takes.
+                        when (action) {
+                            "KEEP" -> Robin.around(f, targetSlot) { BoardSheet.apply(f, targetSlot, recipeToKeep) }
+                            "REMOVE" -> Robin.around(f, targetSlot) { BoardSheet.remove(f, targetSlot) }
+                            "UNDO" -> BoardSheet.undo(f, targetSlot)
+                            else -> error("Unknown board action")
                         }
                         applied = true
                     }
@@ -1572,12 +1582,7 @@ fun PadSheetScreen(
                             "This pad changed. Open it again before previewing Aquarium"
                         }
                         reapplyPendingMetadataFields(fresh, stalePads)
-                        val audio = if (current.isRobinChain) {
-                            check(!PrintedPads.has(current.recipe)) { Copy.ROBIN_HEAR_PRINTED }
-                            AquariumPadSheet.previewFrom(Robin.original(fresh, targetSlot), recipe, aquariumRenderer)
-                        } else {
-                            AquariumPadSheet.preview(fresh, targetSlot, recipe, aquariumRenderer)
-                        }
+                        val audio = AquariumPadSheet.preview(fresh, targetSlot, recipe, aquariumRenderer)
                         aquariumAuditionPcm(audio, fresh.kit.pad(targetSlot)!!)
                     }
                 }
@@ -1629,13 +1634,12 @@ fun PadSheetScreen(
                         "This pad changed. Open it again before changing Aquarium"
                     }
                     reapplyPendingMetadataFields(currentModel, stalePads)
-                    Robin.around(currentModel, targetSlot) {
-                        when (action) {
-                            "KEEP" -> AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer)
-                            "REMOVE" -> AquariumPadSheet.remove(currentModel, targetSlot)
-                            "UNDO" -> AquariumPadSheet.undo(currentModel, targetSlot)
-                            else -> error("Unknown Aquarium action")
-                        }
+                    // UNDO never reaches a robin pad (its button explains); only KEEP and REMOVE run around the takes.
+                    when (action) {
+                        "KEEP" -> Robin.around(currentModel, targetSlot) { AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer) }
+                        "REMOVE" -> Robin.around(currentModel, targetSlot) { AquariumPadSheet.remove(currentModel, targetSlot) }
+                        "UNDO" -> AquariumPadSheet.undo(currentModel, targetSlot)
+                        else -> error("Unknown Aquarium action")
                     }
                 }
                 if (scope.isActive && liveKitDir == kitDir) {
@@ -1753,7 +1757,8 @@ fun PadSheetScreen(
             p.isRobinChain -> commitPadEditNow("ROUND ROBIN", onSuccess = { onToast(Copy.ROBIN_OFF) }) { mm ->
                 Robin.undo(mm, slot)
             }
-            p.chain != null || p.velocityLayers.isNotEmpty() -> onToast(Copy.ROBIN_FOREIGN)
+            p.chain != null -> onToast(Copy.ROBIN_FOREIGN)
+            p.velocityLayers.isNotEmpty() -> onToast(Copy.ROBIN_LAYERED)
             else -> commitPadEditNow("ROUND ROBIN", onSuccess = { onToast(Copy.ROBIN_ON) }) { mm ->
                 val settings = mm.kit.robin ?: KitRobin()
                 Robin.apply(mm, slot, RobinSettings(settings.amount, settings.takes, 0, followsKit = true))
@@ -1765,18 +1770,25 @@ fun PadSheetScreen(
     fun onRobinOwn() {
         val amount = robinDraft.amount
         val takes = robinDraft.takes.coerceIn(2, KitRobin.MAX_TAKES)
-        commitPadEditNow("ROUND ROBIN", onSuccess = { onToast(Copy.ROBIN_OWN) }) { mm ->
+        val now = model?.kit?.pad(slot)?.robin ?: return
+        // A release that moved nothing changes nothing: no re-render, no unhooking from the kit.
+        if (takes == now.takes && (amount == now.amount || (now.amount == null && !robinDraft.amountMoved))) return
+        var did = false
+        commitPadEditNow("ROUND ROBIN", onSuccess = { if (did) onToast(Copy.ROBIN_OWN) }) { mm ->
             val current = mm.kit.pad(slot)?.robin ?: return@commitPadEditNow
             Robin.rerender(mm, slot, RobinSettings(amount, takes, current.seed, followsKit = false))
+            did = true
         }
     }
 
     /** FOLLOW KIT: the pad takes the kit's amount and take count again. */
     fun onRobinFollowKit() {
-        commitPadEditNow("ROUND ROBIN") { mm ->
+        var did = false
+        commitPadEditNow("ROUND ROBIN", onSuccess = { if (did) onToast(Copy.ROBIN_FOLLOWS) }) { mm ->
             val current = mm.kit.pad(slot)?.robin ?: return@commitPadEditNow
             val settings = mm.kit.robin ?: KitRobin()
             Robin.rerender(mm, slot, RobinSettings(settings.amount, settings.takes, current.seed, followsKit = true))
+            did = true
         }
     }
 
@@ -3459,7 +3471,21 @@ fun PadSheetScreen(
             busy = busy,
             backLabel = backLabel,
             onBack = ::requestBack,
-            onHit = { stopAquariumPreview(); snip?.let { audition(it, pad.level, pad) } },
+            onHit = {
+                stopAquariumPreview()
+                val whole = chainSnip
+                val chain = pad.chain
+                val heard = if (whole != null && chain != null && pad.isRobinChain) {
+                    val window = chain.window(hitCount++ % chain.cycle, whole.frameCount.toLong())
+                    Snip(
+                        whole.samples.copyOfRange(window.first.toInt() * whole.channels, (window.last.toInt() + 1) * whole.channels),
+                        whole.channels, whole.sampleRate,
+                    )
+                } else {
+                    snip
+                }
+                heard?.let { onHeard(it); audition(it, pad.level, pad) }
+            },
             // Aquarium/boards compare their preserved input. Older treatments
             // compare the bin take while it remains available.
             onBefore = when {
@@ -3535,7 +3561,10 @@ fun PadSheetScreen(
                 )
             }
             if (robinBlocked) {
-                TapeText(Copy.ROBIN_FOREIGN, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+                TapeText(
+                    if (pad.chain != null) Copy.ROBIN_FOREIGN else Copy.ROBIN_LAYERED,
+                    TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                )
             }
             StepperSlider(
                 label = "AMOUNT",
@@ -3549,6 +3578,7 @@ fun PadSheetScreen(
                 onFractionChange = { f ->
                     pendingRobinAmount = f
                     robinDraft.amount = f
+                    robinDraft.amountMoved = true
                     robinAmountMoved = true
                 },
                 onFractionCommit = ::onRobinOwn,
@@ -3632,7 +3662,7 @@ fun PadSheetScreen(
                     canPreview = aquariumRefusal == null && snip != null,
                     canKeep = aquariumRefusal == null && (!aquariumEditor.render.isBypass || aquariumApplied != null),
                     canRemove = aquariumRefusal == null && aquariumApplied != null,
-                    canUndo = aquariumRefusal == null && aquariumUndoAvailable,
+                    canUndo = aquariumRefusal == null && (aquariumUndoAvailable || (robinOn && aquariumApplied != null)),
                     busy = busy,
                     previewing = aquariumPreviewing,
                     sourceStatus = when {
@@ -3656,7 +3686,7 @@ fun PadSheetScreen(
                     onHear = { hearAquarium(original = false) },
                     onKeep = { commitAquarium("KEEP") },
                     onRemove = { commitAquarium("REMOVE") },
-                    onUndo = { commitAquarium("UNDO") },
+                    onUndo = { if (robinOn) onToast(Copy.ROBIN_NO_UNDO) else commitAquarium("UNDO") },
                     onCancel = ::closeAquarium,
                 )
             } else {
@@ -3678,7 +3708,8 @@ fun PadSheetScreen(
                 obliterate = pendingObliterate,
                 onObliterateChange = { update -> pendingObliterate = update(pendingObliterate) },
                 applied = boardApplied,
-                canUndo = boardUndoAvailable,
+                // A robin pad's UNDO stays tappable so it can say why it waits for round robin to be off.
+                canUndo = boardUndoAvailable || (robinOn && boardApplied != null),
                 chainPad = pad.chain != null && !pad.isRobinChain,
                 busy = busy,
                 action = boardAction.takeIf { busy },
@@ -3701,7 +3732,8 @@ fun PadSheetScreen(
                     }
                 },
                 onUndo = {
-                    if (!boardUndoAvailable) onToast("No board change to undo") else commitBoard("UNDO")
+                    if (robinOn) onToast(Copy.ROBIN_NO_UNDO)
+                    else if (!boardUndoAvailable) onToast("No board change to undo") else commitBoard("UNDO")
                 },
             )
             // Which segment the user just tapped, so the card can say what it
@@ -4612,6 +4644,7 @@ private fun WaveformLcd(snip: Snip?, drumClass: DrumClass, color: Color, scheme:
 private class RobinDraft {
     var amount: Float = KitRobin.DEFAULT_AMOUNT
     var takes: Int = KitRobin.DEFAULT_TAKES
+    var amountMoved: Boolean = false
 }
 
 /** Which way the confirm dialog is asked: STRIKE FX over soft hits, or soft hits over a STRIKE FX bank. */

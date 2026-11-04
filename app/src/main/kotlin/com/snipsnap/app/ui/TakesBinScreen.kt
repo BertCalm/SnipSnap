@@ -372,7 +372,7 @@ fun TakesBinScreen(
                     // for why a structurally-unchanged kit is a no-op where
                     // this lands (`App`'s `LaunchedEffect(entry.kit)`).
                     onKitUpdated(restoredKit ?: m.kit)
-                    refreshLists(m)
+                    refreshLists(m, restoredKit)
                     onToast(Copy.BACK_FROM_BIN)
                 } else {
                     // Not an exception — just a row that outran the tap (see

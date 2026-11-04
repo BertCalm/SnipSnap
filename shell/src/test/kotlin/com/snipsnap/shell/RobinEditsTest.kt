@@ -307,4 +307,18 @@ class RobinEditsTest {
         assertContentEquals(before, bytes(m, 1))
         assertTrue(m.pad(1)!!.isRobinChain)
     }
+
+    @Test
+    fun `beforeTake on a treated robin pad is the pre-treatment take one`() {
+        val m = model("Before")
+        val preTreatment = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        m.treatPad(1, "crushed")
+
+        val row = Robin.beforeTake(m, 1)
+
+        assertNotNull(row)
+        assertContentEquals(preTreatment.samples, WavReader.read(row.file).samples)
+        assertTrue(!WavReader.read(row.file).samples.contentEquals(Robin.original(m, 1).samples), "not the treated take one")
+    }
 }

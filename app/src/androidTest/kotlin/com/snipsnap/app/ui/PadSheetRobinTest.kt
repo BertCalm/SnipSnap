@@ -60,6 +60,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
     private val kitDirs = mutableListOf<File>()
     private val toasts = CopyOnWriteArrayList<String>()
     private var openBoxState by mutableStateOf<String?>(null)
+    private val heard = CopyOnWriteArrayList<Snip>()
 
     @After
     fun cleanUp() {
@@ -106,6 +107,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
                 onSplice = {},
                 onStack = {},
                 onKitUpdated = {},
+                onHeard = { heard += it },
                 onShelfAssetWritten = {},
                 appScope = appScope,
                 workshopOpen = false,
@@ -232,6 +234,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
 
         toasts.clear()
         activate("FOLLOW KIT, OFF")
+        waitForToast(Copy.ROBIN_FOLLOWS)
         waitFor("the pad to follow the kit again", timeoutMillis = 60_000) { savedPad(entry).robin!!.followsKit }
         assertEquals("the kit has no setting, so the defaults", 6, savedPad(entry).chain!!.cycle)
         assertEquals(0.6f, savedPad(entry).robin!!.amount)
@@ -248,5 +251,40 @@ class PadSheetRobinTest : ComposeScreenTest() {
         assertEquals("CUSTOM", stateText("ROUND ROBIN AMOUNT"))
         assertEquals("3", stateText("ROUND ROBIN TAKES"))
         assertTrue("the chip reads ON", nodes("ROUND ROBIN, ON").isNotEmpty())
+    }
+
+    @Test
+    fun consecutiveHitsOnARobinPadDealDifferentTakes() {
+        val entry = kit()
+        val m = KitBuilderModel.open(entry.dir)
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        m.save()
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)))
+        // The first taps may land before the pad has been read; keep tapping until one is heard.
+        waitFor("a first hit to sound", timeoutMillis = 60_000) {
+            if (heard.isEmpty()) activate("▶ HIT")
+            heard.isNotEmpty()
+        }
+        activate("▶ HIT")
+        waitFor("a second hit to sound", timeoutMillis = 60_000) { heard.size >= 2 }
+        assertFalse("two hits, two takes", heard[0].samples.contentEquals(heard[1].samples))
+        assertTrue("each hit is one take, not the whole chain", heard[0].frameCount == heard[1].frameCount || heard[0].frameCount < 4410 * 2)
+    }
+
+    @Test
+    fun aReleaseThatMovedNothingChangesNothing() {
+        val entry = kit()
+        val m = KitBuilderModel.open(entry.dir)
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        m.save()
+        val before = File(entry.dir, "hit1.wav").readBytes()
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)))
+        dial("ROUND ROBIN AMOUNT", 0.6f)
+        pump()
+        assertTrue("the pad still follows the kit", savedPad(entry).robin!!.followsKit)
+        assertTrue("no re-render", before.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+        assertFalse("no toast", Copy.ROBIN_OWN in toasts)
     }
 }

@@ -1790,8 +1790,9 @@ fun App(shelf: KitShelf) {
                         var noDust = 0
                         try {
                             for (pad in m.kit.pads.toList()) {
-                                // Layers and chains are what every audio rewrite
-                                // refuses: counted, not attempted. Anything else
+                                // Layers and foreign chains are what every audio rewrite
+                                // refuses (a robin pad is lifted by the door itself):
+                                // counted, not attempted. Anything else
                                 // that fails is a real failure and says so.
                                 if (pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)) {
                                     left++

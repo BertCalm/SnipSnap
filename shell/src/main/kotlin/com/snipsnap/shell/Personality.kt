@@ -1874,10 +1874,15 @@ object Copy {
     const val ROBIN_OWN = "THIS PAD KEEPS ITS OWN ROUND ROBIN."
 
     /** Soft hits, STRIKE FX and stacked takes are velocity layers; a layered pad cannot also cycle takes. */
-    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS OR STRIKE FX. TURN ROUND ROBIN OFF FIRST."
+    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS, STRIKE FX OR STACKED TAKES. TURN ROUND ROBIN OFF FIRST."
 
-    /** A print (board, Aquarium) hides the pre-print sound that a preview would start from. */
-    const val ROBIN_HEAR_PRINTED = "TAKE ONE ALREADY CARRIES THIS SOUND. REMOVE IT FIRST TO HEAR A NEW ONE."
+    /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
+    const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
+
+    /** A print kept on a robin pad: its UNDO needs the takes lifted, which turning round robin off does. */
+    const val ROBIN_NO_UNDO = "UNDO WORKS WITH ROUND ROBIN OFF. TURN IT OFF FIRST."
+
+    const val ROBIN_FOLLOWS = "THIS PAD FOLLOWS THE KIT'S ROUND ROBIN."
 
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =

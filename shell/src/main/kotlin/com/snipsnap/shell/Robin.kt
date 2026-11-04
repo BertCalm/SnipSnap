@@ -296,6 +296,18 @@ object Robin {
         }
     }
 
+    /**
+     * The bin row holding the sound a robin pad had before its last edit, for ◀ BEFORE. The newest
+     * row under the pad's file is the pad's own original ([undo] restores it) and the one under it
+     * is what the edit replaced; a pad with no earlier row answers its own original. Any other
+     * pad: its newest row.
+     */
+    fun beforeTake(model: KitBuilderModel, slot: Int): KitBuilderModel.BinEntry? {
+        val pad = model.pad(slot) ?: return null
+        val rows = model.binContents().filter { it.originalName == pad.sampleFile }.sortedByDescending { it.binnedAtMillis }
+        return if (pad.isRobinChain) rows.getOrNull(1) ?: rows.firstOrNull() else rows.firstOrNull()
+    }
+
     /** The backstop: an edit that left the pad in a shape the takes cannot render from fails like any other failed edit. */
     private fun checkRenderable(model: KitBuilderModel, slot: Int) {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("pad $slot is gone - nothing to re-render the takes from")

@@ -43,9 +43,6 @@ object BoardSheet {
 
     fun preview(model: KitBuilderModel, slot: Int, board: BoardRecipe): Snip = store.preview(model, slot, board::process)
 
-    /** The same preview over a sound the caller already holds - a round-robin pad's take one, which [preview] cannot read. */
-    fun previewFrom(source: Snip, board: BoardRecipe): Snip = if (board.isBypass) source else board.process(source)
-
     /** Every KEEP renders all velocity zones from the immutable pre-board baseline. */
     fun apply(model: KitBuilderModel, slot: Int, amount: Float, type: BoardType = BoardType.WIDE): KitPad =
         apply(model, slot, BoardRecipe(type = type, amount = amount))

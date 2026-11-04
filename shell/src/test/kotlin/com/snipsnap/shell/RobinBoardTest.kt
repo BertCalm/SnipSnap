@@ -58,4 +58,17 @@ class RobinBoardTest {
         BoardSheet.remove(m, 1)
         assertContentEquals(before, bytes(m, 1))
     }
+
+    @Test
+    fun `a printed robin pad previews from the pre-print take one`() {
+        val m = model()
+        val original = com.snipsnap.audio.WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        // Before any print: the lifted original.
+        assertContentEquals(original.samples, BoardSheet.preview(m, 1, 0f).samples)
+        Robin.around(m, 1) { BoardSheet.apply(m, 1, 0.5f) }
+        assertTrue(!Robin.original(m, 1).samples.contentEquals(original.samples), "take one now carries the board")
+
+        assertContentEquals(original.samples, BoardSheet.preview(m, 1, 0f).samples)
+    }
 }
