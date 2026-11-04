@@ -338,7 +338,7 @@ class KitExporterTest {
     }
 
     @Test
-    fun `an xtd export with a robin chain still leaves history behind`() {
+    fun `an xtd export with a whole robin chain still writes no history`() {
         val (slots, _) = KitExporter.buildSlots(robinKit(4), kitDir, File(temp, "track"))
         assertEquals(null, KitExporter.writeSidecar(robinKit(4), slots, File(temp, "track")), "a whole chain has no sidecar reader yet")
     }

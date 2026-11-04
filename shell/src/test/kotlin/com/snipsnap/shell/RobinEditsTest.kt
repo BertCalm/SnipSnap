@@ -140,6 +140,39 @@ class RobinEditsTest {
     }
 
     @Test
+    fun `a synth patch replayed onto a robin pad re-renders the takes from the new take one`() {
+        val src = model("PatchSrc")
+        src.desamplePad(1, evenIfFar = true)
+        val patch = com.snipsnap.synth.PadRecipe.fromJsonValue(src.pad(1)!!.recipe!!).patch!!
+        val recipe = com.snipsnap.synth.PadRecipe(patch = patch).toJsonValue() as com.snipsnap.json.JsonValue.Obj
+        kotlin.test.assertIs<RecipeReplay.Plan.Patch>(RecipeReplay.plan(recipe))
+
+        val m = model("PatchRobin")
+        val settings = RobinSettings(0.6f, 6, 0, followsKit = false)
+        Robin.apply(m, 2, settings)
+        RecipeReplay.apply(m, 2, recipe, "P")
+
+        val pad = m.pad(2)!!
+        assertTrue(pad.isRobinChain)
+        assertEquals(settings, pad.robin)
+        assertEquals(6, pad.chain!!.cycle)
+        assertEquals(patch, com.snipsnap.synth.PadRecipe.fromJsonValue(pad.recipe!!).patch, "the pad is the patch's now")
+        // Take one is the patch's own render (to the 24-bit file's step)...
+        val rendered = com.snipsnap.synth.PadRecipe(patch = patch).render()
+        val one = Robin.original(m, 2)
+        assertEquals(rendered.frameCount, one.frameCount)
+        for (i in rendered.samples.indices) assertEquals(rendered.samples[i], one.samples[i], 2.5e-7f, "take one at $i")
+        // ...and every other take is dealt from it with the pad's settings, seed and slot.
+        val whole = WavReader.read(File(m.kitDir, pad.sampleFile))
+        val expected = RobinVariation.takes(one, 6, 0.6f, java.util.Random(0L * 31 + 2))
+        for (t in 1 until 6) {
+            val take = Robin.take(whole, pad.chain!!, t)!!
+            assertEquals(expected[t].frameCount, take.frameCount, "take ${t + 1} length")
+            for (i in take.samples.indices) assertEquals(expected[t].samples[i], take.samples[i], 2.5e-7f, "take ${t + 1} at $i")
+        }
+    }
+
+    @Test
     fun `retrim and mutate work on a robin pad`() {
         val m = model("RetrimMutate")
         Robin.apply(m, 1, RobinSettings(0.5f, 3))
