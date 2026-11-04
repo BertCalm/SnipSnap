@@ -361,12 +361,63 @@ object Bore {
      * pipe has every harmonic). A real player does it by blowing faster and closer to the edge, which shortens the jet's
      * transit time against the period; here the transit time drops from [JET_RATIO] of a period to this, a quarter, where
      * the jet locks onto the 2nd mode. Measured (the design's "R2: OVERBLOW, as built", and the research note
-     * `2026-11-04-bore-r2-research.md`): the octave plays within a few cents of TUNE's octave. Everything in between is not
-     * a sound worth a knob's travel: the low register's pitch is pulled up to 1.7 semitones sharp before it breaks, and at
-     * C5 and C6 its upper harmonics overtake the fundamental. So the jet is never left between the two: it holds 0.5, then
-     * moves to 0.25 over [OVERBLOW_RAMP_SECONDS], and the knob sets *when* ([crackFrame]), not how far.
+     * `2026-11-04-bore-r2-research.md`): the octave plays within a few cents of TUNE's octave.
+     *
+     * Since the owner's redesign (2026-11-04: "instead of the parameter being how early or late the crack happens, we keep it
+     * close to the end and have the dial control rasp") any OVERBLOW above 0 cracks at the same moment near the end of the
+     * note ([crackFrame]), and the knob sets how rough the crack and the overblown note are, in one of three flavours
+     * ([Rasp]) the owner is choosing between by ear.
      */
     const val OVERBLOW_JET_RATIO = 0.25f
+
+    /**
+     * Where the crack falls: the overblown tail is this share of the blown note (the attack and the held breath), and never
+     * less than [OVERBLOW_TAIL_MIN_SECONDS], so the crack sits near the end of a long note and the octave is still heard. A
+     * note whose whole breath is shorter than the minimum (a stab: HOLD 0 blows 0.3 s) is overblown from its first sample.
+     */
+    const val OVERBLOW_TAIL_SHARE = 0.25f
+
+    /**
+     * The shortest overblown tail: [OVERBLOW_FIGHT_SECONDS], the longest crossing the roughest crack takes, plus the octave's
+     * own settle after it (at most 0.08 s with the crack's seed, measured), plus about a fifth of a second of the settled
+     * octave before the release.
+     */
+    const val OVERBLOW_TAIL_MIN_SECONDS = 0.6f
+
+    /**
+     * RASP, the three flavours of rough the knob can mean, behind this switch until the owner picks one by ear (the others are
+     * then removed). The knob scales each from a clean crack at its bottom to the roughest at 1; each lands on the octave.
+     *  - [FIGHT]: the registers fight. The jet's transit time crosses from half a period to a quarter slowly, over up to
+     *    [OVERBLOW_FIGHT_SECONDS], instead of in [OVERBLOW_RAMP_SECONDS]: on the way the low register is pulled sharp and, low
+     *    in the range, a wrong mode about 2.3 semitones over the note sounds before the octave wins. Measured: the octave
+     *    settles 0.12 to 0.16 s after the crack at the knob's 0.25 and 0.32 to 0.36 s at 1, at C4, C5 and C6 alike (the
+     *    harness had forecast it clean at C5 and C6).
+     *  - [GROWL]: a throat growl on the overblown note, the mouth pressure modulated at [OVERBLOW_GROWL_HZ] by up to
+     *    [OVERBLOW_GROWL_DEPTH] of itself: a flutter in the level and the tone.
+     *  - [BREATH]: more turbulence in the jet once overblown, up to [OVERBLOW_BREATH_EXTRA] more than BREATH's own.
+     */
+    internal enum class Rasp { FIGHT, GROWL, BREATH }
+
+    /** The flavour [render] plays: FIGHT until the owner chooses. */
+    internal val OVERBLOW_RASP = Rasp.FIGHT
+
+    /** FIGHT's crossing at the top of the knob; at its bottom the crossing is [OVERBLOW_RAMP_SECONDS], the clean crack. */
+    const val OVERBLOW_FIGHT_SECONDS = 0.3f
+
+    /** GROWL's rate, in the 20 to 60 Hz of a flutter-tongue or a throat growl, and its depth at the top of the knob as a share of the mouth pressure. */
+    const val OVERBLOW_GROWL_HZ = 31.0
+    const val OVERBLOW_GROWL_DEPTH = 0.3f
+
+    /**
+     * BREATH's extra turbulence at the top of the knob, added to BREATH's own (0.05 to 0.6 on FLUTE). Measured in the harness
+     * on the settled octave at BREATH 0.6: the energy between its harmonics rises from -36, -33 and -30 dB (C4, C5, C6) by
+     * about 6 dB at 0.4 extra and 8.5 dB at this, to -28 to -21 dB, a breathy flute's range (R1 read -20 to -30), with the
+     * octave still in tune and speaking. 0.4 was the first guess and read as only a little breathier.
+     */
+    const val OVERBLOW_BREATH_EXTRA = 0.8f
+
+    /** GROWL and BREATH rise in over this long after the jet reaches the octave, so neither starts with a step. */
+    const val OVERBLOW_RASP_RISE_SECONDS = 0.03f
 
     /**
      * LIP's floor on an overblown FLUTE (OVERBLOW above 0), from its first sample. LIP sets the jet's rest offset from the
@@ -381,7 +432,8 @@ object Bore {
     const val OVERBLOW_LIP_FLOOR = 0.35f
 
     /**
-     * How long the jet takes to move from one transit time to the other, under a raised-cosine glide. An instant switch
+     * How long the jet takes to move from one transit time to the other in a clean crack (GROWL and BREATH always, FIGHT at
+     * the bottom of the knob), under a raised-cosine glide. An instant switch
      * left a step in the wave 1.34 to 1.39 times the note's own steepest ordinary step at C5 and C6 (the research note's
      * Python harness); over this glide the step is 1.00 to 1.06 times it (`BoreOverblowTest`), an ordinary step of the note.
      * It is a little over a period at C4, too short for any register between the two to start: a register takes tens of
@@ -390,7 +442,8 @@ object Bore {
     const val OVERBLOW_RAMP_SECONDS = 0.005f
 
     /**
-     * The crack's seed: a short burst at the octave's own frequency, put straight into the bore at the crack, the flute's
+     * The crack's seed: a short burst at the octave's own frequency, put straight into the bore as the jet reaches the octave's
+     * transit time (the end of the crossing), the flute's
      * counterpart of the reed's tongue seed ([TONGUE_SEED]). With the jet at a quarter period the octave is the only stable
      * state (every corner of the knob lands on it from the first sample), but a note already sounding has to get there, and
      * how long that takes depends on where in its cycle the crack falls: without a seed a crack at C4 with the hardest breath
@@ -805,7 +858,8 @@ object Bore {
      * The overrides are for tests and probes: [turbulence] replaces BREATH's noise
      * (0 is none), [gateSeconds] replaces HOLD's length, and [pressure] replaces
      * BREATH's whole mapping with an absolute mouth pressure - a share of the
-     * closing pressure on SAX, so a sweep can find the window's real edges.
+     * closing pressure on SAX, so a sweep can find the window's real edges. [rasp] is the
+     * OVERBLOW flavour an overblown FLUTE cracks with ([Rasp]); it plays no part elsewhere.
      */
     internal fun blow(
         voice: BoreVoice,
@@ -817,24 +871,28 @@ object Bore {
         pressure: Float? = null,
         pop: Float? = null,
         seed: Float? = null,
+        rasp: Rasp = OVERBLOW_RASP,
     ): FloatArray {
-        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed)
+        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed, rasp)
     }
 
     /**
      * The raw sample at which an overblown FLUTE note cracks to its upper register ([OVERBLOW_JET_RATIO]), or null when it never
      * does: on SAX, at OVERBLOW 0 (or absent, or not a number) - so a knob at 0 never reaches the crack's code at all, and every
-     * render that names no OVERBLOW is the render it was before round two (`BoreFrozenSoundTest`). Above 0 the knob is *when*:
-     * the share `1 - OVERBLOW` of the way through the blown part of the note (the attack and the held breath, [attackN] +
-     * [holdN]), so a little OVERBLOW cracks a long note near its end, a half way through, and 1 from its first sample, a note
-     * played in the upper register throughout. A time inside the gate and never a length, so [renderFrames] and [drumClassFor]
-     * do not move.
+     * render that names no OVERBLOW is the render it was before round two (`BoreFrozenSoundTest`). Above 0, whatever the knob
+     * (it is the rasp now, [Rasp]), the crack leaves the note's last [OVERBLOW_TAIL_SHARE] of its blown part (the attack and the
+     * held breath, [attackN] + [holdN]) overblown, and never less than [OVERBLOW_TAIL_MIN_SECONDS] of it: near the end of a long
+     * note, with time for the roughest crossing and a settled octave before the release. A note blown for less than the minimum
+     * is overblown from its first sample. A time inside the gate and never a length, so [renderFrames] and [drumClassFor] do
+     * not move.
      */
-    internal fun crackFrame(voice: BoreVoice, macros: Map<String, Float>, attackN: Int, holdN: Int): Int? {
+    internal fun crackFrame(voice: BoreVoice, macros: Map<String, Float>, attackN: Int, holdN: Int, rate: Int): Int? {
         if (voice != BoreVoice.FLUTE) return null
         val overblow = macros[OVERBLOW] ?: return null
         if (!(overblow > 0f)) return null
-        return ((1f - overblow.coerceAtMost(1f)) * (attackN + holdN)).toInt()
+        val blown = attackN + holdN
+        val tail = maxOf(OVERBLOW_TAIL_SHARE * blown, OVERBLOW_TAIL_MIN_SECONDS * rate).toInt()
+        return (blown - tail).coerceAtLeast(0)
     }
 
     /**
@@ -862,10 +920,11 @@ object Bore {
         pressure: Float?,
         pop: Float? = null,
         seed: Float? = null,
+        rasp: Rasp = OVERBLOW_RASP,
     ): FloatArray {
         val player = Player(voice, hz, macros, rate, maxDetuneCents = 0f,
             turbulence = turbulence, pressure = pressure, pop = pop, seed = seed,
-            crackAt = crackFrame(voice, macros, gate.attackN, gate.holdN))
+            crackAt = crackFrame(voice, macros, gate.attackN, gate.holdN, rate), rasp = rasp)
         val out = FloatArray(gate.total)
         for (i in 0 until gate.total) {
             if (i % 8192 == 0) stopIfUnwanted()
@@ -906,6 +965,8 @@ object Bore {
         seed: Float? = null,
         /** The sample at which a FLUTE cracks to its upper register ([crackFrame]); null, the default, never does and never reads [Crack]. */
         crackAt: Int? = null,
+        /** How rough the crack is, with OVERBLOW's own value as the amount ([Rasp]). */
+        rasp: Rasp = OVERBLOW_RASP,
     ) {
         init {
             require(hz.isFinite() && hz > 0f) { "a bore player needs a positive finite frequency" }
@@ -942,13 +1003,21 @@ object Bore {
         private val jet = FloatArray(ceil(jetDelay).toInt() + 2)
         private var jw = 0
         private val jetBias = Dsp.lin(lip, JET_OFFSET_LOW, JET_OFFSET_HIGH)
-        private val crack: Crack? = if (flute && crackAt != null) Crack(
-            from = crackAt.coerceAtLeast(0),
-            rampN = (OVERBLOW_RAMP_SECONDS * rate).toInt().coerceAtLeast(1),
-            delay = (OVERBLOW_JET_RATIO * rate / hz).coerceAtLeast(2f),
-            octaveStep = 2.0 * PI * 2.0 * hz / rate,
-            seedN = (OVERBLOW_SEED_PERIODS * rate / (2f * hz)).toInt().coerceAtLeast(2),
-        ) else null
+        private val crack: Crack? = if (flute && crackAt != null) {
+            val amount = (macros[OVERBLOW] ?: 0f).coerceIn(0f, 1f)
+            val crossing = if (rasp == Rasp.FIGHT) Dsp.lin(amount, OVERBLOW_RAMP_SECONDS, OVERBLOW_FIGHT_SECONDS) else OVERBLOW_RAMP_SECONDS
+            Crack(
+                from = crackAt.coerceAtLeast(0),
+                rampN = (crossing * rate).toInt().coerceAtLeast(1),
+                delay = (OVERBLOW_JET_RATIO * rate / hz).coerceAtLeast(2f),
+                octaveStep = 2.0 * PI * 2.0 * hz / rate,
+                seedN = (OVERBLOW_SEED_PERIODS * rate / (2f * hz)).toInt().coerceAtLeast(2),
+                growl = if (rasp == Rasp.GROWL) OVERBLOW_GROWL_DEPTH * amount else 0f,
+                growlStep = 2.0 * PI * OVERBLOW_GROWL_HZ / rate,
+                breath = if (rasp == Rasp.BREATH) OVERBLOW_BREATH_EXTRA * amount else 0f,
+                riseN = (OVERBLOW_RASP_RISE_SECONDS * rate).toInt().coerceAtLeast(1),
+            )
+        } else null
         private val chiffNoise = CHIFF_NOISE * chiff
         private val overshoot = if (flute) 0f else OVERSHOOT
         private val popLevel = if (flute) 0f else pop ?: POP_LEVEL
@@ -985,11 +1054,14 @@ object Bore {
             val scale = if (pressureScale.isFinite()) pressureScale.coerceAtLeast(0f) else 1f
             val turbulenceGain = if (turbulenceScale.isFinite()) turbulenceScale.coerceAtLeast(0f) else 1f
             val env = if (envelope.isFinite()) envelope.coerceAtLeast(0f) else 0f
-            val pMax = basePressure * scale
+            // GROWL modulates the mouth pressure once the note is overblown; without a crack this is the shipped pressure, untouched.
+            val pMax = if (crack == null) basePressure * scale else basePressure * scale * crack.pressure(i)
             val over = if (overshoot > 0f) 1f + overshoot * exp(-t / OVERSHOOT_SECONDS).toFloat() else 1f
             val burst = if (chiffNoise > 0f) chiffNoise * exp(-t / CHIFF_NOISE_SECONDS).toFloat() else 0f
             val popNow = if (popLevel > 0f && i >= popStart && i < popStart + popN) popLevel * pMax * sin(PI * (i - popStart) / popN).toFloat() else 0f
-            val pm = (pMax * env * over * (1f + (turb + burst) * turbulenceGain * noise.next()) + popNow).coerceAtMost(cap)
+            // BREATH adds turbulence to the jet once overblown; without a crack this is the shipped turbulence, untouched.
+            val air = if (crack == null) turb + burst else turb + burst + crack.breath(i)
+            val pm = (pMax * env * over * (1f + air * turbulenceGain * noise.next()) + popNow).coerceAtMost(cap)
             val returning = loop.reflected()
             val y = if (flute) {
                 // The returning wave deflects the jet; the disturbance crosses the mouth (the jet line);
@@ -1026,22 +1098,43 @@ object Bore {
         }
 
         /**
-         * A crack: from sample [from] the jet's transit time moves to [delay] samples, under a raised cosine [rampN] samples
-         * long ([OVERBLOW_RAMP_SECONDS]), and an octave seed ([OVERBLOW_SEED]) of [seedN] samples goes into the bore, a
-         * sine advancing [octaveStep] radians a sample under a raised cosine.
+         * A crack: from sample [from] the jet's transit time moves to [delay] samples under a raised cosine [rampN] samples
+         * long (the clean crack's [OVERBLOW_RAMP_SECONDS], or FIGHT's slower crossing). Where the crossing ends an octave seed
+         * ([OVERBLOW_SEED]) of [seedN] samples goes into the bore, a sine advancing [octaveStep] radians a sample under a raised
+         * cosine, and GROWL's [growl] (a share of the mouth pressure, at [growlStep] radians a sample) and BREATH's [breath]
+         * (added turbulence) rise in over [riseN] samples.
          */
-        private class Crack(val from: Int, val rampN: Int, val delay: Float, val octaveStep: Double, val seedN: Int) {
+        private class Crack(
+            val from: Int,
+            val rampN: Int,
+            val delay: Float,
+            val octaveStep: Double,
+            val seedN: Int,
+            val growl: Float,
+            val growlStep: Double,
+            val breath: Float,
+            val riseN: Int,
+        ) {
+            private val arrived = from + rampN
+
             fun share(i: Int): Float = when {
                 i < from -> 0f
-                i >= from + rampN -> 1f
+                i >= arrived -> 1f
                 else -> (0.5 - 0.5 * cos(PI * (i - from) / rampN)).toFloat()
             }
 
             fun seed(i: Int): Float {
-                val k = i - from
+                val k = i - arrived
                 if (k < 0 || k >= seedN) return 0f
                 return (OVERBLOW_SEED * (0.5 - 0.5 * cos(2.0 * PI * k / seedN)) * sin(octaveStep * k)).toFloat()
             }
+
+            private fun rise(i: Int): Float = ((i - arrived).toFloat() / riseN).coerceIn(0f, 1f)
+
+            fun pressure(i: Int): Float =
+                if (growl <= 0f || i < arrived) 1f else 1f + growl * rise(i) * sin(growlStep * (i - arrived)).toFloat()
+
+            fun breath(i: Int): Float = if (breath <= 0f || i < arrived) 0f else breath * rise(i)
         }
     }
 
@@ -1453,13 +1546,16 @@ object Bore {
 
     // ---- the render --------------------------------------------------------
 
-    fun render(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): Snip = render(voice, macros, OVERBLOW_RASP)
+
+    /** [render] with an overblown FLUTE cracking in [flavour]'s rasp: for the audition and the tests while the owner chooses. */
+    internal fun render(voice: BoreVoice, macros: Map<String, Float>, flavour: Rasp): Snip {
         val m = settled(macros, voice)
         if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = tunedHz(voice, frequencyFor(voice, m.getValue("TUNE")))
         val rate = RATE * Dsp.OVERSAMPLE
         val bite = biteBoostDb(voice, m.getValue("LIP"))
         val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
-        return Snip(finish(blow(voice, hz, m, rate), rate, bite, rasp, voicingFor(voice)), channels = 1, sampleRate = RATE)
+        return Snip(finish(blow(voice, hz, m, rate, rasp = flavour), rate, bite, rasp, voicingFor(voice)), channels = 1, sampleRate = RATE)
     }
 }
