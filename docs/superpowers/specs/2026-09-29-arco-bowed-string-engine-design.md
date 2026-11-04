@@ -2979,9 +2979,14 @@ CRY, R1's loop, the SNAPPED one and the HUMAN one, each three times end to end a
 5. **The risk** is that the drift repeats every two seconds and is heard as a repeat of its own; the A/B is
    where the owner says.
 
+**Heard (2026-11-04, after the build).** The owner played the A/B (ENDLESS DRAW and ENDLESS CRY, each old,
+snapped and humanised, three times end to end) and wrote: **"Humanized is best."** That is the variant that
+ships (`Arco.LOOP_VIBRATO` is HUMAN), so nothing changes; SNAPPED stays only as the A/B's middle clip.
+
 **Ledger.**
 
-* *Heard:* the owner's verdict above, on R1's loops. The new loops are not heard.
+* *Heard:* the owner's verdict on R1's loops ("Sounds a bit cheap, try the vibrato fix. Mechanical sounding."),
+  and on the A/B, "Humanized is best", which picks the shipped variant.
 * *Measured (Kotlin: ArcoLoopVibratoTest, ArcoProductTest, ArcoLoopFuzzTest, ArcoPresetsTest, ArcoFrozenR1cTest,
   ArcoBuzzLoopPadTest):* the periodicity, the 450 seams, the spreads, the means, the cost, the frozen controls,
   the loop instrument's joins.
