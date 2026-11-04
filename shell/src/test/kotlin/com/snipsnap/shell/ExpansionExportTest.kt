@@ -104,6 +104,20 @@ class ExpansionExportTest {
     }
 
     @Test
+    fun `a replace whose every member is now blocked keeps the export already there`() {
+        val e = expansion("Kept", playable("Kit One", 1))
+        val root = File(temp, "card")
+        assertTrue(model(e).write(root, overwrite = false) is ExpansionExportModel.WriteResult.Done)
+        val written = File(root, "Expansions/Kept/Expansion.xml")
+        assertTrue(written.isFile)
+        // The kit's sound goes missing; a confirmed replace must refuse before it clears the old folder.
+        File(shelf, "Kit One").listFiles { f -> f.extension == "wav" }!!.forEach { it.delete() }
+        val again = model(e).write(root, overwrite = true)
+        assertTrue(again is ExpansionExportModel.WriteResult.Nothing, "$again")
+        assertTrue(written.isFile, "the good export from before is still there")
+    }
+
+    @Test
     fun `an empty expansion refuses to export`() {
         val gone = playable("Gone", 1)
         val e = expansion("Empty", gone)

@@ -10,7 +10,6 @@ import com.snipsnap.kit.PackBuilder
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
 import java.io.File
-import java.io.IOException
 
 /**
  * EXPORT's expansion subject: every present member packed as one MPC
@@ -74,6 +73,12 @@ class ExpansionExportModel(
         if (empty) return WriteResult.Nothing(emptyList())
         val preflight = runPreflight()
         val passing = members.filter { m -> preflight.getValue(m).none { it.severity == Severity.FAIL } }
+        val refused = members.mapNotNull { m ->
+            preflight.getValue(m).firstOrNull { it.severity == Severity.FAIL }?.let { m.kit.name to it.message }
+        }
+        // Refused before PackBuilder runs: a confirmed replace clears the old folder first, and a
+        // write that packs nothing must not cost the export that was already there.
+        if (passing.isEmpty()) return WriteResult.Nothing(refused)
         val meta = ExpansionMeta(expansion.title, manufacturer = expansion.manufacturer, identifier = expansion.identifier)
         val jCards = passing.associate { m ->
             "[J-Cards]/${m.kit.name}.png" to jCardRenderer(m.kit, m.dir, Label.forKit(m.dir))
@@ -88,13 +93,6 @@ class ExpansionExportModel(
             )
         } catch (e: DestinationExists) {
             return WriteResult.WouldOverwrite(e.path)
-        } catch (e: IOException) {
-            // PackBuilder refuses when no member could be packed; say which and why.
-            val skipped = members.mapNotNull { m ->
-                preflight.getValue(m).firstOrNull { it.severity == Severity.FAIL }?.let { m.kit.name to it.message }
-            }
-            if (skipped.size == members.size) return WriteResult.Nothing(skipped)
-            throw e
         }
         val programs = File(result.directory, "Programs")
         val readBack = members.filter { it.kit.name in result.packed }.associate { m ->
