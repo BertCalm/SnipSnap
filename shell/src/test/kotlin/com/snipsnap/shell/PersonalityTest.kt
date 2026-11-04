@@ -785,7 +785,7 @@ class PersonalityTest {
      * e.g. `tapeTruncated`/`imported`'s templated output) rather than a
      * violation of "TapeOS shouts". Still checked for the full-stop law.
      */
-    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED")
+    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED", "NO_TAPE_YET_ARMED")
 
     /**
      * The exact ~30 names the old hand-listed `listOf(Copy.A, Copy.B, ...)`
@@ -1268,6 +1268,16 @@ class PersonalityTest {
     @Test
     fun `chop names the kit sample it fell back to`() {
         assertEquals("FROM A03_SNARE", Copy.chopFromKit("A03_SNARE"))
+    }
+
+    @Test
+    fun `the armed empty deck makes the same claim as the snip toast and sends nobody to a pressed button`() {
+        // TAPE's empty deck, once LISTEN is armed, says what SNIP keeps. It must
+        // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
+        // not repeat NO_TAPE_YET's instruction to tap LISTEN.
+        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
+        assertTrue("UP TO 60s" in Copy.NO_TAPE_YET_ARMED && "UP TO 60s" in Copy.SNIPPED)
+        assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
     }
 
 }
