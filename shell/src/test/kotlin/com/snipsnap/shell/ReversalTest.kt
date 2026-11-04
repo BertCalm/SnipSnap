@@ -180,6 +180,12 @@ class ReversalTest {
             why = "a warning before the act, not a landing",
             stillTrue = "IS ALREADY THERE",
         ),
+        // The expansion side's twin of `dubWouldOverwrite`: the same moment before an expansion
+        // write replaces its folder, naming that side's own button. Nothing has been written.
+        "expansionWouldOverwrite" to NotALanding(
+            why = "a warning before the act, not a landing",
+            stillTrue = "IS ALREADY THERE",
+        ),
         // The same moment as `dubWouldOverwrite`, rendered on the button
         // instead of in a toast: it is the WRITE control's own label while
         // the dub is armed, so it is what you read BEFORE deciding to tap a

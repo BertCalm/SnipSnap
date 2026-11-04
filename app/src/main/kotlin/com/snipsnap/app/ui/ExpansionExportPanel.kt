@@ -199,7 +199,7 @@ internal fun ExpansionExportPanel(
                 when (result) {
                     is ExpansionExportModel.WriteResult.WouldOverwrite -> {
                         overwriting = result.path
-                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                        onToast(Copy.expansionWouldOverwrite(result.path.name))
                     }
                     is ExpansionExportModel.WriteResult.Nothing -> {
                         overwriting = null

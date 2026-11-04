@@ -216,8 +216,10 @@ SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 | `:synth` depends on `:kit`, so the assembler lives in `:synth` | verified | `synth/build.gradle.kts:893` |
 | `KitAssembler` derives the choke group from the class with no override | verified | `KitAssembler.kt:164` |
 | The landing chains and grooves suit their genres | proposed | not prototyped |
-| A bark's kit sounds like the bark | heard? | not heard; audition pad-beside-source |
-| The techno numbers | proposed | extrapolated from HOUSE's corner; no techno rows exist in the repo |
+| A bark's kit sounds like the bark | heard? | still open: Josh's marks answer whether a pad sounds good, not whether it keeps the source's identity, which is the question here |
+| The Bottle hit's house kit sounds good, all sixteen pads | heard | Josh marked every pad Great on the listening page, 2026-11-02 evening (stamped 2026-11-03T02:48Z), sixteen documents in the page's `heard` collection. This is the kit the octave fix rebuilt; its siren starts near 2 kHz |
+| "All sounds good" | heard | Josh's words, 2026-11-02, said of the listening page's eighteen kits (his Monday 09:03 recording, five stand-ins, a snare hit, a kick hit and a drum break, each in the genres listed). The statement is not scoped further and the page holds per-pad marks for the Bottle kit only |
+| The techno numbers | proposed | extrapolated from HOUSE's corner; no techno rows exist in the repo. Josh's "All sounds good" covers the page's techno kits as part of the whole, with no per-pad techno marks, so the row stays proposed and the flag in the code stays |
 
 ## Why it is built this way
 
@@ -407,5 +409,23 @@ that ring free by choice ("hats share choke group 1; 6, 7 ring free by choice");
 in a different non-zero group, or no shared group at all, still warns. `PreflightTest` 11 of
 11 pass, including one test for the ride and crash and one for the open hat in group 2.
 
-Not heard. The reels are measurements made audible, not judgements: the first six were sent
-to Josh's phone on 2026-11-01 and nothing has come back yet.
+Heard, in part. The reels were sent to Josh's phone on 2026-11-01 and he could not tell what they
+were showing, so on 2026-11-02 they became a listening page: a four by four pad grid, the original
+beside each pad, a plain-words line on how each pad was made, and Great, Wrong and Not sure buttons
+that write to the page's database (`heard`, one document per kit and pad). What came back: sixteen
+Great marks on the Bottle hit's house kit, and the words "All sounds good". Nothing was marked
+Wrong or Not sure, no note was written, and no mark exists for any other kit. What this does not
+settle: whether any pad keeps its source's identity (the open row above), whether the techno,
+boom bap and drum-source kits were each listened to, and the decisions the handover leaves with
+Josh (the bass shape for boom bap, the blend cap, the siren as a slot in every genre, which captures
+become fixtures).
+
+**What the listening page showed about drum sources.** A snare hit, a kick hit and a two-second
+chop of a drum break were run through `kitfrom` in all three genres (nine kits). Measured: every
+pad of the six snare and kick kits passes its gate unaided; the drum break's kick reads TOM (0.94
+in house, 0.88 in boom bap) and is blended with THUMP KICK at 0.50 and then passes (0.76 and
+0.80), and the techno break needs no blend. Read from the code, not heard: the assembler has no
+path that keeps a found hit, so a snare source's A02 is still built from its cycle and its
+whitened arrival, which the brief's "found beats made" principle says it should not be; and a
+source over 1.5 s is classified LOOP, so a 1.9 s snare hit reads as a loop. Josh's "All sounds
+good" is the only judgement on these kits, so neither is a defect he has named.

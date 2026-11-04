@@ -59,6 +59,9 @@ android {
     // once: the JVM reads them as class-path resources, the phone as
     // assets under the same relative path. One file, two loaders.
     sourceSets["main"].assets.srcDir("../shell/src/main/resources")
+    // The same faces also reach the APK as :shell's class-path resources; the phone reads them
+    // only as assets (AndroidFonts), so the second copy is dead weight (about a megabyte).
+    packaging { resources.excludes += "/fonts/**" }
 
     buildFeatures {
         compose = true
