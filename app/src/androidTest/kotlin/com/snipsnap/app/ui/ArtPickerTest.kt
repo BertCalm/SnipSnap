@@ -16,10 +16,13 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.ArtKnobs
 import com.snipsnap.shell.ArtSidecar
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitArt
+import com.snipsnap.shell.Member
 import com.snipsnap.shell.Palettes
+import com.snipsnap.shell.Schemes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -136,6 +139,36 @@ class ArtPickerTest : ComposeScreenTest() {
             assertEquals(null, ArtSidecar.read(e.dir))
         } finally {
             e.dir.setWritable(true, false)
+        }
+    }
+
+    @Test
+    fun theSeedKitRowSwapsWhichKitDrawsTheTile() {
+        val first = entry()
+        val second = entry()
+        val members = listOf(
+            Member("first", first.dir, first.kit.copy(name = "FIRST")),
+            Member("second", second.dir, second.kit.copy(name = "SECOND")),
+        )
+        val picked = mutableListOf<Member>()
+        setPhoneContent {
+            ArtPickerSheet(
+                kit = members[0].kit, kitDir = members[0].dir,
+                knobs = ArtKnobs.default(Schemes.DEFAULT),
+                onKnobs = {}, onDismiss = {},
+                label = "MY EXPANSION",
+                seedKits = members,
+                onSeedKit = { picked += it },
+                title = "ART FOR MY EXPANSION",
+            )
+        }
+        waitFor("the sheet's own title") {
+            compose.onAllNodesWithText("ART FOR MY EXPANSION", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        press("SEED KIT: SECOND")
+        assertEquals(listOf("second"), picked.map { it.kitId })
+        waitFor("eight style cells") {
+            compose.onAllNodesWithContentDescription("STYLE: ", substring = true).fetchSemanticsNodes().size == 8
         }
     }
 

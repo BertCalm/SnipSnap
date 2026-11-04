@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
+import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +23,7 @@ internal suspend fun <T> renderSynthPreview(
     render: () -> T,
     publish: (T) -> Unit,
     onFailure: (Exception) -> Unit,
+    label: String = "",
 ) = withContext(Dispatchers.Main.immediate) {
     // As in offMain, the explicit main dispatcher matters under Compose's test interceptor:
     // the delayed shimmer and completion callbacks must both write UI state on main.
@@ -33,8 +36,13 @@ internal suspend fun <T> renderSynthPreview(
             onRendering(true)
         }
         try {
+            val started = SystemClock.elapsedRealtime()
             val rendered = offMainInterruptible(Dispatchers.Default, render)
             coroutineContext.ensureActive()
+            // Device render time for the speed scan (docs/ENGINE_STANDARD_SCAN_2026_11.md,
+            // "Render speed"): adb logcat -s SnipSnapRender. Only finished, still-wanted
+            // renders are logged, so superseded knob turns do not skew the numbers.
+            Log.i(RENDER_TIMING_TAG, "$label ${SystemClock.elapsedRealtime() - started} ms")
             publish(rendered)
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -51,3 +59,6 @@ internal suspend fun <T> renderSynthPreview(
         }
     }
 }
+
+/** Logcat tag for SYNTH preview render times; see [renderSynthPreview]. */
+internal const val RENDER_TIMING_TAG = "SnipSnapRender"

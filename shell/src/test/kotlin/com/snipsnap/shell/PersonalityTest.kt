@@ -361,6 +361,30 @@ class PersonalityTest {
     }
 
     /**
+     * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
+     * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
+     * They are functions, so the reflective shout law cannot see them; this holds them by hand.
+     */
+    @Test
+    fun `a print refuses SPLICE and DE-SAMPLE in the words it refuses the other doors with`() {
+        assertEquals("REMOVE WIDE BEFORE SPLICE.", Copy.boardRemoveBeforeSplice("WIDE"))
+        assertEquals("REMOVE AQUARIUM BEFORE DE-SAMPLE.", Copy.boardRemoveBeforeDesample("AQUARIUM"))
+        val lines = listOf(
+            Copy.boardRemoveBeforeSoftHits("RUSH"),
+            Copy.boardRemoveBeforeStack("RUSH"),
+            Copy.boardRemoveBeforeSpread("RUSH"),
+            Copy.boardRemoveBeforeSplice("RUSH"),
+            Copy.boardRemoveBeforeDesample("RUSH"),
+        )
+        assertEquals(lines.size, lines.toSet().size, "each refusal names its own door: $lines")
+        for (line in lines) {
+            assertTrue(line.startsWith("REMOVE RUSH BEFORE "), "the print and the way out lead: $line")
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+    }
+
+    /**
      * Finding 23. SETUP held three settings and answered none of the
      * questions a user actually arrives with. These are the three the app
      * can answer from what it already knows — the format EXPORT will open
@@ -435,6 +459,7 @@ class PersonalityTest {
         assertTrue(Copy.SHELF_LEGEND.contains("KIT"), "and what to hold: ${Copy.SHELF_LEGEND}")
         assertTrue(Copy.SHELF_LEGEND.contains("RENAME"), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
         assertTrue(Copy.SHELF_LEGEND.contains("DELETE"), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("EXPANSION"), "and the third door the hold now reveals: ${Copy.SHELF_LEGEND}")
         assertEquals(Copy.SHELF_LEGEND.uppercase(Locale.ROOT), Copy.SHELF_LEGEND, "TapeOS shouts")
         assertTrue(Copy.SHELF_LEGEND.length <= 52, "one line under the shelf: ${Copy.SHELF_LEGEND.length}")
         // Furniture, not a toast - it never lands on a full stop, and the
@@ -584,7 +609,14 @@ class PersonalityTest {
      */
     private val notASentence = setOf(
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
-        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY",
+        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
+        // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
+        "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
+        // The shelf's EXPANSIONS group heading and the rename dialog title.
+        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
+        "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "CHANGE_ART",
+        "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.

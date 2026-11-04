@@ -290,6 +290,12 @@ data class Kit(
      * MPC programs do not interpret this metadata or bake it into individual samples.
      */
     val aquariumPerformance: JsonValue? = null,
+    /**
+     * A stable id, the same across rename, bin and restore, so an expansion
+     * can name its members. Null until the kit first joins one ([KitIds]):
+     * a kit nobody has gathered keeps exactly the kit.json it always had.
+     */
+    val id: String? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }

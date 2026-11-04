@@ -53,6 +53,23 @@ class LauncherIconTest {
     }
 
     @Test
+    fun `the adaptive icons carry a monochrome layer of the symbol`() {
+        // Android 13 themed icons draw only this layer, tinted by the system.
+        for (icon in listOf("mipmap-anydpi-v26/ic_launcher.xml", "mipmap-anydpi-v26/ic_launcher_round.xml")) {
+            assertTrue("<monochrome android:drawable=\"@drawable/ic_launcher_monochrome\"" in File(res, icon).readText(), "$icon has a monochrome layer")
+        }
+        assertEquals(points(Mark.symbol(30f, 30f, 48f)), paths("drawable/ic_launcher_monochrome.xml"))
+        assertEquals(List(4) { "#FFFFFF" }, fills("drawable/ic_launcher_monochrome.xml"), "one colour: the system tints it")
+    }
+
+    @Test
+    fun `the recording notification wears the mark`() {
+        val source = File("src/main/kotlin/com/snipsnap/app/MicSessionService.kt").readText()
+        assertTrue("ic_btn_speak_now" !in source, "no stock speaker glyph in the notification shade")
+        assertTrue("R.drawable.ic_mark_symbol" in source, "the symbol is the notification's icon")
+    }
+
+    @Test
     fun `the manifest points at the adaptive icon`() {
         val m = File("src/main/AndroidManifest.xml").readText()
         assertTrue("android:icon=\"@mipmap/ic_launcher\"" in m && "android:roundIcon=\"@mipmap/ic_launcher_round\"" in m)

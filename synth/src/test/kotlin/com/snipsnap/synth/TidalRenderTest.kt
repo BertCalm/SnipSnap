@@ -5,11 +5,17 @@ import com.snipsnap.json.Json
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
+import java.util.concurrent.Callable
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -112,6 +118,101 @@ class TidalRenderTest {
             assertFailsWith<CancellationException> { Tidal.render(TidalVoice.PAIR) }
         } finally {
             Thread.interrupted()
+        }
+    }
+
+    @Test
+    fun `an identical request waits for the render in flight and takes its completed copy`() {
+        // The emulator recipe: a preview and SEND TO PAD of this held patch ran side by side.
+        val held = mapOf("HOLD" to 1f)
+        Tidal.clearCaches()
+        val before = Tidal.freshRenderCount()
+        val inside = CountDownLatch(1)
+        val waiting = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            var checks = 0
+            var secondChecks = 0
+            // A request's first check precedes the cache lookup, and an uncontended entry makes
+            // none, so the first request's third check is inside the render that holds this
+            // recipe's flight. It holds there until the second request is provably waiting:
+            // that request's second check can only come from the flight's wait loop. So the
+            // second request is queued behind the first however the threads are scheduled.
+            val first = pool.submit(Callable {
+                Tidal.render(TidalVoice.STREAM, held, seed = Long.MAX_VALUE,
+                    cancelled = {
+                        if (++checks == 3) {
+                            inside.countDown()
+                            check(waiting.await(5, TimeUnit.MINUTES)) { "the second request never waited" }
+                        }
+                        false
+                    })
+            })
+            assertTrue(inside.await(5, TimeUnit.MINUTES), "the first render never started")
+            val second = pool.submit(Callable {
+                Tidal.render(TidalVoice.STREAM, held, seed = Long.MAX_VALUE,
+                    cancelled = { if (++secondChecks == 2) waiting.countDown(); false })
+            })
+            val a = first.get(5, TimeUnit.MINUTES).samples
+            val b = second.get(5, TimeUnit.MINUTES).samples
+            assertEquals(1, Tidal.freshRenderCount() - before, "the identical request synthesized a second field")
+            assertContentEquals(a, b)
+            assertEquals(0, Tidal.rendersInFlight())
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `flights hold back only an equal key and release cancelled interrupted and failed callers`() {
+        val cache = TidalAudioCache<String>(64)
+        val pool = Executors.newCachedThreadPool()
+        fun waitUntil(what: String, condition: () -> Boolean) {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            while (!condition()) {
+                assertTrue(System.nanoTime() < deadline, what)
+                Thread.sleep(1)
+            }
+        }
+        try {
+            val entered = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val owner = pool.submit(Callable {
+                cache.exclusive<String>("a", {}) {
+                    entered.countDown()
+                    release.await()
+                    throw IllegalStateException("render failed")
+                }
+            })
+            assertTrue(entered.await(10, TimeUnit.SECONDS))
+            assertEquals("b", pool.submit(Callable { cache.exclusive("b", {}) { "b" } }).get(10, TimeUnit.SECONDS),
+                "another recipe waited for this one")
+            // A waiter stops as soon as its own check cancels it...
+            val cancelled = pool.submit(Callable { cache.exclusive("a", { throw CancellationException() }) { "entered" } })
+            assertIs<CancellationException>(assertFailsWith<ExecutionException> { cancelled.get(10, TimeUnit.SECONDS) }.cause)
+            // ...or when its thread is interrupted, which stays set for runInterruptible.
+            var keptInterrupt = false
+            val interrupted = Thread {
+                try {
+                    cache.exclusive("a", {}) { }
+                } catch (_: CancellationException) {
+                    keptInterrupt = Thread.currentThread().isInterrupted
+                }
+            }.apply { start() }
+            waitUntil("the second caller never waited") { interrupted.state == Thread.State.TIMED_WAITING }
+            interrupted.interrupt()
+            interrupted.join(10_000)
+            assertTrue(keptInterrupt, "an interrupted waiter must stop as a cancellation, still interrupted")
+            // When the caller inside fails, a waiter enters and renders for itself.
+            val waiting = CountDownLatch(1)
+            val next = pool.submit(Callable { cache.exclusive("a", { waiting.countDown() }) { "rendered" } })
+            assertTrue(waiting.await(10, TimeUnit.SECONDS))
+            release.countDown()
+            assertIs<IllegalStateException>(assertFailsWith<ExecutionException> { owner.get(10, TimeUnit.SECONDS) }.cause)
+            assertEquals("rendered", next.get(10, TimeUnit.SECONDS))
+            assertEquals(0, cache.inFlight())
+        } finally {
+            pool.shutdownNow()
         }
     }
 

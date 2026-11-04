@@ -38,28 +38,35 @@ object ArtSidecar {
         val file = File(kitDir, FILE)
         if (!file.isFile) return null
         val obj = runCatching { Json.parse(file.readText(Charsets.UTF_8)) as? JsonValue.Obj }.getOrNull() ?: return null
-        val e = obj.entries
-        if ((e["version"] as? JsonValue.Num)?.value?.toInt() != VERSION) return null
-        val style = (e["style"] as? JsonValue.Str)?.value?.let { KitArt.Style.byId(it) } ?: return null
-        val palette = (e["palette"] as? JsonValue.Str)?.value?.let { Palettes.byId(it) } ?: return null
-        val mark = (e["mark"] as? JsonValue.Str)?.value?.let { Mark.Variant.byId(it) } ?: return null
-        val seed = when (val s = e["seedSlot"]) {
-            null, JsonValue.Null -> null
-            is JsonValue.Num -> s.value.toInt()
-            else -> return null
-        }
-        return ArtKnobs(style, palette, seed, mark)
+        if ((obj.entries["version"] as? JsonValue.Num)?.value?.toInt() != VERSION) return null
+        return knobsFrom(obj.entries)
     }
 
     fun write(kitDir: File, knobs: ArtKnobs) {
-        val m = linkedMapOf<String, JsonValue>(
-            "version" to JsonValue.Num(VERSION.toDouble()),
-            "style" to JsonValue.Str(knobs.style.id),
-            "palette" to JsonValue.Str(knobs.palette.id),
-            "seedSlot" to (knobs.seedSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
-            "mark" to JsonValue.Str(knobs.mark.id),
-        )
+        val m = linkedMapOf<String, JsonValue>("version" to JsonValue.Num(VERSION.toDouble()))
+        m.putAll(knobsFields(knobs))
         AtomicFile.writeText(File(kitDir, FILE), Json.write(JsonValue.Obj(m)))
+    }
+
+    /** The knobs as JSON fields, in art.json's order; shared with an expansion's own file. */
+    internal fun knobsFields(knobs: ArtKnobs): LinkedHashMap<String, JsonValue> = linkedMapOf(
+        "style" to JsonValue.Str(knobs.style.id),
+        "palette" to JsonValue.Str(knobs.palette.id),
+        "seedSlot" to (knobs.seedSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
+        "mark" to JsonValue.Str(knobs.mark.id),
+    )
+
+    /** [knobsFields] read back; null when any id is one this build does not know. */
+    internal fun knobsFrom(e: Map<String, JsonValue>): ArtKnobs? {
+        val style = (e["style"] as? JsonValue.Str)?.value?.let { KitArt.Style.byId(it) } ?: return null
+        val palette = (e["palette"] as? JsonValue.Str)?.value?.let { Palettes.byId(it) } ?: return null
+        val mark = (e["mark"] as? JsonValue.Str)?.value?.let { Mark.Variant.byId(it) } ?: return null
+        val seed = when (val v = e["seedSlot"]) {
+            null, JsonValue.Null -> null
+            is JsonValue.Num -> v.value.toInt()
+            else -> return null
+        }
+        return ArtKnobs(style, palette, seed, mark)
     }
 
     /** The sidecar's knobs, or the scheme's defaults when there are none to read. */

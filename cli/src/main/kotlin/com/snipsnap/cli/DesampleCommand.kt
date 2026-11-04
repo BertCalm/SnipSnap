@@ -14,7 +14,8 @@ import java.util.Locale
  * render with the patch as its recipe, bin-backed (`--undo` gives the
  * take before the de-sample back and refuses a pad it is no longer on top
  * of, `KitBuilderModel.undesamplePad`). A far match is named far and
- * refused for a pad unless `--force`.
+ * refused for a pad unless `--force`. A printed pad is refused in the pad
+ * sheet's words: REMOVE the print first.
  */
 object DesampleCommand {
 

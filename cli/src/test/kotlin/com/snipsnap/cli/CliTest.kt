@@ -1637,6 +1637,28 @@ class CliTest {
         assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)
     }
 
+    /** A print over the pad refuses `desample` in the pad sheet's words, exit 2 as its other refusals, touching nothing (2026-11-02). */
+    @Test
+    fun `desample refuses a printed pad, touching nothing, and the print still comes off`() {
+        val kitDir = File(temp, "ds-printed")
+        val m = KitBuilderModel.create("DSP", kitDir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val underPrint = m.pad(1)!!
+        val printed = com.snipsnap.shell.BoardSheet.apply(m, 1, .7f)
+        m.save()
+        val saved = KitStore.load(kitDir).pad(1)
+        val wet = File(kitDir, printed.sampleFile).readBytes()
+
+        val (code, stdout, stderr) = cli("desample", kitDir.path, "A01", "--force")
+        assertEquals(2, code, "stdout: $stdout stderr: $stderr")
+        assertContains(stderr, com.snipsnap.shell.Copy.boardRemoveBeforeDesample("WIDE"))
+        assertEquals(saved, KitStore.load(kitDir).pad(1), "the refusal leaves the pad and its print alone")
+        assertTrue(wet.contentEquals(File(kitDir, printed.sampleFile).readBytes()), "and its audio")
+
+        val removed = com.snipsnap.shell.BoardSheet.remove(KitBuilderModel.open(kitDir), 1)
+        assertEquals(underPrint.sampleFile, removed.sampleFile, "REMOVE still lands")
+    }
+
     @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))

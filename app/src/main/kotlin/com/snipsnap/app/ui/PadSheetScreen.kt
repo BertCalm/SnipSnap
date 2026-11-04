@@ -2126,6 +2126,23 @@ fun PadSheetScreen(
     }
 
     /**
+     * SPLICE ▸: a printed pad is refused on the tap, before TAPE SPLICE
+     * opens, the way SPREAD ▸ refuses one before its panel (2026-11-02).
+     * A splice writes its own recipe where the print's sits, so REMOVE could
+     * not bring the print's source back. `KitBuilderModel.splicePad` refuses
+     * it too, but only at COMMIT, after the takes are picked and the needle set.
+     */
+    fun openSplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe)))
+            return
+        }
+        onSplice(slot)
+    }
+
+    /**
      * DE-SAMPLE's UNDO, in the MAKE box's DE-SAMPLE row: the take the
      * de-sample binned comes back, and the patch and the `desampled` stamp
      * come off ([KitBuilderModel.undesamplePad]). Dimmed, not disabled, when
@@ -2951,6 +2968,12 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        // A print first, as SOFT HITS and SPREAD ask it (2026-11-02): the patch would
+        // take the print's place in the recipe, and REMOVE could not bring its source back.
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeDesample(PrintedPads.label(p.recipe)))
+            return
+        }
         if (p.velocityLayers.isNotEmpty()) {
             onToast(Copy.MUTATE_NEEDS_ONE)
             return
@@ -4025,13 +4048,14 @@ fun PadSheetScreen(
             // nothing. Its own label, not a bare UNDO: this foot is always
             // composed, so a second "UNDO" would sit beside the open box's.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
                 ActionButton(
                     "SPLICE ▸",
                     scheme,
                     enabled = !busy,
                     dimmed = binDaysLeft == null,
                     modifier = Modifier.weight(1f),
-                    onClick = { onSplice(slot) },
+                    onClick = ::openSplice,
                 )
                 ActionButton(
                     "UNDO SPLICE",
