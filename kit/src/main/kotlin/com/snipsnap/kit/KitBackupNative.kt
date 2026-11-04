@@ -36,7 +36,8 @@ internal object KitBackupNative {
             )) }),
             "pads" to JsonValue.Arr(kit.pads.sortedBy { it.slot }.map { pad -> JsonValue.Obj(linkedMapOf(
                 "slot" to JsonValue.Num(pad.slot.toDouble()),
-                "sampleHashes" to JsonValue.Arr(sampleFiles(pad).map { JsonValue.Str(XpnSourceMetadata.sha256(SafePath.child(kitDir, it))) }),
+                // A robin pad lands as take one, its original, and is dealt after this check.
+                "sampleHashes" to JsonValue.Arr(XpnRobin.landedHashes(pad, kitDir, sampleFiles(pad)).map { JsonValue.Str(it) }),
             )) }),
         ))
         val indexBytes = (Json.write(index) + "\n").toByteArray(Charsets.UTF_8)

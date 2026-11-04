@@ -223,6 +223,25 @@ object Robin {
         return rendered.map { t -> at.also { _ -> at += t.frameCount } }
     }
 
+    /**
+     * Deals the takes of every pad an import landed with robin settings and no chain, from the
+     * original it landed with: deterministic, so the chain comes back as it was exported, and the
+     * original goes into the bin where [undo] looks for it. The kit is saved into [dir] first, so a
+     * model can open it there; the importer saves what this returns.
+     */
+    val dealer: com.snipsnap.kit.RobinDealer = com.snipsnap.kit.RobinDealer { kit, dir ->
+        com.snipsnap.kit.KitStore.save(kit, dir)
+        val model = KitBuilderModel.open(dir)
+        for (pad in kit.pads) {
+            val settings = pad.robin ?: continue
+            if (pad.chain != null) continue
+            model.update(pad.slot) { it.copy(robin = null) }
+            apply(model, pad.slot, settings)
+            model.update(pad.slot) { it.copy(recipe = pad.recipe) }
+        }
+        model.kit
+    }
+
     /** Undo then apply: new settings over the same original. Only a robin chain qualifies. */
     fun rerender(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")

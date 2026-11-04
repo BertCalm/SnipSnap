@@ -124,10 +124,9 @@ object XpnPackager {
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))
         val programEntry = "Programs/$programStem.xpm"
         val programBytes = programXml.toByteArray(Charsets.UTF_8)
-        val sourceMetadata = XpnSourceMetadata.render(
-            kit, kitDir, programEntry, programBytes, samplesPrefix,
-            takes = cycleEntries.mapValues { (_, es) -> es.map { it.stem to requireNotNull(it.bytes) } },
-        )
+        val takeFiles = cycleEntries.mapValues { (_, es) -> es.map { it.stem to requireNotNull(it.bytes) } }
+        val sourceMetadata = XpnSourceMetadata.render(kit, kitDir, programEntry, programBytes, samplesPrefix, takes = takeFiles)
+        val robinMetadata = XpnRobin.render(kit, programEntry, programBytes, takeFiles)
 
         ZipOutputStream(outputFile.outputStream().buffered()).use { zip ->
             fun put(name: String, bytes: ByteArray) {
@@ -140,6 +139,7 @@ object XpnPackager {
             put(ExpansionWriter.XML_NAME, ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
             put(programEntry, programBytes)
             sourceMetadata?.let { put(XpnSourceMetadata.entryName(programEntry), it) }
+            robinMetadata?.let { put(XpnRobin.entryName(programEntry), it) }
             SourceAttribution.render(kit)?.let { put(SourceAttribution.fileName(kit), it.toByteArray(Charsets.UTF_8)) }
             preview?.let {
                 val tmp = File.createTempFile("preview", ".wav")

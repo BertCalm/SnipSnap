@@ -190,6 +190,8 @@ object KitBackup {
         // Overridable for tests, the same way ShelfImport.unzipSafely's
         // maxBytes is - real callers keep the default.
         budget: XpnImporter.WriteBudget = XpnImporter.WriteBudget(XpnImporter.DEFAULT_BUDGET_BYTES),
+        // Deals robin pads' takes again (`:shell`'s Robin); without it they restore as their originals.
+        robin: RobinDealer? = null,
     ): RestoreResult {
         require(backupFile.isFile) { "no such file: $backupFile" }
         val temp = java.nio.file.Files.createTempDirectory("kitrestore").toFile()
@@ -272,7 +274,7 @@ object KitBackup {
                                 } }
                             }
                         }
-                        results += XpnImporter.importWithNativeSources(xpn, destRoot, overwrite, budget) { imported, staging ->
+                        results += XpnImporter.importWithNativeSources(xpn, destRoot, overwrite, budget, robin) { imported, staging ->
                             val personal = if (native == null) {
                                 require(ConfluencePersonalFiles.referencedIds(imported).isEmpty()) { "personal voice backup is missing its native source archive" }
                                 imported

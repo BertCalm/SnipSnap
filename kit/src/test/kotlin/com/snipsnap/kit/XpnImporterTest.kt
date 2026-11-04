@@ -475,8 +475,21 @@ class XpnImporterTest {
         assertEquals(setOf("Round Trip"), destRoot.list()!!.toSet(), "no .xpn-replaced-* staging litter left beside the kit")
     }
 
-    @Test
-    fun `an exported robin program imports back as a playable pad`() {
+    /** [xpn] as another vendor would ship it: the same Cycle program and takes, no SnipSnap round-robin entry. */
+    private fun foreign(xpn: File): File = File(temp, "foreign-${xpn.name}").also { out ->
+        java.util.zip.ZipFile(xpn).use { zin ->
+            ZipOutputStream(out.outputStream()).use { zout ->
+                for (e in zin.entries()) {
+                    if (e.name.endsWith(".snipsnap-robin.json")) continue
+                    zout.putNextEntry(ZipEntry(e.name))
+                    zout.write(zin.getInputStream(e).readBytes())
+                    zout.closeEntry()
+                }
+            }
+        }
+    }
+
+    private fun robinBack(): Pair<File, File> {
         val kitDir = File(temp, "robinsrc")
         kitDir.mkdirs()
         val frames = 1000
@@ -495,13 +508,43 @@ class XpnImporterTest {
         KitStore.save(kit, kitDir)
         val xpn = File(temp, "Robin Back.xpn")
         XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        return kitDir to xpn
+    }
 
-        val result = XpnImporter.import(xpn, File(temp, "in"))
+    @Test
+    fun `an exported robin program lands its original and its settings`() {
+        val (kitDir, xpn) = robinBack()
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, "A01_Kick_01.wav")).samples
+
+        // With a dealer (the app's, the CLI's): settings back, all six takes dealt from take one.
+        val seen = HashMap<Int, ByteArray>()
+        val dealt = XpnImporter.import(xpn, File(temp, "dealt"), robin = RobinFixture.dealer(seen))
+        val pad = dealt.kit.pad(1)!!
+        assertEquals(RobinSettings(0.5f, 6), pad.robin)
+        assertEquals(6, pad.chain!!.cycle)
+        assertEquals("A01_Kick_01.wav", pad.sampleFile, "take one lands under the pad's own name")
+        assertTrue(original.copyOfRange(0, 1000).contentEquals(com.snipsnap.audio.WavReader.read(seen.getValue(1)).samples), "dealt from take one")
+        assertEquals(listOf("A01_Kick_01.wav"), dealt.directory.listFiles { f -> f.name.endsWith(".wav") }!!.map { it.name })
+
+        // Without one: the untouched original, a plain pad - never a chain the robin cannot undo.
+        val plain = XpnImporter.import(xpn, File(temp, "plain"))
+        val p = plain.kit.pad(1)!!
+        assertEquals(null, p.robin)
+        assertEquals(null, p.chain)
+        assertTrue(original.copyOfRange(0, 1000).contentEquals(com.snipsnap.audio.WavReader.read(File(plain.directory, p.sampleFile)).samples))
+    }
+
+    @Test
+    fun `a foreign cycle program imports back as a playable chain`() {
+        val (kitDir, robinXpn) = robinBack()
+        val xpn = foreign(robinXpn)
+
+        val result = XpnImporter.import(xpn, File(temp, "in"), robin = RobinFixture.dealer())
         val pad = result.kit.pad(1)!!
         val chain = pad.chain!!
         assertEquals(4, chain.cycle)
         assertEquals(listOf(0L, 1000L, 2000L, 3000L), chain.boundaries)
-        assertEquals(null, pad.robin, "a foreign chain: the importer cannot know the seed")
+        assertEquals(null, pad.robin, "a foreign chain: no settings travelled with it")
         assertEquals(null, chain.zones)
         val landed = com.snipsnap.audio.WavReader.read(File(result.directory, pad.sampleFile)).samples
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, "A01_Kick_01.wav")).samples
@@ -537,7 +580,7 @@ class XpnImporterTest {
                 }
             }
         }
-        val result = XpnImporter.import(bad, File(temp, "in2"))
+        val result = XpnImporter.import(foreign(bad), File(temp, "in2"))
         val pad = result.kit.pad(1)!!
         assertEquals(null, pad.chain)
         assertEquals("A01_Kick_01_RR1.wav", pad.sampleFile)

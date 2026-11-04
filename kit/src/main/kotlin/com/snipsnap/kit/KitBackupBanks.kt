@@ -34,7 +34,7 @@ internal object KitBackupBanks {
             "pads" to JsonValue.Arr(kit.pads.filter { it.source["engine"] == ConfluenceBankFiles.ENGINE }.sortedBy { it.slot }.map { pad ->
                 JsonValue.Obj(linkedMapOf("slot" to JsonValue.Num(pad.slot.toDouble()),
                     "sourceSha256" to JsonValue.Str(sourceHash(pad)),
-                    "sampleHashes" to JsonValue.Arr(samples(pad).map { JsonValue.Str(XpnSourceMetadata.sha256(SafePath.child(kitDir, it))) })))
+                    "sampleHashes" to JsonValue.Arr(XpnRobin.landedHashes(pad, kitDir, samples(pad)).map { JsonValue.Str(it) })))
             }),
         ))
         val bytes = (Json.write(index) + "\n").toByteArray(Charsets.UTF_8)

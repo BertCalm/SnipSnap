@@ -179,7 +179,7 @@ internal object XpnSourceMetadata {
     }
 
     /** Debit each accepted chunk immediately, including attempts later refused by parsing or the entry cap. */
-    private fun readBudgeted(input: InputStream, limit: Long, what: String, budget: XpnImporter.WriteBudget): ByteArray {
+    fun readBudgeted(input: InputStream, limit: Long, what: String, budget: XpnImporter.WriteBudget): ByteArray {
         val allowed = minOf(limit, budget.remaining)
         if (allowed == 0L) throw LimitedRead.TooLargeException("$what exceeds the remaining import budget")
         val output = java.io.ByteArrayOutputStream()

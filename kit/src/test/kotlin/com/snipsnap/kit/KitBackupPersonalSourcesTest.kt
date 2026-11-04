@@ -286,4 +286,29 @@ class KitBackupPersonalSourcesTest {
         assertTrue(error.message!!.contains("conflicting immutable source files"), error.message)
         assertFalse(dest.exists())
     }
+
+    @Test fun `a personal voice kit with a robin pad restores, the robin dealt again from its original`() {
+        val root = File(temp, "robin")
+        val dir = File(root, "Voice")
+        RobinFixture.addRobinPad(makeKit(root, "Voice", personal = true), dir, 3, rate)
+        val backup = KitBackup.backup(root, File(temp, "robin.zip"))
+        assertEquals(listOf("Voice"), backup.packed)
+
+        val seen = HashMap<Int, ByteArray>()
+        val result = KitBackup.restore(backup.file, File(temp, "robin-out"), robin = RobinFixture.dealer(seen))
+        assertTrue(result.skipped.isEmpty(), "${result.skipped}")
+        val kit = result.kits.single().kit
+        assertEquals(RobinFixture.SETTINGS, kit.pad(3)!!.robin)
+        assertEquals(RobinFixture.SETTINGS.takes, kit.pad(3)!!.chain!!.cycle)
+        assertEquals(RobinFixture.KIT, kit.robin)
+        assertContentEquals(RobinFixture.originalBytes(rate), seen.getValue(3), "the dealer starts from take one, the untouched original")
+        assertEquals(kit, KitStore.load(result.kits.single().directory))
+        assertEquals(id, kit.pad(1)!!.source[ConfluencePersonalFiles.SOURCE_ID_KEY])
+
+        // With nobody to deal the takes, the original lands as a plain pad, never a half-dealt one.
+        val plain = KitBackup.restore(backup.file, File(temp, "robin-plain")).kits.single()
+        assertEquals(null, plain.kit.pad(3)!!.robin)
+        assertEquals(null, plain.kit.pad(3)!!.chain)
+        assertContentEquals(RobinFixture.originalBytes(rate), File(plain.directory, plain.kit.pad(3)!!.sampleFile).readBytes())
+    }
 }
