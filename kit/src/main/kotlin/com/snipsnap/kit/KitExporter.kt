@@ -160,13 +160,13 @@ object KitExporter {
 
         for (p in kit.pads.sortedBy { it.slot }) {
             if (splitRobinTakes && p.isRobinChain && p.velocityLayers.isEmpty()) {
-                val takes = RobinSplit.takes(p, File(kitDir, p.sampleFile)).mapIndexed { i, take ->
-                    val stem = Names.sanitizeStem(stemPrefix + p.sampleFile.substringBeforeLast('.') + "_RR${i + 1}")
+                val takes = RobinSplit.split(p, kitDir, stemPrefix) { stem ->
                     check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
-                    val dst = File(samplesDir, "$stem.wav")
+                }.map { take ->
+                    val dst = File(samplesDir, "${take.stem}.wav")
                     dst.writeBytes(take.bytes)
                     written += dst
-                    VelocityLayer(stem, take.frames, 0, 127)
+                    VelocityLayer(take.stem, take.frames, 0, 127)
                 }
                 cycleBySlot[p.slot] = takes
                 stemBySlot[p.slot] = takes.first().sampleName

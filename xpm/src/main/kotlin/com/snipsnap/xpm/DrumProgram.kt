@@ -166,6 +166,7 @@ data class Pad(
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
         cycleLayers?.let { takes ->
             require(velocityLayers == null) { "a cycling pad has no velocity layers" }
+            require(chain == null) { "a cycling pad is already split into takes - it carries no chain" }
             require(takes.size in 2..4) { "a cycle has 2..4 takes, got ${takes.size}" }
             require(takes.all { it.velStart == 0 && it.velEnd == 127 }) { "cycle takes span the full velocity range" }
         }

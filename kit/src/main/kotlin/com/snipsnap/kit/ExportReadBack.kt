@@ -192,10 +192,8 @@ object ExportReadBack {
         }
 
     /** The cycling layers the `.xpm` writers were handed for a robin chain, in take order. */
-    private fun expectedTakes(p: KitPad): List<Zone> {
-        val stem = Names.sanitizeStem(p.sampleStem)
-        return (1..minOf(requireNotNull(p.chain).cycle, RobinSplit.MAX_TAKES)).map { Zone("${stem}_RR$it", 0, 127) }
-    }
+    private fun expectedTakes(p: KitPad): List<Zone> =
+        (1..RobinSplit.takeCount(p)).map { Zone(RobinSplit.takeStem("", p, it), 0, 127) }
 
     /** ACVS names the sample twice and X-Ray prefers the `.wav`-suffixed one; XML names the bare stem. One shape for both. */
     private fun stripWav(name: String): String =

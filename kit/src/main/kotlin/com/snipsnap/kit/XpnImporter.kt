@@ -304,18 +304,21 @@ object XpnImporter {
                 for (inst in instruments) {
                     val slot = if (zeroBased) inst.number + 1 else inst.number
                     if (slot !in 1..128 || !isCycle(inst)) continue
-                    foldCycle(staging, inst.layers.map { it.sampleName }, taken = (cycleChains.values.map { it.stem } + referenced).toSet())?.let { cycleChains[slot] = it }
+                    val taken = cycleChains.values.map { it.stem } + referenced
+                    foldCycle(staging, inst.layers.map { it.sampleName }, taken, budget)?.let { cycleChains[slot] = it }
                 }
-                val stillNeeded = instruments.filter { inst ->
-                    val slot = if (zeroBased) inst.number + 1 else inst.number
-                    slot !in cycleChains
-                }.flatMap { it.layers.map { l -> l.sampleName.lowercase() } }.toSet()
+                // Take files nothing lands on any more (folded into a chain, or
+                // layers 2..n of a cycle pad that could not fold) leave staging.
+                val keep = HashSet<String>()
                 for (inst in instruments) {
                     val slot = if (zeroBased) inst.number + 1 else inst.number
-                    if (slot in cycleChains) {
-                        for (l in inst.layers) if (l.sampleName.lowercase() !in stillNeeded) File(staging, "${l.sampleName}.wav").delete()
+                    when {
+                        slot in cycleChains -> {}
+                        isCycle(inst) -> keep += inst.layers.first().sampleName.lowercase()
+                        else -> inst.layers.forEach { keep += it.sampleName.lowercase() }
                     }
                 }
+                for (stem in referenced) if (stem.lowercase() !in keep) File(staging, "$stem.wav").delete()
 
                 val pads = instruments.mapNotNull { inst ->
                     val slot = if (zeroBased) inst.number + 1 else inst.number
@@ -436,26 +439,43 @@ object XpnImporter {
      * WAV in [staging]; null when they cannot join (rate or channel mismatch,
      * unreadable, more than a chain can cycle), leaving the takes as found.
      */
-    private fun foldCycle(staging: File, takes: List<String>, taken: Set<String>): CycleChain? = try {
-        val snips = takes.map { com.snipsnap.audio.WavReader.read(File(staging, "$it.wav")) }
-        val first = snips.first()
-        if (snips.any { it.sampleRate != first.sampleRate || it.channels != first.channels } || snips.size > 128) {
-            null
-        } else {
-            val depth = if (com.snipsnap.xpm.WavInfo.read(File(staging, "${takes.first()}.wav")).bitsPerSample == 16) {
-                com.snipsnap.audio.WavWriter.BitDepth.PCM_16
-            } else com.snipsnap.audio.WavWriter.BitDepth.PCM_24
-            val base = takes.first().replace(Regex("_RR1$"), "").let { if (it == takes.first()) "${it}_chain" else it }
-            var stem = base
-            var n = 2
-            while (stem.lowercase() in taken.map { it.lowercase() }) stem = "$base $n".also { n++ }
-            val boundaries = snips.runningFold(0L) { acc, s -> acc + s.frameCount }.dropLast(1)
-            val all = com.snipsnap.audio.Snip(snips.flatMap { it.samples.asList() }.toFloatArray(), first.channels, first.sampleRate)
-            com.snipsnap.audio.WavWriter.write(File(staging, "$stem.wav"), all, depth, allowNonMpcRate = true)
-            CycleChain(stem, ChainInfo(boundaries, cycle = snips.size))
+    private fun foldCycle(staging: File, takes: List<String>, taken: List<String>, budget: WriteBudget): CycleChain? {
+        // Unreadable or mismatched takes are an expected input, not an error: the pad lands as take one.
+        val snips = try {
+            takes.map { com.snipsnap.audio.WavReader.read(File(staging, "$it.wav")) }
+        } catch (e: java.io.IOException) {
+            return null
+        } catch (e: IllegalArgumentException) {
+            return null
         }
-    } catch (e: Exception) {
-        null
+        val first = snips.first()
+        if (snips.size > 128 || snips.any { it.sampleRate != first.sampleRate || it.channels != first.channels }) return null
+        val depth = if (com.snipsnap.xpm.WavInfo.read(File(staging, "${takes.first()}.wav")).bitsPerSample == 16) {
+            com.snipsnap.audio.WavWriter.BitDepth.PCM_16
+        } else com.snipsnap.audio.WavWriter.BitDepth.PCM_24
+        val base = takes.first().replace(Regex("_RR1$"), "").let { if (it == takes.first()) "${it}_chain" else it }
+        val used = taken.map { it.lowercase() }.toSet()
+        var stem = base
+        var n = 2
+        while (stem.lowercase() in used) stem = "$base ${n++}"
+        val boundaries = snips.runningFold(0L) { acc, s -> acc + s.frameCount }.dropLast(1)
+        val all = com.snipsnap.audio.Snip(snips.flatMap { it.samples.asList() }.toFloatArray(), first.channels, first.sampleRate)
+        val out = File(staging, "$stem.wav")
+        try {
+            com.snipsnap.audio.WavWriter.write(out, all, depth, allowNonMpcRate = true)
+            // The chain is new bytes on disk: it spends the same budget the takes did.
+            val size = out.length()
+            if (size > budget.remaining) {
+                throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                    "folding '${takes.first()}' into a chain writes past the ${budget.max / (1024 * 1024)} MB sample budget - refused",
+                )
+            }
+            budget.spend(size)
+        } catch (e: Throwable) {
+            out.delete()
+            throw e
+        }
+        return CycleChain(stem, ChainInfo(boundaries, cycle = snips.size))
     }
 
     /** Ordinary XPNs carry rendered audio and provenance, never the private editing source bundle. */

@@ -511,4 +511,36 @@ class XpnImporterTest {
         // The landed kit re-exports: a foreign chain, windowed to take one.
         assertTrue(KitExporter.exportProgramFolder(result.kit, result.directory, File(temp, "reexport")).program.isFile)
     }
+
+    @Test
+    fun `a cycle whose takes cannot join lands take one alone and leaves no orphan files`() {
+        val kitDir = File(temp, "mismatch")
+        kitDir.mkdirs()
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), Snip(FloatArray(4000) { i -> ((i % 50) - 25) / 100f }, 1, 44_100))
+        val kit = Kit("Mismatch", listOf(KitPad(
+            slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK,
+            chain = ChainInfo(listOf(0L, 1000L, 2000L, 3000L), cycle = 4), robin = RobinSettings(0.5f, 4),
+        )))
+        KitStore.save(kit, kitDir)
+        val good = File(temp, "good.xpn")
+        XpnPackager.write(kit, kitDir, good, Exporters.defaultMeta(kit))
+        // Same archive, but take two is recorded at 48 kHz: the takes cannot be joined.
+        val odd = File(temp, "odd.wav")
+        WavWriter.write(odd, Snip(FloatArray(1000) { 0.1f }, 1, 48_000), allowNonMpcRate = true)
+        val bad = File(temp, "bad.xpn")
+        java.util.zip.ZipFile(good).use { zin ->
+            ZipOutputStream(bad.outputStream()).use { zout ->
+                for (e in zin.entries()) {
+                    zout.putNextEntry(ZipEntry(e.name))
+                    zout.write(if (e.name.endsWith("A01_Kick_01_RR2.wav")) odd.readBytes() else zin.getInputStream(e).readBytes())
+                    zout.closeEntry()
+                }
+            }
+        }
+        val result = XpnImporter.import(bad, File(temp, "in2"))
+        val pad = result.kit.pad(1)!!
+        assertEquals(null, pad.chain)
+        assertEquals("A01_Kick_01_RR1.wav", pad.sampleFile)
+        assertEquals(listOf("A01_Kick_01_RR1.wav"), result.directory.listFiles { f -> f.name.endsWith(".wav") }!!.map { it.name })
+    }
 }

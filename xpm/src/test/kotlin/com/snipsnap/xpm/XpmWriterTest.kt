@@ -239,8 +239,9 @@ class XpmWriterTest {
         assertTrue("<ZonePlay>0</ZonePlay>" in xml)
         assertEquals(4, Regex("<SampleName>K_RR\\d</SampleName>").findAll(xml).count())
         assertEquals(4, Regex("<VelStart>0</VelStart>\\s*<VelEnd>127</VelEnd>").findAll(xml).count())
-        assertTrue("<SliceStart>0</SliceStart>" in xml)
-        for (it in 1..4) assertTrue("<SliceEnd>${100 + it}</SliceEnd>" in xml)
+        // Each layer windows exactly its own take: 0 .. that take's frames, in layer order.
+        val windows = Regex("<SliceStart>(\\d+)</SliceStart>\\s*<SliceEnd>(\\d+)</SliceEnd>").findAll(xml).map { it.groupValues[1] to it.groupValues[2] }.toList()
+        assertEquals((1..4).map { "0" to "${100 + it}" }, windows)
     }
 
     @Test fun `a plain pad still writes zone play one`() {
@@ -259,5 +260,11 @@ class XpmWriterTest {
         assertFailsWith<IllegalArgumentException> {
             Pad("a", 10, cycleLayers = (1..2).map { VelocityLayer("t$it", 10, 0, 127) }, velocityLayers = one)
         }
+        assertFailsWith<IllegalArgumentException> {
+            Pad("a", 10, cycleLayers = (1..2).map { VelocityLayer("t$it", 10, 0, 127) }, chain = ChainPlay(5, 2))
+        }
     }
 }
+
+private fun createTempDir(): File =
+    java.nio.file.Files.createTempDirectory("xpmtest").toFile()

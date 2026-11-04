@@ -202,26 +202,96 @@ class KitExporterTest {
         assertEquals(1, info.channels)
     }
 
-    @Test
-    fun `a foreign chain exports exactly as before`() {
-        val kit = robinKit(4, robin = null)
-        val result = KitExporter.exportProgramFolder(kit, kitDir, sd)
-        assertTrue(File(result.directory, "A01_Kick_01.wav").isFile)
-        assertTrue(result.directory.listFiles().orEmpty().none { "_RR" in it.name })
-        val frames = WavInfo.read(File(result.directory, "A01_Kick_01.wav")).frameCount
-        val expected = com.snipsnap.xpm.XpmWriter().write(com.snipsnap.xpm.DrumProgram("Robin Kit", listOf(
-            com.snipsnap.xpm.Pad("A01_Kick_01", frames, chain = kit.pads[0].chain!!.toPlay(frames), color = null),
-        )))
-        assertEquals(expected, result.program.readText())
-        assertTrue("<ZonePlay>0</ZonePlay>" !in expected)
+    // Deterministic fixtures whose .xpm sha256 was taken from the code at BASE 228a27a09,
+    // before round robin touched the exporters. The same builders ran there.
+    private fun pinnedTone(hz: Double, frames: Int) =
+        Snip(FloatArray(frames) { i -> (0.5 * Math.sin(2.0 * Math.PI * hz * i / 44_100)).toFloat() }, 1, 44_100)
+
+    private fun sha(f: File) = java.security.MessageDigest.getInstance("SHA-256").digest(f.readBytes())
+        .joinToString("") { "%02x".format(it) }
+
+    private fun plainPinnedKit(): Kit {
+        kitDir.mkdirs()
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), pinnedTone(60.0, 3000))
+        WavWriter.write(File(kitDir, "A02_Snare_01.wav"), pinnedTone(200.0, 2000))
+        return Kit("Pinned Plain", listOf(
+            KitPad(1, "A01_Kick_01.wav", drumClass = DrumClass.KICK, tuneCoarse = -2),
+            KitPad(2, "A02_Snare_01.wav", drumClass = DrumClass.SNARE, muteGroup = 4),
+        ))
+    }
+
+    private fun foreignPinnedKit(): Kit {
+        kitDir.mkdirs()
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), pinnedTone(90.0, 4000))
+        return Kit("Pinned Chain", listOf(
+            KitPad(1, "A01_Kick_01.wav", drumClass = DrumClass.KICK, chain = ChainInfo(listOf(0L, 1000L, 2000L, 3000L), cycle = 4)),
+        ))
     }
 
     @Test
-    fun `a kit without robin pads exports a plain program`() {
-        val result = KitExporter.exportProgramFolder(buildKit(), kitDir, sd)
-        val xml = result.program.readText()
-        assertTrue("<ZonePlay>0</ZonePlay>" !in xml)
+    fun `a foreign chain exports exactly as before`() {
+        val result = KitExporter.exportProgramFolder(foreignPinnedKit(), kitDir, sd)
+        assertTrue(File(result.directory, "A01_Kick_01.wav").isFile)
+        assertTrue(result.directory.listFiles().orEmpty().none { "_RR" in it.name })
+        assertEquals(FOREIGN_CHAIN_XPM_SHA, sha(result.program))
+    }
+
+    @Test
+    fun `a kit without robin pads exports byte-identical`() {
+        val result = KitExporter.exportProgramFolder(plainPinnedKit(), kitDir, sd)
+        assertEquals(PLAIN_XPM_SHA, sha(result.program))
         assertEquals(2, result.samples.size)
+    }
+
+    private companion object {
+        const val PLAIN_XPM_SHA = "30ff857ad411e8b3980ab9df932b367afa50c71d01c88c1048cce8f110306ef3"
+        const val FOREIGN_CHAIN_XPM_SHA = "2f496c6fc1b9b785e6e7ab89ad096681b04af25a097024f185bd4353f03b8ea7"
+    }
+
+    private fun ByteArray.indexOfFirst3(tag: String): Int =
+        (0..size - tag.length).first { i -> tag.indices.all { this[i + it] == tag[it].code.toByte() } }
+
+    @Test
+    fun `take one is the original take's PCM bytes, 16-bit minimum sample included`() {
+        kitDir.mkdirs()
+        val frames = 500
+        val samples = FloatArray(3 * frames) { i -> if (i == 3) -1f else ((i % 97) - 48) / 100f }
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), Snip(samples, 1, 44_100), WavWriter.BitDepth.PCM_16)
+        // The writer never emits -32768 (it scales by 32767); poke one in, as a real recorder's file can carry.
+        File(kitDir, "A01_Kick_01.wav").let { f ->
+            val b = f.readBytes()
+            val at = b.indexOfFirst3("data") + 8 + 6
+            b[at] = 0x00; b[at + 1] = 0x80.toByte()
+            f.writeBytes(b)
+        }
+        val kit = Kit("Bytes", listOf(KitPad(1, "A01_Kick_01.wav", chain = ChainInfo(listOf(0L, 500L, 1000L), cycle = 3), robin = RobinSettings(0.5f, 3))))
+        val result = KitExporter.exportProgramFolder(kit, kitDir, sd)
+        fun data(f: File): ByteArray {
+            val b = f.readBytes()
+            var pos = 12
+            while (pos + 8 <= b.size) {
+                val id = String(b, pos, 4, Charsets.US_ASCII)
+                val size = java.nio.ByteBuffer.wrap(b, pos + 4, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int
+                if (id == "data") return b.copyOfRange(pos + 8, pos + 8 + size)
+                pos += 8 + size + (size and 1)
+            }
+            error("no data chunk")
+        }
+        val whole = data(File(kitDir, "A01_Kick_01.wav"))
+        for (n in 1..3) {
+            assertTrue(whole.copyOfRange((n - 1) * 1000, n * 1000).contentEquals(data(File(result.directory, "A01_Kick_01_RR$n.wav"))), "RR$n data bytes")
+        }
+        assertEquals(-32768, java.nio.ByteBuffer.wrap(data(File(result.directory, "A01_Kick_01_RR1.wav"))).order(java.nio.ByteOrder.LITTLE_ENDIAN).getShort(6).toInt())
+    }
+
+    @Test
+    fun `a pad named like a take file is a preflight failure, not a late crash`() {
+        val kit = robinKit(4)
+        WavWriter.write(File(kitDir, "A01_Kick_01_RR1.wav"), takeSnip(1))
+        val clash = kit.copy(pads = kit.pads + KitPad(2, "A01_Kick_01_RR1.wav"))
+        val findings = Preflight.check(clash, kitDir)
+        assertTrue(findings.any { it.severity == Severity.FAIL && "collide" in it.message }, findings.joinToString { it.message })
+        assertFailsWith<ExportBlockedException> { KitExporter.exportProgramFolder(clash, kitDir, sd) }
     }
 
     @Test

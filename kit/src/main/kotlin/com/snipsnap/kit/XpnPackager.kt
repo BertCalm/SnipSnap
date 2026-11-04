@@ -82,11 +82,9 @@ object XpnPackager {
         for (p in kit.pads.sortedBy { it.slot }) {
             if (p.isRobinChain && p.velocityLayers.isEmpty()) {
                 // The .xpm cycles take files, not a chain: same split the folder export writes.
-                val takes = RobinSplit.takes(p, File(kitDir, p.sampleFile)).mapIndexed { i, take ->
-                    val stem = Names.sanitizeStem(p.sampleFile.substringBeforeLast('.') + "_RR${i + 1}")
+                val takes = RobinSplit.split(p, kitDir) { stem ->
                     check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
-                    Entry(stem, null, take.frames, take.bytes).also { allEntries += it }
-                }
+                }.map { take -> Entry(take.stem, null, take.frames, take.bytes).also { allEntries += it } }
                 cycleEntries[p.slot] = takes
                 bySlot[p.slot] = takes.first()
             } else if (p.velocityLayers.isEmpty()) {
