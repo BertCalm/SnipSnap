@@ -762,6 +762,11 @@ object Bore {
      * SCRAMBLE near a preset (see [Thump.scramble]); HOLD is capped short of LOOP,
      * because the top step is a choice, not a roll. BREATH and LIP are mapped onto
      * the speaking window, so any roll speaks.
+     *
+     * OVERBLOW is never rolled: it is a gesture the player asks for, so SCRAMBLE keeps the value it starts from (0 from
+     * the defaults and every factory preset, the patch's own when it scrambles [near] one) and draws nothing for it. The
+     * five other macros are drawn from exactly the random stream they were drawn from before OVERBLOW existed
+     * (`BoreFrozenSoundTest` holds them to it).
      */
     fun scramble(voice: BoreVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
@@ -770,8 +775,9 @@ object Bore {
             temperature >= 1f -> base
             else -> base + BorePresets.forVoice(voice).random(random).macros.filterKeys { it in base }
         }
-        val rolled = Dsp.scrambleNear(seed, temperature, random).toMutableMap()
+        val rolled = Dsp.scrambleNear(seed - OVERBLOW, temperature, random).toMutableMap()
         rolled["HOLD"] = rolled.getValue("HOLD").coerceAtMost(SCRAMBLE_HOLD_CEILING)
+        seed[OVERBLOW]?.let { rolled[OVERBLOW] = it }
         return rolled
     }
 
