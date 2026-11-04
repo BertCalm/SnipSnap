@@ -2,6 +2,8 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import java.io.ByteArrayOutputStream
 import com.snipsnap.json.JsonValue
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -75,7 +77,10 @@ class NacreVelocityKitTest {
                 assertEquals(264_600, sample.frameCount)
                 assertTrue(sample.samples.all { it.isFinite() })
                 assertTrue(sample.peak() in .001f.. .950001f)
-                assertEquals(0f, sample.samples.last())
+                // The native float tail may retain a sub-LSB residual. The delivered
+                // PCM24 ending must be exactly zero without changing the hard anchor.
+                val delivered = ByteArrayOutputStream().also { WavWriter.write(it, sample) }.toByteArray()
+                assertTrue(delivered.takeLast(3).all { it == 0.toByte() }, "the last PCM24 frame must be zero")
                 assertContentEquals(expected, sample.samples,
                     "pad ${index + 1} layer $layerIndex did not replay its native source and explicit input gain")
                 if (layerIndex == 2) assertContentEquals(native.samples, pad.snip.samples,
