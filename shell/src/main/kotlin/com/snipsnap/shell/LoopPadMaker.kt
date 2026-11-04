@@ -47,10 +47,29 @@ object LoopPadMaker {
 
     /**
      * Engine to voices that passed [LoopInstrumentScan] on 2026-11-04 with their first
-     * factory preset: a clean wrap, the key's pitch (or an octave of it, to check by
-     * ear) and a level steady within 6 dB at the lowest, root and highest note.
+     * factory preset: a clean wrap, the key's pitch and a level steady within 6 dB at
+     * the lowest, root and highest note. EMBOUCHURE reads exactly an octave above every
+     * key, the same at each note: a weak fundamental can fool the detector that way, so
+     * its octave waits on the owner's ear. FLOTILLA's CROSSWAVE and GATHER are left out
+     * because their octave jumps between notes.
      */
-    val QUALIFIED: Map<String, Set<String>> = mapOf()
+    val QUALIFIED: Map<String, Set<String>> = mapOf(
+        "AEROSTAT" to setOf("FLOAT"),
+        "ALLOY" to setOf("BASS", "KEY", "PLUCK", "BRASS", "STRING", "SOFT"),
+        "ARCO" to setOf("CELLO", "ERHU"),
+        "BORE" to setOf("FLUTE", "SAX"),
+        "COROLLA" to setOf("TONGUE", "CHOIR", "CHATTER", "ORBIT"),
+        "EMBOUCHURE" to setOf("REED", "BRASS", "BASS", "SOFT", "BOW", "WHISTLE"),
+        "FLOTILLA" to setOf("KNOCK", "DRIFT"),
+        "LACQUER" to setOf("GLASS", "KEY", "BRASS", "BASS", "PLUCK", "SILK"),
+        "MURMUR" to setOf("BASS", "KEY", "PLUCK", "METAL"),
+        "PITCHWHEEL" to setOf("PLUCK", "DRAW", "THAWED", "TURN"),
+        "SKITTER" to setOf("BASS", "LEAD", "HOLLOW", "FLUTTER", "CHIRP", "FRAY"),
+        "STOOP" to setOf("TINE", "CLAV", "ORGAN", "LEAD"),
+        "TANGLE" to setOf("LEAD", "HOLLOW", "PULSE", "METAL"),
+        "THAW" to setOf("BRITTLE", "RUNNER", "MELT", "CHANNEL", "FROST", "SHEET"),
+        "UNDERTOW" to setOf("KNOCK", "BREATH", "FLUTTER", "SEAL", "HOLLOW", "SURGE"),
+    )
 
     fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
 

@@ -2235,7 +2235,8 @@ fun SynthScreen(
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
         (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice)))) ||
-        (LoopPadMaker.offers(engine.name) && LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
+        (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
+            LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
         Engine.MERIDIAN -> MeridianPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)

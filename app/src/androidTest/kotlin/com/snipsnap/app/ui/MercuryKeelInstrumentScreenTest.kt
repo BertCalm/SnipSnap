@@ -10,6 +10,8 @@ import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryVoice
+import com.snipsnap.synth.Thaw
+import com.snipsnap.synth.ThawVoice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,9 +24,9 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * MERCURY and KEEL reach MAKE INSTRUMENT. Their makers' zones, layout and export are pinned by
- * the :shell tests; this proves the phone opens each one's sheet with its own note, without
- * rendering every zone on the emulator.
+ * MERCURY, KEEL and the shared loop maker's engines reach MAKE INSTRUMENT. Their makers' zones,
+ * layout and export are pinned by the :shell tests; this proves the phone opens each one's sheet
+ * with its own note, without rendering every zone on the emulator.
  */
 @RunWith(AndroidJUnit4::class)
 class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
@@ -71,6 +73,14 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
         show("KEEL", voice.name, Keel.defaults(voice))
         click("MAKE INSTRUMENT")
         compose.onNodeWithText("THEN HOLDS THE SETTLED BASS.", substring = true).assertExists()
+        compose.onNodeWithText("RELEASE", substring = true).assertExists()
+    }
+
+    @Test
+    fun a_shared_loop_engine_opens_its_held_instrument_sheet() {
+        show("THAW", ThawVoice.BRITTLE.name, Thaw.defaults(ThawVoice.BRITTLE))
+        click("MAKE INSTRUMENT")
+        compose.onNodeWithText("THIS SOUND'S HOLD LOOP", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 }

@@ -70,7 +70,9 @@ object LoopInstrumentScan {
     }
 
     class Row(val engine: String, val voice: String, val preset: String, val zones: List<Zone>, val failure: String? = null) {
-        val ok get() = failure == null && zones.isNotEmpty() && zones.all { it.ok }
+        /** Every zone in the same octave relation to its key: a keyboard whose notes jump octaves is not one. */
+        val octaveSteady get() = zones.mapNotNull { z -> z.cents?.let { Math.round(it / 1200.0) } }.distinct().size <= 1
+        val ok get() = failure == null && zones.isNotEmpty() && zones.all { it.ok } && octaveSteady
         fun why(): String = failure ?: buildList {
             if (zones.any { !it.audible }) add("silent")
             if (zones.any { !it.wrapOk }) add("wrap clicks (worst ${"%.1f".format(zones.maxOf { it.wrap })}x)")
@@ -78,6 +80,7 @@ object LoopInstrumentScan {
                 z.cents?.let { "%+.0fc".format(it) } ?: "none" })
             else if (zones.any { it.octaveOff }) add("octave to check by ear (" + zones.joinToString("/") { z ->
                 z.cents?.let { "%+.0fc".format(it) } ?: "none" } + ")")
+            if (!octaveSteady) add("octave jumps between notes")
             if (zones.any { !it.steadyOk }) add("pulses (spread up to ${"%.0f".format(zones.maxOf { it.spreadDb })} dB)")
         }.joinToString("; ").ifEmpty { "passes" }
     }
