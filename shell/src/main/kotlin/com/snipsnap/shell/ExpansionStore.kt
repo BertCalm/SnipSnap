@@ -12,7 +12,9 @@ import kotlin.random.Random
  * tile. Members are kit ids ([com.snipsnap.kit.KitIds]) in the order they
  * joined, so a kit's rename, bin and restore never touch membership.
  * [identifier] is fixed at birth and never recomputed, so the MPC's cache
- * sees one pack across re-exports and renames.
+ * sees one pack across re-exports and renames. [instrumentNames] are the
+ * shelf instruments packed beside the kits, by the name their sidecar
+ * carries, in the order they joined.
  */
 data class Expansion(
     val id: String,
@@ -21,6 +23,7 @@ data class Expansion(
     val memberKitIds: List<String>,
     val seedKitId: String?,
     val knobs: ArtKnobs,
+    val instrumentNames: List<String> = emptyList(),
 ) {
     val manufacturer: String get() = MANUFACTURER
 
@@ -69,6 +72,21 @@ class ExpansionStore(val root: File, private val random: Random = Random.Default
     }
 
     /**
+     * An expansion born from an instrument: no kit yet, so no seed and the
+     * default art until a kit joins and CHANGE ART draws one.
+     */
+    fun createForInstrument(title: String, instrumentName: String, knobs: ArtKnobs): Expansion {
+        require(checkTitle(title) == NameCheck.Ok) { "expansion title refused: '$title'" }
+        var id: String
+        do {
+            id = freshId()
+        } while (File(root, id).exists())
+        val e = Expansion(id, title, identifier(title, id), emptyList(), null, knobs, listOf(instrumentName))
+        write(e)
+        return e
+    }
+
+    /**
      * An expansion coming home from a backup: its [identifier] kept, so the
      * MPC still sees the same pack, under [title] or the first free "TITLE 2".
      * Refused when an expansion with that identifier is already here.
@@ -94,6 +112,12 @@ class ExpansionStore(val root: File, private val random: Random = Random.Default
     fun remove(id: String, kitId: String): Expansion = update(id) {
         it.copy(memberKitIds = it.memberKitIds - kitId, seedKitId = it.seedKitId.takeIf { s -> s != kitId })
     }
+
+    fun addInstrument(id: String, name: String): Expansion = update(id) {
+        if (name in it.instrumentNames) it else it.copy(instrumentNames = it.instrumentNames + name)
+    }
+
+    fun removeInstrument(id: String, name: String): Expansion = update(id) { it.copy(instrumentNames = it.instrumentNames - name) }
 
     fun rename(id: String, title: String): Expansion {
         require(checkTitle(title, exceptId = id) == NameCheck.Ok) { "expansion title refused: '$title'" }
@@ -138,6 +162,7 @@ class ExpansionStore(val root: File, private val random: Random = Random.Default
             "members" to JsonValue.Arr(e.memberKitIds.map { JsonValue.Str(it) }),
             "seed" to (e.seedKitId?.let { JsonValue.Str(it) } ?: JsonValue.Null),
             "art" to JsonValue.Obj(ArtSidecar.knobsFields(e.knobs)),
+            "instruments" to JsonValue.Arr(e.instrumentNames.map { JsonValue.Str(it) }),
         )
         AtomicFile.writeText(File(File(root, e.id).apply { mkdirs() }, FILE), Json.write(JsonValue.Obj(m)))
     }
@@ -153,7 +178,9 @@ class ExpansionStore(val root: File, private val random: Random = Random.Default
         val members = (e["members"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value }?.distinct() ?: return null
         val seed = (e["seed"] as? JsonValue.Str)?.value
         val knobs = (e["art"] as? JsonValue.Obj)?.let { ArtSidecar.knobsFrom(it.entries) } ?: return null
-        return Expansion(dir.name, title, identifier, members, seed, knobs)
+        // Absent on an expansion written before instruments could join: none.
+        val instruments = (e["instruments"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value }?.distinct().orEmpty()
+        return Expansion(dir.name, title, identifier, members, seed, knobs, instruments)
     }
 
     companion object {

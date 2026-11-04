@@ -37,6 +37,7 @@ import com.snipsnap.app.AndroidJCard
 import com.snipsnap.app.AndroidKitArt
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.Exports
+import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.PREFS
 import com.snipsnap.app.theme.LocalScheme
@@ -57,13 +58,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import com.snipsnap.kit.InstrumentStore
 import java.io.File
 import java.io.IOException
 
 private const val TAG = "ExpansionExport"
 
 /** One expansion and the shelf as it is now: what the panel draws and the model writes from. */
-private class Loaded(val all: List<Expansion>, val expansion: Expansion?, val members: List<Member>, val seed: Member?)
+private class Loaded(
+    val all: List<Expansion>,
+    val expansion: Expansion?,
+    val members: List<Member>,
+    val seed: Member?,
+    /** The expansion's instruments still on the shelf, as their sidecars. */
+    val instruments: List<File> = emptyList(),
+)
 
 /**
  * EXPORT's EXPANSION subject: which expansion, the kits in it now, the form
@@ -93,7 +102,10 @@ internal fun ExpansionExportPanel(
                 // An empty id is the switch's "the first one there is".
                 val e = all.firstOrNull { it.id == expansionId } ?: all.firstOrNull().takeIf { expansionId.isEmpty() }
                 val index = ExpansionMembers.index(shelfRoot)
-                Loaded(all, e, e?.let { ExpansionMembers.present(it, index) }.orEmpty(), e?.let { ExpansionMembers.seed(it, index) })
+                Loaded(
+                    all, e, e?.let { ExpansionMembers.present(it, index) }.orEmpty(), e?.let { ExpansionMembers.seed(it, index) },
+                    e?.let { ExpansionMembers.instruments(it, File(shelfRoot, KitShelf.INSTRUMENTS_DIR)) }.orEmpty(),
+                )
             }.getOrNull()
         }
     }
@@ -107,11 +119,12 @@ internal fun ExpansionExportPanel(
         }
         return
     }
-    val model = remember(e, now.members) {
+    val model = remember(e, now.members, now.instruments) {
         ExpansionExportModel(
             e, now.members, now.seed,
             tileRenderer = { k, d, knobs, label -> AndroidKitArt.png(k, d, knobs, label = label, assets = context.assets) },
             jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c, assets = context.assets) },
+            instruments = now.instruments,
         )
     }
     var form by remember(model) { mutableStateOf(model.form) }
@@ -197,7 +210,7 @@ internal fun ExpansionExportPanel(
                         overwriting = null
                         result.skipped.forEach { (kit, why) -> onToast(Copy.memberSkipped(kit, why)) }
                         val items = ExpansionExportModel.cardItems(result.result, model.form)
-                        val written = Copy.expansionWritten(e.title, result.result.packed.size)
+                        val written = Copy.expansionWritten(e.title, result.result.packed.size, result.result.instruments.size)
                         val files = offMain { items.sumOf { f -> if (f.isFile) 1 else f.walkTopDown().count { it.isFile } } }
                         if (card == null) {
                             onToast(written)
@@ -234,11 +247,16 @@ internal fun ExpansionExportPanel(
         ChipLine {
             for (x in now.all) Chip(x.title, x.id == e.id) { onPick(x.id) }
         }
-        Heading(Copy.EXPANSION_MEMBERS)
+        // An expansion of instruments alone has no kits row to show.
+        if (model.empty || now.members.isNotEmpty()) Heading(Copy.EXPANSION_MEMBERS)
         if (model.empty) {
             TapeText(Copy.EXPANSION_EMPTY, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else {
             for (m in now.members) TapeText(m.kit.name, TapeType.marker, scheme.ink.tape)
+        }
+        if (now.instruments.isNotEmpty()) {
+            Heading(Copy.EXPANSION_INSTRUMENTS)
+            for (f in now.instruments) TapeText(f.name.removeSuffix(InstrumentStore.SUFFIX), TapeType.marker, scheme.ink.tape)
         }
         ChipLine {
             Chip(Copy.EXPANSION_FORM_FOLDER, form == ExpansionExportModel.Form.FOLDER) {

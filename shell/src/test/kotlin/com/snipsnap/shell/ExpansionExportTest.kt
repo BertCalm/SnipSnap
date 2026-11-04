@@ -2,11 +2,17 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Snip
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitIds
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.Severity
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 import kotlin.random.Random
 import kotlin.test.AfterTest
@@ -184,5 +190,65 @@ class ExpansionExportTest {
         val again = model(e).write(root, overwrite = false)
         assertTrue(again is ExpansionExportModel.WriteResult.WouldOverwrite, "$again")
         assertTrue(model(e).write(root, overwrite = true) is ExpansionExportModel.WriteResult.Done)
+    }
+
+    private val instrumentsDir = File(temp, "Instruments")
+
+    /** A two-zone held instrument on the shelf, as MAKE INSTRUMENT leaves one. */
+    private fun instrument(name: String): String {
+        val samples = LinkedHashMap<String, Snip>()
+        val keygroups = listOf(48, 60).map { midi ->
+            val stem = "${name.filter { !it.isWhitespace() }}_$midi"
+            samples[stem] = Snip(FloatArray(6_000) { f -> (0.3 * Math.sin(2.0 * Math.PI * 220.0 * f / 44_100)).toFloat() }, 1, 44_100)
+            Keygroup(midi - 6, midi + 5, midi, listOf(VelocityLayer(stem, 6_000, 0, 127, loopStartFrame = 3_000)))
+        }
+        OneNote.writePackage(name, KeygroupProgram(name, keygroups, volumeRelease = .5f), samples, instrumentsDir, overwrite = false)
+        return name
+    }
+
+    @Test
+    fun `instruments join an expansion, survive a reload and pack beside its kits`() {
+        val kit = playable("Alpha", 1)
+        val e = expansion("Keys Vol 1", kit)
+        store.addInstrument(e.id, instrument("Glass Keys"))
+        store.addInstrument(e.id, "Glass Keys")
+        store.addInstrument(e.id, "Gone Keys")
+        val reloaded = ExpansionStore(store.root).get(e.id)!!
+        assertEquals(listOf("Glass Keys", "Gone Keys"), reloaded.instrumentNames, "joined once each, in order")
+        val present = ExpansionMembers.instruments(reloaded, instrumentsDir)
+        assertEquals(listOf(InstrumentStore.sidecar(instrumentsDir, "Glass Keys")), present, "a deleted instrument is simply not there")
+
+        val index = ExpansionMembers.index(shelf)
+        val model = ExpansionExportModel(reloaded, ExpansionMembers.present(reloaded, index), ExpansionMembers.seed(reloaded, index),
+            tileRenderer = { _, _, _, _ -> byteArrayOf(1) }, jCardRenderer = { _, _, _ -> byteArrayOf(2) }, instruments = present)
+        val done = model.write(File(temp, "out"), overwrite = false) as ExpansionExportModel.WriteResult.Done
+        assertEquals(listOf("Alpha"), done.result.packed)
+        assertEquals(listOf("Glass Keys"), done.result.instruments)
+        assertTrue(File(done.result.directory, "Programs/Glass Keys.xpm").isFile)
+        assertTrue(File(done.result.directory, "Samples/Glass Keys/GlassKeys_60.wav").isFile)
+
+        store.removeInstrument(e.id, "Gone Keys")
+        assertEquals(listOf("Glass Keys"), store.get(e.id)!!.instrumentNames)
+
+        // A file written before instruments could join has no such key: it reads as none.
+        val file = File(store.root, "${e.id}/${ExpansionStore.FILE}")
+        file.writeText(file.readText().replace(Regex(",\\s*\"instruments\"\\s*:\\s*\\[[^\\]]*\\]"), ""))
+        assertTrue("instruments" !in file.readText())
+        assertEquals(emptyList(), store.get(e.id)!!.instrumentNames)
+        assertEquals(listOf(kit), store.get(e.id)!!.memberKitIds)
+    }
+
+    @Test
+    fun `an expansion born from an instrument has no kit, no seed and still writes`() {
+        val e = store.createForInstrument("Bass Only", instrument("Low Bass"), knobs)
+        assertEquals(emptyList(), e.memberKitIds)
+        assertNull(e.seedKitId)
+        val present = ExpansionMembers.instruments(e, instrumentsDir)
+        val model = ExpansionExportModel(e, emptyList(), null, instruments = present)
+        assertTrue(!model.empty)
+        assertNull(model.tile(), "no kit draws the tile yet")
+        val done = model.write(File(temp, "out"), overwrite = false) as ExpansionExportModel.WriteResult.Done
+        assertEquals(listOf("Low Bass"), done.result.instruments)
+        assertTrue(File(done.result.directory, "Programs/Low Bass.xpm").isFile)
     }
 }

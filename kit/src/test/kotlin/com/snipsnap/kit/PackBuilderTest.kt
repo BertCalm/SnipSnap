@@ -2,13 +2,18 @@ package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 import java.util.zip.ZipFile
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PackBuilderTest {
@@ -100,5 +105,77 @@ class PackBuilderTest {
                 .contentEquals(File(kits[0], "A01_Kick_01.wav").readBytes()),
             "audio byte-identical through the round-trip",
         )
+    }
+
+    /** A three-zone held instrument as MAKE INSTRUMENT writes one: each zone a tone with a sustain loop. */
+    private fun buildInstrument(name: String, root: File = File(temp, "Instruments")): File {
+        val midis = listOf(48, 60, 72)
+        val samples = LinkedHashMap<String, Snip>()
+        val keygroups = midis.mapIndexed { i, midi ->
+            val hz = 440.0 * Math.pow(2.0, (midi - 69) / 12.0)
+            val stem = "${name.filter { !it.isWhitespace() }}_$midi"
+            samples[stem] = Snip(FloatArray(8_000) { f -> (0.4 * Math.sin(2.0 * Math.PI * hz * f / 44_100)).toFloat() }, 1, 44_100)
+            Keygroup(
+                lowNote = if (i == 0) midi - 9 else midi - 6, highNote = if (i == midis.lastIndex) midi + 9 else midi + 5,
+                rootNote = midi, layers = listOf(VelocityLayer(stem, 8_000, 0, 127, loopStartFrame = 4_000)),
+            )
+        }
+        OneNote.writePackage(name, KeygroupProgram(name, keygroups, volumeRelease = .6f), samples, root, overwrite = false)
+        return InstrumentStore.sidecar(root, name)
+    }
+
+    @Test
+    fun `an instrument lands as a keygroup program beside the kits, its loops intact`() {
+        val sidecar = buildInstrument("Glass Keys")
+        val result = PackBuilder.build(listOf(buildKit("Alpha", 90.0)), File(temp, "card"), meta,
+            asXpn = true, instruments = listOf(sidecar))
+
+        assertEquals(listOf("Alpha"), result.packed)
+        assertEquals(listOf("Glass Keys"), result.instruments)
+        assertTrue(result.skipped.isEmpty(), "${result.skipped}")
+        val dest = result.directory
+        assertEquals(setOf("Alpha.xpm", "Glass Keys.xpm"), File(dest, "Programs").list()!!.toSet())
+        val packageXpm = File(sidecar.parentFile, "Glass Keys_[TrackData]/Glass Keys.xpm")
+        assertEquals(packageXpm.readText(), File(dest, "Programs/Glass Keys.xpm").readText(), "the package's own program, as made")
+        for (midi in listOf(48, 60, 72)) {
+            val wav = File(dest, "Samples/Glass Keys/GlassKeys_$midi.wav")
+            assertTrue(wav.isFile, "zone $midi")
+            val smpl = assertNotNull(WavReader.readSmpl(wav), "zone $midi keeps its sampler sheet")
+            assertEquals(midi, smpl.rootNote)
+            assertEquals(4_000L, smpl.loop?.startFrame, "zone $midi keeps its sustain loop")
+        }
+        val preview = WavReader.read(File(dest, "[Previews]/Glass Keys.xpm.wav"))
+        assertEquals(4 * 44_100, preview.frameCount, "the preview holds the middle zone past its 8,000 frames")
+        ZipFile(assertNotNull(result.xpn)).use { zip ->
+            assertNotNull(zip.getEntry("Programs/Glass Keys.xpm"))
+            assertNotNull(zip.getEntry("Samples/Glass Keys/GlassKeys_60.wav"))
+        }
+    }
+
+    @Test
+    fun `instruments alone make a pack, and a clash or a broken package is named and left out`() {
+        val root = File(temp, "Instruments")
+        val good = buildInstrument("Low Bass", root)
+        val clash = buildInstrument("Alpha", File(temp, "Other"))
+        val broken = InstrumentStore.sidecar(root, "Broken").apply { writeText("{ not json") }
+        val missing = buildInstrument("No Program", root)
+        File(root, "No Program_[TrackData]/No Program.xpm").delete()
+
+        val withKit = PackBuilder.build(listOf(buildKit("Alpha", 90.0)), File(temp, "card"), meta,
+            instruments = listOf(good, clash, broken, missing))
+        assertEquals(listOf("Low Bass"), withKit.instruments)
+        val reasons = withKit.skipped.toMap()
+        assertEquals(setOf("Alpha", "Broken", "No Program"), reasons.keys)
+        assertTrue("already in this pack" in reasons.getValue("Alpha"), reasons.getValue("Alpha"))
+        assertTrue("could not be read" in reasons.getValue("Broken"), reasons.getValue("Broken"))
+        assertTrue("missing" in reasons.getValue("No Program"), reasons.getValue("No Program"))
+
+        val alone = PackBuilder.build(emptyList(), File(temp, "card2"), meta, instruments = listOf(good))
+        assertEquals(emptyList(), alone.packed)
+        assertEquals(listOf("Low Bass"), alone.instruments)
+
+        assertFailsWith<java.io.IOException> {
+            PackBuilder.build(emptyList(), File(temp, "card3"), meta, instruments = listOf(broken))
+        }
     }
 }

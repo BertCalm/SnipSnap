@@ -56,7 +56,10 @@ enum class ScourVoice { PLATE, PANE, SHEET, BEAM }
  * third listen dropped the held loop, so HOLD's whole range, top step included, is how long it rings.
  */
 object Scour {
-    /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
+    /**
+     * Seeds the draws. Every saved SCOUR sound regenerates through it: the presets, the starter kit's pads, and
+     * anything saved from the phone's synth picker. Changing it changes them all.
+     */
     const val MODEL_VERSION = 1
     /** PLATE's, PANE's and BEAM's lowest note, C3. */
     const val ROOT_MIDI = 48

@@ -583,6 +583,8 @@ testkit/tide-audition/
 testkit/vox-audition/
 testkit/resin-audition/
 testkit/render-times/
+testkit/loop-instruments/
+testkit/loop-instruments-pack/
 
 # Regenerable EROSION three-zone bank and separate SCAR listening study.
 testkit/erosion-playable-bank/

@@ -5,6 +5,7 @@ import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportReadBack
 import com.snipsnap.kit.ExpansionMeta
 import com.snipsnap.kit.Finding
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.PackBuilder
 import com.snipsnap.kit.Preflight
@@ -17,7 +18,9 @@ import java.io.File
  * `.xpn`. Each member is preflighted on its own, and one that fails is
  * skipped and named rather than sinking the rest; each packed member gets
  * its J-Card and is read back. The tile is the seed kit drawn with the
- * expansion's knobs and captioned with its title. The single-kit
+ * expansion's knobs and captioned with its title. [instruments] (their
+ * `.instrument.json` sidecars) pack beside the kits as keygroup programs.
+ * The single-kit
  * [ExportWizardModel] is untouched; this sits beside it.
  *
  * [tileRenderer] and [jCardRenderer] default to the desktop renderers; the
@@ -30,6 +33,7 @@ class ExpansionExportModel(
     var seed: Member?,
     private val tileRenderer: (Kit, File, ArtKnobs, String) -> ByteArray = { k, d, knobs, label -> KitArt.png(k, d, knobs, label = label) },
     private val jCardRenderer: (Kit, File, String?) -> ByteArray = JCard::awtPng,
+    private val instruments: List<File> = emptyList(),
 ) {
     enum class Form { FOLDER, XPN }
 
@@ -38,8 +42,8 @@ class ExpansionExportModel(
     /** The knobs the tile is drawn with: the expansion's own, until CHANGE ART edits them. */
     var knobs: ArtKnobs = expansion.knobs
 
-    /** No member is on the shelf: nothing to draw, nothing to write. */
-    val empty: Boolean get() = members.isEmpty()
+    /** No member kit and no instrument is on the shelf: nothing to write. */
+    val empty: Boolean get() = members.isEmpty() && instruments.isEmpty()
 
     /** Each member's preflight findings; a member with any FAIL is skipped by [write]. */
     fun runPreflight(): Map<Member, List<Finding>> = members.associateWith { Preflight.check(it.kit, it.dir) }
@@ -76,9 +80,12 @@ class ExpansionExportModel(
         val refused = members.mapNotNull { m ->
             preflight.getValue(m).firstOrNull { it.severity == Severity.FAIL }?.let { m.kit.name to it.message }
         }
+        // An instrument that will not read is refused here too, for the same reason.
+        val unreadable = instruments.filter { runCatching { InstrumentStore.read(it) }.isFailure }
+            .map { it.name.removeSuffix(InstrumentStore.SUFFIX) to "the instrument could not be read" }
         // Refused before PackBuilder runs: a confirmed replace clears the old folder first, and a
         // write that packs nothing must not cost the export that was already there.
-        if (passing.isEmpty()) return WriteResult.Nothing(refused)
+        if (passing.isEmpty() && unreadable.size == instruments.size) return WriteResult.Nothing(refused + unreadable)
         val meta = ExpansionMeta(expansion.title, manufacturer = expansion.manufacturer, identifier = expansion.identifier)
         val jCards = passing.associate { m ->
             "[J-Cards]/${m.kit.name}.png" to jCardRenderer(m.kit, m.dir, Label.forKit(m.dir))
@@ -90,6 +97,7 @@ class ExpansionExportModel(
                 asXpn = form == Form.XPN,
                 overwrite = overwrite,
                 extraFiles = jCards,
+                instruments = instruments,
             )
         } catch (e: DestinationExists) {
             return WriteResult.WouldOverwrite(e.path)
