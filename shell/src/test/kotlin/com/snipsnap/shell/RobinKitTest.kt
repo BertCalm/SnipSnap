@@ -11,6 +11,7 @@ import java.security.MessageDigest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -132,5 +133,61 @@ class RobinKitTest {
         assertEquals(before, (1..3).associateWith { sha(m, it) })
         assertNull(m.pad(1)!!.robin)
         assertNull(m.kit.robin)
+    }
+
+    @Test
+    fun `the kit switch keeps tonal and note pads in tune and the pad switch still takes them`() {
+        val m = KitBuilderModel.create("T", File(temp, "T"))
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.tom(), DrumClass.TONAL)
+        m.assign(3, DrumSynth.tom(), DrumClass.TOM)
+        m.update(3) { it.copy(source = it.source + (Spread.NOTE_KEY to "C3")) }
+        val r = RobinKit.on(m)
+        assertEquals(listOf(1), r.changed)
+        assertEquals(RobinKit.Skip.TONAL, r.skipped[2])
+        assertEquals(RobinKit.Skip.TONAL, r.skipped[3])
+        assertNull(m.pad(2)!!.chain)
+        // Deliberately, one pad at a time: still allowed.
+        Robin.apply(m, 2, RobinSettings(0.6f, 6, 0, followsKit = false))
+        assertTrue(m.pad(2)!!.chain != null)
+    }
+
+    @Test
+    fun `the ON line never says ON 0 PADS`() {
+        val loops = KitBuilderModel.create("L", File(temp, "L"))
+        loops.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        loops.update(1) { it.copy(loop = true) }
+        loops.assign(2, DrumSynth.tom(), DrumClass.TONAL)
+        val none = RobinKit.onLine(RobinKit.on(loops))
+        assertTrue("0 PADS" !in none, none)
+        assertEquals(Copy.ROBIN_KIT_NONE + " " + Copy.ROBIN_SKIPPED_LOOPS + " " + Copy.ROBIN_SKIPPED_TONAL, none)
+
+        val m = model("Again")
+        RobinKit.on(m)
+        val again = RobinKit.onLine(RobinKit.on(m))
+        assertEquals(Copy.robinKitOn(1) + " " + Copy.ROBIN_SKIPPED_LOOPS, again, "pads already on count as on")
+    }
+
+    @Test
+    fun `a final save that fails is a stop, not a silent success`() {
+        val m = model("Save")
+        val dir = m.kitDir
+        assertFailsWith<RobinKit.Stopped> {
+            RobinKit.runSaving(dir) { model ->
+                val r = RobinKit.on(model)
+                // kit.json can no longer be written: a folder sits where it goes.
+                File(dir, com.snipsnap.kit.KitStore.FILE_NAME).delete()
+                File(dir, com.snipsnap.kit.KitStore.FILE_NAME).mkdirs()
+                r
+            }
+        }
+    }
+
+    @Test
+    fun `a kit that will not open is a plain failure, not a stop`() {
+        val m = model("Open")
+        File(m.kitDir, com.snipsnap.kit.KitStore.FILE_NAME).writeText("{ not json")
+        val e = assertFailsWith<Exception> { RobinKit.onSaving(m.kitDir) }
+        assertTrue(e !is RobinKit.Stopped, "nothing was dealt: $e")
     }
 }

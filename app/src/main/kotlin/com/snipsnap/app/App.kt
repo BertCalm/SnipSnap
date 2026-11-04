@@ -3011,11 +3011,13 @@ fun App(shelf: KitShelf) {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "robinKit: failed", e)
-                    (e as? KitShelf.RobinStopped)?.let { stopped ->
+                    val stopped = e as? KitShelf.RobinStopped
+                    if (stopped != null) {
                         if (open?.dir == source.dir) open = stopped.entry
                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     }
-                    dock.say(Copy.ROBIN_KIT_FAILED)
+                    // Only a stop dealt anything; a kit that would not open was never touched.
+                    dock.say(if (stopped != null) Copy.ROBIN_KIT_FAILED else Copy.ROBIN_KIT_DIDNT_RUN)
                     return@launch
                 }
                 if (open?.dir == source.dir) open = entry
@@ -3027,11 +3029,8 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    // The dock holds one line, so the loops note rides the same line as the count.
-    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.onSaving(it) }) { r ->
-        val loops = r.skipped.values.any { it == com.snipsnap.shell.RobinKit.Skip.LOOP }
-        Copy.robinKitOn(r.changed.size) + if (loops) " " + Copy.ROBIN_SKIPPED_LOOPS else ""
-    }
+    // The dock holds one line, so the skip notes ride the same line as the count.
+    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.onSaving(it) }) { com.snipsnap.shell.RobinKit.onLine(it) }
 
     fun robinKitSet(settings: com.snipsnap.kit.KitRobin) = robinKit({ com.snipsnap.shell.RobinKit.setSaving(it, settings) }) { "" }
 
