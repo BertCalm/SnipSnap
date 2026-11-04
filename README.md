@@ -14,6 +14,8 @@ PLAY / KEYS / SURFACE on the native engine, synth, and export). What still
 needs a phone or the Live III is [`docs/BENCH.md`](docs/BENCH.md). Where
 the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
+HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
+
 ## The loop
 
 ```

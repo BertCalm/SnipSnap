@@ -316,6 +316,18 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
+### HYDROFORM — native two-voice prototype
+
+DOME and BULKHEAD port the accepted Python R5 sources, pressure-return dispersion,
+dynamic slope folding and approved ARREST range. DOME's top HOLD step is a measured
+2 s impact loop assuming 120 BPM; BULKHEAD is finite. Saved velocity, strict recipe replay,
+registry and velocity integration are present. Native house-stage output is a new listening
+gate; no factory presets, kit or Android picker are claimed in this round. Raw Python/native
+parity, probe and timing evidence are recorded in [HYDROFORM](HYDROFORM.md) and its
+[implementation specification](superpowers/specs/2026-11-04-hydroform-native-engine.md).
+The strongest BULKHEAD corner's aliasing risk remains disclosed.
+
+
 ### LIBRATION — finite gestures and recurring held keys (native integration)
 
 GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body

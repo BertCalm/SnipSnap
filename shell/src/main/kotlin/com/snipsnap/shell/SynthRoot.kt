@@ -50,6 +50,8 @@ import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
+import com.snipsnap.synth.Hydroform
+import com.snipsnap.synth.HydroformPatch
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
@@ -295,6 +297,7 @@ object SynthRoot {
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
+        is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
         is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
         is MagnetPatch -> tune(patch, { Magnet.rootMidi(patch.voice) + Magnet.semitonesFor(it) })

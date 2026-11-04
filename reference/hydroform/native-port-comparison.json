@@ -1,0 +1,46 @@
+{
+  "raw_parity_gate": "pass",
+  "raw_tolerance": {
+    "peak": 0.0001,
+    "rms": 2e-05
+  },
+  "rows": [
+    {
+      "case": "dome-default",
+      "raw_peak_error": 2.9801487833047702e-08,
+      "raw_rms_error": 5.611623767750022e-09,
+      "output_alignment_frames": 0,
+      "output_fitted_gain": 0.6526054642234033,
+      "output_residual_db": -42.14046530369853
+    },
+    {
+      "case": "dome-hard-4",
+      "raw_peak_error": 2.980191238233232e-08,
+      "raw_rms_error": 3.73616840465056e-09
+    },
+    {
+      "case": "dome-hard-16",
+      "raw_peak_error": 2.9802139867030064e-08,
+      "raw_rms_error": 3.744376870476781e-09
+    },
+    {
+      "case": "bulkhead-default",
+      "raw_peak_error": 2.980166136090645e-08,
+      "raw_rms_error": 5.149285626675499e-09,
+      "output_alignment_frames": 0,
+      "output_fitted_gain": 0.8075921456815018,
+      "output_residual_db": -37.063723670307944
+    },
+    {
+      "case": "bulkhead-hard-4",
+      "raw_peak_error": 2.979493740618011e-08,
+      "raw_rms_error": 3.761327724895839e-09
+    },
+    {
+      "case": "bulkhead-hard-16",
+      "raw_peak_error": 2.980079294445659e-08,
+      "raw_rms_error": 3.765836052060693e-09
+    }
+  ],
+  "scope": "Python R5 vs Kotlin model 1. Macros quantized to Float before Python comparison. Output residual includes house filtering, resampling and loudness differences; not an alias bound."
+}
