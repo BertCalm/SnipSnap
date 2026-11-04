@@ -700,8 +700,10 @@ zero on every commercial layer) — the format's "no two hits alike"
 dice. (GG4's first verdict — "no round robin anywhere" — was wrong:
 round robin exists as chain-based **Slice Motion**, `sliceIncrement`
 stepping through a chain WAV per hit; see `chop --break-pad` and
-`robin`. Humanize is the *other* mechanism: randomization, not
-rotation.)
+`robin`. The `.xpm` has its own cycle field too, `<ZonePlay>0</ZonePlay>`
+(Cycle): `.xpm`-based exports write a robin pad's first four takes as
+`_RR1..RR4` WAVs on full-range cycling layers, which the MPC alternates.
+Humanize is the *other* mechanism: randomization, not rotation.)
 Humanize scales them conservatively (pitch ×0.05, volume ×0.2, pan
 ×0.1) and the hardware rolls the dice on every hit. MPC 2 exports
 have no such fields and honestly ignore it. Bench row: humanize 0.5

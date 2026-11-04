@@ -93,7 +93,7 @@ object KitExporter {
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")
 
-        val (slots, written) = buildSlots(kit, kitDir, samplesDir = dest)
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir = dest, splitRobinTakes = true)
         val program = XpmWriter().writeTo(dest, DrumProgram(kit.name, slots))
         writeSidecar(kit, slots, dest)
         return ExportResult(dest, program, written, findings)
@@ -112,7 +112,7 @@ object KitExporter {
         samplesDir: File,
     ): Pair<File, List<File>> {
         programDir.mkdirs()
-        val (slots, written) = buildSlots(kit, kitDir, samplesDir)
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir, splitRobinTakes = true)
         val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots))
         return program to written
     }
@@ -132,6 +132,13 @@ object KitExporter {
          * `_[ProjectData]/` without their `A01_Kick_01`s colliding.
          */
         stemPrefix: String = "",
+        /**
+         * `.xpm` exports only: write each robin chain's first takes as
+         * `_RR1..RR4` WAVs on full-range cycling layers (see [RobinSplit])
+         * instead of copying the chain. The `.xtd`, DecentSampler and SFZ
+         * writers keep the default and the whole chain.
+         */
+        splitRobinTakes: Boolean = false,
     ): Pair<List<Pad?>, List<File>> {
         samplesDir.mkdirs()
 
@@ -139,6 +146,7 @@ object KitExporter {
         val stemBySlot = HashMap<Int, String>()
         val frameCountBySlot = HashMap<Int, Long>()
         val layersBySlot = HashMap<Int, List<VelocityLayer>>()
+        val cycleBySlot = HashMap<Int, List<VelocityLayer>>()
         val used = HashSet<String>()
 
         fun copySample(file: String): Pair<String, Long> {
@@ -151,7 +159,19 @@ object KitExporter {
         }
 
         for (p in kit.pads.sortedBy { it.slot }) {
-            if (p.velocityLayers.isEmpty()) {
+            if (splitRobinTakes && p.isRobinChain && p.velocityLayers.isEmpty()) {
+                val takes = RobinSplit.takes(p, File(kitDir, p.sampleFile)).mapIndexed { i, take ->
+                    val stem = Names.sanitizeStem(stemPrefix + p.sampleFile.substringBeforeLast('.') + "_RR${i + 1}")
+                    check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
+                    val dst = File(samplesDir, "$stem.wav")
+                    dst.writeBytes(take.bytes)
+                    written += dst
+                    VelocityLayer(stem, take.frames, 0, 127)
+                }
+                cycleBySlot[p.slot] = takes
+                stemBySlot[p.slot] = takes.first().sampleName
+                frameCountBySlot[p.slot] = takes.first().frameCount
+            } else if (p.velocityLayers.isEmpty()) {
                 val (stem, frames) = copySample(p.sampleFile)
                 stemBySlot[p.slot] = stem
                 frameCountBySlot[p.slot] = frames
@@ -179,7 +199,7 @@ object KitExporter {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
-                loop = p.loop,
+                loop = p.loop && p.slot !in cycleBySlot,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
                 attack = p.attack,
@@ -187,7 +207,8 @@ object KitExporter {
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
-                chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
+                chain = if (p.slot in cycleBySlot) null else p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
+                cycleLayers = cycleBySlot[p.slot],
             )
         }
         SourceAttribution.writeTo(kit, samplesDir)

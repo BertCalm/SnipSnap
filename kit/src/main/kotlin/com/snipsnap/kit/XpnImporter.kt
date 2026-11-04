@@ -297,15 +297,39 @@ object XpnImporter {
                     }
                 }
 
+                // A Cycle pad (ZonePlay 0, every layer full-range) is round robin:
+                // fold its take files into one chain so SnipSnap plays them the
+                // same way. Take files only the chain used are folded away.
+                val cycleChains = HashMap<Int, CycleChain>()
+                for (inst in instruments) {
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    if (slot !in 1..128 || !isCycle(inst)) continue
+                    foldCycle(staging, inst.layers.map { it.sampleName }, taken = (cycleChains.values.map { it.stem } + referenced).toSet())?.let { cycleChains[slot] = it }
+                }
+                val stillNeeded = instruments.filter { inst ->
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    slot !in cycleChains
+                }.flatMap { it.layers.map { l -> l.sampleName.lowercase() } }.toSet()
+                for (inst in instruments) {
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    if (slot in cycleChains) {
+                        for (l in inst.layers) if (l.sampleName.lowercase() !in stillNeeded) File(staging, "${l.sampleName}.wav").delete()
+                    }
+                }
+
                 val pads = instruments.mapNotNull { inst ->
                     val slot = if (zeroBased) inst.number + 1 else inst.number
                     if (slot !in 1..128) return@mapNotNull null
                     val ordered = inst.layers.sortedBy { it.velStart }
-                    val main = ordered.last()
+                    val cycle = cycleChains[slot]
+                    // A cycle pad that could not fold lands take one, a plain pad.
+                    val plainLayers = if (isCycle(inst) && cycle == null) listOf(ordered.first()) else ordered
+                    val main = cycle?.let { ParsedLayer(it.stem, 0, 127) } ?: plainLayers.last()
                     KitPad(
                         slot = slot,
                         sampleFile = "${main.sampleName}.wav",
                         displayName = main.sampleName,
+                        chain = cycle?.chain,
                         drumClass = DrumClass.UNKNOWN,
                         level = inst.volume.coerceIn(0f, 1f),
                         pan = inst.pan.coerceIn(0f, 1f),
@@ -324,8 +348,8 @@ object XpnImporter {
                             // single pad cannot discard the source credits.
                             legacyNotice?.let { put("attribution", it) }
                         },
-                        velocityLayers = if (ordered.size < 2) emptyList() else {
-                            ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
+                        velocityLayers = if (cycle != null || plainLayers.size < 2) emptyList() else {
+                            plainLayers.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
                         },
                     )
                 }
@@ -402,6 +426,38 @@ object XpnImporter {
         }
     }
 
+    private fun isCycle(inst: ParsedInstrument): Boolean =
+        inst.zonePlay == 0 && inst.layers.size >= 2 && inst.layers.all { it.velStart == 0 && it.velEnd == 127 }
+
+    private class CycleChain(val stem: String, val chain: ChainInfo)
+
+    /**
+     * Concatenates the staged take WAVs [takes] (in layer order) into one chain
+     * WAV in [staging]; null when they cannot join (rate or channel mismatch,
+     * unreadable, more than a chain can cycle), leaving the takes as found.
+     */
+    private fun foldCycle(staging: File, takes: List<String>, taken: Set<String>): CycleChain? = try {
+        val snips = takes.map { com.snipsnap.audio.WavReader.read(File(staging, "$it.wav")) }
+        val first = snips.first()
+        if (snips.any { it.sampleRate != first.sampleRate || it.channels != first.channels } || snips.size > 128) {
+            null
+        } else {
+            val depth = if (com.snipsnap.xpm.WavInfo.read(File(staging, "${takes.first()}.wav")).bitsPerSample == 16) {
+                com.snipsnap.audio.WavWriter.BitDepth.PCM_16
+            } else com.snipsnap.audio.WavWriter.BitDepth.PCM_24
+            val base = takes.first().replace(Regex("_RR1$"), "").let { if (it == takes.first()) "${it}_chain" else it }
+            var stem = base
+            var n = 2
+            while (stem.lowercase() in taken.map { it.lowercase() }) stem = "$base $n".also { n++ }
+            val boundaries = snips.runningFold(0L) { acc, s -> acc + s.frameCount }.dropLast(1)
+            val all = com.snipsnap.audio.Snip(snips.flatMap { it.samples.asList() }.toFloatArray(), first.channels, first.sampleRate)
+            com.snipsnap.audio.WavWriter.write(File(staging, "$stem.wav"), all, depth, allowNonMpcRate = true)
+            CycleChain(stem, ChainInfo(boundaries, cycle = snips.size))
+        }
+    } catch (e: Exception) {
+        null
+    }
+
     /** Ordinary XPNs carry rendered audio and provenance, never the private editing source bundle. */
     private fun renderedBankSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
         if (pad.source["engine"] != ConfluenceBankFiles.ENGINE && pad.source["engine"] != ConfluenceBankFiles.RENDERED_ENGINE) pad
@@ -434,6 +490,8 @@ object XpnImporter {
         val tuneFine: Int,
         val muteGroup: Int,
         val oneShot: Boolean,
+        /** `ZonePlay`: 0 = Cycle (round-robin layers), 1 = velocity zones; null when absent. */
+        val zonePlay: Int?,
         /** Shape fields, already default-collapsed to null (see [shapeOrNull]). */
         val attack: Float?,
         val decay: Float?,
@@ -496,6 +554,7 @@ object XpnImporter {
                 tuneFine = directText(inst, "TuneFine")?.toIntOrNull() ?: 0,
                 muteGroup = directText(inst, "MuteGroup")?.toIntOrNull() ?: 0,
                 oneShot = directText(inst, "OneShot")?.equals("False", ignoreCase = true) != true,
+                zonePlay = directText(inst, "ZonePlay")?.trim()?.toIntOrNull(),
                 attack = shapeOrNull(directText(inst, "VolumeAttack"), default = 0f),
                 decay = shapeOrNull(directText(inst, "VolumeDecay"), default = 0.047244f),
                 cutoff = shapeOrNull(directText(inst, "Cutoff"), default = 1f),

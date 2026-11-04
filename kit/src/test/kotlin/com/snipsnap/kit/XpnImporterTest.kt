@@ -474,4 +474,41 @@ class XpnImporterTest {
         )
         assertEquals(setOf("Round Trip"), destRoot.list()!!.toSet(), "no .xpn-replaced-* staging litter left beside the kit")
     }
+
+    @Test
+    fun `an exported robin program imports back as a playable pad`() {
+        val kitDir = File(temp, "robinsrc")
+        kitDir.mkdirs()
+        val frames = 1000
+        val snip = Snip(FloatArray(6 * frames) { i -> ((i / frames + 1) * 0.1f) * (if (i % 2 == 0) 1f else -1f) }, 1, 44_100)
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), snip)
+        val kit = Kit(
+            "Robin Back",
+            listOf(
+                KitPad(
+                    slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK,
+                    chain = ChainInfo((0 until 6).map { it * 1000L }, cycle = 6), robin = RobinSettings(0.5f, 6),
+                    source = mapOf("recordedBy" to "me"),
+                ),
+            ),
+        )
+        KitStore.save(kit, kitDir)
+        val xpn = File(temp, "Robin Back.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+
+        val result = XpnImporter.import(xpn, File(temp, "in"))
+        val pad = result.kit.pad(1)!!
+        val chain = pad.chain!!
+        assertEquals(4, chain.cycle)
+        assertEquals(listOf(0L, 1000L, 2000L, 3000L), chain.boundaries)
+        assertEquals(null, pad.robin, "a foreign chain: the importer cannot know the seed")
+        assertEquals(null, chain.zones)
+        val landed = com.snipsnap.audio.WavReader.read(File(result.directory, pad.sampleFile)).samples
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, "A01_Kick_01.wav")).samples
+        assertTrue(original.copyOfRange(0, 4000).contentEquals(landed), "the chain is the four takes end to end")
+        assertEquals(1, result.directory.listFiles { f -> f.name.endsWith(".wav") }!!.size, "take files fold into the chain")
+
+        // The landed kit re-exports: a foreign chain, windowed to take one.
+        assertTrue(KitExporter.exportProgramFolder(result.kit, result.directory, File(temp, "reexport")).program.isFile)
+    }
 }

@@ -123,4 +123,22 @@ class ExportReadBackTest {
     fun `SKIP never blocks`() {
         assertFalse(listOf(Finding(Severity.SKIP, "not checked")).blocked())
     }
+
+    @Test
+    fun `a split robin pad reads back its take files on the xpm formats`() {
+        val dir = File(temp, "robin-src")
+        dir.mkdirs()
+        WavWriter.write(File(dir, "Kick.wav"), Snip(FloatArray(5_000) { i -> (i % 50) / 100f }, 1, 44_100))
+        val kit = Kit("RobinReadBack", listOf(KitPad(
+            slot = 1, sampleFile = "Kick.wav", drumClass = DrumClass.KICK,
+            chain = ChainInfo((0 until 5).map { it * 1000L }, cycle = 5), robin = RobinSettings(0.5f, 5),
+        )))
+        KitStore.save(kit, dir)
+        for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION, ExportFormat.XPN)) {
+            val outcome = Exporters.export(format, kit, dir, File(temp, "robin-${format.id}"), overwrite = true)
+            val findings = ExportReadBack.verify(kit, outcome)
+            assertTrue(findings.none { it.severity == Severity.FAIL }, "$format: " + findings.joinToString { it.message })
+            assertTrue(findings.none { "a chain pad" in it.message }, "$format: the takes are checked, not skipped")
+        }
+    }
 }

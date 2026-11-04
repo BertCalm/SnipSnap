@@ -157,4 +157,79 @@ class KitExporterTest {
         assertEquals("A01_Kick_01.wav", kit.pad(1)?.sampleFile)
         assertEquals("A02_Kick_02.wav", kit.pad(2)?.sampleFile)
     }
+
+    // ---- round robin: the MPC cycles take files --------------------------------
+
+    private fun takeSnip(takes: Int, frames: Int = 1000, rate: Int = 44_100): Snip =
+        Snip(FloatArray(takes * frames) { i -> ((i / frames + 1) * 0.1f) * (if (i % 2 == 0) 1f else -1f) }, 1, rate)
+
+    private fun robinKit(takes: Int, name: String = "Robin Kit", depth: WavWriter.BitDepth = WavWriter.BitDepth.PCM_24, robin: RobinSettings? = RobinSettings(0.5f, takes)): Kit {
+        kitDir.mkdirs()
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), takeSnip(takes), depth)
+        val chain = ChainInfo((0 until takes).map { it * 1000L }, cycle = takes)
+        return Kit(name, listOf(KitPad(1, "A01_Kick_01.wav", drumClass = DrumClass.KICK, chain = chain, robin = robin)))
+    }
+
+    private fun samplesOf(f: File) = com.snipsnap.audio.WavReader.read(f).samples
+
+    @Test
+    fun `a six-take robin pad exports four take files in order`() {
+        val result = KitExporter.exportProgramFolder(robinKit(6), kitDir, sd)
+        val dir = result.directory
+        val source = samplesOf(File(kitDir, "A01_Kick_01.wav"))
+        for (n in 1..4) {
+            val take = File(dir, "A01_Kick_01_RR$n.wav")
+            assertTrue(take.isFile, "RR$n written")
+            assertEquals(1000L, WavInfo.read(take).frameCount)
+            assertTrue(source.copyOfRange((n - 1) * 1000, n * 1000).contentEquals(samplesOf(take)), "RR$n is take $n")
+        }
+        assertTrue(!File(dir, "A01_Kick_01_RR5.wav").exists())
+        assertTrue(!File(dir, "A01_Kick_01.wav").exists(), "the chain WAV itself is not copied")
+        assertEquals(4, result.samples.size)
+        val xml = result.program.readText()
+        assertTrue("<ZonePlay>0</ZonePlay>" in xml)
+        assertEquals(listOf("A01_Kick_01_RR1", "A01_Kick_01_RR2", "A01_Kick_01_RR3", "A01_Kick_01_RR4"),
+            Regex("<SampleName>(.+?)</SampleName>").findAll(xml).map { it.groupValues[1] }.toList())
+    }
+
+    @Test
+    fun `a three-take pad exports three takes and keeps the bit depth and rate`() {
+        val result = KitExporter.exportProgramFolder(robinKit(3, depth = WavWriter.BitDepth.PCM_16), kitDir, sd)
+        assertEquals(3, result.samples.size)
+        val info = WavInfo.read(File(result.directory, "A01_Kick_01_RR1.wav"))
+        assertEquals(16, info.bitsPerSample)
+        assertEquals(44_100, info.sampleRate)
+        assertEquals(1, info.channels)
+    }
+
+    @Test
+    fun `a foreign chain exports exactly as before`() {
+        val kit = robinKit(4, robin = null)
+        val result = KitExporter.exportProgramFolder(kit, kitDir, sd)
+        assertTrue(File(result.directory, "A01_Kick_01.wav").isFile)
+        assertTrue(result.directory.listFiles().orEmpty().none { "_RR" in it.name })
+        val frames = WavInfo.read(File(result.directory, "A01_Kick_01.wav")).frameCount
+        val expected = com.snipsnap.xpm.XpmWriter().write(com.snipsnap.xpm.DrumProgram("Robin Kit", listOf(
+            com.snipsnap.xpm.Pad("A01_Kick_01", frames, chain = kit.pads[0].chain!!.toPlay(frames), color = null),
+        )))
+        assertEquals(expected, result.program.readText())
+        assertTrue("<ZonePlay>0</ZonePlay>" !in expected)
+    }
+
+    @Test
+    fun `a kit without robin pads exports a plain program`() {
+        val result = KitExporter.exportProgramFolder(buildKit(), kitDir, sd)
+        val xml = result.program.readText()
+        assertTrue("<ZonePlay>0</ZonePlay>" !in xml)
+        assertEquals(2, result.samples.size)
+    }
+
+    @Test
+    fun `the other program writers keep the whole chain`() {
+        val kit = robinKit(4)
+        val (slots, written) = KitExporter.buildSlots(kit, kitDir, File(temp, "out"))
+        assertEquals(1, written.size)
+        assertEquals("A01_Kick_01", slots[0]!!.sampleName)
+        assertEquals(null, slots[0]!!.cycleLayers)
+    }
 }

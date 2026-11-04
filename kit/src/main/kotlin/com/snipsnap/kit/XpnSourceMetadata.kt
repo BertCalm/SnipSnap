@@ -39,7 +39,10 @@ internal object XpnSourceMetadata {
     fun entryName(programEntry: String): String = "$programEntry.snipsnap-source.json"
 
     /** Nothing is added to archives whose pads have no source metadata. */
-    fun render(kit: Kit, kitDir: File, programEntry: String, programBytes: ByteArray, samplesPrefix: String): ByteArray? {
+    fun render(kit: Kit, kitDir: File, programEntry: String, programBytes: ByteArray, samplesPrefix: String,
+        /** Split robin pads: slot -> (stem, WAV bytes) of the take files that travel instead of the chain. */
+        takes: Map<Int, List<Pair<String, ByteArray>>> = emptyMap(),
+    ): ByteArray? {
         if (kit.pads.all { it.source.isEmpty() }) return null
         var sourceChars = 0L
         for (pad in kit.pads) {
@@ -48,10 +51,17 @@ internal object XpnSourceMetadata {
             require(sourceChars <= MAX_BYTES) { "XPN source metadata exceeds $MAX_BYTES characters" }
         }
         val pads = kit.pads.sortedBy { it.slot }.map { pad ->
+            val split = takes[pad.slot]
             val files = if (pad.velocityLayers.isEmpty()) listOf(pad.sampleFile) else pad.velocityLayers.map { it.sampleFile }
             JsonValue.Obj(linkedMapOf(
                 "slot" to JsonValue.Num(pad.slot.toDouble()),
-                "samples" to JsonValue.Arr(files.map { file ->
+                "samples" to JsonValue.Arr(split?.map { (stem, bytes) ->
+                    JsonValue.Obj(linkedMapOf(
+                        "name" to JsonValue.Str(stem),
+                        "entry" to JsonValue.Str("$samplesPrefix/$stem.wav"),
+                        "sha256" to JsonValue.Str(sha256(bytes)),
+                    ))
+                } ?: files.map { file ->
                     val stem = Names.sanitizeStem(file.substringBeforeLast('.'))
                     JsonValue.Obj(linkedMapOf(
                         "name" to JsonValue.Str(stem),
