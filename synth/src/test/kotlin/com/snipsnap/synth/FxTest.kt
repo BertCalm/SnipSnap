@@ -749,6 +749,25 @@ class FxTest {
     }
 
     @Test
+    fun `DIVE sits right after PITCH in the transport, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("speed") + 1, names.indexOf("dive"), "DIVE is not right after PITCH: $names")
+        assertEquals(names.indexOf("dive") + 1, names.indexOf("swell"), "DIVE is not right before SWELL: $names")
+
+        val without = FxChain(speed = Speed.defaults())
+        assertTrue(!without.toJsonText().contains("dive"), "no dive key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(dive = Dive.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the dive section is a no-op in the chain")
+        // The tail budget is measured from the dived pad (a TRANSPORT section), so the cap leaves a longer pad whole.
+        assertContentEquals(Dive.process(snare, Dive.defaults()).samples, chained.samples, "the chain's dive row does not run Dive.process")
+        assertTrue(chained.frameCount > snare.frameCount, "a dive did not lengthen the pad the way a lower pitch does")
+    }
+
+    @Test
     fun `amped exists, sets only valve, and is a bypass at AMT 0`() {
         assertTrue("amped" in Treatments.names)
         val chain = Treatments.chain("amped")
@@ -1279,7 +1298,9 @@ class FxTest {
     @Test
     fun `SPEED runs before SWELL so the swell is grown from the pitched sound`() {
         assertEquals("speed", FxChain.SECTION_NAMES.first(), "speed is not first in the rack")
-        assertEquals("swell", FxChain.SECTION_NAMES[1], "swell is not second in the rack")
+        // DIVE is pitch that moves over time, so it follows PITCH in the transport and still precedes the swell.
+        assertEquals("dive", FxChain.SECTION_NAMES[1], "dive is not second in the rack")
+        assertEquals("swell", FxChain.SECTION_NAMES[2], "swell is not third in the rack")
     }
 
     @Test
