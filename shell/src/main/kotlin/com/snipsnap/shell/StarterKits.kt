@@ -157,6 +157,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tidal() },
         Starter(
+            "nacre", "NACRE",
+            "Paired harp notes with soft and hard touch, coral replies and seaweed paths.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.nacreVelocity() },
+        Starter(
             "ohm", "OHM",
             "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
             seeded = false,

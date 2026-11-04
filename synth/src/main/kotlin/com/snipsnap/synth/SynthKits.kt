@@ -108,6 +108,9 @@ object SynthKits {
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
+    /** The preferred finite harp with three native touch articulations on every pad. */
+    fun nacreVelocity(): List<ArrangedPad?> = NacreVelocityKits.build()
+
     /**
      * Sixteen dry finite NACRE notes for the MPC listening trial. A01–A08 play
      * Pearl Close up C minor pentatonic from C3 at medium excitation. A09–A10
