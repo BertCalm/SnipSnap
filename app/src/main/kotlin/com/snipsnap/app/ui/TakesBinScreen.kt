@@ -47,6 +47,7 @@ import com.snipsnap.shell.KitDiff
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
+import com.snipsnap.shell.Robin
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -356,13 +357,21 @@ fun TakesBinScreen(
         job = Copy.ROOM_RESTORE_BUSY
         scope.launch {
             try {
-                val restoredFile = withContext(Dispatchers.IO) { m.restoreFromBin(entry) }
+                // A robin chain's file is every take end to end: Robin.restoreEntry restores around
+                // the pad, so the restored take becomes the original and the takes re-render. Under
+                // the kit lock on a fresh model, like every other write on this screen.
+                var restoredFile: File? = null
+                var restoredKit: com.snipsnap.kit.Kit? = null
+                withFreshKit(m.kitDir) { fresh ->
+                    restoredFile = Robin.restoreEntry(fresh, entry)
+                    restoredKit = fresh.kit
+                }
                 if (restoredFile != null) {
                     // Safe unconditionally, whether or not a pad was
                     // actually reinstated - see this screen's own class-doc
                     // for why a structurally-unchanged kit is a no-op where
                     // this lands (`App`'s `LaunchedEffect(entry.kit)`).
-                    onKitUpdated(m.kit)
+                    onKitUpdated(restoredKit ?: m.kit)
                     refreshLists(m)
                     onToast(Copy.BACK_FROM_BIN)
                 } else {

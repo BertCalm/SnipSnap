@@ -1868,6 +1868,17 @@ object Copy {
     const val ROBIN_SKIPPED_LOOPS = "LONG LOOPS LEFT AS THEY ARE."
     const val ROBIN_FOREIGN = "THIS PAD ALREADY CHAINS ITS OWN TAKES."
 
+    // ---- ROUND ROBIN, ONE PAD ----
+    const val ROBIN_ON = "ROUND ROBIN ON. TURN IT OFF TO GET THE ORIGINAL BACK."
+    const val ROBIN_OFF = "ROUND ROBIN OFF. THE ORIGINAL IS BACK."
+    const val ROBIN_OWN = "THIS PAD KEEPS ITS OWN ROUND ROBIN."
+
+    /** Soft hits, STRIKE FX and stacked takes are velocity layers; a layered pad cannot also cycle takes. */
+    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS OR STRIKE FX. TURN ROUND ROBIN OFF FIRST."
+
+    /** A print (board, Aquarium) hides the pre-print sound that a preview would start from. */
+    const val ROBIN_HEAR_PRINTED = "TAKE ONE ALREADY CARRIES THIS SOUND. REMOVE IT FIRST TO HEAR A NEW ONE."
+
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =
         "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."

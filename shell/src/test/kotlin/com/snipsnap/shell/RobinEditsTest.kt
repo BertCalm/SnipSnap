@@ -258,4 +258,53 @@ class RobinEditsTest {
         assertEquals(decoyMax + 1, newest.binnedAtMillis, "the stamp stepped past every taken millisecond")
         assertContentEquals(original, newest.file.readBytes(), "newest-first is the real original, not a decoy")
     }
+
+    @Test
+    fun `BACK over an older bin row restores that take as the original and re-renders the takes`() {
+        val m = model("BackOlder")
+        val firstTake = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        m.treatPad(1, "crushed")
+        val older = m.binContents().single { WavReader.read(it.file).samples.contentEquals(firstTake.samples) }
+
+        val restored = Robin.restoreEntry(m, older)
+
+        assertNotNull(restored)
+        val pad = m.pad(1)!!
+        assertTrue(pad.isRobinChain)
+        assertEquals(6, pad.chain!!.cycle)
+        assertContentEquals(firstTake.samples, Robin.original(m, 1).samples)
+        val frames = WavReader.read(File(m.kitDir, pad.sampleFile)).frameCount
+        assertTrue(pad.chain!!.boundaries.all { it < frames }, "every boundary lands inside the chain WAV")
+    }
+
+    @Test
+    fun `BACK over the row the lift consumes keeps the robin and re-deals from that take`() {
+        val m = model("BackNewest")
+        val firstTake = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        val row = m.binContents().single { it.originalName == m.pad(1)!!.sampleFile }
+
+        assertNotNull(Robin.restoreEntry(m, row))
+
+        val pad = m.pad(1)!!
+        assertTrue(pad.isRobinChain)
+        assertContentEquals(firstTake.samples, Robin.original(m, 1).samples)
+        val frames = WavReader.read(File(m.kitDir, pad.sampleFile)).frameCount
+        assertTrue(pad.chain!!.boundaries.all { it < frames })
+    }
+
+    @Test
+    fun `BACK over a row that is gone changes nothing`() {
+        val m = model("BackGone")
+        Robin.apply(m, 1, RobinSettings(0.6f, 6))
+        val row = m.binContents().single { it.originalName == m.pad(1)!!.sampleFile }
+        row.file.delete()
+        val before = bytes(m, 1)
+
+        assertNull(Robin.restoreEntry(m, row))
+
+        assertContentEquals(before, bytes(m, 1))
+        assertTrue(m.pad(1)!!.isRobinChain)
+    }
 }

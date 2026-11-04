@@ -130,6 +130,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
 import com.snipsnap.kit.GrooveStore
@@ -1792,7 +1793,7 @@ fun App(shelf: KitShelf) {
                                 // Layers and chains are what every audio rewrite
                                 // refuses: counted, not attempted. Anything else
                                 // that fails is a real failure and says so.
-                                if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
+                                if (pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)) {
                                     left++
                                     continue
                                 }

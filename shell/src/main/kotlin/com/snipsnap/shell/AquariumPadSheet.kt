@@ -56,6 +56,10 @@ object AquariumPadSheet {
         if (recipe.isBypass) source else rendered(source, recipe, renderer)
     }
 
+    /** The same preview over a sound the caller already holds - a round-robin pad's take one, which [preview] cannot read. */
+    fun previewFrom(source: Snip, recipe: AquariumRenderRecipe, renderer: AquariumOfflineRenderer): Snip =
+        if (recipe.isBypass) source else rendered(source, recipe, renderer)
+
     /** Adopts new immutable WAV names only after every source file rendered and passed validation. */
     fun apply(
         model: KitBuilderModel,

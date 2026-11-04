@@ -280,6 +280,22 @@ object Robin {
         return result
     }
 
+    /**
+     * BACK on a bin row: [entry] copied over the file it came from. When a robin chain plays that
+     * file, copying one take over the chain would leave its boundaries pointing past the end, so the
+     * restore runs [around] the pad: the restored take becomes the original and the takes re-render.
+     * A row that is the very take [undo] lifts was already restored by the lift; the pad is then
+     * re-dealt from it. Null when the row is gone, as [KitBuilderModel.restoreFromBin] says.
+     */
+    fun restoreEntry(model: KitBuilderModel, entry: KitBuilderModel.BinEntry): java.io.File? {
+        if (!entry.file.isFile) return null
+        val pad = model.kit.pads.firstOrNull { it.sampleFile == entry.originalName && it.isRobinChain }
+            ?: return model.restoreFromBin(entry)
+        return around(model, pad.slot) {
+            model.restoreFromBin(entry) ?: java.io.File(model.kitDir, entry.originalName)
+        }
+    }
+
     /** The backstop: an edit that left the pad in a shape the takes cannot render from fails like any other failed edit. */
     private fun checkRenderable(model: KitBuilderModel, slot: Int) {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("pad $slot is gone - nothing to re-render the takes from")

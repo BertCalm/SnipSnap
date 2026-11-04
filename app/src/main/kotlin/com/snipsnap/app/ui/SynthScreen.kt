@@ -104,6 +104,7 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.OneNote
 import com.snipsnap.json.JsonValue
 import com.snipsnap.loop.Session
@@ -1953,7 +1954,7 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && pad.chain == null &&
+        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -3501,7 +3502,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
+                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -6782,7 +6783,7 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
+    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     // Locked (chained/layered, refused by replaceAudio) and explicitly
