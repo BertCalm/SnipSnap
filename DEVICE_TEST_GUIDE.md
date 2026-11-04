@@ -19,8 +19,9 @@ UI tests live in `app/src/androidTest` and run on a device under
 2. **KIT → tap the closed hat, then the open hat, then closed again.**
    The open hat must CUT OFF when the closed hat fires (choke group). If both
    ring together, chokes are broken on your device.
-3. **Rotate your phone on every screen.** Nothing should restart or lose state
-   (the manifest suppresses recreation — verify it holds on your OEM's skin).
+3. **Rotate your phone on every screen.** The app is portrait-locked, so nothing
+   should turn, restart or lose state (landscape exists only in PLAY's ⟳
+   fullscreen, item 24 — verify the lock holds on your OEM's skin).
 
 ## TAPE (the feel screen — judgement, not correctness)
 4. Drag the tape. Does it track your finger 1:1? Release mid-drag — does the
