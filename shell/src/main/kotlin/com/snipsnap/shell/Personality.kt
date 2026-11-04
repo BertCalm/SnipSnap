@@ -243,6 +243,14 @@ object Copy {
      * exactly what was actually heard, up to that cap.
      */
     const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+    /**
+     * TAPE's empty deck while the session is armed: the tape is already
+     * rolling and nothing has been snipped, so [NO_TAPE_YET]'s "TAP LISTEN ·
+     * MIC BELOW" would send the user to a button they have pressed. It states
+     * what SNIP will keep instead, in the same words and cap as [SNIPPED]
+     * (heard since LISTEN, not "the last 60 seconds").
+     */
+    const val NO_TAPE_YET_ARMED = "$SESSION_ARMED SNIP KEEPS WHAT IT'S HEARD, UP TO 60s."
 
     /**
      * The first SNIP of a cold shelf, landed: App has made the project, the

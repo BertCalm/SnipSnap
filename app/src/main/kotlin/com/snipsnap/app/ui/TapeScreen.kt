@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -384,12 +385,16 @@ fun TapeScreen(
 
 @Composable
 private fun EmptyDeck(onNavigateSnips: () -> Unit) {
+    val armed by MicSessionService.armed.collectAsState()
     // The way in is named twice, because there are two: LISTEN · MIC is the
     // dock's, on every screen, so it is a sentence and not a button here;
     // an earlier catch is on SNIPS, which is the one door this panel draws.
     // EMPTY_SHELF ("NOTHING TAPED YET.") stays where it is still true: the
     // shelf's own empty list.
-    EmptyStatePanel(Copy.NO_TAPE_YET, listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)))
+    EmptyStatePanel(
+        if (armed) Copy.NO_TAPE_YET_ARMED else Copy.NO_TAPE_YET,
+        listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)),
+    )
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
