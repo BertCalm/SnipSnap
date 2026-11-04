@@ -1214,7 +1214,10 @@ cabinet to a closed wall — run four times over inside so a hot tube folds
 back far less), TAPE (the
 cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
-physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one
+physics-lite nod to ChowDSP's AnalogTapeModel), VIBRATO (the pitch sings: one short delay swept by a
+sine, wet only, so the pitch moves and the level does not; DEPTH is the peak swing in cents, 0 to 60, the same at every
+RATE of 2 to 9 Hz, and LATE brings it in after the note starts; the VIBRATO pedal, the `vibratoed` character, swings 42
+cents at a tap (AMT 70) and 60 at AMT 100, for held sounds: a choir and a snare are too short for it), ENSEMBLE (three taps off one
 delay line swimming 120° apart on two slow sines, each through its own
 tone, summed with no dry — the string machine's back half on any pad, and
 the one section that widens a mono pad to stereo, by choice, with the pair

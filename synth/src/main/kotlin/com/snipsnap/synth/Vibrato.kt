@@ -23,6 +23,13 @@ import kotlin.math.pow
  * Shape, not loudness: the peak is matched afterwards, and at DEPTH 0 the pad comes back unchanged.
  *
  * Sits after TAPE and before ENSEMBLE, after the amp, where a guitar amp's own vibrato lives.
+ *
+ * For held sounds. At its gate (2026-11-04) the owner heard it on JANGLE, the choir and the snare beside TAPE's wobble:
+ * on JANGLE it is different from TAPE WOBBLE and worth having, and on the choir and the snare it does not work. A vibrato
+ * needs several cycles, and those sounds are loud for too short a time (measured, within 20 dB of the peak: the snare
+ * 0.09 s, half a cycle at 5.5 Hz; the choir 0.48 s, 2.6 cycles; JANGLE 2.92 s, 16 cycles), so nothing here tries to rescue them.
+ * TAPE WOBBLE at 0.8 is not the shallower effect (measured on a steady tone, +68 / -71 cents against this section's +60 / -62
+ * at DEPTH 1): the difference is one steady rate against two mixed (1.3 and 7.4 Hz).
  */
 object Vibrato {
 

@@ -112,6 +112,26 @@ class VibratoTest {
     }
 
     @Test
+    fun `a tap of the VIBRATO chip swings the pitch 42 cents at the default rate, and AMT walks the depth alone`() {
+        val tap = 0.7f
+        val pad = tone(2.5f)
+        assertEquals(setOf("DEPTH"), Treatments.chain("vibratoed").vibrato!!.keys, "the vibratoed character set more than DEPTH")
+        fun up(amount: Float): Double {
+            val out = Treatments.apply("vibratoed", pad, amount).snip
+            return swing(centsTrack(out.samples, 220.0)).first
+        }
+        println("VIBRATO chip: tap +${"%.1f".format(up(tap))} cents, AMT 1 +${"%.1f".format(up(1f))}, AMT 0.35 +${"%.1f".format(up(0.35f))}")
+        assertEquals(42.0, up(tap), 3.0, "a tap no longer swings the 42 cents the owner chose")
+        assertEquals(60.0, up(1f), 3.0, "AMT 1 no longer swings the 60 cents the owner also heard")
+        assertTrue(up(0.35f) < up(tap), "a lower AMT did not shrink the swing")
+        // The tap is, sample for sample, the 42-cent clip the owner heard (DEPTH 0.7 at the default RATE).
+        for (p in listOf(choir, snare)) {
+            assertContentEquals(Vibrato.process(p, mapOf("DEPTH" to 0.7f)).samples, Treatments.apply("vibratoed", p, tap).snip.samples, "the tap is not the heard depth")
+        }
+        assertContentEquals(choir.samples, Treatments.apply("vibratoed", choir, 0f).snip.samples, "AMT 0 is not a copy")
+    }
+
+    @Test
     fun `the section is deterministic, keeps stereo intact, and ignores unknown keys`() {
         val a = Vibrato.process(choir, mapOf("DEPTH" to 0.8f))
         assertContentEquals(a.samples, Vibrato.process(choir, mapOf("DEPTH" to 0.8f)).samples, "VIBRATO is not deterministic")
