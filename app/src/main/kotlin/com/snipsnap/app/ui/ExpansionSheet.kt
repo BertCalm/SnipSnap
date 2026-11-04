@@ -162,6 +162,83 @@ internal fun ExpansionFlow(entry: KitShelf.Entry, store: ExpansionStore, onToast
     }
 }
 
+/**
+ * EXPANSION ▸ on an instrument: [ExpansionFlow]'s sheet for MAKE ▸ INSTRUMENTS.
+ * NEW names an expansion and starts it with this instrument (no kit yet, so
+ * no art picker: the default art until a kit joins); any other row joins or
+ * leaves, by the name the instrument's sidecar carries. Packed beside the
+ * kits as a keygroup program when the expansion is written.
+ */
+@Composable
+internal fun InstrumentExpansionFlow(entry: KitShelf.InstrumentEntry, store: ExpansionStore, onToast: (String) -> Unit, onDone: () -> Unit) {
+    val scheme = LocalScheme.current
+    val scope = rememberCoroutineScope()
+    var naming by remember(entry) { mutableStateOf(false) }
+    var revision by remember { mutableIntStateOf(0) }
+    val name = entry.instrument.name
+    val expansions by produceState<List<Expansion>>(emptyList(), revision) { value = offMain { store.list() } }
+
+    if (naming) {
+        ExpansionNameDialog(
+            title = Copy.EXPANSION_NAME_TITLE,
+            initialName = "",
+            check = { title -> nameCheck(title, expansions, exceptId = null) },
+            taken = expansions.map { it.title }.toSet(),
+            onCancel = { naming = false },
+            onConfirm = { title ->
+                scope.launch {
+                    val ok = offMain {
+                        KitWrites.mutex.withLock {
+                            runCatching { store.createForInstrument(title, name, ArtKnobs.default(scheme)) }.isSuccess
+                        }
+                    }
+                    onToast(if (ok) Copy.expansionBorn(title) else Copy.EXPANSION_SAVE_FAILED)
+                    onDone()
+                }
+            },
+        )
+        return
+    }
+    BottomSheet(Copy.EXPANSION_SHEET_TITLE, onDone) {
+        Column(
+            Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            SheetRow(Copy.EXPANSION_NEW, null, marked = false) { naming = true }
+            for (e in expansions) {
+                val facts = Copy.countOf(e.memberKitIds.size, "KIT", "KITS") + " · " +
+                    Copy.countOf(e.instrumentNames.size, "INSTRUMENT", "INSTRUMENTS")
+                SheetRow(e.title, facts, marked = name in e.instrumentNames) {
+                    scope.launch {
+                        // Decided from the store inside the lock, as a kit's join is: a second tap can land first.
+                        val joined: Boolean? = offMain {
+                            KitWrites.mutex.withLock {
+                                runCatching {
+                                    if (store.get(e.id)?.instrumentNames?.contains(name) == true) {
+                                        store.removeInstrument(e.id, name)
+                                        false
+                                    } else {
+                                        store.addInstrument(e.id, name)
+                                        true
+                                    }
+                                }.getOrNull()
+                            }
+                        }
+                        onToast(
+                            when (joined) {
+                                null -> Copy.EXPANSION_SAVE_FAILED
+                                true -> Copy.kitJoined(name, e.title)
+                                false -> Copy.kitLeft(name, e.title)
+                            },
+                        )
+                        revision++
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Whether [name] can name an expansion beside [existing]: the store's own rule, read from the list already in hand. */
 internal fun nameCheck(name: String, existing: List<Expansion>, exceptId: String?): ExpansionStore.NameCheck = when {
     !Names.isMpcSafe(name) -> ExpansionStore.NameCheck.Unsafe
