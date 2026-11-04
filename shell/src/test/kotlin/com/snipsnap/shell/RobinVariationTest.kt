@@ -110,4 +110,59 @@ class RobinVariationTest {
             assertTrue(it.samples.all { s -> s in -1f..1f })
         }
     }
+
+    private fun peakAfter(s: Snip, frames: Int): Float {
+        var p = 0f
+        for (i in frames * s.channels until s.samples.size) p = maxOf(p, abs(s.samples[i]))
+        return p
+    }
+
+    /** A 20 ms click, exponential decay to a nonzero tail: most of its energy is in the first few ms. */
+    private val click = Snip(FloatArray(882) { (0.9 * kotlin.math.exp(-it / 40.0)).toFloat() }, 1, 44_100)
+
+    @Test fun `the front trim never shaves a short hit's peak away`() {
+        val peak = peakAfter(click, 0)
+        val floor = peak * Math.pow(10.0, -6.0 / 20.0).toFloat()
+        // Every trim the dial can draw, up to H's 10 ms (441 frames).
+        for (drawn in 0..441) {
+            val t = RobinVariation.trimFor(click, drawn)
+            assertTrue(t in 0..drawn, "trim $t for a draw of $drawn")
+            assertTrue(peakAfter(click, t) >= floor, "a draw of $drawn trims $t and leaves peak ${peakAfter(click, t)} under $floor")
+        }
+    }
+
+    @Test fun `the front trim keeps the ear-tested amount on the ear-tested drums`() {
+        // The five sounds the owner picked F on; H's longest trim, 10 ms, stays whole on every one.
+        val drums = mapOf(
+            "kick" to com.snipsnap.audio.DrumSynth.kick(),
+            "snare" to com.snipsnap.audio.DrumSynth.snare(),
+            "hat" to com.snipsnap.audio.DrumSynth.hat(0.1f, 60.0),
+            "clap" to com.snipsnap.audio.DrumSynth.clap(),
+            "tom" to com.snipsnap.audio.DrumSynth.tom(),
+        )
+        for ((name, hit) in drums) {
+            val drawn = (0.010f * hit.sampleRate).toInt()
+            assertEquals(drawn, RobinVariation.trimFor(hit, drawn), name)
+        }
+    }
+
+    @Test fun `every take of a decaying click keeps the click`() {
+        val peak = peakAfter(click, 0)
+        RobinVariation.takes(click, 8, 1f, Random(1)).drop(1).forEachIndexed { i, take ->
+            // Level (down to x0.4 at H) and tilt move the peak too, so this only asks that the click is
+            // still there: a trim past it left 0.003 of 0.9 (-50 dB); [trimFor] is checked exactly above.
+            assertTrue(peakAfter(take, 0) >= peak * 0.1f, "take ${i + 2} peak ${peakAfter(take, 0)} vs $peak")
+        }
+    }
+
+    @Test fun `louder takes of a full-scale hit are limited, never clipped`() {
+        val full = Snip(FloatArray(22_050) { sin(2.0 * PI * 200.0 * it / 44_100.0).toFloat() }, 1, 44_100)
+        val takes = RobinVariation.takes(full, 8, 0.6f, Random(5))
+        takes.drop(1).forEachIndexed { i, take ->
+            val p = take.samples.maxOf { abs(it) }
+            assertTrue(p <= 0.999f, "take ${i + 2} peaks at $p - clamped at full scale")
+        }
+        val distinct = takes.drop(1).map { it.samples.toList() }.toSet()
+        assertEquals(7, distinct.size, "the limited takes still differ from one another")
+    }
 }
