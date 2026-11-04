@@ -252,6 +252,10 @@ Only 22 engines reach MAKE INSTRUMENT through a `Keys.xxxPad` or a `:shell`
 PadMaker. The inventory's "thin by slot" finding stands: many HOLD engines never
 export as instruments.
 
+**Round two, 2026-11-04:** MERCURY and KEEL now reach MAKE INSTRUMENT through their
+own makers, and 63 voices across 15 more engines through the shared `LoopPadMaker`;
+instruments also pack into expansions. See [HELD_INSTRUMENTS_2026_11.md](HELD_INSTRUMENTS_2026_11.md).
+
 ## ROOT and OCT steppers (done in this change)
 
 The SYNTH picker shows 69 engines. 65 of them now get the ROOT / OCT row that
