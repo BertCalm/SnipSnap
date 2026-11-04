@@ -720,6 +720,23 @@ tasks.register<JavaExec>("generateOverlapHeldKeygroups") {
     args(providers.gradleProperty("overlapHeldKeygroupOutput").orNull ?: "${rootDir}/testkit/overlap-held-keygroup")
 }
 
+/** Separate moving-circuit proof; fixed whole-clip gains preserve the breathing gesture. */
+tasks.register<JavaExec>("generateOverlapBreathingAudition") {
+    group = "distribution"
+    description = "Render steady, independent and synchronized OVERLAP circuits with physical raw/RMS-matched audio and replayable recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapBreathingAuditionGenerator")
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("overlapBreathingRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("overlapBreathingWav").get(),
+            providers.gradleProperty("overlapBreathingVariant").orNull ?: "raw")
+    } else {
+        args(providers.gradleProperty("overlapBreathingOutput").orNull ?: "${rootDir}/testkit/overlap-breathing-audition")
+    }
+}
+
 /** Separate steady sustain proof with real loop recurrence and passive note-off. */
 tasks.register<JavaExec>("generateOverlapHeldAudition") {
     group = "distribution"
