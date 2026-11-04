@@ -831,6 +831,13 @@ object Bore {
         return ((1f - overblow.coerceAtMost(1f)) * (attackN + holdN)).toInt()
     }
 
+    /**
+     * [m] as a held note plays it: OVERBLOW is a gesture in time, a crack at a moment of a one-shot, so a LOOP (HOLD's top
+     * step, which every keygroup maker renders through: `LoopPadMaker` moves the patch to HOLD 1 and each zone's note) plays
+     * the note as if the knob were at 0, and every keygroup zone stays on its key.
+     */
+    internal fun held(m: Map<String, Float>): Map<String, Float> = if (OVERBLOW in m) m + (OVERBLOW to 0f) else m
+
     /** A one-shot's gate in raw samples at [rate]: the one place its length is worked out, for [blow] and [renderFrames] alike. */
     private fun gateFor(macros: Map<String, Float>, rate: Int, gateSeconds: Float?): Gate {
         val attackN = (attackSeconds(macros.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
@@ -1243,7 +1250,8 @@ object Bore {
      * a join that does not hold ([LOOP_MIN_CORRELATION], [LOOP_MAX_DIP_DB]).
      */
     internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>): LoopRender {
-        val m = settled(macros, voice)
+        // Held, so no crack: OVERBLOW is a one-shot's gesture ([held]).
+        val m = held(settled(macros, voice))
         val name = "BORE $voice ${midiFor(voice, m.getValue("TUNE"))}"
         val rate = RATE * Dsp.OVERSAMPLE
         val hz = tunedHz(voice, frequencyFor(voice, m.getValue("TUNE")))
