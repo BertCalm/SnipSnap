@@ -692,10 +692,21 @@ Separately, clean local `8b6d0aea` passed 7,452 JVM cases and all three APK
 assemblies, plus 106 focused tests and all twelve complete accepted-WAV
 comparisons; it is not the PR head.
 The proven cache-copy mutation guard and prior host measurements remain
-recorded separately. Physical-phone listening and timing still need a device pass.
+recorded separately. The owner reported “Works” for the held phone workflow on
+2026-11-01 without device/model details, per-check results or timing measurements.
 Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
 reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records
 the APIs, regeneration commands, release approximation and acceptance ledger.
+
+A separate loopable-breathing audition compares fixed TREFOIL/MIDI-48 steady,
+staggered `3/4/4/5/3/5` and aligned four-breath circuits. Node excitation and
+absorption move inside a constrained repeatable cycle, checked against full
+state and real neighbouring audio. The focused run passed 34 tests; the
+[listening comparison](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/breathing/index.html)
+awaits the owner's verdict. Saved playback, phone controls and the accepted
+sources stay unchanged. Production parameters, intermediate synchronization and
+an interactive cost/cache story remain separate decisions; [OVERLAP.md](OVERLAP.md#loopable-breathing-audition)
+records the measured proof and replay commands.
 
 ### OHM — finite coupled family strings
 
