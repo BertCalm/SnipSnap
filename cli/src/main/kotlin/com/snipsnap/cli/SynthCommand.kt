@@ -188,8 +188,8 @@ import kotlin.random.Random
  * seed and finite render model. Its held zones span C3-C5 and override TUNE.
  * Its model-4 voices accept --gesture STEADY|BLOOM|UNFOLD and all six controls
  * through --macros; MOTION sets gesture duration in BLOOM/UNFOLD.
- * --expression LEVEL|FOLD keeps the existing level response by default, or lets
- * strike velocity scale the chosen fold. FOLD instruments export three velocity layers.
+ * --expression LEVEL|FOLD|TOUCH chooses level only, fold depth, or fold depth plus
+ * source balance. FOLD and TOUCH instruments export three native velocity layers.
  * ALLOY accepts saved --patch JSON recipes, retaining their complete configuration
  * and HOLD setting while --midi and --velocity override note and strike energy.
  * CONTOUR exports seventeen settled-sustain zones with release only, omitting its
@@ -984,7 +984,10 @@ object SynthCommand {
         OrigamiPadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, each holds - authored attack retained, RELEASE ${OrigamiPadMaker.secondsLabel(spec.releaseSeconds)}")
-        if (spec.layerCount > 1) out.println("expression layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard folded color up to the saved velocity")
+        if (spec.layerCount > 1) {
+            val color = if (spec.patch.expression == OrigamiExpression.TOUCH) "source and folded color" else "folded color"
+            out.println("expression layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard $color up to the saved velocity")
+        }
         return 0
     }
 

@@ -1369,27 +1369,26 @@ and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
 phone/MPC checks.
 
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
-CRANE, FAN and STILL. Twelve presets and a sixteen-pad starter kit use the accepted
-model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
-SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
-and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
-on the desk, use
-`snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
-`--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
-renderer has its own model 1, separate from finite model 4; the six controls
-remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
-once between the source and folded color; MOTION sets their duration. STEADY
-retains existing audio and JSON. The new gesture is saved with its own version,
-and held keys finish it before the sustain loop. The six performance presets pair
-BLOOM/UNFOLD with velocity FOLD. The reference recipes and starter layout stay unchanged.
-The [performance bank](docs/ORIGAMI.md#performance-bank) includes four ready-made MPC
-keygroups and musical auditions. See the
-[ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
-Optional `VELOCITY: FOLD` adds hit-dependent folded color without changing pitch
-or gesture timing. The preview offers soft/mid/full touches. MAKE INSTRUMENT
-writes three touch layers per pitch zone in this mode; pads use the existing
-SOFT HITS action after SEND. LEVEL preserves existing recipes and audio.
-The CLI accepts `--expression LEVEL|FOLD` alongside `--velocity`.
+CRANE, FAN and STILL. Twelve presets and a sixteen-pad starter use model-4
+sources, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION. SEND saves a
+replayable recipe and authored pitch. FAN/STILL offer C3–C5 held instruments
+through `MAKE INSTRUMENT ▸` to KEYS, with RELEASE from .1–1.5 seconds, default
+.6; CRANE remains finite. Held model 1 is separate from finite model 4, with no
+HOLD macro. BLOOM and UNFOLD move once between source and folded color; MOTION
+sets their duration, and held keys finish the gesture before the sustain loop.
+
+The six performance factories now pair BLOOM/UNFOLD with explicit VELOCITY
+TOUCH: softer strikes reduce the source and folded upper body, while factory
+hard strikes keep their previous sound exactly. LEVEL and FOLD recipes, the six
+original references and all sixteen starter pads keep their existing audio.
+SOFT/MID/FULL render quietly; tap AUDITION to hear or queue the latest selection.
+FOLD/TOUCH MAKE INSTRUMENT writes three layers per root; ordinary pads use SOFT
+HITS after SEND. The CLI accepts `--expression LEVEL|FOLD|TOUCH` and `--velocity`.
+The [performance bank](docs/ORIGAMI.md#performance-bank) supplies four MPC programs
+and Native-default musical auditions, with Matched available for comparing tone.
+See the [ORIGAMI notes](docs/ORIGAMI.md) and
+[TOUCH brief](docs/superpowers/specs/2026-11-05-origami-touch-response.md) for the
+absolute-velocity curve, compatibility and pending listening checks.
 
 ### `:mpc3`
 

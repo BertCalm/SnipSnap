@@ -343,6 +343,7 @@ tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
     mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+    if (providers.gradleProperty("origamiPerformanceLegacyFold").orNull == "true") args("--legacy-fold")
 }
 
 /** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */

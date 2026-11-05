@@ -3930,9 +3930,11 @@ private fun OrigamiPerformanceControls(
         }
     }
     TapeText(
-        if (patch.expression == OrigamiExpression.FOLD)
-            "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
-        else "HIT STRENGTH CHANGES VOLUME.",
+        when (patch.expression) {
+            OrigamiExpression.LEVEL -> "HIT STRENGTH CHANGES VOLUME."
+            OrigamiExpression.FOLD -> "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
+            OrigamiExpression.TOUCH -> "SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR."
+        },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
     TapeText("PREVIEW HIT", TapeType.pixelSmall, scheme.ink2.tape)
@@ -3948,7 +3950,7 @@ private fun OrigamiPerformanceControls(
             ) { onPreviewHit(hit) }
         }
     }
-    if (patch.expression == OrigamiExpression.FOLD) {
+    if (OrigamiExpressions.colorsWithVelocity(patch.expression)) {
         TapeText(
             "PADS: USE SOFT HITS FOR VELOCITY COLOR",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
@@ -4851,9 +4853,13 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = spec.layerCount
         override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
-        override val instrumentNote get() = if (spec.layerCount > 1)
-            "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
-        else "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        override val instrumentNote get() = when {
+            spec.patch.expression == OrigamiExpression.TOUCH ->
+                "C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+            spec.layerCount > 1 ->
+                "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+            else -> "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        }
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrigamiPadMaker.renderVelocityZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
