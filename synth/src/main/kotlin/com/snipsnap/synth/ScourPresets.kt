@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * SCOUR's factory roster: sixteen impacts, four for each voice, from a bare slam to a long grinding run,
+ * SCOUR's factory roster: twenty-four impacts, four for each voice, from a bare slam to a long grinding run,
  * a ringing bell and a distant storm. Every sound is dry and names all six controls; TUNE stays on C minor
  * pentatonic from each voice's root (C3, and C2 for SHEET). BUILD is in seconds (the engine has no
  * tempo): the kit's own build pads are cut to bar lengths at 90 and 120 BPM. These names and settings are
@@ -17,6 +17,8 @@ object ScourPresets {
         ScourVoice.PANE -> pane
         ScourVoice.SHEET -> sheet
         ScourVoice.BEAM -> beam
+        ScourVoice.DISC -> disc
+        ScourVoice.ROD -> rod
     }
 
     fun all(): List<ScourPatch> = ScourVoice.entries.flatMap { forVoice(it) }
@@ -49,5 +51,21 @@ object ScourPresets {
         p(ScourVoice.BEAM, "RIVET RISE", "TUNE" to 7 / 24f, "BUILD" to 0.60f, "RPM" to 0.50f, "SHOT" to 0.90f, "HARDEN" to 0.90f, "HOLD" to 0.20f),
         p(ScourVoice.BEAM, "GANTRY RUN", "TUNE" to 3 / 24f, "BUILD" to 0.85f, "RPM" to 0.80f, "SHOT" to 0.50f, "HARDEN" to 0.50f, "HOLD" to 0.50f),
         p(ScourVoice.BEAM, "FOUNDRY BELL", "TUNE" to 12 / 24f, "BUILD" to 0.30f, "RPM" to 0.10f, "SHOT" to 0.40f, "HARDEN" to 1f, "HOLD" to 1f),
+    )
+
+    /** DISC plays from C3, like PLATE and PANE. */
+    private val disc = listOf(
+        p(ScourVoice.DISC, "ROTOR SLAM", "TUNE" to 0f, "BUILD" to 0f, "RPM" to 0.30f, "SHOT" to 0.70f, "HARDEN" to 0.50f, "HOLD" to 0.30f),
+        p(ScourVoice.DISC, "CALIPER RISE", "TUNE" to 7 / 24f, "BUILD" to 0.60f, "RPM" to 0.60f, "SHOT" to 0.80f, "HARDEN" to 0.80f, "HOLD" to 0.40f),
+        p(ScourVoice.DISC, "DRAG RUN", "TUNE" to 3 / 24f, "BUILD" to 0.85f, "RPM" to 1f, "SHOT" to 0.50f, "HARDEN" to 0.40f, "HOLD" to 0.50f),
+        p(ScourVoice.DISC, "DISC BELL", "TUNE" to 12 / 24f, "BUILD" to 0.30f, "RPM" to 0.20f, "SHOT" to 0.50f, "HARDEN" to 1f, "HOLD" to 1f),
+    )
+
+    /** ROD plays from C3. Its HARDEN stays low where the ping should stay harmonic: the stretch detunes the upper partials. */
+    private val rod = listOf(
+        p(ScourVoice.ROD, "NEEDLE PING", "TUNE" to 0f, "BUILD" to 0f, "RPM" to 0.20f, "SHOT" to 0.60f, "HARDEN" to 0.30f, "HOLD" to 0.30f),
+        p(ScourVoice.ROD, "SPIKE RISE", "TUNE" to 7 / 24f, "BUILD" to 0.60f, "RPM" to 0.50f, "SHOT" to 0.90f, "HARDEN" to 0.40f, "HOLD" to 0.20f),
+        p(ScourVoice.ROD, "RAIL RUN", "TUNE" to 3 / 24f, "BUILD" to 0.85f, "RPM" to 0.80f, "SHOT" to 0.50f, "HARDEN" to 0.20f, "HOLD" to 0.50f),
+        p(ScourVoice.ROD, "STRUT BELL", "TUNE" to 12 / 24f, "BUILD" to 0.30f, "RPM" to 0.10f, "SHOT" to 0.40f, "HARDEN" to 0.60f, "HOLD" to 1f),
     )
 }
