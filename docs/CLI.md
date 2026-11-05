@@ -556,7 +556,9 @@ defaults, a live room with the mic about 1.35 m back; AMT moves only the mic, so
 AMT 100 puts it about 2.3 m back in the same room, lower AMT closer, and AMT 0
 none) and `eased` (a fade-in, the VOLUME section: the pad rises from silence on a smooth
 curve, 448 ms at AMT 70, the pad sheet's tap, 640 ms at AMT 100, shorter below and none at
-AMT 0; for held sounds, a snare keeps only about 16 percent of its peak under it).
+AMT 0; for held sounds, a snare keeps only about 16 percent of its peak under it) and `vibratoed` (a pitch vibrato, the
+VIBRATO section at 5.5 Hz: the pitch swings 42 cents at AMT 70, the pad sheet's tap, and 60 at AMT 100, less below and
+none at AMT 0; for held sounds, a choir and a snare are too short for it to read).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -572,7 +574,7 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), `eased` (in front of the amp, fixed
-there), and
+there), `vibratoed` (after the amp, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -593,8 +595,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY · ROOM · FADE IN — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
-`delayed`, `roomed` and `eased`), of which the row draws five, the user's choice and the same
+DELAY · ROOM · FADE IN · VIBRATO — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed`, `roomed`, `eased` and `vibratoed`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);

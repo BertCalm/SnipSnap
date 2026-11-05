@@ -410,16 +410,6 @@ internal object TileStyles {
         return (nr shl 16) or (ng shl 8) or nb
     }
 
-    fun darken(rgb: Int, k: Float): Int {
-        val r = (rgb shr 16) and 0xFF
-        val g = (rgb shr 8) and 0xFF
-        val b = rgb and 0xFF
-        val nr = (r * (1 - k)).toInt().coerceIn(0, 255)
-        val ng = (g * (1 - k)).toInt().coerceIn(0, 255)
-        val nb = (b * (1 - k)).toInt().coerceIn(0, 255)
-        return (nr shl 16) or (ng shl 8) or nb
-    }
-
     /** [a] at t = 0 running to [b] at t = 1. */
     fun lerp(a: Int, b: Int, t: Float): Int {
         val k = t.coerceIn(0f, 1f)

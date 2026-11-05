@@ -159,6 +159,16 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    them every internal sample. CIRCUIT's cost is per-sample observer gain divisions. The
    spec recommends a CIRCUIT model 2 first, behind SHA-256 fixtures of today's sound.
    Not built: it changes the sound and waits for the owner's go-ahead and listen.
+   **Built and measured, 2026-11-03, then not shipped.** With the owner's go-ahead, a
+   CIRCUIT model 2 moved the observer path gains and breath drive to 64-sample block
+   ramps. It differed from model 1 by -110 dB peak at most, and it was only about 3.5%
+   faster: ROOT 1431 to 1374 ms, inside run-to-run noise. A profile of each model showed
+   why: the removed divisions overlapped the fractional-delay read and one-pole filter,
+   which carry the observer's real cost. A second published model for a 3.5% gain was
+   not worth the complexity, so only its first step shipped: `CircuitFrozenModelTest`
+   pins SHA-256 fixtures of today's CIRCUIT sound (voice defaults, first presets, EMBER
+   PULSE, HELD CIRCLE, the ceremony). A real CIRCUIT speed-up needs a cheaper observer
+   read, or observing at the 44.1 kHz output rate, which the spec set aside.
 6. **Clip length (product decision).** Most voices over 1 s are 5 to 10 s clips. The
    median cost is about 100 to 400 ms per second of audio. A knob-turn preview that
    renders only the first second or two and plays it while the rest renders would
@@ -241,6 +251,10 @@ Counted by keyword in each engine's own tests (`--gaps` lists them all):
 Only 22 engines reach MAKE INSTRUMENT through a `Keys.xxxPad` or a `:shell`
 PadMaker. The inventory's "thin by slot" finding stands: many HOLD engines never
 export as instruments.
+
+**Round two, 2026-11-04:** MERCURY and KEEL now reach MAKE INSTRUMENT through their
+own makers, and 63 voices across 15 more engines through the shared `LoopPadMaker`;
+instruments also pack into expansions. See [HELD_INSTRUMENTS_2026_11.md](HELD_INSTRUMENTS_2026_11.md).
 
 ## ROOT and OCT steppers (done in this change)
 

@@ -57,7 +57,8 @@ internal fun artSummary(knobs: ArtKnobs): String =
 /**
  * The picker's previews: one tile per knob set, drawn off the main thread
  * by [render] and kept for the sheet's life, so flipping back to a palette
- * already seen is instant. At most two draw at once, so eight cells
+ * already seen is instant (the cache lives as long as the sheet, so it is
+ * bounded by what one sitting taps). At most two draw at once, so eight cells
  * opening together do not hold eight kits' worth of pixels at the same
  * moment. A render that throws is an empty cell, never the screen.
  */

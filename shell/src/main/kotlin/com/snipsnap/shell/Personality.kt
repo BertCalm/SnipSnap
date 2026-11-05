@@ -243,6 +243,14 @@ object Copy {
      * exactly what was actually heard, up to that cap.
      */
     const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+    /**
+     * TAPE's empty deck while the session is armed: the tape is already
+     * rolling and nothing has been snipped, so [NO_TAPE_YET]'s "TAP LISTEN ·
+     * MIC BELOW" would send the user to a button they have pressed. It states
+     * what SNIP will keep instead, in the same words and cap as [SNIPPED]
+     * (heard since LISTEN, not "the last 60 seconds").
+     */
+    const val NO_TAPE_YET_ARMED = "$SESSION_ARMED SNIP KEEPS WHAT IT'S HEARD, UP TO 60s."
 
     /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
@@ -586,6 +594,8 @@ object Copy {
     const val EXPANSION_PICK = "WHICH EXPANSION"
     /** The members row heading. */
     const val EXPANSION_MEMBERS = "KITS IN IT"
+    /** The instruments row heading: what MAKE INSTRUMENT made, packed as keygroups beside the kits. */
+    const val EXPANSION_INSTRUMENTS = "INSTRUMENTS IN IT"
     /** The last look at the tile, and its door back into the picker. */
     const val CHANGE_ART = "CHANGE ART ▸"
     /** The two forms an expansion writes in. */
@@ -596,8 +606,11 @@ object Copy {
     const val EXPANSION_NONE = "NO EXPANSIONS YET. HOLD A KIT ON THE SHELF TO START ONE."
     const val EXPANSION_TO_PHONE = "GOES TO THE PHONE. PICK A CARD ON THE KIT SIDE TO SEND IT THERE."
     fun expansionToCard(card: String): String = "GOES TO THE CARD: $card."
+    /** The expansion side's arm-to-replace line, naming the button it asks for again. */
+    fun expansionWouldOverwrite(what: String): String = "$what IS ALREADY THERE. $EXPANSION_WRITE AGAIN TO WRITE OVER IT."
     fun memberSkipped(kit: String, reason: String): String = "$kit SKIPPED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    fun expansionWritten(name: String, kits: Int): String = "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}."
+    fun expansionWritten(name: String, kits: Int, instruments: Int = 0): String =
+        "$name WRITTEN: ${countOf(kits, "KIT", "KITS")}" + (if (instruments > 0) ", ${countOf(instruments, "INSTRUMENT", "INSTRUMENTS")}" else "") + "."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"

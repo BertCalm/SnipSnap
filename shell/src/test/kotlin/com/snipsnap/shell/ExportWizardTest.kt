@@ -237,6 +237,30 @@ class ExportWizardTest {
     }
 
     @Test
+    fun `the first tile written fixes an untouched kit's knobs`() {
+        // An untouched kit takes the on-screen scheme's palette; once a tile has gone out, a scheme
+        // switch must not change the next export's tile (the spec's no-churn anti-goal).
+        val (kit, dir) = makeKit("Untouched")
+        assertEquals(null, ArtSidecar.read(dir))
+        val tide = ArtKnobs.default(Schemes.TIDE)
+        val first = ExportWizardModel(kit, dir, artKnobs = tide)
+        first.setFormat(ExportFormat.EXPANSION)
+        assertTrue(first.write(File(temp, "drift-a")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(tide, ArtSidecar.read(dir), "the knobs the tile was drawn with are now the kit's")
+        // The screen now opens on the sidecar, whatever the scheme.
+        assertEquals(tide, ArtSidecar.read(dir) ?: ArtKnobs.default(Schemes.RISO))
+    }
+
+    @Test
+    fun `a format that writes no tile leaves an untouched kit untouched`() {
+        val (kit, dir) = makeKit("NoTile")
+        val m = ExportWizardModel(kit, dir, artKnobs = ArtKnobs.default(Schemes.TIDE))
+        m.setFormat(ExportFormat.SFZ)
+        assertTrue(m.write(File(temp, "drift-sfz")) is ExportWizardModel.WriteResult.Done)
+        assertEquals(null, ArtSidecar.read(dir))
+    }
+
+    @Test
     fun `the caller's knobs and then the sidecar's pick the tile`() {
         val (kit, dir) = makeKit("Picked")
         val seen = mutableListOf<ArtKnobs>()

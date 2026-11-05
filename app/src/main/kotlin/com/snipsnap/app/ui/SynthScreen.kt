@@ -112,6 +112,9 @@ import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.BallastPadMaker
+import com.snipsnap.shell.KeelPadMaker
+import com.snipsnap.shell.LoopPadMaker
+import com.snipsnap.shell.MercuryPadMaker
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.OverlapPadMaker
@@ -490,6 +493,28 @@ private fun storedEmbouchurePatch(settings: Map<String, String>, voice: Embouchu
     }
 
 /**
+ * Manual AUDITION: knob turns render quietly and only AUDITION plays (the owner's call,
+ * 2026-11-03). Each preview render takes a request number; AUDITION plays at once when the
+ * newest request has landed, otherwise it is remembered as [pending] and the render that
+ * lands plays it, so what is heard always matches the knobs. One holder instead of three
+ * locals: SynthScreen is at the limit of what the toolchain verifies (see [EmbouchureRestore]).
+ */
+private class ManualAudition {
+    private var requested = 0
+    private var landed = 0
+    /** AUDITION was tapped before the newest render landed; that render plays when it does. */
+    var pending by mutableStateOf(false)
+
+    fun start(): Int = (++requested)
+    /** The render for [request] landed (published); later requests stay outstanding. */
+    fun settle(request: Int) { if (request == requested) landed = request }
+    /** The render for [request] produced nothing to play (failed, or another owner plays). */
+    fun skip(request: Int) { settle(request); pending = false }
+    /** AUDITION: play the newest render now, or as soon as it lands. */
+    fun tap(play: () -> Unit) { if (landed == requested) play() else pending = true }
+}
+
+/**
  * What SYNTH restores for EMBOUCHURE when it reopens (BRASS GROW is a different saved model with
  * different controls, so its recipe must come back whole).
  */
@@ -701,10 +726,11 @@ private fun ControlsColumn(
  * Compose surface plus the SEND TO PAD action, multiplexed over the
  * registered engines via the file-private [Engine] adapter below.
  *
- * `prototype/thumplab.html` is the interaction truth this ports: every
- * macro/voice/SCRAMBLE change re-renders and retrigger-plays the audition
- * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
- * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
+ * `prototype/thumplab.html` was the interaction truth this ported: every
+ * macro/voice/SCRAMBLE change re-rendered and retrigger-played the audition
+ * voice ("EVERY MOVE RE-RENDERS + RETRIGGERS"), debounced so a drag doesn't
+ * hammer the DSP. Since 2026-11-03 every move still re-renders, quietly, and
+ * only AUDITION plays ([ManualAudition]): slow engines made the retrigger lag. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
  * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN, MURMUR, TRIO, ORIGAMI and OHM, join it here.
@@ -1312,14 +1338,11 @@ fun SynthScreen(
             for ((ovenVoice, recipe) in ovenRecipes) settings["$SETTINGS_OVEN_PATCH_PREFIX${ovenVoice.name}"] = recipe
         }
     }
-    // The prototype gates its very first sound behind a "TAP TO POWER ON"
-    // veil — a Web Audio autoplay-policy workaround, not part of the actual
-    // interaction — and only *after* that makes every move retrigger. This
-    // is the Android equivalent: the scope still renders and draws the
-    // instant the screen opens, but nothing is heard until the first real
-    // touch (a slider drag, a voice pick, an engine cycle, SCRAMBLE), so
-    // landing on SYNTH never plays a kick unasked.
-    var touched by remember { mutableStateOf(false) }
+    // Manual AUDITION (the owner's call, 2026-11-03): every move still renders, quietly, so
+    // the scope and SEND stay current, but only AUDITION plays. This replaced the
+    // prototype's "every move re-renders and retriggers", which made slow engines lag a
+    // second or more behind each knob turn. Nothing plays on landing either.
+    val manualAudition = remember { ManualAudition() }
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
         // Motion recipes contain a finite opening. Keep HOLD below the loop
         // threshold so a slider or accessibility edit cannot discard that gesture.
@@ -1380,7 +1403,6 @@ fun SynthScreen(
     }
     fun updateUprightVelocity(value: Float) {
         if (engine != Engine.PLUCK || voice != PluckVoice.UPRIGHT) return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         val patch = (buildCurrentPatch(engine.patchDisplayName(voice)) as PluckPatch)
@@ -1391,7 +1413,6 @@ fun SynthScreen(
     }
     fun updateMacro(name: String, value: Float) {
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
-        touched = true
         embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
@@ -1424,7 +1445,6 @@ fun SynthScreen(
     }
     fun updateOhmPerformance(edit: (OhmPatch) -> OhmPatch) {
         if (engine != Engine.OHM) return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(Engine.OHM, OhmVoice.STRING))
         val source = loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] as? OhmPatch
@@ -1435,7 +1455,6 @@ fun SynthScreen(
         if (engine != Engine.ORIGAMI) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
         if (patch.model != Origami.MODEL_VERSION || patch.gesture == gesture) return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         val next = patch.copy(gesture = gesture)
@@ -1448,7 +1467,6 @@ fun SynthScreen(
         if (engine != Engine.ORIGAMI) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
         if (patch.model != Origami.MODEL_VERSION || patch.expression == expression) return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         val next = patch.copy(expression = expression)
@@ -1462,18 +1480,15 @@ fun SynthScreen(
         if (engine != Engine.ORIGAMI) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
         if (patch.model != Origami.MODEL_VERSION) return
-        touched = true
         origamiPreview.strike(voice as OrigamiVoice, hit)
     }
     fun updateTrioPatch(change: (TrioPatch) -> TrioPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrioPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
     fun updateLibrationPatch(patch: LibrationPatch) {
         if (engine != Engine.LIBRATION || voice != patch.voice) return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         loadedPatchesByVoice[engine to voice] = patch
@@ -1485,7 +1500,6 @@ fun SynthScreen(
     fun updateAccordPatch(expectedVoice: AccordVoice, change: (AccordPatch) -> AccordPatch) {
         if (engine != Engine.ACCORD || voice != expectedVoice) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? AccordPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         loadedPatchesByVoice[engine to voice] = change(patch)
@@ -1494,7 +1508,6 @@ fun SynthScreen(
     }
     fun updateOverlapPatch(change: (OverlapPatch) -> OverlapPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OverlapPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         val updated = change(patch)
@@ -1503,7 +1516,6 @@ fun SynthScreen(
     }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
@@ -1511,7 +1523,6 @@ fun SynthScreen(
         if (engine != Engine.TIDAL || voice != expectedVoice ||
             embouchureRestore.pending.containsKey(engine to voice)) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TidalPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         val updated = change(patch)
@@ -1525,13 +1536,11 @@ fun SynthScreen(
         val controls = macrosByVoice.getValue(pair)
         val patch = (loadedPatchesByVoice[pair] as? FilamentPatch)?.withMacros(controls)
             ?: FilamentPatch(engine.patchDisplayName(voice), voice as FilamentVoice, controls)
-        touched = true
         currentPresetByVoice.remove(pair)
         loadedPatchesByVoice[pair] = change(patch)
     }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
-        touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = patch.copy(config = change(patch.config))
     }
@@ -1556,7 +1565,6 @@ fun SynthScreen(
                 val patch = if (onScreen) buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
                     else loadedPatchesByVoice[pair] ?: return
                 val next = (SynthRoot.of(patch) ?: control).at(midi)
-                touched = true
                 currentPresetByVoice.remove(pair)
                 when (next) {
                     is OhmPatch -> if (onScreen) updateOhmPerformance { next }
@@ -1578,7 +1586,6 @@ fun SynthScreen(
         val pair = engine to voice
         val name = loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)
         val next = change(buildCurrentPatch(name) as PrismPatch)
-        touched = true
         Snapshot.withMutableSnapshot {
             currentPresetByVoice.remove(pair)
             loadedPatchesByVoice[pair] = next
@@ -1586,7 +1593,6 @@ fun SynthScreen(
         }
     }
     fun loadPreset(patch: Patch) {
-        touched = true
         loadedRecipesByVoice.remove(engine to voice)
         recalledRecipesByVoice.remove(engine to voice)
         reopenedPadsByVoice.remove(engine to voice)
@@ -1804,8 +1810,8 @@ fun SynthScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
-                if (engine == Engine.APSIS) touched = false
-                if (engine == Engine.PRISM) { touched = false; prismMotionStudio.cancel() }
+                if (engine == Engine.APSIS) manualAudition.pending = false
+                if (engine == Engine.PRISM) { manualAudition.pending = false; prismMotionStudio.cancel() }
                 voicePlayer?.release()
                 voicePlayer = null
             }
@@ -1854,14 +1860,17 @@ fun SynthScreen(
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
     LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe, embouchureRestore.pending.containsKey(engine to voice), prismMotionStudio.ownsPreview, origamiPreviewHit, origamiPreview.trigger) {
+        val request = manualAudition.start()
         if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) {
             rendering = false
+            manualAudition.skip(request)
             return@LaunchedEffect
         }
         if (embouchureRestore.waitsForRecipe(engine, voice)) {
             voicePlayer?.stop()
             snip = null
             rendering = false
+            manualAudition.skip(request)
             return@LaunchedEffect
         }
         if (sampleHeldPreview != null) {
@@ -1870,6 +1879,7 @@ fun SynthScreen(
             voicePlayer?.stop()
             snip = null
             rendering = false
+            manualAudition.skip(request)
             return@LaunchedEffect
         }
         val previewJob = coroutineContext[Job]
@@ -1933,11 +1943,16 @@ fun SynthScreen(
                 if (engine != Engine.PRISM || !prismMotionStudio.ownsPreview) {
                     if (engine == Engine.PRISM) prismMotionStudio.rememberPlayback(rendered)
                     snip = rendered.snip
-                    if (touched) audition(rendered.snip, allowLoop = true)
+                    if (manualAudition.pending) {
+                        manualAudition.pending = false
+                        audition(rendered.snip, allowLoop = true)
+                    }
                 }
+                manualAudition.settle(request)
             },
             onFailure = { failure ->
                 Log.e("SynthScreen", "render: failed", failure)
+                manualAudition.skip(request)
                 onToast(Copy.RENDER_FAILED)
             },
         )
@@ -1975,7 +1990,6 @@ fun SynthScreen(
         macrosByVoice[key] = editableDefaults(sourceEngine.defaults(sourceVoice), editable) + editableMacros(editable)
         currentPresetByVoice.remove(key)
         embouchureRestore.pending.remove(key)
-        touched = true
         engine = sourceEngine
         voice = sourceVoice
         reopeningPad.value = false
@@ -2214,14 +2228,16 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN ||
+    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
-        (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice))))
+        (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice)))) ||
+        (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
+            LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
         Engine.MERIDIAN -> MeridianPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
@@ -2270,6 +2286,8 @@ fun SynthScreen(
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, heldSheet.holdRelease))
         Engine.BALLAST -> HeldSpec.Ballast(BallastPadMaker.spec(voice as BallastVoice, macros, heldSheet.holdRelease))
+        Engine.MERCURY -> HeldSpec.Mercury(MercuryPadMaker.spec(voice as MercuryVoice, macros, heldSheet.holdRelease))
+        Engine.KEEL -> HeldSpec.Keel(KeelPadMaker.spec(voice as KeelVoice, macros, heldSheet.holdRelease))
         Engine.ORPHICA -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
             HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, heldSheet.holdRelease))
@@ -2324,7 +2342,9 @@ fun SynthScreen(
         }
         Engine.PRISM -> prismHeldSpec(heldSheet.prismPatch ?: buildCurrentPatch(
             loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)), heldSheet.holdRelease)
-        else -> null
+        // The shared loop maker: any engine whose voice passed LoopInstrumentScan.
+        else -> if (!LoopPadMaker.offers(engine.name)) null else buildCurrentPatch(engine.patchDisplayName(voice))
+            .takeIf { LoopPadMaker.supports(it) }?.let { HeldSpec.Loop(LoopPadMaker.spec(it, heldSheet.holdRelease)) }
     }
 
     fun previewHeld() {
@@ -2333,7 +2353,7 @@ fun SynthScreen(
         val spec = heldSpec() ?: return
         sampleHeldPreview?.silence()
         val prismPreview = if (spec is PrismHeldSpec) prismMotionStudio.startPreview() else null
-        if (prismPreview != null) { touched = false; voicePlayer?.stop() }
+        if (prismPreview != null) { manualAudition.pending = false; voicePlayer?.stop() }
         heldSheet.holdPreviewing = true
         heldSheet.holdJob = appScope.launch {
             try {
@@ -2366,7 +2386,7 @@ fun SynthScreen(
         // Captured now: the sheet's own sound, before anything can move it.
         val spec = heldSpec() ?: return
         sampleHeldPreview?.silence()
-        if (spec is PrismHeldSpec) { prismMotionStudio.cancelPreview(); touched = false; voicePlayer?.stop() }
+        if (spec is PrismHeldSpec) { prismMotionStudio.cancelPreview(); manualAudition.pending = false; voicePlayer?.stop() }
         val base = holdBase
         val midis = spec.zoneMidis
         heldSheet.holdTotal = midis.size * spec.progressPerZone
@@ -2377,7 +2397,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2385,12 +2405,13 @@ fun SynthScreen(
                         // work to one zone at a time.
                         // FILAMENT similarly bounds its network history to one root.
                         // BALLAST simulates a frame, six strings and six tiles at 4x for
-                        // each of its thirteen zones.
+                        // each of its thirteen zones. A MERCURY zone is seconds of audio
+                        // rendered several times over, and a KEEL zone runs up to 15 s at 4x.
                         // Render serially so phones never hold nine
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2440,7 +2461,7 @@ fun SynthScreen(
         sampleHeldPreview?.silence()
         if (heldSheet.prismPatch != null) {
             prismMotionStudio.cancelPreview()
-            touched = false
+            manualAudition.pending = false
             voicePlayer?.stop()
             heldSheet.prismPatch = null
         }
@@ -2705,10 +2726,9 @@ fun SynthScreen(
 
     // Arriving on a different engine, whichever way: ◄, ► or a row of the engine list other than
     // the current engine's (that row only closes the list, see the sheet's onPick). It is exactly
-    // what the tap-to-cycle header did, so the new engine is touched (and so auditioned, as
-    // every touch is) and starts on its first voice.
+    // what the tap-to-cycle header did: the new engine starts on its first voice and renders
+    // quietly, ready for AUDITION.
     fun arrive(next: Engine) {
-        touched = true
         engine = next
         voice = next.voices().first()
     }
@@ -2739,7 +2759,6 @@ fun SynthScreen(
 
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
                 VoicePicker(engine, voice, scheme, onSelect = {
-                    touched = true
                     if (engine == Engine.PRISM) { prismMotionStudio.cancel(); voicePlayer?.stop() }
                     voice = it
                 })
@@ -2788,7 +2807,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onVelocityChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(velocity = value)
@@ -2804,7 +2822,6 @@ fun SynthScreen(
                             TapeType.pixelSmall, scheme.ink2.tape)
                     }
                     fun editRime(edit: (RimePatch) -> RimePatch) {
-                        touched = true
                         currentPresetByVoice.remove(engine to voice)
                         loadedPatchesByVoice[engine to voice] = edit(buildCurrentPatch(rimePatch.name) as RimePatch)
                     }
@@ -2825,7 +2842,6 @@ fun SynthScreen(
                         if (engine == Engine.CHAMBER && voice == chamberVoice) {
                             val current = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
                                 ?: engine.patchDisplayName(voice)) as ChamberPatch
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             settings.remove(presetSettingsKey(engine, voice))
                             loadedPatchesByVoice[engine to voice] = change(current)
@@ -2844,7 +2860,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onVelocityChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(velocity = value)
@@ -2863,7 +2878,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
@@ -2897,7 +2911,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
@@ -2921,7 +2934,6 @@ fun SynthScreen(
                         buildCurrentPatch(engine.patchDisplayName(voice)) as ApsisPatch,
                         classColor, scheme,
                     ) { patch ->
-                        touched = true
                         currentPresetByVoice.remove(engine to voice)
                         loadedPatchesByVoice[engine to voice] = patch
                     }
@@ -2937,7 +2949,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch)
@@ -2993,7 +3004,6 @@ fun SynthScreen(
                                     val current = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
                                     val nextMacros = if (Shoal.supportsHold(Shoal.MODEL_VERSION, material)) macros
                                         else macros + ("HOLD" to 0f)
-                                    touched = true
                                     currentPresetByVoice.remove(engine to voice)
                                     macrosByVoice[engine to voice] = nextMacros
                                     loadedPatchesByVoice[engine to voice] = current.copy(
@@ -3015,7 +3025,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch)
@@ -3072,7 +3081,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as RelayPatch)
@@ -3091,7 +3099,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch)
@@ -3112,7 +3119,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as OspreyPatch)
@@ -3126,7 +3132,6 @@ fun SynthScreen(
                         scheme = scheme,
                         readout = "%.1fs".format(Locale.ROOT, seconds),
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             val duration = .25f + value.coerceIn(0f, 1f) * (Osprey.MAX_SECONDS - .25f)
                             loadedPatchesByVoice[engine to voice] =
@@ -3148,7 +3153,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
@@ -3162,7 +3166,6 @@ fun SynthScreen(
                         scheme = scheme,
                         readout = String.format(java.util.Locale.ROOT, "%.2f s", openSkyPatch.gateSeconds),
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
@@ -3180,7 +3183,6 @@ fun SynthScreen(
                                 modifier = Modifier.weight(1f).semantics { selected = openSkyPatch.wet == wet },
                                 accessibilityLabel = if (wet) "OPENSKY WET" else "OPENSKY DRY",
                             ) {
-                                touched = true
                                 currentPresetByVoice.remove(engine to voice)
                                 loadedPatchesByVoice[engine to voice] =
                                     (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch).copy(wet = wet)
@@ -3238,14 +3240,12 @@ fun SynthScreen(
                             entry = entry,
                             onPatchChanged = { edited ->
                                 val target = Engine.SCANNED_CHAIN to edited.voice
-                                touched = true
                                 currentPresetByVoice.remove(target)
                                 loadedPatchesByVoice[target] = edited
                             },
                             onRecallPatch = { recipe ->
                                 val patch = recipe.patch as? ScannedChainPatch ?: return@ScannedShapeControls
                                 val target = Engine.SCANNED_CHAIN to patch.voice
-                                touched = true
                                 engine = Engine.SCANNED_CHAIN
                                 voice = patch.voice
                                 loadedPatchesByVoice[target] = patch
@@ -3272,7 +3272,7 @@ fun SynthScreen(
                     MacroSlider(
                         label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
                         onValueChange = { value ->
-                            touched = true; currentPresetByVoice.remove(engine to voice)
+                            currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
@@ -3280,7 +3280,7 @@ fun SynthScreen(
                         label = "CONTACT", value = (patch.activeSeconds - .05f) / (patch.seconds - .15f),
                         fillColor = classColor, scheme = scheme, readout = "%.2fs".format(Locale.ROOT, patch.activeSeconds),
                         onValueChange = { value ->
-                            touched = true; currentPresetByVoice.remove(engine to voice)
+                            currentPresetByVoice.remove(engine to voice)
                             val current = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
                             loadedPatchesByVoice[engine to voice] = current.copy(activeSeconds = (.05f + value * (current.seconds - .15f)).coerceIn(.05f, current.seconds - .1f))
                         },
@@ -3296,7 +3296,6 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
-                            touched = true
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)
@@ -3321,7 +3320,7 @@ fun SynthScreen(
                             snip = target.snip
                             audition(target.snip, allowLoop = false, previewLoop = target.loop)
                         },
-                        onStopPreview = { pause -> if (pause) touched = false; voicePlayer?.stop() },
+                        onStopPreview = { pause -> if (pause) manualAudition.pending = false; voicePlayer?.stop() },
                         onBeforeEdit = ::closeHeld,
                     )
                 }
@@ -3347,7 +3346,6 @@ fun SynthScreen(
                         buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch,
                         classColor, scheme,
                     ) { changed ->
-                        touched = true
                         currentPresetByVoice.remove(engine to voice)
                         keepMeridianPatch(changed)
                     }
@@ -3399,7 +3397,6 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
-                        touched = true
                         embouchureRestore.pending.remove(engine to voice)
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
@@ -3569,7 +3566,7 @@ fun SynthScreen(
                             if (prismMotionStudio.sourceBusy || !prismOpeningInstrumentSupported(current)) return@LabButton
                             heldSheet.prismPatch = current
                             prismMotionStudio.cancel()
-                            touched = false
+                            manualAudition.pending = false
                             voicePlayer?.stop()
                         }
                         makingInstrument = true
@@ -3608,9 +3605,9 @@ fun SynthScreen(
                 FlockHeldAudition(sampleHeldPreview, classColor, scheme)
             } else if (engine == Engine.APSIS || (engine == Engine.PRISM && Prism.isLoop(macros["HOLD"] ?: 0f))) {
                 RepeatingAuditionControls(classColor, scheme,
-                    onAudition = { touched = true; snip?.let { audition(it, allowLoop = true) } },
+                    onAudition = { manualAudition.tap { snip?.let { audition(it, allowLoop = true) } } },
                     onStop = {
-                        touched = false
+                        manualAudition.pending = false
                         if (engine == Engine.PRISM) prismMotionStudio.cancelPreview()
                         voicePlayer?.stop(); voicePlayer = null
                     },
@@ -3622,7 +3619,7 @@ fun SynthScreen(
                         .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                         .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
                         .tapeClick(label = "AUDITION", enabled = !embouchureRestore.waitsForRecipe(engine, voice)) {
-                            snip?.let { audition(it, allowLoop = true) }
+                            manualAudition.tap { snip?.let { audition(it, allowLoop = true) } }
                         }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
@@ -4653,6 +4650,37 @@ internal sealed interface HeldSpec {
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BallastPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Mercury(private val spec: MercuryPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = MercuryPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${MercuryPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "EACH KEY PLAYS THE GLASS'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(MercuryPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = MercuryPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MercuryPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    /** The shared loop maker ([LoopPadMaker]): HOLD's loop at each zone's note, for an engine with no maker of its own. */
+    class Loop(private val spec: LoopPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = LoopPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${LoopPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "EACH KEY PLAYS THIS SOUND'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LoopPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = LoopPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = LoopPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Keel(private val spec: KeelPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = KeelPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${KeelPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "KEEPS THE NOTE'S ATTACK AND SETTLE, THEN HOLDS THE SETTLED BASS."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(KeelPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = KeelPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = KeelPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Glint(private val spec: GlintPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = GlintPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -4852,7 +4880,7 @@ internal sealed interface HeldSpec {
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, MERCURY, KEEL, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,

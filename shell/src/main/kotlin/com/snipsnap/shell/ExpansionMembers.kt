@@ -26,6 +26,13 @@ object ExpansionMembers {
     fun present(expansion: Expansion, index: Map<String, Member>): List<Member> =
         expansion.memberKitIds.mapNotNull { index[it] }
 
+    /**
+     * [expansion]'s instruments whose sidecar is in [instrumentsDir], in the order they joined.
+     * One deleted since it joined is simply not there, the way a missing kit is not.
+     */
+    fun instruments(expansion: Expansion, instrumentsDir: File): List<File> =
+        expansion.instrumentNames.map { com.snipsnap.kit.InstrumentStore.sidecar(instrumentsDir, it) }.filter { it.isFile }
+
     /** The seed: the seed kit when present, else the first present member, else null. */
     fun seed(expansion: Expansion, index: Map<String, Member>): Member? =
         expansion.seedKitId?.let { index[it] }?.takeIf { it.kitId in expansion.memberKitIds }

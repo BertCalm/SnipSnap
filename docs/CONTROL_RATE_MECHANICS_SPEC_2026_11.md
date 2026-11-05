@@ -116,6 +116,10 @@ at `Undertow.kt:334-335` with no floor). Section 5.6 makes the ten-minute test s
 
 ## 4. CIRCUIT
 
+**Outcome, 2026-11-03:** built as model 2 and measured at about 3.5% faster (the 4.5
+estimate of 25 to 40% did not hold; the divisions overlapped the delay read and filter).
+Not shipped; only the SHA-256 fixtures of step 1 landed. See the scan doc, item 5.
+
 ### 4.1 What moves slowly and what must stay at audio rate
 
 The tube loop (`Circuit.kt:437-490`), per internal sample:
