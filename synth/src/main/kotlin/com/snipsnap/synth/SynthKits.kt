@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Candidate finite CHITIN kit, with complete pad recipes. */
+    fun chitin(): List<ArrangedPad?> = ChitinKits.build()
+
     /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
     fun accord(): List<ArrangedPad> = AccordKits.arranged()
 

@@ -3004,3 +3004,14 @@ tasks.register<JavaExec>("generateChitinAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("chitinOutput").orNull ?: "${rootDir}/testkit/chitin-audition")
 }
+
+
+tasks.register<JavaExec>("generateChitinBank") {
+    group = "distribution"
+    description = "Render twelve candidate presets and the sixteen-pad finite CHITIN MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinBankGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
+}

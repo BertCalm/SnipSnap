@@ -15,6 +15,8 @@ import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.Bellows
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.Bore
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinPatch
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
@@ -290,6 +292,7 @@ object SynthRoot {
         is AerostatPatch -> tune(patch, { Aerostat.midiFor(it) })
         is ArcoPatch -> tune(patch, { Arco.midiFor(patch.voice, it) })
         is BallastPatch -> tune(patch, { Ballast.midiFor(patch.voice, it) })
+        is ChitinPatch -> tune(patch, { Chitin.midiFor(patch.voice, it) })
         is BorePatch -> tune(patch, { Bore.midiFor(patch.voice, it) })
         is CircuitPatch -> tune(patch, { Circuit.midiFor(it) })
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })

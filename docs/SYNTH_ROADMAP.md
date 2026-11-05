@@ -3121,4 +3121,4 @@ LORENTZ ports the accepted third Python listening pass into the JVM synth: falli
 
 ## CHITIN finite-note prototype
 
-SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; candidate presets and a finite-note MPC kit are the next round. See `docs/CHITIN.md`.
+SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.

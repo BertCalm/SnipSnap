@@ -115,7 +115,7 @@ Compute `gateFrames = floor(gateSeconds*44100 + .5)` and the corresponding relea
 Define the clamped quintic ramp `S(u)=6u^5−15u^4+10u^3` for `0<u<1`, with endpoint values 0 and 1. It has zero first and second derivatives at both ends.
 
 ```text
-t0 = .015 seconds
+t0 = .08 seconds // pitched attack guard added in the candidate-bank round
 mv = M * (.7 + .3*v)
 before note-off: m(t) = mv * S((t-t0)/riseSeconds)
 mOff = mv * S((roundedGateSeconds-t0)/riseSeconds)
@@ -414,6 +414,18 @@ One measured design correction: the original constant-sustain contour let the lo
 Other disclosed implementation choices: scalar morph/filter/drive targets are evaluated directly at audio rate rather than cached as control-node plans; the expensive phaser coefficient pairs retain 64-frame chord interpolation. The completed-result cache is capped at four immutable PCM results and returns defensive copies. A separate plan cache was unnecessary because there is no solver or costly precomputation beyond the immutable BLEP table. Cache hits and misses are covered by replay tests. The independent phaser test also checks an adversarial scattering model and a deliberately unnormalized feedback counterexample.
 
 The generator produces 108 normal clips with recipes, traces and diagnostics, ten comparison clips and 36 high-rate source-reference files. The audition has been generated from Kotlin. Nothing has been heard or approved here. Six factory presets per voice, a kit, seamless sustain, Android picker work and phone/MPC acceptance remain at their declared later gates. The maximum HOLD is a finite note with no loop chunk; a duration LOOP label is not represented as seamless sustain.
+
+### Candidate bank round 2026-11-05
+
+Merged default-branch commit `482c55a` into the implementation branch and reconciled the newer velocity and shared root-editor dispatchers. The owner approved the first published core audition. This round adds six **candidate** recipes per voice, kept outside `Presets.all()` until selected by ear. `ChitinPresets` is available through the CLI and picker without changing prototype status.
+
+`generateChitinBank` reconstructs a twelve-preset audition, recipe ZIP and a sixteen-pad compatibility MPC program folder with sixteen mono 44.1 kHz WAVs. A01-A08 climb C minor pentatonic from MIDI 24 through 41; the final eight compare eight other colors, with duration-classified long notes last. Every pad is dry, carries its saved recipe and plays once. Export tests inspect real sample headers, sample references and disabled loop flags. Actual MPC hardware loading is still pending.
+
+The broader 192-point short-note grid found an additional maximum-speed WING corner classified SNARE on the current baseline. Moving the shared morph onset from 15 ms to 80 ms preserves a pitched initial FFT window. All fourteen focused Kotlin tests then passed, including the corner grid, C1 projection, ordinary pitch, preset levels and classes, JSON replay, kit replay, waveform bounds and export checks. The updated bank is available at [the private listening site](https://chitin-audition.bertcalm.chatgpt.site), with the full control lab retained under `/lab/`.
+
+Measured over the twelve candidates: raw peak ceiling 2.201, low-pass output peak 1.154, maximum positive feedback energy excess 0. Desktop median render time was 74.34 ms in the generator run; this is not a phone benchmark. The program ZIP is approximately 2.65 MB. The listening selection for these twelve recipes is outstanding.
+
+Picker changes cover voices, macros, defaults, scramble, rendering, classification, saved patches, note-root control and candidate-preset loading. Maximum HOLD displays LONG NOTE; seamless instrument support remains disabled. A Compose device test covers loading FOUNDATION, editing HOLD and retaining state after recreation. SDK-backed CI must compile and run the Android paths. Full JVM status and the PR are recorded in the implementation notes when their gates complete.
 
 ## 21. Why it is built this way
 

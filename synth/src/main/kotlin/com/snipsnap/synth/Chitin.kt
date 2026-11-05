@@ -18,6 +18,9 @@ internal data class ChitinRender(val snip: Snip, val raw: FloatArray, val before
  * step is reserved. No random modulation, samples or extra rack processing. */
 object Chitin {
     const val MODEL_VERSION=1
+    // A pitched attack precedes the shared sweep; a fast sync chirp at note-on
+    // otherwise becomes broadband percussion in the classifier head window.
+    internal const val MORPH_START_SECONDS=.08
     private val names=listOf("TUNE","BITE","COLOR","PHASE","MORPH","PACE","HOLD")
     fun macrosFor(voice: ChitinVoice): List<MacroSpec> {
         val values=if(voice==ChitinVoice.SHELL) listOf(.5f,.35f,.45f,.55f,.6f,.4f,.35f)
@@ -45,8 +48,8 @@ object Chitin {
         fun morph(t: Double): Double {
             val amount=m.getValue("MORPH")*(.7+.3*velocity)
             val gateTime=gate.toDouble()/Dsp.RATE
-            return if(t<gateTime) amount*smooth((t-.015)/rise)
-            else amount*smooth((gateTime-.015)/rise)*(1-smooth((t-gateTime)/(release.toDouble()/Dsp.RATE)))
+            return if(t<gateTime) amount*smooth((t-MORPH_START_SECONDS)/rise)
+            else amount*smooth((gateTime-MORPH_START_SECONDS)/rise)*(1-smooth((t-gateTime)/(release.toDouble()/Dsp.RATE)))
         }
         fun ratio(t: Double): Double {
             val wing=voice==ChitinVoice.WING

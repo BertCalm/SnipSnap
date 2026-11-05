@@ -166,8 +166,8 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 CHITIN's finite SHELL and WING prototype combines corrected hard sync and a
 six-stage morphing phaser with bass protection. Run
-`./gradlew :synth:generateChitinAudition` or render provisional CLI starting points
-with `synth CHITIN SHELL --preset 1`. [Implementation notes](docs/CHITIN.md)
+`./gradlew :synth:generateChitinBank` for twelve candidates and a sixteen-pad
+MPC kit, or render CLI presets with `synth CHITIN SHELL --preset 1`. [Implementation notes](docs/CHITIN.md)
 describe its seven controls and finite HOLD. It awaits listening and is counted
 separately from the factory preset roster.
 

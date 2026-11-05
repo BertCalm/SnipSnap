@@ -194,6 +194,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)

@@ -52,6 +52,7 @@ data class EngineEntry(val categories: List<EngineCategory>, val description: St
  */
 object EngineCatalog {
     val ENTRIES: Map<String, EngineEntry> = mapOf(
+        "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
         "LATTICE" to EngineEntry(listOf(EngineCategory.SYNTH), "Warm, plucked or hollow notes that drop out and come back"),
         "ACCORD" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Pitched brushes, wood and tines finding shared timing"),
         "THUMP" to EngineEntry(listOf(EngineCategory.DRUMS), "Analog-style kick, snare, hats, clap, tom, cowbell, rim"),
