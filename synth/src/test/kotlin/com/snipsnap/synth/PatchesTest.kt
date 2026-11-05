@@ -42,6 +42,7 @@ class PatchesTest {
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
+        ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
         ErosionPatch("Door", ErosionVoice.ARC),
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),

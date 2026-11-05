@@ -617,3 +617,7 @@ testkit/vibrato-audition/
 # Cairn SING native audition and Python proof are regenerated from source.
 testkit/cairn-sing/
 testkit/cairn-sing-prototype/
+
+# Reconstructible CHITIN listening assets and candidate MPC program.
+/testkit/chitin-audition/
+/testkit/chitin-bank/

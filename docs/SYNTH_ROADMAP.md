@@ -3198,3 +3198,7 @@ every factor is exactly 1 at full velocity, so no saved sound moves; the
 held-loop join sits at the loop's end so the attack stays the render's own;
 and the chord voicings gather near one centre so neighbouring pads read as a
 progression.
+
+## CHITIN finite-note prototype
+
+SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.

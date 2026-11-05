@@ -21,6 +21,10 @@ class DeterminismTest {
         assertContentEquals(loop.render().samples, loop.render().samples)
     }
 
+    @Test fun `CHITIN finite voices replay without cache state`() {
+        for (v in ChitinVoice.entries) assertContentEquals(Chitin.inspect(v).snip.samples, Chitin.inspect(v).snip.samples)
+    }
+
     @Test fun `APSIS saved populations reproduce finite and held material after cold geometry preparation`() {
         for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (hold in listOf(0f, 1f)) {
             val patch = ApsisPatch("Population canary", voice,

@@ -3055,3 +3055,24 @@ tasks.register<JavaExec>("generateHydroformAudition") {
     args(providers.gradleProperty("hydroformManifest").orNull ?: "${rootDir}/reference/hydroform/python-manifest.json",
         providers.gradleProperty("hydroformOutput").orNull ?: "${rootDir}/testkit/hydroform-audition")
 }
+
+tasks.register<JavaExec>("generateChitinAudition") {
+    group = "distribution"
+    description = "Render CHITIN's two finite voices, macro pairs, ablations and source references."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinOutput").orNull ?: "${rootDir}/testkit/chitin-audition")
+}
+
+
+tasks.register<JavaExec>("generateChitinBank") {
+    group = "distribution"
+    description = "Render twelve candidate presets and the sixteen-pad finite CHITIN MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinBankGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
+}
