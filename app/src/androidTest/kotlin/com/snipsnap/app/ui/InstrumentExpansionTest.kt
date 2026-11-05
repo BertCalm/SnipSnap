@@ -105,9 +105,11 @@ class InstrumentExpansionTest : ComposeScreenTest() {
         waitFor("the sheet lists the expansion") { shows("KEY SHIFT") }
         press("KEY SHIFT")
         waitFor("joined") { store.get(e.id)?.instrumentNames == listOf("GLASS KEYS") }
-        assertTrue(toasts.toString(), Copy.kitJoined("GLASS KEYS", "KEY SHIFT") in toasts)
+        // The IO write is visible before offMain resumes the main-thread feedback callback.
+        waitFor("the instrument joined confirmation") { Copy.kitJoined("GLASS KEYS", "KEY SHIFT") in toasts }
         press("KEY SHIFT")
         waitFor("left") { store.get(e.id)?.instrumentNames == emptyList<String>() }
+        waitFor("the instrument left confirmation") { Copy.kitLeft("GLASS KEYS", "KEY SHIFT") in toasts }
     }
 
     @Test

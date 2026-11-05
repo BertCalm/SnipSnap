@@ -557,6 +557,14 @@ testkit/prism-opening-sustain-audition/
 testkit/erosion-native-audition/
 # Reproducible Rime held instruments and listening evidence.
 testkit/rime-instruments/
+testkit/filament-thread-wide-keys/
+testkit/filament-pulse-wide-keys/
+testkit/filament-curl-wide-keys/
+testkit/filament-held-wide-keys/
+testkit/filament-thread-wide-touch-keys/
+testkit/filament-pulse-wide-touch-keys/
+testkit/filament-curl-wide-touch-keys/
+testkit/filament-held-wide-touch-keys/
 testkit/rime-complete-instruments/
 # Reproducible LORENTZ Kotlin listening and MPC export artifacts.
 testkit/lorentz-audition/
