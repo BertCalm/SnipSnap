@@ -2897,6 +2897,17 @@ tasks.register<JavaExec>("generateNacrePresenceAudition") {
     args("${rootDir}/testkit/nacre-presence-audition")
 }
 
+/** Three sampled touch zones per finite harp pad, with complete source recipes. */
+tasks.register<JavaExec>("generateNacreVelocityKit") {
+    group = "distribution"
+    description = "Export the Nacre velocity-layered starter kit, both MPC programs and its listening page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreVelocityKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("nacreVelocityKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Sixteen finite harp pads for the MPC listening trial, retaining exact native strikes. */
 tasks.register<JavaExec>("generateNacreKit") {
     group = "distribution"

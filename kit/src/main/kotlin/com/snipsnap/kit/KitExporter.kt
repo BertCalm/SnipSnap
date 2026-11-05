@@ -1,5 +1,7 @@
 package com.snipsnap.kit
 
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
@@ -8,6 +10,8 @@ import com.snipsnap.xpm.XpmWriter
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
+
+internal const val RAW_VELOCITY_SHA256 = "rawVelocitySha256"
 
 /**
  * Thrown by every writer that refuses to replace something already on disk —
@@ -214,23 +218,22 @@ object KitExporter {
         val exported = kit.copy(pads = kit.pads.map { pad ->
             val slot = requireNotNull(slots[pad.slot - 1]) { "missing exported slot ${pad.slot}" }
             val sampleFile = "${slot.sampleName}.wav"
-            val sha256 = MessageDigest.getInstance("SHA-256")
-            File(samplesDir, sampleFile).inputStream().use { input ->
-                val buffer = ByteArray(8192)
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    sha256.update(buffer, 0, count)
-                }
+            val digest = sha256(SafePath.child(samplesDir, sampleFile))
+            val layers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
+                KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
+                    displayName = pad.velocityLayers.getOrNull(index)?.displayName)
             }
-            val digest = sha256.digest()
-                .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
+            // A lower zone has its own native source history just as the main
+            // sample does. Bind every copied zone after name projection; old
+            // hashes must not follow a renamed or newly rendered sample.
+            val source = ((pad.source - RAW_VELOCITY_SHA256) + ("rawSha256" to digest)).toMutableMap()
+            if (layers.isNotEmpty()) {
+                source[RAW_VELOCITY_SHA256] = Json.write(JsonValue.Obj(layers.map { it.sampleFile }.distinct()
+                    .associateWith { file -> JsonValue.Str(if (file == sampleFile) digest else sha256(SafePath.child(samplesDir, file))) }))
+            }
             pad.copy(
                 sampleFile = sampleFile,
-                velocityLayers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
-                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
-                        displayName = pad.velocityLayers.getOrNull(index)?.displayName)
-                },
+                velocityLayers = layers,
                 // Printed boards and Aquarium pads depend on immutable source
                 // snapshots outside the live WAV set. Flat MPC exports carry
                 // their baked audio, so a later import must not advertise an
@@ -238,10 +241,23 @@ object KitExporter {
                 // Ordinary opaque recipes and self-contained typed boards
                 // retain their existing sidecar behavior.
                 recipe = pad.recipe?.takeUnless { "boardPad" in it.entries || "aquariumPad" in it.entries },
-                source = pad.source + ("rawSha256" to digest),
+                source = source,
             )
         })
         return KitStore.save(exported, samplesDir)
+    }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
     }
 
     /**

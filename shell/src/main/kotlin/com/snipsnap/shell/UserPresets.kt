@@ -28,6 +28,7 @@ import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -431,6 +432,8 @@ object UserPresets {
      * velocity, geometry seed, profile, retention setting and saved model through
      * the complete JSON constructor. ACCORD retains its acoustic profile, initializer,
      * passage, root, velocity, exact seed and render model through that constructor.
+     * NACRE likewise retains its saved renderer, native root, strike, exact seed and
+     * controls through the complete JSON constructor.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
@@ -476,6 +479,10 @@ object UserPresets {
         if (patch is TidalPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "TidalPatch.fromJsonText($recipe),"
+        }
+        if (patch is NacrePatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "NacrePatch.fromJsonText($recipe),"
         }
         if (patch is ChamberPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
