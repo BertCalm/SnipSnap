@@ -4,6 +4,7 @@ import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.synth.AerostatPatch
 import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.KeelPatch
 import com.snipsnap.synth.TremorPatch
 import java.io.File
 import java.nio.file.Files
@@ -23,6 +24,7 @@ class NewSynthStarterTest {
                 "aerostat" to AerostatPatch.ENGINE,
                 "tremor" to TremorPatch.ENGINE,
                 "ballast" to BallastPatch.ENGINE,
+                "keel" to KeelPatch.ENGINE,
             )
             for ((id, engine) in engines) {
                 val starter = assertNotNull(StarterKits.byId(id), "missing FRESH TAPE entry $id")

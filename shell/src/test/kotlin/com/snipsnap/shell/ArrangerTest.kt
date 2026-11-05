@@ -2,17 +2,28 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.log2
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ArrangerTest {
@@ -276,10 +287,13 @@ class ArrangerTest {
         assertTrue(mix.sectionStarts.zipWithNext().all { (a, b) -> b > a }, "sections in order")
         val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM *
             com.snipsnap.kit.KitPreview.RATE * 4).toInt()
-        assertTrue(
-            mix.snip.frameCount > plan.totalBars * framesPerBar,
-            "the song is at least its bars (ring-outs and transitions on top)",
-        )
+        // The song is its bars plus the outro's own ring-out, and nothing
+        // in between. This used to read "at least its bars (ring-outs and
+        // transitions on top)": every section's ring-out was laid before the
+        // next section instead of under it, and pushed each downbeat late.
+        val past = mix.snip.frameCount - plan.totalBars * framesPerBar
+        assertTrue(past >= 0, "the song is at least its bars: $past frames short")
+        assertTrue(past < com.snipsnap.kit.KitPreview.RATE, "no more than the outro's ring-out past the last bar: $past frames")
 
         // The fill section is measurably denser than the intro.
         fun rms(fromFrame: Int, frames: Int): Double {
@@ -557,5 +571,197 @@ class ArrangerTest {
             noteTimes(Arranger.arrange(m.kit, m.kitDir, seed = 0, feel = -1f, feelTemplate = null)),
             "a caller with no template has no feel to apply",
         )
+    }
+
+    // ---- the mixdown on the grid (song-making plan, phase 2) --------------
+
+    /** Where section k must start: the frame of its first pulse, at KitPreview's own arithmetic. */
+    private fun gridStarts(plan: Arranger.Arrangement, bpm: Float): List<Int> {
+        val framesPerPulse = 60.0 / bpm * com.snipsnap.kit.KitPreview.RATE / Mpc3Clip.PULSES_PER_BEAT
+        var pulses = 0L
+        return plan.sections.map { s ->
+            val start = (pulses * framesPerPulse).roundToInt()
+            pulses += s.clip.lengthPulses * s.repeats
+            start
+        }
+    }
+
+    @Test
+    fun `every section starts on its own downbeat`() {
+        // Measured before this: theme 600 ms (0.92 beat) late at 92 BPM, the
+        // turn 1.84 beats late, the outro 5.52 beats late. Each ring-out was
+        // laid before the next section instead of under it.
+        for (bpm in listOf(null, 140f)) {
+            val m = model("Grid ${bpm ?: "default"}")
+            m.setTempo(bpm)
+            m.save()
+            val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+            val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+            assertEquals(
+                gridStarts(plan, com.snipsnap.kit.KitPreview.playedBpm(bpm)),
+                mix.sectionStarts,
+                "every section on its bar at ${bpm ?: "the default"} BPM",
+            )
+        }
+    }
+
+    @Test
+    fun `the pull-up plays over the last beat and stops at the turn`() {
+        val rate = com.snipsnap.kit.KitPreview.RATE
+        val end = rate * 2
+        val cut = end - rate / 2
+        // A section with a ring-out past its end, so there is a tail to silence.
+        val seg = Snip(FloatArray((end + rate / 2) * 2) { i -> 0.3f * sin(2 * PI * 220 * (i / 2) / rate).toFloat() }, 2, rate)
+
+        val pulled = Arranger.pullUpOver(seg, cut, end)
+        assertEquals(end, pulled.frameCount, "nothing sounds past the turn's downbeat")
+        for (i in 0 until cut * 2) assertEquals(seg.samples[i], pulled.samples[i], "untouched before the last beat (sample $i)")
+        var energy = 0.0
+        for (i in cut * 2 until end * 2) energy += pulled.samples[i] * pulled.samples[i].toDouble()
+        assertTrue(energy > 0.0, "the spinback fills the last beat")
+        assertTrue(
+            (cut * 2 until end * 2).any { pulled.samples[it] != seg.samples[it] },
+            "the last beat is the spinback, not the section played on",
+        )
+    }
+
+    private fun sine(hz: Double, seconds: Float = 1f): Snip {
+        val rate = 44_100
+        return Snip(FloatArray((seconds * rate).toInt()) { 0.5f * sin(2 * PI * hz * it / rate).toFloat() }, 1, rate)
+    }
+
+    private fun centsOff(hz: Float, target: Double) = abs(1200 * log2(hz / target))
+
+    @Test
+    fun `a bass note an octave or a twelfth up plays at its written pitch`() {
+        // An octave is a speed of exactly 2, which the old 0.51..1.99 window
+        // refused: every octave in an Answer line played at the root.
+        val root = sine(110.0)
+        for ((semitones, hz) in listOf(12 to 220.0, 19 to 110.0 * Math.pow(2.0, 19 / 12.0), -12 to 55.0)) {
+            val note = Arranger.repitched(root, semitones)!!
+            val found = Pitch.detect(note)!!
+            assertTrue(centsOff(found.hz, hz) < 50.0, "$semitones semitones: wanted $hz Hz, heard ${found.hz}")
+        }
+        assertSame(root, Arranger.repitched(root, 0), "the root plays the sample as it is")
+        assertNull(Arranger.repitched(root, Arranger.BED_REACH_SEMITONES + 1), "past the reach, the note is left out")
+    }
+
+    @Test
+    fun `a three-four groove tiles by its own bar`() {
+        val waltz = Mpc3Clip(
+            "Waltz", 1,
+            listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(38, 960, 0.7f), Mpc3Note(38, 1920, 0.7f)),
+            pulsesPerBar = 3 * Mpc3Clip.PULSES_PER_BEAT,
+        )
+        val three = Arranger.tiled(waltz, 3)
+        assertEquals(3 * waltz.lengthPulses, three.lengthPulses)
+        assertEquals((0 until 9).map { it * 960L }, three.notes.map { it.timePulses }.sorted(), "one beat apart, no gaps, nothing past the end")
+    }
+
+    @Test
+    fun `the bed covers its section exactly, whatever its own length`() {
+        val bar = Mpc3Clip.PULSES_PER_BAR
+        val oneBar = Mpc3Clip("Bass", 1, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(43, bar / 2, 0.8f)))
+        assertEquals(
+            (0 until 4).flatMap { listOf(it * bar, it * bar + bar / 2) },
+            Arranger.bedNotes(oneBar, 4 * bar).map { it.timePulses },
+            "a one-bar line repeats to fill a four-bar section",
+        )
+        val twoBars = Mpc3Clip("Bass", 2, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(43, bar + bar / 2, 0.8f)))
+        assertEquals(listOf(0L), Arranger.bedNotes(twoBars, bar).map { it.timePulses }, "a two-bar line stops at a one-bar section's end")
+    }
+
+    /** Energy of the left channel over [fromMs, toMs) after [frame]. */
+    private fun energyAfter(mix: Snip, frame: Int, fromMs: Int, toMs: Int): Double {
+        val rate = com.snipsnap.kit.KitPreview.RATE
+        var acc = 0.0
+        for (f in frame + fromMs * rate / 1000 until minOf(frame + toMs * rate / 1000, mix.frameCount)) {
+            acc += mix.samples[f * 2] * mix.samples[f * 2].toDouble()
+        }
+        return acc
+    }
+
+    @Test
+    fun `an open hat chokes on the next section's closed hat`() {
+        // Sections overlap now that each ring-out sounds under the next one's
+        // opening, so the kit's choke has to reach across the boundary. The
+        // open hat sits on the theme's last 16th (about 160 ms before the
+        // boundary) and rings 500 ms; the closed hat is 80 ms long, so from
+        // 100 to 300 ms past the boundary only an unchoked open hat sounds.
+        val m = KitBuilderModel.create("Choke", File(temp, "Choke"))
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.save()
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val open = Mpc3Clip("Open", 1, listOf(Mpc3Note(39, 15 * s16, 1f)))
+        fun song(next: Mpc3Clip) = Arranger.Arrangement(
+            "Choke Song", 0,
+            listOf(Arranger.Section("theme", open, 1, "open hat last"), Arranger.Section("variation", next, 1, "then this")),
+        )
+        val closed = Arranger.mixdown(m.kit, m.kitDir, song(Mpc3Clip("Closed", 1, listOf(Mpc3Note(38, 0, 1f)))))
+        val boundary = closed.sectionStarts[1]
+        assertTrue(energyAfter(closed.snip, boundary, 100, 300) < 1e-6, "the closed hat on one chokes the open hat: ${energyAfter(closed.snip, boundary, 100, 300)}")
+
+        // The control: with nothing in the group on one, the same window does hold the open hat's tail.
+        val late = Arranger.mixdown(m.kit, m.kitDir, song(Mpc3Clip("Late", 1, listOf(Mpc3Note(38, 12 * s16, 1f)))))
+        assertTrue(energyAfter(late.snip, late.sectionStarts[1], 100, 300) > 1e-3, "the window hears an unchoked open hat")
+    }
+
+    @Test
+    fun `the tape stop ends the whole song, a ringing bass note with it`() {
+        // A twelve-second bass note under the reprise rings far past the
+        // outro. The tape stop has to take it down with the drums at the
+        // outro's end, not leave it playing on at full speed.
+        val m = model("Tape")
+        val rate = 44_100
+        val note = Snip(FloatArray(12 * rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate)
+        WavWriter.write(File(m.kitDir, "bass.wav"), note)
+        AnswerStore.save(
+            m.kitDir,
+            AnswerStore.StoredAnswer(0, "Tape Answer", "bass.wav", Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))),
+        )
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM * com.snipsnap.kit.KitPreview.RATE * 4).toInt()
+        val past = mix.snip.frameCount - plan.totalBars * framesPerBar
+        assertTrue(past in 0 until com.snipsnap.kit.KitPreview.RATE, "the song ends at the outro's ring-out, bass and all: $past frames past")
+        val lastFrame = mix.snip.frameCount - 1
+        assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped by the last frame: ${mix.snip.samples[lastFrame * 2]}")
+        // And the bass really rang into the outro, or the checks above would
+        // pass with no bass at all: against the same plan with no Answer, the
+        // outro's first second carries the reprise's last note on top.
+        File(m.kitDir, AnswerStore.FILE_NAME).delete()
+        val bare = Arranger.mixdown(m.kit, m.kitDir, plan)
+        val outro = plan.sections.lastIndex
+        val withBass = energyAfter(mix.snip, mix.sectionStarts[outro], 0, 1000)
+        val without = energyAfter(bare.snip, bare.sectionStarts[outro], 0, 1000)
+        assertTrue(withBass - without > 100.0, "the reprise's bass rings into the outro: $withBass with it, $without without")
+    }
+
+    @Test
+    fun `a long pad struck before the outro does not hold back the tape stop`() {
+        // A twelve-second pad on the reprise's last off-beat rings far past the
+        // outro inside the same take. The song still ends where the outro does:
+        // its bars and its own ring-out.
+        val m = model("Long Pad")
+        val rate = 44_100
+        m.assign(5, Snip(FloatArray(12 * rate) { 0.3f * sin(2 * PI * 220.0 * it / rate).toFloat() }, 1, rate), DrumClass.PERC)
+        m.save()
+        val bar = Mpc3Clip.PULSES_PER_BAR
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val reprise = Mpc3Clip("Reprise", 1, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(40, 12 * s16, 0.9f)))
+        val outro = Mpc3Clip("Outro", 2, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(36, bar, 0.9f)))
+        val plan = Arranger.Arrangement(
+            "Long Song", 0,
+            listOf(Arranger.Section("reprise", reprise, 1, "a long pad late"), Arranger.Section("outro", outro, 1, "kicks")),
+        )
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM * com.snipsnap.kit.KitPreview.RATE * 4).toInt()
+        val past = mix.snip.frameCount - 3 * framesPerBar
+        assertTrue(past in 0 until com.snipsnap.kit.KitPreview.RATE, "the song ends at the outro's ring-out, not the long pad's: $past frames past")
+        val lastFrame = mix.snip.frameCount - 1
+        assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped the long pad: ${mix.snip.samples[lastFrame * 2]}")
     }
 }

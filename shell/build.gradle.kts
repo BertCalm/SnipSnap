@@ -185,6 +185,17 @@ tasks.register<JavaExec>("generateCreaseKeysAudition") {
     args(providers.gradleProperty("creaseKeysOutput").orNull ?: "${rootDir}/testkit/crease-keys-audition")
 }
 
+/** BALLAST held: four keygroup instruments through the production exporter, with held and walking previews. */
+tasks.register<JavaExec>("generateBallastKeys") {
+    group = "distribution"
+    description = "Export four BALLAST sounds as thirteen-zone held keygroups, with previews, under testkit/ballast-keys/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BallastKeysGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-keys")
+}
+
 /** Package Contour's 36 factory recipes as held instruments with verified native and compatibility programs. */
 tasks.register<JavaExec>("generateContourStarter") {
     group = "distribution"
@@ -232,6 +243,17 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
+/** KEEL held: four keygroup instruments through the production exporter, with held and walking previews (spec section 17, R2). */
+tasks.register<JavaExec>("generateKeelKeys") {
+    group = "distribution"
+    description = "Export KEEL's two voices at their defaults and at WEIGHT 1 as nine-zone held keygroups, with previews, under testkit/keel-keys/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.KeelKeysGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/keel-keys")
+}
+
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     group = "distribution"
     description = "Render BELLOWS native/program A/B and release previews through exported WAVs and the JVM player."
@@ -250,4 +272,118 @@ tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
     mainClass.set("com.snipsnap.shell.OrigamiExpressionAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
+}
+
+/** Export continuous LIBRATION keys and play their PCM24 samples through real note-on/note-off. */
+tasks.register<JavaExec>("generateLibrationHoldAudition") {
+    group = "distribution"
+    description = "Render three LIBRATION held instruments, playback comparisons and measured recurrence evidence."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationHoldAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("librationHoldOutput").orElse("${rootDir}/testkit/libration-sustain").get())
+}
+
+/** One opening before a separately marked sustain region, compared with unchanged PRISM pad renders. */
+tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
+    group = "distribution"
+    description = "Render PRISM OPEN, pure HOLD and opening-once keygroup notes with sampler metadata and eight-sustain proofs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.PrismOpeningSustainAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
+}
+
+/** The phone's nine approved cultural passages, all five playback modes and the complete portable bank. */
+tasks.register<JavaExec>("generateConfluenceSelectedAudition") {
+    group = "distribution"
+    description = "Render the cultural passage audition through the app workshop and package its unchanged source bank."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ConfluenceSelectedAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootDir
+    args(providers.gradleProperty("confluenceSelectedAuditionOutput").orElse("${rootDir}/testkit/confluence-selected-audition").get())
+    providers.gradleProperty("confluenceSelectedAuditionRevision").orNull?.let { args(it) }
+}
+
+/** Three native Rime keyboard instruments, each with nine attack-plus-loop zones. */
+tasks.register<JavaExec>("generateRimeInstruments") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
+}
+
+tasks.register<JavaExec>("generateRimeCompleteInstruments") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-complete-instruments", "--complete")
+}
+
+tasks.register<JavaExec>("generateScannedChainControlsAudition") {
+    group = "distribution"
+    description = "Render Scanned Chain editor sweeps, complete recipes and numerical evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScannedChainControlsAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("scannedChainControlsOutput").orElse("${rootDir}/testkit/scanned-chain-controls").get())
+}
+
+/** Reproduce the six factory performance recipes and four MPC-ready held instruments. */
+tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
+    group = "distribution"
+    description = "Render the ORIGAMI performance bank, native/matched takes, portable audition and MPC downloads."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+}
+
+/** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */
+tasks.register<JavaExec>("generateCausticCompleteAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC motion and sustain comparisons, genuine-cycle evidence and playable keygroup exports."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CausticCompleteAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
+}
+
+/** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */
+tasks.register<JavaExec>("scanLoopInstruments") {
+    group = "verification"
+    description = "Measure each HOLD-loop engine's loop as a keys instrument (wrap, pitch, steadiness) under testkit/loop-instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LoopInstrumentScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory expansion of the new held instruments (MERCURY, KEEL, LoopPadMaker's qualifiers). See InstrumentPackGenerator. */
+tasks.register<JavaExec>("generateInstrumentPack") {
+    group = "distribution"
+    description = "Render the new held instruments and pack them as one MPC expansion (.xpn) under testkit/loop-instruments-pack/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments-pack") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory instruments again, one expansion per engine, from the packages generateInstrumentPack left. */
+tasks.register<JavaExec>("splitInstrumentPack") {
+    group = "distribution"
+    description = "Pack the rendered new held instruments one expansion per engine under testkit/loop-instruments-pack/By engine/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/loop-instruments-pack", "--split")
 }

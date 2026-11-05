@@ -254,4 +254,18 @@ class InstrumentSuiteTest {
         assertEquals(63.0, num(epSamples[0]["velEnd"]))
         assertEquals(127.0, num(epSamples[1]["velEnd"]))
     }
+
+    @Test
+    fun `the regeneration manifest records keyboard-spanned zones`() {
+        val program = InstrumentSuite.renderEp(File(temp, "ep-unspanned"))
+        val spanned = program.fullKeyboard()
+        val manifest = InstrumentSidecar.describe(listOf(spanned))
+        val instrument = ((manifest.entries.getValue("instruments") as com.snipsnap.json.JsonValue.Arr)
+            .items.single() as com.snipsnap.json.JsonValue.Obj).entries
+        val zones = (instrument.getValue("zones") as com.snipsnap.json.JsonValue.Arr).items
+        val first = (zones.first() as com.snipsnap.json.JsonValue.Obj).entries
+        val last = (zones.last() as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals(0.0, (first.getValue("lowNote") as com.snipsnap.json.JsonValue.Num).value)
+        assertEquals(127.0, (last.getValue("highNote") as com.snipsnap.json.JsonValue.Num).value)
+    }
 }

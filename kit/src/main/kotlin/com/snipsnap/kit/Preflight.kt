@@ -137,11 +137,31 @@ object Preflight {
             it.drumClass == DrumClass.HAT_CLOSED || it.drumClass == DrumClass.HAT_OPEN
         }
         if (hats.size >= 2) {
-            val groups = hats.map { it.muteGroup }.toSet()
-            if (groups.size == 1 && groups.single() != 0) {
-                out += Finding(Severity.OK, "hats share choke group ${groups.single()}")
-            } else {
-                out += Finding(Severity.WARN, "open and closed hats don't share a choke group — open hats will ring")
+            // Mute group 0 on an open-hat-class pad is a choice, not an omission: a ride or a crash
+            // arranged under the HAT_OPEN tag for colour and balance asks to ring free
+            // (ArrangedPad.muteGroup, the KIT FROM ANYTHING layout). So the rule is that every
+            // closed hat sits in one choke group and at least one open hat sits in it with them;
+            // the open hats outside that group are named, not warned about.
+            val closedGroups = hats.filter { it.drumClass == DrumClass.HAT_CLOSED && it.muteGroup != 0 }
+                .map { it.muteGroup }.toSet()
+            val open = hats.filter { it.drumClass == DrumClass.HAT_OPEN }
+            val choked = open.filter { it.muteGroup in closedGroups }
+            val free = open.filter { it.muteGroup !in closedGroups }
+            when {
+                closedGroups.isEmpty() -> {
+                    // no closed hat in a group: the original rule, every hat in one non-zero group
+                    val groups = hats.map { it.muteGroup }.toSet()
+                    if (groups.size == 1 && groups.single() != 0) {
+                        out += Finding(Severity.OK, "hats share choke group ${groups.single()}")
+                    } else {
+                        out += Finding(Severity.WARN, "open and closed hats don't share a choke group — open hats will ring")
+                    }
+                }
+                closedGroups.size == 1 && choked.isNotEmpty() -> {
+                    val ringing = if (free.isEmpty()) "" else "; ${free.joinToString { it.slot.toString() }} ring free by choice"
+                    out += Finding(Severity.OK, "hats share choke group ${closedGroups.single()}$ringing")
+                }
+                else -> out += Finding(Severity.WARN, "open and closed hats don't share a choke group — open hats will ring")
             }
         }
 

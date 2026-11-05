@@ -1,5 +1,30 @@
 # OBBLIGATO: a conversation that develops
 
+## Accepted longer overlap
+
+The owner approved model 10 on 2026-11-01: “It's better, let's proceed.” New
+patches, factory presets and the sixteen-pad kit now select that renderer.
+Legacy JSON without a `model` field still selects model 5, and explicitly saved
+versions retain their original audio. The acceptance change selects the same
+model-10 sound used in the comparison below.
+
+The current kit carries four relationships and four notes, each with three
+native velocity zones, plus MPC 3, MPC 2 and editable SnipSnap recipes. Its row-walk
+demo uses the main velocity zone. The approved candidate's complete JVM, Android
+and native CI checks passed in
+[run 41213483185](https://github.com/BertCalm/SnipSnap/actions/runs/41213483185);
+the acceptance change and regenerated kit have their own validation results.
+
+The acceptance change passed 67 focused synthesis, kit, CLI, saved-preset and
+determinism checks. All 53 immutable renderer recipes retain exact raw audio and
+PCM24 exports, including the approved renderer captured before promotion. All 48
+kit samples pass an independent pitch/ending audit, and exported programs,
+downloads and browser playback verify. Broader results are tracked separately.
+
+The sections below retain the design, measurements and listening history for
+models 8–10. Their earlier audition status is historical, rather than the current
+factory default.
+
 ## A little more overlap
 
 After hearing model 9, the owner asked for a little more overlap. Model 10 keeps
@@ -11,8 +36,9 @@ shapes; they do not promise constant mixed energy between nearly unison pipes.
 
 The added time gives the outgoing phrase longer to finish while its partner
 takes over. Opening, same-player renewals and settling keep their earlier
-curves. Model 5 remains the factory and missing-model default. Saved models 1–9
-keep their original rendering paths; five independently captured model-9 raw
+curves. Model 10 is now the factory default; missing-model JSON still selects
+model 5. Saved models 1–9 keep their original rendering paths; five independently
+captured model-9 raw
 sum/stem and complete PCM24 receipts protect the latest preceding version.
 
 Remembered body slope waits until the 290 ms pass plus 40 ms of meter settling.
@@ -95,10 +121,11 @@ playback, downloads, notes and mobile layout; the 197 earlier
 non-navigation Site files retain their bytes. The broader suite is reported
 separately. No listening verdict is claimed for model 9.
 
-Status: model 8 rendered listening proof; broader checks and listening verdict pending.
+Historical model-8 status: rendered listening proof; broader checks and listening
+verdict pending.
 Baseline: `122c7c0c6486521951db33ffbf78aef32d7fb31f`. The owner described the
-gentler model-7 direction as better, then authorized this audition. Model 5
-remains the factory and missing-model default.
+gentler model-7 direction as better, then authorized this audition. At that stage,
+model 5 remained the factory and missing-model default.
 
 The characteristic gesture is **statement → remembered answer → changed counter
 → shared settling**. Play, Fight and Protect are the first relationships.
@@ -225,7 +252,7 @@ mix/independent-source-energy ratio is .694, up from .240 in that first candidat
 The corner-case coda guard covers 18 note/relationship/HOLD cases; the common
 HOLD-.45 Fight recipe also has a dedicated regression guard.
 
-## Cost and evidence
+## Historical model-8 cost and evidence
 
 Exploratory warm Temurin 17.0.21 measurements used C4, strike .8, seed 0 and HOLD
 .45, with four warmups and five timed renders per cell:

@@ -66,7 +66,7 @@ arrive, rather than whether their source contributions are numerically different
 
 | Control | Purpose |
 | --- | --- |
-| TOUCH | Playing force and attack character |
+| TOUCH | Playing force and attack character; upper ensemble settings add a hollow contact color |
 | DRAMA | Conversational intensity, companion presence and reply timing across 0–1 |
 | SIDES | Starting pair-versus-outsider relationship |
 | MOTION | Alliance travel during the finite performance |
@@ -86,16 +86,28 @@ recreates the audio; an optional existing `FxChain` remains a separate treatment
 The renderer uses SnipSnap's shared string tuning and 4× synthesis/decimation
 path, with 44.1 kHz mono output.
 
-New patches and starting presets save renderer model 6. TOUCH above .8 now
-adds a smooth increase in contact brightness, scaled by DRAMA, after the older
-pick ceiling. TOUCH at or below .8 retains model 5 exactly, including every
-accepted factory sound. The phin scrape retains its original source shape.
-Models 1–4 remain in `TrioV1` through `TrioV4`; model 5 uses the shared renderer
-with its original pick law. Saved recipes retain their earlier audition audio.
+New patches and starting presets save renderer model 7. Above TOUCH .8, an
+opposing third-period copy shapes each fresh course excitation before its
+string loop. This changes low/mid contact color, including the phin scrape,
+while preserving all strums, single companion hits and event timing. The
+profile is the contact experiment the owner preferred on 2026-11-01. At
+DRAMA .5 and 1 it matches that audition exactly. Below .5 its strength eases
+smoothly to zero, avoiding an added contact-color jump at zero DRAMA. This low-DRAMA easing
+is a continuity choice and has not received a separate listening verdict.
+TOUCH at or below .8 retains every accepted factory sound exactly.
+
+Models 1–4 remain in `TrioV1` through `TrioV4`; model 5 keeps its original pick
+law and model 6 keeps its upper contact-brightness extension. Saved recipes
+retain their earlier audition audio.
 Absent or null model fields decode as model 1, while newly authored
-`TrioConfig()` uses model 6. Edits and velocity variants preserve the saved
+`TrioConfig()` uses model 7. Edits and velocity variants preserve the saved
 model. DRAMA 0 uses the accepted original sound exactly in every newer model.
 Archived float-audio hashes guard that compatibility.
+
+The [contact integration notes](TRIO_CONTACT_AUDITION.md) explain the bounded
+source filter, version compatibility and verification. The published
+[TOUCH comparison](https://trio-snipsnap-audition.bertcalm.chatgpt.site/touch/)
+keeps the previous sound beside the approved profile.
 
 The finite performance is baked into the sample. An MPC export does not retain
 live SIDES, MOTION or DRAMA controls. The current SYNTH audition path folds

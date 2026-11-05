@@ -155,12 +155,66 @@ class BoardSheetTest {
             assertEquals(0, swept, "layered=$layered: the sweep took an original the board's era'd source needs")
             assertEquals(files.sorted(), m.binHolds().map { it.entry.originalName }.sorted(), "layered=$layered: one entry per file the source plays")
             assertTrue(m.binHolds().all { it.keptFor == 1 }, "layered=$layered: every one kept for the printed pad's slot")
+            // THE BIN asks the pad under the print whether it can undo itself, and it can: the
+            // printed pad's NONE removes the board, then NONE again reads these entries. So no BACK.
+            val binned = m.binHolds().map { it.entry.originalName }.toSet()
+            val under = m.unprinted(m.pad(1)!!)
+            for (f in files) {
+                assertTrue(PadSheet.hasOwnWayBack(under, f, binned), "layered=$layered: under the board, NONE gives $f back")
+                assertFalse(PadSheet.hasOwnWayBack(m.pad(1)!!, f, binned), "layered=$layered: the print itself plays none of $f")
+            }
             val removed = BoardSheet.remove(m, 1)
             assertEquals("main.wav", removed.sampleFile)
             assertTrue(PadSheet.read(removed.recipe) != null, "test setup: REMOVE brought the era back")
             m.unEraPad(1)
             for ((f, b) in files.zip(originals)) assertTrue(b.contentEquals(bytes(m, f)), "layered=$layered: NONE after REMOVE gives $f back")
         }
+    }
+
+    /**
+     * THE BIN shows no BACK on a row whose file a board's saved source names (the owner's call,
+     * 2026-11-01): REMOVE restores those files and first checks each by hash, so BACK there would
+     * leave the board stuck on for good. The names count while the board can come back, live or in
+     * its tombstone, and leave once it cannot.
+     */
+    @Test fun `the files under a board are named while the board can come back, and BACK there would keep it on for good`() {
+        for (layered in listOf(false, true)) {
+            val m = model("UnderBoard-$layered", layered = layered)
+            val files = if (layered) setOf("main.wav", "soft.wav") else setOf("main.wav")
+            m.eraPad(1, "tape", 1f)
+            assertEquals(emptySet(), m.filesUnderPrints(), "layered=$layered: no print yet")
+            BoardSheet.apply(m, 1, .7f)
+            assertEquals(files, m.filesUnderPrints(), "layered=$layered: every file the board's source plays")
+            BoardSheet.remove(m, 1)
+            assertEquals(emptySet(), m.filesUnderPrints(), "layered=$layered: after REMOVE the names are free, and BACK comes back")
+        }
+
+        val ejected = model("UnderEjectedBoard")
+        ejected.eraPad(1, "tape", 1f)
+        BoardSheet.apply(ejected, 1, .7f)
+        ejected.clear(1)
+        assertEquals(setOf("main.wav"), ejected.filesUnderPrints(), "an ejected board BACK can bring back still counts")
+        ejected.emptyBin()
+        assertEquals(emptySet(), ejected.filesUnderPrints(), "with its tombstone gone, nothing can bring it back")
+
+        // binHolds' one exception holds here too: an ejected board past its tombstone's days whose
+        // saved source will not read is skipped, so it cannot drop THE BIN to its fallback.
+        val overdue = model("UnderOverdueBoard")
+        overdue.eraPad(1, "tape", 1f)
+        val source = (BoardSheet.apply(overdue, 1, .7f).recipe!!.entries.getValue("source") as JsonValue.Str).value
+        overdue.clear(1)
+        overdue.save()
+        File(overdue.kitDir, ".boards/states/$source.json").appendText(" ")
+        val now = System.currentTimeMillis()
+        assertFailsWith<IllegalArgumentException>("while BACK can bring it back, a source that will not read stops it") { overdue.filesUnderPrints(nowMillis = now) }
+        assertEquals(emptySet(), overdue.filesUnderPrints(nowMillis = now + 31L * 24 * 60 * 60 * 1000), "past its days, the damaged board is skipped")
+
+        // What the guard prevents: BACK on the era's row, under the board, and REMOVE refuses.
+        val stuck = model("BackUnderBoard")
+        stuck.eraPad(1, "tape", 1f)
+        BoardSheet.apply(stuck, 1, .7f)
+        stuck.restoreFromBin(stuck.binContents().single { it.originalName == "main.wav" })
+        assertFailsWith<IllegalArgumentException>("BACK overwrote a file the board restores") { BoardSheet.remove(stuck, 1) }
     }
 
     /**

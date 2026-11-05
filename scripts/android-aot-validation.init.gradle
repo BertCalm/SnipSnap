@@ -1,0 +1,10 @@
+// Environment-only validation build: keep the debug variant's dependencies and
+// signing, but allow Android 15 ART to compile the target for the software AVD.
+// This does not change repository build settings or any instrumentation test.
+gradle.beforeProject { project ->
+    project.plugins.withId('com.android.application') {
+        project.extensions.getByName('androidComponents').finalizeDsl { androidDsl ->
+            androidDsl.buildTypes.getByName('debug').debuggable = false
+        }
+    }
+}

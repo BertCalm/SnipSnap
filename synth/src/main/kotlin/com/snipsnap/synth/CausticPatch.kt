@@ -7,7 +7,8 @@ import com.snipsnap.json.JsonValue
 /**
  * Editable native CAUSTIC sound. Its native render model is independent of
  * the archived [CausticRecipe] models; note and excitation survive macro edits.
- * This first instrument renders finite notes and reserves HOLD at zero.
+ * Model 1 retains the original finite notes. Model 2 also supports moving
+ * reflection paths and an explicitly driven sustain loop at HOLD's top step.
  */
 data class CausticPatch(
     override val name: String,
@@ -24,7 +25,9 @@ data class CausticPatch(
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "CAUSTIC velocity must be finite in 0..1: $velocity" }
         Patches.validateMacros(this, CausticInstrument.macrosFor(voice, model))
-        require((macros["HOLD"] ?: 0f) == 0f) { "CAUSTIC HOLD is reserved at 0; this instrument renders finite notes" }
+        require(model != CausticInstrument.LEGACY_MODEL_VERSION || (macros["HOLD"] ?: 0f) == 0f) {
+            "CAUSTIC model 1 HOLD is reserved at 0; its saved finite notes remain unchanged"
+        }
     }
 
     override val engine get() = ENGINE

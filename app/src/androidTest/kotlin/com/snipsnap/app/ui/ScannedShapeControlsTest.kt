@@ -19,6 +19,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.ScannedChainEditor
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.ScannedChain
@@ -91,6 +92,73 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     }
 
     @Test
+    fun opening_saved_envelopes_keeps_their_exact_values_in_both_models() {
+        val original = fixture(ScannedChainVoice.BLOOM).copy(
+            model = 1,
+            config = fixture(ScannedChainVoice.BLOOM).config.copy(
+                seconds = .25f, attackSeconds = .8234567f, releaseSeconds = 1.7654321f,
+            ),
+        )
+        show(original)
+        assertEquals(original.toJsonText(), currentPatch.toJsonText())
+        assertEquals(0, changeCount)
+
+        val updated = original.copy(model = 2)
+        compose.runOnUiThread { currentPatch = updated }
+        pump()
+        assertEquals(updated.toJsonText(), currentPatch.toJsonText())
+        assertEquals("opening a recipe never quantizes or shortens its envelope", 0, changeCount)
+    }
+
+    @Test
+    fun envelope_edits_preserve_the_complete_source_and_other_fields_in_both_models() {
+        val original = fixture(ScannedChainVoice.PLUCK).copy(
+            model = 1,
+            shape = ScannedChainShape.drawn(FloatArray(128) { i -> if (i % 11 < 5) .21f else -.13f }, "KEPT SOURCE"),
+        )
+        show(original)
+        for (model in listOf(1, 2)) {
+            val saved = original.copy(model = model)
+            compose.runOnUiThread { currentPatch = saved }
+            pump()
+
+            adjust("ATTACK", .2f)
+            val attacked = saved.copy(config = saved.config.copy(attackSeconds = ScannedChainEditor.attackSeconds(.2f)))
+            assertEquals(attacked, currentPatch)
+
+            adjust("RELEASE", .9f)
+            val released = attacked.copy(config = attacked.config.copy(releaseSeconds = ScannedChainEditor.releaseSeconds(.9f)))
+            assertEquals(released, currentPatch)
+            assertEquals(released, ScannedChainPatch.fromJsonText(currentPatch.toJsonText()))
+        }
+        assertEquals(4, changeCount)
+    }
+
+    @Test
+    fun consecutive_envelope_and_length_edits_keep_each_other_before_recomposition() {
+        val original = fixture(ScannedChainVoice.METAL).copy(model = 1)
+        show(original)
+        fun action(label: String) = compose.onNodeWithContentDescription(label, useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+        val attack = action("ATTACK")
+        val release = action("RELEASE")
+        val length = action("LENGTH")
+        compose.runOnUiThread {
+            assertTrue(attack(.8f))
+            assertTrue(release(.95f))
+            assertTrue(length(.25f))
+        }
+        pump()
+
+        assertEquals(original.copy(config = original.config.copy(
+            seconds = .25f,
+            attackSeconds = ScannedChainEditor.attackSeconds(.8f),
+            releaseSeconds = ScannedChainEditor.releaseSeconds(.95f),
+        )), currentPatch)
+        assertEquals("long envelopes remain deliberate choices when length is reduced", 3, changeCount)
+    }
+
+    @Test
     fun updated_controls_keep_the_complete_legacy_source_and_settings() {
         val original = fixture(ScannedChainVoice.BLOOM).copy(model = ScannedChain.LEGACY_MODEL)
         show(original)
@@ -107,7 +175,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     fun a_drawn_starting_shape_commits_without_resetting_the_current_recipe() {
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original)
-        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "ROOT", "VELOCITY", "LENGTH")) {
+        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "VELOCITY", "LENGTH")) {
             assertReadsInFull(label)
         }
 
@@ -149,7 +217,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     }
 
     @Test
-    fun root_velocity_and_length_each_preserve_the_other_saved_fields() {
+    fun velocity_and_length_each_preserve_the_other_saved_fields() {
         val voice = ScannedChainVoice.BLOOM
         val custom = ScannedChainShape.drawn(
             FloatArray(ScannedChain.SHAPE_SIZE) { i -> if (i < 29) .27f else -.08f },
@@ -158,15 +226,14 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
         val original = fixture(voice).copy(shape = custom)
         show(original)
 
-        adjust("ROOT", 65f)
-        assertEquals(original.copy(midi = 65), currentPatch)
-
+        // ROOT is the shared stepper row drawn by the screen, not by these controls; the screen
+        // tests drive it. What is checked here is that each control keeps the others' saved fields.
         adjust("VELOCITY", .64f)
-        assertEquals(original.copy(midi = 65, velocity = .64f), currentPatch)
+        assertEquals(original.copy(velocity = .64f), currentPatch)
 
         adjust("LENGTH", 2.5f)
-        assertEquals(original.copy(midi = 65, velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
-        assertEquals(3, changeCount)
+        assertEquals(original.copy(velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
+        assertEquals(2, changeCount)
     }
 
     @Test

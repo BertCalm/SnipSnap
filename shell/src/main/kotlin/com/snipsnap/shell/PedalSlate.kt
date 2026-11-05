@@ -488,8 +488,8 @@ object PedalSlate {
 
         /**
          * The pad carries pedals and the bin holds no earlier take of it (the bin keeps a pad's
-         * original for as long as the pad needs it, so this is, for example, a bin emptied by hand,
-         * BACK on the pad's kept row in THE BIN, or a recipe that came from another pad): the board
+         * original for as long as the pad needs it, so this is, for example, a bin emptied by hand or
+         * a recipe that came from another pad): the board
          * re-renders whole from the original, so changing it would play every pedal already in the
          * audio twice. Nothing was touched.
          */

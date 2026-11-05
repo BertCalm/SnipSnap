@@ -52,6 +52,11 @@ object ResampleCommand {
         val name = opts["--name"] ?: "$base Gen $generation"
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outDir = opts["--out"] ?: "snipsnap-out"
+        // chop --overwrite replaces the kit folder whole, so a bounce named onto its own source
+        // would delete the kit it was bounced from (and the bounce has already read it).
+        if (File(outDir, name).canonicalFile == kitDir.canonicalFile) {
+            throw CliError("resample would write over its own source kit: pick another --name or --out")
+        }
 
         // The bounce: the kit playing its own groove, worn per its ledger.
         val render = Wear.render(kit, KitPreview.render(kit, kitDir), wearW)

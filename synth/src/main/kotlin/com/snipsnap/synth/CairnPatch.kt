@@ -17,12 +17,13 @@ data class CairnPatch(
         Patches.validateMacros(this, Cairn.macrosFor(voice))
         require(midi in Cairn.MIN_MIDI..Cairn.MAX_MIDI)
         require(velocity.isFinite() && velocity in 0f..1f)
-        require(model == Cairn.MODEL_VERSION) { "unsupported CAIRN model $model" }
-        require((macros["HOLD"] ?: 0f) < Cairn.HOLD_RESERVED) { "CAIRN reserves HOLD's top step in this milestone" }
+        require(model in 1..Cairn.MODEL_VERSION) { "unsupported CAIRN model $model" }
+        require(voice != CairnVoice.TUMBLE || model >= 3) { "CAIRN TUMBLE requires model 3" }
+        require(model >= 2 || !Cairn.isLoop(macros)) { "CAIRN model 1 reserves HOLD's top step" }
     }
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Cairn.render(voice, macros, midi, velocity, startAtContact)
+    override fun render() = Cairn.render(voice, macros, midi, velocity, startAtContact, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
     override fun toJsonValue() = JsonValue.Obj(LinkedHashMap(Patches.toJsonValue(this).entries).also {
         it["model"] = JsonValue.Num(model.toDouble())
@@ -40,7 +41,7 @@ data class CairnPatch(
                     obj["midi"]?.int() ?: Cairn.DEFAULT_MIDI,
                     obj["velocity"]?.num()?.toFloat() ?: 1f,
                     obj["startAtContact"]?.bool() ?: true,
-                    obj["model"]?.int() ?: Cairn.MODEL_VERSION)
+                    obj["model"]?.int() ?: 1)
             }
         }
         fun fromJsonText(text: String) = fromJsonValue(Json.parse(text)) as CairnPatch

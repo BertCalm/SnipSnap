@@ -1,0 +1,52 @@
+{
+  "baseRevision": "82a1f9c74086d574d4de3eb1b7dc0944069c89d6",
+  "midi": 60,
+  "velocity": 0.65,
+  "seedContext": 17,
+  "hashEncoding": "little-endian final Float32 mono samples",
+  "unchanged": true,
+  "renders": [
+    {
+      "voice": "PASSAGE",
+      "model": 1,
+      "held": false,
+      "frames": 264600,
+      "sha256": "7d16adf72c144bdd087c74d2412e4d1fd729ad801e68df689abd27a4e2e0c4e3"
+    },
+    {
+      "voice": "PASSAGE",
+      "model": 1,
+      "held": true,
+      "frames": 257056,
+      "sha256": "7604f51b703b46e7ec06f7a51cd059e481637d3d293a71e7a13e6894cf699377"
+    },
+    {
+      "voice": "PASSAGE",
+      "model": 2,
+      "held": false,
+      "frames": 264600,
+      "sha256": "03626ec11a6b56fe25e07b6d0391901b86c78eb0ffd512b92e1534964bc5138b"
+    },
+    {
+      "voice": "PASSAGE",
+      "model": 2,
+      "held": true,
+      "frames": 257056,
+      "sha256": "cf089dbc543cbb6d4e30e595201772be76dfa1e71a4937470ffa4a0031b10b94"
+    },
+    {
+      "voice": "PASSAGE",
+      "model": 3,
+      "held": false,
+      "frames": 264600,
+      "sha256": "8eebc67220ebc41fe630d5f5fa89bc36d46cb1b7f8adbc439ccd77e551caf46a"
+    },
+    {
+      "voice": "PASSAGE",
+      "model": 3,
+      "held": true,
+      "frames": 257056,
+      "sha256": "9531cbb2f74284b1258cb93842477ab8beb0e6d9578035c64598f44db0ff6ce4"
+    }
+  ]
+}

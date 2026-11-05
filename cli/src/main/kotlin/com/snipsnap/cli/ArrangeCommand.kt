@@ -1,11 +1,9 @@
 package com.snipsnap.cli
 
+import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.KitStore
-import com.snipsnap.kit.Mpc3Exporter
-import com.snipsnap.mpc3.Mpc3ProjectTrack
-import com.snipsnap.mpc3.Mpc3ProjectWriter
-import com.snipsnap.mpc3.Mpc3Song
 import com.snipsnap.shell.Arranger
+import com.snipsnap.shell.SongExport
 import java.io.File
 import java.io.PrintStream
 
@@ -35,29 +33,15 @@ object ArrangeCommand {
 
         val kit = KitStore.load(kitDir)
         val plan = Arranger.arrange(kit, kitDir, seed)
-
-        // Sequence names carry the order: flipping 01.. IS the arrangement.
-        val sectionClips = plan.sections.mapIndexed { i, s ->
-            s.clip.copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
-        }
-
-        val destRoot = File(opts["--out"] ?: "snipsnap-out", "card")
-        val overwrite = opts.has("--overwrite")
-        val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(plan.name))
-        val xpjDest = File(destRoot, "${plan.name}.xpj")
-        if ((xpjDest.exists() || dataDir.exists()) && !overwrite) {
-            throw CliError("destination already exists: $xpjDest (pass --overwrite to replace it)")
-        }
-        dataDir.deleteRecursively()
-        val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
-        val writer = Mpc3ProjectWriter()
-        val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = sectionClips))
-        val song = Mpc3Song(plan.name)
-        val tempo = kit.tempoBpm
-        val xpj = if (tempo != null) {
-            writer.writeTo(destRoot, plan.name, tracks, tempo, song = song)
-        } else {
-            writer.writeTo(destRoot, plan.name, tracks, song = song)
+        val written = try {
+            SongExport.write(
+                kit, kitDir, plan,
+                destRoot = File(opts["--out"] ?: "snipsnap-out", "card"),
+                overwrite = opts.has("--overwrite"),
+                mixdown = opts.has("--mixdown"),
+            )
+        } catch (e: DestinationExists) {
+            throw CliError("destination already exists: ${e.path} (pass --overwrite to replace it)")
         }
 
         out.println(
@@ -68,16 +52,10 @@ object ArrangeCommand {
             val loops = if (s.repeats > 1) "  (${s.clip.bars}-bar pattern x${s.repeats})" else ""
             out.println("  %02d  %-10s %2d bars$loops".format(java.util.Locale.ROOT, i + 1, s.name, s.bars))
         }
-        out.println("project: ${xpj.path}")
+        out.println("project: ${written.project.path}")
         out.println("  flip sequences 01..%02d in order on the hardware - that's the song".format(java.util.Locale.ROOT, plan.sections.size))
 
-        if (opts.has("--mixdown")) {
-            val mix = Arranger.mixdown(kit, kitDir, plan)
-            val wav = File(destRoot, "${plan.name}.wav")
-            if (wav.exists() && !overwrite) {
-                throw CliError("destination already exists: $wav (pass --overwrite to replace it)")
-            }
-            com.snipsnap.audio.WavWriter.write(wav, mix.snip)
+        written.mixdown?.let { (wav, mix) ->
             out.println(
                 "mixdown: ${wav.path} (%.1fs - pull-up into the turn, tape stop on the outro%s)".format(java.util.Locale.ROOT, 
                     mix.snip.durationSeconds,

@@ -32,6 +32,22 @@ internal object Dsp {
      */
     const val OVERSAMPLE = 4
 
+    /**
+     * Recursive states below this are set to exactly zero by [floored]. A state whose input
+     * has gone to exact zero decays into subnormal doubles, which the processor handles on a
+     * slow path, and a slow one-pole or rotation can then sit there for the rest of the render
+     * because rounding stops the decay. 1e-100 is ACCORD's and FILAMENT's floor
+     * ([Filament.TINY_STATE]): about -2000 dB, far above where subnormals begin (2.2e-308) and
+     * far below any 24-bit sample step. A linear state this small cannot reach a written
+     * sample, but a nonlinear use of it can (a square root, a branch on > 0), so each caller
+     * checks its own pinned audio before adopting it.
+     */
+    internal const val TINY_STATE = 1e-100
+
+    /** [x], or exactly zero when it has decayed below [TINY_STATE]. */
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun floored(x: Double): Double = if (kotlin.math.abs(x) < TINY_STATE) 0.0 else x
+
     /** Linear macro map: macro 0..1 onto [lo, hi]. */
     fun lin(macro: Float, lo: Float, hi: Float): Float = lo + (hi - lo) * macro.coerceIn(0f, 1f)
 

@@ -108,7 +108,7 @@ class FilamentPadMakerTest {
                 assertTrue(worst < 2e-7f, "PCM24 transport changed the actual source: worst difference $worst")
             }
             val track = Acvs.read(File(destination, "$name.xty"))
-            assertEquals(Mpc3TrackWriter().keygroupPayloadText(program), track.payloadText,
+            assertEquals(Mpc3TrackWriter().keygroupPayloadText(program.fullKeyboard()), track.payloadText,
                 "read the real MPC 3 container, including every loop marker")
 
             val (_, instrument) = InstrumentStore.list(destination).single()

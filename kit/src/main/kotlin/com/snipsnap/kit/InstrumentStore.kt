@@ -3,7 +3,10 @@ package com.snipsnap.kit
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 
 /**
@@ -63,6 +66,10 @@ object InstrumentStore {
         /** Seconds, the amp envelope's release once a note lets go. */
         val release: Float,
         val zones: List<Zone>,
+        /** How the keys share the voice; a sidecar that does not say is polyphonic. */
+        val voiceMode: VoiceMode = VoiceMode.POLY,
+        /** Whether the XPM declares an explicit NoteOn trigger. */
+        val explicitNoteOn: Boolean = false,
     ) {
         /**
          * [release] as a player may use it: finite, not negative, at most
@@ -81,12 +88,39 @@ object InstrumentStore {
 
         /** Every layer must load, including soft samples that are not a zone's headline. */
         val sampleFiles: List<String> get() = zones.flatMap { it.playableLayers }.map { it.sample }.distinct()
+
+        /**
+         * The program this instrument was written from: one keygroup per zone, one layer per playable layer.
+         * It carries no `pitchBendRange`; trigger mode is preserved because some packages require an explicit NoteOn.
+         */
+        fun toProgram(): KeygroupProgram = KeygroupProgram(
+            name = name,
+            keygroups = zones.map { zone ->
+                Keygroup(
+                    zone.lowNote, zone.highNote, zone.rootNote,
+                    zone.playableLayers.map { l ->
+                        VelocityLayer(
+                            l.sample.substringAfterLast('/').substringAfterLast('\\').removeSuffix(".wav"),
+                            l.frameCount, l.velStart, l.velEnd, l.loopStartFrame,
+                        )
+                    },
+                )
+            },
+            volumeRelease = playableRelease,
+            explicitNoteOn = explicitNoteOn,
+            voiceMode = voiceMode,
+        )
     }
 
     fun sidecar(destRoot: File, name: String): File = File(destRoot, "$name$SUFFIX")
 
     /** Write the sidecar for [program], whose samples live under [dataDirName] beside it. */
     fun write(destRoot: File, name: String, program: KeygroupProgram, dataDirName: String) {
+        AtomicFile.writeText(sidecar(destRoot, name), render(program, dataDirName))
+    }
+
+    /** The sidecar's JSON text for [program], without touching the disk. */
+    fun render(program: KeygroupProgram, dataDirName: String): String {
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
             JsonValue.Obj(
@@ -114,10 +148,12 @@ object InstrumentStore {
                 "version" to JsonValue.Num(VERSION.toDouble()),
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
+                "voiceMode" to JsonValue.Str(program.voiceMode.name),
+                "explicitNoteOn" to JsonValue.Bool(program.explicitNoteOn),
                 "zones" to JsonValue.Arr(zones),
             ),
         )
-        AtomicFile.writeText(sidecar(destRoot, name), Json.write(obj))
+        return Json.write(obj)
     }
 
     /**
@@ -141,6 +177,7 @@ object InstrumentStore {
             throw JsonException("instrument release isn't a length of time: $releaseRaw")
         }
         val release = releaseRaw.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)
+        val voiceMode = VoiceMode.parse(obj["voiceMode"]?.str())
         val folder = file.absoluteFile.parentFile
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
@@ -189,7 +226,14 @@ object InstrumentStore {
             zone
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")
-        return Instrument(name, release, zones)
+        val explicitNoteOn = obj["explicitNoteOn"]?.bool() ?: legacyExplicitNoteOn(file, name, zones)
+        return Instrument(name, release, zones, voiceMode, explicitNoteOn)
+    }
+
+    private fun legacyExplicitNoteOn(file: File, name: String, zones: List<Zone>): Boolean {
+        val dataDirName = zones.first().sample.split('/', '\\').firstOrNull() ?: return false
+        val xpm = File(File(file.absoluteFile.parentFile, dataDirName), "$name.xpm")
+        return xpm.isFile && runCatching { "<TriggerMode>2</TriggerMode>" in xpm.readText() }.getOrDefault(false)
     }
 
     private val MIDI = 0..127

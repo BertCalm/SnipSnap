@@ -70,7 +70,10 @@ object ChamberAuditionGenerator {
         val kitDownloads = kit?.let { copyKitDownload(root, it) }.orEmpty()
         val repo = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .firstOrNull { File(it, ".git").exists() } ?: error("run from the SnipSnap repository")
-        val source = provenance(repo, root)
+        // Named studies retain their authored recipes even when new instruments
+        // adopt a newer renderer. Provenance describes those actual render laws.
+        val cases = if (timpaniRevision) timpaniCases(timpaniBoost) else cases(finite)
+        val source = provenance(repo, root, cases.map { it.patch.model }.distinct().sorted())
         for (name in listOf("index.html", "app.js", "styles.css")) {
             val resource = ChamberAuditionGenerator::class.java.getResourceAsStream("/chamber-audition/$name")
                 ?: error("missing retained CHAMBER audition page resource $name")
@@ -78,7 +81,6 @@ object ChamberAuditionGenerator {
         }
         val sourceRevision = source.getValue("revision")
         val previousAudition = previous?.let { archivePrevious(it, root, if (finite) 3 else if (timpaniBoost) 2 else 1) }
-        val cases = if (timpaniRevision) timpaniCases(timpaniBoost) else cases(finite)
         require(cases.map { it.id }.distinct().size == cases.size) { "duplicate CHAMBER clip ID" }
         val clips = mutableListOf<Map<String, Any?>>()
         val failures = mutableListOf<Map<String, Any?>>()
@@ -569,7 +571,7 @@ object ChamberAuditionGenerator {
     }
 
     /** These phrases play the actual exported samples, including their baked room and ending. */
-    private fun performances(root: File, kitDirectory: File, sourceRevision: Any?): List<Map<String, Any?>> {
+    internal fun performances(root: File, kitDirectory: File, sourceRevision: Any?): List<Map<String, Any?>> {
         val kit = kitDirectory.canonicalFile
         val manifestFile = File(kit, "manifest.json")
         val kitManifest = Json.parse(manifestFile.readText()).obj()
@@ -586,8 +588,8 @@ object ChamberAuditionGenerator {
             }
             val recipe = PadRecipe.fromJsonValue(pad.getValue("savedRecipe"))
             val patch = recipe.patch as? ChamberPatch ?: error("$label has no CHAMBER recipe")
-            require(recipe.fx == null && patch.model == Chamber.MODEL_VERSION && patch.macros["HOLD"] == 0f) {
-                "$label must contain the current dry finite instrument"
+            require(recipe.fx == null && patch.model == ChamberKits.MODEL && patch.macros["HOLD"] == 0f) {
+                "$label must contain the authored dry finite kit instrument"
             }
             val destination = File(root, "performance-sources/$label.wav").also { it.parentFile.mkdirs() }
             sample.copyTo(destination, overwrite = true)
@@ -608,7 +610,7 @@ object ChamberAuditionGenerator {
             val sourceFrames = phrase.order.maxOf { label -> WavReader.read(File(root, "performance-sources/$label.wav")).samples.size }
             val frames = ((phrase.order.lastIndex * phrase.interval * Dsp.RATE).toInt() + sourceFrames)
             val score = linkedMapOf<String, Any?>(
-                "performanceRecipe" to 1, "engine" to ChamberPatch.ENGINE, "model" to Chamber.MODEL_VERSION,
+                "performanceRecipe" to 1, "engine" to ChamberPatch.ENGINE, "model" to ChamberKits.MODEL,
                 "sampleRate" to Dsp.RATE, "frames" to frames, "mixGain" to .125f,
                 "sourcePolicy" to "SHA-256-checked exported PCM24; native sample pitch; independent baked rooms",
                 "sources" to phrase.order.distinct().map { copiedSources.getValue(it) },
@@ -656,7 +658,7 @@ object ChamberAuditionGenerator {
             metrics["recipeSha256"] = sha(recipeFile)
             metrics["diagnostics"] = tracePath
             linkedMapOf("id" to phrase.id, "title" to phrase.title, "section" to "performance",
-                "model" to Chamber.MODEL_VERSION, "sourceRevision" to sourceRevision,
+                "model" to ChamberKits.MODEL, "sourceRevision" to sourceRevision,
                 "voice" to if (phrase.id == "hybrid-kit-phrase") "HYBRID" else "MIXED", "midi" to null,
                 "description" to phrase.description, "question" to "Do the attack, membrane body and overlapping tails make a useful playable instrument?",
                 "raw" to rawPath, "matched" to matchedPath, "recipe" to recipePath, "metrics" to metrics,
@@ -673,11 +675,12 @@ object ChamberAuditionGenerator {
         for (i in 0 until count) { val delta = a[i].toDouble() - b[i]; energy += delta * delta }
         return sqrt(energy / count.coerceAtLeast(1)) / TangleMeasure.rms(a).coerceAtLeast(1e-30)
     }
-    private fun provenance(repo: File, root: File): Map<String, Any?> {
+    private fun provenance(repo: File, root: File, renderedModels: List<Int>): Map<String, Any?> {
         val paths = listOf("synth/src/main/kotlin/com/snipsnap/synth/Chamber.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ChamberConfig.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberRoom.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ChamberPatch.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberPresets.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ChamberKits.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberRenderer.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ChamberWideRange.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberRegister.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt", "synth/src/main/kotlin/com/snipsnap/synth/Tide.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Keys.kt", "synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt", "synth/src/main/kotlin/com/snipsnap/synth/Thump.kt",
@@ -717,7 +720,8 @@ object ChamberAuditionGenerator {
         check(statusProcess.waitFor() == 0) { "could not inspect source worktree" }
         return linkedMapOf("revision" to revision, "worktreeSourceHashesAuthoritative" to true,
             "dirtyWorktree" to changedPaths.isNotEmpty(), "worktreeChanges" to changedPaths,
-            "engine" to "CHAMBER", "model" to Chamber.MODEL_VERSION,
+            "engine" to "CHAMBER", "model" to renderedModels.max(), "models" to renderedModels,
+            "defaultModel" to Chamber.MODEL_VERSION,
             "javaRuntime" to System.getProperty("java.runtime.version"), "kotlinRuntime" to KotlinVersion.CURRENT.toString(),
             "oversample" to Dsp.OVERSAMPLE, "sampleRate" to Dsp.RATE, "files" to files)
     }

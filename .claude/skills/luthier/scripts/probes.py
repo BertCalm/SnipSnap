@@ -70,7 +70,10 @@ def pitch(x: np.ndarray, rate: int = RATE, lo_hz: float = 40.0, hi_hz: float = 2
     total = e[-1]
     m = np.empty(len(seg))
     for tau in range(len(seg)):
-        m[tau] = (total - (e[tau - 1] if tau > 0 else 0.0)) + (total - (e[len(seg) - tau - 1]))
+        # sum x[i]^2 over i in [0, n-tau) is e[n-tau-1]; sum x[i+tau]^2 over the same i is total - e[tau-1].
+        # The earlier form subtracted the first term from the total, which halved m at short lags,
+        # let the NSDF exceed 1 and clipped every confidence to 1.0 (found in review of SnipSnap PR 796).
+        m[tau] = e[len(seg) - tau - 1] + (total - (e[tau - 1] if tau > 0 else 0.0))
     nsdf = 2 * acf / np.maximum(m, 1e-12)
     cand = nsdf[min_lag: max_lag]
     if len(cand) == 0:

@@ -35,7 +35,7 @@ class ObbligatoKitTest {
     private val relationships = listOf("Harmony" to 0f, "Play" to (1f / 7f), "Fight" to (3f / 7f), "Protect" to (6f / 7f))
 
     @Test
-    fun `the starter matrix and shared preset dispatcher retain the accepted model five duet`() {
+    fun `the starter matrix and shared preset dispatcher use the accepted longer overlap duet`() {
         val patches = ObbligatoKits.patches()
         assertEquals(16, patches.size)
         assertEquals(16, patches.map { it.name }.distinct().size)
@@ -44,7 +44,7 @@ class ObbligatoKitTest {
             assertTrue(patch.name.startsWith(relationship.first + " "), "pad ${row * 4 + column + 1} names the wrong player relationship")
             assertEquals(midi, patch.midi)
             assertEquals(relationship.second, patch.macros.getValue("BOND"))
-            assertEquals(5, patch.model, "the accepted audition must not change when a later model is introduced")
+            assertEquals(10, patch.model, "new factory pads must use the approved longer-overlap renderer")
             assertEquals(.8f, patch.velocity)
             assertEquals(0, patch.seed)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
@@ -112,7 +112,7 @@ class ObbligatoKitTest {
                 assertEquals(listOf(1 to 41, 42 to 84, 85 to 127), pad.velocityLayers.map { it.velStart to it.velEnd })
                 assertEquals(listOf("0.3", "0.6", "0.8"), listOf("velocitySoft", "velocityMid", "velocityMain").map { pad.source[it] })
                 assertEquals("peak-match-main", pad.source["velocityNormalization"])
-                assertEquals("5", pad.source["model"])
+                assertEquals("10", pad.source["model"])
                 assertEquals(patch.midi.toString(), pad.source["midi"])
                 assertEquals("0", pad.source["seed"])
 

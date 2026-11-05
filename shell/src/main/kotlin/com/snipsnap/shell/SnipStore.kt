@@ -244,18 +244,22 @@ object SnipStore {
      * renameable later exactly like any other snip. Only the two things
      * the deck needs — mono (the ring is mono; the deck reads mono) and
      * the MPC rate (a 48 k or 22.05 k file through the sinc [Resampler])
-     * — and the [IMPORT_MAX_SEC] cap. Written through [AtomicFile] like a
+     * — and the [IMPORT_MAX_SEC] cap. [preserveStereo] is an explicit
+     * performance-print option: keep both file channels while retaining
+     * rate conversion and the duration cap. Ordinary imports remain mono;
+     * TAPE's existing mono editor still folds a stereo file on read.
+     * Written through [AtomicFile] like a
      * commit, named `snip_<nowMillis>.wav` so [newest] ranks it by
      * arrival. An empty file is refused in words.
      */
-    fun import(snip: Snip, root: File, nowMillis: Long): Imported {
+    fun import(snip: Snip, root: File, nowMillis: Long, preserveStereo: Boolean = false): Imported {
         require(snip.frameCount > 0) { "the shared file holds no audio" }
-        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
-        val cameInAt = mono.sampleRate.takeIf { it != WavWriter.MPC_SAMPLE_RATE }
-        val atRate = if (cameInAt == null) mono else Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
+        val input = if (preserveStereo || snip.channels == 1) snip else Cleanup.toMono(snip)
+        val cameInAt = input.sampleRate.takeIf { it != WavWriter.MPC_SAMPLE_RATE }
+        val atRate = if (cameInAt == null) input else Resampler.resample(input, WavWriter.MPC_SAMPLE_RATE)
         val maxFrames = (IMPORT_MAX_SEC * atRate.sampleRate).toInt()
         val truncated = atRate.frameCount > maxFrames
-        val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames), 1, atRate.sampleRate) else atRate
+        val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames * atRate.channels), atRate.channels, atRate.sampleRate) else atRate
 
         val file = freshFile(root, nowMillis)
         // The decoded audio is already in memory. Stream its encoding to the

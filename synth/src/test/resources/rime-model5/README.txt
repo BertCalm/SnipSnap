@@ -1,0 +1,1 @@
+Model-5 production audition at SnipSnap commit 4954af520aabe3928454d3b03b1b767cffb0b2d6. SHA-256 of each published raw PCM24 mono 44.1-kHz WAV, including its opening and eight independently checked sustain repetitions. Captured before adding model 6.

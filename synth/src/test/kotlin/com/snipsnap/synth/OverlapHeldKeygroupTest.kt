@@ -73,8 +73,8 @@ class OverlapHeldKeygroupTest {
                 val sidecar = File(output, program.getValue("instrumentSidecar").str())
                 val instrument = InstrumentStore.read(sidecar)
                 assertEquals(.6f, instrument.release)
-                assertEquals(null, instrument.zoneFor(41))
-                assertEquals(null, instrument.zoneFor(55))
+                // The single zone spans the whole keyboard: the packaging door stretches it to 0..127.
+                assertEquals(0..127, instrument.zones.single().let { it.lowNote..it.highNote })
                 val stored = requireNotNull(instrument.zoneFor(48))
                 assertEquals(48, stored.rootNote)
                 val zone = (program.getValue("zones") as JsonValue.Arr).items.single().obj()

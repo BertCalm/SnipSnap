@@ -8,12 +8,16 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
  * before phase, because the copies are made of the finished tone and the
  * sweep and the repeats then carry all three.
+ *
+ * volume after spike and before eq: a fade-in is a level move on the finished
+ * anatomy, ahead of the tone and, on purpose, ahead of the amp, so a swell into
+ * DRIVE blooms and WAH's envelope follower rides it.
  *
  * wah after contour and before squash: a wah is the first pedal on the
  * board, a filter in front of the compressor and the amp, and the
@@ -76,6 +80,7 @@ data class FxChain(
     val smear: Map<String, Float>? = null,
     val ghost: Map<String, Float>? = null,
     val spike: Map<String, Float>? = null,
+    val volume: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
     val dub: Map<String, Float>? = null,
     val vinyl: Map<String, Float>? = null,
@@ -227,6 +232,7 @@ data class FxChain(
             Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
             Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
+            Section("volume", Volume.MACROS, { it.volume }, { c, m -> c.copy(volume = m) }, Volume::process),
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),

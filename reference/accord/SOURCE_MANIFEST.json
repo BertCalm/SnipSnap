@@ -1,0 +1,282 @@
+{
+  "status": "Frozen Python research references; portable copies, not production Kotlin",
+  "created_utc": "2026-10-31T22:37:45.110915+00:00",
+  "dependency_versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "matplotlib": "3.10.8"
+  },
+  "repository_context": "Original SnipSnap API inspection used commit 4e36a2bf8cf8bfb07dba35379558b54429b5d73d; this bundle does not establish current repository APIs.",
+  "historical_reports": "JSON report files are verbatim snapshots. Absolute /workspace paths inside them are historical provenance, not portable runtime dependencies. The full 36 refinement WAV matrix is not included.",
+  "duplicate_audio_policy": "Original brush/wood/tine audio stored once in reference/musicality. TINE reference.wav is omitted because it is byte-identical to musicality/tine.wav; bundled QA falls back to that file and verifies its historical SHA.",
+  "omitted_duplicate": {
+    "original_path": "/workspace/accord-tine-options/reference.wav",
+    "equivalent_bundle_path": "reference/musicality/tine.wav",
+    "sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951"
+  },
+  "files": [
+    {
+      "original_path": "/workspace/accord-probe/mechanics.py",
+      "original_sha256": "b4c7e36e7e2c44b38f72774075d818741ee5ac75732c4e64c96ab673d9685590",
+      "bundled_path": "reference/mechanics/mechanics.py",
+      "bundled_sha256": "b4c7e36e7e2c44b38f72774075d818741ee5ac75732c4e64c96ab673d9685590",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/validate.py",
+      "original_sha256": "1e20d21b9f857f4dc34cce0d2ca15b7e34ffa6cd655f2f7e2ab4c42de1409602",
+      "bundled_path": "reference/mechanics/validate.py",
+      "bundled_sha256": "1e20d21b9f857f4dc34cce0d2ca15b7e34ffa6cd655f2f7e2ab4c42de1409602",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/snipkit.py",
+      "original_sha256": "b9dad644af4adf86d4c2fe39b169abcce083d854506760cf795e6013616ddf68",
+      "bundled_path": "reference/mechanics/snipkit.py",
+      "bundled_sha256": "b9dad644af4adf86d4c2fe39b169abcce083d854506760cf795e6013616ddf68",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/probes.py",
+      "original_sha256": "16bf87d40f0f801266540e727ed3a2a20eb95ac7ba1d13e342c2bcd4d37f1cbb",
+      "bundled_path": "reference/mechanics/probes.py",
+      "bundled_sha256": "16bf87d40f0f801266540e727ed3a2a20eb95ac7ba1d13e342c2bcd4d37f1cbb",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/gathered.npz",
+      "original_sha256": "0d21db799d14bd061a927dd5149d0de631d6858a44091fe2012ab859b9830fd0",
+      "bundled_path": "reference/mechanics/gathered.npz",
+      "bundled_sha256": "0d21db799d14bd061a927dd5149d0de631d6858a44091fe2012ab859b9830fd0",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/gathered-events.json",
+      "original_sha256": "db9031b53412969b70dde12eedf952b73606c3241ef8bfd7b819a183463a4ce4",
+      "bundled_path": "reference/mechanics/gathered-events.json",
+      "bundled_sha256": "db9031b53412969b70dde12eedf952b73606c3241ef8bfd7b819a183463a4ce4",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-probe/report.json",
+      "original_sha256": "80c682a4226ee3205f945b0accbe96799b0a3302682c426dba385d8495f680db",
+      "bundled_path": "reference/mechanics/report.json",
+      "bundled_sha256": "80c682a4226ee3205f945b0accbe96799b0a3302682c426dba385d8495f680db",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-musicality/render.py",
+      "original_sha256": "c012b8a38fad7865d764a99c866b061c170e58d21afbb7b94db811f47b8f14df",
+      "bundled_path": "reference/musicality/render.py",
+      "bundled_sha256": "386a04f0cba13ba53ed16266a24b7e2dcb3ab5bbbb82b83157f0eb62b9b732f2",
+      "portability_transformation": [
+        {
+          "original": "sys.path.insert(0, '/workspace/accord-probe')",
+          "portable": "sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'mechanics'))",
+          "replacements": 1
+        },
+        {
+          "original": "Path('/workspace/accord-probe/gathered-events.json')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'mechanics' / 'gathered-events.json')",
+          "replacements": 1
+        },
+        {
+          "original": "np.load('/workspace/accord-probe/gathered.npz')",
+          "portable": "np.load(Path(__file__).resolve().parent.parent / 'mechanics' / 'gathered.npz')",
+          "replacements": 1
+        }
+      ]
+    },
+    {
+      "original_path": "/workspace/accord-musicality/report.json",
+      "original_sha256": "58bfeffd7ec1c8e977ee39a1beb58e87cb04d75c6406a79c62bf111bea62b5e5",
+      "bundled_path": "reference/musicality/report.json",
+      "bundled_sha256": "58bfeffd7ec1c8e977ee39a1beb58e87cb04d75c6406a79c62bf111bea62b5e5",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-musicality/brush.wav",
+      "original_sha256": "54c9c770afce11b52782e4e04b7ef72fbb78a466604f8e699ab79df2f754724b",
+      "bundled_path": "reference/musicality/brush.wav",
+      "bundled_sha256": "54c9c770afce11b52782e4e04b7ef72fbb78a466604f8e699ab79df2f754724b",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-musicality/wood.wav",
+      "original_sha256": "4a57bb0dd678322452229300bbeb9c5e46c6bc86af6ead995f3626b483a0bd45",
+      "bundled_path": "reference/musicality/wood.wav",
+      "bundled_sha256": "4a57bb0dd678322452229300bbeb9c5e46c6bc86af6ead995f3626b483a0bd45",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-musicality/tine.wav",
+      "original_sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951",
+      "bundled_path": "reference/musicality/tine.wav",
+      "bundled_sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-refinement/controls.py",
+      "original_sha256": "c61298e5121fe4a99d1c5448904ee98849ee903f7cb72a51c5a9d865972dc058",
+      "bundled_path": "reference/refinement/controls.py",
+      "bundled_sha256": "f5b97086ab65caa1613fd68e1508499f35293ddfe8b4a70fb407b6762df16eec",
+      "portability_transformation": [
+        {
+          "original": "Path('/workspace/accord-musicality/report.json')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'musicality' / 'report.json')",
+          "replacements": 1
+        }
+      ]
+    },
+    {
+      "original_path": "/workspace/accord-refinement/render.py",
+      "original_sha256": "361245bde8705aa77c4f0dbe7a78e0de2b72eab67a842522e52f5beb940684c1",
+      "bundled_path": "reference/refinement/render.py",
+      "bundled_sha256": "54129929ee55de714fb9c8fc612ec4472d278583fbc13e3f9a780c9635f93957",
+      "portability_transformation": [
+        {
+          "original": "Path('/workspace/accord-musicality')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'musicality')",
+          "replacements": 1
+        }
+      ]
+    },
+    {
+      "original_path": "/workspace/accord-refinement/report.json",
+      "original_sha256": "1e4324e53234710e88606c04c8890213bae22e266e56eb38c6e5b435c3f488a4",
+      "bundled_path": "reference/refinement/report.json",
+      "bundled_sha256": "1e4324e53234710e88606c04c8890213bae22e266e56eb38c6e5b435c3f488a4",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-refinement/controls_report.json",
+      "original_sha256": "2ece3c891f9d777fdd90b0452e6b246493102bf8f3475cb070ab5e24576bb496",
+      "bundled_path": "reference/refinement/controls_report.json",
+      "bundled_sha256": "2ece3c891f9d777fdd90b0452e6b246493102bf8f3475cb070ab5e24576bb496",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-refinement/qa-results.json",
+      "original_sha256": "25e082f1ecfebe336ccd24dd22b89e977d3e7ae7a676deec3568f641ac3aed0f",
+      "bundled_path": "reference/refinement/qa-results.json",
+      "bundled_sha256": "25e082f1ecfebe336ccd24dd22b89e977d3e7ae7a676deec3568f641ac3aed0f",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-refinement/pitch_study.json",
+      "original_sha256": "5ac0a14b6560152c413c3d38a40ce954b1c4b7951185a472d0545cd6a238c0ae",
+      "bundled_path": "reference/refinement/pitch_study.json",
+      "bundled_sha256": "5ac0a14b6560152c413c3d38a40ce954b1c4b7951185a472d0545cd6a238c0ae",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/render.py",
+      "original_sha256": "41a0581552af39156860d2093476fb34c167e1389ce6e73510d4d763b7d29168",
+      "bundled_path": "reference/tine-options/render.py",
+      "bundled_sha256": "12aba24c8c7b927fe9ec144ee7c28a21d8acd23975592d7bf33e62fd4038d959",
+      "portability_transformation": [
+        {
+          "original": "Path('/workspace/accord-musicality')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'musicality')",
+          "replacements": 1
+        },
+        {
+          "original": "Path('/workspace/accord-probe/gathered-events.json')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'mechanics' / 'gathered-events.json')",
+          "replacements": 1
+        }
+      ]
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/report.json",
+      "original_sha256": "a4d0497b2b9f0a71423d1f1829bec19e73da42a0890f901010223e084bc39339",
+      "bundled_path": "reference/tine-options/report.json",
+      "bundled_sha256": "a4d0497b2b9f0a71423d1f1829bec19e73da42a0890f901010223e084bc39339",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/qa.py",
+      "original_sha256": "2a27981fc26732286ac7bbdf8a4ce15855c6330154d795b9a9fb20ca2f80fd1a",
+      "bundled_path": "reference/tine-options/qa.py",
+      "bundled_sha256": "a65e83082ff2846156788a2ec7e9bf18fb7df5b7e4cece7242450949c4fefc48",
+      "portability_transformation": [
+        {
+          "original": "Path('/workspace/accord-musicality/tine.wav')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'musicality' / 'tine.wav')",
+          "replacements": 1
+        },
+        {
+          "original": "Path('/workspace/accord-probe/gathered-events.json')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'mechanics' / 'gathered-events.json')",
+          "replacements": 1
+        },
+        {
+          "original": "Path('/workspace/accord-probe/report.json')",
+          "portable": "(Path(__file__).resolve().parent.parent / 'mechanics' / 'report.json')",
+          "replacements": 1
+        },
+        {
+          "original": "x,meta,raw=read(ROOT/(name+'.wav'))",
+          "portable": "x,meta,raw=read(APPROVED if name == 'reference' and not (ROOT/'reference.wav').exists() else ROOT/(name+'.wav'))",
+          "replacements": 1
+        },
+        {
+          "original": "copied=(ROOT/'reference.wav')",
+          "portable": "copied=(ROOT/'reference.wav') if (ROOT/'reference.wav').exists() else APPROVED",
+          "replacements": 1
+        },
+        {
+          "original": "file_byte_identical=sha(copied)==sha(APPROVED)",
+          "portable": "file_byte_identical=sha(copied)==sha(APPROVED)==source['reference_file_sha256']",
+          "replacements": 1
+        }
+      ]
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/qa_results.json",
+      "original_sha256": "11cc21f2dde16bf8b4c3289fc4be47b3549af2240d94dbf103e24a06b46782f6",
+      "bundled_path": "reference/tine-options/qa_results.json",
+      "bundled_sha256": "11cc21f2dde16bf8b4c3289fc4be47b3549af2240d94dbf103e24a06b46782f6",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/soft_attack.wav",
+      "original_sha256": "1b41ad52492dba6e29434b8f5b6cf50f9021d190996cd5c6c9f5fef938964d08",
+      "bundled_path": "reference/tine-options/soft_attack.wav",
+      "bundled_sha256": "1b41ad52492dba6e29434b8f5b6cf50f9021d190996cd5c6c9f5fef938964d08",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/bright_edge.wav",
+      "original_sha256": "1c24ea1faf26a1d3f5fb3375bbeb545af8e012e8b273a1167a8b803ecb536259",
+      "bundled_path": "reference/tine-options/bright_edge.wav",
+      "bundled_sha256": "1c24ea1faf26a1d3f5fb3375bbeb545af8e012e8b273a1167a8b803ecb536259",
+      "portability_transformation": "None; byte-identical copy"
+    },
+    {
+      "original_path": "/workspace/accord-tine-options/long_ring.wav",
+      "original_sha256": "b2d4bdc6707cf872e3e538b347aa7920642ec5568c842cf8f7f765a5422c3f61",
+      "bundled_path": "reference/tine-options/long_ring.wav",
+      "bundled_sha256": "b2d4bdc6707cf872e3e538b347aa7920642ec5568c842cf8f7f765a5422c3f61",
+      "portability_transformation": "None; byte-identical copy"
+    }
+  ],
+  "generated_files": [
+    {
+      "bundled_path": "requirements.txt",
+      "sha256": "3ae259088901a3efbd26918fc6f7d8e23ff29d58a5c02aeb1afb68edf5f65518",
+      "purpose": "Dependency versions from current installed environment"
+    },
+    {
+      "bundled_path": "README-references.md",
+      "sha256": "184980cdab846bcd2dd684ccba04ad66bd65c4576eb740ba976cf3872c71c72d",
+      "purpose": "Portable run instructions and research limitations"
+    },
+    {
+      "bundled_path": "verify-references.py",
+      "sha256": "2eb68711f7419b7e627f8c3bf66f0be544f4bd4226f590f01efde8a733cb248b",
+      "purpose": "No-render portable snapshot/import/fixture verifier"
+    }
+  ]
+}

@@ -61,8 +61,8 @@ internal class FilamentJunction(
         private var high = 0.0
         var maxState = 0.0; private set
         fun next(x: Double): Double {
-            low += lowAlpha * (x - low)
-            high += highAlpha * (low - high)
+            low = Filament.floored(low + lowAlpha * (x - low))
+            high = Filament.floored(high + highAlpha * (low - high))
             if (captureDiagnostics) maxState = max(maxState, max(abs(low), abs(high)))
             val filtered = low - highMix * high
             val allpass = dispersion ?: return filtered
@@ -208,13 +208,13 @@ internal class FilamentJunction(
             junction[id] = middle
             if (captureDiagnostics) before[id] = middle
             if (route.branch.pathId != 0) {
-                route.activityLow += activityAlpha * (middle - route.activityLow)
+                route.activityLow = Filament.floored(route.activityLow + activityAlpha * (middle - route.activityLow))
                 val upper = middle - route.activityLow
                 val power = upper * upper
                 val target = power / (power + .000070)
                 if (!options.freezeMemory) {
                     val alpha = if (target > route.memory) attackAlpha else releaseAlpha
-                    route.memory += alpha * (target - route.memory)
+                    route.memory = Filament.floored(route.memory + alpha * (target - route.memory))
                 }
                 if (captureDiagnostics) {
                     minimumMemory = min(minimumMemory, route.memory)

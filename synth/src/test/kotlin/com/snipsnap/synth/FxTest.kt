@@ -34,6 +34,9 @@ class FxTest {
      * so a fixed section cannot sit here forgotten.
      */
     private val contractExcluded: Map<String, String> = mapOf(
+        "volume" to "peak-match: a fade-in takes the peak of any pad that is loudest at the start, and the " +
+            "restore is capped at Volume.MAX_LIFT (12 dB) so the pad's noise floor is not lifted 15 to 20 dB; " +
+            "at random RISE the snare comes out quieter by design (VolumeTest pins the cap and the held-note case)",
         "motion" to "peak-match: by design, STOP/START fade the level toward silence; at " +
             "random macro values this lands far outside the 0.05 tolerance meant for " +
             "level-preserving effects (roll 0: out 0.2681 vs snare 0.9500, diff 0.6819; " +
@@ -726,6 +729,23 @@ class FxTest {
         assertTrue(!chained.samples.contentEquals(snare.samples), "the room section is a no-op in the chain")
         // ROOM bounds its own tail to the rack's budget, so capTail leaves its output as it is.
         assertContentEquals(Room.process(snare, Room.defaults()).samples, chained.samples, "the chain's room row does not run Room.process")
+    }
+
+    @Test
+    fun `VOLUME sits after SPIKE and before EQ, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("spike") + 1, names.indexOf("volume"), "VOLUME is not right after SPIKE: $names")
+        assertEquals(names.indexOf("volume") + 1, names.indexOf("eq"), "VOLUME is not right before EQ: $names")
+
+        val without = FxChain(spike = Spike.defaults())
+        assertTrue(!without.toJsonText().contains("volume"), "no volume key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(volume = Volume.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the volume section is a no-op in the chain")
+        assertContentEquals(Volume.process(snare, Volume.defaults()).samples, chained.samples, "the chain's volume row does not run Volume.process")
     }
 
     @Test

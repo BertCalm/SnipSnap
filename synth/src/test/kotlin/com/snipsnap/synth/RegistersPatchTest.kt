@@ -98,14 +98,14 @@ class RegistersPatchTest {
     }
 
     @Test
-    fun `factory presets retain accepted settings and offer the preferred ensemble registration`() {
+    fun `factory presets retain accepted settings and offer the selected octave registration`() {
         val all = RegistersPresets.all()
-        assertEquals(10, all.size)
-        assertEquals(10, all.map { it.name }.distinct().size)
+        assertEquals(11, all.size)
+        assertEquals(11, all.map { it.name }.distinct().size)
         assertTrue(Presets.all().containsAll(all))
         for (voice in RegistersVoice.entries) {
             val group = RegistersPresets.forVoice(voice)
-            assertEquals(if (voice == RegistersVoice.TRANSISTOR) 4 else 3, group.size)
+            assertEquals(if (voice == RegistersVoice.TRANSISTOR) 5 else 3, group.size)
             assertEquals(group, Presets.forVoice("REGISTERS", voice.name))
             assertEquals(Registers.defaults(voice), group.first().macros)
             for (preset in group) {
@@ -127,12 +127,14 @@ class RegistersPatchTest {
         assertEquals(listOf(.24f, .78f), musette.drop(1).map { it.macros.getValue("AIR") })
         assertEquals(listOf(.20f, .78f), musette.drop(1).map { it.macros.getValue("SPREAD") })
         val transistor = RegistersPresets.forVoice(RegistersVoice.TRANSISTOR)
-        assertEquals(listOf("Compact Keys", "Clean Combo", "Garage Buzz", "Rich Ensemble"), transistor.map { it.name })
-        assertEquals(listOf(.42f, .25f, .78f, .42f), transistor.map { it.macros.getValue("COLOR") })
-        assertEquals(listOf(.20f, .10f, .45f, .20f), transistor.map { it.macros.getValue("AIR") })
-        assertEquals(listOf(.30f, .05f, .78f, .30f), transistor.map { it.macros.getValue("EDGE") })
-        assertEquals(listOf(.12f, 0f, .18f, .65f), transistor.map { it.macros.getValue("SPREAD") })
-        assertEquals(listOf(.18f, .08f, .55f, .32f), transistor.map { it.macros.getValue("MOTION") })
+        assertEquals(listOf("Compact Keys", "Clean Combo", "Garage Buzz", "Rich Ensemble", "Octave Keys"), transistor.map { it.name })
+        assertEquals(listOf(.42f, .25f, .78f, .42f, .65f), transistor.map { it.macros.getValue("COLOR") })
+        assertEquals(listOf(.20f, .10f, .45f, .20f, .20f), transistor.map { it.macros.getValue("AIR") })
+        assertEquals(listOf(.30f, .05f, .78f, .30f, .30f), transistor.map { it.macros.getValue("EDGE") })
+        assertEquals(listOf(.12f, 0f, .18f, .65f, .40f), transistor.map { it.macros.getValue("SPREAD") })
+        assertEquals(listOf(.18f, .08f, .55f, .32f, .08f), transistor.map { it.macros.getValue("MOTION") })
+        assertEquals(transistor.first().macros + mapOf("COLOR" to .65f, "SPREAD" to .40f, "MOTION" to .08f),
+            transistor.last().macros, "Octave Keys must retain every other control from the accepted audition")
         assertTrue(Presets.forVoice("REGISTERS", "UNKNOWN").isEmpty())
     }
 

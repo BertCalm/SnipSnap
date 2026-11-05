@@ -11,9 +11,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -34,6 +36,7 @@ import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiExpression
 import com.snipsnap.synth.OrigamiGesture
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.OrigamiPresets
 import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.PadRecipe
 import kotlinx.coroutines.CoroutineScope
@@ -194,6 +197,57 @@ class OrigamiSynthScreenTest {
             }
             compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()
         }
+    }
+
+    @Test
+    fun performanceFactoryPresetsSurviveSavingNavigationAndOpeningTheMaker() {
+        show()
+        val fan = OrigamiPresets.performance().single { it.name == "Fifth Bloom" }
+        val still = OrigamiPresets.performance().single { it.name == "Soft Unfold" }
+        for (factory in listOf(fan, still)) {
+            click(factory.voice.name)
+            click("PRESET ${factory.name}")
+            compose.onNodeWithContentDescription("ORIGAMI ${factory.gesture.name}").assertIsSelected()
+            compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+            assertEquals(factory.name, settings["preset.ORIGAMI.${factory.voice.name}"])
+            val selected = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.${factory.voice.name}"))
+            // The bench supplies its display name; every authored sound field must remain whole.
+            assertEquals(factory.copy(name = selected.name), selected)
+            assertEquals(factory.macros, factory.macros.keys.associateWith(::macroValue))
+        }
+
+        val savedName = "MY SOFT UNFOLD"
+        click("SAVE PRESET")
+        compose.onNode(hasSetTextAction()).performTextReplacement(savedName)
+        pump()
+        click("SAVE")
+        val shelf = fixtures.single()
+        val deadline = System.currentTimeMillis() + 30_000
+        while (UserPresets.read(shelf).none { it.name == savedName }) {
+            if (System.currentTimeMillis() > deadline) throw AssertionError("the performance ORIGAMI preset was not saved")
+            pump(16)
+        }
+        val saved = UserPresets.read(shelf).single { it.name == savedName }.patch as OrigamiPatch
+        assertEquals(still.copy(name = savedName), saved)
+        // Replace the moving factory sound, then recall the actual on-disk YOURS recipe.
+        click("PRESET Quiet Paper")
+        compose.onNodeWithContentDescription("ORIGAMI STEADY").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY LEVEL").assertIsSelected()
+        loadSavedPreset(saved)
+        compose.runOnIdle { showing = false }
+        pump()
+        compose.runOnIdle { showing = true }
+        pump()
+        compose.onNodeWithContentDescription("ORIGAMI UNFOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        val restored = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.STILL"))
+        assertEquals(saved.copy(name = restored.name), restored)
+        assertEquals(still.macros, still.macros.keys.associateWith(::macroValue))
+        click("MAKE INSTRUMENT")
+        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithContentDescription("RELEASE").assertExists()
+        compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
+        // Opening this sheet checks the selected performance spec without rendering its zones.
     }
 
     @Test

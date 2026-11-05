@@ -48,7 +48,9 @@ object PackCommand {
             null
         } else {
             com.snipsnap.shell.KitArt.png(
-                KitStore.load(kitDirs.first()), kitDirs.first(), artStyle, label = title,
+                KitStore.load(kitDirs.first()), kitDirs.first(),
+                Exports.artKnobs(kitDirs.first(), artStyle),
+                label = title,
             )
         }
 

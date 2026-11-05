@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -62,9 +63,13 @@ object Tidal {
     private data class RenderKey(val voice: TidalVoice, val model: Int, val midi: Int,
         val velocity: Float, val seed: Long, val controls: List<Float>)
     private val audioCache = TidalAudioCache<RenderKey>(AUDIO_CACHE_BYTES)
+    private val freshRenders = AtomicInteger()
 
     internal data class AudioCacheSnapshot(val entries: Int, val bytes: Long, val maxBytes: Long)
     internal fun audioCacheSnapshot(): AudioCacheSnapshot = audioCache.snapshot()
+    /** Requests that synthesized rather than took a completed or in-flight identical render. */
+    internal fun freshRenderCount(): Int = freshRenders.get()
+    internal fun rendersInFlight(): Int = audioCache.inFlight()
     internal fun clearAudioCache() = audioCache.clear()
     internal fun clearCaches() {
         audioCache.clear()
@@ -565,11 +570,22 @@ object Tidal {
             checkCancelled(cancelled)
             return Snip(samples, channels = 1, sampleRate = Dsp.RATE)
         }
-        val snip = if (isHeld(settled["HOLD"] ?: 0f))
-            TidalKeys.loop(TidalPatch("TIDAL HOLD", voice, settled, midi, velocity, seed, model), cancelled)
-        else renderUncached(voice, settled, midi, velocity, seed, model, cancelled)
-        checkCancelled(cancelled)
-        audioCache.put(key, snip.samples) { checkCancelled(cancelled) }
-        return snip
+        // A screen preview and a SEND of the same recipe start within a second of each other.
+        // Rendered side by side, two TIDAL HOLD fields (about 25 MB each in a debuggable
+        // build) overran the emulator's 192 MB heap. The later request waits, cancellably,
+        // and takes the first one's completed copy: the key already determines every sample.
+        return audioCache.exclusive(key, { checkCancelled(cancelled) }) {
+            audioCache.get(key)?.let { samples ->
+                checkCancelled(cancelled)
+                return@exclusive Snip(samples, channels = 1, sampleRate = Dsp.RATE)
+            }
+            freshRenders.incrementAndGet()
+            val snip = if (isHeld(settled["HOLD"] ?: 0f))
+                TidalKeys.loop(TidalPatch("TIDAL HOLD", voice, settled, midi, velocity, seed, model), cancelled)
+            else renderUncached(voice, settled, midi, velocity, seed, model, cancelled)
+            checkCancelled(cancelled)
+            audioCache.put(key, snip.samples) { checkCancelled(cancelled) }
+            snip
+        }
     }
 }

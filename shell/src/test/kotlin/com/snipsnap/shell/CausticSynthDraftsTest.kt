@@ -57,7 +57,7 @@ class CausticSynthDraftsTest {
 
     @Test
     fun `unsupported native models reserved HOLD and misplaced drafts do not become working sounds`() {
-        val valid = CausticPatch("Valid", CausticVoice.ALLOY, emptyMap(), midi = 69, velocity = .47f)
+        val valid = CausticPatch("Valid", CausticVoice.ALLOY, emptyMap(), midi = 69, velocity = .47f, model = 1)
         val unsupported = JsonValue.Obj(valid.toJsonValue().entries + ("model" to JsonValue.Num(4.0)))
         val held = JsonValue.Obj(valid.toJsonValue().entries +
             ("macros" to JsonValue.Obj(mapOf("HOLD" to JsonValue.Num(.5)))))

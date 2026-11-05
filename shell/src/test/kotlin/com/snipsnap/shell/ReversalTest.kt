@@ -180,6 +180,12 @@ class ReversalTest {
             why = "a warning before the act, not a landing",
             stillTrue = "IS ALREADY THERE",
         ),
+        // The expansion side's twin of `dubWouldOverwrite`: the same moment before an expansion
+        // write replaces its folder, naming that side's own button. Nothing has been written.
+        "expansionWouldOverwrite" to NotALanding(
+            why = "a warning before the act, not a landing",
+            stillTrue = "IS ALREADY THERE",
+        ),
         // The same moment as `dubWouldOverwrite`, rendered on the button
         // instead of in a toast: it is the WRITE control's own label while
         // the dub is armed, so it is what you read BEFORE deciding to tap a
@@ -251,6 +257,7 @@ class ReversalTest {
         "snipBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "roomBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "GESTURE_CLEARED" to "SURFACE's CLEAR writes the kit's recorded gesture out of surface.json; no control there steps it back",
+        "EXPANSION_DELETE_CONFIRM" to "an expansion has no bin; its kits stay on the shelf, and a new expansion can gather them again",
     )
 
     private fun soundsDestructive(line: String) = destructive.any { it in line }
@@ -507,12 +514,14 @@ class ReversalTest {
     @Test
     fun `the count of you-cannot sites is the stack evidence`() {
         assertEquals(
-            6, noWayBack.size,
+            7, noWayBack.size,
             "the number of destructive sites with no way back changed. That is the recorded test for " +
                 "the deferred undo stack, so update docs/SPECS_2026_09.md §3 in the same change.",
         )
         val reallyHurts = noWayBack.keys - setOf(
             "kitBinEmptied", "snipBinEmptied", "roomBinEmptied",
+            // An expansion is a grouping and a tile choice; deleting it loses no sound, its kits stay on the shelf.
+            "EXPANSION_DELETE_CONFIRM",
         )
         assertEquals(
             setOf("BAR_WIPED", "FORKED_TO_E_REPLACED", "GESTURE_CLEARED"), reallyHurts,

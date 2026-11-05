@@ -1,0 +1,481 @@
+{
+  "status": "Python voicing studies, not Kotlin or reviewed production sounds",
+  "root_midi": 48,
+  "root_hz": 130.8127826502993,
+  "output_rate": 44100,
+  "internal_rate": 176400,
+  "mechanics_preroll_seconds": 4.0,
+  "acoustic_preroll_seconds": 0.0,
+  "excitation_seconds": 8.0,
+  "release_seconds": 0.9,
+  "reference_cycles_per_second": 2.0,
+  "comparison": "Same events and note; one constant whole-file RMS-proxy gain per voice",
+  "limitations": [
+    "Approximate Python output filters, not Kotlin house code",
+    "RMS proxy is not perceived loudness matching",
+    "Mode ratios, gains, contact widths and decay constants are unreviewed design choices",
+    "Pressure descriptors interpolate a coarse smooth mechanical readout; events retain exact timing",
+    "No HOLD, note-range sweep, velocity sweep or listening judgment"
+  ],
+  "renders": {
+    "wood": {
+      "config": {
+        "width_ms": 2.1,
+        "tongue": [
+          [
+            1.0,
+            0.85,
+            0.48
+          ],
+          [
+            2.0,
+            0.5,
+            0.29
+          ],
+          [
+            3.0,
+            0.24,
+            0.17
+          ],
+          [
+            4.04,
+            0.1,
+            0.1
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.22,
+            0.72
+          ],
+          [
+            1.51,
+            0.07,
+            0.22
+          ],
+          [
+            2.29,
+            0.035,
+            0.16
+          ],
+          [
+            3.41,
+            0.018,
+            0.1
+          ]
+        ],
+        "body_gain": 0.5,
+        "brush": 0.0
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.314680519881461,
+      "gain": 1.9435865256095133,
+      "finite": true,
+      "peak": 0.6036119299073895,
+      "rms": 0.10499991085428433,
+      "dc": -7.79248330412247e-06,
+      "active_spectral_centroid_hz": 142.7525038725348,
+      "active_root_band_energy_share": 0.7251904548188864,
+      "brushing_to_direct_rms_db": null,
+      "pitch_method": "Corrected Python NSDF overlap-energy denominator, unrestricted 40..2000Hz search, .3s windows",
+      "pitch_windows": [
+        {
+          "start_s": 0.5,
+          "hz": 129.62445340973903,
+          "cents": -15.798741770717895,
+          "confidence": 0.9234695842625246
+        },
+        {
+          "start_s": 2.0,
+          "hz": 129.79378433989814,
+          "cents": -13.53867311842857,
+          "confidence": 0.8986147895765673
+        },
+        {
+          "start_s": 4.0,
+          "hz": 129.56031266324325,
+          "cents": -16.655602675124534,
+          "confidence": 0.8576934321521502
+        },
+        {
+          "start_s": 6.5,
+          "hz": 128.43607829960638,
+          "cents": -31.743605428986395,
+          "confidence": 0.8148498149856247
+        }
+      ],
+      "last_100ms_rms": 9.859610840659947e-07,
+      "max_pole_radius": 0.9999456127791141
+    },
+    "tine": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.42834791688636464,
+      "gain": 1.3299977764119413,
+      "finite": true,
+      "peak": 0.5271287390755934,
+      "rms": 0.10499995404381872,
+      "dc": -5.595547098508231e-06,
+      "active_spectral_centroid_hz": 178.22419040249315,
+      "active_root_band_energy_share": 0.7757330122013036,
+      "brushing_to_direct_rms_db": null,
+      "pitch_method": "Corrected Python NSDF overlap-energy denominator, unrestricted 40..2000Hz search, .3s windows",
+      "pitch_windows": [
+        {
+          "start_s": 0.5,
+          "hz": 129.7729982476023,
+          "cents": -13.815947355507838,
+          "confidence": 0.9500940966640977
+        },
+        {
+          "start_s": 2.0,
+          "hz": 130.01264273886477,
+          "cents": -10.621923089573684,
+          "confidence": 0.9276919293877852
+        },
+        {
+          "start_s": 4.0,
+          "hz": 130.33088687324576,
+          "cents": -6.3893972680077376,
+          "confidence": 0.9190402373774845
+        },
+        {
+          "start_s": 6.5,
+          "hz": 130.3264107412764,
+          "cents": -6.448856428715442,
+          "confidence": 0.8819117054927889
+        }
+      ],
+      "last_100ms_rms": 2.3885007503958913e-05,
+      "max_pole_radius": 0.9999528205540145
+    },
+    "brush": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.05
+          ],
+          [
+            2.0,
+            0.13,
+            0.52
+          ],
+          [
+            3.0,
+            0.025,
+            0.29
+          ],
+          [
+            4.0,
+            0.009,
+            0.17
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.35
+          ],
+          [
+            1.5,
+            0.06,
+            0.55
+          ],
+          [
+            2.25,
+            0.018,
+            0.31
+          ],
+          [
+            3.25,
+            0.009,
+            0.19
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55
+      },
+      "root_hz": 130.8127826502993,
+      "events": 528,
+      "raw_peak": 0.199931427738792,
+      "gain": 2.480036509853863,
+      "finite": true,
+      "peak": 0.49586383594351024,
+      "rms": 0.10499994538750923,
+      "dc": -4.959077791195809e-06,
+      "active_spectral_centroid_hz": 129.48729401473534,
+      "active_root_band_energy_share": 0.9181553985440389,
+      "brushing_to_direct_rms_db": -9.783946826716665,
+      "pitch_method": "Corrected Python NSDF overlap-energy denominator, unrestricted 40..2000Hz search, .3s windows",
+      "pitch_windows": [
+        {
+          "start_s": 0.5,
+          "hz": 130.00966232653712,
+          "cents": -10.661610387175287,
+          "confidence": 0.9476741643409499
+        },
+        {
+          "start_s": 2.0,
+          "hz": 129.75013440538888,
+          "cents": -14.120988850885253,
+          "confidence": 0.9555622402752967
+        },
+        {
+          "start_s": 4.0,
+          "hz": 130.49149689504534,
+          "cents": -4.257267582752132,
+          "confidence": 0.9621889929211542
+        },
+        {
+          "start_s": 6.5,
+          "hz": 130.06059601670253,
+          "cents": -9.983500246107534,
+          "confidence": 0.9222683915278536
+        }
+      ],
+      "last_100ms_rms": 0.00010519401541541745,
+      "max_pole_radius": 0.9999709931140814
+    },
+    "brush_C2": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.05
+          ],
+          [
+            2.0,
+            0.13,
+            0.52
+          ],
+          [
+            3.0,
+            0.025,
+            0.29
+          ],
+          [
+            4.0,
+            0.009,
+            0.17
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.35
+          ],
+          [
+            1.5,
+            0.06,
+            0.55
+          ],
+          [
+            2.25,
+            0.018,
+            0.31
+          ],
+          [
+            3.25,
+            0.009,
+            0.19
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55
+      },
+      "root_hz": 65.40639132514966,
+      "events": 528,
+      "raw_peak": 0.274949585606425,
+      "gain": 2.1343216655652095,
+      "finite": true,
+      "peak": 0.489745440270446,
+      "rms": 0.10499987570253956,
+      "dc": -8.563052329346567e-06,
+      "active_spectral_centroid_hz": 64.7796330676499,
+      "active_root_band_energy_share": 0.8227571043946271,
+      "brushing_to_direct_rms_db": -16.446537106904337,
+      "pitch_method": "Corrected Python NSDF overlap-energy denominator, unrestricted 40..2000Hz search, .3s windows",
+      "pitch_windows": [
+        {
+          "start_s": 0.5,
+          "hz": 65.44615898291727,
+          "cents": 1.0522855708424999,
+          "confidence": 0.9456429771426356
+        },
+        {
+          "start_s": 2.0,
+          "hz": 64.27754143516685,
+          "cents": -30.14024460812434,
+          "confidence": 0.8633511680204465
+        },
+        {
+          "start_s": 4.0,
+          "hz": 65.45582393003376,
+          "cents": 1.3079315922175747,
+          "confidence": 0.8919979291309345
+        },
+        {
+          "start_s": 6.5,
+          "hz": 65.65186812127607,
+          "cents": 6.485333873406591,
+          "confidence": 0.9549640656270353
+        }
+      ],
+      "last_100ms_rms": 0.0005508144725459795,
+      "max_pole_radius": 0.9999709931140814
+    },
+    "brush_C4": {
+      "config": {
+        "width_ms": 4.5,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            1.05
+          ],
+          [
+            2.0,
+            0.13,
+            0.52
+          ],
+          [
+            3.0,
+            0.025,
+            0.29
+          ],
+          [
+            4.0,
+            0.009,
+            0.17
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.26,
+            1.35
+          ],
+          [
+            1.5,
+            0.06,
+            0.55
+          ],
+          [
+            2.25,
+            0.018,
+            0.31
+          ],
+          [
+            3.25,
+            0.009,
+            0.19
+          ]
+        ],
+        "body_gain": 0.58,
+        "brush": 0.0024,
+        "pulse_gain": 0.55
+      },
+      "root_hz": 261.6255653005986,
+      "events": 528,
+      "raw_peak": 0.22732066349583818,
+      "gain": 2.2867908962713193,
+      "finite": true,
+      "peak": 0.5391729338219189,
+      "rms": 0.10499997710274182,
+      "dc": -2.1823180334663373e-06,
+      "active_spectral_centroid_hz": 260.74770099755943,
+      "active_root_band_energy_share": 0.9581303052341383,
+      "brushing_to_direct_rms_db": -9.288550644167529,
+      "pitch_method": "Corrected Python NSDF overlap-energy denominator, unrestricted 40..2000Hz search, .3s windows",
+      "pitch_windows": [
+        {
+          "start_s": 0.5,
+          "hz": 261.0442677415342,
+          "cents": -3.850853744379834,
+          "confidence": 0.9658273807052776
+        },
+        {
+          "start_s": 2.0,
+          "hz": 260.7230070927036,
+          "cents": -5.982752278418893,
+          "confidence": 0.9617817874151554
+        },
+        {
+          "start_s": 4.0,
+          "hz": 261.6384310928421,
+          "cents": 0.0851336906729826,
+          "confidence": 0.9740027976333433
+        },
+        {
+          "start_s": 6.5,
+          "hz": 261.21994123288664,
+          "cents": -2.6861867578548906,
+          "confidence": 0.9807812211621141
+        }
+      ],
+      "last_100ms_rms": 0.00040714556637760246,
+      "max_pole_radius": 0.9999709931140814
+    }
+  },
+  "wall_seconds_python_all_three_with_metrics": 7.1157985910003845
+}

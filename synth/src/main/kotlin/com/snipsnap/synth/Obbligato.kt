@@ -26,19 +26,19 @@ enum class ObbligatoRelationship {
  *
  * Dry mono, explicit C4–C5 notes, independently seeded players and one final loudness target.
  * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
- * Model 5 is accepted. Model 6 adds activity-driven Fight entries. Model 7 is an explicit
- * gentler-voiced listening revision. Model 8 adds remembered articulations for Play,
- * Fight and Protect. Model 9 lets an answer join before the outgoing phrase yields.
- * These listening revisions remain opt-in.
+ * The accepted revision combines gentler voicing, remembered articulations and overlapping
+ * phrase handoffs. Earlier explicitly saved revisions remain renderable; old recipes
+ * without a renderer revision retain their original interpretation.
  */
 object Obbligato {
-    /** The accepted sound stays the default until the responsive experiment is heard. */
-    const val MODEL = 5
+    /** Old JSON recipes omitted the revision when this was the accepted renderer. */
+    const val LEGACY_MODEL = 5
     const val EXPERIMENTAL_MODEL = 6
     const val MUSICAL_MODEL = 7
     const val CONVERSATION_MODEL = 8
     const val OVERLAP_MODEL = 9
     const val MORE_OVERLAP_MODEL = 10
+    const val MODEL = MORE_OVERLAP_MODEL
     const val MAX_MODEL = MORE_OVERLAP_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.

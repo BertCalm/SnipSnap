@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "sourceCommit": "1a03d6c0846f5950599cd95dac5180a01d6d6b4b",
+  "workingTreeDirty": true,
+  "sourceHashes": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Obliterate.kt": "b8192d5344871a147dc9d68f27461e9d5e79bf22ffbb42e47acc31fc5f777885",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateCore.kt": "e9c5baceb4433677d2ae62e9c9a2a7610b318fd9a4348af8d9ba5d918f2cb3a3",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliteratePcg64.kt": "c98c3c7123354508d6810fd3879ccf0e2ee90a458ef5b1ecfa404ef4887949a9",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateShimmer.kt": "014136150a9e4874ceb6ce0239aee85d87149c7328270519c4e4b6fc41ac75f5",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateBoard.kt": "ac412ca7e78d4c023e967859a510169e236e211c5a942d19cb5501bee1bd1614",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateBoardCache.kt": "4ae4cf86dceff213bac3b9c1e1d285356b021ca507b840a3f7c628b2250ddf2f",
+    "synth/src/main/kotlin/com/snipsnap/synth/BoardRecipe.kt": "42550b5018ab3c6debb214fcecab5702d339dee22cfa9b6cec49f42d612f2d46",
+    "experiments/obliterate-board/BoardProfileRenderer.kt": "59b88f6544c40c1b1547c17122ca65fbf1cbb6ce2369e00bd26d4bcb8edea864"
+  },
+  "meaning": "Host JVM only; GC and host load uncontrolled. Repeat calls include input snapshot, validation, content hash and owned output copy. Cold calls include both real processors.",
+  "javaVersion": "17.0.20.1",
+  "availableProcessors": 4,
+  "warmups": 3,
+  "trials": 7,
+  "maximumRetainedFloatBytes": 7673400,
+  "cases": [
+    {
+      "sourceId": "snare",
+      "inputSha256": "66cc79f86d8fcceeef90763d7f6037da9f455834556964aaaaf74b97a7bf93e0",
+      "inputFrames": 14709,
+      "coreAmount": 0.699999988079071,
+      "settings": "{\n  \"board\": 2,\n  \"type\": \"obliterate\",\n  \"amount\": 0.699999988079071,\n  \"obliterate\": {\n    \"model\": \"obliterate-board-r1\",\n    \"shimmerModel\": \"obliterate-shimmer-kotlin-r1\",\n    \"coreModel\": \"obliterate-core-kotlin-r1\",\n    \"shimmerMix\": 0.15,\n    \"pitched\": true,\n    \"bpm\": 120,\n    \"division\": 16,\n    \"seed\": 20261023\n  }\n}",
+      "coldBoardMs": [
+        261.798023,
+        255.636329,
+        242.254077,
+        233.2022,
+        282.802309,
+        274.670385,
+        282.608484
+      ],
+      "coldMedianMs": 261.798023,
+      "repeatBoardMs": [
+        0.477122,
+        0.763119,
+        0.531823,
+        0.359979,
+        4.958514,
+        0.573334,
+        0.451505
+      ],
+      "repeatMedianMs": 0.531823,
+      "clockEditMs": 232.330648,
+      "clockEditReusedShimmer": true,
+      "sampleExactToPublicComposition": true,
+      "retainedSamples": 389586
+    },
+    {
+      "sourceId": "percussion",
+      "inputSha256": "4d2864234eea51bdd211904a7c73e42476ca04ea4f3b63ea9b55801c1c8b0c2d",
+      "inputFrames": 88200,
+      "coreAmount": 0.3499999940395355,
+      "settings": "{\n  \"board\": 2,\n  \"type\": \"obliterate\",\n  \"amount\": 0.3499999940395355,\n  \"obliterate\": {\n    \"model\": \"obliterate-board-r1\",\n    \"shimmerModel\": \"obliterate-shimmer-kotlin-r1\",\n    \"coreModel\": \"obliterate-core-kotlin-r1\",\n    \"shimmerMix\": 0.15,\n    \"pitched\": true,\n    \"bpm\": 120,\n    \"division\": 16,\n    \"seed\": 20261023\n  }\n}",
+      "coldBoardMs": [
+        489.073046,
+        483.968639,
+        496.113107,
+        475.327163,
+        462.140349,
+        475.907504,
+        481.158597
+      ],
+      "coldMedianMs": 481.158597,
+      "repeatBoardMs": [
+        1.334684,
+        1.215292,
+        1.111597,
+        1.103509,
+        1.407846,
+        1.149141,
+        1.247806
+      ],
+      "repeatMedianMs": 1.215292,
+      "clockEditMs": 430.225343,
+      "clockEditReusedShimmer": true,
+      "sampleExactToPublicComposition": true,
+      "retainedSamples": 683550
+    },
+    {
+      "sourceId": "pluck",
+      "inputSha256": "944ed383f1188df281254fc83cd39929b7ffa4610bdf6506c0c5607a7612328f",
+      "inputFrames": 88200,
+      "coreAmount": 0.3499999940395355,
+      "settings": "{\n  \"board\": 2,\n  \"type\": \"obliterate\",\n  \"amount\": 0.3499999940395355,\n  \"obliterate\": {\n    \"model\": \"obliterate-board-r1\",\n    \"shimmerModel\": \"obliterate-shimmer-kotlin-r1\",\n    \"coreModel\": \"obliterate-core-kotlin-r1\",\n    \"shimmerMix\": 0.15,\n    \"pitched\": true,\n    \"bpm\": 120,\n    \"division\": 16,\n    \"seed\": 20261023\n  }\n}",
+      "coldBoardMs": [
+        467.745673,
+        458.534143,
+        460.156676,
+        465.225627,
+        457.445046,
+        461.292984,
+        466.581073
+      ],
+      "coldMedianMs": 461.292984,
+      "repeatBoardMs": [
+        2.250209,
+        2.426302,
+        2.031814,
+        2.99498,
+        2.681468,
+        2.55136,
+        2.575742
+      ],
+      "repeatMedianMs": 2.55136,
+      "clockEditMs": 430.821458,
+      "clockEditReusedShimmer": true,
+      "sampleExactToPublicComposition": true,
+      "retainedSamples": 683550
+    },
+    {
+      "sourceId": "bass",
+      "inputSha256": "6ede15b4e765632a3a5855b412355b55b325dede2ef0a7625f32032ee169d6ec",
+      "inputFrames": 46450,
+      "coreAmount": 0.3499999940395355,
+      "settings": "{\n  \"board\": 2,\n  \"type\": \"obliterate\",\n  \"amount\": 0.3499999940395355,\n  \"obliterate\": {\n    \"model\": \"obliterate-board-r1\",\n    \"shimmerModel\": \"obliterate-shimmer-kotlin-r1\",\n    \"coreModel\": \"obliterate-core-kotlin-r1\",\n    \"shimmerMix\": 0.15,\n    \"pitched\": true,\n    \"bpm\": 120,\n    \"division\": 16,\n    \"seed\": 20261023\n  }\n}",
+      "coldBoardMs": [
+        362.914933,
+        362.68928,
+        414.651461,
+        371.607612,
+        366.47734,
+        378.850026,
+        359.327732
+      ],
+      "coldMedianMs": 366.47734,
+      "repeatBoardMs": [
+        1.060625,
+        1.126901,
+        0.958447,
+        0.669045,
+        0.792319,
+        0.907492,
+        0.898396
+      ],
+      "repeatMedianMs": 0.907492,
+      "clockEditMs": 318.214427,
+      "clockEditReusedShimmer": true,
+      "sampleExactToPublicComposition": true,
+      "retainedSamples": 516550
+    }
+  ],
+  "scope": "Initial focused host profile before the Android/full regression gates. The port source was uncommitted; hashes identify the measured code."
+}

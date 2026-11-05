@@ -34,6 +34,14 @@ object KeysMidi {
     fun settle(learned: MidiBinding): MidiBinding =
         if (learned.target == VOLUME && learned.mode == MidiBinding.Mode.ABSOLUTE) learned.copy(takeover = MidiBinding.Takeover.JUMP) else learned
 
+    /**
+     * The octave buttons learn from keys, pads and buttons only: a bend strip
+     * or pressure brushed while one waits would bind a control that never
+     * fires. VOL takes anything continuous, a strip included.
+     */
+    fun kinds(target: String): Set<MidiBinding.Kind>? =
+        if (target == OCT_DOWN || target == OCT_UP) setOf(MidiBinding.Kind.NOTE, MidiBinding.Kind.CC, MidiBinding.Kind.PROGRAM) else null
+
     /** What some actions ask of the screen: a new [volume] (0..1), or null to keep it, and an [octaveStep]. */
     data class Change(val volume: Float?, val octaveStep: Int)
 

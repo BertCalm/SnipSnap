@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-/** Export the model-five duet as sixteen editable pads, MPC 3, an MPC 2 twin and a ZIP. */
+/** Export the accepted duet as sixteen editable pads, MPC 3, an MPC 2 twin and a ZIP. */
 object ObbligatoKitGenerator {
     const val DEMO_BPM = 120f
     const val DEMO_VELOCITY = .9f
@@ -136,7 +136,8 @@ object ObbligatoKitGenerator {
     private fun readme(dataDirectory: String): String = """
         ${ObbligatoKits.NAME}
 
-        Sixteen dry, finite model-five duets. Each pad starts independent air and reed
+        Sixteen dry, finite duets from accepted renderer revision ${ObbligatoKits.MODEL}.
+        Each pad starts independent air and reed
         sources; pads do not share a live relationship. HOLD is not a sustain loop.
 
         Pad rows (left to right: C4, Eb4, F4, G4):

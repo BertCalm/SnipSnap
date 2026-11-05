@@ -40,18 +40,18 @@ class OrigamiSynthCommandTest {
                 ), errors.toString())
                 val presets = OrigamiPresets.forVoice(voice)
                 val wavs = requireNotNull(dir.listFiles { file -> file.extension == "wav" }).sortedBy { it.name }
-                assertEquals(2, presets.size, "$voice has two factory choices")
-                assertEquals(presets.size, wavs.size, "$voice --all must render both choices")
+                assertEquals(4, presets.size, "$voice has two reference and two performance choices")
+                assertEquals(presets.size, wavs.size, "$voice --all must render every choice")
                 for ((preset, wav) in presets.zip(wavs)) {
                     assertTrue(wav.name.startsWith("ORIGAMI_${voice.name}_"), wav.name)
                     assertContentEquals(exported(preset), wav.readBytes(),
-                        "${preset.name}: CLI must retain the factory model, seed, velocity and controls")
+                        "${preset.name}: CLI must retain the factory model, seed, velocity, gesture, expression and controls")
                     val actual = WavReader.read(wav)
                     assertEquals(1, actual.channels)
                     assertEquals(44_100, actual.sampleRate)
                     assertTrue(actual.peak() > 0f, "${preset.name}: routed factory audio is silent")
                 }
-                assertTrue("2 rendered into" in output.toString(), output.toString())
+                assertTrue("${presets.size} rendered into" in output.toString(), output.toString())
                 assertFalse("lands with" in output.toString(), "ORIGAMI factory auditions are dry")
             }
         } finally {
@@ -355,8 +355,8 @@ class OrigamiSynthCommandTest {
 
                 val (sidecar, instrument) = InstrumentStore.list(dir).single()
                 assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
-                assertEquals(48, instrument.zones.first().lowNote)
-                assertEquals(72, instrument.zones.last().highNote)
+                assertEquals(0, instrument.zones.first().lowNote)
+                assertEquals(127, instrument.zones.last().highNote)
                 assertEquals(release, instrument.release)
                 val layerCount = if (voice == OrigamiVoice.FAN) 3 else 1
                 assertEquals(9 * layerCount, instrument.sampleFiles.size)

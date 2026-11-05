@@ -5,6 +5,7 @@ import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -314,6 +315,76 @@ class PersonalityTest {
     }
 
     /**
+     * The same law for the two UNDOs the pad sheet gained on 2026-11-01, TAPE SPLICE's and
+     * DE-SAMPLE's: each has four answers (it landed, nothing of its kind is on the pad, the bin
+     * holds no earlier take, soft hits are in the way) and they have to be told apart. The landing
+     * says the take came from the bin; the not-binned refusal says the bin and claims no restore.
+     * Neither door borrows MUTATE's words, which name MUTATE.
+     */
+    @Test
+    fun `UNDO SPLICE and DE-SAMPLE's UNDO each say which of their four answers they are giving`() {
+        val doors = mapOf(
+            "SPLICE" to listOf(Copy.UNSPLICED, Copy.SPLICE_UNDO_NOTHING, Copy.SPLICE_UNDO_NOT_BINNED),
+            "DE-SAMPLE" to listOf(Copy.UNDESAMPLED, Copy.DESAMPLE_UNDO_NOTHING, Copy.DESAMPLE_UNDO_NOT_BINNED),
+        )
+        for ((door, lines) in doors) {
+            val (landed, nothing, notBinned) = lines
+            val answers = lines + Copy.UNDO_LAYERED
+            assertEquals(answers.size, answers.toSet().size, "$door: a refusal that reads like a success teaches nothing: $answers")
+            assertTrue(landed.contains("BIN"), "$door: the bin is where the take came from: $landed")
+            assertTrue(landed.contains(door), "$door: the landing names what it took off: $landed")
+            assertTrue(nothing.contains(door), "$door: the refusal names what the pad does not carry: $nothing")
+            assertFalse(nothing.contains("BACK"), "$door: nothing came back: $nothing")
+            assertTrue(notBinned.contains("BIN"), "$door: $notBinned")
+            assertFalse(notBinned.contains("BACK"), "$door: nothing came back: $notBinned")
+            for (line in answers) {
+                assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+                assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+                assertFalse(line.contains("MUTATE"), "$door's UNDO is not MUTATE's: $line")
+            }
+        }
+        assertTrue(Copy.UNDO_LAYERED.contains("SOFT HITS"), "the layered refusal names the chip that clears it: ${Copy.UNDO_LAYERED}")
+        assertFalse(Copy.UNDO_LAYERED.contains("BACK"), Copy.UNDO_LAYERED)
+        assertTrue(Copy.UNSPLICED.contains("THE TAKE BEFORE THE LAST SPLICE"), "after two splices the first splice's result comes back: ${Copy.UNSPLICED}")
+        assertTrue(Copy.UNDESAMPLED.contains("THE TAKE BEFORE THE LAST DE-SAMPLE"), Copy.UNDESAMPLED)
+    }
+
+    /** TAPE SPLICE's landing names its way back, as DE-SAMPLE's, MUTATE's and DRIFT's do. */
+    @Test
+    fun `the SPLICE landing says where the take before it went, either way it joined`() {
+        for (crossfaded in listOf(true, false)) {
+            val line = Copy.spliced(crossfaded)
+            assertTrue(line.endsWith(" THE TAKE BEFORE IT SLEEPS IN THE BIN."), "crossfaded=$crossfaded: $line")
+            assertTrue(line.startsWith("SPLICED"), line)
+        }
+        assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
+    }
+
+    /**
+     * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
+     * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
+     * They are functions, so the reflective shout law cannot see them; this holds them by hand.
+     */
+    @Test
+    fun `a print refuses SPLICE and DE-SAMPLE in the words it refuses the other doors with`() {
+        assertEquals("REMOVE WIDE BEFORE SPLICE.", Copy.boardRemoveBeforeSplice("WIDE"))
+        assertEquals("REMOVE AQUARIUM BEFORE DE-SAMPLE.", Copy.boardRemoveBeforeDesample("AQUARIUM"))
+        val lines = listOf(
+            Copy.boardRemoveBeforeSoftHits("RUSH"),
+            Copy.boardRemoveBeforeStack("RUSH"),
+            Copy.boardRemoveBeforeSpread("RUSH"),
+            Copy.boardRemoveBeforeSplice("RUSH"),
+            Copy.boardRemoveBeforeDesample("RUSH"),
+        )
+        assertEquals(lines.size, lines.toSet().size, "each refusal names its own door: $lines")
+        for (line in lines) {
+            assertTrue(line.startsWith("REMOVE RUSH BEFORE "), "the print and the way out lead: $line")
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+    }
+
+    /**
      * Finding 23. SETUP held three settings and answered none of the
      * questions a user actually arrives with. These are the three the app
      * can answer from what it already knows — the format EXPORT will open
@@ -388,6 +459,7 @@ class PersonalityTest {
         assertTrue(Copy.SHELF_LEGEND.contains("KIT"), "and what to hold: ${Copy.SHELF_LEGEND}")
         assertTrue(Copy.SHELF_LEGEND.contains("RENAME"), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
         assertTrue(Copy.SHELF_LEGEND.contains("DELETE"), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("EXPANSION"), "and the third door the hold now reveals: ${Copy.SHELF_LEGEND}")
         assertEquals(Copy.SHELF_LEGEND.uppercase(Locale.ROOT), Copy.SHELF_LEGEND, "TapeOS shouts")
         assertTrue(Copy.SHELF_LEGEND.length <= 52, "one line under the shelf: ${Copy.SHELF_LEGEND.length}")
         // Furniture, not a toast - it never lands on a full stop, and the
@@ -536,6 +608,15 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
+        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
+        // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
+        "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
+        // The shelf's EXPANSIONS group heading and the rename dialog title.
+        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
+        "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
+        "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
@@ -675,7 +756,7 @@ class PersonalityTest {
         // SPLIT - the same `…`-suffixed shape as every other *_BUSY constant
         // above: a line the dock says while the job runs, not a landing.
         // Each job's own landing toast is a separate line.
-        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
+        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_KIT_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
         // The pad editor's plain save and its close-time flush: the same
         // `…`-suffixed dock line as the named jobs above, for a write no
         // control of its own started.
@@ -691,6 +772,11 @@ class PersonalityTest {
         // are read off disk: the same `…`-suffixed dock line as every other
         // *_BUSY constant above, for a load no control started.
         "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
+        // The dock's line while KEYS rewrites an instrument's descriptors for
+        // a new voice mode: the same `…`-suffixed dock line as the loads
+        // above. Its failure toast, KEYS_VOICE_FAILED, is a sentence and
+        // keeps its full stop.
+        "KEYS_VOICE_BUSY",
     )
 
     /**
@@ -699,7 +785,7 @@ class PersonalityTest {
      * e.g. `tapeTruncated`/`imported`'s templated output) rather than a
      * violation of "TapeOS shouts". Still checked for the full-stop law.
      */
-    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED")
+    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED", "NO_TAPE_YET_ARMED")
 
     /**
      * The exact ~30 names the old hand-listed `listOf(Copy.A, Copy.B, ...)`
@@ -1182,6 +1268,16 @@ class PersonalityTest {
     @Test
     fun `chop names the kit sample it fell back to`() {
         assertEquals("FROM A03_SNARE", Copy.chopFromKit("A03_SNARE"))
+    }
+
+    @Test
+    fun `the armed empty deck makes the same claim as the snip toast and sends nobody to a pressed button`() {
+        // TAPE's empty deck, once LISTEN is armed, says what SNIP keeps. It must
+        // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
+        // not repeat NO_TAPE_YET's instruction to tap LISTEN.
+        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
+        assertTrue("UP TO 60s" in Copy.NO_TAPE_YET_ARMED && "UP TO 60s" in Copy.SNIPPED)
+        assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
     }
 
 }

@@ -124,7 +124,9 @@ class CairnTest {
             val snip = Snip(r.samples, 1, Cairn.RATE)
             val filed = Cairn.drumClassFor(voice, middle)
             assertEquals(snip.frameCount > (1.5 * Cairn.RATE).toInt(), filed == DrumClass.LOOP)
-            val classified = Classifier.classify(snip).drumClass
+            val classification = Classifier.classify(snip)
+            val classified = classification.drumClass
+            if (voice == CairnVoice.TUMBLE) println("TUMBLE MIDI$midi classifier $classification")
             assertTrue(classified in setOf(DrumClass.PERC, DrumClass.TONAL, DrumClass.LOOP), "$voice MIDI$midi filed $classified")
         }
     }
@@ -135,7 +137,10 @@ class CairnTest {
             val r = Cairn.inspect(voice, middle + mapOf("BODY" to body, "WEIGHT" to body), midi)
             // Measure the ring after the direct contact cluster. Correlating
             // across three new attacks biases a low-register pitch estimate.
-            val estimate = assertNotNull(Pitch.detect(Snip(r.samples, 1, Cairn.RATE), fromSec = .20f, windowSec = .25f))
+            val from = if (voice == CairnVoice.TUMBLE)
+                (r.diagnostics.motion.events.last().seconds - r.diagnostics.outputStartFrame.toDouble()/Cairn.RATE + .012).toFloat() else .20f
+            val estimate = assertNotNull(Pitch.detect(Snip(r.samples, 1, Cairn.RATE), fromSec = from,
+                windowSec = if (voice == CairnVoice.TUMBLE) .12f else .25f))
             val cents = 1200 * log2(estimate.hz / Cairn.frequencyFor(midi))
             assertTrue(abs(cents) < 12.0, "$voice MIDI$midi BODY$body: $cents cents")
             assertTrue(estimate.confidence >= .3f)
@@ -187,12 +192,12 @@ class CairnTest {
     }
 
     @Test
-    fun `recipes pin model note velocity and cue and reject unsupported HOLD`() {
+    fun `recipes pin model note velocity cue and the legacy HOLD refusal`() {
         val patch = CairnPatch("A physical reply", CairnVoice.ANSWER, middle, 57, .6f, false)
         assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
-        assertFailsWith<IllegalArgumentException> { patch.copy(model = 2) }
-        assertFailsWith<IllegalArgumentException> { patch.copy(macros = middle + ("HOLD" to 1f)) }
-        assertFailsWith<IllegalArgumentException> { Cairn.render(CairnVoice.ANSWER, middle + ("HOLD" to 1f)) }
+        assertFailsWith<IllegalArgumentException> { patch.copy(model = Cairn.MODEL_VERSION + 1) }
+        assertFailsWith<IllegalArgumentException> { patch.copy(model = 1, macros = middle + ("HOLD" to 1f)) }
+        assertFailsWith<IllegalArgumentException> { Cairn.render(CairnVoice.ANSWER, middle + ("HOLD" to 1f), model = 1) }
         assertFailsWith<IllegalArgumentException> { patch.copy(velocity = Float.NaN) }
         for (voice in CairnVoice.entries) {
             assertContentEquals(Cairn.render(voice).samples,

@@ -54,6 +54,7 @@ object Cli {
         |                        band, arrange + mixdown, inserts - one song
         |                        in, a release folder out; every skip named
         |  classify <wav...>     print what the classifier hears in each file
+        |  kitfrom <wav>         KIT FROM ANYTHING: one sound into sixteen pads in a key and a genre
         |  crate <root>          the whole library as a collection: cached
         |                        pad index + class census (--dupes finds
         |                        same-sound files; --pick KICK [--top N]
@@ -92,7 +93,8 @@ object Cli {
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
-        |                         --patch recipe.json --macros HANDOFF=.5; finite exchange, HOLD unavailable)
+        |                         --model 1|2|3 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;
+        |                         MATCH requires model 2+; LOSS requires model 3; finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
@@ -114,6 +116,9 @@ object Cli {
         |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
+        |                        (OVERLAP: --patch recipe.json --midi 24..84 --velocity 0..1;
+        |                        saved HELD recipes support --instrument [--release .1..1.5];
+        |                        finite recipes retain their original playback)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
         |                        --velocity 0..1 --gate S --dry|--wet;
         |                        --patch recipe.json loads a complete sound;
@@ -324,9 +329,14 @@ object Cli {
         |                        with classes and sources, groove notation,
         |                        key/tempo/mileage; --width PX, --out DIR)
         |  art <kit-dir>         procedural cover art from the kit itself
-        |                        (--style waveform|grid|slices|rings, --scheme,
+        |                        (--style bloom|ridges|field|ribbon|waveform|
+        |                        grid|slices|rings, --palette ID or --scheme,
+        |                        --seed-pad N, --mark symbol|lockup|stacked,
         |                        --seed N, --size PX, --out DIR; no --style
         |                        renders every style side by side)
+        |  mark                  the SnipSnap mark as PNGs: symbol, one-line
+        |                        lockup and stacked lockup (--scheme, --size PX
+        |                        16..1024, --out DIR)
         |  help                  this text
         |
         |chop options:
@@ -365,7 +375,8 @@ object Cli {
         |  --art STYLE       the expansion/xpn browser tile's style (default
         |                    waveform; also rings, grid, slices)
         |  --no-art          skip the browser tile
-        |  --overwrite       replace same-named output
+        |  --overwrite       replace the same-named kit folder whole (its bin
+        |                    and versions go too)
         |
         |export options: --export LIST, --out DIR, --overwrite, --preview,
         |                --art STYLE, --no-art (as above); --no-wear exports
@@ -392,6 +403,7 @@ object Cli {
                 "dig" -> DigCommand.run(args.drop(1), out)
                 "beat" -> BeatCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
+                "kitfrom" -> KitFromCommand.run(args.drop(1), out)
                 "similar" -> SimilarCommand.run(args.drop(1), out)
                 "crate" -> CrateCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
@@ -440,6 +452,7 @@ object Cli {
                 "split" -> SplitCommand.run(args.drop(1), out)
                 "retime" -> RetimeCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
+                "mark" -> MarkCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
                 "lineage" -> LineageCommand.run(args.drop(1), out)
