@@ -39,7 +39,8 @@ object OrigamiPerformanceBankGenerator {
     private const val CEILING = .90f
     private const val RELEASE = .6f
     private const val PHRASE_GAIN = .1f
-    private const val BASE_COMMIT = "82a1f9c74086d574d4de3eb1b7dc0944069c89d6"
+    private const val BASE_COMMIT = "482c55a146b1569ba9ccad27e4ebd274ad398df4"
+    private const val FOLD_BASE_COMMIT = "82a1f9c74086d574d4de3eb1b7dc0944069c89d6"
     private val touches = listOf(.3f, .6f, 1f)
     private val touchNames = listOf("soft", "mid", "hard")
     private val why = listOf(
@@ -124,7 +125,8 @@ object OrigamiPerformanceBankGenerator {
             "expressionResponse" to response.name,
             "touchUpperPolicy" to if (legacyFold) "Legacy FOLD changes fold depth only." else
                 "TOUCH keeps the fixed root and scales the complete upper bank by 0.1 + 0.9 * min(velocity / 0.85, 1)^2. At and above 0.85, the published FOLD waveform is exact. Constants are authored listening shapes.",
-            "baseCommitRead" to BASE_COMMIT, "sourceSha256" to sourceHash, "sourceFiles" to hashes,
+            "baseCommitRead" to if (legacyFold) FOLD_BASE_COMMIT else BASE_COMMIT,
+            "publishedFoldBaseline" to FOLD_BASE_COMMIT, "sourceSha256" to sourceHash, "sourceFiles" to hashes,
             "recipeSha256" to factoryRecipeHash, "factoryPresetCount" to presets.size, "factoryPresets" to presetRows,
             "clipCount" to clips.size, "sampleRate" to RATE, "bitDepth" to 16,
             "listeningRound" to "origami-performance-" + sourceHash.take(12) + "-" + factoryRecipeHash.take(12),

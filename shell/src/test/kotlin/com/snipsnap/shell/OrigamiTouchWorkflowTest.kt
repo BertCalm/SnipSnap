@@ -120,7 +120,7 @@ class OrigamiTouchWorkflowTest {
     fun `TOUCH SOFT HITS preserve complete preset and pad recipes beneath the saved ceiling`() {
         val temp = createTempDirectory("origami-touch-soft-hits").toFile()
         try {
-            val patch = authored().copy(name = "SOFT TOUCH PAPER", midi = 60, velocity = .35f)
+            val patch = authored().copy(name = "SOFT TOUCH", midi = 60, velocity = .35f)
             val shelf = File(temp, "shelf")
             UserPresets.save(shelf, patch, nowMillis = 1701L)
             val restored = assertIs<OrigamiPatch>(UserPresets.read(shelf).single().patch)
@@ -219,6 +219,11 @@ class OrigamiTouchWorkflowTest {
                 assertEquals(zone.highNote, xmlZone.getElementsByTagName("HighNote").item(0).textContent.toInt())
                 val nativeLayers = nativeZone.getValue("layersv").arr().take(3)
                 val xmlLayers = xmlZone.getElementsByTagName("Layer")
+                assertEquals(zone.layers.asReversed().map { it.sample.substringAfterLast('/').removeSuffix(".wav") },
+                    nativeLayers.map { it.obj().getValue("sampleName").str() })
+                assertEquals(listOf(85..127, 43..84, 1..42), nativeLayers.map {
+                    it.obj().getValue("velocityStart").int()..it.obj().getValue("velocityEnd").int()
+                })
                 for ((layerIndex, layer) in zone.layers.withIndex()) {
                     val note = notes[zoneIndex][layerIndex]
                     val wav = File(dir, layer.sample)
@@ -229,14 +234,19 @@ class OrigamiTouchWorkflowTest {
                             SmplChunk.Loop(note.loopStartFrame, note.snip.frameCount.toLong())))
                     }.toByteArray()
                     assertContentEquals(expected, wav.readBytes())
-                    val nativeLayer = nativeLayers[layerIndex].obj()
+                    val nativeLayer = nativeLayers[nativeLayers.lastIndex - layerIndex].obj()
                     val slice = nativeLayer.getValue("sliceInfo").obj()
                     assertEquals(layer.sample.substringAfterLast('/').removeSuffix(".wav"), nativeLayer.getValue("sampleName").str())
+                    assertEquals(layer.velStart, nativeLayer.getValue("velocityStart").int())
+                    assertEquals(layer.velEnd, nativeLayer.getValue("velocityEnd").int())
                     assertEquals(zone.rootNote, nativeLayer.getValue("rootNote").int())
                     assertEquals(note.loopStartFrame, slice.getValue("LoopStart").long())
                     assertEquals(note.snip.frameCount.toLong(), slice.getValue("End").long())
                     assertEquals(1, slice.getValue("LoopMode").int())
                     val xmlLayer = xmlLayers.item(layerIndex) as Element
+                    assertEquals(layer.sample.substringAfterLast('/').removeSuffix(".wav"), xmlLayer.getElementsByTagName("SampleName").item(0).textContent)
+                    assertEquals(layer.velStart, xmlLayer.getElementsByTagName("VelStart").item(0).textContent.toInt())
+                    assertEquals(layer.velEnd, xmlLayer.getElementsByTagName("VelEnd").item(0).textContent.toInt())
                     assertEquals(note.loopStartFrame, xmlLayer.getElementsByTagName("SliceLoopStart").item(0).textContent.toLong())
                     assertEquals(note.snip.frameCount.toLong(), xmlLayer.getElementsByTagName("SliceEnd").item(0).textContent.toLong())
                 }
