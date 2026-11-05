@@ -19,6 +19,13 @@ import java.util.Random
  * take per hit, the preview does the same, and the MPC 2 plays take one
  * (which is the untouched original, deliberately first).
  *
+ * A modal-drum synth pad (SKIN's kick and tom, any TERRA voice:
+ * `Restrike.canRestrike`) gets its takes hit again instead: a slightly
+ * different force and, on TERRA, strike position, each with its own click
+ * or grit, at the drum's own root. The micro level and start jitter still
+ * apply; the micro repitch does not, because detuning a whole drum by a few
+ * cents is the one difference a real second hit never makes.
+ *
  * Bin-backed like every treatment: undo pulls the single take back out
  * byte-identical and clears the chain.
  */
@@ -117,10 +124,21 @@ object Robin {
         )
         model.replaceAudio(slot, recipe) { original ->
             val rng = Random(seed.toLong() * 31 + slot)
+            // A modal-drum synth pad (Restrike.canRestrike) is hit again for
+            // each take - a slightly different force and, on TERRA, spot,
+            // with its own click - instead of resampling one take a few
+            // cents sharp or flat, which detunes the drum. Same fx gate and
+            // format probe as the velocity layers ([Velocity.canUseAtVelocity]).
+            val restrikes = patch != null && patchFx == null && com.snipsnap.synth.Restrike.canRestrike(patch) &&
+                com.snipsnap.synth.Velocity.canUseAtVelocity(original, patch, patchFx)
+            fun struck(reference: Snip, velocity: Float, take: Int): Snip? =
+                if (!restrikes) null
+                else com.snipsnap.synth.Restrike.take(patch!!, velocity, seed * 31 + slot, take)
+                    ?.let { com.snipsnap.synth.Velocity.peakMatch(reference, it) }
             val rendered = if (zones == null) {
                 buildList {
                     add(original)
-                    repeat(takes - 1) { add(variant(original, rng)) }
+                    repeat(takes - 1) { t -> add(variant(original, rng, struck(original, 1f, t + 1))) }
                 }
             } else {
                 val soften = ZONE_SOFTEN.getValue(zones)
@@ -144,7 +162,8 @@ object Robin {
                             original
                         }
                         add(graded)
-                        repeat(takes - 1) { add(variant(graded, rng)) }
+                        val zoneVelocity = if (z < zones - 1) 1f - soften[z] else 1f
+                        repeat(takes - 1) { t -> add(variant(graded, rng, struck(graded, zoneVelocity, z * takes + t + 1))) }
                     }
                 }
             }
@@ -178,27 +197,38 @@ object Robin {
         return model.update(slot) { it.copy(chain = null, recipe = null) }
     }
 
-    private fun variant(original: Snip, rng: Random): Snip {
+    /**
+     * One more take of [original]: up to [START_JITTER_SEC] off its front
+     * and [LEVEL_SPREAD] of level, plus either a micro repitch of
+     * [original] or, when the pad could be hit again, [struck] (that
+     * re-struck take, already peak-matched to [original]) in its place.
+     */
+    private fun variant(original: Snip, rng: Random, struck: Snip? = null): Snip {
         // Draw all three before any early return, so the rng stream (and
-        // with it every later take) never depends on this take's values.
+        // with it every later take) never depends on this take's values -
+        // nor on whether the take was re-struck.
         val trimFrames = (rng.nextFloat() * START_JITTER_SEC * original.sampleRate).toInt()
             .coerceAtMost(original.frameCount / 4)
         val cents = (rng.nextFloat() * 2f - 1f) * PITCH_SPREAD_CENTS
         val gain = 1f + (rng.nextFloat() * 2f - 1f) * LEVEL_SPREAD
 
+        val source = struck ?: original
         var s = if (trimFrames > 0) {
             Snip(
-                original.samples.copyOfRange(trimFrames * original.channels, original.samples.size),
-                original.channels,
-                original.sampleRate,
+                source.samples.copyOfRange(trimFrames * source.channels, source.samples.size),
+                source.channels,
+                source.sampleRate,
             )
         } else {
-            original
+            source
         }
         // Micro repitch by resample - the sampler way, pitch and length
-        // riding together like a slightly different hit would.
-        val speed = Math.pow(2.0, cents / 1200.0).toFloat()
-        s = TempoFit.repitch(s, 1000f, 1000f * speed)
+        // riding together like a slightly different hit would. A re-struck
+        // take skips it: its variation is the hit's own, at the drum's root.
+        if (struck == null) {
+            val speed = Math.pow(2.0, cents / 1200.0).toFloat()
+            s = TempoFit.repitch(s, 1000f, 1000f * speed)
+        }
         val out = FloatArray(s.samples.size)
         for (i in s.samples.indices) out[i] = (s.samples[i] * gain).coerceIn(-1f, 1f)
         return Snip(out, s.channels, s.sampleRate)

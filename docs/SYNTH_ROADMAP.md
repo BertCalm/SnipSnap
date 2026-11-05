@@ -3118,3 +3118,46 @@ Android compilation and remaining device validation are recorded in [OTIS.md](OT
 ## LORENTZ finite collision handoff
 
 LORENTZ ports the accepted third Python listening pass into the JVM synth: falling sweep, finite collision, irreversible capture and a steady sub tail. FUSE and LORENTZ share the root but have distinct contact behavior. IMPACT and GAP retain their widened audible ranges; HOLD is a finite decay extension. Saved model/velocity, factory anchors, CLI controls, raw reference probes, a dry sixteen-pad kit and Kotlin audition tasks are wired in. Classification uses actual PCM rather than forcing every hit into KICK. Android picker integration remains deferred to an SDK-backed session. See [LORENTZ](engines/LORENTZ.md) for source provenance, validation and the As built record.
+
+## Luthier gap scan: strike velocity, re-strike, OBBLIGATO keys, chord stabs (2026-11-04)
+
+A gap scan of the 84-engine roster ranked four gaps by producer value per
+build round; all four landed together.
+
+1. **Strike velocity for the modal drums.** SKIN's KICK and TOM and every
+   TERRA voice take a velocity of their own (`StrikeVelocity.kt`): a softer
+   hit tilts the modes toward the root, bends the head less (by v²), lands
+   with less grit, and drives TERRA's buzz and cavity less. Full velocity is
+   each engine's existing render, bit for bit. The first 30 ms brighten from
+   v = 0.25 to 1 on every TERRA voice and kit pad (+8% on the bells to
+   several hundred percent on the buzz pads) and on every SKIN kick and tom
+   preset but three named ones. [STRIKE_VELOCITY.md](STRIKE_VELOCITY.md)
+   records the laws, what was tried and dropped, and the numbers.
+   `SkinKits.classic()` and `TerraKits.classic()` carry two softer takes per
+   pad.
+2. **Keygroups for a held wind instrument.** OBBLIGATO as a keys instrument
+   (`Keys.obbligatoPad`, `ObbligatoPadMaker`), five attack-plus-loop zones
+   from C4 to C5; the loop is searched per zone because the duet is not
+   periodic ([OBBLIGATO.md](OBBLIGATO.md), "As built: OBBLIGATO held as a
+   keys instrument"). The join toolkit is `HeldLoop.kt`.
+3. **Round robin that re-strikes.** Robin's takes on a modal-drum synth pad
+   are hit again (`Restrike.kt`: a little softer, a little off the spot on
+   TERRA, each with its own click) instead of resampled a few cents sharp or
+   flat. Other pads keep byte-identical takes.
+4. **Chord stabs in a key.** `ChordStabs.kit(key)`, the CHORD STABS starter:
+   a key's triads, sevenths, a wide tonic and an add9 on STOOP CHORD, voiced
+   near one centre ([STOOP.md](STOOP.md), "As built: CHORD STABS").
+
+Nothing in this round has had the owner's listen. Disclosed, not fixed:
+TERRA's FORCE is not monotone in onset brightness on its rim pads; THUMP's
+and ONSET's kicks still take `soften()`; no app screen calls the OBBLIGATO
+pad maker yet.
+
+Why it is built this way: a pad is the unit of use, so the round fixes what
+reaches every drum kit before adding a mechanism; velocity enters through
+the engines' own physics (contact, tension, grit) rather than a filter over
+a finished render, so a soft hit is a different hit, not a quieter copy;
+every factor is exactly 1 at full velocity, so no saved sound moves; the
+held-loop join sits at the loop's end so the attack stays the render's own;
+and the chord voicings gather near one centre so neighbouring pads read as a
+progression.

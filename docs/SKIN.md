@@ -70,12 +70,23 @@ continuous here, not snapped: it tunes a drum, it does not pick a note.
   inside each voice's classifier-safe region, which was mapped first (the table
   in that file's KDoc). Not authored by ear.
 - **Starter kit:** `SkinKits.classic()`, all eight voices on sixteen pads, every
-  pad named by a preset so the values have one home. It is the SKIN starter kit
+  pad named by a preset so the values have one home, each with two softer
+  velocity takes. It is the SKIN starter kit
   in the app (`StarterKits.kt`). No gradle task renders it to `testkit/`.
 - **Audition page:** `./gradlew :synth:generateSkinAudition` runs
   `SkinRosterAuditionGenerator`, the shared `RosterAudition` page. It writes
   `testkit/skin-audition/` with the classic kit, then each voice's default, every
   knob at both ends, TUNE at three tunings, and every preset, at one loudness.
+
+## Velocity
+
+KICK and TOM take a strike velocity (`Skin.STRUCK`,
+[STRIKE_VELOCITY.md](STRIKE_VELOCITY.md)): a softer hit tilts the partials
+toward the fundamental, bends the head less (DROP by v²), and lands a
+quieter, duller beater click. Full velocity is the render SKIN has always
+made, bit for bit. The other voices keep the touch `Velocity` gives them.
+The classic kit carries two softer takes under every pad, and Robin's
+round-robin takes on a KICK or TOM pad are re-struck rather than resampled.
 
 ## Ledger
 

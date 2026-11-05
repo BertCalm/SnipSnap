@@ -686,4 +686,55 @@ object Keys {
         requireSeam("KEEL $voice at MIDI $midi", held.audio, held.loopStart)
         return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
     }
+
+    // ---------- OBBLIGATO, held ----------
+
+    /** Where an OBBLIGATO key's loop may start: after the entry, 1.2 s in. */
+    const val OBBLIGATO_LOOP_FROM_SECONDS = 1.2f
+
+    /** Where it must end: before the players stop, 5 s in at HOLD 1 ([Obbligato]'s held span, 2 + 3 HOLD seconds), with 50 ms to spare. */
+    const val OBBLIGATO_LOOP_UNTIL_SECONDS = 4.95f
+
+    /**
+     * The loop lengths searched, longest first ([HeldLoop.search]); each
+     * ±50 ms. Measured on the factory relationships: HARMONY at MIDI 69
+     * and 72 holds only at the shortest length, every other zone at a
+     * second or more.
+     */
+    val OBBLIGATO_LOOP_SECONDS = listOf(2.0f, 1.5f, 1.0f, 0.75f)
+
+    /** How many of the steadiest starts are closed per length: 24 found a holding loop on every factory zone where 12 missed two. */
+    const val OBBLIGATO_LOOP_TRIES = 24
+
+    /** The five OBBLIGATO zones: every minor third across the engine's own C4 to C5. */
+    fun obbligatoPadMidis(): List<Int> = (Obbligato.MIDI_MIN..Obbligato.MIDI_MAX step 3).toList()
+
+    /**
+     * OBBLIGATO held - one keygroup zone at exact MIDI pitch: the duet's
+     * entry at HOLD 1, then a stretch of its held exchange as the loop
+     * ([HeldLoop]). The duet is not periodic (the players trade, swell and
+     * wander by design), so the loop is searched per zone for a stretch
+     * whose level holds and whose join correlates, and a zone with none
+     * throws, naming the zone and its nearest miss, rather than shipping a
+     * loop that breathes or clicks. Rendered at [velocity], the engine's
+     * default touch unless asked; [cancelled] is asked before the search.
+     */
+    fun obbligatoPad(
+        macros: Map<String, Float>, midi: Int, velocity: Float = Obbligato.DEFAULT_VELOCITY, seed: Int = 0,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        require(midi in Obbligato.MIDI_MIN..Obbligato.MIDI_MAX) { "OBBLIGATO pads are MIDI ${Obbligato.MIDI_MIN}..${Obbligato.MIDI_MAX}, got $midi" }
+        val held = Obbligato.render(macros + ("HOLD" to 1f), midi, velocity, seed).samples
+        if (cancelled()) throw java.util.concurrent.CancellationException("OBBLIGATO pad render cancelled")
+        val from = (OBBLIGATO_LOOP_FROM_SECONDS * RATE).toInt()
+        val until = (OBBLIGATO_LOOP_UNTIL_SECONDS * RATE).toInt()
+        val lengths = OBBLIGATO_LOOP_SECONDS.map { (it * RATE).toInt() }
+        val slack = (0.05f * RATE).toInt()
+        val blend = (0.15f * RATE).toInt()
+        val cut = HeldLoop.search(held, from, until, lengths, slack, blend, tries = OBBLIGATO_LOOP_TRIES)
+            ?: error("OBBLIGATO at MIDI $midi: no stretch of the held duet loops (" +
+                (HeldLoop.closest(held, from, until, lengths, slack, blend, tries = OBBLIGATO_LOOP_TRIES)?.fault() ?: "no candidate fits") + ")")
+        requireSeam("OBBLIGATO at MIDI $midi", cut.audio, cut.loopStart)
+        return KeyNote(Snip(cut.audio, channels = 1, sampleRate = RATE), loopStartFrame = cut.loopStart.toLong())
+    }
 }

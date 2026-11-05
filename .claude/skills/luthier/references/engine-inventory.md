@@ -143,17 +143,21 @@ CLASSIFIER, TRANSIENTS.
 A pad is the unit of use, so what reaches a kit or a keygroup matters as much as what an
 engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-21 list at
 `565551e` is superseded:
-- **Keygroup (multisampled instrument) path**: `Keys.kt` has twelve builders (`rimePad`,
+- **Keygroup (multisampled instrument) path**: `Keys.kt` has thirteen builders (`rimePad`,
   `resinPad`, `sirenPad`, `mercuryPad`, `prismPad`, `creasePad`, `registersPad`, `contourPad`,
-  `glintPad`, `ballastPad`, `orphicaPad`, `keelPad`), and `shell` has 22 engine PadMakers
-  (BALLAST, BELLOWS, CONTOUR, CREASE, FILAMENT, FLOCK, GLINT, KEEL, LIBRATION, MERCURY, MERIDIAN,
-  OHM, OPENSKY, ORIGAMI, ORPHICA, OVERLAP, PRISM, REGISTERS, RESIN, RIME, SIREN, TIDAL) beside
-  the shared `PadMaker.kt`. The two lists overlap and were not de-duplicated. How many HOLD
-  engines still lack a path has not been counted.
+  `glintPad`, `ballastPad`, `orphicaPad`, `keelPad`, `obbligatoPad`), and `shell` has 24 engine
+  PadMakers (BALLAST, BELLOWS, CAUSTIC, CONTOUR, CREASE, FILAMENT, FLOCK, GLINT, KEEL, LIBRATION,
+  MERCURY, MERIDIAN, OBBLIGATO, OHM, OPENSKY, ORIGAMI, ORPHICA, OVERLAP, PRISM, REGISTERS, RESIN,
+  RIME, SIREN, TIDAL) beside the shared `PadMaker.kt`. The two lists
+  overlap and were not de-duplicated. Held wind and bowed engines without a path (2026-11-04
+  grep): ARCO, BORE, EMBOUCHURE, MURMUR, ALLOY, LACQUER, STOOP, TANGLE. A non-periodic held note
+  can now loop with its attack in front through `HeldLoop` (OBBLIGATO is the first user).
 - **Velocity layers in kits**: `softVariants` is used by the kit assembler (`KitAssembler.kt`),
-  by the THUMP classic starter kit (`StarterKits.kt`, two soft variants from `Velocity.variantsAt`)
-  and by test-side kit generators for APSIS, MERIDIAN, ACCORD, FLOCK and MURMUR. Whether the SKIN,
-  TERRA and ONSET kits carry layers has not been counted.
+  by the THUMP classic starter kit (`StarterKits.kt`, two soft variants from `Velocity.variantsAt`),
+  by `SkinKits.classic()`, `TerraKits.classic()` and `ChordStabs.kit()` (2026-11-04), and by
+  test-side kit generators for APSIS, MERIDIAN, ACCORD, FLOCK and MURMUR. ONSET's kit carries
+  none. SKIN's KICK and TOM and every TERRA voice re-render at velocity through their own
+  physics (`StrikeVelocity`); THUMP's and ONSET's kicks still take `Velocity.soften`.
 - **Bass register**: FATHOM, BALLAST and KEEL. BALLAST and KEEL have keygroup builders. KEEL is
   off the phone picker. ARCO, CIRCUIT and TREMOR root at C2 (`ROOT_MIDI = 36`) but are not bass
   instruments.
@@ -190,10 +194,10 @@ chip's first version fell short of the heard room for exactly that reason.
 | Kit slot | What serves it today | Thin because |
 |---|---|---|
 | Bass (A01 register, sub to low mids) | FATHOM, BALLAST, KEEL, RESIN low TUNE, MAGNET low | served; KEEL is off the phone picker |
-| Kick / snare / hats / toms | THUMP, SKIN, TERRA, ONSET, TREMOR, FATHOM kicks | velocity layers now exist in the kit assembler and the THUMP classic kit; count the other drum kits before calling it thin; an open/closed hat pair on one physical engine is unverified |
-| Keys instrument (keygroup) | 12 `Keys` builders and 22 engine PadMakers | HOLD engines without a path are uncounted |
+| Kick / snare / hats / toms | THUMP, SKIN, TERRA, ONSET, TREMOR, FATHOM kicks | SKIN and TERRA kits layered with a strike velocity, and Robin re-strikes them (2026-11-04); THUMP's and ONSET's kicks still `soften()`; an open/closed hat pair on one physical engine is unverified |
+| Keys instrument (keygroup) | 13 `Keys` builders and 24 engine PadMakers | ARCO, BORE, EMBOUCHURE, MURMUR, ALLOY, LACQUER, STOOP, TANGLE hold but have no keygroup |
 | Loop / texture pads | the always-LOOP engines, HOLD tops | plentiful; the gap is export (seam, keygroup), not synthesis |
-| Chord / stab | PHOTO CHORD (a photo picks a chord laid on pads), STRING MACHINE's landing, OTIS (chords sharing one budget), RIME's voicing, GYRE and NACRE intervals | partly served; none was read for a key-aware stab, so "absent" is no longer a safe claim |
+| Chord / stab | CHORD STABS (`ChordStabs.kit`: a key's chords one per pad on STOOP CHORD, 2026-11-04), PHOTO CHORD (a photo picks a chord laid on pads), STRING MACHINE's landing, OTIS (chords sharing one budget), RIME's voicing, GYRE and NACRE intervals | served for major and minor keys; modal and borrowed chords are not |
 | Melodic lead | most of the roster | crowded |
 
 ## What the roster already covers heavily, and what it barely touches
@@ -221,3 +225,6 @@ not by reading):
   files, unread).
 - **FX-as-instrument** on the pitched side (OVERLAP is one; the Aquarium suite is FX, not an engine).
 - **Velocity as timbre**: `brightnessOverride` exists but few engines prove a monotonic sweep.
+  `StrikeVelocityTest` proves one for SKIN's kick and tom and every TERRA voice, on a
+  magnitude-weighted onset centroid: `FeatureExtractor`'s power-weighted centroid hides a
+  kick's overtones and is the wrong probe for this.

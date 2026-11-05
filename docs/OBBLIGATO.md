@@ -307,3 +307,40 @@ current default branch. They cover immutable model-6
 receipts, root pitch, actual alternating source dominance, continuity and causal
 answers. The generator produced ten mono PCM24 recordings with matching levels.
 Broader checks for this revision are reported separately from those results.
+
+## As built: OBBLIGATO held as a keys instrument (2026-11-04)
+
+A Luthier gap scan asked for a keygroup for one of the held wind
+instruments that had none; OBBLIGATO was chosen because BORE is being
+worked on elsewhere. `Keys.obbligatoPad` and `ObbligatoPadMaker` (KEEL's
+shape: RELEASE alone) build five zones, every minor third from C4 to C5
+(MIDI 60, 63, 66, 69, 72), edge zones reaching nine semitones past the ends.
+
+Each zone is an attack-plus-loop key: the duet rendered at HOLD 1 (five
+held seconds), its own entry untouched, then a stretch of its held
+exchange as the loop. The duet is not periodic by design (the players
+trade, swell and wander), so the stretch is searched per zone
+(`HeldLoop.search`): lengths of 2, 1.5, 1 and 0.75 s (±50 ms) are tried
+longest first, starting from 1.2 s and ending by 4.95 s, the 24 starts
+whose level moves least are closed, and the best-correlated one that holds
+wins. A join holds when its blended waves correlate at least 0.9 (BORE's
+bar), its blend dips no more than 1 dB, and the loop's level moves no more
+than 1.5 dB from start to end. The join sits at the loop's end and crosses
+into the material from just before the loop start, so the wrap is the
+render's own continuation (`Keys.seamError` reads it as zero); the attack
+is the render's own up to the blend. A zone with no holding stretch throws,
+naming the zone and its nearest miss.
+
+Measured on the five factory relationships at every zone (Kotlin): every
+zone holds. Most loops run about 2 s; HARMONY (the default) holds only at
+0.70 to 0.80 s at MIDI 69 and 72, where its exchange swells within any
+longer stretch. A zone renders in about 0.5 s and searches in 0.6 to 3.3 s.
+
+What a held key plays is a repeating stretch of the exchange, not a
+settled sustain: on PLAY and FIGHT the trade is audible inside the loop,
+and HARMONY's two top zones repeat about every three quarters of a second.
+Nothing here has been heard. The listening question is whether a held key
+reads as the duet carrying on or as a phrase stuck on repeat, most of all
+on HARMONY's top two zones. No app screen calls the pad maker yet (an
+Android SDK session wires keys screens). Tests: `ObbligatoKeysTest`,
+`ObbligatoPadMakerTest`.

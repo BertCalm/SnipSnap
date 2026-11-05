@@ -45,7 +45,12 @@ object SkinKits {
                     "name rather than copying its numbers back in here.",
             )
         val patch = SkinPatch(patchName, voice, source.macros)
-        return ArrangedPad(patch.render(), drumClass, PadRecipe(patch).toJsonValue())
+        val snip = patch.render()
+        // Two softer takes under the hard one, so the MPC switches sound,
+        // not just level, with how hard the pad is hit (three velocity
+        // zones). The kick and toms re-strike (StrikeVelocity); the snare,
+        // hats, ride, shaker and stick take Velocity's own touch for them.
+        return ArrangedPad(snip, drumClass, PadRecipe(patch).toJsonValue(), softVariants = Velocity.variantsAt(snip, patch, count = 2))
     }
 
     /**
