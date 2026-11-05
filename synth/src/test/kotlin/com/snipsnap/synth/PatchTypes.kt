@@ -53,7 +53,7 @@ internal object PatchTypes {
      * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed.
      */
-    val ROSTERLESS: Set<String> = setOf(SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are

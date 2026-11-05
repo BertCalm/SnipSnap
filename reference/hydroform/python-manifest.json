@@ -1,0 +1,1328 @@
+[
+  {
+    "id": "compare-amplitude",
+    "group": "compare",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-static"
+  },
+  {
+    "id": "compare-derivative",
+    "group": "compare",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "tune-0",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "tune-0.25",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.25,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "tune-0.5",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "tune-0.75",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.75,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "tune-1",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 1,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "charge-0",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "charge-0.25",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.25,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "charge-0.5",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.5,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "charge-0.75",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.75,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "charge-1",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "standoff-0",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "standoff-0.25",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.25,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "standoff-0.5",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.5,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "standoff-0.75",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.75,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "standoff-1",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "yield-0",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "yield-0.25",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.25,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "yield-0.5",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "yield-0.75",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.75,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "yield-1",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "arrest-0",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "arrest-0.25",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.25
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "arrest-0.5",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.5
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "arrest-0.75",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.75
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "arrest-1",
+    "group": "sweep",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "pressure",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0.2,
+      "ARREST": 0.4
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "cut",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.3,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "sub",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0,
+      "CHARGE": 0.5,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "brittle",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.8,
+      "CHARGE": 0.9,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "soft",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.15,
+      "STANDOFF": 0.35,
+      "YIELD": 0.8,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dispersion",
+    "group": "study",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 0.25
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-default",
+    "group": "voice",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pitch-0.25",
+    "group": "pitch",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.25,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pitch-0.5",
+    "group": "pitch",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pitch-0.75",
+    "group": "pitch",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.75,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-velocity-0.25",
+    "group": "velocity",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 0.25,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-velocity-0.6",
+    "group": "velocity",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 0.6,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-velocity-1",
+    "group": "velocity",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-charge-0-0",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-charge-0-1",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-charge-1-0",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-charge-1-1",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-standoff-0-0",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-standoff-0-1",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-standoff-1-0",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "dome-pair-standoff-1-1",
+    "group": "pair",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-default",
+    "group": "voice",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pitch-0.25",
+    "group": "pitch",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.25,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pitch-0.5",
+    "group": "pitch",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pitch-0.75",
+    "group": "pitch",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.75,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-velocity-0.25",
+    "group": "velocity",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 0.25,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-velocity-0.6",
+    "group": "velocity",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 0.6,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-velocity-1",
+    "group": "velocity",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-charge-0-0",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-charge-0-1",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-charge-1-0",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-charge-1-1",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-standoff-0-0",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-standoff-0-1",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-standoff-1-0",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulkhead-pair-standoff-1-1",
+    "group": "pair",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-tune-0",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-tune-0.25",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.25,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-tune-0.5",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-tune-0.75",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.75,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-tune-1",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 1,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-charge-0",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-charge-0.25",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.25,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-charge-0.5",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.5,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-charge-0.75",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.75,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-charge-1",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-standoff-0",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-standoff-0.25",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.25,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-standoff-0.5",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.5,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-standoff-0.75",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.75,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-standoff-1",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 1,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-yield-0",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-yield-0.25",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.25,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-yield-0.5",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-yield-0.75",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.75,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-yield-1",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 1,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-arrest-0",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-arrest-0.25",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.25
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-arrest-0.5",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.5
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-arrest-0.75",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 0.75
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "bulk-arrest-1",
+    "group": "bulk-sweep",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 0.7,
+      "STANDOFF": 0.35,
+      "YIELD": 0.5,
+      "ARREST": 1
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2"
+  },
+  {
+    "id": "hold",
+    "group": "hold"
+  },
+  {
+    "id": "dome-hot-0-4",
+    "group": "hot-corner",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  },
+  {
+    "id": "dome-hot-0.5-4",
+    "group": "hot-corner",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  },
+  {
+    "id": "dome-hot-1-4",
+    "group": "hot-corner",
+    "voice": "DOME",
+    "macros": {
+      "TUNE": 1,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  },
+  {
+    "id": "bulkhead-hot-0-4",
+    "group": "hot-corner",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  },
+  {
+    "id": "bulkhead-hot-0.5-4",
+    "group": "hot-corner",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 0.5,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  },
+  {
+    "id": "bulkhead-hot-1-4",
+    "group": "hot-corner",
+    "voice": "BULKHEAD",
+    "macros": {
+      "TUNE": 1,
+      "CHARGE": 1,
+      "STANDOFF": 0.35,
+      "YIELD": 0,
+      "ARREST": 0.65
+    },
+    "velocity": 1.0,
+    "variant": "slope-v2",
+    "internal_factor": 4
+  }
+]

@@ -200,6 +200,7 @@ object Velocity {
         is OtisPatch -> Otis.macrosFor(patch.voice)
         is LorentzPatch -> Lorentz.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
+        is HydroformPatch -> Hydroform.macrosFor(patch.voice)
         is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
@@ -457,6 +458,7 @@ object Velocity {
         is TrefoilPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
+        is HydroformPatch -> patch.copy(velocity = v).render()
         is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is KeelPatch -> patch.copy(velocity = v).render()

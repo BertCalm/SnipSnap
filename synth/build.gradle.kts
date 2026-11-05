@@ -3021,3 +3021,14 @@ tasks.register<JavaExec>("generateErosionBank") {
     workingDir = projectDir
     args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-playable-bank")
 }
+
+tasks.register<JavaExec>("generateHydroformAudition") {
+    group = "distribution"
+    description = "Render native HYDROFORM against the accepted Python manifest, with recipes and raw parity floats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HydroformAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("hydroformManifest").orNull ?: "${rootDir}/reference/hydroform/python-manifest.json",
+        providers.gradleProperty("hydroformOutput").orNull ?: "${rootDir}/testkit/hydroform-audition")
+}
