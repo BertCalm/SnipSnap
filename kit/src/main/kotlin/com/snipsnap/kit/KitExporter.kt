@@ -97,7 +97,7 @@ object KitExporter {
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")
 
-        val (slots, written) = buildSlots(kit, kitDir, samplesDir = dest)
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir = dest, splitRobinTakes = true)
         val program = XpmWriter().writeTo(dest, DrumProgram(kit.name, slots))
         writeSidecar(kit, slots, dest)
         return ExportResult(dest, program, written, findings)
@@ -116,7 +116,7 @@ object KitExporter {
         samplesDir: File,
     ): Pair<File, List<File>> {
         programDir.mkdirs()
-        val (slots, written) = buildSlots(kit, kitDir, samplesDir)
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir, splitRobinTakes = true)
         val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots))
         return program to written
     }
@@ -136,6 +136,13 @@ object KitExporter {
          * `_[ProjectData]/` without their `A01_Kick_01`s colliding.
          */
         stemPrefix: String = "",
+        /**
+         * `.xpm` exports only: write each robin chain's first takes as
+         * `_RR1..RR4` WAVs on full-range cycling layers (see [RobinSplit])
+         * instead of copying the chain. The `.xtd`, DecentSampler and SFZ
+         * writers keep the default and the whole chain.
+         */
+        splitRobinTakes: Boolean = false,
     ): Pair<List<Pad?>, List<File>> {
         samplesDir.mkdirs()
 
@@ -143,6 +150,7 @@ object KitExporter {
         val stemBySlot = HashMap<Int, String>()
         val frameCountBySlot = HashMap<Int, Long>()
         val layersBySlot = HashMap<Int, List<VelocityLayer>>()
+        val cycleBySlot = HashMap<Int, List<VelocityLayer>>()
         val used = HashSet<String>()
 
         fun copySample(file: String): Pair<String, Long> {
@@ -155,7 +163,19 @@ object KitExporter {
         }
 
         for (p in kit.pads.sortedBy { it.slot }) {
-            if (p.velocityLayers.isEmpty()) {
+            if (splitRobinTakes && p.isRobinChain && p.velocityLayers.isEmpty()) {
+                val takes = RobinSplit.split(p, kitDir, stemPrefix) { stem ->
+                    check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
+                }.map { take ->
+                    val dst = File(samplesDir, "${take.stem}.wav")
+                    dst.writeBytes(take.bytes)
+                    written += dst
+                    VelocityLayer(take.stem, take.frames, 0, 127)
+                }
+                cycleBySlot[p.slot] = takes
+                stemBySlot[p.slot] = takes.first().sampleName
+                frameCountBySlot[p.slot] = takes.first().frameCount
+            } else if (p.velocityLayers.isEmpty()) {
                 val (stem, frames) = copySample(p.sampleFile)
                 stemBySlot[p.slot] = stem
                 frameCountBySlot[p.slot] = frames
@@ -183,7 +203,7 @@ object KitExporter {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
-                loop = p.loop,
+                loop = p.loop && p.slot !in cycleBySlot,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
                 attack = p.attack,
@@ -191,7 +211,8 @@ object KitExporter {
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
-                chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
+                chain = if (p.slot in cycleBySlot) null else p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
+                cycleLayers = cycleBySlot[p.slot],
             )
         }
         SourceAttribution.writeTo(kit, samplesDir)
@@ -208,7 +229,10 @@ object KitExporter {
         // The readers do not yet reconstruct Slice Motion and its per-zone
         // anchor windows. Keep chain exports on their existing program/audio
         // import path instead of claiming editable history we cannot match.
-        if (kit.pads.any { it.chain != null }) {
+        // A robin pad split into take files is not such a chain: it is
+        // described as the importer lands it (take one, its original, with
+        // its settings) and the importer deals the rest again.
+        if (kit.pads.any { it.chain != null && slots.getOrNull(it.slot - 1)?.cycleLayers == null }) {
             val old = File(samplesDir, KitStore.FILE_NAME)
             if (old.exists() && (!old.isFile || !old.delete())) {
                 throw IOException("could not remove unsupported chain history sidecar: $old")
@@ -217,8 +241,11 @@ object KitExporter {
         }
         val exported = kit.copy(pads = kit.pads.map { pad ->
             val slot = requireNotNull(slots[pad.slot - 1]) { "missing exported slot ${pad.slot}" }
-            val sampleFile = "${slot.sampleName}.wav"
-            val digest = sha256(SafePath.child(samplesDir, sampleFile))
+            // A split robin pad lands as its take one under the name before `_RR1` (XpnImporter).
+            val takeOne = slot.cycleLayers?.first()?.sampleName
+            val sampleFile = takeOne?.let { "${it.removeSuffix("_RR1").ifBlank { it }}.wav" } ?: "${slot.sampleName}.wav"
+            // What travels is take one's own file when the pad was split, so that is what is fingerprinted.
+            val digest = sha256(SafePath.child(samplesDir, takeOne?.let { "$it.wav" } ?: sampleFile))
             val layers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
                 KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
                     displayName = pad.velocityLayers.getOrNull(index)?.displayName)
@@ -233,6 +260,7 @@ object KitExporter {
             }
             pad.copy(
                 sampleFile = sampleFile,
+                chain = if (takeOne != null) null else pad.chain,
                 velocityLayers = layers,
                 // Printed boards and Aquarium pads depend on immutable source
                 // snapshots outside the live WAV set. Flat MPC exports carry

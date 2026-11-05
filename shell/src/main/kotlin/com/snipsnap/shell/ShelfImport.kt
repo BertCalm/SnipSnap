@@ -231,7 +231,7 @@ object ShelfImport {
         }
         return when {
             xpn -> {
-                val r = KitBackup.restore(file, staging)
+                val r = KitBackup.restore(file, staging, robin = Robin.dealer)
                 // Only a backup carries the presets file, and only at its root
                 // (KitBackup's own extras rule); read bounded, as a stranger's
                 // archive may declare anything, and one past the ceiling is
@@ -254,7 +254,7 @@ object ShelfImport {
                 ZipLanding(r.kits.map { it.directory }, skipped, presets, expansionsText)
             }
             xpm -> {
-                val r = XpnImporter.importAll(file, staging)
+                val r = XpnImporter.importAll(file, staging, robin = Robin.dealer)
                 ZipLanding(r.kits.map { it.directory }, r.skipped.map { "${it.first}: ${it.second}" }, null)
             }
             mpc -> {

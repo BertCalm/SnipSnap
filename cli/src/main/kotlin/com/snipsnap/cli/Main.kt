@@ -209,8 +209,10 @@ object Cli {
         |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
         |                        into a chain WAV - the MPC 3 cycles one per
         |                        hit (Slice Motion), the MPC 2 plays take one
-        |                        ([--takes N] [--seed S]; --undo restores the
-        |                        single take byte-identical); --zones Z (2..4)
+        |                        ([--takes N] [--seed S]; --amount 0..1 sets how
+        |                        far the takes stray and keeps a synth pad's
+        |                        patch; --undo restores the single take
+        |                        byte-identical); --zones Z (2..4)
         |                        renders the full velocity x robin grid - a
         |                        dynamics-graded chain where soft hits play
         |                        quieter, darker takes

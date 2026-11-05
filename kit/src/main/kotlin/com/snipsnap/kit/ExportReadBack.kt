@@ -114,6 +114,14 @@ object ExportReadBack {
             val problems = mutableListOf<String>()
             if (!read.hasSample) {
                 problems += "no sample"
+            } else if (dialect === XML && p.isRobinChain) {
+                // The .xpm cycles take files: RR1..RRn, each full-range.
+                val asked = expectedTakes(p)
+                val got = read.layers.filter { it.sampleName != null }
+                    .map { Zone(stripWav(it.sampleName!!), it.velocityStart, it.velocityEnd) }
+                if (got != asked) {
+                    problems += "samples ${got.joinToString { it.text() }} (asked ${asked.joinToString { it.text() }})"
+                }
             } else if (p.chain != null) {
                 // A chain pad's zones all reference one WAV, differing by
                 // slice anchors the reader doesn't surface — said as a SKIP
@@ -182,6 +190,10 @@ object ExportReadBack {
         } else {
             p.velocityLayers.sortedBy { it.velStart }.map { Zone(Names.sanitizeStem(it.sampleStem), it.velStart, it.velEnd) }
         }
+
+    /** The cycling layers the `.xpm` writers were handed for a robin chain, in take order. */
+    private fun expectedTakes(p: KitPad): List<Zone> =
+        (1..RobinSplit.takeCount(p)).map { Zone(RobinSplit.takeStem("", p, it), 0, 127) }
 
     /** ACVS names the sample twice and X-Ray prefers the `.wav`-suffixed one; XML names the bare stem. One shape for both. */
     private fun stripWav(name: String): String =

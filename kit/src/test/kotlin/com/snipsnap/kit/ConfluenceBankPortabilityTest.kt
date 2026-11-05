@@ -227,4 +227,18 @@ class ConfluenceBankPortabilityTest {
             .also { assertTrue(it.message!!.contains("symbolic link"), it.message) }
         assertFalse(linkDest.exists())
     }
+
+    @Test fun `a selected-bank kit with a robin pad restores, the robin dealt again from its original`() {
+        val root = File(temp, "robin")
+        RobinFixture.addRobinPad(kit(root), File(root, "Passages"), 2, rate)
+        val backup = KitBackup.backup(root, File(temp, "robin.zip"))
+        val seen = HashMap<Int, ByteArray>()
+        val result = KitBackup.restore(backup.file, File(temp, "robin-out"), robin = RobinFixture.dealer(seen))
+        assertTrue(result.skipped.isEmpty(), "${result.skipped}")
+        val kit = result.kits.single().kit
+        assertEquals(RobinFixture.SETTINGS, kit.pad(2)!!.robin)
+        assertEquals(RobinFixture.SETTINGS.takes, kit.pad(2)!!.chain!!.cycle)
+        assertContentEquals(RobinFixture.originalBytes(rate), seen.getValue(2))
+        ConfluenceBankFiles.requireImportable(kit, result.kits.single().directory)
+    }
 }

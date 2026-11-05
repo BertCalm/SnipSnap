@@ -104,6 +104,7 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.OneNote
 import com.snipsnap.json.JsonValue
 import com.snipsnap.loop.Session
@@ -1972,7 +1973,7 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && pad.chain == null &&
+        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -3502,7 +3503,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
+                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -6810,7 +6811,7 @@ internal fun SlotChooserOverlay(
  * `sendToSlot` branches to `assign` for exactly this case), and previews in
  * [previewColor] — the CURRENT voice's class colour — so the cell shows the
  * sound about to land, not a "nothing here" dead zone. A velocity-layered or
- * chained pad refuses `replaceAudio` outright (its own guards), so those are
+ * foreign-chained pad (not a round-robin one, which `replaceAudio` lifts) refuses it outright (its own guards), so those are
  * grayed out and non-tappable here instead of letting the tap arrive at a
  * refusal toast.
  */
@@ -6850,10 +6851,10 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
+    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
-    // Locked (chained/layered, refused by replaceAudio) and explicitly
+    // Locked (foreign-chained/layered, refused by replaceAudio) and explicitly
     // disabled (SlotChooserOverlay's `busy`) read as the same "can't tap
     // this" state — one fade, not a distinct look per reason.
     val fade = if (tappable) 1f else 0.35f
@@ -6866,7 +6867,7 @@ private fun SlotCell(
             // a locked or disabled cell still announces itself instead of
             // vanishing from the accessibility tree (finding 12). Names
             // which pad and what's on it (task convention), plus LOCKED
-            // when a velocity-layered/chained pad refuses replaceAudio.
+            // when a velocity-layered/foreign-chained pad refuses replaceAudio.
             .tapeClick(label = "$tag, ${pad.displayName}" + if (locked) ", LOCKED" else "", enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {
