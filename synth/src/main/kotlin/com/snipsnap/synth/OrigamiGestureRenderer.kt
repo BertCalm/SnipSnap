@@ -190,6 +190,9 @@ object OrigamiGestureRenderer {
         cancelled: () -> Boolean = { false },
     ): FloatArray {
         stop(cancelled)
+        if (patch.expression == OrigamiExpression.TOUCH) {
+            return OrigamiExpressions.renderTouchRaw(patch, midi, diagnostic, cancelled)
+        }
         if (patch.expression != OrigamiExpression.LEVEL) {
             return renderRaw(OrigamiExpressions.appliedPatch(patch), midi, diagnostic, cancelled)
         }
@@ -233,6 +236,9 @@ object OrigamiGestureRenderer {
 
     fun render(patch: OrigamiPatch, cancelled: () -> Boolean = { false }): Snip {
         stop(cancelled)
+        if (patch.expression == OrigamiExpression.TOUCH) {
+            return OrigamiExpressions.renderTouch(patch, cancelled)
+        }
         if (patch.expression != OrigamiExpression.LEVEL) {
             return render(OrigamiExpressions.appliedPatch(patch), cancelled)
         }

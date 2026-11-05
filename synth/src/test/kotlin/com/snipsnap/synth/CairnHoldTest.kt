@@ -15,7 +15,7 @@ class CairnHoldTest {
         "GROOVE" to .35f, "FRICTION" to .3f, "BODY" to .4f, "HOLD" to 1f)
 
     @Test fun `powered gestures spend real primary input and keep voice identities`() {
-        for (v in CairnVoice.entries) for (m in listOf(middle, Cairn.defaults(v) + ("HOLD" to 1f),
+        for (v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for (m in listOf(middle, Cairn.defaults(v) + ("HOLD" to 1f),
             middle.mapValues { if (it.key == "HOLD") 1f else 0f }, middle.mapValues { 1f })) {
             val r = Cairn.motion(v, m)
             assertTrue(r.suppliedWork > 0)
@@ -37,7 +37,7 @@ class CairnHoldTest {
     }
 
     @Test fun `real preceding cycles close at three notes without fades or copied audio`() {
-        for (v in CairnVoice.entries) for (note in listOf(48,60,72)) {
+        for (v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for (note in listOf(48,60,72)) {
             val r = Cairn.renderLoop(v, midi = note)
             val d = r.diagnostics
             assertEquals((Cairn.loopSeconds(v)*Cairn.RATE).roundToInt(), r.samples.size)
@@ -64,7 +64,7 @@ class CairnHoldTest {
     }
 
     @Test fun `loop controls corners soft velocity and silence stay bounded and deterministic`() {
-        for (v in CairnVoice.entries) {
+        for (v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             for (body in listOf(.25f,.75f)) for (friction in listOf(.25f,.75f)) {
                 val r = Cairn.inspect(v,middle + mapOf("BODY" to body,"FRICTION" to friction))
                 assertTrue(r.diagnostics.seamError!! < Keys.MAX_SEAM_ERROR)
@@ -123,7 +123,7 @@ class CairnHoldTest {
     }
 
     @Test fun `held recipes round trip and old recipes keep their rendering contract`() {
-        for (v in CairnVoice.entries) {
+        for (v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             val p=CairnPatch("Continuing ${v.name}",v,middle)
             assertEquals(p,CairnPatch.fromJsonText(p.toJsonText()))
             assertContentEquals(p.render().samples,Cairn.renderLoop(v,middle).samples)

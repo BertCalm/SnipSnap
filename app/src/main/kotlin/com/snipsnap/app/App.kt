@@ -130,6 +130,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
 import com.snipsnap.kit.GrooveStore
@@ -1789,10 +1790,11 @@ fun App(shelf: KitShelf) {
                         var noDust = 0
                         try {
                             for (pad in m.kit.pads.toList()) {
-                                // Layers and chains are what every audio rewrite
-                                // refuses: counted, not attempted. Anything else
+                                // Layers and foreign chains are what every audio rewrite
+                                // refuses (a robin pad is lifted by the door itself):
+                                // counted, not attempted. Anything else
                                 // that fails is a real failure and says so.
-                                if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
+                                if (pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)) {
                                     left++
                                     continue
                                 }
@@ -2988,6 +2990,52 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * Kit-wide ROUND ROBIN: [run] (`RobinKit.onSaving/setSaving/offSaving`) runs off the main
+     * thread under the kit write lock on the job board. A stop part way leaves some pads
+     * converted and the kit saved to match; `open` and the shelf are refreshed from disk and the
+     * toast says to turn it off to get the originals back.
+     */
+    fun robinKit(
+        run: (java.io.File) -> com.snipsnap.shell.RobinKit.Result,
+        say: (com.snipsnap.shell.RobinKit.Result) -> String,
+    ) {
+        val source = open ?: return
+        if (busy != null) return
+        val job = jobs.begin(Busy(Copy.ROBIN_KIT_BUSY))
+        scope.launch {
+            try {
+                val (entry, result) = try {
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.robin(source, run) } }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "robinKit: failed", e)
+                    val stopped = e as? KitShelf.RobinStopped
+                    if (stopped != null) {
+                        if (open?.dir == source.dir) open = stopped.entry
+                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                    }
+                    // Only a stop dealt anything; a kit that would not open was never touched.
+                    dock.say(if (stopped != null) Copy.ROBIN_KIT_FAILED else Copy.ROBIN_KIT_DIDNT_RUN)
+                    return@launch
+                }
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                say(result).takeIf { it.isNotEmpty() }?.let { dock.say(it) }
+            } finally {
+                job.end()
+            }
+        }
+    }
+
+    // The dock holds one line, so the skip notes ride the same line as the count.
+    fun robinKitOn() = robinKit({ com.snipsnap.shell.RobinKit.onSaving(it) }) { com.snipsnap.shell.RobinKit.onLine(it) }
+
+    fun robinKitSet(settings: com.snipsnap.kit.KitRobin) = robinKit({ com.snipsnap.shell.RobinKit.setSaving(it, settings) }) { "" }
+
+    fun robinKitOff() = robinKit({ com.snipsnap.shell.RobinKit.offSaving(it) }) { Copy.ROBIN_KIT_OFF }
+
     // Shared by the place and stage rows, the dock's door and the system
     // Back fallback below — one reset, one navigation, so they can never
     // drift apart on which overlay/hand-off state a departure must clear.
@@ -4136,6 +4184,9 @@ fun App(shelf: KitShelf) {
                                 onSetKey = ::setKey,
                                 onSavePerformance = ::savePerformance,
                                 onInKey = ::inKey,
+                                onRobinOn = ::robinKitOn,
+                                onRobinSet = ::robinKitSet,
+                                onRobinOff = ::robinKitOff,
                                 onTwins = ::evilTwins,
                                 onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                 bankRequest = kitBankRequest,

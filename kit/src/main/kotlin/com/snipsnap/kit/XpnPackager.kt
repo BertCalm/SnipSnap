@@ -62,11 +62,12 @@ object XpnPackager {
 
         // Sanitize + measure exactly the way the folder exporters do; the
         // program references bare stems and the MPC finds the WAVs itself.
-        data class Entry(val stem: String, val source: File, val frames: Long)
+        data class Entry(val stem: String, val source: File?, val frames: Long, val bytes: ByteArray? = null)
 
         val used = HashSet<String>()
         val bySlot = HashMap<Int, Entry>()
         val layerEntries = HashMap<Int, List<Pair<Entry, KitLayer>>>()
+        val cycleEntries = HashMap<Int, List<Entry>>()
         val allEntries = mutableListOf<Entry>()
 
         fun claim(file: String): Entry {
@@ -79,7 +80,14 @@ object XpnPackager {
         }
 
         for (p in kit.pads.sortedBy { it.slot }) {
-            if (p.velocityLayers.isEmpty()) {
+            if (p.isRobinChain && p.velocityLayers.isEmpty()) {
+                // The .xpm cycles take files, not a chain: same split the folder export writes.
+                val takes = RobinSplit.split(p, kitDir) { stem ->
+                    check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
+                }.map { take -> Entry(take.stem, null, take.frames, take.bytes).also { allEntries += it } }
+                cycleEntries[p.slot] = takes
+                bySlot[p.slot] = takes.first()
+            } else if (p.velocityLayers.isEmpty()) {
                 bySlot[p.slot] = claim(p.sampleFile)
             } else {
                 val zones = p.velocityLayers.map { l -> claim(l.sampleFile) to l }
@@ -109,13 +117,16 @@ object XpnPackager {
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
-                chain = p.chain?.toPlay(main.frames),
+                chain = if (p.slot in cycleEntries) null else p.chain?.toPlay(main.frames),
+                cycleLayers = cycleEntries[p.slot]?.map { VelocityLayer(it.stem, it.frames, 0, 127) },
             )
         }
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))
         val programEntry = "Programs/$programStem.xpm"
         val programBytes = programXml.toByteArray(Charsets.UTF_8)
-        val sourceMetadata = XpnSourceMetadata.render(kit, kitDir, programEntry, programBytes, samplesPrefix)
+        val takeFiles = cycleEntries.mapValues { (_, es) -> es.map { it.stem to requireNotNull(it.bytes) } }
+        val sourceMetadata = XpnSourceMetadata.render(kit, kitDir, programEntry, programBytes, samplesPrefix, takes = takeFiles)
+        val robinMetadata = XpnRobin.render(kit, programEntry, programBytes, takeFiles)
 
         ZipOutputStream(outputFile.outputStream().buffered()).use { zip ->
             fun put(name: String, bytes: ByteArray) {
@@ -128,6 +139,7 @@ object XpnPackager {
             put(ExpansionWriter.XML_NAME, ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
             put(programEntry, programBytes)
             sourceMetadata?.let { put(XpnSourceMetadata.entryName(programEntry), it) }
+            robinMetadata?.let { put(XpnRobin.entryName(programEntry), it) }
             SourceAttribution.render(kit)?.let { put(SourceAttribution.fileName(kit), it.toByteArray(Charsets.UTF_8)) }
             preview?.let {
                 val tmp = File.createTempFile("preview", ".wav")
@@ -139,7 +151,7 @@ object XpnPackager {
                     tmp.delete()
                 }
             }
-            for (e in allEntries) put("$samplesPrefix/${e.stem}.wav", e.source.readBytes())
+            for (e in allEntries) put("$samplesPrefix/${e.stem}.wav", e.bytes ?: requireNotNull(e.source).readBytes())
             artworkPng?.let { put("artwork.png", it) }
         }
         return outputFile

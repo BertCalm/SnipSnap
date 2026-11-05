@@ -107,6 +107,23 @@ class PackBuilderTest {
         )
     }
 
+    @Test
+    fun `an xpn pack of a robin kit with source metadata imports`() {
+        val dir = File(temp, "kits/Robin").apply { mkdirs() }
+        WavWriter.write(File(dir, "A01_Kick_01.wav"), Snip(FloatArray(5_000) { i -> ((i % 50) - 25) / 100f }, 1, 44_100))
+        KitStore.save(Kit("Robin", listOf(KitPad(
+            slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK,
+            chain = ChainInfo((0 until 5).map { it * 1000L }, cycle = 5), robin = RobinSettings(0.5f, 5),
+            source = mapOf("recordedBy" to "me"),
+        ))), dir)
+        val xpn = PackBuilder.build(listOf(dir), File(temp, "rz"), meta, asXpn = true).xpn!!
+        val back = XpnImporter.importAll(xpn, File(temp, "rback"))
+        assertTrue(back.skipped.isEmpty(), back.skipped.toString())
+        val pad = back.kits.single().kit.pad(1)!!
+        assertEquals(4, pad.chain!!.cycle)
+        assertEquals("me", pad.source["recordedBy"])
+    }
+
     /** A three-zone held instrument as MAKE INSTRUMENT writes one: each zone a tone with a sustain loop. */
     private fun buildInstrument(name: String, root: File = File(temp, "Instruments")): File {
         val midis = listOf(48, 60, 72)

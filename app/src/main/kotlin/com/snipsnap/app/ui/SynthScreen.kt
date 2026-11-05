@@ -104,6 +104,7 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.OneNote
 import com.snipsnap.json.JsonValue
 import com.snipsnap.loop.Session
@@ -245,6 +246,10 @@ import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.MercuryVoice
 import com.snipsnap.synth.Bore
 import com.snipsnap.synth.BorePatch
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinVoice
+import com.snipsnap.synth.ChitinPatch
+import com.snipsnap.synth.ChitinPresets
 import com.snipsnap.synth.BoreVoice
 import com.snipsnap.synth.Arco
 import com.snipsnap.synth.ArcoPatch
@@ -862,7 +867,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
+                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -1968,7 +1973,7 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && pad.chain == null &&
+        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -3498,7 +3503,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
+                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3933,9 +3938,11 @@ private fun OrigamiPerformanceControls(
         }
     }
     TapeText(
-        if (patch.expression == OrigamiExpression.FOLD)
-            "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
-        else "HIT STRENGTH CHANGES VOLUME.",
+        when (patch.expression) {
+            OrigamiExpression.LEVEL -> "HIT STRENGTH CHANGES VOLUME."
+            OrigamiExpression.FOLD -> "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
+            OrigamiExpression.TOUCH -> "SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR."
+        },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
     TapeText("PREVIEW HIT", TapeType.pixelSmall, scheme.ink2.tape)
@@ -3951,7 +3958,7 @@ private fun OrigamiPerformanceControls(
             ) { onPreviewHit(hit) }
         }
     }
-    if (patch.expression == OrigamiExpression.FOLD) {
+    if (OrigamiExpressions.colorsWithVelocity(patch.expression)) {
         TapeText(
             "PADS: USE SOFT HITS FOR VELOCITY COLOR",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
@@ -4225,6 +4232,8 @@ private fun macroReadout(
     engine == Engine.SUTURE && name == "HOLD" && Suture.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.SPOOL && name == "HOLD" && Spool.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.REVEL && name == "HOLD" && Revel.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.CHITIN && name == "TUNE" -> Scales.nameOf(Chitin.midiFor(voice as ChitinVoice, macros.getValue(name)))
+    engine == Engine.CHITIN && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
     engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
@@ -4857,9 +4866,13 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = spec.layerCount
         override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
-        override val instrumentNote get() = if (spec.layerCount > 1)
-            "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
-        else "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        override val instrumentNote get() = when {
+            spec.patch.expression == OrigamiExpression.TOUCH ->
+                "C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+            spec.layerCount > 1 ->
+                "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+            else -> "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        }
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrigamiPadMaker.renderVelocityZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5343,7 +5356,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5353,6 +5366,7 @@ private enum class Engine {
     fun previous(): Engine = entries[(ordinal + entries.size - 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
+        CHITIN -> ChitinVoice.entries
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
         SKIN -> SkinVoice.entries
@@ -5432,6 +5446,7 @@ private enum class Engine {
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
+        CHITIN -> Chitin.macrosFor(voice as ChitinVoice)
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.macrosFor(voice as ScannedChainVoice)
         SKIN -> Skin.macrosFor(voice as SkinVoice)
@@ -5509,6 +5524,7 @@ private enum class Engine {
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
+        CHITIN -> Chitin.defaults(voice as ChitinVoice)
         THUMP -> Thump.defaults(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.defaults(voice as ScannedChainVoice)
         SKIN -> Skin.defaults(voice as SkinVoice)
@@ -5586,6 +5602,7 @@ private enum class Engine {
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
+        CHITIN -> Chitin.scramble(voice as ChitinVoice, random)
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
         SCANNED_CHAIN -> ScannedChain.scramble(voice as ScannedChainVoice, random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
@@ -5677,6 +5694,7 @@ private enum class Engine {
     // key-patch side), but its default already produces the one-shot stab
     // this screen wants, so the uniform two-arg call reaches it fine.
     fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
+        CHITIN -> Chitin.render(voice as ChitinVoice, macros)
         THUMP -> Thump.render(voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
@@ -5758,6 +5776,7 @@ private enum class Engine {
      * only where one knob picks the drum: VOX BEATBOX's HIT.
      */
     fun drumClass(voice: Enum<*>, macros: Map<String, Float> = emptyMap()): DrumClass = when (this) {
+        CHITIN -> Chitin.drumClassFor(voice as ChitinVoice, macros)
         THUMP -> (voice as ThumpVoice).drumClass
         SCANNED_CHAIN -> ScannedChain.drumClassFor(voice as ScannedChainVoice, macros)
         SKIN -> (voice as SkinVoice).drumClass
@@ -5838,6 +5857,7 @@ private enum class Engine {
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
+        CHITIN -> ChitinPatch(name, voice as ChitinVoice, macros)
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChainPatch(name, voice as ScannedChainVoice, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
@@ -5926,7 +5946,8 @@ private enum class Engine {
 
 /** Starting recipes supplied directly by a provisional engine remain available in MAKE. */
 private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
-    if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
+    if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
+    else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
     else Presets.forVoice(engine.name, voice.name)
 
 // ---------- voice ↔ drum class ----------
@@ -6790,7 +6811,7 @@ internal fun SlotChooserOverlay(
  * `sendToSlot` branches to `assign` for exactly this case), and previews in
  * [previewColor] — the CURRENT voice's class colour — so the cell shows the
  * sound about to land, not a "nothing here" dead zone. A velocity-layered or
- * chained pad refuses `replaceAudio` outright (its own guards), so those are
+ * foreign-chained pad (not a round-robin one, which `replaceAudio` lifts) refuses it outright (its own guards), so those are
  * grayed out and non-tappable here instead of letting the tap arrive at a
  * refusal toast.
  */
@@ -6830,10 +6851,10 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
+    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
-    // Locked (chained/layered, refused by replaceAudio) and explicitly
+    // Locked (foreign-chained/layered, refused by replaceAudio) and explicitly
     // disabled (SlotChooserOverlay's `busy`) read as the same "can't tap
     // this" state — one fade, not a distinct look per reason.
     val fade = if (tappable) 1f else 0.35f
@@ -6846,7 +6867,7 @@ private fun SlotCell(
             // a locked or disabled cell still announces itself instead of
             // vanishing from the accessibility tree (finding 12). Names
             // which pad and what's on it (task convention), plus LOCKED
-            // when a velocity-layered/chained pad refuses replaceAudio.
+            // when a velocity-layered/foreign-chained pad refuses replaceAudio.
             .tapeClick(label = "$tag, ${pad.displayName}" + if (locked) ", LOCKED" else "", enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {

@@ -146,7 +146,8 @@ internal object OrigamiHeld {
         return 1.0 / sqrt(1.0 + (hz.coerceAtLeast(0.0) / root / scale).pow(4))
     }
 
-    private fun tracks(patch: OrigamiPatch, m: Map<String, Float>, midi: Int, requestedHz: Double): List<Track> {
+    private fun tracks(patch: OrigamiPatch, m: Map<String, Float>, midi: Int, requestedHz: Double,
+        upperScale: Float): List<Track> {
         val source = Origami.partials(patch.voice, m + ("FOLD" to 0f), midi, patch.seed, model = 4)
         val random = Random(Dsp.seedFor("ORIGAMI", 1, patch.voice.name, patch.seed))
         // R4 STILL consumes two 64-value source-definition blocks before its oscillator phases.
@@ -159,7 +160,11 @@ internal object OrigamiHeld {
             source.forEachIndexed { index, partial ->
                 val sourceBand = band(partial.sourceHz, requestedHz)
                 val amplitude = if (sourceBand > 0.0) partial.sourceAmplitude / sourceBand else 0.0
-                out += Track(index, wet, partial.sourceHz / requestedHz, amplitude * share, phases[index])
+                val level = amplitude * share
+                // Keep the root and every phase/frequency quantity untouched. Scaling before
+                // conditioning carries the same upper balance through both independent cycles.
+                out += Track(index, wet, partial.sourceHz / requestedHz,
+                    if (upperScale == 1f) level else level * upperScale, phases[index])
             }
         }
         if (fold < 1.0) append(false, 1.0 - fold)
@@ -171,8 +176,8 @@ internal object OrigamiHeld {
         (root * if (track.wet) target(voice, track.ratio, shape) else track.ratio).coerceIn(0.0, 18_000.0)
 
     private fun makeField(patch: OrigamiPatch, m: Map<String, Float>, midi: Int, requestedHz: Double,
-        plan: Plan, alignFrame: Int, cancelled: () -> Boolean): Field {
-        val tracks = tracks(patch, m, midi, requestedHz)
+        plan: Plan, alignFrame: Int, upperScale: Float, cancelled: () -> Boolean): Field {
+        val tracks = tracks(patch, m, midi, requestedHz, upperScale)
         // Static carriers need one value, not a table for every block of a long texture.
         val frequency = Array(tracks.size) { p ->
             if (tracks[p].wet) DoubleArray(plan.blocks + 1)
@@ -385,13 +390,19 @@ internal object OrigamiHeld {
 
     fun probe(recipe: OrigamiPatch, midi: Int, cancelled: () -> Boolean): Probe {
         stop(cancelled)
+        // appliedPatch clears the mode while resolving fold depth. Retain TOUCH's independent
+        // upper scale first, including for UNFOLD's source-only settled body.
+        val upperScale = if (recipe.expression == OrigamiExpression.TOUCH)
+            OrigamiExpressions.upperScale(recipe.velocity) else 1f
         // Resolve touch once so the accepted attack and periodic body share the same fold depth.
         val patch = OrigamiExpressions.appliedPatch(recipe)
         val bodyPatch = OrigamiGestures.settledPatch(patch)
         val m = Origami.defaults(patch.voice).mapValues { (key, default) ->
             (bodyPatch.macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)
         }
-        val rawReference = finiteReference(patch, midi, cancelled)
+        val rawReference = if (recipe.expression == OrigamiExpression.TOUCH && upperScale < 1f)
+            OrigamiExpressions.renderTouchRaw(recipe, midi, cancelled = cancelled)
+        else finiteReference(patch, midi, cancelled)
         val reference = rawReference.copyOf()
         if (patch.velocity > 0f) Dsp.levelTo(reference, RATE, Dsp.MELODIC_LOUDNESS_TARGET * patch.velocity.pow(.65f))
         stop(cancelled)
@@ -403,7 +414,7 @@ internal object OrigamiHeld {
         val joinEnd = aligned(joinStart + ((if (patch.voice == OrigamiVoice.FAN) .16 else .24) * RATE).roundToInt())
         val releaseAt = if (patch.voice == OrigamiVoice.FAN) 2.2 else 3.0
         check(joinEnd < releaseAt * RATE) { "ORIGAMI gesture must settle before the finite release" }
-        val field = makeField(bodyPatch, m, midi, requested, plan, (joinStart + joinEnd) / 2, cancelled)
+        val field = makeField(bodyPatch, m, midi, requested, plan, (joinStart + joinEnd) / 2, upperScale, cancelled)
         val phaseClosure = field.tracks.indices.maxOf { p ->
             val values = field.frequencies[p]
             val turns = if (values.size == 1) (values[0] + field.corrections[p]) * plan.seconds

@@ -11,7 +11,6 @@ import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.KeyNote
-import com.snipsnap.synth.OrigamiExpression
 import com.snipsnap.synth.OrigamiExpressions
 import com.snipsnap.synth.OrigamiKeys
 import com.snipsnap.synth.OrigamiPatch
@@ -35,7 +34,7 @@ object OrigamiPadMaker {
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, .6f, exponential = true)
 
     data class Spec(val patch: OrigamiPatch, val releaseSeconds: Float = RELEASE.default) {
-        val layerCount: Int get() = if (patch.expression == OrigamiExpression.FOLD) RELATIVE_VELOCITIES.size else 1
+        val layerCount: Int get() = if (OrigamiExpressions.colorsWithVelocity(patch.expression)) RELATIVE_VELOCITIES.size else 1
 
         init {
             require(supports(patch)) { "ORIGAMI keys require model-4 FAN or STILL; other recipes keep their finite sound" }
@@ -81,7 +80,7 @@ object OrigamiPadMaker {
 
     /**
      * The saved velocity is the hard-touch anchor. Softer touches change the
-     * held folded share; peak matching leaves key loudness to the player.
+     * held color; peak matching leaves key loudness to the player.
      * Render the anchor first, but keep the exported layers in soft-to-hard order.
      */
     fun renderVelocityZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> {
@@ -100,7 +99,7 @@ object OrigamiPadMaker {
     }
 
     fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> {
-        require(spec.layerCount == 1) { "ORIGAMI FOLD expression needs assembleLayers; a single sample would discard its softer layers" }
+        require(spec.layerCount == 1) { "ORIGAMI ${spec.patch.expression} expression needs assembleLayers; a single sample would discard its softer layers" }
         return assembleLayers(name, spec, notes.map { listOf(it) })
     }
 
@@ -135,7 +134,7 @@ object OrigamiPadMaker {
     fun recipeFile(destRoot: File, name: String): File = File(destRoot, "$name$RECIPE_SUFFIX")
 
     fun export(name: String, spec: Spec, notes: List<KeyNote>, destRoot: File, overwrite: Boolean = false): KeygroupProgram {
-        require(spec.layerCount == 1) { "ORIGAMI FOLD expression needs exportLayers; a single sample would discard its softer layers" }
+        require(spec.layerCount == 1) { "ORIGAMI ${spec.patch.expression} expression needs exportLayers; a single sample would discard its softer layers" }
         return exportLayers(name, spec, notes.map { listOf(it) }, destRoot, overwrite)
     }
 

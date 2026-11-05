@@ -147,7 +147,7 @@ object Velocity {
             // An authored quiet ORIGAMI reference is the hardest sample of its own set.
             // Its softer layers must stay below that ceiling instead of replacing it
             // with an absolute .3/.6 strike that could be harder than the saved note.
-            val strike = if (patch is OrigamiPatch && patch.expression == OrigamiExpression.FOLD)
+            val strike = if (patch is OrigamiPatch && OrigamiExpressions.colorsWithVelocity(patch.expression))
                 OrigamiExpressions.relativeVelocity(patch, velocity) else velocity
             peakMatch(reference, atVelocity(patch!!, strike, spec))
         } else {
@@ -194,12 +194,14 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         is OtisPatch -> Otis.macrosFor(patch.voice)
         is LorentzPatch -> Lorentz.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
+        is HydroformPatch -> Hydroform.macrosFor(patch.voice)
         is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
@@ -391,6 +393,7 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()
         is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
@@ -457,6 +460,7 @@ object Velocity {
         is TrefoilPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
+        is HydroformPatch -> patch.copy(velocity = v).render()
         is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is KeelPatch -> patch.copy(velocity = v).render()

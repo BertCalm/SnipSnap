@@ -37,6 +37,8 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
+        ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
         AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
             midi = 55, velocity = .6f, seed = Long.MIN_VALUE,
             acousticProfile = AccordAcousticProfile.LONG_RING,

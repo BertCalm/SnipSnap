@@ -139,6 +139,18 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
+**Cairn SING listening gate (2026-11-04).** Model 4 adds a fourth role: one soft
+contact opens into sustained, smooth pitched rubbing. A bounded regenerative-energy
+analogy drives six stone/body modes; the maintained two-second stroke continues
+without another knock. All 35 focused tests pass, including nine SING tests,
+243 control points in finite/held regimes, independent energy/RK4 probes and a
+separately warmed acoustic reference. The full nine-module JVM gate passes (8,439 tests). The native audition
+contains 81 comparisons and two dry phrases, with 39 independently checked held cases.
+All 480 earlier comparison WAVs replay byte for byte. The earlier three voice versions retain their rendering.
+SING listening, phone/MPC acceptance, factory recipes and app controls remain
+open; GRIND and VESSEL wait for their own designs. See [CAIRN_SING.md](CAIRN_SING.md)
+and the [four-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/sing/).
+
 **Cairn three-voice listening gate (2026-10-31).** The owner approved the
 KNOCK/ANSWER HOLD direction. Model 3 adds TUMBLE: one launch becomes a tightening
 cascade through gravity, drag and energy-losing rebounds. It shares the modal
@@ -317,6 +329,18 @@ rule itself: this roadmap, design specs, and implementation plans may name
 machines when the point is naming the rule that forbids naming them.
 
 ## The engines
+
+### HYDROFORM — native two-voice prototype
+
+DOME and BULKHEAD port the accepted Python R5 sources, pressure-return dispersion,
+dynamic slope folding and approved ARREST range. DOME's top HOLD step is a measured
+2 s impact loop assuming 120 BPM; BULKHEAD is finite. Saved velocity, strict recipe replay,
+registry and velocity integration are present. Native house-stage output is a new listening
+gate; no factory presets, kit or Android picker are claimed in this round. Raw Python/native
+parity, probe and timing evidence are recorded in [HYDROFORM](HYDROFORM.md) and its
+[implementation specification](superpowers/specs/2026-11-04-hydroform-native-engine.md).
+The strongest BULKHEAD corner's aliasing risk remains disclosed.
+
 
 ### LIBRATION — finite gestures and recurring held keys (native integration)
 
@@ -692,10 +716,21 @@ Separately, clean local `8b6d0aea` passed 7,452 JVM cases and all three APK
 assemblies, plus 106 focused tests and all twelve complete accepted-WAV
 comparisons; it is not the PR head.
 The proven cache-copy mutation guard and prior host measurements remain
-recorded separately. Physical-phone listening and timing still need a device pass.
+recorded separately. The owner reported “Works” for the held phone workflow on
+2026-11-01 without device/model details, per-check results or timing measurements.
 Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
 reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records
 the APIs, regeneration commands, release approximation and acceptance ledger.
+
+A separate loopable-breathing audition compares fixed TREFOIL/MIDI-48 steady,
+staggered `3/4/4/5/3/5` and aligned four-breath circuits. Node excitation and
+absorption move inside a constrained repeatable cycle, checked against full
+state and real neighbouring audio. The focused run passed 34 tests; the
+[listening comparison](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/breathing/index.html)
+awaits the owner's verdict. Saved playback, phone controls and the accepted
+sources stay unchanged. Production parameters, intermediate synchronization and
+an interactive cost/cache story remain separate decisions; [OVERLAP.md](OVERLAP.md#loopable-breathing-audition)
+records the measured proof and replay commands.
 
 ### OHM — finite coupled family strings
 
@@ -2787,7 +2822,7 @@ word, two stutters. The longest render takes about 60 ms.
 
 ## NACRE — playable finite harp revision
 
-Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** A separate sixteen-pad MPC starter trial uses an eight-note Pearl Close scale and complete soft/medium/hard C3 comparisons for all three presets. Its native MPC 3/MPC 2 export, editable recipes and exact sample playback are checked before the hardware listen; factory-menu promotion remains pending that listen. Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
+Revision 3 keeps the owner-preferred first paired-harp renderer and replaces its venue contribution with the later coral and moving seaweed returns heard as “Much better.” VENUE continuously blends the paths; CURRENT controls return movement; BLOOM develops sympathetic and return balance. Fixed reference gain preserves strike dynamics and control authority, with peak-only safety. Saved revisions 1 and 2 retain their exact renderers/defaults. A bounded owned-buffer source cache makes return-only edits inexpensive. Three starting recipes, native MIDI/velocity/seed recipes, Android picker access and a playable audition cover registers, strike strengths, five-step controls and overlapping phrases. **Range and musical acceptance pending the new listen.** A separate sixteen-pad MPC starter trial uses an eight-note Pearl Close scale and complete soft/medium/hard C3 comparisons for all three presets. The original single-strike export remains a separate reference. The three unchanged presets now join the shared factory roster, and FRESH TAPE offers a new three-zone bank: eight Pearl Close scale notes, four Coral Reply notes and four Kelp Passage notes. Native strike plus gentler TOUCH recipes supply soft/medium/hard contact; fixed input-effort compensation leaves the hard anchor unchanged and keeps sampler-controlled volume separate. All forty-eight files have full source/gain recipes, and standalone sidecars fingerprint every layer. Software checks and the published audition do not establish target-MPC acceptance; that listen remains open. Conch, cave and held-key operation remain deferred; nonzero HOLD is refused. See [NACRE.md](NACRE.md).
 
 ## S24 — FLOTILLA, as built
 
@@ -3163,3 +3198,7 @@ every factor is exactly 1 at full velocity, so no saved sound moves; the
 held-loop join sits at the loop's end so the attack stays the render's own;
 and the chord voicings gather near one centre so neighbouring pads read as a
 progression.
+
+## CHITIN finite-note prototype
+
+SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.

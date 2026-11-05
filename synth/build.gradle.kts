@@ -303,6 +303,18 @@ tasks.register<JavaExec>("generateUprightKit") {
     args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
+/** SING's continuous traction beside the preserved three contact gestures. */
+tasks.register<JavaExec>("generateCairnSingAudition") {
+    group = "distribution"
+    description = "Render four Cairn voices, SING pressure controls, real HOLD continuations and dry phrases."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnSingAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnSingOutput").orNull ?: "${rootDir}/testkit/cairn-sing")
+    providers.gradleProperty("cairnSingLegacyRoots").orNull?.split(";")?.forEach { args("--legacy-root", it) }
+}
+
 /** Continuing KNOCK/ANSWER gestures, preserved beside the first finite audition. */
 tasks.register<JavaExec>("generateCairnHoldAudition") {
     group = "distribution"
@@ -718,6 +730,23 @@ tasks.register<JavaExec>("generateOverlapHeldKeygroups") {
     mainClass.set("com.snipsnap.synth.OverlapHeldKeygroupGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("overlapHeldKeygroupOutput").orNull ?: "${rootDir}/testkit/overlap-held-keygroup")
+}
+
+/** Separate moving-circuit proof; fixed whole-clip gains preserve the breathing gesture. */
+tasks.register<JavaExec>("generateOverlapBreathingAudition") {
+    group = "distribution"
+    description = "Render steady, independent and synchronized OVERLAP circuits with physical raw/RMS-matched audio and replayable recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapBreathingAuditionGenerator")
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("overlapBreathingRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("overlapBreathingWav").get(),
+            providers.gradleProperty("overlapBreathingVariant").orNull ?: "raw")
+    } else {
+        args(providers.gradleProperty("overlapBreathingOutput").orNull ?: "${rootDir}/testkit/overlap-breathing-audition")
+    }
 }
 
 /** Separate steady sustain proof with real loop recurrence and passive note-off. */
@@ -2868,6 +2897,17 @@ tasks.register<JavaExec>("generateNacrePresenceAudition") {
     args("${rootDir}/testkit/nacre-presence-audition")
 }
 
+/** Three sampled touch zones per finite harp pad, with complete source recipes. */
+tasks.register<JavaExec>("generateNacreVelocityKit") {
+    group = "distribution"
+    description = "Export the Nacre velocity-layered starter kit, both MPC programs and its listening page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreVelocityKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("nacreVelocityKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Sixteen finite harp pads for the MPC listening trial, retaining exact native strikes. */
 tasks.register<JavaExec>("generateNacreKit") {
     group = "distribution"
@@ -3003,4 +3043,36 @@ tasks.register<JavaExec>("generateErosionBank") {
     maxHeapSize = "768m"
     workingDir = projectDir
     args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-playable-bank")
+}
+
+tasks.register<JavaExec>("generateHydroformAudition") {
+    group = "distribution"
+    description = "Render native HYDROFORM against the accepted Python manifest, with recipes and raw parity floats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HydroformAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("hydroformManifest").orNull ?: "${rootDir}/reference/hydroform/python-manifest.json",
+        providers.gradleProperty("hydroformOutput").orNull ?: "${rootDir}/testkit/hydroform-audition")
+}
+
+tasks.register<JavaExec>("generateChitinAudition") {
+    group = "distribution"
+    description = "Render CHITIN's two finite voices, macro pairs, ablations and source references."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinOutput").orNull ?: "${rootDir}/testkit/chitin-audition")
+}
+
+
+tasks.register<JavaExec>("generateChitinBank") {
+    group = "distribution"
+    description = "Render twelve candidate presets and the sixteen-pad finite CHITIN MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinBankGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
 }

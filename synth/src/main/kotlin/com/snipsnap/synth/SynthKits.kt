@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Candidate finite CHITIN kit, with complete pad recipes. */
+    fun chitin(): List<ArrangedPad?> = ChitinKits.build()
+
     /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
     fun accord(): List<ArrangedPad> = AccordKits.arranged()
 
@@ -107,6 +110,9 @@ object SynthKits {
 
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
+
+    /** The preferred finite harp with three native touch articulations on every pad. */
+    fun nacreVelocity(): List<ArrangedPad?> = NacreVelocityKits.build()
 
     /**
      * Sixteen dry finite NACRE notes for the MPC listening trial. A01–A08 play

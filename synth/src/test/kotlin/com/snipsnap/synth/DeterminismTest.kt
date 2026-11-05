@@ -12,6 +12,19 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `HYDROFORM replays both voices and the measured DOME loop`() {
+        for (voice in HydroformVoice.entries) {
+            val patch = HydroformPatch("Canary", voice, emptyMap(), velocity = .6f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+        val loop = HydroformPatch("Held", HydroformVoice.DOME, mapOf("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples)
+    }
+
+    @Test fun `CHITIN finite voices replay without cache state`() {
+        for (v in ChitinVoice.entries) assertContentEquals(Chitin.inspect(v).snip.samples, Chitin.inspect(v).snip.samples)
+    }
+
     @Test fun `APSIS saved populations reproduce finite and held material after cold geometry preparation`() {
         for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (hold in listOf(0f, 1f)) {
             val patch = ApsisPatch("Population canary", voice,

@@ -39,29 +39,33 @@ object OrigamiPerformanceBankGenerator {
     private const val CEILING = .90f
     private const val RELEASE = .6f
     private const val PHRASE_GAIN = .1f
-    private const val BASE_COMMIT = "82a1f9c74086d574d4de3eb1b7dc0944069c89d6"
+    private const val BASE_COMMIT = "482c55a146b1569ba9ccad27e4ebd274ad398df4"
+    private const val FOLD_BASE_COMMIT = "82a1f9c74086d574d4de3eb1b7dc0944069c89d6"
     private val touches = listOf(.3f, .6f, 1f)
     private val touchNames = listOf("soft", "mid", "hard")
     private val why = listOf(
         "Each BLOOM/UNFOLD pair shares its authored controls. Only the direction changes, so you can compare how the note opens or folds.",
-        "Soft, mid and hard touches stay beneath the saved factory velocity ceiling. The hard single is the exact factory render; none of the six source recipes is rewritten.",
-        "One gain covers an entire matched take, preserving its internal changes. Native retains the actual renderer or reference-player levels.",
+        "Soft, mid and hard touches stay beneath the saved factory velocity ceiling. Every take retains its complete authoring recipe, and the hard single is the exact factory render.",
+        "Native is the default and preserves touch levels. Matched equalizes separate takes to compare tone; one gain covers each complete phrase or held sequence, preserving changes inside it.",
         "Held instruments use three real sample layers, their own attacks and loops, and one player velocity gain. The held take actually plays soft, mid and hard notes; each selected layer crosses at least three real wraps before release.",
         "MPC ZIPs include both program formats, samples, playback sidecar and the complete authoring recipe. On the phone, select the factory preset and use MAKE INSTRUMENT; these ZIPs are not phone imports.",
     )
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 1) { "Supply at most one output directory" }
-        val output = File(args.firstOrNull() ?: "../testkit/origami-performance-bank").absoluteFile
+        val legacyFold = args.contains("--legacy-fold")
+        val directories = args.filterNot { it == "--legacy-fold" }
+        require(directories.size <= 1) { "Supply at most one output directory and optional --legacy-fold" }
+        val output = File(directories.firstOrNull() ?: "../testkit/origami-performance-bank").absoluteFile
         require(output.isDirectory || output.mkdirs())
         val checkout = File("..").canonicalFile
         val sources = sourceFiles(checkout)
         val hashes = sources.associate { it.relativeTo(checkout).invariantSeparatorsPath to sha(it.readBytes()) }.toSortedMap()
         val sourceHash = sha(hashes.entries.joinToString("\n") { it.key + ":" + it.value }.toByteArray())
-        val presets = OrigamiPresets.performance()
+        val presets = if (legacyFold) OrigamiPresets.foldPerformance() else OrigamiPresets.performance()
+        val response = if (legacyFold) OrigamiExpression.FOLD else OrigamiExpression.TOUCH
         require(presets.size == 6 && presets.map { it.name }.distinct().size == 6)
-        require(presets.all { it.model == 4 && it.expression == OrigamiExpression.FOLD })
+        require(presets.all { it.model == 4 && it.expression == response })
         for (voice in OrigamiVoice.entries) check(presets.filter { it.voice == voice }.map { it.gesture }.toSet() == setOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD))
         val presetRows = presets.map { preset ->
             val path = "recipes/" + id(preset) + ".json"
@@ -89,8 +93,11 @@ object OrigamiPerformanceBankGenerator {
                     val exact = preset.render()
                     check(native.samples.contentEquals(exact.samples)) { "Hard take differs from factory: " + preset.name }
                     check(performed.toJsonValue() == preset.toJsonValue())
+                    val oldHard = OrigamiPresets.foldPerformance().single { it.name == preset.name }.render()
+                    check(native.samples.contentEquals(oldHard.samples)) { "Hard take changed the published tone: " + preset.name }
                     hardIdentities += mapOf("presetId" to id(preset), "hardClipId" to id(preset) + "-hard",
-                        "exactFactoryRecipe" to true, "exactFactoryWaveform" to true, "waveformSha256" to waveformSha(native.samples))
+                        "exactFactoryRecipe" to true, "exactFactoryWaveform" to true,
+                        "exactPublishedFoldHardWaveform" to true, "waveformSha256" to waveformSha(native.samples))
                 }
                 clips += writeClip(output, id(preset) + "-" + touchNames[index], preset, "singles",
                     preset.name + " · " + touchNames[index],
@@ -115,7 +122,11 @@ object OrigamiPerformanceBankGenerator {
         for (file in sources) file.copyTo(File(output, "sources/" + file.relativeTo(checkout).invariantSeparatorsPath).apply { parentFile.mkdirs() }, overwrite = true)
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "title" to "ORIGAMI performance bank", "createdUtc" to Instant.now().toString(),
-            "baseCommitRead" to BASE_COMMIT, "sourceSha256" to sourceHash, "sourceFiles" to hashes,
+            "expressionResponse" to response.name,
+            "touchUpperPolicy" to if (legacyFold) "Legacy FOLD changes fold depth only." else
+                "TOUCH keeps the fixed root and scales the complete upper bank by 0.1 + 0.9 * min(velocity / 0.85, 1)^2. At and above 0.85, the published FOLD waveform is exact. Constants are authored listening shapes.",
+            "baseCommitRead" to if (legacyFold) FOLD_BASE_COMMIT else BASE_COMMIT,
+            "publishedFoldBaseline" to FOLD_BASE_COMMIT, "sourceSha256" to sourceHash, "sourceFiles" to hashes,
             "recipeSha256" to factoryRecipeHash, "factoryPresetCount" to presets.size, "factoryPresets" to presetRows,
             "clipCount" to clips.size, "sampleRate" to RATE, "bitDepth" to 16,
             "listeningRound" to "origami-performance-" + sourceHash.take(12) + "-" + factoryRecipeHash.take(12),
@@ -127,7 +138,7 @@ object OrigamiPerformanceBankGenerator {
                 "fullLoadFloatPayloadBytes" to instruments.sumOf { (it.getValue("floatResidentBytes") as Number).toLong() },
                 "exportedWavDiskBytes" to instruments.sumOf { (it.getValue("exportedWavDiskBytes") as Number).toLong() }),
             "matching" to mapOf("targetLoudness" to TARGET, "peakCeiling" to CEILING,
-                "policy" to "Loudness.of; one gain per complete take, no independent endpoint or note normalization"),
+                "policy" to "Native is the default and preserves actual touch levels. Matched equalizes separate takes with Loudness.of; one gain covers an entire phrase or held sequence, preserving its internal touch levels."),
             "relativeTouchPolicy" to "Finite render velocity = saved factory velocity * relative touch; hard remains exactly authored. Held layers use the same relative ceiling, then InstrumentEngine applies key gain once.",
             "phrasePolicy" to "120 BPM minor-pentatonic line followed by a minor triad; native note renders at authored relative velocities mixed through one fixed 0.10 bus gain. Offline score, not a device performance.",
             "memoryPolicy" to "Export one instrument at a time. Its maker API owns 27 render samples during export; only the three exported C4 samples are loaded for the long take. Never retain all four banks' audio.",
@@ -149,7 +160,7 @@ object OrigamiPerformanceBankGenerator {
             put("parentManifestSha256", sha(text.toByteArray()))
         }
         val embedded = starterClips.associate { row ->
-            val path = row.getValue("matchedPath").toString()
+            val path = row.getValue("nativePath").toString()
             path to "data:audio/wav;base64," + Base64.getEncoder().encodeToString(File(output, path).readBytes())
         }
         File(output, "start-here.html").writeText(page(starter, embedded, true))
@@ -191,6 +202,7 @@ object OrigamiPerformanceBankGenerator {
             "recipe" to recipe, "recipeSha256" to sha(Json.write(json(recipe)).toByteArray()),
             "frames" to native.frameCount, "durationSeconds" to seconds, "sampleRate" to RATE,
             "maximumFold" to preset.resolvedMacros().getValue("FOLD"), "effectiveFold" to applied?.resolvedMacros()?.getValue("FOLD"),
+            "upperBankScale" to performed?.let { if (it.expression == OrigamiExpression.TOUCH) OrigamiExpressions.upperScale(it.velocity) else 1f },
             "gestureStartSeconds" to OrigamiGestures.startSeconds(preset.voice),
             "gestureDurationSeconds" to OrigamiGestures.durationSeconds(preset.voice, preset.resolvedMacros().getValue("MOTION")),
             "gestureEndSeconds" to OrigamiGestures.endSeconds(preset),
@@ -418,8 +430,9 @@ object OrigamiPerformanceBankGenerator {
 
     private fun readme(manifest: Map<String, Any?>): String = buildString {
         appendLine("ORIGAMI performance bank")
-        appendLine("Six factory presets, 18 soft/mid/hard singles, six phrases/chords and four held instrument takes. Open start-here.html for the self-contained matched singles; index.html adds Native, phrases, long holds and MPC downloads.")
-        appendLine("Relative touches 0.3 / 0.6 / 1 stay beneath each saved velocity ceiling. Hard singles equal the unchanged factory recipe render. The phrase is an offline 120 BPM minor-pentatonic line plus minor triad, with one fixed 0.10 bus gain.")
+        appendLine("Six factory presets, 18 soft/mid/hard singles, six phrases/chords and four held instrument takes. Open start-here.html for self-contained actual touch levels; index.html also offers equal-loudness tone comparisons, phrases, long holds and MPC downloads.")
+        appendLine("Velocity response: " + manifest["expressionResponse"] + ". " + manifest["touchUpperPolicy"])
+        appendLine("Relative touches 0.3 / 0.6 / 1 stay beneath each saved velocity ceiling. Hard singles equal their complete saved factory render and preserve the published FOLD hard waveform. The phrase is an offline 120 BPM minor-pentatonic line plus minor triad, with one fixed 0.10 bus gain.")
         appendLine("downloads/ contains four MPC-ready ZIPs. Extract a complete ZIP together: root .xty for MPC 3, TrackData .xpm for MPC 2, all WAVs, .instrument.json and .origami-keys.json. Each bank has nine roots and three layers (27 PCM24 WAVs), per-layer loops, and 0.60 s release.")
         appendLine("These ZIPs are not SnipSnap phone imports. On phone use the new factory preset and existing MAKE INSTRUMENT. Finite pad layers use SOFT HITS; SEND TO PAD alone renders one hit.")
         appendLine("Each held example plays three sequential notes: soft, mid and hard. Every selected layer is actually played across at least three real loop wraps. Each STILL note holds at least 36 seconds; the full three-note take is roughly 110 seconds. FAN notes hold at least 12 seconds. Each release is 0.60 s followed by a 0.05 s gap. A single matched gain covers the complete sequence. Playback is the production reference map, not a device recording.")
@@ -510,14 +523,15 @@ object OrigamiPerformanceBankGenerator {
 <div class="eyebrow">SNIPSNAP / ORIGAMI / PERFORMANCE BANK</div>
 <h1>Six ways to play paper.</h1>
 <p>Six factory presets pair BLOOM with UNFOLD across CRANE, FAN and STILL. Compare soft, mid and hard touches, then play the phrases and longer held notes.</p>
-<p class="dim">Soft and mid are relative to each preset’s saved velocity ceiling. Hard is its exact authored sound. Matched compares color; Native keeps the original levels.</p>
+<p class="dim">Soft and mid are relative to each preset’s saved velocity ceiling. Hard is its exact authored sound. Native keeps actual touch levels. Matched makes separate takes equally loud so you can compare tone.</p>
 <p class="dim" id="edition"></p>
 <section class="panel transport" aria-label="Audio player">
 <h2 id="now">Choose a clip</h2><div class="dim" id="caption"></div>
-<div class="row"><button class="play" id="play">Play selected</button><button id="stop">Stop</button><label id="modeLabel">Level <select id="mode"><option value="matched">Matched</option><option value="native">Native</option></select></label></div>
+<div class="row"><button class="play" id="play">Play selected</button><button id="stop">Stop</button><label id="modeLabel">Level <select id="mode"><option value="native">Native · actual touch levels</option><option value="matched">Matched · equal loudness, compare tone</option></select></label></div>
 <audio id="audio" controls preload="none" playsinline></audio><div class="status" id="status" role="status">Audio is off. Choose Play to begin.</div>
 <a id="openBrowser" hidden target="_blank" rel="noopener">Open this page in your browser</a>
 <div class="ab"><button id="playA">A</button><select id="a" aria-label="Comparison A"></select><button id="playB">B</button><select id="b" aria-label="Comparison B"></select></div>
+<p class="dim">Native preserves the soft-to-hard volume difference. Matched removes that difference so you can compare tone at equal loudness.</p>
 <div id="curve"></div><div class="legend"><span>Fold depth · one shared clip gain</span><span id="length"></span></div><div id="timing" class="timing"></div>
 </section>
 <div class="row filters"><label>Show <select id="category"><option value="singles">Single notes</option><option value="phrases">Phrases + chords</option><option value="held">Long held notes</option><option value="all">All takes</option></select></label><label>Preset <select id="presetFilter"><option value="all">All presets</option></select></label><label>Voice <select id="voice"><option value="all">All voices</option><option>CRANE</option><option>FAN</option><option>STILL</option></select></label><label id="gestureLabel">Gesture <select id="gestureFilter"><option value="all">Both directions</option><option>BLOOM</option><option>UNFOLD</option></select></label><label>Touch <select id="strikeFilter"><option value="all">All touches</option><option value="0.3">Soft</option><option value="0.6">Mid</option><option value="1">Hard</option></select></label></div>
@@ -535,7 +549,7 @@ const manifest=JSON.parse(document.getElementById('manifest').textContent);
 const embedded=JSON.parse(document.getElementById('embedded').textContent),compact=__COMPACT__;
 const clips=manifest.clips,byId=new Map(clips.map(c=>[c.id,c]));
 const el=id=>document.getElementById(id),audio=el('audio');
-let selected=clips.find(c=>c.id==='fifth-bloom-soft')||clips[0],mode='matched',token=0,watchdog=0,playingId=null;
+let selected=clips.find(c=>c.id==='fifth-bloom-soft')||clips[0],mode='native',token=0,watchdog=0,playingId=null;
 const noteKey=c=>'origami-performance:'+manifest.sourceSha256+':'+c.recipeSha256;
 function readNote(c){try{return localStorage.getItem(noteKey(c))||'';}catch(e){return '';}}
 function status(text){el('status').textContent=text;}
@@ -575,7 +589,7 @@ el('bench').textContent=manifest.benchmarkPolicy+'\n\n'+JSON.stringify({factoryH
 for(const preset of manifest.factoryPresets){const option=document.createElement('option');option.value=preset.id;option.textContent=preset.name;el('presetFilter').append(option);}
 for(const bank of manifest.instruments){const a=document.createElement('a');a.href=bank.downloadPath;a.download=bank.id+'.zip';a.textContent=bank.presetName+' · MPC ZIP ('+(bank.downloadBytes/1048576).toFixed(1)+' MiB)';el('bankLinks').append(a);}
 const manifestUrl=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'}));el('manifestLink').href=manifestUrl;el('manifestLink').download='origami-performance-manifest.json';
-if(compact){el('edition').textContent='Self-contained starter · 18 matched singles from six factory presets. The complete pack adds musical phrases, long held notes and four MPC downloads.';el('modeLabel').hidden=true;el('banks').hidden=true;for(const option of Array.from(el('category').options)){if(!['singles','all'].includes(option.value))option.remove();}}
+if(compact){el('edition').textContent='Self-contained starter · 18 singles at actual touch levels. The full page also offers equal-loudness tone comparisons, musical phrases, long holds and MPC downloads.';el('modeLabel').hidden=true;el('banks').hidden=true;for(const option of Array.from(el('category').options)){if(!['singles','all'].includes(option.value))option.remove();}}
 else el('edition').textContent='Full performance bank · '+clips.length+' takes. Native and Matched levels, musical phrases, actual exported instruments and long held notes.';
 try{if(window.self!==window.top){el('openBrowser').hidden=false;el('openBrowser').href=window.location.href;}}catch(e){}
 drawSelected();drawCards();

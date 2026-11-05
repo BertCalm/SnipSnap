@@ -702,8 +702,10 @@ zero on every commercial layer) — the format's "no two hits alike"
 dice. (GG4's first verdict — "no round robin anywhere" — was wrong:
 round robin exists as chain-based **Slice Motion**, `sliceIncrement`
 stepping through a chain WAV per hit; see `chop --break-pad` and
-`robin`. Humanize is the *other* mechanism: randomization, not
-rotation.)
+`robin`. The `.xpm` has its own cycle field too, `<ZonePlay>0</ZonePlay>`
+(Cycle): `.xpm`-based exports write a robin pad's first four takes as
+`_RR1..RR4` WAVs on full-range cycling layers, which the MPC alternates.
+Humanize is the *other* mechanism: randomization, not rotation.)
 Humanize scales them conservatively (pitch ×0.05, volume ×0.2, pan
 ×0.1) and the hardware rolls the dice on every hit. MPC 2 exports
 have no such fields and honestly ignore it. Bench row: humanize 0.5
@@ -826,6 +828,14 @@ would orphan the slice boundaries — undo the robin first. Bench row:
 a robin'd pad on the Live III audibly alternates takes (pending the
 HH1.4 slice-chunk capture; until then the hardware plays take one, the
 declared fallback).
+
+`--amount A` (0..1) renders the takes on the amount dial instead
+(RobinVariation: level, pitch, start trim and a tone tilt all scale
+together, the same random draws at every position) and **keeps the
+pad's recipe**, so a synth pad stays a synth pad; the settings ride
+the kit sidecar and `--undo` restores the single take byte-identical.
+Without `--amount` the output is byte-identical to the original robin.
+`--amount` and `--zones` don't combine.
 
 `--zones Z` (2..4) renders the **full velocity × round-robin grid**
 from that one take — the PSK corpus scheme. The chain becomes
