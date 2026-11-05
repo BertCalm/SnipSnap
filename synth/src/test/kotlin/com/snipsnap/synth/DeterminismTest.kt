@@ -511,6 +511,21 @@ class DeterminismTest {
         }
     }
 
+    // R2: BUZZ is the first thing in ARCO that draws noise (Dsp.Noise from a fixed seed per voice: free-running in a one-shot, a table one loop
+    // long in a LOOP), so the same canary again with it on, one-shot and LOOP, and the control that the rows are rows of the buzz: each differs
+    // from the same render at BUZZ 0.
+    @Test
+    fun `ARCO with BUZZ on is byte-identical across renders, both voices, one-shot and loop`() {
+        for (voice in ArcoVoice.entries) for (buzz in listOf(0.5f, 1f)) {
+            val shot = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("BUZZ" to buzz))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot at BUZZ $buzz")
+            assertTrue(!shot.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice)).samples), "$voice one-shot at BUZZ $buzz equals BUZZ 0")
+            val loop = ArcoPatch("Canary", voice, Arco.defaults(voice) + mapOf("HOLD" to 1f, "BUZZ" to buzz))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop at BUZZ $buzz")
+            assertTrue(!loop.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice) + ("HOLD" to 1f)).samples), "$voice loop at BUZZ $buzz equals BUZZ 0")
+        }
+    }
+
     // R1g: BODY above the middle of the knob is a lift on the plain note (a low shelf and a bell, a cap searched by bisection on the note's own peak, and for a loop a cut chosen on the lifted window), none of it seeded,
     // and none of the rows above renders above the knee (the default BODY is the knee itself, which is the old finish to the sample). So the same canary again at BODY 0.75 and BODY 1, both voices, one-shot and LOOP, at the
     // default note (where the cap is idle or nearly so) and at the root of the voice (CELLO C2, where the cap acts at both BODYs: its bisection and its halving check are arithmetic that must repeat to the last bit). The control
