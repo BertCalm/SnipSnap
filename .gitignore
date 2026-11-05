@@ -608,3 +608,7 @@ testkit/vibrato-audition/
 
 # Regenerable native HYDROFORM parity and listening assets.
 /testkit/hydroform-audition/
+
+# Cairn SING native audition and Python proof are regenerated from source.
+testkit/cairn-sing/
+testkit/cairn-sing-prototype/

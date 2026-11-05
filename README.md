@@ -176,15 +176,16 @@ over finite one-to-eight-second observations; the neutral sound and model-1/2
 recipes stay unchanged. LOSS listening, natural tails, HOLD and phone acceptance
 remain separate gates.
 
-CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, and the
-new TUMBLE a tightening cascade of real rebounds. Model 3 adds TUMBLE's passive
-flight/contact law while preserving the earlier two voices. Each has powered
-HOLD, measured against a real preceding segment. The
-[three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/)
-compares one-shots/HOLD at C3–C5, common controls and dry musical roles. Earlier
-auditions and original six-voice recordings remain available.
-[Implementation notes](docs/CAIRN_TUMBLE.md) explain the new voice; the
-[KNOCK/ANSWER foundation](docs/CAIRN.md) records their mechanics and compatibility.
+CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, TUMBLE a
+tightening rebound cascade, and the new SING a soft contact opening into smooth,
+pitched rubbing. Model 4 adds SING's bounded regenerative-energy analogy while
+preserving the earlier versions. HOLD maintains SING's traction continuously;
+each voice is checked against actual preceding audio. The
+[four-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/sing/)
+compares C3–C5, common controls and dry musical roles. Earlier auditions and the
+original six-voice recordings remain available. [SING's design](docs/CAIRN_SING.md),
+[TUMBLE's mechanism](docs/CAIRN_TUMBLE.md) and the
+[KNOCK/ANSWER foundation](docs/CAIRN.md) record the distinctions and compatibility.
 Factory expansion, the remaining voices, phone/MPC timing and the Android picker
 remain deferred.
 
