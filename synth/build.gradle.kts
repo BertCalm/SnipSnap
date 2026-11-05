@@ -1922,10 +1922,10 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
-/** Export SCOUR's forty-eight dry pads over three banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's, bank C BEAM's) to testkit/SnipSnap Scour Kit/. */
+/** Export SCOUR's sixty-four dry pads over four banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's, bank C BEAM's, bank D DISC's and ROD's) to testkit/SnipSnap Scour Kit/. */
 tasks.register<JavaExec>("generateScourKit") {
     group = "distribution"
-    description = "Export SCOUR's three banks (builds cut for 120 and 90 BPM, its sixteen presets, and SHEET's and BEAM's short hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
+    description = "Export SCOUR's four banks (builds cut for 120 and 90 BPM, its twenty-four presets, and SHEET's and BEAM's short hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourKitGenerator")
     workingDir = projectDir
