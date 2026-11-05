@@ -85,6 +85,9 @@ import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
 import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.Ferry
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinVoice
+import com.snipsnap.synth.ChitinPatch
 import com.snipsnap.synth.FerryPatch
 import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.FerryVoice
@@ -265,8 +268,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE)) {
-            throw CliError("--patch is only supported by APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, LATTICE, OHM and FERRY, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(ChitinPatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE)) {
+            throw CliError("--patch is only supported by CHITIN, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, LATTICE, OHM and FERRY, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -291,6 +294,7 @@ object SynthCommand {
         }
 
         val presets = when (engine) {
+            ChitinPatch.ENGINE -> ChitinVoice.entries.firstOrNull { it.name == voice }?.let { listOf(ChitinPatch("Starting point", it, Chitin.defaults(it))) } ?: emptyList()
             FerryPatch.ENGINE -> FerryVoice.entries.firstOrNull { it.name == voice }?.let { FerryPresets.forVoice(it) } ?: emptyList()
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
@@ -308,6 +312,7 @@ object SynthCommand {
         }
         val macroOverrides = opts["--macros"]?.let { raw ->
             val names = when (engine) {
+                ChitinPatch.ENGINE -> Chitin.macrosFor(ChitinVoice.valueOf(voice))
                 FerryPatch.ENGINE -> Ferry.macrosFor(FerryVoice.valueOf(voice))
                 TidalPatch.ENGINE -> Tidal.macrosFor(TidalVoice.valueOf(voice))
                 ApsisPatch.ENGINE -> Apsis.macrosFor(ApsisVoice.valueOf(voice))
@@ -318,7 +323,7 @@ object SynthCommand {
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
-                else -> throw CliError("--macros is only supported by TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM FERRY and PLUCK UPRIGHT, got $engine")
+                else -> throw CliError("--macros is only supported by CHITIN, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM FERRY and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -612,7 +617,9 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is ApsisPatch) {
+            if (withNote is ChitinPatch) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
+            } else if (withNote is ApsisPatch) {
                 withNote.copy(macros = withNote.macros + macroOverrides,
                     config = withNote.config.copy(seedContext = seedOverride ?: withNote.config.seedContext))
             } else if (withNote is OrigamiPatch) {
@@ -775,7 +782,7 @@ object SynthCommand {
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+            if (patch is ChitinPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }

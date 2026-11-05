@@ -12,6 +12,11 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `CHITIN finite voices replay without cache state`() {
+        for (v in ChitinVoice.entries) assertContentEquals(
+            Chitin.inspect(v).snip.samples, Chitin.inspect(v).snip.samples)
+    }
+
     @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }

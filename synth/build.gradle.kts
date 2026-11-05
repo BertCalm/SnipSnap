@@ -2377,3 +2377,13 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
 }
+
+tasks.register<JavaExec>("generateChitinAudition") {
+    group = "distribution"
+    description = "Render CHITIN's two finite voices, macro pairs, ablations and source references."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChitinAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("chitinOutput").orNull ?: "${rootDir}/testkit/chitin-audition")
+}

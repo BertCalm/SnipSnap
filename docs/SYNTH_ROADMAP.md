@@ -2653,3 +2653,11 @@ The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-ex
 records implementation, cost, verification and the new listening gate. Owner
 acceptance of the expression curve and physical MPC playback remain listening
 and hardware checks.
+
+## CHITIN finite-note prototype
+
+SHELL and WING share a source/filter/phaser excursion with a protected root.
+Prototype patch/velocity/CLI registration and an actual-engine audition are
+available. Finite HOLD reserves the loop step; factory presets, seamless sustain
+and Android picker integration await their gates. See `docs/CHITIN.md` and the
+2026-10-31 CHITIN specification for validation and disclosed limits.

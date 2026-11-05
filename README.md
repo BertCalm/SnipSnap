@@ -164,6 +164,13 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CHITIN's finite SHELL and WING prototype combines corrected hard sync and a
+six-stage morphing phaser with bass protection. Run
+`./gradlew :synth:generateChitinAudition` or render provisional CLI starting points
+with `synth CHITIN SHELL --preset 1`. [Implementation notes](docs/CHITIN.md)
+describe its seven controls and finite HOLD. It awaits listening and is counted
+separately from the factory preset roster.
+
 FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
 a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
 HANDOFF control, provisional CLI starting points and an actual-engine audition
