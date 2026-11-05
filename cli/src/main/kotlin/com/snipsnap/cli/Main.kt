@@ -78,6 +78,9 @@ object Cli {
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
         |                        render factory presets to wav, to hear them
         |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/LATTICE/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO/SCANNED_CHAIN: --midi N --velocity 0..1)
+        |                        (ORIGAMI: --expression LEVEL|FOLD|TOUCH; TOUCH darkens source
+        |                        and folded color on soft hits; --gesture STEADY|BLOOM|UNFOLD;
+        |                        FAN/STILL --instrument retains three FOLD/TOUCH velocity layers)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
         |                        six factory positions with saved root and velocity;
         |                        model 3: --instrument [--touch] [--release .1..1.5]

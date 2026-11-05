@@ -147,7 +147,7 @@ object Velocity {
             // An authored quiet ORIGAMI reference is the hardest sample of its own set.
             // Its softer layers must stay below that ceiling instead of replacing it
             // with an absolute .3/.6 strike that could be harder than the saved note.
-            val strike = if (patch is OrigamiPatch && patch.expression == OrigamiExpression.FOLD)
+            val strike = if (patch is OrigamiPatch && OrigamiExpressions.colorsWithVelocity(patch.expression))
                 OrigamiExpressions.relativeVelocity(patch, velocity) else velocity
             peakMatch(reference, atVelocity(patch!!, strike, spec))
         } else {

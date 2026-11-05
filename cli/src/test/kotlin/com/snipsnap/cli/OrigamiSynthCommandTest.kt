@@ -149,7 +149,14 @@ class OrigamiSynthCommandTest {
     }
 
     @Test
-    fun `fold expression preserves every gesture and complete saved recipe through finite replay`() {
+    fun `fold expression preserves every gesture and complete saved recipe through finite replay`() =
+        expressionSurvivesFiniteReplay(OrigamiExpression.FOLD)
+
+    @Test
+    fun `touch expression preserves every gesture and complete saved recipe through finite replay`() =
+        expressionSurvivesFiniteReplay(OrigamiExpression.TOUCH)
+
+    private fun expressionSurvivesFiniteReplay(mode: OrigamiExpression) {
         val root = createTempDirectory("origami-cli-expression").toFile()
         try {
             for (gesture in OrigamiGesture.entries) {
@@ -164,11 +171,11 @@ class OrigamiSynthCommandTest {
                 val errors = ByteArrayOutputStream()
                 assertEquals(0, Cli.run(arrayOf(
                     "synth", "ORIGAMI", "FAN", "--patch", saved.path,
-                    "--expression", "fOlD", "--velocity", ".37",
+                    "--expression", if (mode == OrigamiExpression.TOUCH) "tOuCh" else "fOlD", "--velocity", ".37",
                     "--macros", "FOLD=.71,MOTION=.28", "--out", dir.path,
                 ), PrintStream(ByteArrayOutputStream()), PrintStream(errors)), errors.toString())
                 val expected = source.copy(
-                    expression = OrigamiExpression.FOLD, velocity = .37f,
+                    expression = mode, velocity = .37f,
                     macros = source.macros + mapOf("FOLD" to .71f, "MOTION" to .28f),
                 )
                 assertEquals(source, OrigamiPatch.fromJsonText(saved.readText()), "CLI must not rewrite its input recipe")
@@ -193,7 +200,7 @@ class OrigamiSynthCommandTest {
                     ), PrintStream(ByteArrayOutputStream())))
                     val levelWav = requireNotNull(levelDir.listFiles { it.extension == "wav" }).single()
                     assertContentEquals(exported(expected.copy(expression = OrigamiExpression.LEVEL)), levelWav.readBytes(),
-                        "explicit LEVEL must disable saved fold expression without replacing its recipe")
+                        "explicit LEVEL must disable saved $mode expression without replacing its recipe")
                 }
             }
         } finally {
@@ -212,10 +219,10 @@ class OrigamiSynthCommandTest {
                     "synth", "ORIGAMI", "FAN", "--expression", value, "--out", dir.path,
                 ), PrintStream(ByteArrayOutputStream()), PrintStream(errors)))
                 assertTrue("--expression" in errors.toString(), errors.toString())
-                assertTrue("LEVEL|FOLD" in errors.toString(), errors.toString())
+                assertTrue("LEVEL|FOLD|TOUCH" in errors.toString(), errors.toString())
                 assertFalse(dir.exists(), "invalid expression must not create output")
             }
-            for (value in listOf("LEVEL", "FOLD")) {
+            for (value in listOf("LEVEL", "FOLD", "TOUCH")) {
                 val errors = ByteArrayOutputStream()
                 assertEquals(2, Cli.run(arrayOf(
                     "synth", "OPENSKY", "HALO", "--expression", value, "--out", dir.path,
@@ -224,13 +231,13 @@ class OrigamiSynthCommandTest {
                 assertTrue("ORIGAMI" in errors.toString(), errors.toString())
                 assertFalse(dir.exists(), "foreign expression must not create output")
             }
-            for (model in 1..3) {
+            for (model in 1..3) for (mode in listOf("FOLD", "TOUCH")) {
                 val source = OrigamiPresets.forVoice(OrigamiVoice.FAN).first().copy(model = model)
                 val saved = File(root, "legacy-$model.patch").apply { writeText(source.toJsonText()) }
                 val errors = ByteArrayOutputStream()
                 assertEquals(2, Cli.run(arrayOf(
                     "synth", "ORIGAMI", "FAN", "--patch", saved.path,
-                    "--expression", "FOLD", "--out", dir.path,
+                    "--expression", mode, "--out", dir.path,
                 ), PrintStream(ByteArrayOutputStream()), PrintStream(errors)))
                 assertTrue("--expression" in errors.toString(), errors.toString())
                 assertTrue("model 4" in errors.toString(), errors.toString())
@@ -413,6 +420,49 @@ class OrigamiSynthCommandTest {
                     assertTrue("expression layers: 3 per zone, 27 samples" in output.toString())
                 }
             }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `touch instruments retain three native layers and the accepted hard capture`() {
+        val root = createTempDirectory("origami-cli-touch-keys").toFile()
+        try {
+            val source = OrigamiPatch(
+                "TOUCH KEYS", OrigamiVoice.FAN, Origami.defaults(OrigamiVoice.FAN),
+                midi = 57, velocity = .85f, seed = Long.MIN_VALUE + 23L,
+                gesture = OrigamiGesture.UNFOLD, expression = OrigamiExpression.FOLD,
+            )
+            val saved = File(root, "accepted-fold.patch").apply { writeText(source.toJsonText()) }
+            val dir = File(root, "instrument")
+            val output = ByteArrayOutputStream()
+            val errors = ByteArrayOutputStream()
+            assertEquals(0, Cli.run(arrayOf(
+                "synth", "ORIGAMI", "FAN", "--patch", saved.path,
+                "--expression", "tOuCh", "--instrument", "--release", ".3", "--out", dir.path,
+            ), PrintStream(output), PrintStream(errors)), errors.toString())
+
+            val expected = source.copy(expression = OrigamiExpression.TOUCH)
+            val spec = OrigamiPadMaker.Spec(expected, .3f)
+            val (sidecar, instrument) = InstrumentStore.list(dir).single()
+            assertEquals(spec, OrigamiPadMaker.Spec.fromJsonText(
+                OrigamiPadMaker.recipeFile(dir, instrument.name).readText()))
+            assertEquals(source, OrigamiPatch.fromJsonText(saved.readText()), "the saved FOLD source remains unchanged")
+            assertEquals(27, instrument.sampleFiles.size)
+            assertTrue(instrument.zones.all { it.playableLayers.size == 3 })
+
+            val center = instrument.zones.single { it.rootNote == 60 }
+            val acceptedHard = OrigamiPadMaker.renderZone(spec.copy(patch = source), 60)
+            val encoded = ByteArrayOutputStream().also {
+                WavWriter.write(it, acceptedHard.snip, smpl = SmplChunk(
+                    60, SmplChunk.Loop(acceptedHard.loopStartFrame, acceptedHard.snip.frameCount.toLong()),
+                ))
+            }.toByteArray()
+            assertContentEquals(encoded, File(sidecar.parentFile, center.playableLayers.last().sample).readBytes(),
+                "TOUCH at the authored .85 ceiling keeps the accepted FOLD capture without another gain")
+            assertTrue("expression layers: 3 per zone, 27 samples" in output.toString())
+            assertTrue("source and folded color" in output.toString())
         } finally {
             root.deleteRecursively()
         }
