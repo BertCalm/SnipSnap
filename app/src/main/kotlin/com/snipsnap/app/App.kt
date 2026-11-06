@@ -174,6 +174,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.ProjectTempo
 import com.snipsnap.shell.Places
@@ -577,10 +578,10 @@ fun App(shelf: KitShelf) {
 
     /**
      * What the editor, or a tool opened over it, does on arrival ([bench] is
-     * PAD_SHEET, GRAIN_FIELD, SPLICE or STACK): draw, or close because the kit
+     * PAD_SHEET, PAD_EFFECTS, PAD_VARIATIONS, GRAIN_FIELD, SPLICE or STACK): draw, or close because the kit
      * it was opened for is not the open one, no kit is open, there is no pad
      * recorded, or that pad has been emptied since. The one place the pad
-     * benches' arguments are read together, so the four arms agree.
+     * benches' arguments are read together, so the arms agree.
      */
     fun padBenchVerdict(bench: Bench): KitBench.Verdict {
         val entry = open
@@ -4070,7 +4071,13 @@ fun App(shelf: KitShelf) {
                         // under a tool: it leaves composition when one opens and
                         // re-opens its model on the way back (its open section
                         // is PADS' state, `nav.padsOpenBox`, and survives).
-                        top == Bench.PAD_SHEET -> {
+                        // EFFECTS and VARIATIONS are the editor's own screens (`Bench.PAD_EFFECTS`,
+                        // `Bench.PAD_VARIATIONS`, opened by its `EFFECTS ▸` and `VARIATIONS ▸` doors).
+                        // They are drawn by this same call, with a `page`, and not by arms of their
+                        // own: everything they hold closes over state this composable keeps (a trip
+                        // out in flight, the Aquarium's draft, the pedal slate, the pending knobs), and
+                        // a second call site would start them again from nothing.
+                        top == Bench.PAD_EFFECTS || top == Bench.PAD_VARIATIONS || top == Bench.PAD_SHEET -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
                             val openDir = sheetEntry?.dir
@@ -4084,6 +4091,9 @@ fun App(shelf: KitShelf) {
                                     slot = sheetSlot,
                                     backLabel = checkNotNull(nav.backChip) { "PAD SHEET is a bench, so it has something to go back to" },
                                     onSlotChange = ::retargetPadSheet,
+                                    page = PadSheetPage.of(top) ?: PadSheetPage.EDITOR,
+                                    onOpenEffects = { nav.open(Bench.PAD_EFFECTS) },
+                                    onOpenVariations = { nav.open(Bench.PAD_VARIATIONS) },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // The open box is PADS' state (plan §3.3): a

@@ -652,6 +652,9 @@ class PersonalityTest {
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // The pad editor's two doors and their screens' titles, and its per-tool UNDO buttons: labels, not landings.
+        "PAD_EFFECTS_DOOR", "PAD_VARIATIONS_DOOR", "PAD_EFFECTS_TITLE", "PAD_VARIATIONS_TITLE",
+        "UNDO_MUTATE", "UNDO_SPLICE", "UNDO_DESAMPLE", "UNDO_OUTSIDE", "UNDO_BOARD",
         // BEAT's GO TO and SEND IT OUT group headings: labels over a run of controls, not landings.
         "BEAT_HEADING_GO_TO", "BEAT_HEADING_SEND_OUT",
         // MAKE's two group headings: labels, not landings.
