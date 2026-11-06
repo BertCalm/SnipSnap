@@ -126,10 +126,24 @@ class StrikeVelocityTest {
         assertEquals(.25f, StrikeVelocity.droopFactor(.5f), 1e-7f)
     }
 
-    /** What TERRA hands its bank: the bend scaled by v^2, and the same modes tilted, read off [Terra.Body] through the input hook. */
+    /**
+     * What TERRA hands its bank: the bend scaled by v^2, and the same modes
+     * tilted, read off [Terra.Body] through the input hook. BOX is the
+     * exception, by design: its contact law is the slap's own pulse width
+     * (TerraBox.render), so its modes reach the bank untilted at every hit.
+     */
     @Test
     fun `TERRA's bank sees the bend by v squared and the tilted modes`() {
         for (voice in TerraVoice.entries) {
+            if (voice == TerraVoice.BOX) {
+                fun gainsAt(v: Float): List<Float> {
+                    var seen: Terra.Body? = null
+                    Terra.renderAt(voice, Terra.defaults(voice), v) { body -> seen = body; null }
+                    return assertNotNull(seen).modes.map { it.gain }
+                }
+                assertEquals(gainsAt(1f), gainsAt(.5f), "BOX's modes are not tilted by velocity")
+                continue
+            }
             val macros = Terra.defaults(voice) + ("DROOP" to .8f).takeIf { "DROOP" in Terra.defaults(voice) }.let { listOfNotNull(it).toMap() }
             fun bodyAt(v: Float): Terra.Body {
                 var seen: Terra.Body? = null

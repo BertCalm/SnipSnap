@@ -636,6 +636,8 @@ class PersonalityTest {
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading and the rename dialog title.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // SYNTH's four group headings: labels over a run of controls, not landings.
+        "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
@@ -666,6 +668,9 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
+        // track's name follows it): labels, not landings.
+        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
         // SNAP's FIELD and CLOUD, while the photo is cut into grains and
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.

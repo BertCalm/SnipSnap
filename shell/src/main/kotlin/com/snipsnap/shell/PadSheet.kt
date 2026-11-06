@@ -137,6 +137,19 @@ object PadSheet {
     val ROWS: List<List<String>> = FIXED_ROWS + listOf(PEDAL_SEGMENTS.take(MAX_ROW_CHIPS))
 
     /**
+     * The small heading over each row of [ROWS] (and of [rows]), top to bottom, in the luthier's words:
+     * the damage a tape does, the hit's arrival and body, its colour, what happens in time, the machine's
+     * own transport, what follows the kit's key and tempo, and the pedals. One per row, so the card can
+     * say what a chip row is for; the screen reads `ROW_HEADINGS[i]` over row `i`.
+     */
+    val ROW_HEADINGS: List<String> =
+        listOf("WEAR", "TRANSIENT", "COLOUR", "TIME", "PLAYBACK", "FOLLOWS THE KIT", "PEDALS")
+
+    init {
+        require(ROW_HEADINGS.size == ROWS.size) { "one heading per row: ${ROW_HEADINGS.size} headings, ${ROWS.size} rows" }
+    }
+
+    /**
      * The slate's card: rows one to six as they are, then row seven as [pedals] (the words of the
      * user's [PedalSlate.Row]) and [MORE]. Refuses a word off the slate, a duplicate, or a row too wide
      * to leave room for MORE. A library with no gated pedals draws MORE alone.

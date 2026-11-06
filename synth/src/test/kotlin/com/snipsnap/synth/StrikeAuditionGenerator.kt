@@ -59,7 +59,7 @@ object StrikeAuditionGenerator {
         )
         sections += Section(
             "CAJON", "Cajon Slap, rebuilt",
-            "After the first gate, where the cajon had no bassy resonance: the old slap was a tuned bar like the balafon; the new one is a box, its front plate struck near the edge over the port's resonance. Then Balafon Key and Cajon Low for comparison, and the new slap soft and medium.",
+            "After the first gate, where the cajon had no bassy resonance: the old slap was a tuned bar like the balafon; the first rebuild, the one question 8 played, struck a cavity's plate near the edge over the port's resonance, and was heard as a drum machine rimshot. Now the slap is a box: a plywood plate's dense modes, the port's air and the wires, from the prototype you picked. Balafon Key and Cajon Low for comparison, and each slap soft and medium.",
             cajon(),
         )
         sections += Section(
@@ -142,17 +142,22 @@ object StrikeAuditionGenerator {
 
     private fun cajon(): List<Clip> {
         val pads = terraPads()
-        val slap = pads.single { it.name == "Cajon Slap" }
-        check(slap.voice == TerraVoice.RESONANT_CAVITY) { "A07 is not the rebuilt cajon slap" }
-        // The slap as it shipped until 2026-11-06 (TerraKits A07 before the rebuild).
+        val box = pads.single { it.name == "Cajon Slap" }
+        check(box.voice == TerraVoice.BOX) { "A07 is not the BOX cajon slap" }
+        // The slap as it shipped until 2026-11-06 (TerraKits A07 before the first rebuild).
         val old = TerraPatch("Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f))
+        // The first rebuild, the one question 8 played: heard as "too much like a drum machine rimshot".
+        val cavity = TerraPatch("Cajon Slap", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f))
         return listOf(
             Clip("old_slap", "CAJON SLAP, OLD (A TUNED BAR)", old.render()),
-            Clip("new_slap", "CAJON SLAP, NEW (A BOX)", slap.render()),
+            Clip("new_slap", "CAJON SLAP, FIRST REBUILD (THE CAVITY)", cavity.render()),
             Clip("balafon_key", "BALAFON KEY", pads.single { it.name == "Balafon Key" }.render()),
             Clip("cajon_low", "CAJON LOW", pads.single { it.name == "Cajon Low" }.render()),
-            Clip("new_slap_v25", "CAJON SLAP, NEW, SOFT", Velocity.atVelocity(slap, SOFT)),
-            Clip("new_slap_v60", "CAJON SLAP, NEW, MEDIUM", Velocity.atVelocity(slap, MEDIUM)),
+            Clip("new_slap_v25", "CAJON SLAP, FIRST REBUILD, SOFT", Velocity.atVelocity(cavity, SOFT)),
+            Clip("new_slap_v60", "CAJON SLAP, FIRST REBUILD, MEDIUM", Velocity.atVelocity(cavity, MEDIUM)),
+            Clip("box_slap", "CAJON SLAP, NOW (THE BOX)", box.render()),
+            Clip("box_slap_v25", "CAJON SLAP, NOW, SOFT", Velocity.atVelocity(box, SOFT)),
+            Clip("box_slap_v60", "CAJON SLAP, NOW, MEDIUM", Velocity.atVelocity(box, MEDIUM)),
         )
     }
 

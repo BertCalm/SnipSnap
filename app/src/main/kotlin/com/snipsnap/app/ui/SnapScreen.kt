@@ -941,6 +941,8 @@ fun SnapScreen(
                     }
                 }
 
+                SnapNeedsKitLine(kitOpen = kit != null, scheme = scheme)
+
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
                         if (looking) "…" else "TAKE PHOTO",
@@ -1399,6 +1401,17 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
 }
 
 // ---------- the photo and its numbers ----------
+
+/**
+ * One line above the photo buttons when no kit is open: SEND TO PAD, CLOUD
+ * and SPECTRUM are greyed for want of a kit, and the grey said nothing.
+ * Its own composable, as SURFACE's line is, so [SnapScreen] (near the
+ * 256-register dex limit) gains one call and no inline logic.
+ */
+@Composable
+private fun SnapNeedsKitLine(kitOpen: Boolean, scheme: Scheme) {
+    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.amber.tape)
+}
 
 /**
  * The thumbnail beside the reading it produced — LUM, SAT, HUE, DETAIL as

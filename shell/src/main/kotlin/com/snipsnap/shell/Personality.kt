@@ -587,6 +587,14 @@ object Copy {
     fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
     /** The shelf's group heading over the expansions. */
     const val EXPANSIONS_HEADING = "EXPANSIONS"
+    /** SYNTH's heading over the voice chips. */
+    const val SYNTH_HEADING_VOICE = "VOICE"
+    /** SYNTH's heading over the preset strip and SAVE PRESET. */
+    const val SYNTH_HEADING_PRESETS = "PRESETS"
+    /** SYNTH's heading over an engine's own playing controls (velocity, note length), shown only on engines that have them. */
+    const val SYNTH_HEADING_PLAYING = "PLAYING"
+    /** SYNTH's heading over the buttons that take the sound somewhere (SPREAD, MAKE INSTRUMENT, REOPEN PAD). */
+    const val SYNTH_HEADING_USE = "USE THIS SOUND"
     /** An expansion row whose kits are all gone or binned. */
     const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
     /** The rename dialog's title for an expansion. */
@@ -784,7 +792,7 @@ object Copy {
      */
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
-        "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
+        "· HOLD A KIT ON THE SHELF TO RENAME IT, OR TO BIN IT.",
         "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
         "· TILT THE PHONE ON SURFACE FOR RESONANCE, EVEN IN MORPH.",
@@ -1906,6 +1914,14 @@ object Copy {
     /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
     const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
 
+    /**
+     * The one line under the LAYERS heading, and what the code enforces: soft hits, STRIKE FX and stacked
+     * takes are all velocity layers, so a pad holds one set at a time (SOFT HITS and STRIKE FX ask before
+     * replacing each other; STACK refuses a layered pad), and round robin refuses layers and layers refuse
+     * round robin ([ROBIN_NO_LAYERS], [ROBIN_LAYERED]).
+     */
+    const val LAYERS_RULE = "ONE SET OF LAYERS PER PAD, AND NONE WITH ROUND ROBIN."
+
     /** BEAT's ORBIT UNDO chip: how many edits it can step back through (the history holds sets, not edit names). */
     fun orbitUndo(steps: Int): String = if (steps > 0) "UNDO ($steps)" else "UNDO"
 
@@ -2863,6 +2879,24 @@ object Copy {
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
     /**
+     * The undo chip's words, ahead of the cleared track's name: UNDO CLEAR
+     * KICK. It names what it undoes because it sits in the header row for as
+     * long as it is offered, and a bare UNDO beside a screen that also has
+     * mutes and a tempo would not say which of them it takes back. One level,
+     * and it goes when the bench closes.
+     */
+    const val LOOP_UNDO_CLEAR = "UNDO CLEAR"
+    /** The track is back on the grid and in the file. */
+    const val LOOP_CLEAR_UNDONE = "TRACK IS BACK."
+    /**
+     * An undo whose restore could not be written: the track is on screen again
+     * because the engine took it, and the disk is what refused — so the file
+     * still says it is clear. The mirror of [LOOP_CLEAR_NOT_SAVED].
+     */
+    const val LOOP_UNDO_NOT_SAVED = "THE TRACK IS BACK, BUT IT DID NOT SAVE. IT WILL BE CLEAR NEXT TIME."
+    /** The visible twin of holding a block: clears the track the selected block is in. */
+    const val LOOP_CLEAR_BUTTON = "CLEAR TRACK"
+    /**
      * A tempo change, once the taps have stopped and it is on the grid.
      *
      * The new number is already on screen by then — this says it reached the
@@ -2973,11 +3007,13 @@ object Copy {
     fun loopBounceButton(bars: Int): String = "BOUNCE ${barsOf(bars)} TO SNIPS"
 
     /**
-     * LOOP's own legend. Both of the grid's gestures are invisible — a track
-     * name is not obviously a mute button and a block is not obviously
-     * clearable — and the hold is the one nobody can guess.
+     * LOOP's own legend. Both of the grid's tap gestures are invisible — a
+     * track name is not obviously a mute button and a block is not obviously
+     * selectable. Clearing is not here: it has a visible button
+     * ([LOOP_CLEAR_BUTTON]) and an undo, and holding a block stays as that
+     * button's shortcut rather than something only a sentence can teach.
      */
-    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT."
     /**
      * What a tapped block is, in the line the legend usually occupies.
      *
@@ -3011,11 +3047,13 @@ object Copy {
      */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
     /**
-     * MAKE's header: what the place is, and where its sounds land. Every lab
-     * sends to the active kit, so the line says the one thing the four rows
-     * under it share.
+     * MAKE's header: what the place is, and nothing about where it lands.
+     * "EACH ONE LANDS ON THE ACTIVE KIT" was false: SYNTH, SNAP, SURFACE,
+     * CONFLUENCE VOICES and MY VOICE write a pad, but INSTRUMENTS only lists
+     * what was made and does not touch the kit's pads. The rows say their own
+     * destinations ([makeSub], `Places.HELP`).
      */
-    const val MAKE_HEADER = "SOUND FROM NOTHING. EACH ONE LANDS ON THE ACTIVE KIT."
+    const val MAKE_HEADER = "SOUND FROM NOTHING."
     /**
      * The line under MAKE's header when no kit is active, and the same
      * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).
@@ -3065,6 +3103,8 @@ object Copy {
             } else {
                 "NO SNIPS ON THE SHELF YET FOR + SNIP."
             }
+    /** SNAP with no kit open - SEND TO PAD, CLOUD and SPECTRUM write pads and are greyed until one is. */
+    const val SNAP_NEEDS_KIT = "OPEN A KIT TO SEND SOUNDS TO PADS."
     /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
     const val SURFACE_NEEDS_KIT = "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD."
     /** SPLICE's own picker hint before a head and a tail are chosen. */
