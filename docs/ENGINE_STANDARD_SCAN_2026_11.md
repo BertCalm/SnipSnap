@@ -107,6 +107,16 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    in the shared `Modes.Bank` made no measurable difference to MURK, MERCURY,
    MERIDIAN, BALLAST, LIBRATION or SCOUR, so this is not a toolkit-wide fix. Other
    engines with long double-precision tails are worth the same 10-minute test.
+   **Swept, 2026-11-03.** One more engine had it: PITCHWHEEL's `Wood.tick` left each
+   spent pending-work reservoir at a subnormal value for the rest of the clip. It now
+   floors through a shared `Dsp.floored` (same 1e-100). Measured: CLUNK 1129 to 693 ms,
+   PLUCK 1112 to 569, RECOIL 669 to 332, TURN 1119 to 650. Not byte-identical: float
+   renders of the 7 factory presets differ by at most 3e-7 (-130 dBFS); 16-bit renders
+   are identical. The frozen model-one and model-two tests pass untouched. Tried with no
+   kept gain (under 25%, or slower), each reverted: CIRCUIT, TESSERA, CHAMBER, NIMBUS,
+   SPOOL, TIDAL (16 to 18%, in a shared filter, so not worth it), SUTURE. Ruled out by
+   reading: COROLLA stops once its energy is spent; REVEL, UNDERTOW, TESSERA's modes and
+   NIMBUS's banks already floor at 1e-25; TREFOIL's tails are too long to get there.
 2. **Done, 2026-11-02: cancellation. The first reading of this was wrong.** The
    preview runs through `offMainInterruptible`, which interrupts the render thread when
    a newer knob position supersedes it, and about a hundred engine files already stop on
@@ -120,6 +130,13 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    CIRCUIT, 13% of TREFOIL and 9% of PITCHWHEEL, and `tanh(` appears about 120
    times across the synth sources. One shared `Dsp.tanh` with a stated maximum error would serve all of
    them. It changes bytes, so each engine needs an A/B before it moves.
+   **Done for two engines, 2026-11-03.** `FastMath.tanh` is not an approximation: one
+   `exp`, largest error 2.2e-16 against `StrictMath.tanh`, about 2.8 times faster per
+   call on JDK 21. Kept where every engine test passes: COROLLA (about 10 to 20 percent
+   faster, CHOIR 1255 to 1063 ms) and TREFOIL (TRACE 1163 to 766 ms). CIRCUIT showed no
+   gain and is unchanged. PITCHWHEEL's frozen model-two audio test failed, so its
+   published models keep `kotlin.math.tanh`. Android uses the platform maths library
+   for `tanh`, so the gain on a phone is unmeasured and may be small.
 4. **Tried and reverted, 2026-11-02 (TESSERA): no gain.** Summing the energy every
    64th sample removed `passiveEnergy` from the profile, but `Engine.step` rose from 66% to
    81% and the renders stayed at 1.08 to 1.18 s. The 15% was the profiler attributing
@@ -136,6 +153,22 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    planning, energy budgets) could run at a control rate with the resonators left
    at audio rate. This is the Luthier render-budget rule applied after the fact: each
    engine needs a spec, a measured before and after, and a listen.
+   **Specced, 2026-11-03, and the premise was mostly wrong:** see
+   `docs/CONTROL_RATE_MECHANICS_SPEC_2026_11.md`. UNDERTOW, NIMBUS, TESSERA, REVEL and
+   CIRCUIT already step their slow mechanics at a control rate; only PITCHWHEEL steps
+   them every internal sample. CIRCUIT's cost is per-sample observer gain divisions. The
+   spec recommends a CIRCUIT model 2 first, behind SHA-256 fixtures of today's sound.
+   Not built: it changes the sound and waits for the owner's go-ahead and listen.
+   **Built and measured, 2026-11-03, then not shipped.** With the owner's go-ahead, a
+   CIRCUIT model 2 moved the observer path gains and breath drive to 64-sample block
+   ramps. It differed from model 1 by -110 dB peak at most, and it was only about 3.5%
+   faster: ROOT 1431 to 1374 ms, inside run-to-run noise. A profile of each model showed
+   why: the removed divisions overlapped the fractional-delay read and one-pole filter,
+   which carry the observer's real cost. A second published model for a 3.5% gain was
+   not worth the complexity, so only its first step shipped: `CircuitFrozenModelTest`
+   pins SHA-256 fixtures of today's CIRCUIT sound (voice defaults, first presets, EMBER
+   PULSE, HELD CIRCLE, the ceremony). A real CIRCUIT speed-up needs a cheaper observer
+   read, or observing at the 44.1 kHz output rate, which the spec set aside.
 6. **Clip length (product decision).** Most voices over 1 s are 5 to 10 s clips. The
    median cost is about 100 to 400 ms per second of audio. A knob-turn preview that
    renders only the first second or two and plays it while the rest renders would
@@ -143,6 +176,9 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
    for a partial render, and it changes what a knob turn lets you hear.
 7. **Measure on a phone.** Every number here is from a cloud JVM. A device run of
    the same scan, or the app timing its own previews, would set the real targets.
+   **The app now times its own previews, 2026-11-03:** each finished SYNTH preview logs
+   `<ENGINE> <VOICE> <ms> ms` under `adb logcat -s SnipSnapRender`. Nobody has read a
+   device yet.
 
 ## Ledger
 
@@ -215,6 +251,10 @@ Counted by keyword in each engine's own tests (`--gaps` lists them all):
 Only 22 engines reach MAKE INSTRUMENT through a `Keys.xxxPad` or a `:shell`
 PadMaker. The inventory's "thin by slot" finding stands: many HOLD engines never
 export as instruments.
+
+**Round two, 2026-11-04:** MERCURY and KEEL now reach MAKE INSTRUMENT through their
+own makers, and 63 voices across 15 more engines through the shared `LoopPadMaker`;
+instruments also pack into expansions. See [HELD_INSTRUMENTS_2026_11.md](HELD_INSTRUMENTS_2026_11.md).
 
 ## ROOT and OCT steppers (done in this change)
 

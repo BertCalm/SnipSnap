@@ -202,7 +202,11 @@ class TremorSynthScreenTest : ComposeScreenTest() {
         press("SEND TO PAD")
         press("A01, EMPTY")
         val dir = requireNotNull(currentEntry).dir
-        waitFor("legacy Tremor pad") { KitStore.load(dir).pad(1)?.recipe != null }
+        // The send renders and writes the pad off the main thread, and this
+        // deadline is wall clock on a shared emulator. The render is about a
+        // tenth of a second, but the 10 s default once ran out in CI, so it
+        // gets a minute, in line with the other synth screens' send tests.
+        waitFor("legacy Tremor pad", timeoutMillis = 60_000) { KitStore.load(dir).pad(1)?.recipe != null }
         val pad = requireNotNull(KitStore.load(dir).pad(1))
         val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
         val landed = recipe.patch as TremorPatch

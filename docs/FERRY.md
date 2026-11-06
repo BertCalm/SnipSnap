@@ -8,7 +8,9 @@ handoff comparison and “Clear throughout” to nine low/middle/high, slow/norm
 examples. Those answers approve the Python references. On 2026-10-30 the owner
 also answered “Ferry Kotlin listen: Same character.” The aligned Kotlin port is
 approved. On 2026-11-01 the owner answered “Ferry MATCH listen: Clear change,
-note stays clear.” LOSS now has its own gate at
+note stays clear.” On 2026-11-06 the owner rejected the first LOSS ending:
+“Something sounds wrong. Short stops abruptly rather than fade.” Model 4 below
+adds a proposed shaped release for the dry half of LOSS; the revision awaits hearing at
 <https://ferry-first-listen.bertcalm.chatgpt.site>.
 
 Repository base inspected: `bf17f4561bda7418cc4ebf7bae8e78d7c8c45329`.
@@ -30,6 +32,8 @@ stay outside the factory roster.
 
 Models 1 and 2 last four seconds, matching the approved comparison. Model 3
 retains that length at neutral LOSS and uses one-to-eight-second windows otherwise.
+Model 4 adds a cosine release after the window for LOSS above .5, reaching
+350 ms at the driest setting. Neutral and bloom audio remain unchanged.
 A four-millisecond
 house fade ends the file. This is a retained prototype cutoff, not a claim that
 the physical state has decayed to silence. Energy-based termination and production
@@ -57,7 +61,7 @@ saved note, velocity, seed, HANDOFF
                          │
         independent quiet A root (1), added at readout
                          │
-       bandLimit → decimate → DC → levelTo → fadeTail
+       bandLimit → decimate → DC → optional short-note release → levelTo → fadeTail
 ```
 
 The state is an energy-normalized complex vector. `da/dt = (i H − Γ) a`, with
@@ -95,7 +99,8 @@ network stepping, not scheduled envelopes or separately rendered layers.
 `FerryTest` compares the block output with direct single-sample stepping and with
 independent exact full-system observations.
 
-The render does no per-sample eigensolve, trigonometry or allocation. A 32-entry
+The network readout does no per-sample eigensolve, trigonometry or allocation.
+The optional model-4 release uses the shared cosine pass after decimation. A 32-entry
 LRU retains immutable coefficients keyed by note, HANDOFF, MATCH and LOSS bits;
 rate, voice and the fixed tables are constants. Models 1 and 2 at aligned tuning
 share the same network coefficients. Velocity and seed
@@ -369,3 +374,109 @@ the JVM modules rather than the app or on-device audio.
 - Neutral LOSS preserves the approved sound and both older recipe versions.
 - A bounded observation window lets the slower bloom unfold at practical cost;
   its final physical termination is still a separate design task.
+
+
+## As built: revised dry ending, 2026-11-06
+
+Reviewed repository base: `5c9ba711ff10559143df1fafdeebd9baedda9cd5`.
+This is a REVIEW repair of PASSAGE's ending, retaining its characteristic
+**strike → handoff → sympathetic bloom → return**. The owner heard the short
+model-3 example stop abruptly. The one-second observation still contained
+clearly measurable audio: the published middle dry WAV's final 50 ms measured
+about −30.30 dBFS RMS, despite its final four-millisecond hygiene fade. A finite
+file and zero final sample did not prove a musically complete ending.
+
+### Fix now: sound character
+
+Model 4 retains the physical LOSS law and extends the short observation with
+continued network audio. Above neutral LOSS, the output then follows the shared
+`Dsp.fadeTailCosine` release, before house loudness matching and the final 4 ms
+fade. The release grows continuously from zero at LOSS=.5 to 350 ms at LOSS=1.
+The driest file is now 1.35 seconds. The first second uses the same network
+trajectory; the model does not resample the note or alter the handoff links.
+
+```
+release seconds = 0                         for LOSS <= .5 or models 1..3
+release seconds = .35 * (2 LOSS - 1)        for model 4, LOSS > .5
+output frames = observation frames + floor(release seconds * 44100)
+```
+
+The 350 ms duration is a proposed listening choice. This is an explicit musical
+output release, not a claim that the physical state has reached silence.
+Energy-based natural stopping remains open. A longer simulation alone would
+preserve a quiet but lengthy wire tail; the requested repair is a short note
+that finishes gracefully. GYRE and NACRE are still the nearest sympathetic
+siblings, and no new voice or engine is needed to repair this gesture.
+
+### Architecture, compatibility and cost
+
+The compiled passive network and its existing 32-entry cache are unchanged.
+Only the final short-note readout and bounded render length change. The release
+uses the existing house cosine helper, so it adds a linear pass over at most
+15,435 output frames and no solver or new coefficient cache. Models 1–3 keep
+exactly their previous durations and samples, including the rejected model-3
+cut when replaying an old recipe. Model 4 retains exact neutral and bloom audio.
+No macro is added. MIDI, velocity, 64-bit seeds, HOLD refusal and the provisional
+roster status remain unchanged.
+
+`ferry-model3-goldens.json` contains four independent whole-Float hashes captured
+from the old compiled renderer at `86283ac23ee80e087a4d7b4de5db0c163d65bac5`
+before this repair, spanning loss, velocity, register and extreme signed seeds.
+The first LOSS generator and its regression sweep are now explicitly pinned to
+model 3, alongside the earlier model-1 and model-2 studies.
+
+```
+./gradlew --no-daemon :synth:generateFerryReleaseAudition
+snipsnap synth FERRY PASSAGE --patch old-dry.patch --model 4 --out released-dry
+```
+
+The new generator writes nine actual-engine files to
+`testkit/ferry-release-audition/`, or `-PferryReleaseOutput=...`, with complete
+patch recipes, ending RMS, pitch, output health and complete-render timing.
+The page keeps A as the approved four-second reference and C as the unchanged
+eight-second bloom. B is the revised dry note. The original one-second B is
+available for direct comparison, and the complete first LOSS page is archived.
+
+### What is measured and what remains open
+
+The focused checks compare independent legacy hashes, the actual continued raw
+trajectory, independent cosine points, a quiet final 50 ms, native pitch/output
+health and exact JSON/CLI replay. The release revision still awaits the owner’s
+ears. Production natural stopping, SPAN/BODY, HOLD and phone/MPC acceptance
+remain separate work. Completed measurements and validation follow; server timing is never
+reported as phone timing.
+
+The 27 focused Ferry/CLI checks completed with exit code 0. The 81-case
+revised short-setting grid measured at most 18.11 cents of deviation and at
+least .9251 confidence, retaining the existing 20-cent/.9 gates. The original
+225-case model-3 grid also passed. Revised dry files last 1.35 seconds; their
+final 50 ms measured about −69.51/−64.05/−65.61 dBFS RMS at low/middle/high.
+Warm complete server-JVM renders took 14.0–14.6 ms. The nine audition files
+preserved exact reference and bloom hashes and replayed their saved recipes.
+`reference/ferry/release-measurements.json` retains the captured report, test
+output and production source hashes. Browser checks passed for revised and
+original playback, duration, stop, notes, answer copying/persistence, mobile
+layout and archived studies. These numbers do not claim on-device performance
+or owner approval of the revised release.
+
+The complete `./gradlew --no-daemon test` completed on 2026-11-06 with
+exit code 0 in 1 hour 10 minutes 36 seconds, with 8,660 passing checks. No
+Android SDK was present; this validates the JVM modules rather than the app
+or on-device sound. A fresh portable generation also reproduced all nine
+published audio hashes and generated the three original dry comparisons and
+recipes without copying assets from the Site.
+
+One disclosed measurement: the low dry pitch probe beginning at 1.08 seconds
+crosses the falling release and reports .8725 confidence, with a detected root
+12.69 cents from the target. The retained 81-case .9-confidence gate measures
+the attack, middle and late body before the release; the old model-3 225-case
+probe windows and limits remain unchanged. The report includes the complete ending measurements and that release-window
+probe.
+
+### Why it is built this way
+
+- The dry note keeps its physical strike and handoff, then has time to let go.
+- A smooth release removes the audible cutoff; a zero final sample alone did not.
+- The existing cosine helper keeps one definition of the release shape.
+- Versioning preserves old recipes and the approved reference while the revised
+  ending is judged in the listening room.

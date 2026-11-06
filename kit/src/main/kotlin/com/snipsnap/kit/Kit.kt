@@ -30,6 +30,44 @@ data class KitLayer(
 }
 
 /**
+ * One pad's round-robin settings. [amount] is the 0..1 position on the C..H
+ * dial; null means the legacy variation (pads made before the dial existed).
+ */
+data class RobinSettings(
+    val amount: Float?,
+    val takes: Int,
+    val seed: Int = 0,
+    val followsKit: Boolean = true,
+) {
+    init {
+        require(takes in 2..8) { "robin takes is 2..8, got $takes" }
+        amount?.let { require(it in 0f..1f) { "robin amount is 0..1, got $it" } }
+    }
+}
+
+/** The kit-wide round-robin defaults. */
+data class KitRobin(
+    val amount: Float = DEFAULT_AMOUNT,
+    val takes: Int = DEFAULT_TAKES,
+) {
+    init {
+        require(amount in 0f..1f) { "kit robin amount is 0..1, got $amount" }
+        require(takes in MIN_TAKES..MAX_TAKES) { "kit robin takes is $MIN_TAKES..$MAX_TAKES, got $takes" }
+    }
+
+    companion object {
+        const val DEFAULT_AMOUNT = 0.6f
+        const val DEFAULT_TAKES = 6
+        const val MIN_TAKES = 4
+        const val MAX_TAKES = 8
+    }
+}
+
+/** A real robin chain: a plain slice chain (no velocity grid) that carries robin settings. */
+val KitPad.isRobinChain: Boolean
+    get() = chain != null && robin != null && chain.zones == null
+
+/**
  * One pad's worth of a kit.
  *
  * [sampleFile] is a bare filename resolved against the kit's own folder — a
@@ -86,6 +124,8 @@ data class KitPad(
     val chain: ChainInfo? = null,
     /** Repeat the complete sample on an ordinary gated pad; one-shot and chain playback disable it. */
     val loop: Boolean = false,
+    /** Round-robin settings when this pad is a robin chain (see [isRobinChain]); null = not a robin pad. */
+    val robin: RobinSettings? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -290,6 +330,14 @@ data class Kit(
      * MPC programs do not interpret this metadata or bake it into individual samples.
      */
     val aquariumPerformance: JsonValue? = null,
+    /**
+     * A stable id, the same across rename, bin and restore, so an expansion
+     * can name its members. Null until the kit first joins one ([KitIds]):
+     * a kit nobody has gathered keeps exactly the kit.json it always had.
+     */
+    val id: String? = null,
+    /** The kit-wide round-robin defaults that pads with [RobinSettings.followsKit] follow; null = never set. */
+    val robin: KitRobin? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }

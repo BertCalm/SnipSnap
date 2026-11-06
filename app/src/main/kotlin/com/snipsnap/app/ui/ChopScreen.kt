@@ -934,24 +934,52 @@ private fun ChopContent(
             },
         )
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SegmentButton("CLASSIC", active = layout == ChopLayout.CLASSIC, modifier = Modifier.weight(1f)) {
-                layout = ChopLayout.CLASSIC
-            }
-            // FOLD DOUBLES: sixteen slices of a break are five sounds played
-            // over and over; one pad per sound, the repeats cycling under it.
-            SegmentButton("FOLD", active = fold, modifier = Modifier.weight(1f)) {
-                layout = ChopLayout.FOLD
-                onToast(Copy.FOLD_ON)
-            }
-            // The button says what the player wants to see and nothing
-            // else. The placement it needs is rebuilt by the effect above,
-            // because a tap is no longer the only way to arrive here: now
-            // that `layout` outlives a re-chop, the chop can change while
-            // MELODIC is already showing and no tap accompanies it.
-            SegmentButton("MELODIC", active = melodic, modifier = Modifier.weight(1f)) {
-                layout = ChopLayout.MELODIC
-                onToast(Copy.MELODIC_ON)
+        // RE-CHOP belongs to the cut: it runs the same detection again, so it
+        // sits straight under the CUT box. Not inside it - that box is closed
+        // by default, and a control that was always visible stays visible.
+        SecondaryButton(
+            if (rechopBusy) "…" else "RE-CHOP",
+            modifier = Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+            // Symmetric with SEND's own guard below — RE-CHOP swapping
+            // `model` out from under an in-flight SEND would re-key the
+            // arrangement the write is reading.
+            //
+            // J6: `humming` belongs here too, and its absence made this
+            // the one control on the bench without it. Every sibling
+            // route — `rechopTo`, and the two guards below it — refuses
+            // while a hum is being read, because a hum resolves into a
+            // fresh `model` of its own and the two would race for it.
+            enabled = !rechopBusy && !sendBusy && !humming,
+        ) {
+            if (rechopBusy || sendBusy || humming) return@SecondaryButton
+            rechopBusy = true
+            val current = model
+            scope.launch {
+                // Match `App.fresh()`'s own pattern: real disk/CPU work
+                // in a try, the busy flag cleared in a finally so a
+                // failure can't leave the button permanently disabled
+                // and silent — it says exactly what happened instead.
+                try {
+                    // J5: `rechopKeeping`, not bare `rechop`. Every other
+                    // control on this bench carries the player's own
+                    // per-slice overrides across a re-chop; this one
+                    // silently dropped them, so the single button named
+                    // RE-CHOP was the only one that also meant "and
+                    // forget what I changed". Carrying is both the
+                    // smaller change and the less surprising one. If a
+                    // deliberately clean re-chop is ever wanted it
+                    // deserves its own named control rather than living
+                    // on as a side effect nothing announces.
+                    val fresh = offMain { current.rechopKeeping(current.mode) }
+                    model = fresh
+                    onToast(Copy.RECHOPPED)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    Log.e("ChopScreen", "rechop: failed", e)
+                    onToast(Copy.RECHOP_FAILED)
+                } finally {
+                    rechopBusy = false
+                }
             }
         }
 
@@ -1116,53 +1144,33 @@ private fun ChopContent(
         // readout, not a promise.
         val plannedName = remember(shelf, sourceFile) { shelf.rolledName() }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            SecondaryButton(
-                if (rechopBusy) "…" else "RE-CHOP",
-                modifier = Modifier.weight(1f).height(Layout.PRIMARY_ACTION_H.dp),
-                // Symmetric with SEND's own guard below — RE-CHOP swapping
-                // `model` out from under an in-flight SEND would re-key the
-                // arrangement the write is reading.
-                //
-                // J6: `humming` belongs here too, and its absence made this
-                // the one control on the bench without it. Every sibling
-                // route — `rechopTo`, and the two guards below it — refuses
-                // while a hum is being read, because a hum resolves into a
-                // fresh `model` of its own and the two would race for it.
-                enabled = !rechopBusy && !sendBusy && !humming,
-            ) {
-                if (rechopBusy || sendBusy || humming) return@SecondaryButton
-                rechopBusy = true
-                val current = model
-                scope.launch {
-                    // Match `App.fresh()`'s own pattern: real disk/CPU work
-                    // in a try, the busy flag cleared in a finally so a
-                    // failure can't leave the button permanently disabled
-                    // and silent — it says exactly what happened instead.
-                    try {
-                        // J5: `rechopKeeping`, not bare `rechop`. Every other
-                        // control on this bench carries the player's own
-                        // per-slice overrides across a re-chop; this one
-                        // silently dropped them, so the single button named
-                        // RE-CHOP was the only one that also meant "and
-                        // forget what I changed". Carrying is both the
-                        // smaller change and the less surprising one. If a
-                        // deliberately clean re-chop is ever wanted it
-                        // deserves its own named control rather than living
-                        // on as a side effect nothing announces.
-                        val fresh = offMain { current.rechopKeeping(current.mode) }
-                        model = fresh
-                        onToast(Copy.RECHOPPED)
-                    } catch (e: Exception) {
-                        if (e is kotlinx.coroutines.CancellationException) throw e
-                        Log.e("ChopScreen", "rechop: failed", e)
-                        onToast(Copy.RECHOP_FAILED)
-                    } finally {
-                        rechopBusy = false
-                    }
-                }
+        // LAND AS: how SEND TO PADS lays the slices on the pads. CLASSIC, FOLD
+        // and MELODIC change the landing, not the cut, so they sit directly
+        // above the button that lands them.
+        TapeText(Copy.CHOP_LAND_AS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            SegmentButton("CLASSIC", active = layout == ChopLayout.CLASSIC, modifier = Modifier.weight(1f)) {
+                layout = ChopLayout.CLASSIC
             }
-            Box(Modifier.weight(2f)) {
+            // FOLD DOUBLES: sixteen slices of a break are five sounds played
+            // over and over; one pad per sound, the repeats cycling under it.
+            SegmentButton("FOLD", active = fold, modifier = Modifier.weight(1f)) {
+                layout = ChopLayout.FOLD
+                onToast(Copy.FOLD_ON)
+            }
+            // The button says what the player wants to see and nothing
+            // else. The placement it needs is rebuilt by the effect above,
+            // because a tap is no longer the only way to arrive here: now
+            // that `layout` outlives a re-chop, the chop can change while
+            // MELODIC is already showing and no tap accompanies it.
+            SegmentButton("MELODIC", active = melodic, modifier = Modifier.weight(1f)) {
+                layout = ChopLayout.MELODIC
+                onToast(Copy.MELODIC_ON)
+            }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f)) {
                 PrimaryAction(
                     label = if (sendBusy) "…" else "SEND TO PADS",
                     // A chop with no slices has nothing to send: dimmed (with

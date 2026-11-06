@@ -182,9 +182,11 @@ class OrigamiSynthScreenTest {
             compose.onNodeWithContentDescription("TIME").assertDoesNotExist()
             compose.onNodeWithContentDescription("VELOCITY").assertDoesNotExist()
             val before = controls.associateWith(::macroValue)
-            click("ORIGAMI VELOCITY FOLD")
-            compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
-            assertEquals(before, controls.associateWith(::macroValue))
+            for (expression in listOf("FOLD", "TOUCH")) {
+                click("ORIGAMI VELOCITY $expression")
+                compose.onNodeWithContentDescription("ORIGAMI VELOCITY $expression").assertIsSelected()
+                assertEquals(before, controls.associateWith(::macroValue))
+            }
             for (gesture in listOf("BLOOM", "UNFOLD")) {
                 click("ORIGAMI $gesture")
                 compose.onNodeWithContentDescription("ORIGAMI $gesture").assertIsSelected()
@@ -208,7 +210,7 @@ class OrigamiSynthScreenTest {
             click(factory.voice.name)
             click("PRESET ${factory.name}")
             compose.onNodeWithContentDescription("ORIGAMI ${factory.gesture.name}").assertIsSelected()
-            compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+            compose.onNodeWithContentDescription("ORIGAMI VELOCITY TOUCH").assertIsSelected()
             assertEquals(factory.name, settings["preset.ORIGAMI.${factory.voice.name}"])
             val selected = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.${factory.voice.name}"))
             // The bench supplies its display name; every authored sound field must remain whole.
@@ -239,12 +241,16 @@ class OrigamiSynthScreenTest {
         compose.runOnIdle { showing = true }
         pump()
         compose.onNodeWithContentDescription("ORIGAMI UNFOLD").assertIsSelected()
-        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY TOUCH").assertIsSelected()
         val restored = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.STILL"))
         assertEquals(saved.copy(name = restored.name), restored)
         assertEquals(still.macros, still.macros.keys.associateWith(::macroValue))
+        val delivered = send(1)
+        assertEquals(OrigamiExpression.TOUCH, delivered.expression)
+        assertEquals("saving, recalling and sending must keep the complete authored TOUCH recipe",
+            saved.copy(name = delivered.name), delivered)
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
         compose.onNodeWithContentDescription("RELEASE").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
         // Opening this sheet checks the selected performance spec without rendering its zones.
@@ -295,7 +301,14 @@ class OrigamiSynthScreenTest {
     }
 
     @Test
-    fun expressionAndGestureEditsShareAFrameAndSurviveImmediateNavigation() {
+    fun expressionAndGestureEditsShareAFrameAndSurviveImmediateNavigation() =
+        expressionAndGestureSurviveNavigation(OrigamiExpression.FOLD)
+
+    @Test
+    fun touchAndGestureEditsShareAFrameAndSurviveImmediateNavigation() =
+        expressionAndGestureSurviveNavigation(OrigamiExpression.TOUCH)
+
+    private fun expressionAndGestureSurviveNavigation(mode: OrigamiExpression) {
         val saved = OrigamiPatch(
             "COLOR SOURCE", OrigamiVoice.FAN,
             mapOf("TUNE" to 0f, "CREASE" to .39f, "FOLD" to .82f, "TURN" to .26f, "WARP" to .43f, "MOTION" to .73f),
@@ -306,7 +319,7 @@ class OrigamiSynthScreenTest {
         loadSavedPreset(saved)
         val controls = listOf("TUNE", "CREASE", "FOLD", "TURN", "WARP", "MOTION")
         val before = controls.associateWith(::macroValue)
-        val expression = compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD")
+        val expression = compose.onNodeWithContentDescription("ORIGAMI VELOCITY ${mode.name}")
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         val gesture = compose.onNodeWithContentDescription("ORIGAMI UNFOLD")
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
@@ -318,7 +331,7 @@ class OrigamiSynthScreenTest {
             written = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN"))
             assertFalse(settings.containsKey("preset.ORIGAMI.FAN"))
         }
-        assertEquals(OrigamiExpression.FOLD, written.expression)
+        assertEquals(mode, written.expression)
         assertEquals(OrigamiGesture.UNFOLD, written.gesture)
         assertEquals(saved.model, written.model)
         assertEquals(saved.seed, written.seed)
@@ -328,19 +341,32 @@ class OrigamiSynthScreenTest {
         pump()
         compose.runOnIdle { showing = true }
         pump()
-        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY ${mode.name}").assertIsSelected()
         compose.onNodeWithContentDescription("ORIGAMI UNFOLD").assertIsSelected()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
         assertEquals(before, controls.associateWith(::macroValue))
         assertEquals(written, OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN")))
+        if (mode == OrigamiExpression.TOUCH) {
+            compose.onNodeWithText("SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR.").assertExists()
+            compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
+            click("MAKE INSTRUMENT")
+            compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        }
     }
 
     @Test
-    fun previewHitChangesNeitherSavedCeilingNorPresetAndResetsAfterNavigation() {
+    fun previewHitChangesNeitherSavedCeilingNorPresetAndResetsAfterNavigation() =
+        previewHitKeepsAuthoredRecipe(OrigamiExpression.FOLD)
+
+    @Test
+    fun touchPreviewHitKeepsTheSavedCeilingAndResetsAfterNavigation() =
+        previewHitKeepsAuthoredRecipe(OrigamiExpression.TOUCH)
+
+    private fun previewHitKeepsAuthoredRecipe(mode: OrigamiExpression) {
         val saved = OrigamiPatch(
             "SOFT SOURCE", OrigamiVoice.FAN, Origami.defaults(OrigamiVoice.FAN),
             midi = 67, velocity = .42f, seed = Long.MIN_VALUE + 17,
-            gesture = OrigamiGesture.BLOOM, expression = OrigamiExpression.FOLD,
+            gesture = OrigamiGesture.BLOOM, expression = mode,
         )
         show(saved)
         loadSavedPreset(saved)
@@ -356,7 +382,7 @@ class OrigamiSynthScreenTest {
         compose.runOnIdle { showing = true }
         pump()
         compose.onNodeWithContentDescription("ORIGAMI PREVIEW FULL").assertIsSelected()
-        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY ${mode.name}").assertIsSelected()
         assertEquals(before, settings.getValue("patch.ORIGAMI.FAN"))
         assertEquals(saved.velocity, OrigamiPatch.fromJsonText(before).velocity)
     }

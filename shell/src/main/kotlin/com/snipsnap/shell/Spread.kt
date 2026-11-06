@@ -9,6 +9,8 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinPatch
 import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
@@ -117,6 +119,7 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is ChitinPatch -> Chitin.midiFor(patch.voice, (Chitin.defaults(patch.voice) + patch.macros).getValue("TUNE")).toFloat()
         is AccordPatch -> patch.midi.toFloat()
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is OtisPatch -> Otis.midiFor(patch).toFloat()

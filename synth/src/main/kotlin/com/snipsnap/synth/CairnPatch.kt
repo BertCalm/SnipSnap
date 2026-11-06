@@ -19,6 +19,7 @@ data class CairnPatch(
         require(velocity.isFinite() && velocity in 0f..1f)
         require(model in 1..Cairn.MODEL_VERSION) { "unsupported CAIRN model $model" }
         require(voice != CairnVoice.TUMBLE || model >= 3) { "CAIRN TUMBLE requires model 3" }
+        require(voice != CairnVoice.SING || model >= 4) { "CAIRN SING requires model 4" }
         require(model >= 2 || !Cairn.isLoop(macros)) { "CAIRN model 1 reserves HOLD's top step" }
     }
     override val engine get() = ENGINE

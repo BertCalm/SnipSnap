@@ -10,20 +10,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Product contracts: the named roster, saved recipes, filing, the two-bank, two-tempo kit, velocity and spread. */
+/** Product contracts: the named roster, saved recipes, filing, the four-bank, two-tempo kit, velocity and spread. */
 class ScourPresetsTest {
 
     @Test
-    fun `the sixteen impacts name every control and round-trip every voice`() {
+    fun `the twenty-four impacts name every control and round-trip every voice`() {
         val names = setOf(
             "IRON SLAM", "FORGE RISE", "GRINDER RUN", "PEENED BELL",
             "GLASS SNAP", "FROST RISE", "SHATTER RUN", "PANE TOLL",
             "STEEL BOOM", "SHEET RISE", "THUNDER RUN", "DISTANT STORM",
             "GIRDER CLANG", "RIVET RISE", "GANTRY RUN", "FOUNDRY BELL",
+            "ROTOR SLAM", "CALIPER RISE", "DRAG RUN", "DISC BELL",
+            "NEEDLE PING", "SPIKE RISE", "RAIL RUN", "STRUT BELL",
         )
         val all = ScourPresets.all()
         assertEquals(names, all.map { it.name }.toSet())
-        assertEquals(16, all.size)
+        assertEquals(24, all.size)
         for (voice in ScourVoice.entries) {
             assertEquals(4, ScourPresets.forVoice(voice).size, "$voice has four impacts")
             assertEquals(ScourPresets.forVoice(voice), Presets.forVoice("SCOUR", voice.name))
@@ -65,14 +67,15 @@ class ScourPresetsTest {
     }
 
     @Test
-    fun `the dry kit cuts its builds for 120 and 90 BPM in three banks and ends each with its presets`() {
+    fun `the dry kit cuts its builds for 120 and 90 BPM in four banks and ends each with its presets`() {
         val kit = SynthKits.scour()
-        assertEquals(48, kit.size)
+        assertEquals(64, kit.size)
         val voices = mutableSetOf<ScourVoice>()
         // Slots 1-4 of each bank at 120 BPM, 5-8 at 90 BPM: one beat, two beats, one bar, two bars. Bank A
-        // builds PLATE then PANE at C3; bank B builds SHEET and bank C BEAM, each on its own note.
+        // builds PLATE then PANE at C3; bank B builds SHEET and bank C BEAM, each on its own note; bank D is laid out
+        // as bank A, DISC's builds at 120 BPM then ROD's at 90 BPM, each on its own note, then DISC's and ROD's presets.
         val builds = listOf(120 to 1, 120 to 2, 120 to 4, 120 to 8, 90 to 1, 90 to 2, 90 to 4, 90 to 8)
-        val bankVoice = listOf(null, ScourVoice.SHEET, ScourVoice.BEAM)
+        val bankVoice = listOf(null, ScourVoice.SHEET, ScourVoice.BEAM, null)
         for ((i, maybePad) in kit.withIndex()) {
             val slot = "${'A' + i / 16}%02d".format(i % 16 + 1)
             val inBank = i % 16
@@ -91,9 +94,12 @@ class ScourPresetsTest {
             when {
                 inBank < builds.size -> {
                     val (bpm, beats) = builds[inBank]
-                    val voice = banked ?: if (bpm == 120) ScourVoice.PLATE else ScourVoice.PANE
+                    val voice = banked ?: when {
+                        i / 16 == 3 -> if (bpm == 120) ScourVoice.DISC else ScourVoice.ROD
+                        else -> if (bpm == 120) ScourVoice.PLATE else ScourVoice.PANE
+                    }
                     assertEquals(voice, patch.voice, slot)
-                    if (banked == null) {
+                    if (i / 16 == 0) {
                         assertEquals(0, above, "$slot is at its voice's root")
                     } else {
                         assertTrue(above in 0..12 && above % 12 in PENTATONIC_CLASSES, "$slot: $above semitones up, off the bank's octave of the scale")
@@ -103,8 +109,13 @@ class ScourPresetsTest {
                     val slam = Scour.mechanics(patch.voice, patch.macros).slamSeconds
                     assertTrue(abs(slam - seconds) * Dsp.RATE < 1.0, "$slot: the slam is at $slam s, not $seconds s")
                 }
-                banked == null -> assertEquals(ScourPresets.all()[inBank - builds.size], patch, "$slot is the preset in roster order")
-                inBank < 12 -> assertEquals(ScourPresets.forVoice(banked)[inBank - builds.size], patch, "$slot is the preset in roster order")
+                i / 16 == 0 -> assertEquals(ScourPresets.all()[inBank - builds.size], patch, "$slot is the preset in roster order")
+                // D09-D12 are DISC's presets and D13-D16 ROD's, as A09-A16 are PLATE's and PANE's.
+                i / 16 == 3 -> assertEquals(
+                    ScourPresets.forVoice(if (inBank < 12) ScourVoice.DISC else ScourVoice.ROD)[(inBank - builds.size) % 4], patch,
+                    "$slot is the preset in roster order",
+                )
+                inBank < 12 -> assertEquals(ScourPresets.forVoice(requireNotNull(banked))[inBank - builds.size], patch, "$slot is the preset in roster order")
                 else -> {
                     // B13-B16 and C13-C16: the shortest build on a minor third, a fourth, a fifth and a minor
                     // seventh; the bank's first preset is the bare slam on the root.
@@ -118,16 +129,19 @@ class ScourPresetsTest {
     }
 
     @Test
-    fun `banks B and C vary every pad rather than repeat one sound`() {
+    fun `banks B, C and D vary every pad rather than repeat one sound`() {
         // The owner heard the first bank B, twelve pads at one setting apart from BUILD or TUNE, as "pretty
         // similar". Every pair in banks B and C now sits at least a fifth of the control range apart (RMS over
         // the six controls), the bar the presets hold within a voice. The four hits (slots 13-16) are one low
-        // line on four notes, so they are held apart from every other pad but not from each other.
+        // line on four notes, so they are held apart from every other pad but not from each other. Bank D has no
+        // hits, and holds two voices, so its pads are compared within a voice: a DISC pad and a ROD pad sound
+        // different at any setting.
         val kit = SynthKits.scour().map { PadRecipe.fromJsonValue(requireNotNull(requireNotNull(it).recipe)).patch as ScourPatch }
-        for (bank in listOf(1, 2)) {
+        for (bank in listOf(1, 2, 3)) {
             val pads = kit.subList(16 * bank, 16 * bank + 16)
             for (i in pads.indices) for (j in i + 1 until pads.size) {
-                if (i >= 12 && j >= 12) continue
+                if (bank < 3 && i >= 12 && j >= 12) continue
+                if (pads[i].voice != pads[j].voice) continue
                 val d = PresetTestSupport.rmsDistance(pads[i].macros, pads[j].macros)
                 assertTrue(d >= 0.2f, "${pads[i].name} and ${pads[j].name} are only $d apart")
             }

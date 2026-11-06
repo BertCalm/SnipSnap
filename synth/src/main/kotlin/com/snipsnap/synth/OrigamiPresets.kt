@@ -38,12 +38,16 @@ object OrigamiPresets {
         expressive(OrigamiVoice.STILL, "Soft Bloom", OrigamiGesture.BLOOM, .62f, .70f),
         expressive(OrigamiVoice.STILL, "Soft Unfold", OrigamiGesture.UNFOLD, .62f, .70f),
     )
+    private val touchPresets = performancePresets.map { it.copy(expression = OrigamiExpression.TOUCH) }
 
     /** The original six accepted STEADY/LEVEL references and gentle variations, in saved order. */
     fun references(): List<OrigamiPatch> = presets
 
-    /** One BLOOM/UNFOLD pair per voice; velocity chooses color beneath the authored fold ceiling. */
-    fun performance(): List<OrigamiPatch> = performancePresets
+    /** The published FOLD family, retained for explicit legacy audition and recipe comparisons. */
+    fun foldPerformance(): List<OrigamiPatch> = performancePresets
+
+    /** Current factories: soft hits darken the upper bank while firm hits retain the accepted tone. */
+    fun performance(): List<OrigamiPatch> = touchPresets
 
     fun forVoice(voice: OrigamiVoice): List<OrigamiPatch> = all().filter { it.voice == voice }
     fun all(): List<OrigamiPatch> = references() + performance()

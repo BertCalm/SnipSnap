@@ -108,6 +108,27 @@ object Preflight {
                     p.slot,
                 )
             }
+            // A robin chain exports as _RR1..RRn take files on the .xpm formats:
+            // those names are spoken for too, and are longer than the chain's.
+            if (p.isRobinChain && p.velocityLayers.isEmpty()) {
+                for (n in 1..RobinSplit.takeCount(p)) {
+                    val takeStem = RobinSplit.takeStem("", p, n)
+                    stems.put(takeStem.lowercase(), p.slot)?.let { previous ->
+                        out += Finding(
+                            Severity.FAIL,
+                            "pads $previous and ${p.slot} collide on sample name \"$takeStem\"",
+                            p.slot,
+                        )
+                    }
+                    if (n == 1 && takeStem.length + 4 > 64) {
+                        out += Finding(
+                            Severity.WARN,
+                            "${p.sampleFile}'s take files exceed 64 characters — the MPC UI may blank or truncate them",
+                            p.slot,
+                        )
+                    }
+                }
+            }
 
             // Velocity zones ship their own WAVs; each must exist and claim
             // a unique exported stem, same as any pad sample.

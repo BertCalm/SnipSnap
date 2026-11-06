@@ -210,11 +210,17 @@ class TerraPatchTest {
         println("TERRA struck recipe: ${PadRecipe(patch = struck).toJsonText().length} characters of JSON (spec: about 31 KB for a striker, inferred, not measured)")
     }
 
-    /** TERRA keeps the soften fallback, and the render it softens is the struck one; HIT is not a brightness override (spec, "HIT, the design", Velocity). */
+    /**
+     * A velocity layer is the struck pad hit again at that velocity
+     * (StrikeVelocity), not a filter over the struck render; HIT is not a
+     * brightness override (spec, "HIT, the design", Velocity). Until
+     * 2026-11-04 TERRA took the soften fallback here.
+     */
     @Test
-    fun `velocity layers soften the struck render, and HIT is not a brightness macro`() {
+    fun `velocity layers re-strike the struck render, and HIT is not a brightness macro`() {
         assertNull(Velocity.brightnessSpec(struck))
-        assertContentEquals(Velocity.soften(struck.render(), 0.5f).samples, Velocity.atVelocity(struck, 0.5f).samples)
+        assertContentEquals(Terra.render(struck.voice, struck.macros, struck.striker, velocity = 0.5f).samples, Velocity.atVelocity(struck, 0.5f).samples)
+        assertFalse(Velocity.soften(struck.render(), 0.5f).samples.contentEquals(Velocity.atVelocity(struck, 0.5f).samples), "not the old blanket filter")
         assertFalse(Velocity.atVelocity(struck, 0.5f).samples.contentEquals(Velocity.atVelocity(plain, 0.5f).samples))
         val reference = plain.render()
         val layered = Velocity.variantsAt(reference, struck)

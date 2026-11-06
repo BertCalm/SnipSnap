@@ -8,7 +8,7 @@ import kotlin.math.*
 import kotlin.random.Random
 import kotlin.test.*
 
-/** Independent mechanics, acoustic and recipe gates for the two-voice reconstruction. */
+/** Independent mechanics, acoustic and recipe gates for the three contact voices. */
 class CairnTest {
     private val middle = mapOf("TUNE" to .5f, "WEIGHT" to .5f, "SLOPE" to .4f,
         "GROOVE" to .35f, "FRICTION" to .3f, "BODY" to .4f, "HOLD" to 0f)
@@ -52,7 +52,7 @@ class CairnTest {
 
     @Test
     fun `motion spends one launch and contacts remove the recorded kinetic work`() {
-        for (voice in CairnVoice.entries) for (m in listOf(middle,
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for (m in listOf(middle,
             middle.mapValues { if (it.key == "HOLD") 0f else 0f },
             middle.mapValues { if (it.key == "HOLD") 0f else 1f })) {
             val motion = Cairn.motion(voice, m)
@@ -74,7 +74,7 @@ class CairnTest {
 
     @Test
     fun `fresh cache reordered controls and tuning preserve causal motion and deterministic audio`() {
-        for (voice in CairnVoice.entries) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             Cairn.clearMotionCache()
             val a = Cairn.inspect(voice, middle)
             assertFalse(a.diagnostics.mechanicsCacheHit)
@@ -114,7 +114,7 @@ class CairnTest {
 
     @Test
     fun `raw and conditioned audio stay finite passive quiet in DC and out of drum classes`() {
-        for (voice in CairnVoice.entries) for (midi in listOf(Cairn.MIN_MIDI, 60, Cairn.MAX_MIDI)) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for (midi in listOf(Cairn.MIN_MIDI, 60, Cairn.MAX_MIDI)) {
             val r = Cairn.inspect(voice, middle, midi)
             assertTrue(r.raw.all { it.isFinite() } && r.samples.all { it.isFinite() })
             assertTrue(r.diagnostics.rawPeak in .001..2.0)
@@ -133,7 +133,7 @@ class CairnTest {
 
     @Test
     fun `root is anchored at three registers without BODY or WEIGHT detuning it`() {
-        for (voice in CairnVoice.entries) for (midi in listOf(48, 60, 72)) for (body in listOf(.25f, .75f)) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for (midi in listOf(48, 60, 72)) for (body in listOf(.25f, .75f)) {
             val r = Cairn.inspect(voice, middle + mapOf("BODY" to body, "WEIGHT" to body), midi)
             // Measure the ring after the direct contact cluster. Correlating
             // across three new attacks biases a low-register pitch estimate.
@@ -149,7 +149,7 @@ class CairnTest {
 
     @Test
     fun `the contact cue preserves the full recording and starts near the first physical impact`() {
-        for (voice in CairnVoice.entries) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             val r = Cairn.inspect(voice)
             val d = r.diagnostics
             assertTrue(d.firstContactFrame > .03 * Cairn.RATE)
@@ -163,7 +163,7 @@ class CairnTest {
 
     @Test
     fun `soft velocity changes contacts and pulse shape and zero velocity stays silent`() {
-        for (voice in CairnVoice.entries) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             val silent = Cairn.inspect(voice, velocity = 0f)
             assertTrue(silent.raw.all { it == 0f } && silent.samples.all { it == 0f })
             assertTrue(silent.diagnostics.motion.events.isEmpty())
@@ -180,7 +180,7 @@ class CairnTest {
 
     @Test
     fun `conditioning agrees with an independently rendered 8x reference`() {
-        for (voice in CairnVoice.entries) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             val a = Cairn.inspect(voice, middle, midi = 72, startAtContact = false)
             val b = Cairn.inspect(voice, middle, midi = 72, startAtContact = false, options = Cairn.Options(oversample = 8))
             val n = min(a.samples.size, b.samples.size)
@@ -199,7 +199,7 @@ class CairnTest {
         assertFailsWith<IllegalArgumentException> { patch.copy(model = 1, macros = middle + ("HOLD" to 1f)) }
         assertFailsWith<IllegalArgumentException> { Cairn.render(CairnVoice.ANSWER, middle + ("HOLD" to 1f), model = 1) }
         assertFailsWith<IllegalArgumentException> { patch.copy(velocity = Float.NaN) }
-        for (voice in CairnVoice.entries) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) {
             assertContentEquals(Cairn.render(voice).samples,
                 Cairn.render(voice, mapOf("UNKNOWN" to 1f, "BODY" to Float.NaN)).samples)
             repeat(20) { i ->

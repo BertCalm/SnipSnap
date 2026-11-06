@@ -39,6 +39,14 @@ object Places {
     const val LISTEN = "LISTEN · MIC"
 
     /**
+     * The dock's LISTEN, as the player has set it up. [LISTEN] stays the word before any choice is
+     * kept (the first run still shows the sheet, and the copy that points at "LISTEN · MIC" is
+     * true until then); once a source is kept the chip names it, so `LISTEN · APP AUDIO` is never
+     * mistaken for the mic.
+     */
+    fun listen(source: CaptureSource?): String = if (source == null) LISTEN else "LISTEN · ${source.label}"
+
+    /**
      * The cold shelf's one filled button: what LISTEN · MIC then SNIP does,
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.
@@ -132,6 +140,22 @@ object Places {
     /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
+    /**
+     * The closed THIS KIT group's second line: the tools inside that
+     * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
+     * button's label inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     */
+    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
+
+    /** THIS KIT's heading over REMIX BANK B. */
+    const val KIT_BANK_B = "BANK B"
+
+    /** THIS KIT's heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
+    const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
+
+    /** THIS KIT's heading over VERSIONS + BIN and BREED. */
+    const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
+
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
         val parts = mutableListOf<String>()
@@ -155,7 +179,7 @@ object Places {
         "SHELF" to listOf(
             "· YOUR PROJECTS, AND THE KITS, SNIPS AND INSTRUMENTS THEY SHARE.",
             "· A KIT IS AN MPC PROGRAM. A PROJECT IS AN MPC PROJECT. THE CARD READS BOTH.",
-            "· HOLD A ROW TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
+            "· HOLD A KIT TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
             "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, X-RAY A FILE, FIND DOUBLES.",
         ),
         "TAPE" to listOf(
@@ -165,7 +189,7 @@ object Places {
             "· HUM ALONG ON CUT: THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
         ),
         "PROJECT" to listOf(
-            "· PADS: 16 PADS OF THE KIT YOU PICKED. TAP TO HEAR, OPEN ▸ FOR ITS BENCH.",
+            "· PADS: TAP TO HEAR, OPEN ▸ FOR ITS BENCH. RAW ON A STRIP: NOTHING DONE YET.",
             "· BEAT: THE PROJECT'S PATTERNS. RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
             "· OUT: WRITE THE KIT, OR THE WHOLE PROJECT AS A SESSION. THE MPC OPENS BOTH.",
             "· ONE KIT IS ACTIVE AT A TIME. SWAP IT ABOVE THE GRID; ADD MORE FROM THE SHELF.",
@@ -175,10 +199,12 @@ object Places {
             "· SYNTH, SNAP AND SURFACE MAKE A SOUND FROM NOTHING AND SEND IT TO A PAD.",
             "· SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
+            "· CONFLUENCE VOICES: HEAR A RECORDED PASSAGE, THEN SAVE IT AS A PAD.",
+            "· MY VOICE: A SHORT VOWEL OF YOURS BECOMES A VOICE, KEPT ON THIS PHONE.",
         ),
         "THE DOCK" to listOf(
             "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING ON PADS, OUT, MAKE AND A PAD BENCH.",
-            "· THE LIGHT IS THE TAPE. WHILE IT IS ARMED, SNIP TAKES THE LAST 60s.",
+            "· THE LIGHT IS THE TAPE. WHILE IT IS ARMED, SNIP KEEPS WHAT IT HEARS, UP TO 60s.",
             "· THE LINE SAYS WHAT JUST HAPPENED. A DOOR BESIDE IT STAYS UNTIL YOU TAKE IT.",
         ),
     )

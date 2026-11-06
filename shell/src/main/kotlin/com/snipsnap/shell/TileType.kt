@@ -10,14 +10,6 @@ internal object TileType {
     /** The smallest size any name is set at; below this nothing reads. */
     const val MIN_SIZE = 6f
 
-    /** The largest size at most [maxSizePx] whose advance fits [maxWidthPx], never below [MIN_SIZE]. */
-    fun fit(canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float): Float {
-        if (text.isEmpty()) return maxSizePx
-        var size = maxSizePx
-        while (size > MIN_SIZE && canvas.textWidth(text, font, size) > maxWidthPx) size -= 1f
-        return size.coerceAtLeast(MIN_SIZE)
-    }
-
     /**
      * The text and size that fit [maxWidthPx]: shrink from [maxSizePx] no
      * further than [floorShare] of it (type a tenth the size of its zone
@@ -46,14 +38,6 @@ internal object TileType {
         var kept = text.trimEnd()
         while (kept.isNotEmpty() && trackedWidth(canvas, "$kept…", font, size, trackingEm) > maxWidthPx) kept = kept.dropLast(1).trimEnd()
         return "$kept…" to size
-    }
-
-    /** [fit] for [tracked] text: the tracking rides along with the size. */
-    fun fitTracked(canvas: ArtCanvas, text: String, font: ArtFont, maxWidthPx: Float, maxSizePx: Float, trackingEm: Float): Float {
-        if (text.isEmpty()) return maxSizePx
-        var size = maxSizePx
-        while (size > MIN_SIZE && trackedWidth(canvas, text, font, size, trackingEm) > maxWidthPx) size -= 1f
-        return size.coerceAtLeast(MIN_SIZE)
     }
 
     /** [ArtCanvas.drawText] glyph by glyph with [trackingEm] extra advance after each; START anchored at [x]. */

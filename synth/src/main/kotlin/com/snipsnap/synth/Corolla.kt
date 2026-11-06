@@ -342,7 +342,7 @@ object Corolla {
                 // passive structural/magnetic links and answering petals.
                 val delta = q[j] - q[i]
                 val maxTravel = 4.0 / w0
-                val f = spring[e] * maxTravel * tanh(delta / maxTravel)
+                val f = spring[e] * maxTravel * FastMath.tanh(delta / maxTravel)
                 val damping = .00018 * w0 * (v[j] - v[i])
                 force[i] += f + (if (spring[e] > 0) damping else 0.0)
                 force[j] -= f + (if (spring[e] > 0) damping else 0.0)

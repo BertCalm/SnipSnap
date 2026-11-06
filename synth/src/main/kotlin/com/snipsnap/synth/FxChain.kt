@@ -8,12 +8,19 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
  * before phase, because the copies are made of the finished tone and the
  * sweep and the repeats then carry all three.
+ *
+ * vibrato after tape and before ensemble: a vibrato is a pitch move on the finished tone, after the
+ * amp where a guitar amp's own vibrato lives, and the chorus then makes its copies of what already sings.
+ *
+ * volume after spike and before eq: a fade-in is a level move on the finished
+ * anatomy, ahead of the tone and, on purpose, ahead of the amp, so a swell into
+ * DRIVE blooms and WAH's envelope follower rides it.
  *
  * wah after contour and before squash: a wah is the first pedal on the
  * board, a filter in front of the compressor and the amp, and the
@@ -69,6 +76,7 @@ data class FxChain(
     val crunch: Map<String, Float>? = null,
     val ring: Map<String, Float>? = null,
     val tape: Map<String, Float>? = null,
+    val vibrato: Map<String, Float>? = null,
     val phase: Map<String, Float>? = null,
     val echo: Map<String, Float>? = null,
     val spring: Map<String, Float>? = null,
@@ -76,6 +84,7 @@ data class FxChain(
     val smear: Map<String, Float>? = null,
     val ghost: Map<String, Float>? = null,
     val spike: Map<String, Float>? = null,
+    val volume: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
     val dub: Map<String, Float>? = null,
     val vinyl: Map<String, Float>? = null,
@@ -227,6 +236,7 @@ data class FxChain(
             Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
             Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
+            Section("volume", Volume.MACROS, { it.volume }, { c, m -> c.copy(volume = m) }, Volume::process),
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
@@ -239,6 +249,7 @@ data class FxChain(
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
             Section("vinyl", Vinyl.MACROS, { it.vinyl }, { c, m -> c.copy(vinyl = m) }, Vinyl::process),
             Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
+            Section("vibrato", Vibrato.MACROS, { it.vibrato }, { c, m -> c.copy(vibrato = m) }, Vibrato::process),
             Section("ensemble", Ensemble.MACROS, { it.ensemble }, { c, m -> c.copy(ensemble = m) }, Ensemble::process),
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),

@@ -63,7 +63,7 @@ object ImportCommand {
                 Triple(r.kit, r.directory, "track '${r.trackName}' (MPC 3 native)")
             }
             isZip(file) -> {
-                val all = XpnImporter.importAll(file, destRoot, overwrite)
+                val all = XpnImporter.importAll(file, destRoot, overwrite, robin = com.snipsnap.shell.Robin.dealer)
                 if (all.kits.isEmpty()) {
                     throw CliError(
                         "nothing imported from ${file.name}: " +

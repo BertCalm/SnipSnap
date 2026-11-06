@@ -1,0 +1,73 @@
+{
+  "command": "./gradlew --no-daemon test",
+  "exit_code": 0,
+  "duration": "1h 35m 52s",
+  "jdk": "Temurin 21.0.13",
+  "reported_processors": 3,
+  "android_sdk_present": false,
+  "modules": {
+    "json": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "xpm": {
+      "tests": 48,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "audio": {
+      "tests": 457,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "kit": {
+      "tests": 481,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "mpc3": {
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "synth": {
+      "tests": 4587,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "loop": {
+      "tests": 437,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "cli": {
+      "tests": 284,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shell": {
+      "tests": 2032,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "total_tests": 8437,
+  "production_source_sha256": {
+    "shell/src/main/kotlin/com/snipsnap/shell/SynthRoot.kt": "1d1ab1237187b70493af03797cc3f807d3a2f48c31265abfe161da242e9e2624",
+    "synth/src/main/kotlin/com/snipsnap/synth/Hydroform.kt": "136304b65f3d8f5282e90e3c07352b993c6d52c926f9f0cb12e40564a6e1508b",
+    "synth/src/main/kotlin/com/snipsnap/synth/HydroformPatch.kt": "7c7809c2b5c6faaa694b15024586174fdeb8c064d7fb98b3a803fe7789787137",
+    "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt": "fb28432a013b93be7f2d23aa2835604ec37cf51d76862efd625d2909c63fa5d5",
+    "synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt": "106e9411bb43be582826939ebf37a6d9210f6b0b100205b7fc574a481d961094"
+  },
+  "note": "The audition generator was then compiled and run again to add six hot-corner recordings; the engine, production integration and unit tests are unchanged."
+}

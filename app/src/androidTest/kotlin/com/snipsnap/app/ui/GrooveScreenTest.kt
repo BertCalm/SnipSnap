@@ -2,8 +2,10 @@ package com.snipsnap.app.ui
 
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
@@ -120,11 +122,12 @@ class GrooveScreenTest : ComposeScreenTest() {
         )
     }
 
-    private fun show(entry: KitShelf.Entry) {
+    private fun show(entry: KitShelf.Entry, onTempo: ((Float) -> Unit)? = null) {
         setPhoneContent {
             GrooveScreen(
                 entry = entry,
                 appScope = appScope,
+                onTempo = onTempo,
                 onToast = { toasts += it },
                 onNavigateKits = {},
                 hasProject = true,
@@ -155,6 +158,30 @@ class GrooveScreenTest : ComposeScreenTest() {
      * comment. A wrapped label makes its own segment taller than its four
      * neighbours, so this fails on the line count as well as the ellipsis.
      */
+    /**
+     * BEAT's BPM control (2026-11-06: one project tempo, set from BEAT): two
+     * taps on BPM + are one ask, for two BPM more, once the taps settle, and
+     * the control is not there at all without a project to keep the tempo in.
+     */
+    @Test
+    fun BPM_plus_asks_for_the_new_tempo_once_the_taps_settle() {
+        val asked = java.util.concurrent.CopyOnWriteArrayList<Float>()
+        show(grooveKit(0), onTempo = { asked += it })
+        repeat(2) {
+            button("FASTER").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
+        }
+        waitFor("the tempo asked for, once") { asked.size == 1 }
+        org.junit.Assert.assertEquals(listOf(94f), asked.toList())
+    }
+
+    @Test
+    fun there_is_no_BPM_control_without_a_project_to_keep_it_in() {
+        show(grooveKit(0))
+        org.junit.Assert.assertTrue(
+            compose.onAllNodesWithContentDescription("FASTER").fetchSemanticsNodes().isEmpty(),
+        )
+    }
+
     @Test
     fun the_program_row_reads_in_full_at_phone_width() {
         show(grooveKit(userPrograms = 1))

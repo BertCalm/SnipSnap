@@ -143,12 +143,12 @@ class SurfaceScreenTest : ComposeScreenTest() {
     fun the_print_row_reads_in_full_while_a_print_could_run() {
         show(entry = tempoKit())
         // With a tempo the bars button is live and its longest word is on it
-        // after two taps; → TAPE flipped is → PAD.
+        // after two taps; → PAD is on screen beside → TAPE.
         waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         tap("FREE")
         tap(PrintLength.label(PrintLength.BARS[1]))
         assertReadsInFull(PrintLength.label(PrintLength.BARS[2]))
-        tap("→ TAPE")
+        assertReadsInFull("→ TAPE")
         assertReadsInFull("→ PAD")
     }
 
@@ -166,13 +166,14 @@ class SurfaceScreenTest : ComposeScreenTest() {
     @Test
     fun the_print_destination_flips_between_tape_and_pad() {
         show(entry = null)
-        button("→ TAPE").assertExists()
-        button("→ PAD").assertDoesNotExist()
-        tap("→ TAPE")
-        button("→ PAD").assertExists()
-        button("→ TAPE").assertDoesNotExist()
+        // Both destinations are always on screen; the one in force is selected.
+        button("→ TAPE").assertIsSelected()
+        button("→ PAD").assertIsNotSelected()
         tap("→ PAD")
-        button("→ TAPE").assertExists()
+        button("→ PAD").assertIsSelected()
+        button("→ TAPE").assertIsNotSelected()
+        tap("→ TAPE")
+        button("→ TAPE").assertIsSelected()
     }
 
     @Test

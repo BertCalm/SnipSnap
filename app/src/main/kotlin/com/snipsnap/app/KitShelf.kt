@@ -369,6 +369,29 @@ class KitShelf(val root: File) {
         return Entry(source.dir, model.kit) to moved
     }
 
+    /** A kit-wide round robin stopped part way; [entry] is the kit re-read from disk as it now stands. */
+    class RobinStopped(val entry: Entry, cause: Throwable) : RuntimeException(cause.message, cause)
+
+    /**
+     * ROUND ROBIN for the whole kit: [run] is one of `RobinKit.onSaving/setSaving/offSaving`
+     * on the kit's folder. Its pad loops aren't atomic and every step writes WAVs and bin
+     * entries at once, so a stop leaves some pads converted; RobinKit saves the model as it
+     * stands (kit.json matching the files, the switch left ON so OFF can undo what was dealt)
+     * and this rethrows [RobinStopped] with the kit re-read from disk.
+     */
+    fun robin(
+        source: Entry,
+        run: (File) -> com.snipsnap.shell.RobinKit.Result,
+    ): Pair<Entry, com.snipsnap.shell.RobinKit.Result> {
+        val result = try {
+            run(source.dir)
+        } catch (e: com.snipsnap.shell.RobinKit.Stopped) {
+            val now = try { KitStore.load(source.dir) } catch (_: Exception) { source.kit }
+            throw RobinStopped(Entry(source.dir, now), e.cause ?: e)
+        }
+        return Entry(source.dir, KitStore.load(source.dir)) to result
+    }
+
     /**
      * SHARE: [source] packed as one `.xpn` under [outDir] (the share
      * cache), ready for the chooser. Preflight refuses a broken kit in
@@ -390,22 +413,32 @@ class KitShelf(val root: File) {
      * BACKUP: every kit on the shelf as one file under [outDir], each its
      * own `.xpn` inside, and the player's presets file riding at the root
      * when there is one (`UserPresets`, the WS5 follow-up: a backup that
-     * comes home merges them back); kits preflight refuses are skipped
-     * and named.
+     * comes home merges them back), and the phone's expansions beside it
+     * (`ExpansionBackup`: a restore rebuilds them around the kits it lands);
+     * kits preflight refuses are skipped and named.
      */
     fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
         outDir.mkdirs()
         val stamp = ShareOut.stamp(nowMillis)
-        return com.snipsnap.kit.KitBackup.backup(
-            root,
-            File(outDir, "SnipSnap Shelf $stamp.zip"),
-            overwrite = true,
-            extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(root)),
-        )
+        val expansions = File(outDir, ".expansions-$stamp.json")
+        try {
+            val extras = linkedMapOf(UserPresets.FILE_NAME to UserPresets.file(root))
+            if (com.snipsnap.shell.ExpansionBackup.write(expansionStore(), root, expansions)) {
+                extras[com.snipsnap.shell.ExpansionBackup.FILE_NAME] = expansions
+            }
+            return com.snipsnap.kit.KitBackup.backup(
+                root,
+                File(outDir, "SnipSnap Shelf $stamp.zip"),
+                overwrite = true,
+                extras = extras,
+            )
+        } finally {
+            expansions.delete()
+        }
     }
 
     /** What [land] brought home: the kits as shelf entries, what was skipped with the reason, and the presets a backup carried. */
-    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int)
+    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int, val expansions: Int = 0)
 
     /**
      * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
@@ -415,8 +448,8 @@ class KitShelf(val root: File) {
      */
     fun land(file: File, displayName: String): Landing {
         root.mkdirs()
-        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
-        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets)
+        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root, expansions = expansionStore())
+        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets, landed.expansions)
     }
 
     /**

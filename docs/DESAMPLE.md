@@ -71,10 +71,15 @@ noise.
   off. It refuses a pad the de-sample is no longer on top of (never
   de-sampled, pedals, a treatment or a print over it, or a later
   replacement that cleared the stamp), a pad with soft hits on, and a
-  pad whose bin no longer holds the take;
+  pad whose bin no longer holds the take. Since 2026-11-02 the forward
+  door refuses a printed pad (a board or AQUARIUM over it), touching
+  nothing: "REMOVE WIDE BEFORE DE-SAMPLE.". The patch would take
+  the print's place in the recipe, and REMOVE could not bring the
+  print's source back;
 - the PAD SHEET's DE-SAMPLE card on the phone: MAKE SYNTH, and since
   2026-11-01 an UNDO in its header that runs the same `undesamplePad`
   (`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
+  MAKE SYNTH toasts the same print refusal on the tap, before the search.
 
 ## Bounds
 

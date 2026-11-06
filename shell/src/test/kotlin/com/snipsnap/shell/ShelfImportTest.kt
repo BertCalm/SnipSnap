@@ -150,6 +150,21 @@ class ShelfImportTest {
     }
 
     @Test
+    fun `a kit landing beside its own original gets no copy of its id`() {
+        val shelf = File(temp, "shelf-ids")
+        val original = makeKit(shelf, "ALPHA")
+        val id = com.snipsnap.kit.KitIds.ensure(original)
+        // A shelf backup carries kit.json whole: landing it on the same shelf would clone the id.
+        val backup = File(temp, "ids.zip")
+        KitBackup.backup(shelf, backup)
+        val landed = ShelfImport.land(backup, "ids.zip", shelf)
+        val copy = landed.kits.single().second
+        assertEquals("ALPHA 2", copy.name)
+        assertEquals(id, com.snipsnap.kit.KitIds.read(original), "the original keeps its id")
+        assertTrue(com.snipsnap.kit.KitIds.read(copy) != id, "the copy is a new kit, not a second member under the same id")
+    }
+
+    @Test
     fun `a backup lands every kit it holds`() {
         val source = File(temp, "src2")
         makeKit(source, "ALPHA")

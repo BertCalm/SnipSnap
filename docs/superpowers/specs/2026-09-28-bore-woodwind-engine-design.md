@@ -1079,7 +1079,9 @@ plumbing:
   LOOP regardless (`Classifier.kt:72, :137`), so a LOOP is filed by name,
   as SIREN's is (`Siren.kt:176-177`).
 
-**The held keygroup (round two).** MAKE INSTRUMENT is gated to RESIN and
+**The held keygroup (round two).** *(Superseded: built on 2026-11-06 as `BoreKeys` and `BorePadMaker`, each zone the LOOP's
+own held note closed by Round 1.7's blend moved to the loop's end, not by a seam; see "R2: the held keygroup, as built" at the
+end.)* MAKE INSTRUMENT is gated to RESIN and
 SIREN (`SynthScreen.kt:583, :619-621, :1083-1087`) because each closes
 its own loop. `Keys.borePad(voice, macros, midi, attackSeconds,
 cancelled): KeyNote` is `resinPad`'s body (`Keys.kt:216-259`):
@@ -2409,6 +2411,531 @@ test is blind to the waveform still settling, and it was the correlation of the 
 - *The turn, the level and the join.* No rotation, no levelling, a junction a frame late, a junction read at frame 0 (`the rotation turns the loop onto a crossing`, `cutLoop puts its pieces together as the join reports`, `a LOOP closes by a blend`).
 - *The refusals.* `checkJoin` accepting everything, ignoring the correlation floor alone, ignoring the dip limit alone; `renderLoop` not calling `checkJoin`; `blendDipDb` reading zero; the floor at 0; the dip limit at 6 dB (`a join that does not hold is refused by name`, `renderLoop refuses a real loop at the thresholds it is given`, `the dip measure reads a dip in the blend`, `a stretch cut while the waveform still settles does not join`).
 - ***Survived: the margin.*** `usableEnd` without `LOOP_MARGIN_SECONDS` leaves all 59 tests green. No corner comes near the end of the held note (the stretch, the blend and the margin end at about 3.1 s of 4.45), so the margin guards a case nobody has met: `loopStart`'s too-late refusal is tested with hand-picked ends, and how `renderLoopMeasured` computes `usableEnd` is not tested at all.
+
+## R2: OVERBLOW, as built (2026-11-04)
+
+*Redesigned the same day: the knob no longer sets when the note cracks but how rough the crack is, in three candidate flavours; see "The redesign: the knob is the rasp" at the end of this section.*
+
+The owner asked for BORE's full round two on 2026-11-04 and chose **OVERBLOW** for the sixth macro over VIBRATO. The plan then
+went to research first (`2026-11-04-bore-r2-research.md`, which measured both mechanisms in a Python harness). The owner read it and
+said "proceed as recommended". This round builds what the research recommended: OVERBLOW on FLUTE only, as a crack whose moment
+the knob sets. Nothing here has been heard.
+
+**What shipped.**
+
+- **The knob.** `Bore.macrosFor(FLUTE)` gains `OVERBLOW`, last, default 0. SAX does not list it: the reed would need a register
+  vent, which the research measured as an analogy and this round does not build, and a knob that does nothing is not offered. A
+  SAX patch naming OVERBLOW is refused by `BorePatch`, and `settled` drops the key for SAX as it drops any unknown one.
+- **When, not how far.** `Bore.crackFrame` puts the crack at `(1 - OVERBLOW)` of the way through the blown part of the note (the
+  attack and the held breath): a little OVERBLOW cracks a long note near its end, a half way through, and 1 from its first sample, a
+  note played in the upper register throughout. It is a time inside the gate and never a length, so `renderFrames` and
+  `drumClassFor` do not move (tested).
+- **The crack.** At that sample the jet's transit time glides from `JET_RATIO` (0.5 of a period) to `OVERBLOW_JET_RATIO` (0.25)
+  under a raised cosine `OVERBLOW_RAMP_SECONDS` (5 ms) long. Nothing between the two is held: the research measured that region as
+  a pitch pull (up to 1.7 semitones sharp) and, at C5 and C6, an unstable tone, not a sound worth a knob's travel.
+- **The crack's seed.** At the same sample a short burst at the octave's own frequency goes into the bore (`OVERBLOW_SEED` 0.3 over
+  `OVERBLOW_SEED_PERIODS` 8 octave periods under a raised cosine), the flute's counterpart of the reed's tongue seed. With the jet at
+  a quarter period the octave is the only stable state, and the seed is what gets a note already sounding there quickly.
+- **LIP's floor.** An overblown FLUTE plays its LIP at `OVERBLOW_LIP_FLOOR` (0.35) or above, from its first sample, for the jet's
+  offset and the bore's bell alike (below, "things that did not work", says why both and why from the first sample).
+- **The pitch jumps.** The owner's question was whether an overblown note jumps to the upper register or stays on the key. The
+  answer is the jump, an octave above TUNE's note, because that is the gesture. TUNE stays the fingering.
+- **A held note never cracks.** `Bore.held` sets the knob to 0 for `renderLoopMeasured`, so HOLD's top step (the LOOP) plays the
+  note uncracked. `LoopPadMaker` builds BORE FLUTE zones from the patch at HOLD's top step, moved to each zone's note by
+  `SynthRoot`, so every keygroup zone stays on its key (`BoreOverblowKeysTest`, in `:shell`).
+- **SCRAMBLE never rolls it.** The five other macros are drawn from exactly the random stream they were drawn from before (frozen
+  by value), and OVERBLOW keeps the value SCRAMBLE starts from: 0 from the defaults and every factory preset, the patch's own when
+  it scrambles near one.
+- **The presets.** All eight FLUTE presets name `OVERBLOW` 0, because `BorePresetsTest` wants every preset to name every knob. Their
+  sound is frozen.
+- **The proof that 0 is nothing.** `BoreFrozenSoundTest` landed first, in its own commit, with hashes taken from the untouched
+  engine: the SHA-256 of the samples of all sixteen presets, each voice's defaults and each voice's LOOP, and SCRAMBLE's rolls of the
+  five original macros from fixed seeds. With OVERBLOW in, every one is unchanged, and so are `ObbligatoCompatibilityTest`'s hashes of
+  OBBLIGATO's FLUTE and SAX players. The crack's code sits behind a branch (`crackAt` null) that a knob at 0, an absent key or a NaN
+  never enters, and the default path's float arithmetic is the same expression on the same values.
+- **The audition.** `BoreAuditionGenerator` opens with an OVERBLOW section: FLUTE's seven one-shot presets at G4 and G5 with the
+  knob at 0, .25, .5, .75 and 1 (70 clips), each clip's description carrying where that very note cracks and the pitch its octave
+  settles on. `--args="<dir> quick"` writes that section alone.
+
+**Measured (Kotlin, `BoreOverblowTest`, the raw bore wave):**
+
+| | |
+|---|---|
+| the octave at OVERBLOW 1, 27 corners (TUNE 0 / 0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 0.6 / 1) | -2.2 to +5.8 cents; the old fundamental 48 to 77 dB under the octave; raw rms from 0.421; aperiodicity at most -22.8 dB (a tone, not breath) |
+| by LIP | LIP 0 (floored to 0.35) +2.5 to +5.8; LIP 0.5 +1.2 to +2.9; LIP 1 -2.2 to -0.3 |
+| a crack mid-note, OVERBLOW 0.5, 18 corners (TUNE 0 / 0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 1; 2.4 s of breath, the crack at 1.22 s) | the low register in tune before it; the octave leads at most 0.08 s after it; from the second 0.1 s window on, every corner reads -3 to +6 cents; settled, -2.3 to +5.8 |
+| when the octave takes over at C5 (the crack, then the first 10 ms window of a sounding note where the octave outweighs the fundamental) | OVERBLOW 0.2: 1.632 s, 1.670 s (0.04 after); 0.4: 1.224, 1.255 (0.03); 0.6: 0.816, 0.870 (0.05); 0.8: 0.408, 0.440 (0.03); 1: 0, 0.060. Without the seed: 0.31, 0.12, 0.16, 0.20 and 0.06 s after |
+| the largest sample step around the crack, against the note's own steepest ordinary step (99.9th percentile) | 1.06 at C4, 1.02 at C5, 1.00 at C6; the research's instant switch (Python) read 1.34 and 1.39 at C5 and C6 |
+| every overblown corner (OVERBLOW 0.5 and 1, TUNE 0 / 0.5 / 1, LIP 0 / 1, BREATH 0 / 1, CHIFF 1, HOLD 0.98) | finite; raw peak under 3; speaks at the end of the note; the finished render in -1..1, at the loudness target, DC under 0.01 |
+| a LOOP at OVERBLOW 0.3 and 1 | sample for sample the LOOP at 0 |
+
+**Things that did not work, kept so they are not tried again.**
+
+- **LIP floored for the jet's offset only.** The research found the silent corner (LIP 0, BREATH 0) at the jet's offset, and the
+  first build floored that alone, gliding it with the transit time so the low register kept the patch's LIP. At LIP 0 and BREATH 0
+  the crack still failed: mid-note at C4 the note settled 458 cents under the octave (a wrong mode near 1.54 times the note), and at
+  OVERBLOW 1 the old fundamental still led the octave by 8.7 dB. LIP also sets the bore's bell as a multiple of the note, and at
+  LIP 0 with BREATH 0 the bell sits at 1.8 times the note, under the octave it has to carry. The Python harness had floored LIP for
+  both; the Kotlin had floored one. Both are floored now. The bell is part of the loop's tuning budget and is built once with the
+  loop, so the floor holds from the first sample, not from the crack.
+- **A crack with no seed.** With the jet alone switched, a crack at C4 with the hardest breath wandered in a wrong mode for 0.97 s
+  before the octave took over (the engine; pitch read every 0.1 s after the crack: +342, +399, +372, ... +520, -250, +2 cents from
+  the octave). In the harness the same corner took 0.4 to 1.25 s over five crack moments: how long depends on where in its cycle
+  the note is when the jet moves. A seed of 0.3 over eight octave periods brought every one of those moments under 0.1 s (0.6
+  settled at once), and the seed shipped at 0.3.
+- **The low register's speaking floor for the octave.** The octave is a quieter wave in the bore: raw rms from 0.421 against the
+  low register's floor of 0.5 in `BoreTest`. The test's floor for the upper register is 0.15, with an aperiodicity bound of -15 dB
+  so that "speaks" means a tone and not breath.
+- **The test's first octave detector** fired on the attack's breath, 5 ms in, before any note sounded; it now reads only windows
+  where the note is under way.
+
+**What it cost, said plainly.**
+
+- **Not heard.** Whether a crack sounds like a gesture or like a mistake is the audition's question, and so is whether an octave
+  this clean (the old fundamental 48 dB or more under it) is a flute's overblown octave or a whistle.
+- **A step in the knob for a low LIP.** A patch with LIP under 0.35 sounds brighter at any OVERBLOW above 0 than at 0, from its
+  first sample, because the floor holds for the whole overblown note. A patch at LIP 0.35 or above has no such step.
+- **A low OVERBLOW on a short note.** The crack comes near the end of the note, and on a stab (HOLD 0, 0.3 s of breath) a knob of
+  0.25 cracks 0.08 s before the release: a flick at the end, or nothing (estimated from the C5 numbers, not measured on a stab).
+  The audition's clips of 0.9 to 1.2 s report "too near the end to settle" at 0.25. The knob is meant for notes of a second or more.
+- **The seed is a sound.** A 0.3 burst at the octave for eight octave periods is an accent at the crack, the way the reed's tongue
+  seed is an accent at the attack. Whether it reads as the crack or as a blip is the audition's question.
+- **The root.** `SynthRoot` and anything that reads a BORE pad's note from TUNE (in-key, SPREAD) still read the note the one-shot
+  starts on; after the crack it plays an octave up. Keygroup zones are not affected (they never crack).
+- **The pitch.** The octave is not pinned: it plays -2.3 to +5.8 cents from TUNE's octave, sharp at a loose lip and flat at a tight
+  one, inside the 7 cents the shipped FLUTE allows itself across its knobs. LIP moves it by about 8 cents, so a pin by LIP is the
+  next step if the ear asks for one.
+- **No kit pad and no preset overblows.** The kit is unchanged; a cracked note is the player's to ask for.
+- **The vibrato** retunes the bore and not the jet's transit time, as it always did; on an overblown note that is untested by ear.
+
+**Why it is built this way.**
+
+- **The knob is a time because the physics is a switch.** The jet's transit time either holds the low register or the octave; the
+  values in between pull the pitch sharp and then break. A knob that swept through them would spend most of its travel on a sound
+  nobody wants. Setting *when* the note breaks keeps every setting on one of two stable sounds and puts the crack itself, the one
+  interesting moment, under the player's hand.
+- **The glide is five milliseconds because a register needs tens of periods to grow.** Five milliseconds is about one period at C4,
+  so no register between the two can start, and it takes the step at the crack down to the note's own steepest.
+- **The seed is there because the moment is random.** The octave is the only stable state once the jet is at a quarter period, but a
+  note already sounding gets there in its own time, which depends on where in its cycle the crack falls: up to 1.25 s of a wrong
+  mode in the harness. The reed already starts its notes with a seed at its own pitch; the crack is a new note's start in the middle
+  of an old one, so it gets one too, at the octave.
+- **LIP is floored for the whole note because the bell cannot move.** The bell is inside the loop and its delay is charged to the
+  tuning budget when the loop is built. Floored from the first sample, the octave speaks at every corner; floored only at the crack,
+  it could not carry the octave at all.
+- **A held note never cracks so a key always plays its note.** OVERBLOW is a moment in a one-shot. A LOOP or a keygroup zone is a
+  held note, and a zone that jumped an octave mid-hold would sit on the wrong key.
+- **The frozen hashes went in first** because OBBLIGATO and every saved recipe depend on the default path not moving. The change is
+  proved to be nothing at 0, sample for sample, rather than argued to be.
+
+**Verification.** `./gradlew -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs=-Xmx4g --continue :synth:test
+--tests 'com.snipsnap.synth.Bore*' --tests 'com.snipsnap.synth.ObbligatoCompatibilityTest' --tests
+'com.snipsnap.synth.DeterminismTest' --tests 'com.snipsnap.synth.PresetsTest' --tests 'com.snipsnap.synth.PadRecipeTest'
+:shell:test --tests '*ConventionTest' --tests '*PersonalityTest' --tests '*LoopPadMakerTest' --tests '*SynthRootTest' --tests
+'*BoreOverblowKeysTest'`, on the code as committed: exit 0, 178 synth tests (`BoreFrozenSoundTest` 3, `BoreOverblowTest` 11,
+`BoreTest` 51, `BorePresetsTest` 10, `BorePlayerTest` 5, `BoreLoopFuzzTest` 1, `DeterminismTest` 63, `ObbligatoCompatibilityTest`
+1, `PadRecipeTest` 25, `PresetsTest` 8) and 110 shell tests, none failing. `BoreFrozenSoundTest`'s hashes were taken by running it
+on the untouched engine; its control shows a thousandth of LIP changes a hash. The audition ran once in quick mode
+(`:synth:generateBoreAudition --args="<dir> quick"`): 70 clips, the manifest and the page. Not run: the whole suite, the kit
+generator (no kit pad changed), anything under `app/` (no SDK here; no app change is needed: the SYNTH screen builds FLUTE's
+sliders from `macrosFor` and merges every saved FLUTE over the voice's defaults).
+
+**Ledger.**
+
+- **Verified** (read or run on this branch): the crack's branch is never entered at OVERBLOW 0, absent or NaN (`crackFrame` null,
+  tested); every frozen hash and `ObbligatoCompatibilityTest` unchanged; the LOOP at OVERBLOW 0.3 and 1 equals the LOOP at 0;
+  `LoopPadMaker`'s zone of a cracked FLUTE equals the uncracked one's; the SYNTH screen keeps one macro map per engine and voice and
+  merges every preset over the voice's defaults (`SynthScreen.kt`, the invariant written when PUNCH was added), so FLUTE gets a sixth
+  slider and an older saved FLUTE loads at OVERBLOW 0 with no app change.
+- **Measured** (Kotlin): the table above.
+- **Proposed** (shape values, not set by ear): `OVERBLOW_JET_RATIO` 0.25 (the octave condition, half of 0.5), `OVERBLOW_LIP_FLOOR`
+  0.35 (the research's lowest LIP that speaks everywhere), `OVERBLOW_RAMP_SECONDS` 0.005, `OVERBLOW_SEED` 0.3 and
+  `OVERBLOW_SEED_PERIODS` 8 (the smaller of the two seeds that worked in the harness), and the linear map from the knob to the
+  moment of the crack.
+- **Heard:** nothing.
+
+### The redesign: the knob is the rasp (2026-11-04)
+
+The owner, after the first build: "instead of the parameter being how early or late the crack happens, we keep it close to the
+end and have the dial control rasp." Built the same day, with three candidate meanings of "rasp" behind one switch, because
+which one is right is a question for the ear. The owner chooses; the other two are then removed. Nothing here has been heard.
+Above, "When, not how far" and the timing rows of the table describe the first build and no longer hold; everything else does.
+
+**What changed.**
+
+- **The moment is fixed.** `Bore.crackFrame` leaves the note's last `OVERBLOW_TAIL_SHARE` (a quarter) of its blown part (the
+  attack and the held breath) overblown, and never less than `OVERBLOW_TAIL_MIN_SECONDS` (0.6 s), whatever the knob. The minimum
+  is FIGHT's longest crossing (0.3 s), the octave's settle after it (under 0.1 s with the seed) and about a fifth of a second of
+  the settled octave before the release. A note blown for less than 0.6 s is overblown from its first sample: a stab (HOLD 0,
+  about 0.34 s of breath) is all octave, with all of its rasp. Examples: CLEAN TONE at HOLD 0.8 cracks at 1.88 s of a 2.50 s
+  breath; BREATHY at its own HOLD at 0.31 s of 0.91 s; a 4 s note keeps its last 1.01 s.
+- **The knob is the rasp,** in the flavour `Bore.OVERBLOW_RASP` names (`Bore.Rasp`, FIGHT until the owner chooses; the audition and
+  the tests render all three through an internal `render(voice, macros, flavour)`):
+  - **A, FIGHT, the registers fighting.** The jet's transit time crosses from half a period to a quarter over a time the knob
+    sets, from the clean crack's 5 ms at its bottom to `OVERBLOW_FIGHT_SECONDS` (0.3 s) at 1, instead of always in 5 ms. On the
+    way the low register is pulled sharp and, at low notes, a wrong mode about 2.3 semitones over the note sounds before the
+    octave wins. The crack's seed goes in where the crossing ends.
+  - **B, GROWL.** Once the jet reaches the octave, the mouth pressure is modulated at `OVERBLOW_GROWL_HZ` (31 Hz) by up to
+    `OVERBLOW_GROWL_DEPTH` (0.3) of itself at the top of the knob, rising in over 30 ms: a flutter in the level and the tone.
+  - **C, BREATH.** Once the jet reaches the octave, the jet's turbulence rises by up to `OVERBLOW_BREATH_EXTRA` (0.8) at the top
+    of the knob, on top of BREATH's own, rising in over 30 ms.
+- **Unchanged:** OVERBLOW 0, absent or NaN never builds the crack, so `BoreFrozenSoundTest` and `ObbligatoCompatibilityTest` hold;
+  the LIP floor; the octave jump; a LOOP and every keygroup zone play the note uncracked; SCRAMBLE never rolls the knob; the
+  presets sit at 0.
+- **The audition** section is now the A/B: CLEAN TONE at HOLD 0.8 and BREATHY at its own length, off, then each flavour at .25, .5
+  and 1, each clip described with what was measured on it. `--args="<dir> rasp-ab"` writes the same 20 clips as WAVs named for the
+  A/B ("CLEAN_TONE A-fight 0.5.wav", "CLEAN_TONE 0 off.wav") with a notes file.
+
+**Measured (Kotlin, `BoreOverblowTest`, the raw bore wave, LIP 0.5, BREATH 0.6, 2 s of breath).** Settle: seconds from the crack
+until the note stays within 10 cents of the octave. After the crack: the energy between the octave's harmonics over the 0.4 s
+after the crack against the energy at them. Settled: the same over the octave's last 0.35 s. Level: how much the level moves
+there (spread over mean, on windows of two octave periods). End: the octave's pitch over the last 0.2 s before the release.
+
+Each cell: settle (s) / after the crack (dB) / settled (dB) / level / end (cents).
+
+| flavour, note | knob 0.25 | knob 0.5 | knob 1 |
+|---|---|---|---|
+| FIGHT, C4 | 0.16 / -9.7 / -34.7 / 0.01 / +1.2 | 0.20 / +0.1 / -29.1 / 0.07 / +1.4 | 0.36 / +33.0 / +12.0 / 0.17 / +1.7 |
+| FIGHT, C5 | 0.12 / -15.1 / -33.2 / 0.01 / +2.2 | 0.20 / -2.6 / -32.8 / 0.01 / +2.2 | 0.32 / +27.6 / +5.8 / 0.15 / +2.2 |
+| FIGHT, C6 | 0.12 / -16.5 / -29.9 / 0.01 / +2.5 | 0.20 / -3.9 / -30.3 / 0.01 / +2.6 | 0.32 / +23.5 / +2.3 / 0.15 / +2.5 |
+| GROWL, C4 | 0.08 / -24.6 / -34.6 / 0.04 / +1.8 | 0.08 / -24.5 / -34.6 / 0.07 / +1.7 | 0.08 / -24.4 / -34.6 / 0.16 / +1.4 |
+| GROWL, C5 | 0.04 / -30.4 / -32.6 / 0.05 / +2.3 | 0.04 / -30.4 / -32.7 / 0.11 / +2.4 | 0.04 / -30.8 / -33.4 / 0.25 / +2.6 |
+| GROWL, C6 | 0.04 / -30.2 / -31.0 / 0.06 / +2.4 | 0.04 / -30.1 / -30.8 / 0.13 / +2.6 | 0.04 / -30.2 / -30.9 / 0.33 / +3.0 |
+| BREATH, C4 | 0.08 / -24.5 / -31.0 / 0.01 / +1.5 | 0.08 / -24.2 / -28.7 / 0.01 / +1.2 | 0.08 / -23.5 / -26.2 / 0.02 / +0.7 |
+| BREATH, C5 | 0.04 / -28.2 / -28.7 / 0.01 / +2.1 | 0.04 / -26.4 / -26.5 / 0.02 / +2.0 | 0.04 / -24.2 / -24.1 / 0.03 / +1.6 |
+| BREATH, C6 | 0.04 / -26.3 / -26.6 / 0.02 / +2.4 | 0.04 / -23.7 / -24.0 / 0.03 / +2.2 | 0.04 / -21.1 / -21.6 / 0.05 / +1.8 |
+
+Each flavour's own measure rises with the knob at every note: FIGHT's settle and the energy off the octave after the crack, GROWL's
+level movement (0.04 to 0.16 at C4, 0.06 to 0.33 at C6), BREATH's energy between the settled octave's harmonics (+4.6 to +5.0 dB
+from 0.25 to 1). At FIGHT's top the "settled" window still holds the end of the 0.3 s crossing, which is why it reads high there;
+the octave at the end is in tune all the same.
+
+At the end of the note, over 27 corners (TUNE 0 / 0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 0.6 / 1):
+
+| flavour, knob | the octave at the end | the old fundamental under it | raw rms from | aperiodicity at most |
+|---|---|---|---|---|
+| FIGHT 0.25 | -2.3 to +5.9 cents | 44 dB or more | 0.422 | -22.6 dB |
+| FIGHT 1 | -2.4 to +5.8 | 44 | 0.420 | -20.1 |
+| GROWL 0.25 | -2.5 to +5.9 | 45 | 0.423 | -22.7 |
+| GROWL 1 | -2.3 to +6.4 | 44 | 0.376 | -21.8 |
+| BREATH 0.25 | -2.4 to +5.8 | 42 | 0.444 | -19.9 |
+| BREATH 1 | -2.3 to +6.1 | 37 | 0.393 | -16.1 |
+
+Every corner of every flavour is also finite, bounded (raw peak under 3) and speaking at the end of the note at OVERBLOW 0.5 and 1
+with CHIFF 1 and HOLD 0.98, and its finished render is clean at the loudness target. The A/B clips' own readings (the notes file
+beside them): CLEAN TONE settles on the octave 0.08, 0.16 and 0.28 s after the crack under FIGHT at .25, .5 and 1, its level moves
+0.08, 0.17 and 0.35 under GROWL, and its octave ends at +1.7 to +2.1 cents in every clip.
+
+The step at the crack against the note's own steepest ordinary step, knob 0.25: FIGHT 0.97, 1.01, 1.03; GROWL 0.97, 1.01, 1.07; BREATH 0.97, 1.01, 1.07 (C4, C5, C6), an ordinary step of the note in each.
+
+**Things that did not work, kept so they are not tried again.**
+
+- **A jet wavering across the boundary** (the harness, before FIGHT was built): the jet's transit time swung across every
+  measured break point at 9 Hz, to make the two registers trade places. They did not: once a note reached the octave it held it
+  at transit times where a note started fresh would play the low register (the model is bistable there), and at C4 it sat on the
+  sharp wrong mode until the swing ended. A fight that trades registers back and forth is not something this jet does, so FIGHT
+  is the slow crossing.
+- **The harness's forecast for FIGHT** was rough at C4 and nearly clean at C5 and C6 (there the octave took over at once in the
+  harness). The engine measured it rough at all three notes: the settle and the energy off the octave rise with the knob at each.
+- **BREATH at 0.4 extra**, the first guess: on the settled octave in the harness it added about 6 dB between the harmonics; 0.8
+  adds about 8.5 dB, into a breathy flute's range, so the top of the knob is clearly breathier. And read over the 0.4 s right after
+  the crack, BREATH barely moved (0.4 dB at C4), because the crack's own settle filled that window; it is read on the settled
+  octave.
+- **A settle reading at 10 cents on a note with vibrato** read CLEAN TONE at HOLD 0.8 (about 16 cents of vibrato) as never
+  settling; the audition's descriptions read within 40 cents, the tests run without vibrato.
+- **The test's "the octave leads" check** compared the octave's level with 0 dB exactly; the measure adds 1e-12 inside its
+  logarithm, so every corner failed though the octave led by 44 dB or more.
+
+**What it cost, said plainly.**
+
+- **Not heard,** any of it. The questions for the ear: which flavour is "rasp", and how much of it the knob's top should be.
+- **FIGHT is a pitch pull, not two notes at once.** It sounds as a glide or a squeal into the crack (a sharp low register, or a
+  wrong mode, then the octave). Whether that reads as registers fighting is the ear's call.
+- **GROWL is a regular 31 Hz modulation** the engine applies to the pressure, not a modelled throat: deterministic, one rate.
+- **BREATH thins the octave:** at the top of the knob the octave's raw level drops by about a third in the harness (0.98 to
+  0.69), and the level stage takes it back.
+- **A stab is all crack.** Under 0.6 s of breath the whole note is overblown, so the rasp is the whole note.
+- **The step at 0.** Any OVERBLOW above 0 cracks the note (and floors LIP), so the knob's bottom is a jump from a plain note to a
+  clean crack; the rasp starts from there.
+
+**Why it is built this way.**
+
+- **The crack sits near the end because it is the note's ending gesture.** The owner asked for it close to the end; a quarter of
+  the breath keeps it there on a long note, and the 0.6 s minimum keeps the roughest crossing and a settled octave inside the
+  note, so every setting still lands on the octave before the release.
+- **Three flavours behind one switch, each measured by its own yardstick,** because "rasp" names three different things a player
+  does (pushing through the break, growling, blowing breathy) and only the ear can say which one this knob is. Each is monotone in
+  its own measure, and each ends on the octave in tune, so whichever is chosen needs no further engineering.
+- **The seed goes in where the crossing ends,** because the octave only becomes the jet's stable state there; seeded earlier,
+  in the middle of FIGHT's crossing, it would be fighting the jet instead of finishing the crack.
+
+**Verification (the redesign).** `:synth:test` with `--tests 'com.snipsnap.synth.Bore*'`, `ObbligatoCompatibilityTest`,
+`DeterminismTest`, `PresetsTest` and `PadRecipeTest`, with `:synth:generateBoreAudition --args="<dir> rasp-ab"` in the same build:
+exit 0, 179 synth tests, none failing (`BoreOverblowTest` 12, the rest as before), and the 20 A/B clips written. Then `:shell:test`
+with `ConventionTest`, `PersonalityTest`, `LoopPadMakerTest`, `SynthRootTest` and `BoreOverblowKeysTest`: exit 0, 110 tests, none
+failing. Two earlier attempts at one combined build ended when the Gradle daemon was killed for memory while another agent's
+build ran beside it; that was not a test failure, and the split builds above are the record.
+
+**Ledger (the redesign).**
+
+- **Verified** (run on this branch): the crack's branch is never entered at 0, absent or NaN, in every flavour; every frozen hash
+  and OBBLIGATO's unchanged; the crack's moment is the same at every knob setting; a LOOP at any OVERBLOW is the LOOP at 0 in
+  every flavour; every flavour renders the same twice.
+- **Measured** (Kotlin): the tables above. **Measured** (Python harness): the wavering jet's failure, BREATH's 0.4 and 0.8.
+- **Proposed** (shape values): `OVERBLOW_TAIL_SHARE` 0.25, `OVERBLOW_TAIL_MIN_SECONDS` 0.6, `OVERBLOW_FIGHT_SECONDS` 0.3,
+  `OVERBLOW_GROWL_HZ` 31, `OVERBLOW_GROWL_DEPTH` 0.3, `OVERBLOW_BREATH_EXTRA` 0.8, `OVERBLOW_RASP_RISE_SECONDS` 0.03, and FIGHT as
+  the default until the owner picks.
+- **Heard:** the A/B, by the owner on 2026-11-06: "Growl, 1 is a little weak" (below: GROWL shipped, its top raised; FIGHT and
+  BREATH removed).
+
+#### Heard (2026-11-06): GROWL, its top raised
+
+**Heard.** The owner listened to the 20 A/B clips (CLEAN TONE and BREATHY, each flavour at .25, .5 and 1, and the knob off) on a
+listening page and said: "Growl, 1 is a little weak." That is the first listen to anything in OVERBLOW. It chooses the flavour
+and says the top of the knob is not strong enough. Everything else about the crack (where it falls, the octave, the seed) was
+heard only through these clips and drew no comment.
+
+**What changed.**
+
+- **GROWL ships alone.** The switch, FIGHT and BREATH are gone, with their constants (`OVERBLOW_FIGHT_SECONDS`,
+  `OVERBLOW_BREATH_EXTRA`), their code paths and their tests. Every crack is the 5 ms glide with the seed. Once the jet reaches the
+  octave, the mouth pressure flutters at `OVERBLOW_GROWL_HZ` (31 Hz), rising in over 30 ms.
+- **The top is deeper, the quarter is where it was.** Depth = `OVERBLOW_GROWL_DEPTH` (0.4, was 0.3) times OVERBLOW to the power
+  `OVERBLOW_GROWL_CURVE` (1.2, was linear). At 0.25 that is 0.076, the depth the owner heard there (0.075). At 0.5 it is 0.174,
+  at 0.75 0.283, and the old top's 0.3 now sits at OVERBLOW 0.787. ARCO's BUZZ recalibration curved its knob with a power law in
+  the same way.
+- **Depth alone was enough; no second flutter was added.** In the Python harness, depth 0.45 gave 1.7 to 1.9 times the old top's
+  waver, but left the softest corner (BREATH 0, LIP at its 0.35 floor) at a raw rms of 0.23. Depth 0.6 dropped that corner out at
+  C4 and C5. A subharmonic flutter (15.5 Hz at 0.6 of the depth) on top of the old 0.3 gave only about 1.4 times, so the growl's
+  character was left as the owner heard it, a single 31 Hz flutter, only deeper.
+- **Unchanged:** the crack's moment (the last quarter of the breath, at least 0.6 s), the octave, the LIP floor, the seed, a LOOP
+  and every keygroup zone uncracked, SCRAMBLE never rolling the knob, the presets at 0, and OVERBLOW 0 never building the crack.
+- **The audition** section and its `growl-v2` mode: CLEAN TONE at HOLD 0.8 and BREATHY at its own length, off, at .25, .5, .75 and
+  1, and at the old top for comparison.
+
+**Measured (Kotlin, `BoreOverblowTest`, LIP 0.5, BREATH 0.6, 2 s of breath).** The level waver is the spread of the rms on windows
+of two octave periods, over its mean, from 0.4 s to 0.05 s before the release. The pitch is the octave's over the last 0.2 s.
+
+| note | knob 0.25 | 0.5 | 0.75 | 1 | the old top (0.787) | 1 against the old top |
+|---|---|---|---|---|---|---|
+| C4 | 0.037, +1.8 c | 0.086, +1.7 c | 0.151, +1.5 c | 0.229, +1.2 c | 0.161, +1.4 c | 1.42 times |
+| C5 | 0.054, +2.3 c | 0.129, +2.4 c | 0.235, +2.6 c | 0.373, +2.8 c | 0.253, +2.6 c | 1.47 times |
+| C6 | 0.064, +2.4 c | 0.157, +2.6 c | 0.306, +2.9 c | 0.520, +3.2 c | 0.334, +3.0 c | 1.56 times |
+
+The knob's quarter reads what the owner heard there (0.04, 0.05 and 0.06 in the A/B's measurement). Over 27 corners (TUNE 0 /
+0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 0.6 / 1):
+- At knob 1 the note ends on the octave within -2.2 to +6.1 cents, with the old fundamental at least 44 dB under it. The raw rms
+  is at least 0.292 against a floor of 0.15, and the aperiodicity at most -19.2 dB, a tone.
+- At 0.25: -2.5 to +5.9 cents.
+- The step at the crack is 0.97, 1.01 and 1.07 times the note's own steepest at C4, C5 and C6, at 0.25 and at 1 alike: no click.
+- Every corner at 0.5 and 1 with CHIFF 1 and HOLD 0.98 is finite, peaks under 3, speaks at the end of the note, and renders clean
+  at the loudness target.
+
+The owner's clips (the notes file beside them) read:
+
+| clip | level waver at 1 | at the old top | ratio |
+|---|---|---|---|
+| CLEAN TONE (HOLD 0.8) | 0.48 | 0.35 | 1.37 |
+| BREATHY | 0.28 | 0.18 | 1.56 |
+
+Every one of those clips ends on the octave at +2.1 cents (CLEAN TONE) or +2.9 to +3.2 cents (BREATHY).
+
+**What it cost, said plainly.**
+
+- **The new top, heard (2026-11-06).** "A little weak" asked for stronger, not for a set amount, so about one and a half times the old
+  waver was the brief's reading of it. The owner heard the old top beside the new on a listening page of the clips and said "New top
+  is good." HEARD: the top at knob 1 stands as built.
+- **The growl now dips the level harder.** At knob 1 the softest corner's raw rms is 0.292, against 0.42 at the old top. The level
+  stage takes the loss back. Deeper than 0.4 the softest corners begin to drop out (the harness), so this is near the ceiling for
+  a growl made from pressure alone.
+- **CLEAN TONE's ratio is the smallest (1.37), under the brief's 1.5.** Its note is B4 (TUNE 0.45) with a soft breath (0.3) and
+  about 16 cents of vibrato (HOLD 0.8). Neither the soft breath nor the vibrato is in the swept grid, so why its ratio is lower is
+  not measured. It is the clip to judge the new top by.
+- **FIGHT and BREATH are gone** from the code and the audition. The research and the A/B are their record.
+
+**Why it is built this way.**
+
+- **Deeper, not different, because the owner chose this sound.** He picked the growl and asked only for more of it. Making the
+  flutter deeper keeps the sound he chose; adding a second flutter would change its character, and the harness said it was not
+  needed.
+- **A power curve so the bottom of the knob does not move.** The owner heard the quarter of the knob and said nothing against it.
+  With a curve, all the extra depth goes into the top half (0.5 rises from 0.15 to 0.17, 1 from 0.3 to 0.4) and the quarter stays
+  at 0.075.
+- **0.4 and not more,** because 0.45 already left the softest corner at a quarter of its usual raw level, and 0.6 dropped it out.
+  The growl is a modulation of the breath that blows the octave; breathe too little at the trough and the octave stops.
+
+**Ledger (the growl).**
+
+- **Heard:** the owner, 2026-11-06, on the 20 A/B clips: "Growl, 1 is a little weak."
+- **Verified** (run on this branch): FIGHT, BREATH and the switch removed; OVERBLOW 0 changes nothing (`BoreFrozenSoundTest`,
+  `ObbligatoCompatibilityTest`); the knob's quarter at 0.075 and the old top at 0.787 (tested).
+- **Measured** (Kotlin): the tables above. **Measured** (Python harness): depth 0.45 and 0.6, and the subharmonic flutter.
+- **Proposed** (not yet heard): `OVERBLOW_GROWL_DEPTH` 0.4 and `OVERBLOW_GROWL_CURVE` 1.2.
+
+## R2: the held keygroup, as built (2026-11-06)
+
+The owner asked for BORE's held keygroup with the breath attack ("start at the top of the list"). This round builds the research's
+§3 (`2026-11-04-bore-r2-research.md`) with its default decisions. It started from a draft parked on `bore-held-keygroup-wip`
+(`0d5c0b8c`), which was never compiled and predates OVERBLOW; the draft was ported by hand onto today's `Bore.kt` (after OVERBLOW
+and the growl), then compiled and tested. Nothing here has been heard.
+
+**What shipped.**
+
+- **One held note for both cuts.** `Bore.renderLoopMeasured`'s held note is pulled out into `Bore.heldNote(voice, m)` (the one-shot's
+  blow with its gate stretched to `LOOP_HELD_SECONDS`, HOLD at `LOOP_HOLD`, conditioned like the one-shot, not levelled) and
+  `Bore.heldUsableEnd(x, m)`. The blend and the length search's bounds are named once, as `Bore.LOOP_BLEND_FRAMES`,
+  `LOOP_LENGTH_LOW_FRAMES` and `LOOP_LENGTH_HIGH_FRAMES`, and `cutLoop` reads them. The LOOP makes the same calls in the same order,
+  so it is unchanged: `BoreFrozenSoundTest`'s hashes, `ObbligatoCompatibilityTest` and every LOOP test pass as before.
+- **A held note never cracks, in one place.** `heldNote` applies `Bore.held` itself (OVERBLOW as 0). The draft predates OVERBLOW and
+  did not. Ported as it was, a zone of an overblown FLUTE would crack inside its loop; with that line taken out, such a zone is
+  refused ("settles too late (3.50 s)"), which is how the guard sweep below caught it.
+- **The zone** (`BoreKeys`, in `:synth`). Each zone is that held note from its first sample. The reference block starts where Round
+  1.7's stretch does (`loopStart`: settled, and no sooner than 1.5 s), the loop starts 0.3 s later, and its length comes from
+  `bestLength` with the LOOP's arguments. The loop's last 0.3 s fade into the 0.3 s just before the loop start (`assembleTail`: cos t
+  / k on the loop's own wave, sin t / k on the audio before the loop start, t at (i + 1) / blend of a quarter turn, k as in
+  `assembleLoop`). So the file's last frame is the loop start's own predecessor, and everything before the blend, the attack and
+  the first pass into the loop included, is the held note untouched. A join that does not hold is refused by name through
+  `Bore.checkJoin`. Then one gain: the loop region at the melodic target, unless that would take the peak over 0.99, in which case
+  the peak sets it.
+- **The layers.** Two per zone, soft first: 0.45 of the patch's BREATH (soft) and the patch's BREATH (hard), in velocity windows
+  1..63 and 64..127.
+- **The zones.** Nine per voice, every minor third across TUNE's two octaves with both ends included, the draft's `padMidis`: FLUTE
+  C4 to C6 (60, 63, ..., 84), SAX C3 to C5 (48, 51, ..., 72). That is each voice's whole range. The outer zones reach nine semitones
+  past the ends, and the package writer stretches them to the whole keyboard, as it does for every held instrument
+  (`OneNote.writePackage`'s `spanKeyboard`).
+- **The maker** (`BorePadMaker`, in `:shell`), in `BellowsPadMaker`'s shape: `Spec(patch, releaseSeconds)`, RELEASE 0.1 to 1.5 s
+  (default 0.6), `supports` (FLUTE and SAX; a voice added later is not offered until its zones are measured), `spec`, `zoneMidis`
+  (the patch's own TUNE does not move them), `renderZone` (two layers, soft first), `assemble`, `export` through
+  `OneNote.writePackage`, and `preview`: the middle zone's hard layer held 6 s at velocity 0.8 through `InstrumentEngine`, then
+  released.
+- **BORE left `LoopPadMaker.QUALIFIED`**, whose zones had no attack. `BoreOverblowKeysTest` now tests `BorePadMaker`, so "keygroups
+  ignore OVERBLOW" stays pinned.
+- **The audition:** `:shell:generateBoreHeldAudition`, in `:shell` because `:synth`'s `generateBoreAudition` cannot see the maker.
+  Each voice's LOOP preset (FLUTE STEADY LOOP, SAX SOLO LOOP) at its lowest, middle and highest zone, held 8 s and released: the hard
+  layer, the soft layer, and the loop-only zone at the same note for the A/B, all at one velocity and raised by one common gain,
+  with `clips.txt` saying where each clip wraps.
+
+**Measured (Kotlin, `BoreKeysTest` unless named).** Every zone of both voices and both layers at the defaults, 36 renders:
+
+| | FLUTE soft | FLUTE hard | SAX soft | SAX hard |
+|---|---|---|---|---|
+| weakest correlation of the blended waves | 0.9987 (A5) | 0.9978 (A5) | 0.9954 (C3) | 0.9919 (C3) |
+| deepest dip in the blend | -0.06 dB | -0.06 dB | -0.24 dB (D#3) | -0.29 dB (D#3) |
+| widest step at the wrap, over the steepest ordinary step | 0.94 | 0.46 | 0.10 | 0.41 |
+| loop start | 1.80 s | 1.80 s | 1.80 s | 1.80 s |
+| loop length | 1.921 to 2.117 s | 1.922 to 2.118 s | 1.921 to 2.117 s | 1.921 to 2.115 s |
+| the loop's level against the target | 0.00 dB | 0.00 dB | C3 -1.00, D#3 -0.05, the rest 0.00 | C3 -2.36, D#3 -1.30, F#3 -0.17, the rest 0.00 |
+
+- **The corners** (`the corners hold their join`): BREATH 0 and 1, CHIFF 0 (with BREATH 0) and 1, and LIP 0 and 1 with BREATH 0 and
+  1, at the lowest and highest zone of each voice, each distinct layer breath once, 24 renders a voice. FLUTE: weakest correlation
+  0.9955, deepest dip -0.09 dB. SAX: 0.9898 and -0.49 dB. Every loop starts at 1.80 s, so the 1.5 s floor, not the settle, sets the
+  start everywhere measured, as in Round 1.7.
+- **The LOOP's own cycle** (`a zone's loop is the LOOP's own cycle`): at SAX C3 and F#4 and FLUTE C4 and C6 the zone's loop has
+  exactly the LOOP's length, correlation and settle frame, starts one blend after the LOOP's stretch, and dips within 0.05 dB of it.
+- **The wrap** (`the wrap`): on three real zones every frame before the blend is the held note times one gain, bit for bit, and the
+  last frame is the frame before the loop start, bit for bit. On a synthetic note the same, and the power holds for uncorrelated
+  waves where a linear fade dips. Through the player (`BorePadMakerTest`'s preview test) the key reads the file frame for frame and,
+  from its end, the loop start again.
+- **The attack** (`the attack is the note's own`): the zone's opening 0.3 s against the one-shot of the same key and breath at the
+  patch's own HOLD, at three zones a voice and both layers: 0.9932 to 0.9999. Against the one-shot three semitones off: -0.022 to 0.065.
+- **The layers** (`the soft layer is the same note blown softer`): the loops are at the same loudness (0.1834) wherever the ceiling
+  did not set the gain. The soft layer is darker at every zone. Its 1.5 to 8 kHz share is lower by 1.19 to 3.94 dB on FLUTE (mean
+  2.06) and by 0.07 to 1.01 dB on SAX (mean 0.64). Its spectral centroid is 7 to 29 Hz lower on FLUTE and 30 to 202 Hz lower on SAX.
+  The breath between its harmonics is 3.3 to 3.9 dB less on FLUTE and 2.5 to 5.5 dB less on SAX.
+- **The key:** every zone's loop plays within 7 cents of its key (the LOOP's own bound).
+- **The same twice, and what a zone ignores** (`a zone ignores OVERBLOW, TUNE and HOLD`): a zone rendered twice is the same bytes. A
+  FLUTE patch at OVERBLOW 1, TUNE 0 and HOLD 0.98, and a SAX patch at TUNE 1, HOLD 0 and OVERBLOW 1, make the zones the defaults
+  make; CHIFF 0.9 does not (the control). In `:shell`, `BoreOverblowKeysTest`: a cracked FLUTE's lowest zone is the uncracked one's,
+  both layers.
+- **Render time** (wall clock, one thread a render, 18 renders an instrument): the median 320 to 430 ms a layer and 5.9 to 8.3 s an
+  instrument over four runs. The low end is the test JVM alone on the machine; the high end is with three other test JVMs on its four
+  CPUs. The fastest layer took 299 ms; the slowest, 492 to 1,126 ms, is each JVM's first render, before the JIT has compiled the
+  loop. `BorePadMakerTest` made a whole FLUTE instrument in 5.7 and 8.7 s on two runs. A phone was not measured (the research
+  estimated 2 to 4 times).
+- **Size:** 3.72 to 3.92 s a sample, 9.0 MB (SAX) and 9.1 MB (FLUTE) an instrument at PCM_24. The export of FLUTE STEADY LOOP wrote
+  18 WAVs, 9.1 MB.
+- **The clips** (`clips.txt`): every held loudness is -15.6 dBFS except SAX C3, where the hard layer reads -17.9, the soft -16.6 and
+  the loop-only zone -17.0. So the loop-only zone of SOLO LOOP already sat 1.4 dB low at C3 (its own peaks reach the ceiling), and
+  the attack takes the hard layer 0.9 dB further.
+
+**The guards, broken one at a time.** Three were broken in one build, each aimed at a different test, and the first again alone
+with the synthetic check removed; the code was restored after each. The tail's weights one index early (the last frame no longer
+the loop start's predecessor) failed `the wrap`, and alone failed only it, at the real zones' exact check. The length search
+started one blend late failed `a zone's loop is the LOOP's own cycle`. `heldNote` without `held` failed `a zone ignores OVERBLOW,
+TUNE and HOLD` and `:shell`'s `BoreOverblowKeysTest`.
+
+**What it cost, said plainly.**
+
+- **Not heard.** The questions for the ear: whether the attack runs into the loop unnoticed, whether the blend's breath dip and the
+  exact repeat can be heard, and whether the two layers are far enough apart.
+- **The bottom of SAX sits low on its loop.** At C3 and D#3 the attack's overshoot sets the gain under the 0.99 ceiling, so the hard
+  layer's loop is 2.36 dB (C3) and 1.30 dB (D#3) under the target, and the soft layer's 1.00 dB at C3. At C3 the hard layer's loop is
+  1.36 dB quieter than the soft one's. The research predicted this (Round 1.7's +1.08 dB overshoot); this is its first measurement.
+  Not fixed: the rule is the loop at the target, then the ceiling. A limiter on the attack alone would lift the loop and change the
+  attack the player hears. That is proposed only, if the ear minds.
+- **SAX's layers are close in brightness.** 0.07 dB apart in the 1.5 to 8 kHz share at F#3 and 0.64 dB on average, against FLUTE's
+  2.06; they are 2.5 to 5.5 dB apart in breath and 30 to 202 Hz apart in centroid. What narrows SAX's brightness gap is not
+  measured. Whether 0.45 of the breath is soft enough is decision 7's question for the ear.
+- **At BREATH 0 the two layers are one note** (0.45 of 0 is 0), so a patch at BREATH 0 makes two identical layers.
+- **The loop starts at 1.80 s.** A key held for less plays only the note's own audio, which is correct, but the loop is reached
+  only on long notes.
+- **What the guards cannot see** is Round 1.7's open question, unchanged: the breath dips about 3 dB through the 0.3 s blend once a
+  loop, and the same breath and vibrato come round every 1.92 or 2.12 s.
+- **The soft layer's onset at the bottom of SAX** is slow (the research: 0.31 s at C3, BREATH 0, CHIFF 0.4). It was not re-measured.
+- **No BORE instrument on the phone until it is wired.** `LoopPadMaker` no longer offers BORE and the SYNTH screen is not yet built
+  against `BorePadMaker`. `InstrumentPackGenerator`, which walks `LoopPadMaker.QUALIFIED`, no longer makes BORE FLUTE or BORE SAX.
+- **The margin is still untested.** `LOOP_MARGIN_SECONDS` guards a case no zone meets (every cut ends by about 3.9 s of a 4.45 s
+  note), as Round 1.7 found for the LOOP.
+
+**Things that did not work, kept so they are not tried again.**
+
+- **Darker by the high band alone.** The first check of the soft layer asked for a lower 1.5 to 8 kHz share at every zone; SAX F#3
+  passed it by 0.07 dB, too close to hold a test to. The check is now "never brighter" at each zone with a 0.3 dB mean for each
+  voice, and the centroid and the breath, which separate the layers at every zone, carry the per-zone claim.
+- **A loose check on the wrap.** The real zones' last frame was first held to the loop start's predecessor within 1e-6, and the
+  tail's weights one index early passed it: the two frames either side of a real wrap match too closely. Held exactly equal, the
+  check fails on that mistake. At the last frame the loop's own wave weighs cos(pi/2), 6e-17, so the right weights are exact.
+- **A preview that promised two wraps.** The first preview test wanted the 6 s hold to cross the file's end and one more loop; that
+  holds only when the length search lands on ten vibrato cycles (1.92 s), not eleven (2.12 s). The hold now crosses the first wrap
+  with about two seconds to spare.
+- **A Goertzel sweep for brightness** cost 23.7 s of test time for 36 readings; one FFT a reading costs a fraction of a second.
+
+**Why it is built this way.**
+
+- **One note gives both the attack and the loop.** The zone is the LOOP's own held note played from its start, so the attack is the
+  note's real attack, not a one-shot glued onto a loop, and the two can never disagree about pitch, breath or tone.
+- **The blend moved to the loop's end because the attack must run on untouched.** The first time through, the player simply keeps
+  playing from the attack into the loop. Only at the file's end does it jump back, and by then the end has been faded into the
+  audio just before the loop start, so the jump lands between two neighbouring samples of the same note. Without the fade the jump
+  would join two places that only nearly match: a small step and a swell every two seconds.
+- **The same length search with the same arguments** is what lets Round 1.7's 1,071 measured corners speak for the zones too. A test
+  holds the zone's loop to the LOOP's length and correlation exactly, so a change to one cut cannot quietly leave the other behind.
+- **Two layers by breath, levelled alike.** The player sets a key's loudness from its velocity, so the layer only has to change the
+  colour. BREATH is mapped onto the range where the reed or the jet actually speaks, so the soft layer is a soft note, never air.
+- **The risky decision is the level.** Levelling on the loop under a 0.99 ceiling keeps a held key at the house's loudness, but at
+  the bottom of SAX the attack's peak wins and the loop sits up to 2.4 dB low. It is disclosed, not hidden behind a limiter that
+  would change the attack.
+
+**Verification.** `:synth:test` with `BoreFrozenSoundTest`, `BoreLoopFuzzTest`, `BoreTest`, `BoreKeysTest`, `BorePresetsTest`,
+`BorePlayerTest`, `BoreOverblowTest`, `ObbligatoCompatibilityTest`, `DeterminismTest`, `PresetsTest` and `PadRecipeTest`, then
+`:shell:test` with `ConventionTest`, `PersonalityTest`, `LoopPadMakerTest`, `SynthRootTest`, `BoreOverblowKeysTest` and
+`BorePadMakerTest`, then `:shell:generateBoreHeldAudition`, in one build on the code as committed: exit 0. 191 synth tests
+(`BoreKeysTest` 9, `BoreFrozenSoundTest` 3, `BoreOverblowTest` 12, `BoreTest` 51, `BorePresetsTest` 10, `BorePlayerTest` 5,
+`BoreLoopFuzzTest` 1, `DeterminismTest` 66, `ObbligatoCompatibilityTest` 1, `PadRecipeTest` 25, `PresetsTest` 8) and 118 shell tests
+(`ConventionTest` 68, `PersonalityTest` 31, `SynthRootTest` 7, `LoopPadMakerTest` 6, `BorePadMakerTest` 5, `BoreOverblowKeysTest`
+1), none failing, and the 18 clips with `clips.txt`. `BoreKeysTest` took 32 to 40 s and `BorePadMakerTest` 10 to 14 s. Not run: the
+whole suite, anything under `app/` (no SDK here, and the SYNTH screen is the owner's to wire), the kit generator (no kit pad
+changed).
+
+**Ledger.**
+
+- **Verified** (read or run on this branch): a zone's `bestLength` call is the LOOP's, argument for argument; `heldNote` holds
+  OVERBLOW at 0; the LOOP and every frozen hash are unchanged; the package writer spans the keyboard; `LoopPadMaker` no longer offers
+  BORE, and `InstrumentPackGenerator` takes its loop list from `LoopPadMaker.QUALIFIED`.
+- **Measured** (Kotlin): the table and the readings above, and the guards broken one at a time.
+- **Proposed** (shape values, not set by ear): `SOFT_BREATH_SHARE` 0.45, the velocity windows 1..63 and 64..127, the preview's 6 s
+  hold at velocity 0.8, the audition's 8 s hold, and an attack limiter for the bottom of SAX if its level is heard as a fault.
+- **Heard:** nothing yet.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

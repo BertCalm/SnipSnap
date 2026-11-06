@@ -2,7 +2,7 @@
 
 Nacre revision 3 keeps the first listening model's preferred paired-harp source and gives it the later coral and moving seaweed responses from the owner's “Much better” listening verdict. It renders finite six-second mono audio at 44.1 kHz. Saved patches select their exact renderer: revisions 1 and 2 retain their original synthesis, defaults and diagnostic behavior.
 
-New patches select revision 3. Three starting recipes are available in the Nacre picker and CLI: **Pearl Close**, **Coral Reply** and **Kelp Passage**. The playable-range audition is at https://nacre-first-audition.bertcalm.chatgpt.site. The engine's broader range, control and phrase acceptance is pending that listen; these starting recipes remain outside the global factory roster.
+New patches select revision 3. Three factory recipes are available in the Nacre picker, CLI and shared preset roster: **Pearl Close**, **Coral Reply** and **Kelp Passage**. FRESH TAPE offers a separate velocity-layered NACRE bank. The playable-range audition is at https://nacre-first-audition.bertcalm.chatgpt.site; the new sampler-bank comparison is at https://nacre-first-audition.bertcalm.chatgpt.site/velocity/index.html. Software integration does not establish MPC hardware or musical acceptance.
 
 ## The gesture
 
@@ -53,7 +53,31 @@ All pads retain revision 3, seed 7, their preset's existing controls and the com
 
 Every pad is a finite tonal one-shot with no mute group or sample loop. Different pads can overlap. The existing MPC 2 writer sets each pad to mono with polyphony 1, so retriggering the same pad can restart its tail. The native MPC 3 writer uses its existing non-monophonic configuration; the numeric polyphony field is not a verified voice-count claim. Check repeated strikes, chords, dynamic response and complete endings on the target MPC.
 
-The generator checks both program formats by reading them back, compares exported audio with the native recipe renders and records source provenance. These checks establish the exported files and settings; successful loading and musical behavior on hardware remain pending. The three starting presets and this kit remain outside the global factory menus until that listen. The existing renderer, older recipes and audition stay available.
+The generator checks both program formats by reading them back, compares exported audio with the native recipe renders and records source provenance. These checks establish the exported files and settings; successful loading and musical behavior on hardware remain pending. The original single-strike bank remains a separate, immutable listening reference. FRESH TAPE uses the layered bank below. The existing renderer, older recipes and auditions stay available.
+
+## Velocity-layered starter
+
+`./gradlew --no-daemon :synth:generateNacreVelocityKit` writes **SnipSnap-Nacre-Velocity-Kit.zip** into `testkit/`. `-PnacreVelocityKitOutput=/absolute/output/root` selects another destination. It contains sixteen tonal one-shot pads, forty-eight complete mono 44.1 kHz PCM24 WAVs, native MPC 3 and MPC 2 programs, the editable sidecar, full layer recipes, measurements and source hashes.
+
+A01–A08 play Pearl Close at C3, Eb3, F3, G3, Bb3, C4, Eb4 and F4. A09–A12 play Coral Reply at C3, Eb3, G3 and C4; A13–A16 play Kelp Passage at those same four notes. Every pad has the same three touch zones:
+
+| MIDI velocity | Source strike | Source TOUCH | Sampling gain, approximately |
+|---|---:|---:|---:|
+| 1–41 | 0.30 | 0.05 | 5.8020506 |
+| 42–84 | 0.65 | 0.18 | 1.8642224 |
+| 85–127 | 1.00 | 0.30 | 1 |
+
+Velocity zero belongs to no sample zone. The hard layer is the exact ordinary preset performance at velocity 1, including the preferred TOUCH 0.30. Softer layers use gentler contact through the existing TOUCH control as well as lower native excitation. No synthesis algorithm or saved renderer changes. Seed 7, requested note, DUET, CURRENT, VENUE and BLOOM stay with the preset on all three layers.
+
+The MPC applies its own velocity-controlled playback level. To avoid baking the source's explicit strike scaling into that curve a second time, the sampler files use one fixed input-based compensation law:
+
+`samplingGain = effort(0.30) / (sourceVelocity * effort(sourceTouch))`, with `effort(t) = 0.22 + 0.78 * t^0.65`.
+
+This is not peak or RMS matching. It leaves the accepted hard file unchanged; all gains and complete ordinary source recipes are recorded. `NacreVelocityRecipe.renderAllLayers()` replays the source and its stated gain exactly. Rendering refuses nonfinite audio or delivery above 0.95 instead of silently normalizing a layer. Every file keeps the original six-second ending. Browser comparisons play these actual delivered files at a common monitor level; they do not measure or emulate an MPC's configured velocity curve.
+
+The typed `nacreVelocityLayers` source field contains all three independent source recipes, velocity windows and sampling gains. It survives ordinary sidecar and backup source-metadata round trips. Generic one-source editing and REPLAY refuse layered targets; they do not rebuild only the hard file and leave stale softer samples. Full-bank replay uses the explicit layer bundle. Standalone MPC sidecars additionally fingerprint every delivered velocity-layer WAV through optional `rawVelocitySha256` metadata; older sidecars without this field remain readable.
+
+Different pads have no choke relationship. The existing MPC 2 mono-per-pad retrigger behavior remains unchanged. Loading, same-pad repeats, distinct-pad overlap and the player's velocity curve still need a target-MPC listen. Conch, cave, chromatic keygroups and HOLD are separate future work.
 
 ## Cache and cost
 

@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Candidate finite CHITIN kit, with complete pad recipes. */
+    fun chitin(): List<ArrangedPad?> = ChitinKits.build()
+
     /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
     fun accord(): List<ArrangedPad> = AccordKits.arranged()
 
@@ -107,6 +110,9 @@ object SynthKits {
 
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
+
+    /** The preferred finite harp with three native touch articulations on every pad. */
+    fun nacreVelocity(): List<ArrangedPad?> = NacreVelocityKits.build()
 
     /**
      * Sixteen dry finite NACRE notes for the MPC listening trial. A01–A08 play
@@ -1488,7 +1494,7 @@ object SynthKits {
     }
 
     /**
-     * The SCOUR kit: impacts that build, cut for two tempos, over three banks. Each bank's first row is
+     * The SCOUR kit: impacts that build, cut for two tempos, over four banks. Each bank's first row is
      * builds cut for 120 BPM and its second for 90 BPM, each one beat, two beats, one bar and two bars long,
      * so a pad hit that far before a downbeat lands its slam on it. The third row is a voice's presets.
      * - Bank A: PLATE builds (120 BPM) and PANE builds (90 BPM), at C3 with every other control at its
@@ -1500,14 +1506,19 @@ object SynthKits {
      *   whole scale; a C2 hit beside it measured as a near-copy.
      * - Bank C: BEAM, laid out as bank B and varied the same way, from C3 to C4, with GIRDER CLANG on C3
      *   and hits on E♭3, F3, G3 and B♭3.
+     * - Bank D: DISC builds (120 BPM) and ROD builds (90 BPM), laid out as bank A (builds, then DISC's and ROD's
+     *   presets, four each) and varied as banks B and C are: each build has its own note between its voice's root
+     *   and the octave above, and its own roller, shot, hardening and ring. ROD's hardening stays at .5 or under,
+     *   where its harmonic ping stays one. No bank D pad is a hit apart from the presets' own bare slams, ROTOR
+     *   SLAM and NEEDLE PING.
      * Each dry pad carries its recipe and its own name, and is filed by SCOUR's drumClassFor (every render
-     * passes 1.5 s, so all forty-eight are LOOP-class one-shots).
+     * passes 1.5 s, so all sixty-four are LOOP-class one-shots).
      */
     fun scour(): List<ArrangedPad?> {
         fun named(patch: ScourPatch) = pad(patch, Scour.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
         fun tune(semitone: Int) = semitone / Scour.TUNE_SEMITONES.toFloat()
-        val prefix = mapOf(ScourVoice.SHEET to "SHEET", ScourVoice.BEAM to "BEAM")
-        /** A build cut for [beats] at [bpm]; a bank B or C build also sets its note and its character. */
+        val prefix = mapOf(ScourVoice.SHEET to "SHEET", ScourVoice.BEAM to "BEAM", ScourVoice.DISC to "DISC", ScourVoice.ROD to "ROD")
+        /** A build cut for [beats] at [bpm]; a build in bank B, C or D also sets its note and its character. */
         fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String, character: Map<String, Float> = emptyMap()) = named(
             ScourPatch(
                 (prefix[voice]?.let { "$it $bpm" } ?: "$bpm BPM") + " $label", voice,
@@ -1548,7 +1559,15 @@ object SynthKits {
             hit(ScourVoice.BEAM, "Eb3", 3, .6f, .8f, .2f, .4f), hit(ScourVoice.BEAM, "F3", 5, .6f, .4f, .1f, .3f),
             hit(ScourVoice.BEAM, "G3", 7, .8f, .8f, .8f, .3f), hit(ScourVoice.BEAM, "Bb3", 10, .7f, .4f, .1f, .6f),
         )
-        return bankA + bankB + bankC
+        // Bank D, as bank A is laid out: DISC's four builds at 120 BPM, ROD's four at 90 BPM, then both voices' presets.
+        // The builds' settings came from the same search as banks B and C (a closest pair of .29 for DISC and .28 for ROD
+        // among a voice's builds and presets), with ROD's hardening held to .5 or under.
+        val discBuilds = listOf(c(3, .9f, .4f, .7f, .1f), c(7, .5f, .6f, .2f, .7f), c(10, .5f, .2f, .4f, .1f), c(0, .4f, .7f, .2f, .1f))
+        val rodBuilds = listOf(c(7, .7f, .6f, .5f, .7f), c(12, .7f, .3f, .5f, .1f), c(0, .3f, .9f, .4f, .8f), c(5, .1f, .4f, .5f, .1f))
+        val bankD = lengths.mapIndexed { i, (n, l) -> build(ScourVoice.DISC, 120, n, l, discBuilds[i]) } +
+            lengths.mapIndexed { i, (n, l) -> build(ScourVoice.ROD, 90, n, l, rodBuilds[i]) } +
+            ScourPresets.forVoice(ScourVoice.DISC).map { preset(it.name) } + ScourPresets.forVoice(ScourVoice.ROD).map { preset(it.name) }
+        return bankA + bankB + bankC + bankD
     }
 
     /**
