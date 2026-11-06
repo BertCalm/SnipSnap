@@ -947,6 +947,20 @@ tasks.register<JavaExec>("generateWickKit") {
     args("${rootDir}/testkit")
 }
 
+/** Reproducible wall-time evidence; machine speed is not a unit-test assertion. */
+tasks.register<JavaExec>("benchmarkWick") {
+    group = "verification"
+    description = "Measure finite and held WICK render times for all six voices and three RATTLE bodies."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickRenderProfile")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickProfileOutput").orNull ?: "${rootDir}/testkit/wick-audition/render-profile.json")
+    args("--warmups=${providers.gradleProperty("wickWarmups").orNull ?: "1"}")
+    args("--repetitions=${providers.gradleProperty("wickRepetitions").orNull ?: "5"}")
+    providers.gradleProperty("wickSourceRevision").orNull?.let { args("--source-revision=$it") }
+}
+
 /** First recorded-voice Confluence proof; no synthetic vocal placeholders. */
 tasks.register<JavaExec>("generateConfluenceAudition") {
     group = "distribution"

@@ -1,0 +1,168 @@
+{
+  "status": "passed",
+  "baselineCommit": "e634076db9fdf5a0ca9a8aacbbbcb5193c7bd3d4",
+  "baselineSourceSha256": "06cbba04097d0a3d3422d25577ac91def547a1b722bbf542f6f56e05f5d05992",
+  "productionSourceSha256": "7300b4cd03a5ca9974588e2ec960c7b850be21d6da8ac5b281626ba5b2ed2876",
+  "sourceChange": "Precompute the exact voice/stage constant gate shapes once per Engine; no change to sample arithmetic order, source, scheduling or state evolution.",
+  "floatAndDiagnosticHashCases": 50,
+  "allRawSamplesContextsDiagnosticsExact": true,
+  "benchmarkRepetitions": 7,
+  "runtime": "21.0.13+9-LTS",
+  "architecture": "amd64",
+  "activeProcessors": 2,
+  "method": "Separate actual Kotlin JVM processes with JFR profile enabled, prefix-compiled Wick source and copied stable dependency JARs. Both run the same 50-case snapshot sweep before the seven timed repetitions. Cloud wall time only; not physical-phone performance. JVM known loops warm before measurements. Small sample nearest-rank p95 is the maximum.",
+  "timings": [
+    {
+      "id": "pluck_finite",
+      "beforeMedianMs": 211.074844,
+      "afterMedianMs": 188.729969,
+      "speedupPercent": 10.586233099383458,
+      "beforeP95Ms": 214.366305,
+      "afterP95Ms": 317.426242
+    },
+    {
+      "id": "pluck_held",
+      "beforeMedianMs": 921.630573,
+      "afterMedianMs": 858.404268,
+      "speedupPercent": 6.86026558279117,
+      "beforeP95Ms": 938.359379,
+      "afterP95Ms": 1142.611674
+    },
+    {
+      "id": "bubble_finite",
+      "beforeMedianMs": 286.812054,
+      "afterMedianMs": 261.785877,
+      "speedupPercent": 8.725636405783687,
+      "beforeP95Ms": 291.861818,
+      "afterP95Ms": 330.992568
+    },
+    {
+      "id": "bubble_held",
+      "beforeMedianMs": 789.942449,
+      "afterMedianMs": 738.257577,
+      "speedupPercent": 6.542865504370443,
+      "beforeP95Ms": 820.530899,
+      "afterP95Ms": 876.557041
+    },
+    {
+      "id": "wood_finite",
+      "beforeMedianMs": 259.612755,
+      "afterMedianMs": 246.678015,
+      "speedupPercent": 4.982320687594877,
+      "beforeP95Ms": 268.320282,
+      "afterP95Ms": 301.572606
+    },
+    {
+      "id": "wood_held",
+      "beforeMedianMs": 2834.315951,
+      "afterMedianMs": 2742.223016,
+      "speedupPercent": 3.2492120353592946,
+      "beforeP95Ms": 2877.847356,
+      "afterP95Ms": 2972.74613
+    },
+    {
+      "id": "breath_finite",
+      "beforeMedianMs": 348.888162,
+      "afterMedianMs": 298.656356,
+      "speedupPercent": 14.397681397971883,
+      "beforeP95Ms": 353.068924,
+      "afterP95Ms": 477.029485
+    },
+    {
+      "id": "breath_held",
+      "beforeMedianMs": 2445.096335,
+      "afterMedianMs": 2161.463534,
+      "speedupPercent": 11.600066506173068,
+      "beforeP95Ms": 2463.6394,
+      "afterP95Ms": 2443.230107
+    },
+    {
+      "id": "flicker_finite",
+      "beforeMedianMs": 182.083638,
+      "afterMedianMs": 165.956359,
+      "speedupPercent": 8.857072045100512,
+      "beforeP95Ms": 186.683145,
+      "afterP95Ms": 183.452055
+    },
+    {
+      "id": "flicker_held",
+      "beforeMedianMs": 2375.515868,
+      "afterMedianMs": 2209.481205,
+      "speedupPercent": 6.98941502503152,
+      "beforeP95Ms": 2399.135274,
+      "afterP95Ms": 2600.732472
+    },
+    {
+      "id": "rattle_finite",
+      "beforeMedianMs": 251.354479,
+      "afterMedianMs": 228.018579,
+      "speedupPercent": 9.284059744167127,
+      "beforeP95Ms": 252.868656,
+      "afterP95Ms": 258.129433
+    },
+    {
+      "id": "rattle_held",
+      "beforeMedianMs": 963.274885,
+      "afterMedianMs": 867.300542,
+      "speedupPercent": 9.963339073249077,
+      "beforeP95Ms": 968.181608,
+      "afterP95Ms": 1010.709767
+    },
+    {
+      "id": "rattle_current_finite",
+      "beforeMedianMs": 320.763154,
+      "afterMedianMs": 299.73012,
+      "speedupPercent": 6.557185180938829,
+      "beforeP95Ms": 323.641437,
+      "afterP95Ms": 336.004081
+    },
+    {
+      "id": "rattle_current_held",
+      "beforeMedianMs": 1269.607157,
+      "afterMedianMs": 1170.110044,
+      "speedupPercent": 7.8368424792992775,
+      "beforeP95Ms": 1279.78396,
+      "afterP95Ms": 1382.651114
+    },
+    {
+      "id": "rattle_hollow_reed_finite",
+      "beforeMedianMs": 248.956929,
+      "afterMedianMs": 227.577957,
+      "speedupPercent": 8.587417946499498,
+      "beforeP95Ms": 255.927773,
+      "afterP95Ms": 237.60643
+    },
+    {
+      "id": "rattle_hollow_reed_held",
+      "beforeMedianMs": 967.966008,
+      "afterMedianMs": 849.691661,
+      "speedupPercent": 12.218853350478398,
+      "beforeP95Ms": 990.656802,
+      "afterP95Ms": 1016.168125
+    },
+    {
+      "id": "rattle_rubbed_glass_finite",
+      "beforeMedianMs": 249.733334,
+      "afterMedianMs": 222.038195,
+      "speedupPercent": 11.089884780859894,
+      "beforeP95Ms": 256.761422,
+      "afterP95Ms": 382.72726
+    },
+    {
+      "id": "rattle_rubbed_glass_held",
+      "beforeMedianMs": 969.024046,
+      "afterMedianMs": 860.000187,
+      "speedupPercent": 11.250893045434296,
+      "beforeP95Ms": 982.52609,
+      "afterP95Ms": 1200.920498
+    }
+  ],
+  "minimumMedianSpeedupPercent": 3.2492120353592946,
+  "maximumMedianSpeedupPercent": 14.397681397971883,
+  "medianSpeedupPercent": 8.791354225442099,
+  "limitations": [
+    "Tens-of-ms interactive target remains unmet in these cloud measurements.",
+    "Default WOOD/BREATH/FLICKER held renders still require 15 causal/replay search attempts.",
+    "Cold-start values and physical Android/MPC hardware need separate measurement."
+  ]
+}

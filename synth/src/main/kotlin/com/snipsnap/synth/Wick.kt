@@ -403,6 +403,60 @@ object Wick {
         val phaseOffset = Dsp.phases(2, Dsp.seedFor("WICK", voice.name, midi))
         val rattleCore = if (voice == WickVoice.RATTLE && options.rattleSource != RattleSource.CURRENT)
             RattleCore(requireNotNull(options.rattleSource), hz, timbre, velocity) else null
+        /** Voice, pitch and macros are fixed for an offline render; these coefficients do not
+         * evolve with the gates. Keep their original arithmetic and precompute it once. */
+        private data class GateShape(val low: Double, val logSpan: Double, val toneExponent: Double,
+                                     val vcaExponent: Double, val weight: Double)
+        private val gateShapes = Array(STAGES) { j ->
+            val low = when (voice) {
+                WickVoice.PLUCK, WickVoice.BUBBLE -> max(15.0, hz * .60)
+                WickVoice.WOOD -> max(15.0, hz * .72)
+                WickVoice.BREATH -> max(15.0, hz * .95)
+                WickVoice.FLICKER -> max(15.0, hz * .80)
+                WickVoice.RATTLE -> max(15.0, hz * .90)
+            }
+            val high = when (voice) {
+                WickVoice.PLUCK, WickVoice.BUBBLE -> max(5_500.0, hz * (18.0 - 3.0 * j)).coerceAtMost(14_000.0)
+                WickVoice.WOOD -> max(when (j) { 0 -> 4_400.0; 1 -> 3_400.0; else -> 2_600.0 },
+                    hz * (12.0 - 2.0 * j)).coerceAtMost(11_000.0)
+                WickVoice.BREATH -> max(3_200.0 - 450.0 * j,
+                    hz * (14.0 - 2.0 * j)).coerceAtMost(10_000.0)
+                WickVoice.FLICKER -> max(when (j) { 0 -> 9_000.0; 1 -> 11_000.0; else -> 10_000.0 },
+                    hz * (24.0 - 2.0 * j)).coerceAtMost(15_000.0)
+                WickVoice.RATTLE -> max(when (j) { 0 -> 5_500.0; 1 -> 6_200.0; else -> 4_800.0 },
+                    hz * (14.0 - 2.0 * j)).coerceAtMost(12_000.0)
+            }
+            val toneExponent = when (voice) {
+                WickVoice.PLUCK, WickVoice.BUBBLE -> .64 + .07 * j
+                WickVoice.WOOD -> .58 + .09 * j
+                WickVoice.BREATH -> .50 + .08 * j
+                WickVoice.FLICKER -> .42 + .05 * j
+                WickVoice.RATTLE -> if (cohesiveRattle) .42 + .05 * j else .62 + .04 * j
+            }
+            val vcaExponent = when {
+                voice == WickVoice.BREATH -> .78
+                // A slightly gentler primary power keeps the note's body present;
+                // steeper secondary powers close the audible metallic flashes quickly.
+                voice == WickVoice.FLICKER -> if (j == 0) 1.10 else 1.55
+                // A closing root retains a continuous pitched body below the real
+                // release edge. Answers are quieter motion inside that same body.
+                voice == WickVoice.RATTLE -> if (cohesiveRattle) {
+                    if (j == 0) .45 else .85
+                } else if (j == 0) 1.02 else 1.35
+                else -> 1.22
+            }
+            val weight = if (j == 0) 1.0 else (.60 + .42 * cascade) / (1.0 + .15 * j)
+            val voicedWeight = when {
+                roundedBubble && j > 0 -> weight * (if (j == 1) .55 else .42)
+                voice == WickVoice.WOOD && j > 0 -> weight * (if (j == 1) .50 else .34)
+                voice == WickVoice.FLICKER && j > 0 -> weight * (if (j == 1) .80 else .65)
+                voice == WickVoice.RATTLE && j > 0 -> weight * (if (cohesiveRattle) {
+                    if (j == 1) .42 else .30
+                } else if (j == 1) .75 else .60)
+                else -> weight
+            }
+            GateShape(low, ln(high / low), toneExponent, vcaExponent, voicedWeight)
+        }
         var sample = 0L
         var pulseIndex = 0L
         var delivered = 0
@@ -534,6 +588,7 @@ object Wick {
                 var mixed = 0.0
                 for (j in gates.indices) {
                     val gate = gates[j]
+                    val shape = gateShapes[j]
                     gate.available = if (options.constantAvailability) 1.0 else
                         (1.0 - (1.0 - gate.available) * recoveryPole[j]).coerceIn(0.0, 1.0)
                     gate.charge = (gate.charge * chargeDecay[j]).coerceIn(0.0, 1.0)
@@ -578,60 +633,14 @@ object Wick {
                             (1.0 - body) * source + body * sin(partial * rootPhase)
                         }
                     }
-                    val low = when (voice) {
-                        WickVoice.PLUCK, WickVoice.BUBBLE -> max(15.0, hz * .60)
-                        WickVoice.WOOD -> max(15.0, hz * .72)
-                        WickVoice.BREATH -> max(15.0, hz * .95)
-                        WickVoice.FLICKER -> max(15.0, hz * .80)
-                        WickVoice.RATTLE -> max(15.0, hz * .90)
-                    }
-                    val high = when (voice) {
-                        WickVoice.PLUCK, WickVoice.BUBBLE -> max(5_500.0, hz * (18.0 - 3.0 * j)).coerceAtMost(14_000.0)
-                        WickVoice.WOOD -> max(when (j) { 0 -> 4_400.0; 1 -> 3_400.0; else -> 2_600.0 },
-                            hz * (12.0 - 2.0 * j)).coerceAtMost(11_000.0)
-                        WickVoice.BREATH -> max(3_200.0 - 450.0 * j,
-                            hz * (14.0 - 2.0 * j)).coerceAtMost(10_000.0)
-                        WickVoice.FLICKER -> max(when (j) { 0 -> 9_000.0; 1 -> 11_000.0; else -> 10_000.0 },
-                            hz * (24.0 - 2.0 * j)).coerceAtMost(15_000.0)
-                        WickVoice.RATTLE -> max(when (j) { 0 -> 5_500.0; 1 -> 6_200.0; else -> 4_800.0 },
-                            hz * (14.0 - 2.0 * j)).coerceAtMost(12_000.0)
-                    }
-                    val toneExponent = when (voice) {
-                        WickVoice.PLUCK, WickVoice.BUBBLE -> .64 + .07 * j
-                        WickVoice.WOOD -> .58 + .09 * j
-                        WickVoice.BREATH -> .50 + .08 * j
-                        WickVoice.FLICKER -> .42 + .05 * j
-                        WickVoice.RATTLE -> if (cohesiveRattle) .42 + .05 * j else .62 + .04 * j
-                    }
-                    val cutoff = low * exp(ln(high / low) * gate.opening.pow(toneExponent))
+                    val cutoff = shape.low * exp(shape.logSpan * gate.opening.pow(shape.toneExponent))
                     val filtered = gate.filter.next(sourceMix, cutoff)
                     maxFilter = max(maxFilter, max(abs(gate.filter.first), abs(gate.filter.second)))
                     // A closing BREATH gate stays gently audible below the causal closing
                     // threshold. Its actual residual tail meets the next opening; no bypass
                     // drone is mixed in, and CASCADE still comes from the real closing edge.
-                    val vca = gate.opening.pow(when {
-                        voice == WickVoice.BREATH -> .78
-                        // A slightly gentler primary power keeps the note's body present;
-                        // steeper secondary powers close the audible metallic flashes quickly.
-                        voice == WickVoice.FLICKER -> if (j == 0) 1.10 else 1.55
-                        // A closing root retains a continuous pitched body below the real
-                        // release edge. Answers are quieter motion inside that same body.
-                        voice == WickVoice.RATTLE -> if (cohesiveRattle) {
-                            if (j == 0) .45 else .85
-                        } else if (j == 0) 1.02 else 1.35
-                        else -> 1.22
-                    })
-                    val weight = if (j == 0) 1.0 else (.60 + .42 * cascade) / (1.0 + .15 * j)
-                    val voicedWeight = when {
-                        roundedBubble && j > 0 -> weight * (if (j == 1) .55 else .42)
-                        voice == WickVoice.WOOD && j > 0 -> weight * (if (j == 1) .50 else .34)
-                        voice == WickVoice.FLICKER && j > 0 -> weight * (if (j == 1) .80 else .65)
-                        voice == WickVoice.RATTLE && j > 0 -> weight * (if (cohesiveRattle) {
-                            if (j == 1) .42 else .30
-                        } else if (j == 1) .75 else .60)
-                        else -> weight
-                    }
-                    mixed += (if (options.gainOnly) sourceMix else filtered) * vca * voicedWeight
+                    val vca = gate.opening.pow(shape.vcaExponent)
+                    mixed += (if (options.gainOnly) sourceMix else filtered) * vca * shape.weight
                     if (gate.opening >= OPEN_THRESHOLD) {
                         gate.armed = true
                         gate.peak = max(gate.peak, gate.opening)

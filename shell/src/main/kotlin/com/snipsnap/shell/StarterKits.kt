@@ -462,6 +462,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            "wick", "WICK",
+            "Six pitched voices with recovering motion and three RATTLE bodies.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.wick() },
+        Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
             seeded = false,

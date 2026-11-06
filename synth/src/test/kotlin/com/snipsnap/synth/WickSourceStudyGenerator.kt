@@ -143,7 +143,7 @@ object WickSourceStudyGenerator {
             "format" to "wick-source-study-v1", "generatedAt" to Instant.now().toString(),
             "status" to "accepted-bodies", "referenceRevision" to REFERENCE_REVISION,
             "sampleRate" to Dsp.RATE, "channels" to 1, "oversampling" to 4,
-            "scope" to "Warm wire is the accepted RATTLE default, with Hollow reed and Rubbed glass saved as ordinary patch variants. The previous connected body remains an exact reference. The other five voices are unchanged. Names describe synthetic tonal analogies, not physical instrument models.",
+            "scope" to "Warm wire is the accepted RATTLE default, with Hollow reed and Rubbed glass saved as ordinary factory variants. The previous connected body remains an exact reference. These comparisons retain their accepted settings while the 36-recipe bank adds nine new recipes for listening. Names describe synthetic tonal analogies, not physical instrument models.",
             "audioNote" to "Matched PCM16 previews use AuditionLevel on the complete clip. Native and common-gain raw PCM24 are retained locally. Held contexts contain an independently synthesized preceding period and current period at the matched export gain.",
             "clipCount" to entries.size, "renderSeconds" to (System.nanoTime() - started) / 1e9,
             "groups" to groups, "entries" to entries,

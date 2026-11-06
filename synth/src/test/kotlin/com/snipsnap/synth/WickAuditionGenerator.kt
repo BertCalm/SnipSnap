@@ -11,6 +11,8 @@ import com.snipsnap.json.JsonValue
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -52,6 +54,7 @@ object WickAuditionGenerator {
         val variant: String? = null,
         val preset: WickPatch? = null,
         val referenceRevision: String? = null,
+        val newRecipe: Boolean = false,
     )
 
     @JvmStatic
@@ -265,6 +268,7 @@ object WickAuditionGenerator {
         }
         val metrics = entries.mapNotNull { it["metrics"] as? Map<*, *> }
         fun maximum(key: String) = metrics.mapNotNull { (it[key] as? Number)?.toDouble() }.maxOrNull()
+        val factoryBank = exportFactoryBank(root)
         val groups = cases.groupBy { it.groupId }.map { (id, members) -> linkedMapOf(
             "id" to id, "title" to members.first().group,
             "description" to groupDescription(members.first()), "clipIds" to members.map { it.id },
@@ -275,6 +279,8 @@ object WickAuditionGenerator {
             "heldClips" to entries.count { it["loop"] == true },
             "patternClips" to entries.count { it["kind"] == "pattern" },
             "higherRateReferences" to higherRateReferences.size,
+            "factoryRecipes" to WickPresets.all().size,
+            "newRecipes" to entries.count { it["newRecipe"] == true },
             "maxRawPeak" to maximum("rawPeak"), "maxExportedSeamError" to maximum("exportedSeamError"),
             "renderSeconds" to (System.nanoTime() - started) / 1e9,
             "deterministicDefaults" to entries.filter { it["kind"] == "defaults" }.associate { entry ->
@@ -282,13 +288,13 @@ object WickAuditionGenerator {
             },
         )
         writeJson(File(root, "manifest.json"), linkedMapOf(
-            "engine" to "WICK", "schemaVersion" to 1, "status" to if (failures.isEmpty()) "requires-owner-listening" else "render-failed",
+            "engine" to "WICK", "schemaVersion" to 1, "status" to if (failures.isEmpty()) "factory-bank-with-new-recipes-for-listening" else "render-failed",
             "title" to "WICK · First spark", "sampleRate" to Dsp.RATE, "channels" to 1, "oversampling" to 4,
             "generatedAt" to Instant.now().toString(), "quick" to quick, "rawExportGain" to RAW_EXPORT_GAIN,
             "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native single-note PCM24 files are the engine's normal dry output. Native musical-pattern PCM24 files instead apply one fixed 0.25 assembly gain to the sum of unlevelled raw note renders, preserving the source velocity response without per-hit leveling. Matched PCM16 files use the shared 0.03 loudest-200-ms loudness target on the complete clip.",
             "holdNote" to "HOLD uses periodic source timing and periodic-state convergence. A causal-schedule-replay strategy is explicitly reported when used. The seam-context WAV holds an independently generated preceding period and current period, at the matched export gain; it is not a duplicated loop.",
             "pcmSeamNote" to "Exported PCM16 seam error is the squared difference between independently generated preceding/current final 256-frame windows, divided by preceding-window energy. If both windows are exactly zero, error is 0 and silentBoundary=true; a zero-energy reference with a nonzero difference fails. The actual loop join is screened separately: absolute wrap step divided by local derivative RMS plus one PCM16 unit must be at most 8. This numerical screening does not replace listening.",
-            "scope" to "Six-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "scope" to "Six voices and a 36-recipe factory bank, with the established dry sounds and exact historical comparisons retained. Nine new recipes complete the bank and await listening. Ordinary MPC drum pads play the exported held material once; phone performance and hardware acceptance are recorded separately.",
             "patternNote" to "Musical phrases share an exact eight-note score at 100 BPM. Native pattern WAVs use one fixed 0.25 assembly gain applied to the sum of probe.raw note renders; they bypass the engine's per-note loudness scaling so its velocity response survives. Raw files apply the same common 0.5 export gain as other clips. Only completed phrases are loudness matched. Complete note tails ring out after the two-bar score. Each note resets the engine state, while its own FEED and cascade can add articulations between scored onsets.",
             "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. BREATH's late swell can place its first near-peak late in that window: when no 20 dB decay is observed, the classifier reports only the remaining window as decay time and may label a sustained low note KICK or TOM. BREATH also reports onsetEnvelopePeakSeconds, onset20dBCrossingObserved, onsetPostPeakMinimumRatio and onsetDecayCensored using the same 1024-frame peak windows and 256-frame hop. The original classifier result is retained. Neither classifier is a substitute for requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
@@ -304,6 +310,7 @@ object WickAuditionGenerator {
                 "Does the RATTLE reserve comparison expose a useful difference from constant availability at the same controls?",
                 "Do the same musical notes and soft/strong velocities retain each voice's character?", "Do held patterns repeat without audible clicks or stutters?",
             ),
+            "factoryBank" to factoryBank,
             "summary" to summary, "higherRateReferences" to higherRateReferences, "groups" to groups, "entries" to entries,
         ))
         for (name in listOf("index.html", "app.js", "style.css")) {
@@ -365,6 +372,61 @@ object WickAuditionGenerator {
         return DoubleArray(power.size) { power[it] / total }
     }
 
+    private fun isVoiceDefault(patch: WickPatch): Boolean =
+        patch.macros == Wick.defaults(patch.voice) && patch.midi == Wick.rootMidi(patch.voice) && patch.velocity == 1f &&
+            (patch.voice != WickVoice.RATTLE || patch.rattleSource == Wick.RattleSource.WARM_WIRE)
+
+    private fun isNewRecipe(patch: WickPatch): Boolean = patch in WickPresets.additions()
+
+    /** Ordinary patch files can be loaded individually; the ZIP keeps the complete bank together. */
+    private fun exportFactoryBank(root: File): Map<String, Any?> {
+        val bank = WickPresets.all()
+        check(bank.size == 36 && bank.map { it.name }.distinct().size == bank.size) {
+            "WICK factory bank must contain 36 uniquely named patches"
+        }
+        check(WickPresets.additions().size == 9) { "WICK's completion round must identify its nine new recipes" }
+        for (voice in WickVoice.entries) {
+            val recipes = WickPresets.forVoice(voice)
+            check(recipes.size == 6 && Presets.forVoice(WickPatch.ENGINE, voice.name) == recipes) {
+                "$voice must expose six WICK factory patches through the shared registry"
+            }
+        }
+        val files = bank.associateWith { patch -> "factory/patches/${slug(patch.name)}.json" }
+        check(files.values.distinct().size == bank.size) { "WICK factory patch filenames collide" }
+        for ((patch, path) in files) {
+            val text = patch.toJsonText()
+            check(Patches.fromJsonText(text) == patch) { "WICK factory patch ${patch.name} did not round-trip" }
+            File(root, path).also { it.parentFile.mkdirs() }.writeText(text)
+        }
+        val archiveFile = "factory/wick-factory-patches.zip"
+        ZipOutputStream(File(root, archiveFile).outputStream().buffered()).use { zip ->
+            for ((_, path) in files) {
+                zip.putNextEntry(ZipEntry(File(path).name).also { it.time = 0L })
+                File(root, path).inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        val manifestFile = "factory/manifest.json"
+        val info = linkedMapOf<String, Any?>(
+            "format" to "wick-factory-bank-v1", "engine" to WickPatch.ENGINE,
+            "patchCount" to bank.size, "patchesPerVoice" to 6,
+            "voiceCounts" to WickVoice.entries.associate { it.name to WickPresets.forVoice(it).size },
+            "archiveFile" to archiveFile, "manifestFile" to manifestFile,
+            "newRecipeCount" to WickPresets.additions().size,
+            "listeningNote" to "The established sounds and recipes retain their settings. Nine new recipes complete the bank and await listening.",
+            "patches" to bank.map { patch -> linkedMapOf(
+                "name" to patch.name, "voice" to patch.voice.name, "midi" to patch.midi,
+                "velocity" to patch.velocity, "patchFile" to files.getValue(patch),
+                "rattleSource" to if (patch.voice == WickVoice.RATTLE) patch.rattleSource.name else null,
+                "auditionClipId" to if (isVoiceDefault(patch)) "default_${patch.voice.name.lowercase()}" else "preset_${slug(patch.name)}",
+                "newRecipe" to isNewRecipe(patch),
+                "listeningStatus" to if (isNewRecipe(patch)) "awaiting-owner-listening" else "existing-recipe",
+            ) },
+        )
+        writeJson(File(root, manifestFile), info)
+        return info
+    }
+
     private fun metadata(case: Case): Map<String, Any?> = linkedMapOf(
         "id" to case.id, "title" to case.title, "description" to case.description, "kind" to case.kind,
         "voice" to case.voice.name, "group" to case.group, "groupId" to case.groupId,
@@ -372,6 +434,8 @@ object WickAuditionGenerator {
         "loop" to Wick.isLoop(case.macros.getValue("HOLD")), "macro" to case.macro, "value" to case.value,
         "comparison" to case.comparison, "variant" to case.variant,
         "referenceRevision" to case.referenceRevision,
+        "newRecipe" to case.newRecipe,
+        "listeningStatus" to if (case.newRecipe) "awaiting-owner-listening" else "existing-render",
     )
 
     private fun cases(quick: Boolean): List<Case> = buildList {
@@ -411,15 +475,16 @@ object WickAuditionGenerator {
             options = Wick.Options(legacyRattleEnvelope = reference, rattleSource = Wick.RattleSource.CURRENT), comparison = "rattle-cohesion-$midi",
             variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) RATTLE_REFERENCE_REVISION else null,
         ))
-        val variations = WickPresets.all().filterNot {
-            it.macros == Wick.defaults(it.voice) && it.midi == Wick.rootMidi(it.voice) && it.velocity == 1f &&
-                (it.voice != WickVoice.RATTLE || it.rattleSource == Wick.RattleSource.WARM_WIRE)
-        }
+        val variations = WickPresets.all().filterNot(::isVoiceDefault)
         for (preset in variations) add(Case(
             "preset_${slug(preset.name)}", preset.name,
             if (preset.name == "Busy Bubbles") "Busy BUBBLE recipe at FEED 65%, now using the revised gate response. The earlier-response A/B comparison uses FEED 25% with all other controls unchanged."
-            else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
-            "preset", preset.voice, "presets", "${variations.size} provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
+            else if (isNewRecipe(preset)) "New ${preset.voice.name.lowercase()} factory recipe for listening. Its settings extend the established voice; no effects or new source model are added."
+            else "Established ${preset.voice.name.lowercase()} factory recipe. Dry engine output, with no rack effects.",
+            "preset", preset.voice,
+            if (isNewRecipe(preset)) "new-recipes" else "presets",
+            if (isNewRecipe(preset)) "Nine new factory recipes" else "Established factory variations",
+            preset.macros, preset.midi, preset.velocity, preset = preset, newRecipe = isNewRecipe(preset),
         ))
         val base = Wick.defaults(WickVoice.BUBBLE) + mapOf("SPARK" to .65f, "FEED" to .85f, "CASCADE" to .90f, "RECOVERY" to .90f)
         val comparisons = listOf(
@@ -579,14 +644,15 @@ object WickAuditionGenerator {
     }
 
     private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
-        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
+        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the accepted revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
     } else if (case.groupId == "rattle-cohesion") {
-        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier repeated hits reproduces revision 3b77d8b through an explicit diagnostic option. Connected body is the proposed response to the owner's request for a more cohesive gesture. Compare the body between openings and the sharpness of repeated attacks; descriptive RMS measurements support listening without establishing it."
+        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier repeated hits reproduces revision 3b77d8b through an explicit diagnostic option. Both sides preserve the earlier folded-FM source. The accepted RATTLE bodies keep the connected response and are auditioned separately. Descriptive RMS measurements support listening without establishing it."
     } else if (case.groupId == "rattle-reserve") {
         "Four C4 comparisons at FEED 80%. The first pair changes only live versus constant excitation availability. The second pair keeps the live reserve and changes RECOVERY from 20% to 85%, including its gate-lifetime and delay effects. Listen for a clear note, weakening later pulses and their return; diagnostic admissions show what the reserve actually did."
     } else when (case.kind) {
-        "defaults" -> "Listen first to the six dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD, BREATH, FLICKER and revised BUBBLE recipes remain available alongside RATTLE. Every clip uses its saved pitch, velocity and six controls."
+        "defaults" -> "The six dry voice defaults. The initial spark drives a shared pitched source through three interacting low-pass gates."
+        "preset" -> if (case.newRecipe) "Nine additions complete the 36-recipe factory bank. These new settings await listening; each dry clip includes its normal editable patch and real finite or held behavior. The existing voices and recipes retain their settings."
+            else "Established factory variations and held recipes. The accepted PLUCK, WOOD, BREATH, FLICKER and revised BUBBLE sounds remain available alongside RATTLE. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."

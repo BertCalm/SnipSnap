@@ -1413,14 +1413,14 @@ object SynthKits {
     }
 
     /**
-     * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
+     * WICK's dry sixteen-pad factory starter, shared with FRESH TAPE and the CLI.
      * PLUCK, WOOD, BUBBLE, BREATH and FLICKER retain their C3/C4 pairs.
      * RATTLE's Warm Wire, Hollow Reed and Rubbed Glass each speak at C4,
      * followed by held BUBBLE, BREATH and warm-wire RATTLE.
      * Each voice's native-root default is its exact library patch. This
-     * sixteen-pad selection samples the twenty-seven-recipe library with eleven
+     * sixteen-pad selection samples the thirty-six-recipe library with eleven
      * exact library recipes and five transposed default variations;
-     * the complete bank remains available through the audition and CLI.
+     * the complete bank is available through the picker, audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {

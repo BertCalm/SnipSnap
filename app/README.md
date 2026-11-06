@@ -73,21 +73,30 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (67 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO and CHORD STABS,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (68 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK and CHORD STABS,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 75 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 76 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
-SCOUR, KEEL and CHITIN.
+SCOUR, KEEL, CHITIN and WICK.
+
+WICK provides PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE, with six factory
+presets each. ROOT, native VELOCITY and RATTLE BODY survive preset recall,
+macro edits and SEND TO PAD. Warm wire is the new RATTLE default; Hollow reed
+and Rubbed glass are saved alternatives. Older saved RATTLE bodies remain
+reproducible. HOLD's top step previews a genuine repeating cycle; a normal
+kit pad plays its buffer. FRESH TAPE → WICK supplies the dry named sixteen-pad
+kit with all three RATTLE bodies at C4. Physical phone timing and MPC loading
+remain separate acceptance checks.
 
 CHITIN provides SHELL bass and WING lead voices, with six candidate presets each.
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer

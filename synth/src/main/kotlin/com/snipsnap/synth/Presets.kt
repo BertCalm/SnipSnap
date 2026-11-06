@@ -11,11 +11,14 @@ package com.snipsnap.synth
  * returns an empty list rather than throwing, so the UI can ask before
  * checking what exists.
  * VENT's clean model-2 starters are factory recipes; its original model-1
- * comparisons and WICK's provisional recipes stay in their CLI-only tables.
+ * comparisons stay in their CLI-only table. WICK's accepted voices and completed
+ * factory bank are available here and through the ordinary synth picker.
  */
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
+            ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
             val v = AccordVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             AccordPresets.forVoice(v)
@@ -334,6 +337,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
+        WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +
