@@ -2283,7 +2283,8 @@ fun SynthScreen(
             buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
         Engine.LIBRATION -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch
-            if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(LibrationPadMaker.spec(patch, heldSheet.holdRelease)) else null
+            if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(
+                LibrationPadMaker.spec(patch, heldSheet.holdRelease, heldSheet.holdLibrationTouchLayers)) else null
         }
         Engine.MERIDIAN -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch
@@ -3769,6 +3770,7 @@ fun SynthScreen(
                     onTouchLayers = {
                         sampleHeldPreview?.silence()
                         if (engine == Engine.FLOCK) heldSheet.holdFlockTouchLayers = it
+                        else if (engine == Engine.LIBRATION) heldSheet.holdLibrationTouchLayers = it
                         else if (engine == Engine.FILAMENT) heldSheet.holdFilamentTouchLayers = it
                         else heldSheet.holdTouchLayers = it
                     },
@@ -4156,6 +4158,7 @@ private class HeldSheetState {
     // FLOCK opens with physical touch enabled without changing CREASE's existing choice.
     var holdFlockTouchLayers by mutableStateOf(true)
     var holdFilamentTouchLayers by mutableStateOf(true)
+    var holdLibrationTouchLayers by mutableStateOf(true)
     var holdFilamentWideKeys by mutableStateOf(true)
     // Completed zones (or touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
@@ -4707,12 +4710,18 @@ internal sealed interface HeldSpec {
     class Libration(private val spec: LibrationPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = LibrationPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
-        override val instrumentNote get() = "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
+        override val touchLayers get() = spec.touchLayers
+        override val progressPerZone get() = spec.layerCount
+        override val touchLayersNote get() =
+            "ON: SOFT AND HARD TOUCH CHANGE ATTACK AND TONE. TOUCH SETS THE HARD CAPTURE. TWO SAMPLES PER NOTE; ABOUT 2× THE TIME AND STORAGE."
+        override val instrumentNote get() = if (spec.touchLayers)
+            "PREVIEW PLAYS SOFT, THEN HARD, THROUGH TWO WRAPS AND KEY-UP. EACH TOUCH KEEPS ITS ATTACK AND MOVING SUSTAIN."
+            else "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
         override val knobLabel get() = "RELEASE ${LibrationPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LibrationPadMaker.renderZone(spec, midi, cancelled))
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = LibrationPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = LibrationPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            LibrationPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            LibrationPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
