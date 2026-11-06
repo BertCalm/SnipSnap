@@ -1564,7 +1564,63 @@ object Copy {
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
-    const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+
+    // ---- SONG: the song you keep and edit (docs/plans/2026-10-30-song-making.md, Phase 5) ----
+    /** Buttons on the selected section. Labels, not toasts, so none ends in a full stop. */
+    const val SONG_UP = "▲ UP"
+    const val SONG_DOWN = "▼ DOWN"
+    const val SONG_REPEAT_LESS = "− REPEAT"
+    const val SONG_REPEAT_MORE = "+ REPEAT"
+    const val SONG_SWAP = "SWAP CLIP"
+    const val SONG_DUPLICATE = "DUPLICATE"
+    const val SONG_DELETE = "DELETE"
+    const val SONG_LOCK = "LOCK"
+    const val SONG_UNLOCK = "UNLOCK"
+    const val SONG_ADD = "+ SECTION"
+    const val SONG_REROLL = "REROLL ⚄"
+    /** What UNDO names for the edits that have no button label of their own ([songUndo]); the others are named by theirs. */
+    const val SONG_VERB_REORDER = "REORDER"
+    const val SONG_VERB_REPEATS = "REPEATS"
+    const val SONG_VERB_SWAP = "SWAP"
+    const val SONG_VERB_REROLL = "REROLL"
+    /** Spoken names for the glyph buttons, and the picker's chips ([songPickNow], [songPickSwap]). */
+    const val SONG_A11Y_UP = "MOVE SECTION UP"
+    const val SONG_A11Y_DOWN = "MOVE SECTION DOWN"
+    const val SONG_A11Y_REPEAT_LESS = "FEWER REPEATS"
+    const val SONG_A11Y_REPEAT_MORE = "MORE REPEATS"
+    const val SONG_A11Y_REROLL = "REROLL UNLOCKED SECTIONS"
+    fun songPickNow(name: String): String = "$name, IN USE"
+    fun songPickSwap(name: String): String = "SWAP TO $name"
+    /** The UNDO button with nothing to undo; with something, it names it ([songUndo]). */
+    const val SONG_UNDO = "UNDO"
+    /** On the clip picker's chip for the clip the section already plays, and on a locked row. */
+    const val SONG_PICK_NOW = "NOW"
+    const val SONG_LOCKED = "LOCKED"
+    /** The line under the song when it is kept in the project. A sentence, so it ends on a full stop. */
+    const val SONG_CAPTION_KEPT = "YOUR SONG IS KEPT IN THIS PROJECT. TAP A SECTION TO EDIT IT; REROLL REDRAWS ONLY THE UNLOCKED ONES."
+    /** The same line when no project is open: what is true, and what to do. */
+    const val SONG_CAPTION_NOT_KEPT = "NO PROJECT IS OPEN, SO THIS SONG IS NOT KEPT. OPEN A PROJECT TO KEEP IT."
+    /** REROLL with every section locked. */
+    const val SONG_ALL_LOCKED = "EVERY SECTION IS LOCKED. UNLOCK ONE TO REROLL IT."
+    /** REROLL where nothing unlocked uses a seeded clip: the seed moves only the ghosts and the fill, so say so. */
+    const val SONG_REROLL_NOTHING = "NO UNLOCKED SECTION USES GHOSTS OR A FILL, SO A REROLL CHANGES NOTHING."
+    /** The write behind an edit failed; the edit is on screen and not on disk. */
+    const val SONG_NOT_KEPT = "COULDN'T KEEP THE SONG. YOUR EDITS ARE ON SCREEN ONLY."
+    /** UNDO's button while something can be undone: `UNDO REORDER`, `UNDO DELETE`. */
+    fun songUndo(verb: String): String = "$SONG_UNDO $verb"
+    /** What UNDO did. */
+    fun songUndone(verb: String): String = "UNDID $verb."
+    /** REROLL's landing: how many sections were redrawn and how many locked ones were left alone. */
+    fun songRerolled(redrawn: Int, locked: Int): String =
+        "REROLLED ${countOf(redrawn, "SECTION", "SECTIONS")}." + if (locked > 0) " $locked LOCKED, LEFT AS THEY WERE." else ""
+    /** A clip name in words: `CAPTURED`, `YOURS 2` (program number, from 1). */
+    fun songClipLabel(ref: String): String {
+        val program = com.snipsnap.kit.ClipRef.yoursId(ref)
+        return if (program != null) "YOURS ${program + 1}" else ref.uppercase(java.util.Locale.ROOT)
+    }
+    /** Opening a kept song whose clips are not all there: [refs] are the names that are gone, said once, and those sections were planned again. */
+    fun songRefused(refs: List<String>): String =
+        "YOUR SONG NAMED ${refs.joinToString(", ") { songClipLabel(it) }}. ${if (refs.size == 1) "IT IS" else "THEY ARE"} NOT ON THE KIT ANY MORE, SO THOSE SECTIONS WERE PLANNED AGAIN."
     /** EXPORT, while the project and the WAV are written. Ends on a full stop like the toast it is. */
     const val ARRANGE_EXPORT_BUSY = "MIXING AND WRITING THE SONG."
     /** The write threw - no pad file that reads, no external storage to write to. */
