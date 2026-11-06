@@ -75,7 +75,9 @@ makers of their own, each in a soft and a hard touch layer:
   blend at the loop's end; OVERBLOW stays off in a held key (the BORE design spec's "R2: the
   held keygroup, as built").
 
-Neither has been heard yet; both are on a listening page for the owner.
+Heard (2026-11-06): the first build's start was "too long or too different from the held portion". On an A/B of
+four hit lengths the owner picked Short: each key's own hit plays for 80 ms and hands over to its loop by 300 ms, under
+the hit's own swell (`HeldStart.SHORT`), so the loop starts at 0.31 to 0.64 s instead of 1.80 to 3.08 s.
 
 ## How to try it
 
