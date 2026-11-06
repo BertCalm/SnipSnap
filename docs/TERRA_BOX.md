@@ -121,11 +121,16 @@ The cavity slap was declared PERC. With BUZZ at 0 the box reads PERC.
 
 ## Ledger
 
-- **Heard (2026-11-06):** prototype C, "most like a real cajón slap". Against
-  the cavity slap, the rimshot is "Gone". Both answers were for the Python
-  clip.
-- **Not yet heard:** the Kotlin port (the cajón prototype page now plays it
-  beside C), and HIT on the box.
+- **Heard (2026-11-06, the owner, through the cajón prototype page; each
+  verdict covers only the levelled clips its question played):**
+  - Prototype C, "most like a real cajón slap". Against the cavity slap, the
+    rimshot is "Gone". Both answers were for the Python clip.
+  - The Kotlin port, the shipped A07 at full velocity, against prototype C:
+    "Same drum".
+  - Its soft and medium hits (v = 0.25 and 0.6) against the hard one, a
+    softer hand on the same box: "Soft hits sound right" (answered in
+    conversation, not on the page).
+- **Not yet heard:** the re-struck takes, and HIT on the box.
 - **Measured:** the table above, Kotlin, at the commit this lands in.
 - **Proposed (design shapes):** the 12% wire threshold, the 250 Hz drive and
   60 Hz envelope corners, FORCE's 3 to 0.5 ms span, the 2 ms soft widening,
