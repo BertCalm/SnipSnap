@@ -630,6 +630,8 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The Bubble permission line's door: a label, not a toast.
+        "BUBBLE_ALLOW",
         // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
         "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.

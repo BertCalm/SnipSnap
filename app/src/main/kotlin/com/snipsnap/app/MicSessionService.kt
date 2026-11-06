@@ -142,7 +142,7 @@ class MicSessionService : Service() {
     /**
      * Re-entry for an already-armed session of either source. Still worth
      * a call — this is also the path for a just-granted overlay permission
-     * (App's ACTION_MANAGE_OVERLAY_PERMISSION result calls arm() again on
+     * (OverlayAsk calls arm() again when it sees the grant on
      * return): attachBubbleIfAllowed() is a no-op if a bubble is already
      * up, and doesn't touch the AudioRecord either way.
      *
