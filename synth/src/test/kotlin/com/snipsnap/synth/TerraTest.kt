@@ -1067,10 +1067,13 @@ class TerraTest {
             return times[3]
         }
         for (voice in TerraVoice.entries) {
-            val legacy = medianMs { LegacyTerraBank.render(voice, emptyMap()) }
             val plain = medianMs { Terra.render(voice) }
             val struck = medianMs { Terra.renderStruck(voice, emptyMap(), head, 0.5f) }
-            println("TERRA cost $voice: neutral ${"%.1f".format(plain)} ms against the frozen copy's ${"%.1f".format(legacy)} ms (${"%.2f".format(plain / legacy)}x; Phase 0 0.98-1.05x)")
+            // BOX came after the freeze, so it has no frozen copy to time against.
+            if (voice in TerraCases.FROZEN_VOICES) {
+                val legacy = medianMs { LegacyTerraBank.render(voice, emptyMap()) }
+                println("TERRA cost $voice: neutral ${"%.1f".format(plain)} ms against the frozen copy's ${"%.1f".format(legacy)} ms (${"%.2f".format(plain / legacy)}x; Phase 0 0.98-1.05x)")
+            }
             println("TERRA cost $voice: unstruck ${"%.1f".format(plain)} ms, HIT 0.5 ${"%.1f".format(struck)} ms (${"%.2f".format(struck / plain)}x; Phase 0 1.4-1.7x)")
         }
     }
