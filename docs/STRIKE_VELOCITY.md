@@ -136,7 +136,17 @@ start jitter. Both spreads are shapes.
     bassy resonance." Read from the kit, not heard: Cajon Slap (TERRA kit
     A07) is a TUNED_BAR voice like Balafon Key (A16), so the two share the
     bar's mode table and differ mainly in pitch; no box resonance sits
-    under the slap. Open.
+    under the slap. Rebuilt the same day, at the owner's yes: A07 is now a
+    RESONANT_CAVITY voice, its 220 Hz front plate struck hard near the edge
+    (FORCE 0.9, POS 0.9, DROOP 0) over the port's resonance (CAVITY 0.8),
+    the wires kept (BUZZ 0.75, so the HIT audition still names it the BUZZ
+    pad), a shorter ring (DECAY 0.35). Measured in Kotlin: 55% of its first
+    300 ms below 150 Hz (0% before), 39.5 dB RMS from Balafon Key over
+    third-octave bands 60 Hz to 8 kHz (21.3 before), and still classified
+    PERC; plates tuned to 150 or 180 Hz classified TOM or KICK and were
+    passed over. `TerraCases.KIT` and the literal A07 pin in
+    `TerraFrozenTest` follow it. Not yet heard: the gate's question 8 plays
+    it beside the old slap, Balafon Key and Cajon Low.
   - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
     the one-take reference ("same takes") was unclear; the gate now names
     it NO ROUND ROBIN.

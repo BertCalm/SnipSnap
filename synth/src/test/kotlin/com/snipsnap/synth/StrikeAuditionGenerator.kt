@@ -58,6 +58,11 @@ object StrikeAuditionGenerator {
             terraPads().flatMap { touchRow(it) },
         )
         sections += Section(
+            "CAJON", "Cajon Slap, rebuilt",
+            "After the first gate, where the cajon had no bassy resonance: the old slap was a tuned bar like the balafon; the new one is a box, its front plate struck near the edge over the port's resonance. Then Balafon Key and Cajon Low for comparison, and the new slap soft and medium.",
+            cajon(),
+        )
+        sections += Section(
             "ROLL", "Fast roll",
             "Eight hits, 160 ms apart. NO ROUND ROBIN plays one recording eight times, the machine-gun sound round robin exists to avoid. OLD cycles Robin's four re-pitched takes; NEW cycles its four re-struck takes.",
             rolls(),
@@ -131,6 +136,24 @@ object StrikeAuditionGenerator {
             else p.withMacros(p.macros + ("TONE" to asked * Dsp.lin(v, 0.9f / 3.2f, 1f))).render()
         }
         else -> error("no old touch for ${p.engine}")
+    }
+
+    // ---------------------------------------------------------------- cajon
+
+    private fun cajon(): List<Clip> {
+        val pads = terraPads()
+        val slap = pads.single { it.name == "Cajon Slap" }
+        check(slap.voice == TerraVoice.RESONANT_CAVITY) { "A07 is not the rebuilt cajon slap" }
+        // The slap as it shipped until 2026-11-06 (TerraKits A07 before the rebuild).
+        val old = TerraPatch("Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f))
+        return listOf(
+            Clip("old_slap", "CAJON SLAP, OLD (A TUNED BAR)", old.render()),
+            Clip("new_slap", "CAJON SLAP, NEW (A BOX)", slap.render()),
+            Clip("balafon_key", "BALAFON KEY", pads.single { it.name == "Balafon Key" }.render()),
+            Clip("cajon_low", "CAJON LOW", pads.single { it.name == "Cajon Low" }.render()),
+            Clip("new_slap_v25", "CAJON SLAP, NEW, SOFT", Velocity.atVelocity(slap, SOFT)),
+            Clip("new_slap_v60", "CAJON SLAP, NEW, MEDIUM", Velocity.atVelocity(slap, MEDIUM)),
+        )
     }
 
     // ---------------------------------------------------------------- roll
@@ -255,8 +278,8 @@ object StrikeAuditionGenerator {
         |  "task": "generateStrikeAudition",
         |  "title": "Strike Listening Gate",
         |  "heading": "SOFT HITS",
-        |  "questionsTitle": "The gate: seven questions",
-        |  "intro": "Four things built on 2026-11-04 that nobody has heard yet. Every clip plays at the same loudness, so you judge the sound, not the volume. Your ear is the measurement.",
+        |  "questionsTitle": "The gate: eight questions",
+        |  "intro": "Four things built on 2026-11-04, and the Cajon Slap rebuilt after your first answers (question 8). Every clip plays at the same loudness, so you judge the sound, not the volume. Your ear is the measurement.",
         |  "questions": [
         |    {"id": "kick", "title": "A soft SKIN kick: does NEW sound like a softer hit on the same drum, and better than OLD?",
         |     "clips": ["KICK/tape_skin_old", "KICK/tape_skin_v25", "KICK/tape_skin_v60", "KICK/tape_skin_v100"],
@@ -278,7 +301,10 @@ object StrikeAuditionGenerator {
         |     "options": ["Carrying on", "Phrase on repeat", "Depends on the key"]},
         |    {"id": "chords", "title": "CHORD STABS: would you play these progressions from the pads?",
         |     "clips": ["CHORDS/prog_1", "CHORDS/prog_2", "CHORDS/prog_3"],
-        |     "options": ["Yes, as is", "Wrong voicing", "Wrong sound"]}
+        |     "options": ["Yes, as is", "Wrong voicing", "Wrong sound"]},
+        |    {"id": "cajon", "title": "New since your answers: the Cajon Slap rebuilt as a box. Does it have the bass now, and is it clearly not the balafon?",
+        |     "clips": ["CAJON/old_slap", "CAJON/new_slap", "CAJON/balafon_key", "CAJON/cajon_low"],
+        |     "options": ["Yes, fixed", "Too much bass", "Still too close to the balafon"]}
         |  ]
         |}""".trimMargin()
 

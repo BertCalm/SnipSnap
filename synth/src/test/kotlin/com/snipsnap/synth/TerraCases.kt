@@ -32,7 +32,7 @@ internal object TerraCases {
         KitPad("A04", "Cajon Low", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.1516f, "FORCE" to 0.20f, "CAVITY" to 0.70f, "BUZZ" to 0.15f)),
         KitPad("A05", "Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f)),
         KitPad("A06", "Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
-        KitPad("A07", "Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f)),
+        KitPad("A07", "Cajon Slap", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f)),
         KitPad("A08", "Djembe Open", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
         KitPad("A09", "Tabla Tin", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
         KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
