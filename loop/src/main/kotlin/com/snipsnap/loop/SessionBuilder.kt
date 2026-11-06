@@ -251,6 +251,24 @@ object SessionBuilder {
     }
 
     /**
+     * Put [track] back at [trackIndex] of [session], touching nothing else.
+     *
+     * The undo of [clear], and deliberately a one-track write into whatever
+     * session is current rather than a swap back to an old whole session: a
+     * tempo change, a mute on another track or a refit made since the clear
+     * stays as it is. The caller refits drones if the tempo moved, since a
+     * drone's slices were cut for the tempo it was cleared at.
+     */
+    fun restoreTrack(session: Session, trackIndex: Int, track: Track): Session {
+        require(trackIndex in session.tracks.indices) {
+            "track $trackIndex is outside a ${session.tracks.size}-track session"
+        }
+        val tracks = session.tracks.toMutableList()
+        tracks[trackIndex] = track
+        return session.copy(tracks = tracks.toList())
+    }
+
+    /**
      * One piece, written the way [SessionStore] writes the sidecar: into a
      * sibling temp file and renamed over the target.
      *
