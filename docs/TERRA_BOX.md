@@ -75,16 +75,30 @@ colouring: a BEATBOX KICK head moved the overtone balance from -5.0 dB to
 +6.8 at HIT .25, then back to +5.7 at .5. With the fix it reads +7.2 then
 +8.0. An unstruck box is byte-identical either way.
 
-Disclosed, not fixed: HIT is much stronger on the box than on the four
-voices Phase 0 measured. Those voices' modes outlive the 20 ms head; the
-plate's die in as little as 15 ms. So the head plays into the plate, and
-its projection gives the top modes gains in the thousands. At HIT .5, a
-dark head leaves the slap's first 5 ms at about 0.2 of the peak (the other
-voices keep 1.0), and FACTORY KICK turns the wire-less box into a KICK.
-`TerraTest` holds the box only to direction: a bright head brightens it and
-a dark one darkens it, by more than 3 dB at HIT 1. Not yet heard. A cap on
-HIT's gain for the box is the obvious next step if a struck cajón sounds
-wrong.
+HIT is much stronger on the box than on the four voices Phase 0 measured.
+Those voices' modes outlive the 20 ms head; the plate's die in as little as
+15 ms. So the head plays into the plate, and its projection gives the top
+modes gains in the thousands. At HIT .5, a dark head leaves the slap's first
+5 ms at about 0.2 of the peak (the other voices keep 1.0), and FACTORY KICK
+turns the wire-less box into a KICK. `TerraTest` holds the box only to
+direction: a bright head brightens it and a dark one darkens it, by more
+than 3 dB at HIT 1.
+
+Heard and kept (2026-11-06): the owner chose today's HIT over a gentler
+one. Two ways to tame it were measured over the ten strikers, as a
+prototype in test code, never shipped:
+
+- **A cap on each mode's gain** was dropped before listening. It kills a
+  dark head's darkening: under a cap of 4, FACTORY KICK at HIT 1 left the
+  box 1.2 dB brighter instead of 13.7 dB darker.
+- **Each gain to the power 1/3** (a third of its dB, boost and cut alike)
+  kept the direction: FACTORY KICK -4.4 dB and FACTORY SNARE +3.4 dB at HIT
+  1, against -13.7 and +9.8 today. At HIT .5 the first 5 ms stayed at 0.91
+  of the peak or more, and no class changed. This was the GENTLER clip on
+  the second cajón page (https://claude.ai/artifact/MQWKxRLNj4A4r4pHX64pxo),
+  which played FACTORY KICK and SNARE at HIT 1 and FACTORY CLAP at HIT .5,
+  each as is and gentler. Asked "today's HIT or gentler?", the owner
+  answered "As is".
 
 ## The output stage
 
@@ -130,7 +144,12 @@ The cavity slap was declared PERC. With BUZZ at 0 the box reads PERC.
   - Its soft and medium hits (v = 0.25 and 0.6) against the hard one, a
     softer hand on the same box: "Soft hits sound right" (answered in
     conversation, not on the page).
-- **Not yet heard:** the re-struck takes, and HIT on the box.
+- **Heard (2026-11-06, the owner, through the second cajón page,
+  https://claude.ai/artifact/MQWKxRLNj4A4r4pHX64pxo):**
+  - A fast roll, eight hits 160 ms apart, the pad's one recording against
+    four takes (the pad, then three re-struck by `Restrike` with Robin's
+    level and start jitter): "New takes" sound most like one drummer.
+  - HIT on the box, today's against the gentler prototype above: "As is".
 - **Measured:** the table above, Kotlin, at the commit this lands in.
 - **Proposed (design shapes):** the 12% wire threshold, the 250 Hz drive and
   60 Hz envelope corners, FORCE's 3 to 0.5 ms span, the 2 ms soft widening,

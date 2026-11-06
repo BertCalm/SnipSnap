@@ -87,7 +87,10 @@ class BorePadMakerTest {
             for (note in zone) {
                 assertEquals(1, note.snip.channels)
                 assertEquals(rate, note.snip.sampleRate)
-                assertTrue(note.loopStartFrame >= (1.8 * rate).toLong() - 1, "zone ${midis[i]}: the loop starts at ${note.loopStartFrame}, inside the attack")
+                // The owner's pick (HeldStart.SHORT): the loop starts once the onset's 80 ms have handed over by 300 ms, never inside it.
+                val handedOver = (com.snipsnap.synth.HeldStart.SHORT.handover * rate).toLong() + com.snipsnap.synth.HeldStart.SETTLED_FRAMES
+                assertTrue(note.loopStartFrame >= handedOver, "zone ${midis[i]}: the loop starts at ${note.loopStartFrame}, inside the onset's handover")
+                assertTrue(note.loopStartFrame < rate, "zone ${midis[i]}: the loop starts at ${note.loopStartFrame}, a second or more into the key")
                 assertTrue(note.loopStartFrame < note.snip.frameCount, "zone ${midis[i]}: the loop start is past the end")
             }
             assertFalse(zone[0].snip.samples.contentEquals(zone[1].snip.samples), "zone ${midis[i]}: the two layers are one sound")

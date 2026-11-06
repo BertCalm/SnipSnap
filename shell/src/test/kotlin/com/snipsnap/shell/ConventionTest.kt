@@ -2477,7 +2477,7 @@ class ConventionTest {
         for ((marker, dimmed) in listOf(
             "MutateSheet.HEAR_LABEL" to "dimmed = partner == null",
             "MutateSheet.KEEP_LABEL" to "dimmed = partner == null",
-            "\"UNDO\"" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
+            "Copy.UNDO_MUTATE" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
         )) {
             val b = button(marker)
             assertTrue(
@@ -2626,31 +2626,32 @@ class ConventionTest {
      *   null`, toasts it (`onToast(nothing)`) and returns before `commitPadEditNow(`, which then runs
      *   the model's own undo (`unsplicePad`, `undesamplePad`, which ask the same refusal) and lands
      *   on `Copy.UNSPLICED` or `Copy.UNDESAMPLED`.
-     * - Where they sit: UNDO SPLICE shares one Row with SPLICE ▸, half each. Its label is its own,
-     *   "UNDO SPLICE", because the sheet's foot is always composed and WidePadSheetScreenTest
-     *   finds the open box's UNDO by the bare word. DE-SAMPLE's is a visible "UNDO" in the DE-SAMPLE
-     *   header row inside the MAKE box, which composes only while open, and it is spoken as "UNDO
-     *   DE-SAMPLE", because MAKE holds five doors.
+     * - Where they sit: UNDO SPLICE shares one Row with SPLICE ▸, half each. Every per-tool UNDO on the
+     *   sheet is named in full by `Copy` (UNDO SPLICE, UNDO DE-SAMPLE, UNDO MUTATE, UNDO OUTSIDE, UNDO
+     *   BOARD), as the button and as the word its failure toast says: the sheet draws several, and its
+     *   pages draw more than one at a time, so a bare UNDO would not say whose it is. There is no single
+     *   undo for the sheet. DE-SAMPLE's sits in the DE-SAMPLE header row inside the MAKE box, which
+     *   composes only while open.
      */
     @Test
     fun `law - UNDO SPLICE dims with the refusal its door toasts, as MUTATE's UNDO does`() {
         val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
-        val splice = undoButton(code, "\"UNDO SPLICE\"")
+        val splice = undoButtonLabelled(code, "Copy.UNDO_SPLICE")
         assertUndoGreysOnlyForBusy(
             splice,
             "dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null",
             "onClick = ::onUnsplice",
         )
         assertTrue(
-            splice.startsWith("( \"UNDO SPLICE\",") && "▸" !in splice,
-            "UNDO SPLICE's label is not its own `\"UNDO SPLICE\"`, or carries a ▸. The foot is always composed, so a bare " +
+            splice.startsWith("( Copy.UNDO_SPLICE,") && "▸" !in splice && Copy.UNDO_SPLICE == "UNDO SPLICE",
+            "UNDO SPLICE's label is not its own `Copy.UNDO_SPLICE` (\"UNDO SPLICE\"), or carries a ▸. The foot is always composed, so a bare " +
                 "UNDO would be a second one beside the open box's; and it opens nothing:\n  $splice",
         )
         val spliceAt = code.indexOf("\"SPLICE ▸\"")
         assertTrue(spliceAt >= 0, "expected PadSheetScreen to draw `\"SPLICE ▸\"`")
         val row = blockAfter(code.substring(code.lastIndexOf("Row(", spliceAt)), "Row(")
         assertTrue(
-            "\"UNDO SPLICE\"" in row && "modifier = Modifier.weight(1f)" in undoButton(code, "\"SPLICE ▸\"") &&
+            "Copy.UNDO_SPLICE" in row && "modifier = Modifier.weight(1f)" in undoButton(code, "\"SPLICE ▸\"") &&
                 "modifier = Modifier.weight(1f)" in splice,
             "UNDO SPLICE does not share one Row with SPLICE ▸ at half width each (`modifier = Modifier.weight(1f)`):\n  $row",
         )
@@ -2667,15 +2668,15 @@ class ConventionTest {
     @Test
     fun `law - DE-SAMPLE's UNDO dims with the refusal its door toasts, as MUTATE's UNDO does`() {
         val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
-        val desample = undoButton(code, "accessibilityLabel = \"UNDO DE-SAMPLE\"")
+        val desample = undoButtonLabelled(code, "Copy.UNDO_DESAMPLE")
         assertUndoGreysOnlyForBusy(
             desample,
             "dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null",
             "onClick = ::onUndesample",
         )
         assertTrue(
-            desample.startsWith("( \"UNDO\","),
-            "DE-SAMPLE's UNDO does not read UNDO, as MUTATE's and OUTSIDE's header buttons do:\n  $desample",
+            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO DE-SAMPLE",
+            "DE-SAMPLE's UNDO does not read `Copy.UNDO_DESAMPLE` (UNDO DE-SAMPLE, in full: MAKE holds five doors), as MUTATE's and OUTSIDE's header buttons name theirs:\n  $desample",
         )
         val legend = code.indexOf("legend = PadSheetBoxes.Box.MAKE.legend")
         assertTrue(legend >= 0, "expected the MAKE box's GroupBox")
@@ -2685,7 +2686,7 @@ class ConventionTest {
         val header = make.indexOf("TapeText(\"DE-SAMPLE · THE NEAREST PATCH\"")
         val rowAt = if (header >= 0) make.lastIndexOf("Row(", header) else -1
         assertTrue(
-            rowAt >= 0 && "accessibilityLabel = \"UNDO DE-SAMPLE\"" in blockAfter(make.substring(rowAt), "Row("),
+            rowAt >= 0 && "Copy.UNDO_DESAMPLE" in blockAfter(make.substring(rowAt), "Row("),
             "DE-SAMPLE's UNDO is not in the DE-SAMPLE header row inside the MAKE box. Outside a box it would be a " +
                 "second bare UNDO on the always-composed sheet.",
         )
@@ -2749,6 +2750,13 @@ class ConventionTest {
         return normalizeSpan(blockAfterList(code.substring(code.lastIndexOf("ActionButton(", at)), "ActionButton("))
     }
 
+    /** The whole `ActionButton(...)` call whose first argument is [label] (a `Copy` constant), whitespace-normalised. */
+    private fun undoButtonLabelled(code: String, label: String): String {
+        val at = Regex("""ActionButton\(\s*${Regex.escape(label)}""").find(code)?.range?.first ?: -1
+        assertTrue(at >= 0, "expected PadSheetScreen to draw an `ActionButton($label, ...)`")
+        return normalizeSpan(blockAfterList(code.substring(at), "ActionButton("))
+    }
+
     private fun assertUndoGreysOnlyForBusy(button: String, dimmed: String, click: String) {
         assertTrue(
             Regex("""enabled = !busy\s*[,)]""").containsMatchIn(button) && dimmed in button && click in button,
@@ -2761,7 +2769,7 @@ class ConventionTest {
         val body = codeOnly(blockAfter(code, door))
         val ask = body.indexOf(refusal)
         val toast = body.indexOf("onToast(nothing)")
-        val commit = body.indexOf("commitPadEditNow(\"UNDO\"")
+        val commit = body.indexOf("commitPadEditNow(Copy.UNDO_")
         assertTrue(
             ask >= 0 && toast > ask && commit > toast,
             "`$door` commits without asking `$refusal` first and toasting it (`onToast(nothing)`), so a dimmed " +

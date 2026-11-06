@@ -324,18 +324,19 @@ class BoreKeysTest {
     @Test
     fun `a zone ignores OVERBLOW, TUNE and HOLD, and renders the same twice`() {
         // OVERBLOW is a one-shot's gesture: a held note never cracks, so every zone plays its key. TUNE is set by the zone and
-        // HOLD by the LOOP's vibrato, so the patch's own do not move it. Each render is compared with the zone at the defaults.
+        // HOLD by the LOOP's vibrato, so the patch's own do not move it. Each render is compared with the zone at the defaults, both
+        // with the whole start (hit = null): the shaped start is HeldStartTest's.
         val flute = zone(BoreVoice.FLUTE, 72, 1)
-        val cracked = BoreKeys.padLayer(BoreVoice.FLUTE, Bore.defaults(BoreVoice.FLUTE) + mapOf("OVERBLOW" to 1f, "TUNE" to 0f, "HOLD" to 0.98f), 72, flute.breath)
+        val cracked = BoreKeys.padLayer(BoreVoice.FLUTE, Bore.defaults(BoreVoice.FLUTE) + mapOf("OVERBLOW" to 1f, "TUNE" to 0f, "HOLD" to 0.98f), 72, flute.breath, hit = null)
         assertContentEquals(flute.samples, cracked.snip.samples, "a cracked FLUTE patch at another TUNE and HOLD makes another zone")
         val sax = zone(BoreVoice.SAX, 48, 0)
-        val again = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX), 48, sax.breath)
+        val again = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX), 48, sax.breath, hit = null)
         assertContentEquals(sax.samples, again.snip.samples, "two renders of the same zone differ")
         assertEquals(sax.held.note.loopStartFrame, again.loopStartFrame)
-        val moved = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to 1f, "HOLD" to 0f, "OVERBLOW" to 1f), 48, sax.breath)
+        val moved = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to 1f, "HOLD" to 0f, "OVERBLOW" to 1f), 48, sax.breath, hit = null)
         assertContentEquals(sax.samples, moved.snip.samples, "a SAX patch at another TUNE and HOLD makes another zone")
         // The control: a different CHIFF makes a different zone, so the comparison can fail.
-        val chiff = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + ("CHIFF" to 0.9f), 48, sax.breath)
+        val chiff = BoreKeys.padLayer(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + ("CHIFF" to 0.9f), 48, sax.breath, hit = null)
         assertFalse(sax.samples.contentEquals(chiff.snip.samples), "CHIFF does not change the zone, so the comparison cannot fail")
     }
 

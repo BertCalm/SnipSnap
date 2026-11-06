@@ -3193,3 +3193,50 @@ enough sound, at ERHU's top especially.
 * *Proposed:* the soft share of 0.28 and the velocity split at 64 (listening values), the cut's 1024-frame search, the edge zones' reach
   of nine semitones (the loop maker's layout), the guess at the phone's render time.
 * *Heard:* nothing. The A/B is where the owner hears it.
+
+### Heard (2026-11-06): the hit against the held part
+
+**HEARD:** the owner played the held-keys page (CELLO and ERHU beside FLUTE and SAX) and said "I feel like either
+the initial sound is too long or there is too much difference between the hit and the held portion", for both
+engines.
+
+**MEASURED** (the page's hard-layer clips, 100 ms windows against the loop): after the hit, the start already
+matches the loop. Level is within 0.7 dB, the centroid within about 6 %, and the 20 ms level waver and the pitch's
+spread are the same before and after the marker. The difference is the bow's bite: CELLO's first windows run 40 to
+90 % brighter than the loop for about 0.3 s at C3 and 0.6 s at C2, ERHU's for 0.1 to 0.2 s.
+
+PROPOSED, for the owner's pick: one dial, how long the hit keeps its own character before the zone's own loop
+takes over (`HeldStartAuditionGenerator`, `./gradlew :shell:generateHeldStartAudition`), at each voice's low,
+middle and high zone, hard layer, through the instrument player:
+
+- **Now:** the zone as shipped.
+- **Medium:** the hit as itself to 0.2 s, handed to the loop by 0.6 s.
+- **Short:** the hit as itself to 0.08 s, handed to the loop by 0.3 s.
+- **No hit:** the loop's tone from the first frame, under the start's own swell (a reference).
+
+The handover is a raised-cosine blend into the zone's loop, phase-aligned to the note, carrying the start's own
+level rise. The marker moves to where the swell is done, after 300 frames of pure loop, and the loop after it is the
+shipped loop turned to start there, so the seam is the shipped seam: the house check reads 0 on all 18 reshaped
+ARCO clips (MEASURED). Not heard yet; the pick decides what ships.
+
+**HEARD (2026-11-06): "Short sound good in audition."** The owner picked Short, for both engines.
+
+**As built** (`HeldStart`, shared by `ArcoKeys.pad` and `BoreKeys.padLayer`; `padMeasured` keeps the whole start, and
+`hit = null` asks for it):
+
+- The hit plays as itself for 80 ms and has handed over to the zone's own loop by 300 ms, under the start's own swell
+  (its 20 ms level, rising only). The marker moves from 1.80 to 3.08 s to 0.31 to 0.64 s (the latest is CELLO C2's soft
+  layer, whose swell is slowest), so each instrument is about half the size it was.
+- Two changes from the audition's copy, both found by HeldStartTest's swell check. The loop is turned by the best match
+  over the whole handover (an FFT cross-correlation), where the audition matched 30 ms, which at ERHU's high notes could
+  land a vibrato swing away and dipped the soft layers' handover by up to 2.5 dB. And the blend holds the level for how
+  well the two waves match (BORE's blend law, at r = 1 where that would pass the 0.99 ceiling). The audition's copy also
+  counted 10 ms of the start twice when it read the start's level.
+- **MEASURED** (HeldStartTest, all 70 zone-layers of both engines at the defaults):
+  - the hit's first 80 ms are the zone's own frames;
+  - the loop after the marker is the zone's loop turned, frame for frame, its seam 0, and nothing passes 0.99;
+  - by 0.30 to 0.40 s the centroid is within 1.4 % of the loop's, where the whole start's was up to 79 % off;
+  - the handover dips at most 1.77 dB under the whole start and swells at most 0.88 dB over the louder of it and the loop.
+- Against the clips the owner heard, the shipped Short's 20 ms level differs by at most 1.44 dB in its first 0.6 s (SAX
+  C3). The loop is the same loop, entered at a better-matched turn.
+- Not heard: the shipped Short itself, and the soft layers' handover.

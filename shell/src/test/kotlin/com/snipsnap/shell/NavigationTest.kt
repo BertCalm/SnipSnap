@@ -204,7 +204,7 @@ class NavigationTest {
 
     @Test
     fun `Back from a pad tool lands on the pad editor, and the editor then closes to the grid`() {
-        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)) {
+        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS)) {
             val nav = Navigation()
             nav.go(Place.PROJECT)
             nav.open(Bench.PAD_SHEET)

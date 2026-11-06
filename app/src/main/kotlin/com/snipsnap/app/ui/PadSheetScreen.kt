@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -132,6 +132,7 @@ import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Provenance
@@ -200,6 +201,16 @@ fun PadSheetScreen(
      */
     backLabel: String,
     onSlotChange: (Int) -> Unit,
+    /**
+     * Which of the editor's three pages to draw (`Bench.PAD_SHEET`, `PAD_EFFECTS`, `PAD_VARIATIONS`): one
+     * composable, so the state EFFECTS and VARIATIONS work on survives the trip from the editor and back.
+     * [onBack] is Back from whichever page is up, and [backLabel] names where it lands.
+     */
+    page: PadSheetPage = PadSheetPage.EDITOR,
+    /** `EFFECTS ▸`: opens the EFFECTS page over the editor. */
+    onOpenEffects: () -> Unit = {},
+    /** `VARIATIONS ▸`: opens the VARIATIONS page over the editor. */
+    onOpenVariations: () -> Unit = {},
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
@@ -515,8 +526,9 @@ fun PadSheetScreen(
     }
     // The caller also owns the accordion selection. External box changes must
     // revoke a hidden panel's request even when they bypass one of its buttons.
-    LaunchedEffect(openBox, aquariumOpen) {
-        if (aquariumOpen && openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT) {
+    // Leaving EFFECTS is the same: the panel is drawn only there.
+    LaunchedEffect(openBox, aquariumOpen, page) {
+        if (aquariumOpen && (openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT || page != PadSheetPage.EFFECTS)) {
             stopAquariumPreview()
             aquariumOpen = false
             discardAquariumDraft()
@@ -2206,7 +2218,7 @@ fun PadSheetScreen(
             onToast(nothing)
             return
         }
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+        commitPadEditNow(Copy.UNDO_MUTATE, onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
     }
 
     /**
@@ -2226,7 +2238,7 @@ fun PadSheetScreen(
             onToast(nothing)
             return
         }
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNSPLICED) }) { mm -> mm.unsplicePad(slot) }
+        commitPadEditNow(Copy.UNDO_SPLICE, onSuccess = { onToast(Copy.UNSPLICED) }) { mm -> mm.unsplicePad(slot) }
     }
 
     /**
@@ -2263,7 +2275,7 @@ fun PadSheetScreen(
             onToast(nothing)
             return
         }
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
+        commitPadEditNow(Copy.UNDO_DESAMPLE, onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
@@ -2760,7 +2772,7 @@ fun PadSheetScreen(
     }
 
     fun onOutsideUndo() {
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
+        commitPadEditNow(Copy.UNDO_OUTSIDE, onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
     }
 
     /**
@@ -3175,6 +3187,15 @@ fun PadSheetScreen(
     // (a second press while the save is in flight no-ops), so no extra
     // `enabled` condition is needed here, same as the chip's own `enabled`.
     BackHandler(onBack = ::requestBack)
+    // A page change is a change of screen: a preview still sounding (an Aquarium audition, a HEAR) stops,
+    // as it does when the sheet closes. Not on the first composition, which has nothing to stop.
+    var pageSeen by remember { mutableStateOf(page) }
+    LaunchedEffect(page) {
+        if (page != pageSeen) {
+            pageSeen = page
+            stopAquariumPreview()
+        }
+    }
 
     /**
      * The safety net every exit shares, present and future: whatever's
@@ -3464,13 +3485,21 @@ fun PadSheetScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // One scroll position per page: a short page would otherwise clamp the editor's, and Back would land at the top.
+        val pageScrolls = remember { PadSheetPage.entries.associateWith { ScrollState(0) } }
         PadSheetHeader(
             slot = slot,
             pad = pad,
             classColor = classColor,
             scheme = scheme,
             busy = busy,
-            backLabel = backLabel,
+            // A page names the pad it goes back to ("◄ PAD A01") and itself in the middle.
+            backLabel = if (page == PadSheetPage.EDITOR) backLabel else "$backLabel ${padTag(slot)}",
+            title = when (page) {
+                PadSheetPage.EDITOR -> "PAD ${padTag(slot)}"
+                PadSheetPage.EFFECTS -> Copy.PAD_EFFECTS_TITLE
+                PadSheetPage.VARIATIONS -> Copy.PAD_VARIATIONS_TITLE
+            },
             onBack = ::requestBack,
             onHit = {
                 stopAquariumPreview()
@@ -3497,9 +3526,10 @@ fun PadSheetScreen(
         )
 
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(pageScrolls.getValue(page)),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (page == PadSheetPage.EDITOR) PadPageBody {
             WaveformLcd(snip, pad.drumClass, classColor, scheme, Modifier.padding(top = 4.dp))
 
             TapeText(
@@ -3673,8 +3703,8 @@ fun PadSheetScreen(
             // not the Column trap GRAIN ▸'s comment describes). Always drawn
             // and dimmed when it cannot act, so the sheet does not rearrange
             // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
-            // nothing. Its own label, not a bare UNDO: this section is always
-            // composed, so a second "UNDO" would sit beside the open box's.
+            // nothing. Named in full like every per-tool UNDO on the sheet
+            // (Copy.UNDO_*), since the pages draw several.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
                 ActionButton(
@@ -3686,7 +3716,7 @@ fun PadSheetScreen(
                     onClick = ::openSplice,
                 )
                 ActionButton(
-                    "UNDO SPLICE",
+                    Copy.UNDO_SPLICE,
                     scheme,
                     enabled = !busy,
                     dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
@@ -3695,7 +3725,13 @@ fun PadSheetScreen(
                 )
             }
 
-            SectionHeading("EFFECTS", scheme)
+            // EFFECTS and VARIATIONS are screens of their own (`PadSheetPage`), one door row each:
+            // the name with a ▸, and a closed line saying what is applied or what is inside.
+            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onOpenEffects)
+            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onOpenVariations)
+            }
+
+            if (page == PadSheetPage.EFFECTS) PadPageBody {
             GroupBox(
                 legend = PadSheetBoxes.Box.TREATMENT.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.TREATMENT),
@@ -4010,7 +4046,39 @@ fun PadSheetScreen(
             )
             }
 
-            SectionHeading("VARIATIONS", scheme)
+            GroupBox(
+                legend = PadSheetBoxes.Box.OUTSIDE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
+                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
+                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
+                scheme = scheme,
+                enabled = !busy,
+                // The trip out: the strip goes lcd-alt while the reels turn.
+                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+            ) {
+        OutsideCard(
+            moves = OutsideSheet.MOVES,
+            move = outsideMove,
+            onMove = { outsideMove = it },
+            knobLabel = outsideKnob.label,
+            knobFraction = pendingOutsideKnob,
+            knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
+            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
+            applied = OutsideSheet.read(pad.recipe),
+            stage = outsideStage,
+            canUndo = binDaysLeft != null,
+            canKeep = measuredRoom != null,
+            onSend = ::onOutside,
+            onKeep = ::onKeepRoom,
+            onUndo = ::onOutsideUndo,
+            padColor = classColor,
+            scheme = scheme,
+            busy = busy,
+        )
+            }
+            }
+
+            if (page == PadSheetPage.VARIATIONS) PadPageBody {
             GroupBox(
                 legend = PadSheetBoxes.Box.MUTATE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MUTATE),
@@ -4058,38 +4126,9 @@ fun PadSheetScreen(
                 busy = busy,
             )
             }
-
-            GroupBox(
-                legend = PadSheetBoxes.Box.OUTSIDE.legend,
-                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
-                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
-                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
-                scheme = scheme,
-                enabled = !busy,
-                // The trip out: the strip goes lcd-alt while the reels turn.
-                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
-            ) {
-        OutsideCard(
-            moves = OutsideSheet.MOVES,
-            move = outsideMove,
-            onMove = { outsideMove = it },
-            knobLabel = outsideKnob.label,
-            knobFraction = pendingOutsideKnob,
-            knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
-            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
-            applied = OutsideSheet.read(pad.recipe),
-            stage = outsideStage,
-            canUndo = binDaysLeft != null,
-            canKeep = measuredRoom != null,
-            onSend = ::onOutside,
-            onKeep = ::onKeepRoom,
-            onUndo = ::onOutsideUndo,
-            padColor = classColor,
-            scheme = scheme,
-            busy = busy,
-        )
             }
 
+            if (page == PadSheetPage.EDITOR) PadPageBody {
             SectionHeading("MAKE FROM THIS PAD", scheme)
             GroupBox(
                 legend = PadSheetBoxes.Box.MAKE.legend,
@@ -4169,11 +4208,10 @@ fun PadSheetScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
                 ActionButton(
-                    "UNDO",
+                    Copy.UNDO_DESAMPLE,
                     scheme,
                     enabled = !busy,
                     dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null,
-                    accessibilityLabel = "UNDO DE-SAMPLE",
                     onClick = ::onUndesample,
                 )
             }
@@ -4274,10 +4312,13 @@ fun PadSheetScreen(
                 onClick = { onAudition(slot) },
             )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
+            }
         }
 
         // Pinned under the scroll: a 2dp rule, then the pad nav, so the
-        // next pad is always one tap away whatever box is open.
+        // next pad is always one tap away whatever box is open, and on the
+        // EFFECTS and VARIATIONS pages too: treating a kit pad by pad is what
+        // they are for, and the page stays up as the pad changes.
         Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
         // J4 + J23: gated on `busy` as well as on there being somewhere to
         // go. These two were the only controls on this sheet that stayed
@@ -4552,6 +4593,7 @@ private fun PadSheetHeader(
     scheme: Scheme,
     busy: Boolean,
     backLabel: String,
+    title: String,
     onBack: () -> Unit,
     onHit: () -> Unit,
     onBefore: (() -> Unit)?,
@@ -4572,7 +4614,7 @@ private fun PadSheetHeader(
         HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
+            TapeText(title, TapeType.lcdHeader, scheme.lcdInk.tape)
             Box(
                 Modifier.background(classColor.copy(alpha = 0.85f), RoundedCornerShape(3.dp))
                     .padding(horizontal = 6.dp, vertical = 1.dp),
@@ -5107,7 +5149,7 @@ private fun BoardCard(
                 modifier = Modifier.weight(1f), onClick = onRemove,
             )
             ActionButton(
-                "UNDO", scheme, enabled = !busy && canUndo,
+                Copy.UNDO_BOARD, scheme, enabled = !busy && canUndo,
                 modifier = Modifier.weight(1f), onClick = onUndo,
             )
         }
@@ -5164,10 +5206,10 @@ private fun ObliterateBoardControls(
 }
 
 /**
- * A section heading on the pad editor's scrolling page (LAYERS, EDIT, EFFECTS, VARIATIONS, MAKE FROM THIS
- * PAD, TRY IN THE BEAT): a plain label above the controls it names, announced as a heading. A private
- * composable on purpose: [PadSheetScreen] is one method already past the dex register limit's comfort,
- * and an inline Column here would compile into it.
+ * A section heading on the pad editor's scrolling page (LAYERS, EDIT, MAKE FROM THIS PAD, TRY IN THE BEAT;
+ * EFFECTS and VARIATIONS are doors to screens of their own, [PageDoor]): a plain label above the controls
+ * it names, announced as a heading. A private composable on purpose: [PadSheetScreen] is one method already
+ * past the dex register limit's comfort, and an inline Column here would compile into it.
  */
 @Composable
 private fun SectionHeading(text: String, scheme: Scheme) {
@@ -5584,7 +5626,7 @@ private fun MutateCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
-            ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
+            ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
         // The pending pair, so the card names the partner before anything is
         // kept. TalkBack reads it uncut.
@@ -5866,7 +5908,7 @@ private fun OutsideCard(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
+            ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
             // The trip is out: the reels turn on an LCD strip beside the

@@ -44,10 +44,12 @@ import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.AquariumPadSheet
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.Schemes
 import com.snipsnap.synth.AquariumControls
 import com.snipsnap.synth.AquariumEditor
@@ -95,6 +97,9 @@ class AquariumPanelTest : ComposeScreenTest() {
     private var panelPreviewing by mutableStateOf(false)
     private var currentSlot by mutableStateOf(1)
     private var openBox by mutableStateOf<String?>(PadSheetBoxes.Box.TREATMENT.name)
+
+    /** The page the sheet draws, hoisted the way App's `Navigation` holds it: a door opens EFFECTS and Back returns to the editor. */
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
     private var screenVisible by mutableStateOf(true)
     @Volatile private var updated: Kit? = null
 
@@ -335,6 +340,7 @@ class AquariumPanelTest : ComposeScreenTest() {
     private fun showSheet(fixture: Fixture, renderer: AquariumOfflineRenderer = AquariumPadRenderer) {
         currentSlot = 1
         openBox = PadSheetBoxes.Box.TREATMENT.name
+        pageState = PadSheetPage.EDITOR
         screenVisible = true
         setPhoneContent {
             if (screenVisible) PadSheetScreen(
@@ -342,7 +348,11 @@ class AquariumPanelTest : ComposeScreenTest() {
                 slot = currentSlot,
                 backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
-                onBack = {}, onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
+                page = pageState,
+                onOpenEffects = { pageState = PadSheetPage.EFFECTS },
+                onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                onBack = { pageState = PadSheetPage.EDITOR },
+                onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
                 onKitUpdated = { updated = it }, onShelfAssetWritten = {}, appScope = appScope,
                 workshopOpen = false, openBox = openBox, onOpenBox = { openBox = it },
                 pedalRow = PedalSlate.DEFAULT, onPedalRowChange = {},
@@ -350,6 +360,8 @@ class AquariumPanelTest : ComposeScreenTest() {
             )
         }
         waitForText("PAD ${PadBanks.tag(1)}")
+        // AQUARIUM ▸ is on EFFECTS, one door from the editor.
+        activateDescription(Copy.PAD_EFFECTS_DOOR)
         waitForTag("aquarium-open")
         activate("aquarium-open")
         waitForTag("aquarium-panel")
