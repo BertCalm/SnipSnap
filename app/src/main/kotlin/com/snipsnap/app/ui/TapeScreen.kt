@@ -1097,12 +1097,12 @@ private fun TapeDeckContent(
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // BACK ONTO A02 replaces KEEP while a RE-TRIM is live
+                // BACK ONTO A02 replaces USE THIS PART while a RE-TRIM is live
                 // (docs/RETRIM.md §4): the request owns the primary. The
                 // selection's frames are the loaded file's own, which is what
                 // App reads the cut back out of.
                 DeckButton(
-                    retrim?.let { Copy.backOnto(it.padLabel) } ?: "KEEP",
+                    retrim?.let { Copy.backOnto(it.padLabel) } ?: Copy.USE_THIS_PART,
                     Modifier
                         .weight(1f)
                         .height(Layout.PRIMARY_ACTION_H.dp),

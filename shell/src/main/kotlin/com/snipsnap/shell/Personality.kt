@@ -184,8 +184,8 @@ object Copy {
      * EMPTY_SHELF here used to be TAPE's own "NOTHING TAPED YET." said on a
      * screen that isn't TAPE, the exact wrong-screen bug EMPTY_GROOVE was
      * already written to fix elsewhere — this is CHOP's own copy of that
-     * fix. Names both real doors in: TAPE's own KEEP button (the button's
-     * actual on-screen label; `TapeCommit`/`onCommit` are this app's
+     * fix. Names both real doors in: TAPE's own USE THIS PART button (the
+     * button's actual on-screen label; `TapeCommit`/`onCommit` are this app's
      * internal name for the same action, never shown to a user), and the
      * kit-fallback (`ChopScreen.loadLongestSample`) for anyone who already
      * has a sample-bearing kit open. A shared-in file and CHOP ALL are
@@ -193,7 +193,7 @@ object Copy {
      * new kit built directly) rather than putting anything CHOP itself can
      * read.
      */
-    const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND KEEP IT, OR OPEN A KIT WITH SAMPLES ON IT."
+    const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND USE THIS PART, OR OPEN A KIT WITH SAMPLES ON IT."
     /**
      * Said when a source loaded fine but the detector found zero onsets
      * (silence, or nothing loud enough to register) —
@@ -397,10 +397,18 @@ object Copy {
      * `onCommit` puts the range in a `remember`ed `lastCommit` for CHOP to
      * pick up - nothing is taped, nothing is cut, nothing lands on a shelf
      * to be renamed, and the same selection can be kept again a second
-     * later. KEEP says nothing now: it moves the stage to CUT, where the
+     * later. The button (USE THIS PART now, KEEP when this was written) says nothing: it moves the stage to CUT, where the
      * kept tape is on the table, which is the whole of what happened.
      */
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
+    /**
+     * The deck's primary button. It was KEEP, but it writes nothing (see the
+     * note above): it marks the IN-OUT range and moves the stage to CUT. KEEP
+     * means "write what you just heard", so this says what it does, and the
+     * `▸` because it opens the next screen. A RE-TRIM replaces it with
+     * [backOnto].
+     */
+    const val USE_THIS_PART = "USE THIS PART ▸"
     /** The deck glided onto an onset after a coast. */
     const val SNAPPED = "SNAPPED TO THE HIT."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
@@ -1497,7 +1505,7 @@ object Copy {
     const val RETRIM_PAST_CAP = "THAT CUT SITS PAST WHAT TAPE CAN HOLD."
     /** TAPE's header while a RE-TRIM is live: which pad, which tape. */
     fun retrimHeader(pad: String, tape: String): String = "RE-TRIM $pad · $tape"
-    /** The deck's primary button while a RE-TRIM is live — it replaces KEEP. */
+    /** The deck's primary button while a RE-TRIM is live — it replaces [USE_THIS_PART]. */
     fun backOnto(pad: String): String = "BACK ONTO $pad"
     /** The busy line while BACK ONTO reads the cut and writes the pad. */
     const val RETRIM_BUSY = "RE-CUTTING…"
@@ -1583,7 +1591,7 @@ object Copy {
     /** The busy line while the tape's hits are found, before the grid comes up. */
     const val CATCH_BUSY = "LISTENING FOR HITS…"
     /** CATCH A HIT on a tape the detector heard nothing on. */
-    const val CATCH_NO_HITS = "NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD."
+    const val CATCH_NO_HITS = "NO HITS ON THIS TAPE TO CATCH. USE THIS PART, OR INSTANT KIT, INSTEAD."
     /** Over the grid while catching. */
     const val CATCH_HEADER = "HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT."
     /** The grid's bank switch: a bank is worth flipping to for the pads still free on it, since catches land only on those. */
