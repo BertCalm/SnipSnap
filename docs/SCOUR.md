@@ -1,4 +1,4 @@
-# SCOUR: an impact that builds (rounds R1 to R6)
+# SCOUR: an impact that builds (rounds R1 to R6, all heard)
 
 SCOUR is a pitched impact engine. A roller spins up against a free metal or glass body while shot
 rains on it faster and harder, each shot denting the surface; the dented fraction climbs and the
@@ -10,8 +10,8 @@ The design, the Python prototype and every measurement are in
 [the spec](superpowers/specs/2026-10-26-scour-engine-engineering-spec.md); its "As built" sections
 list each place the Kotlin differs from it and why. SCOUR is on the phone's SYNTH picker, has twenty-four
 factory presets and a sixty-four-pad starter kit. The owner has heard every audition up to R5 and
-accepted the voices and kit banks in them. DISC, ROD and bank D (R6) are built and not yet heard (see
-Listening). On the phone the owner reports SCOUR sounds fine; it has not been heard through an MPC.
+accepted the voices and kit banks in them, and said DISC, ROD and bank D (R6) sound good (see Listening).
+On the phone the owner reports SCOUR sounds fine; it has not been heard through an MPC.
 
 ## Voices
 
@@ -161,8 +161,9 @@ STEEL BOOM, already the bare slam on C2, rendered as a near-copy.
 | R4 (2026-11-01) | SHEET into a drop: yes. "Yes, it rumbles." Its place an octave down is right. Bank B: "with changes". Chose character and pitch. |
 | R5 (2026-11-01) | Bank B varied enough now: yes. Bank C as it is: yes. BEAM into a drop: yes, "a struck girder". Chose to put SCOUR on the phone. |
 | Phone (2026-11-05) | "Sounds fine on phone." Asked for six voices; chose a free ring (a brake disc) and a rod, both in one round, with a new bank D. |
+| R6 (2026-11-06) | DISC, ROD and bank D: "they sound good" (said in chat; the page's six questions were not answered one by one). |
 
-Not yet heard: DISC, ROD and bank D (R6); SCOUR through an MPC, where SHEET's lowest octave (65 to 262
+Not yet heard: SCOUR through an MPC, where SHEET's lowest octave (65 to 262
 Hz across TUNE) may thin out.
 
 ## What it does not model

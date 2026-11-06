@@ -1296,8 +1296,8 @@ RPM, SHOT, HARDEN and HOLD; HOLD sets the ring and never loops. Twenty-four dry 
 the SCOUR FRESH TAPE starter and the phone picker are included. `generateScourAudition`
 and `generateScourKit` write the listening page and the MPC kit. The owner has heard rounds
 R1 to R5 and accepted the
-voices and kit banks in them, and reports that SCOUR sounds fine on the phone. DISC, ROD
-and bank D (R6) are built and not yet heard, and SCOUR has not been heard through an MPC.
+voices and kit banks in them, and reports that SCOUR sounds fine on the phone. The owner
+said DISC, ROD and bank D (R6) sound good; SCOUR has not been heard through an MPC.
 
 SUTURE follows as S29, ported from [the supplied engineering specification](SUTURE_SPEC.md).
 BLOOM, THREAD, CLOSE, MURMUR, STRAIN and SHELL share a pitched bronze vessel,
