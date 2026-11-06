@@ -1043,6 +1043,10 @@ object Copy {
     const val LIVE_CAMERA_UNAVAILABLE = "THE CAMERA WOULD NOT OPEN. NOTHING TO READ LIVE."
     /** FREEZE: the current live frame becomes SNAP's own photo, back on the screen underneath. */
     const val LIVE_FROZEN = "FROZEN. THAT FRAME IS NOW THE PHOTO."
+    /** The line at the top of LIVE: the camera's reading is already sounding on entry, and ◄ SNAP, system Back or FREEZE (each closes the voice) are the ways it stops. */
+    const val LIVE_PLAYING_NOTE = "THE CAMERA IS PLAYING. LEAVE TO STOP."
+    /** The small label over LIVE's four sliders: they show the camera's reading and cannot be dragged to change it. A label, not a toast. */
+    const val LIVE_READING_LABEL = "READING"
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

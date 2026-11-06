@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -224,7 +225,14 @@ fun LiveSnapScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderChip("◄ SNAP", scheme, Modifier.width(72.dp), onClick = onBack)
-            TapeText("LIVE", TapeType.pixel, scheme.titleInk.tape)
+            // The title and, under it, the one fact the player needs on
+            // arrival: sound is already running. Inside the header's own
+            // 48 dp, between the two chips, so the preview below does not
+            // move.
+            Column(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                TapeText("LIVE", TapeType.pixel, scheme.titleInk.tape)
+                TapeText(Copy.LIVE_PLAYING_NOTE, TapeType.pixelSmall.copy(textAlign = TextAlign.Center), scheme.lcdInk2, maxLines = 2)
+            }
             Spacer(Modifier.width(72.dp))
         }
 
@@ -243,6 +251,9 @@ fun LiveSnapScreen(
             Modifier.fillMaxWidth().padding(top = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            // One label for the group: these four show what the camera
+            // reads and are not inputs (onValueChange below does nothing).
+            TapeText(Copy.LIVE_READING_LABEL, TapeType.pixelSmall, scheme.lcdInk2)
             for (spec in Snap.macrosFor(SnapVoice.HORIZON)) {
                 MacroSlider(
                     label = spec.name,
