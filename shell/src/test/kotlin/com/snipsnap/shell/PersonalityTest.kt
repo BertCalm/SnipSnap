@@ -644,6 +644,9 @@ class PersonalityTest {
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
         // SYNTH's four group headings: labels over a run of controls, not landings.
         "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
+        // The starter picker's nine group headings: labels over a run of starters, not landings.
+        "STARTER_HEADING_START_HERE", "STARTER_HEADING_BASS", "STARTER_HEADING_KEYS", "STARTER_HEADING_PLUCKS", "STARTER_HEADING_BREATH",
+        "STARTER_HEADING_VOICES", "STARTER_HEADING_METAL", "STARTER_HEADING_SKINS", "STARTER_HEADING_MOVING",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",

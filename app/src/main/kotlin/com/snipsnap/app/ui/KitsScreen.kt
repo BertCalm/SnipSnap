@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -64,6 +65,7 @@ import com.snipsnap.shell.ShelfFilter
 import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.StarterKits
+import com.snipsnap.shell.StarterShelf
 import java.util.Locale
 import kotlin.math.roundToInt
 import java.io.File
@@ -1517,26 +1519,47 @@ internal fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () ->
             TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
             // The viewport stays inside the screen; long rosters scroll so every
             // starter remains reachable without moving the scrim or its dismiss area.
-            for (starter in StarterKits.ALL) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .sunkenField(scheme)
-                        .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
-                        if (starter.seeded) {
-                            Spacer(Modifier.width(6.dp))
-                            TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
-                        }
-                    }
-                    TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-                }
+            // Grouped under headings in StarterShelf's display order; the stored
+            // order (StarterKits.ALL) is untouched. See StarterShelf.
+            for ((heading, starters) in StarterShelf.display()) {
+                StarterHeading(heading)
+                for (starter in starters) StarterRow(starter, onPick)
             }
         }
+    }
+}
+
+/** A group heading in the starter picker: a label announced as a heading, not a button. A private composable so its layout stays out of [StarterMenu]'s method. */
+@Composable
+private fun StarterHeading(text: String) {
+    TapeText(
+        text,
+        TapeType.pixel,
+        LocalScheme.current.ink2.tape,
+        Modifier.fillMaxWidth().padding(top = 6.dp).semantics { heading() },
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun StarterRow(starter: StarterKits.Starter, onPick: (StarterKits.Starter) -> Unit) {
+    val scheme = LocalScheme.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .sunkenField(scheme)
+            .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
+            if (starter.seeded) {
+                Spacer(Modifier.width(6.dp))
+                TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
+            }
+        }
+        TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }
 
