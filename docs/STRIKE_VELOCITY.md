@@ -129,6 +129,14 @@ start jitter. Both spreads are shapes.
   question is whether a soft SKIN kick and a soft TERRA djembe sound like a
   softer hit on the same drum, not a quieter copy, and whether a re-struck
   chain sounds like one drummer.
+- **The gate (2026-11-06):** `./gradlew :synth:generateStrikeAudition`
+  (`StrikeAuditionGenerator`) renders 127 clips at one loudness under
+  `testkit/strike-audition/`: every SKIN kick, tom and TERRA kit pad as its
+  old soft hit, then the new soft, medium and hard; fast rolls with one take,
+  Robin's old re-pitched takes and the new re-struck ones; OBBLIGATO keys held
+  ten seconds; CHORD STABS progressions. Seven questions, published as the
+  listening artifact at https://claude.ai/artifact/KSRzJCMRVCYTdQ9uKFgtf3,
+  whose answers save to its `answers` collection.
 - **Disclosed, not fixed:** TERRA's FORCE is not monotone in onset
   brightness on the rim pads (above). THUMP's and ONSET's kicks still take
   `soften()`.
