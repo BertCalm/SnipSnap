@@ -6,10 +6,12 @@ name: emulator-tests
 # finger the pad does not read - fails here instead of waiting for a tester
 # to notice.
 #
-# Booting an emulator is the most expensive thing this repo asks of its
-# metered minutes (ten to fifteen a run against three for the app build),
+# Booting an emulator and running the suite is the longest job this repo
+# has (about 40 to 50 minutes on a PR, against about 7 for the app build),
 # so this workflow runs only when something under app/ changes, and the
-# same once-per-branch and cancel-superseded rules as tests.yml apply.
+# same once-per-branch and cancel-superseded rules as tests.yml apply. The
+# repo is public now and its minutes are free; that rule dates from when
+# they were metered, and stands because the wait is real.
 # Anything else that wants it can start it by hand (workflow_dispatch).
 on:
   push:

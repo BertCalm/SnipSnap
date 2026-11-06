@@ -124,30 +124,47 @@ Two gradle hygiene rules, both learned the hard way:
 
 ## Reading CI
 
-Jobs on a PR: **`jvm-tests`**, **`android-build`**, **`native-tests`**
-(`.github/workflows/tests.yml`), and **`emulator-tests`**
-(`.github/workflows/emulator-tests.yml`) only when the PR touches
-`app/**`: it boots an emulator and runs `app/src/androidTest`, ten to
-fifteen minutes, and a PR with nothing under `app/` gets no such check.
+Jobs on a PR (`.github/workflows/tests.yml`): **`jvm-other`**, every
+module's JVM tests except `:synth`'s; **`jvm-synth`**, `:synth`'s tests split
+across three jobs, named `jvm-synth (shard 0 of 3)` through `(shard 2 of 3)`;
+**`jvm-tests`**, which runs no tests and is green only when all four of
+those are; **`android-build`**; and **`native-tests`**. **`emulator-tests`**
+(`.github/workflows/emulator-tests.yml`) runs only when the PR touches
+`app/**`: it boots an emulator and runs `app/src/androidTest`, about 40 to
+50 minutes, and a PR with nothing under `app/` gets no such check.
 `dependency-check` is weekly and on-demand only; it never gates a PR,
 and a red one there is not your PR's problem.
+
+A red `jvm-tests` means one of the jobs it waits on failed or was cancelled;
+open that one. Its check appears only once all four have ended, so while
+they run it is missing, not pending - unless an earlier run on the same
+commit was cancelled, in which case that run's red `jvm-tests` shows until
+this one reports. It is never skipped.
+Each `:synth` test class runs in exactly one shard, chosen by a hash of its
+name (root `build.gradle.kts`, "Sharding by test class"). To re-run the
+shard a failing job ran, `./gradlew --no-daemon :synth:test -PtestShards=3
+-PtestShard=<n>` with `<n>` from its name. A plain `./gradlew test` is not
+sharded and still runs every class.
 
 Three things about this workflow will mislead you if you don't know them.
 Its own header explains all three — read it before diagnosing anything.
 
 **1. A docs-only PR gets zero check runs, and that is correct.** Both
-triggers carry `paths-ignore: ["docs/**", "**/*.md"]`. An empty check list
+triggers' `paths` leave out `docs/**` and `**/*.md`, apart from `README.md`
+and `app/README.md`, which `ConventionTest` reads. An empty check list
 on a PR that only touches documentation is the workflow working as
 designed, not a run that failed to start, and not something to wait for.
 Note the deliberate omission: `reference/` is **not** ignored, because it
 is fixture data the audio and MPC-importer suites actually read.
 
-**2. A three-second failure with no logs is not a broken build.** The repo
-is private and its Actions minutes are metered. When the month's allowance
-is exhausted every run fails almost instantly with no output — which looks
-exactly like a catastrophic build failure and is not one. Before you
-root-cause a failure, check whether it produced any log at all. If it
-didn't, say so and stop; there is nothing in the diff to fix.
+**2. A three-second failure with no logs is not a broken build.** While the
+repo was private its Actions minutes were metered, and when the month's
+allowance ran out every run failed almost instantly with no output, which
+looks exactly like a catastrophic build failure and is not one. The repo is
+public now (checked 2026-11-06), so that should not recur unless it goes
+private again. The rule stands: before you root-cause a failure, check
+whether it produced any log at all. If it didn't, say so and stop; there is
+nothing in the diff to fix.
 
 **3. You probably cannot reproduce `android-build` locally.** In a session
 without an Android SDK, `:app` isn't in the build and `dl.google.com` is
@@ -159,11 +176,15 @@ costs a full CI cycle. Re-read the diff adversarially instead.
 Also worth knowing: PR runs are cancel-in-progress, so a superseded run
 showing "cancelled" after you pushed again is expected.
 
-The comment above `setup-android` in `jvm-tests` matches that. With no
+The comment above `setup-android` in `jvm-other` matches that. With no
 SDK, `settings.gradle.kts` leaves `:app` out and the nine JVM modules
-configure. What `setup-android` buys `jvm-tests` is that `:app` *is* in
-the graph there, which is why that job can exclude it. A no-SDK run is
-not a configuration failure. An older comment on that step said the
+configure. On the CI runner `:app` *is* in the graph, which is why
+`jvm-other` can exclude it: the runner image has its own SDK and presets
+`ANDROID_HOME` and `ANDROID_SDK_ROOT` to it (`setup-android` points them
+at the same SDK and accepts its licences; it is not what includes
+`:app`). The `jvm-synth` shards want the opposite: they blank both
+variables, so `:app` stays out there, as it does in a cloud session. A
+no-SDK run is not a configuration failure. An older comment on that step said the
 opposite — that `:app` existing made every module fail to configure
 without an SDK. That was true only while `:app` was included
 unconditionally (`a0a8fb0`, 2026-08-24), and the conditional include
