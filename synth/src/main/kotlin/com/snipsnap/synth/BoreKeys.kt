@@ -31,6 +31,11 @@ import kotlin.math.sqrt
  * 1.7's ([Bore.checkJoin]): the two blended waves must correlate by [Bore.LOOP_MIN_CORRELATION] and the level must not dip
  * more than [Bore.LOOP_MAX_DIP_DB] in the blend, or the zone is refused by name rather than shipped with a swell or a smear.
  *
+ * The zone as shipped then has its start shaped ([HeldStart.SHORT], the owner's pick of 2026-11-06): the onset keeps its
+ * own character for 80 ms and has handed over to the loop by 300 ms, under the onset's own swell, and the marker moves to
+ * where that is done (near 0.3 s, not 1.8 s), the loop after it the same loop turned. The join above is the loop's, so its
+ * guards still hold.
+ *
  * Two BREATH layers per zone ([layerBreaths]): the patch's own BREATH as the hard layer, and [SOFT_BREATH_SHARE] of it as
  * the soft one. BREATH is mapped onto each voice's measured speaking window (`Bore.reedPressure`, `Bore.flutePressure`), so
  * BREATH 0 is the softest note that speaks and a soft layer can never be air: RESIN's held-pad decision 2, "a soft layer
@@ -64,9 +69,11 @@ object BoreKeys {
         return listOf(hard * SOFT_BREATH_SHARE, hard)
     }
 
-    /** One zone's two layers at [midi], soft first, each its attack then its loop ([padLayer]). */
-    fun pad(voice: BoreVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> =
-        layerBreaths(voice, macros).map { padLayer(voice, macros, midi, it, cancelled) }
+    /** One zone's two layers at [midi], soft first, each its attack then its loop ([padLayer]), each start shaped by [hit]. */
+    fun pad(
+        voice: BoreVoice, macros: Map<String, Float>, midi: Int, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): List<KeyNote> = layerBreaths(voice, macros).map { padLayer(voice, macros, midi, it, hit, cancelled) }
 
     /**
      * One layer of one zone: the held note at [midi] blown at [breath], from its first sample to the end of its loop, with
@@ -74,9 +81,16 @@ object BoreKeys {
      * ([Bore.LOOP_HOLD]); OVERBLOW plays as 0; every other macro plays as it does in the one-shot. Throws, naming the zone,
      * if the held note's join does not hold. [cancelled] is asked before and after the render; the render itself stops on
      * its thread's interrupt, as the SYNTH preview's does.
+     *
+     * The start is then shaped by [hit] ([HeldStart.shape]): the note's own onset for 80 ms, handed to its loop by 300 ms
+     * ([HeldStart.SHORT], the owner's pick of 2026-11-06: the chiff or the reed's dark onset, then the first pass to 1.8 s,
+     * made the hit too long and too unlike the held part). A null [hit] keeps the whole first pass, as the zone was first
+     * built, for the audition's reference.
      */
-    fun padLayer(voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, cancelled: () -> Boolean = { false }): KeyNote =
-        padMeasured(voice, macros, midi, breath, cancelled).note
+    fun padLayer(
+        voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = HeldStart.shape(padMeasured(voice, macros, midi, breath, cancelled).note, hit)
 
     /**
      * A held zone and how its join was made. [join] is [Bore.LoopJoin] read on the zone: `startFrames` and `junctionFrames`

@@ -8,9 +8,10 @@ import com.snipsnap.synth.Dsp.RATE
  * ARCO held: a bowed note as a keygroup zone that sounds while a key is down
  * (docs/superpowers/specs/2026-11-04-arco-research.md section 9, and the design record's "R2: the held keygroup, as built").
  *
- * Each zone is one file: the bow's own stroke (the attack a one-shot at the same BOW plays, its bite included), the string settling
- * on a bow that never lifts, then exactly one loop of whole periods, with the loop marker where that loop starts ([KeyNote.loopStartFrame]
- * over 0). A short press plays the stroke; a held key sustains on the loop, which is the shipped LOOP's ([Arco.renderLoopMeasured]): the
+ * Each zone is one file: the bow's own stroke (the attack a one-shot at the same BOW plays, its bite included), then exactly one loop of
+ * whole periods, with the loop marker where that loop starts ([KeyNote.loopStartFrame] over 0). The stroke keeps its own character for
+ * 80 ms and has handed over to the loop by 300 ms ([HeldStart.SHORT], the owner's pick of 2026-11-06: the full stroke and the string's
+ * settling made the hit too long and too unlike the held part). A held key sustains on the loop, which is the shipped LOOP's ([Arco.renderLoopMeasured]): the
  * same retune, the same humanised vibrato fitted to the loop ([Arco.LOOP_VIBRATO], the variant the owner picked on 2026-11-04), the
  * same BUZZ with its noise repeating with the loop. The render is [Arco.renderHeldMeasured]; this file is the zone plan, the two
  * velocity layers and the refusal.
@@ -96,14 +97,19 @@ object ArcoKeys {
     }
 
     /**
-     * One held key: [voice] at [midi] in [layer], the stroke then the loop, levelled on the loop and held under 0.99. A key outside the
-     * voice's range, or a zone whose loop does not close at twice the warm-up, is refused by name. [cancelled] is asked before every pass
-     * of the retune (a pass is a few hundred milliseconds).
+     * One held key: [voice] at [midi] in [layer], the stroke then the loop, levelled on the loop and held under 0.99, its start shaped by
+     * [hit] ([HeldStart.shape]; null keeps the whole stroke and the string's settling, as the zone was first built, for the audition's
+     * reference). A key outside the voice's range, or a zone whose loop does not close at twice the warm-up, is refused by name. [cancelled]
+     * is asked before every pass of the retune (a pass is a few hundred milliseconds).
      */
-    fun pad(voice: ArcoVoice, macros: Map<String, Float>, midi: Int, layer: Layer, cancelled: () -> Boolean = { false }): KeyNote =
-        padMeasured(voice, macros, midi, layer, cancelled).note
+    fun pad(
+        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, layer: Layer, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = HeldStart.shape(padMeasured(voice, macros, midi, layer, cancelled).note, hit)
 
-    /** Both layers of the zone at [midi], soft first. */
-    fun layers(voice: ArcoVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> =
-        Layer.entries.map { pad(voice, macros, midi, it, cancelled) }
+    /** Both layers of the zone at [midi], soft first, each with its start shaped by [hit]. */
+    fun layers(
+        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): List<KeyNote> = Layer.entries.map { pad(voice, macros, midi, it, hit, cancelled) }
 }
