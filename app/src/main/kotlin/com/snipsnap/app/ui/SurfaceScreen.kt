@@ -61,6 +61,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
@@ -1287,13 +1288,7 @@ fun SurfaceScreen(
             // destination as "TA..." and never found → PAD. BARS sits here
             // with the print it sizes, not on VOICE beside LATCH.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionButton(
-                    label = if (printToPad) "→ PAD" else "→ TAPE",
-                    scheme = scheme,
-                    enabled = !printing && !finishing,
-                    dimmed = true,
-                    modifier = Modifier.weight(1f),
-                ) { printToPad = !printToPad }
+                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(2f)) { printToPad = it }
                 // BARS needs a tempo; a kit without one prints free.
                 val printBpm = entry?.kit?.tempoBpm
                 ActionButton(
@@ -1301,7 +1296,7 @@ fun SurfaceScreen(
                     scheme,
                     enabled = printBpm != null && !printing,
                     dimmed = barsIndex == 0,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1.2f),
                 ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
                 ActionButton(
                     label = if (printing) "STOP PRINT" else "PRINT",
@@ -1343,17 +1338,16 @@ fun SurfaceScreen(
             // it rides the MAKE bag instead (§3.6) - and a
             // mutually-exclusive row for TalkBack, like
             // the mode row above.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                for (p in Panel.entries) {
-                    ActionButton(
-                        p.name,
-                        scheme,
-                        enabled = true,
-                        dimmed = p != panel,
-                        modifier = Modifier.weight(1f).semantics { selected = p == panel },
-                    ) { panel = p }
-                }
-            }
+            PanelStrip(
+                panel = panel,
+                ring = ringVoice,
+                padTag = padName?.let { padLabel(padSlot) },
+                armed = armedCorner?.let { 'A' + it },
+                modsOn = kitSettings.mods.count { it.depth > 0f },
+                keysOn = midiDevices.isNotEmpty(),
+                fxFromKit = surfaceRouteOn,
+                scheme = scheme,
+            ) { panel = it }
 
             if (panel == Panel.VOICE) {
                 Spacer(Modifier.height(6.dp))
@@ -1416,46 +1410,19 @@ fun SurfaceScreen(
                 // PAD2/PAD3/PAD4 ◄ name ►: the sample area's other three
                 // vertices, blended in by the finger's own position - see the
                 // class doc.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Unlike PAD's enabled = padName != null: a pad always
-                    // auto-loads on entry, but slots 2/3/4 start empty and only
-                    // these buttons ever fill them, so gating on entry alone
-                    // (not padName2/3/4) is what lets the first press work at all.
-                    ActionButton("◄ PAD2", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(-1) }
-                    TapeText(
-                        padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" } ?: "NO PAD2",
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                    )
-                    ActionButton("PAD2 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(+1) }
-                }
+                // Unlike PAD's enabled = padName != null: a pad always
+                // auto-loads on entry, but slots 2/3/4 start empty and only
+                // these buttons ever fill them, so gating on entry alone
+                // (not padName2/3/4) is what lets the first press work at all.
+                SamplePadRow("PAD2", padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" }, scheme, entry != null) { stepPad2(it) }
 
                 Spacer(Modifier.height(6.dp))
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton("◄ PAD3", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(-1) }
-                    TapeText(
-                        padName3?.let { "${padLabel(padSlot3)} ${it.uppercase()}" } ?: "NO PAD3",
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                    )
-                    ActionButton("PAD3 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(+1) }
-                }
+                SamplePadRow("PAD3", padName3?.let { "${padLabel(padSlot3)} ${it.uppercase()}" }, scheme, entry != null) { stepPad3(it) }
 
                 Spacer(Modifier.height(6.dp))
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton("◄ PAD4", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(-1) }
-                    TapeText(
-                        padName4?.let { "${padLabel(padSlot4)} ${it.uppercase()}" } ?: "NO PAD4",
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                    )
-                    ActionButton("PAD4 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(+1) }
-                }
+                SamplePadRow("PAD4", padName4?.let { "${padLabel(padSlot4)} ${it.uppercase()}" }, scheme, entry != null) { stepPad4(it) }
             }
 
             if (panel == Panel.FX) {
@@ -1897,3 +1864,75 @@ fun SurfaceScreen(
  * surface has no pad chosen until one is.
  */
 private fun padLabel(slot: Int?): String = slot?.let { PadBanks.tag(it) } ?: ""
+
+/**
+ * The panel strip: VOICE, SHAPE, MOD, MIDI, FX as one row of equal tabs, each
+ * with a one-line caption beneath it saying what is inside right now - read
+ * from the live values, not a fixed blurb - while it is not the open tab.
+ * The open tab's line is reserved and blank, so the strip does not change
+ * height as tabs are picked (SegmentButton's SELECTED line does the same).
+ * A child composable, not inline in [SurfaceScreen], which is past the dex
+ * register cliff already.
+ */
+@Composable
+private fun PanelStrip(
+    panel: Panel,
+    ring: Boolean,
+    padTag: String?,
+    armed: Char?,
+    modsOn: Int,
+    keysOn: Boolean,
+    fxFromKit: Boolean,
+    scheme: Scheme,
+    onPick: (Panel) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+        for (p in Panel.entries) {
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                ActionButton(
+                    p.name,
+                    scheme,
+                    enabled = true,
+                    dimmed = p != panel,
+                    modifier = Modifier.fillMaxWidth().semantics { selected = p == panel },
+                ) { onPick(p) }
+                TapeText(
+                    if (p == panel) "" else when (p) {
+                        Panel.VOICE -> Copy.surfacePeekVoice(ring, padTag)
+                        Panel.SHAPE -> Copy.surfacePeekShape(armed)
+                        Panel.MOD -> Copy.surfacePeekMod(modsOn)
+                        Panel.MIDI -> Copy.surfacePeekMidi(keysOn)
+                        Panel.FX -> Copy.surfacePeekFx(fxFromKit)
+                    },
+                    TapeType.pixelSmall,
+                    scheme.ink3.tape,
+                    Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Where the print lands, as two choices side by side: the one in force is
+ * pressed in and reads SELECTED (SegmentButton, the app's picker). Disabled
+ * together while a print runs or lands, so the destination cannot change
+ * under it.
+ */
+@Composable
+private fun PrintDestination(toPad: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onPick: (Boolean) -> Unit) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        SegmentButton("→ TAPE", active = !toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(false) }
+        SegmentButton("→ PAD", active = toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(true) }
+    }
+}
+
+/** One of the sample triangle's other three vertices: ◄ [tag] name ►, [onStep] getting -1 or +1. A child so [SurfaceScreen] pays for three rows once. */
+@Composable
+private fun SamplePadRow(tag: String, name: String?, scheme: Scheme, enabled: Boolean, onStep: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        ActionButton("◄ $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(-1) }
+        TapeText(name ?: "NO $tag", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.2f).padding(horizontal = 4.dp))
+        ActionButton("$tag ►", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(+1) }
+    }
+}

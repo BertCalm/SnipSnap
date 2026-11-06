@@ -2583,6 +2583,19 @@ object Copy {
         if (replaced) "PAD $pad REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE BIN." else "PRINTED TO PAD $pad."
 
     // ---- SURFACE ----
+    // The one-fact caption under each SURFACE panel tab that is not open: what
+    // is inside it right now, in the tab slot's width (about eight characters,
+    // a fifth of a phone). Functions, not constants: each carries a live value.
+    /** Under VOICE: the pad it plays, or the ring when the ring is the voice. */
+    fun surfacePeekVoice(ring: Boolean, padTag: String?): String = if (ring) "THE RING" else if (padTag.isNullOrEmpty()) "NO PAD" else "PAD $padTag"
+    /** Under SHAPE: the corner PRESET ◄ ► will land on, or none armed. */
+    fun surfacePeekShape(armed: Char?): String = if (armed == null) "NO ARM" else "ARM $armed"
+    /** Under MOD: how many of the modulators have any depth. */
+    fun surfacePeekMod(on: Int): String = if (on == 0) "ALL OFF" else "$on ON"
+    /** Under MIDI: whether a keyboard is plugged in. */
+    fun surfacePeekMidi(connected: Boolean): String = if (connected) "KEYS ON" else "NO KEYS"
+    /** Under FX: whether the kit's Aquarium is routed through the surface. */
+    fun surfacePeekFx(fromKit: Boolean): String = if (fromKit) "FROM KIT" else "OFF"
     const val SURFACE_SETTINGS_NOT_SAVED = "SURFACE SETTINGS NOT SAVED. TRY AGAIN."
     const val SURFACE_SETTINGS_UNREADABLE = "SURFACE SETTINGS UNREADABLE. USING THE DEFAULTS."
     const val SURFACE_SET_NEEDS_TOUCH = "TOUCH THE PAD FIRST. SET KEEPS WHAT WAS UNDER THE FINGER."

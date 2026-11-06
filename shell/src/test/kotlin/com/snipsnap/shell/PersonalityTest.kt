@@ -1296,4 +1296,21 @@ class PersonalityTest {
         assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
     }
 
+    @Test
+    fun `the SURFACE tab captions stay short enough for a fifth of a phone and say the live value`() {
+        val all = listOf(
+            Copy.surfacePeekVoice(true, "A01"), Copy.surfacePeekVoice(false, "A01"), Copy.surfacePeekVoice(false, null),
+            Copy.surfacePeekShape('B'), Copy.surfacePeekShape(null),
+            Copy.surfacePeekMod(0), Copy.surfacePeekMod(2),
+            Copy.surfacePeekMidi(true), Copy.surfacePeekMidi(false),
+            Copy.surfacePeekFx(true), Copy.surfacePeekFx(false),
+        )
+        for (c in all) {
+            assertTrue(c.length <= 8, "'$c' must fit under a tab at 360 dp")
+            assertEquals(c.uppercase(), c, "TapeOS shouts: '$c'")
+        }
+        assertEquals("PAD A01", Copy.surfacePeekVoice(false, "A01"))
+        assertEquals("ARM B", Copy.surfacePeekShape('B'))
+        assertEquals("2 ON", Copy.surfacePeekMod(2))
+    }
 }
