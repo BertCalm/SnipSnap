@@ -42,10 +42,12 @@ object LoopInstrumentScan {
     /**
      * HOLD-loop engines without a held instrument on 2026-11-04 (MERCURY and KEEL were
      * wired the same day). OVEN has no HOLD macro, and SHOAL's factory voices are WOOD,
-     * which refuses HOLD loops by design, so neither is a candidate.
+     * which refuses HOLD loops by design, so neither is a candidate. ARCO passed the scan
+     * that day and left the list on 2026-11-06, when it got its own held maker
+     * ([ArcoPadMaker]).
      */
     val CANDIDATES = listOf(
-        "AEROSTAT", "ALLOY", "APSIS", "ARCO", "BORE", "CAIRN", "CIRCUIT", "CISTERN", "COROLLA",
+        "AEROSTAT", "ALLOY", "APSIS", "BORE", "CAIRN", "CIRCUIT", "CISTERN", "COROLLA",
         "EMBOUCHURE", "FLOTILLA", "LACQUER", "MURK", "MURMUR", "NIMBUS", "PITCHWHEEL",
         "RELAY", "REVEL", "SCOUR", "SKITTER", "SPOOL", "STOOP", "SUTURE", "TANGLE",
         "TESSERA", "THAW", "UNDERTOW", "WICK",

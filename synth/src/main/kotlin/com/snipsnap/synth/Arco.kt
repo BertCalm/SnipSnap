@@ -49,6 +49,9 @@ import kotlin.random.Random
  * the one-shot's vibrato at full depth with every movement in it fitted to a whole number of cycles per loop, and humanised (the rate and
  * the depth drift within the loop), so it repeats with the loop and the seam is the string's own.
  *
+ * A held key (R2, [Arco.renderHeldMeasured], played by [ArcoKeys]) is the one-shot's own stroke on a bow that never lifts, then that LOOP,
+ * cut where the string repeats: a keygroup zone with an attack and a sustain loop, and never a crossfade. Nobody has heard it.
+ *
  * What is *not* modelled, on purpose (the design's "Simplifications the model makes, stated"):
  * the string's stiffness and its dispersion (the partials are exactly harmonic), a bow's width
  * (a point), the hair's rosin as a state (the friction table is memoryless, so there is no
@@ -1236,6 +1239,34 @@ object Arco {
      */
     internal fun planLoop(hz: Float): Bore.LoopPlan = Bore.planLoop(hz)
 
+    /** The frames a LOOP's stretch is warmed up for before the kept loop begins: [LOOP_WARMUP_SECONDS] or [LOOP_WARMUP_PERIODS] periods of [hz], the longer. A held key ([renderHeldMeasured]) warms up the same, once or twice over. */
+    internal fun warmFramesFor(hz: Float): Int = Math.round(max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_PERIODS / hz) * RATE)
+
+    /** A stretch after [retuned]: the raw string, the pitch that was played to get it, and how many corrections it took (0 when the planned pitch already closed). */
+    internal class Retuned(val raw: FloatArray, val tunedHz: Double, val passes: Int)
+
+    /**
+     * BORE's route to a loop that closes by period, the one place it runs: [render] the stretch at [target], measure the *played* length of the
+     * plan's whole periods after [warm] frames ([Bore.measureLoopSamples]), and render again at `tuned * ratio`, up to [LOOP_PASSES] times, until
+     * the ratio is within [LOOP_CONVERGED] of 1. A LOOP ([renderLoopMeasured]) and a held key ([renderHeldMeasured]) both run it, each with its
+     * own stretch, so the two cannot retune differently.
+     */
+    private fun retuned(target: Float, plan: Bore.LoopPlan, warm: Int, render: (Float) -> FloatArray): Retuned {
+        val over = Dsp.OVERSAMPLE
+        val wanted = plan.frames.toDouble() * over
+        var tuned = target.toDouble()
+        var raw = render(tuned.toFloat())
+        var passes = 0
+        for (pass in 1..LOOP_PASSES) {
+            val ratio = Bore.measureLoopSamples(raw, warm * over, wanted, plan.periods) / wanted
+            if (abs(ratio - 1.0) < LOOP_CONVERGED) break
+            tuned *= ratio
+            raw = render(tuned.toFloat())
+            passes = pass
+        }
+        return Retuned(raw, tuned, passes)
+    }
+
     /** The steady stretch: a short stroke, then constant velocity and pressure to the end. No bite, no vibrato (the LOOP adds its own after the retune, [loopVibrato]), no stop. */
     internal fun stretch(voice: ArcoVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
@@ -1412,16 +1443,8 @@ object Arco {
         val plan = planLoop(target)
         val over = Dsp.OVERSAMPLE
         val rate = RATE * over
-        val warm = Math.round(max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_PERIODS / target) * RATE)
-        val wanted = plan.frames.toDouble() * over
-        var tuned = target.toDouble()
-        var raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
-        for (pass in 1..LOOP_PASSES) {
-            val ratio = Bore.measureLoopSamples(raw, warm * over, wanted, plan.periods) / wanted
-            if (abs(ratio - 1.0) < LOOP_CONVERGED) break
-            tuned *= ratio
-            raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
-        }
+        val warm = warmFramesFor(target)
+        val raw = retuned(target, plan, warm) { hz -> stretch(voice, m, hz, warm, plan.frames) }.raw
         val loopRaw = plan.frames * over
         val sung = loopVibrato(raw, voice, plan.frames, loopVibrato, rate)
         val buzz = m.getValue("BUZZ")
@@ -1441,6 +1464,135 @@ object Arco {
                 .format(java.util.Locale.ROOT, r.seam, Keys.MAX_SEAM_ERROR)
         }
         return r.loop
+    }
+
+    // ---- the held key (R2) ------------------------------------------------------
+
+    /**
+     * A held key's stretch: the one-shot's own stroke on a gate that never closes. [play] runs the stroke a one-shot runs (BOW's attack,
+     * and above [OVERSHOOT_FROM] its bite in the velocity and the pressure), then holds the bow on the string to the end: the gate's bow-on
+     * length is the whole stretch, so the release ramp, the lift and the stop are never reached, and there is no vibrato here (the key adds
+     * the LOOP's own after the retune, [renderHeldMeasured]). The attack's length is worked out as [gateFor] works it out, capped at
+     * [ATTACK_HOLD_FRACTION] of the bow-on time, which on a stretch this long never binds. The length is the LOOP's, [stretch]'s, so the
+     * retune measures the same span. At BOW 0.5 and under there is no bite and the stroke is the LOOP's fixed 63 ms at BOW 0.5 exactly, so
+     * there this is [stretch], sample for sample (ArcoKeysTest holds that); BOW elsewhere changes only the first few hundred milliseconds.
+     */
+    internal fun heldStretch(voice: ArcoVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int): FloatArray {
+        val rate = RATE * Dsp.OVERSAMPLE
+        val total = (warmFrames + frames + LOOP_PAD_FRAMES) * Dsp.OVERSAMPLE
+        val attackSec = min(attackSeconds(macros.getValue("BOW")), ATTACK_HOLD_FRACTION * total.toFloat() / rate)
+        val attackN = (attackSec * rate).toInt().coerceAtLeast(1)
+        return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = false), null, null, null, null, false, null, null)
+    }
+
+    /**
+     * How far past the warm-up and the seam's own window a held key's loop may start, in frames: the loop start is the best zero crossing
+     * ([Siren.bestCut]) in this many frames, so the file ends at most this far past one loop after the warm-up, still 768 frames inside the
+     * stretch's [LOOP_PAD_FRAMES] (the decimator's edge never reaches it). It holds one and a half periods at C2 and twenty at A5.
+     */
+    private const val HELD_CUT_SEARCH_FRAMES = 1024
+
+    /**
+     * A held key, rendered and measured: [samples] is the file (the stroke, the warm-up, then exactly one loop of [loopFrames] frames, the
+     * last frame the one before the wrap), [loopStart] the frame the loop starts at, [seam] the file's own [Keys.seamError] at that start,
+     * [warmFrames] the warm-up it was cut after, [tunedHz] and [passes] what the retune did, [lift] what BODY above the knee did, and
+     * [limitDb] how far [Dsp.limitPeak] turned the levelled file down to hold 0.99 (0 when it did not have to).
+     */
+    internal class HeldRender(
+        val samples: FloatArray, val loopStart: Int, val loopFrames: Int, val seam: Double, val warmFrames: Int,
+        val tunedHz: Double, val passes: Int, val lift: Lift, val limitDb: Float,
+    )
+
+    /** The peak a held key is held to after it is levelled ([Keys.resinPad]'s ending): [Dsp.levelTo]'s own ceiling, one number. */
+    internal const val HELD_PEAK_CEILING = LEVEL_CEILING
+
+    /**
+     * A held key at [macros]' TUNE (the caller sets TUNE to the key), rendered as one file: the stroke a one-shot plays, then the LOOP's held
+     * bow, cut where it repeats. Every step after the stroke is the LOOP's ([renderLoopMeasured]), in its order, so the held key's loop
+     * carries what a shipped LOOP carries:
+     *  - the stretch is [heldStretch], retuned by [retuned] (BORE's route: the played period measured after the warm-up, the whole stretch
+     *    rendered again at the corrected pitch until the loop's whole periods fill its whole frames to 3e-7), so the attack plays at the
+     *    corrected pitch too, a fraction of a cent from the key;
+     *  - then the LOOP's vibrato ([loopVibrato], [LOOP_VIBRATO], fitted to whole cycles per loop: it swells in from [VIBRATO_DELAY_SECONDS]
+     *    after the stroke begins, as a one-shot's does, and repeats with the loop after it), then BUZZ with its noise tabled one loop long
+     *    from the warm-up's end and its threshold on the RMS of the loop after the warm-up ([buzzed]), then the box and the output chain
+     *    ([conditionedWithBody]), all as the LOOP has them;
+     *  - the loop starts at the best zero crossing ([Siren.bestCut]) within [HELD_CUT_SEARCH_FRAMES] frames after the warm-up and the seam's
+     *    256-frame window, and the file ends exactly one loop later, so the wrap joins the loop's last frame to its first. Never a crossfade;
+     *  - the file is levelled on its loop region, not on the attack ([Keys.resinPad]'s rule: the loop sets the level, a held key is loud
+     *    where it is held), to [Dsp.MELODIC_LOUDNESS_TARGET] by [Loudness.of], then [Dsp.limitPeak] holds it to [HELD_PEAK_CEILING]. Above
+     *    [BODY_KNEE] the lift goes on the whole conditioned stretch at the plain's gain, capped as the LOOP's is (its peak at most
+     *    [PEAK_CAP], or the plain's own if that is higher), the cut chosen on the lifted file, so nothing levels the lift away.
+     *
+     * [warmScale] multiplies the warm-up (the one retry, at twice it, is the caller's: `ArcoKeys`). [law] and [loopVibrato] are for tests, as
+     * on [renderLoopMeasured]. [cancelled] is asked before every pass of the retune and before the finish; a pass is a few hundred milliseconds.
+     * The seam is measured, not required: the caller refuses it by name.
+     */
+    internal fun renderHeldMeasured(
+        voice: ArcoVoice, macros: Map<String, Float>, warmScale: Int = 1, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO,
+        cancelled: () -> Boolean = { false },
+    ): HeldRender {
+        require(warmScale >= 1) { "the warm-up is at least the LOOP's, got $warmScale times it" }
+        fun stopIfCancelled() {
+            if (cancelled()) throw java.util.concurrent.CancellationException("ARCO held key cancelled")
+        }
+        val m = settled(macros, voice)
+        val target = frequencyFor(voice, m.getValue("TUNE"))
+        val plan = planLoop(target)
+        val over = Dsp.OVERSAMPLE
+        val rate = RATE * over
+        val warm = warmScale * warmFramesFor(target)
+        val r = retuned(target, plan, warm) { hz -> stopIfCancelled(); heldStretch(voice, m, hz, warm, plan.frames) }
+        stopIfCancelled()
+        val loopRaw = plan.frames * over
+        val sung = loopVibrato(r.raw, voice, plan.frames, loopVibrato, rate)
+        val buzz = m.getValue("BUZZ")
+        val strung = if (!(buzz > 0f)) sung else buzzed(
+            sung, voice, buzz, rmsOf(sung, warm * over, warm * over + loopRaw),
+            period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
+        )
+        val body = m.getValue("BODY")
+        val conditioned = conditionedWithBody(strung, voice, body, rate)
+        stopIfCancelled()
+        return heldFrom(conditioned, voice, body, warm, plan.frames, r)
+    }
+
+    /**
+     * The finish of a held key from its conditioned stretch: where its loop starts, its level, BODY's lift above the knee, the peak, and the
+     * seam read on the file that ships. See [renderHeldMeasured].
+     */
+    private fun heldFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int, r: Retuned): HeldRender {
+        val base = warm + SEAM_FRAMES
+        fun loopStartIn(buf: FloatArray): Int =
+            base + Siren.bestCut(buf.copyOfRange(base, base + HELD_CUT_SEARCH_FRAMES), HELD_CUT_SEARCH_FRAMES)
+
+        // buf up to one loop past its own cut, times gain: a file, and where its loop starts.
+        fun fileOf(buf: FloatArray, gain: Float): Pair<FloatArray, Int> {
+            val start = loopStartIn(buf)
+            val file = buf.copyOf(start + frames)
+            for (i in file.indices) file[i] *= gain
+            return file to start
+        }
+
+        val plainStart = loopStartIn(conditioned)
+        val loud = Loudness.of(Snip(conditioned.copyOfRange(plainStart, plainStart + frames), channels = 1, sampleRate = RATE))
+        val gain = if (loud > LEVEL_SILENCE) Dsp.MELODIC_LOUDNESS_TARGET / loud else 1f
+        var (file, start) = fileOf(conditioned, gain)
+        var lift = Lift.NONE
+        if (body > BODY_KNEE) {
+            val limit = max(PEAK_CAP, peakOf(file))
+            lift = liftPlan(liftDbFor(body), limit) { db -> peakOf(fileOf(lifted(conditioned, voice, db), gain).first) }
+            if (lift.delivered > 0f) {
+                val shipped = fileOf(lifted(conditioned, voice, lift.delivered), gain)
+                file = shipped.first
+                start = shipped.second
+            }
+        }
+        val before = peakOf(file)
+        Dsp.limitPeak(file, HELD_PEAK_CEILING)
+        val after = peakOf(file)
+        val limitDb = if (after < before && before > 0f) (20.0 * log10(after.toDouble() / before)).toFloat() else 0f
+        return HeldRender(file, start, frames, Keys.seamError(file, start), warm, r.tunedHz, r.passes, lift, limitDb)
     }
 
     // ---- the render -----------------------------------------------------------

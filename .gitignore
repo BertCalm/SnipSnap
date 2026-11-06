@@ -165,6 +165,8 @@ testkit/arco-body-gate-key.json
 # The ARCO R1j bell gate clips, manifest and page, rendered by :synth:generateArcoBellGate (the key is a sibling file, never in the published folder)
 testkit/arco-bell-gate/
 testkit/arco-bell-gate-key.json
+# ARCO's held-key A/B clips and manifest, rendered by :shell:generateArcoHeldAudition; never committed.
+testkit/arco-held-audition/
 # The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
 # and published as the listening artifact; never committed.
 testkit/mercury-audition/
