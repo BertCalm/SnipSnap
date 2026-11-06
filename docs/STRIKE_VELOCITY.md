@@ -148,11 +148,26 @@ start jitter. Both spreads are shapes.
     third-octave bands 60 Hz to 8 kHz (21.3 before), and still classified
     PERC; plates tuned to 150 or 180 Hz classified TOM or KICK and were
     passed over. `TerraCases.KIT` and the literal A07 pin in
-    `TerraFrozenTest` follow it. Heard the same day (question 8, answered
-    in conversation): "Cajon is still not right. Too much like a drum
-    machine rimshot." A07 is now TERRA's BOX voice, from the prototype the
-    owner then picked ([TERRA_BOX.md](TERRA_BOX.md)); the gate's CAJON
-    section plays all three slaps.
+    `TerraFrozenTest` follow it. Heard (2026-11-06, the owner, after the
+    gate's question 8, old and new slap beside Balafon Key and Cajon Low):
+    "Cajon is still not right. Too much like a drum machine rimshot." Read
+    from the code, not heard: every TERRA voice is four to six pure sine
+    modes with the strike pulse mixed beside them, the shape of a drum
+    machine's rim; the cavity voice adds the port's low end under that
+    crack but not a wooden one. A real tapa has dense plate modes driven by
+    the slap, the port's air mode driven by the plate, and wires buzzing in
+    noise. Measured: the cavity slap's first 40 ms are the most tonal attack
+    on the gate (spectral flatness 0.058; the old bar slap 0.40, Cajon Low
+    0.44). A Python prototype of that box (97 plate modes for a 3 mm birch
+    tapa, 0.30 by 0.47 m, driven by the slap; an 85 Hz Helmholtz mode driven
+    by the plate; wires as noise gated by the plate's motion) reaches 0.49
+    at the same bass share (54% below 150 Hz), and 0.28 on a soft hit. Heard
+    the same day on the prototype page
+    (https://claude.ai/artifact/8FteYwEt1FLXDz6CioA65V): variant C, twice
+    the port's air, is "most like a real cajon slap", and against the cavity
+    slap the rimshot is "Gone". A07 is now TERRA's BOX voice, ported from C
+    ([TERRA_BOX.md](TERRA_BOX.md)); the gate's CAJON section plays all three
+    slaps.
   - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
     the one-take reference ("same takes") was unclear; the gate now names
     it NO ROUND ROBIN.
