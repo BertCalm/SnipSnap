@@ -74,11 +74,15 @@ class TerraFrozenTest {
               "engine": "TERRA",
               "version": 1,
               "name": "Cajon Slap",
-              "voice": "TUNED_BAR",
+              "voice": "RESONANT_CAVITY",
               "macros": {
-                "TUNE": 0.2513999938964844,
-                "FORCE": 0.8500000238418579,
-                "BUZZ": 0.75
+                "TUNE": 0.8370000123977661,
+                "FORCE": 0.8999999761581421,
+                "POS": 0.8999999761581421,
+                "DROOP": 0,
+                "CAVITY": 0.800000011920929,
+                "BUZZ": 0.75,
+                "DECAY": 0.3499999940395355
               }
             }
         """.trimIndent()
@@ -98,7 +102,7 @@ class TerraFrozenTest {
         val kit = TerraKits.classic()
         assertEquals(a07, Json.write(requireNotNull(kit[6]?.recipe?.entries?.get("patch"))), "A07's stored recipe")
         assertEquals(a15, Json.write(requireNotNull(kit[14]?.recipe?.entries?.get("patch"))), "A15's stored recipe")
-        assertEquals(a07, TerraPatch("Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f)).toJsonText())
+        assertEquals(a07, TerraPatch("Cajon Slap", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f)).toJsonText())
         assertEquals(a15, TerraPatch("Agogo Clack", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.6108f, "FORCE" to 0.95f, "CLACK" to 0.6667f)).toJsonText())
         for ((i, pad) in TerraCases.KIT.withIndex()) {
             val today = todaysText(pad.name, pad.voice, pad.macros)

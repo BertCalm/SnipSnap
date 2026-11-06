@@ -63,8 +63,14 @@ object TerraKits {
         slot("Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f), // A05
         // Dumbek Doum: 110Hz, hardness 0.40, droop 0.18 ("full center mass displacement") - measured TOM: centroidHz=125.4, lowRatio=0.642, same honest bass-family reasoning as Djembe Bass above.
         slot("Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f), // A06
-        // Cajon Corner Slap: TUNED_BAR, 220Hz, hardness 0.85, BUZZ 0.75 ("high rattleAmount, fast decay").
-        slot("Cajon Slap", TerraVoice.TUNED_BAR, DrumClass.PERC, "TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f), // A07
+        // Cajon Corner Slap: a box, not a bar. The spec's TUNED_BAR slap shared the balafon's bar modes
+        // and had no low end; the owner heard it at the strike gate (2026-11-06) as "very similar" to
+        // Balafon Key and missing "the bassy resonance". Rebuilt on RESONANT_CAVITY: the 220 Hz front
+        // plate struck hard near its edge (FORCE 0.9, POS 0.9), no droop (wood, not skin), the port's
+        // Helmholtz resonance under it (CAVITY 0.8), the wires kept (BUZZ 0.75), a shorter ring (DECAY
+        // 0.35). Measured: 55% of its first 300 ms below 150 Hz (0% before); 39.5 dB RMS from Balafon Key
+        // over third-octave bands (21.3 before); still classified PERC, which a lower plate is not.
+        slot("Cajon Slap", TerraVoice.RESONANT_CAVITY, DrumClass.PERC, "TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f), // A07
         // Djembe Open Tone: 245Hz, hardness 0.50, droop 0.05, POS 0.5 ("harmonic mode resonance").
         slot("Djembe Open", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f), // A08
         // Tabla Dayan (Tin): D4/293.6Hz, hardness 0.80, droop 0.02, POS 0.95 ("high-edge rim strike").

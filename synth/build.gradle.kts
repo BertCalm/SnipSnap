@@ -2075,6 +2075,16 @@ tasks.register<JavaExec>("generateForgeChargeAudition") {
     args("${rootDir}/testkit/forge-charge-audition", "${rootDir}")
 }
 
+/** Render the strike-velocity round's listening gate (clips, manifest, page) under testkit/strike-audition/. See StrikeAuditionGenerator. */
+tasks.register<JavaExec>("generateStrikeAudition") {
+    group = "distribution"
+    description = "Render the strike velocity, re-strike, OBBLIGATO keys and CHORD STABS listening gate under testkit/strike-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StrikeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/strike-audition", "${rootDir}")
+}
+
 /** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeAudition") {
     group = "distribution"

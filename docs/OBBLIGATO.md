@@ -339,8 +339,9 @@ longer stretch. A zone renders in about 0.5 s and searches in 0.6 to 3.3 s.
 What a held key plays is a repeating stretch of the exchange, not a
 settled sustain: on PLAY and FIGHT the trade is audible inside the loop,
 and HARMONY's two top zones repeat about every three quarters of a second.
-Nothing here has been heard. The listening question is whether a held key
-reads as the duet carrying on or as a phrase stuck on repeat, most of all
-on HARMONY's top two zones. No app screen calls the pad maker yet (an
+Heard (2026-11-06, the owner, the strike gate's question 6: HARMONY C4 and
+C5, PLAY C4 and FIGHT F#4, each held ten seconds): "Carrying on." That
+covers HARMONY's 0.8 s top zone; the other three heard zones loop about two
+seconds. No app screen calls the pad maker yet (an
 Android SDK session wires keys screens). Tests: `ObbligatoKeysTest`,
 `ObbligatoPadMakerTest`.

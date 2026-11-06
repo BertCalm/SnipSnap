@@ -125,10 +125,39 @@ start jitter. Both spreads are shapes.
   brightness test on Cajon Low).
 - **Measured:** the tables above, Kotlin, at the commit this lands in.
 - **Proposed:** `R`, `a`, `FORCE_SPREAD`, `POSITION_SPREAD`.
-- **Not heard:** nothing here has had the owner's listen. The audition
-  question is whether a soft SKIN kick and a soft TERRA djembe sound like a
-  softer hit on the same drum, not a quieter copy, and whether a re-struck
-  chain sounds like one drummer.
+- **Heard (2026-11-06, the owner, through the gate below; each verdict
+  covers only the levelled clips its question played):**
+  - The soft SKIN kick (TAPE SKIN, old soft against new soft, medium,
+    hard): "Same to me." The new law is no audible step for this kick.
+  - Soft hand drums (Djembe Bass, Tabla Tun): "New is better."
+  - A soft hit bending less (BEND TOM, Bayan Drag): "Natural."
+  - The buzz waiting for a firm hit (Cajon Slap, Balafon Key): "Right."
+    Note: "Cajon and balafon sound very similar. Cajon doesn't have the
+    bassy resonance." Read from the kit, not heard: Cajon Slap (TERRA kit
+    A07) is a TUNED_BAR voice like Balafon Key (A16), so the two share the
+    bar's mode table and differ mainly in pitch; no box resonance sits
+    under the slap. Rebuilt the same day, at the owner's yes: A07 is now a
+    RESONANT_CAVITY voice, its 220 Hz front plate struck hard near the edge
+    (FORCE 0.9, POS 0.9, DROOP 0) over the port's resonance (CAVITY 0.8),
+    the wires kept (BUZZ 0.75, so the HIT audition still names it the BUZZ
+    pad), a shorter ring (DECAY 0.35). Measured in Kotlin: 55% of its first
+    300 ms below 150 Hz (0% before), 39.5 dB RMS from Balafon Key over
+    third-octave bands 60 Hz to 8 kHz (21.3 before), and still classified
+    PERC; plates tuned to 150 or 180 Hz classified TOM or KICK and were
+    passed over. `TerraCases.KIT` and the literal A07 pin in
+    `TerraFrozenTest` follow it. Not yet heard: the gate's question 8 plays
+    it beside the old slap, Balafon Key and Cajon Low.
+  - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
+    the one-take reference ("same takes") was unclear; the gate now names
+    it NO ROUND ROBIN.
+- **The gate (2026-11-06):** `./gradlew :synth:generateStrikeAudition`
+  (`StrikeAuditionGenerator`) renders 127 clips at one loudness under
+  `testkit/strike-audition/`: every SKIN kick, tom and TERRA kit pad as its
+  old soft hit, then the new soft, medium and hard; fast rolls with one take,
+  Robin's old re-pitched takes and the new re-struck ones; OBBLIGATO keys held
+  ten seconds; CHORD STABS progressions. Seven questions, published as the
+  listening artifact at https://claude.ai/artifact/KSRzJCMRVCYTdQ9uKFgtf3,
+  whose answers save to its `answers` collection.
 - **Disclosed, not fixed:** TERRA's FORCE is not monotone in onset
   brightness on the rim pads (above). THUMP's and ONSET's kicks still take
   `soften()`.
