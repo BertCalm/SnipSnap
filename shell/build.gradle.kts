@@ -381,6 +381,16 @@ tasks.register<JavaExec>("generateArcoHeldAudition") {
     args(providers.gradleProperty("arcoHeldOutput").orElse("${rootDir}/testkit/arco-held-audition").get())
 }
 
+tasks.register<JavaExec>("generateHeldStartAudition") {
+    group = "distribution"
+    description = "Render ARCO's and BORE's held keys with the hit lasting as shipped, medium, short or not at all, three notes per voice, under testkit/held-start-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.HeldStartAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("heldStartOutput").orElse("${rootDir}/testkit/held-start-audition").get())
+}
+
 /** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */
 tasks.register<JavaExec>("scanLoopInstruments") {
     group = "verification"

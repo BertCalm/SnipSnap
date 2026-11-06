@@ -2937,6 +2937,32 @@ changed).
   hold at velocity 0.8, the audition's 8 s hold, and an attack limiter for the bottom of SAX if its level is heard as a fault.
 - **Heard:** nothing yet.
 
+### Heard (2026-11-06): the hit against the held part
+
+**HEARD:** the owner played the held-keys page (FLUTE and SAX beside CELLO and ERHU) and said "I feel like either
+the initial sound is too long or there is too much difference between the hit and the held portion", for both
+engines.
+
+**MEASURED** (the page's hard-layer clips, 100 ms windows against the loop): after the hit, the start already
+matches the loop. Level is within 0.2 dB, the centroid within about 2 %, and the 20 ms level waver and the pitch's
+spread are the same before and after the marker. The difference is the onset: FLUTE's chiff in its first 0.1 s (a
+centroid near three times the loop's at C4) and SAX's dark reed onset, 40 to 90 % darker than the loop for 0.1 to
+0.2 s.
+
+PROPOSED, for the owner's pick: one dial, how long the hit keeps its own character before the zone's own loop
+takes over (`HeldStartAuditionGenerator`, `./gradlew :shell:generateHeldStartAudition`), at each voice's low,
+middle and high zone, hard layer, through the instrument player:
+
+- **Now:** the zone as shipped.
+- **Medium:** the hit as itself to 0.2 s, handed to the loop by 0.6 s.
+- **Short:** the hit as itself to 0.08 s, handed to the loop by 0.3 s.
+- **No hit:** the loop's tone from the first frame, under the start's own swell (a reference).
+
+The handover is a raised-cosine blend into the zone's loop, phase-aligned to the note, carrying the start's own
+level rise. The marker moves to where the swell is done, after 300 frames of pure loop, and the loop after it is the
+shipped loop turned to start there, so the seam is the shipped seam: the house check reads 0 on all 18 reshaped
+BORE clips (MEASURED). Not heard yet; the pick decides what ships.
+
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
 `Bore.kt` verbatim from the spec (its pages 5–11) with one `.toFloat()`,
