@@ -2740,8 +2740,9 @@ Every one of those clips ends on the octave at +2.1 cents (CLEAN TONE) or +2.9 t
 
 **What it cost, said plainly.**
 
-- **The new top is not heard.** "A little weak" asked for stronger, not for this much stronger. About one and a half times the old
-  waver is the brief's reading of it. The clips put the old top beside the new so the ear can say.
+- **The new top, heard (2026-11-06).** "A little weak" asked for stronger, not for a set amount, so about one and a half times the old
+  waver was the brief's reading of it. The owner heard the old top beside the new on a listening page of the clips and said "New top
+  is good." HEARD: the top at knob 1 stands as built.
 - **The growl now dips the level harder.** At knob 1 the softest corner's raw rms is 0.292, against 0.42 at the old top. The level
   stage takes the loss back. Deeper than 0.4 the softest corners begin to drop out (the harness), so this is near the ceiling for
   a growl made from pressure alone.
