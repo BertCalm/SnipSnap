@@ -27,7 +27,9 @@ import kotlin.test.assertTrue
  *  - the marker lands well before the old one: the start is short;
  *  - by the handover the tone is the loop's (the hit's brightness or darkness is gone), where the whole start was still
  *    the hit there at CELLO's low notes;
- *  - the swell into the note keeps the note's own timing and never overshoots the loop's level.
+ *  - the swell into the note arrives no later than the whole start's, and the handover neither dips nor swells against it
+ *    by more than a couple of dB (the matched turn lines up the vibrato too; the blend holds the level for how well the
+ *    two waves match).
  * And on a synthetic note with known answers: the noise burst plays for its 80 ms, then the tone is the note's own, in
  * phase. Nothing here has been heard beyond the audition the pick was made on.
  */
@@ -142,10 +144,11 @@ class HeldStartTest {
     }
 
     @Test
-    fun `the swell keeps the note's own timing and never overshoots the loop's level`() {
+    fun `the swell keeps the note's timing, and the handover neither dips nor swells against the whole start`() {
         val w = RATE / 50
-        var worstLag = 0.0
-        var worstOver = -99.0
+        val a = (HeldStart.SHORT.pure * RATE).roundToInt()
+        class Row(val label: String, val lag: Double, val over: Double, val fullOver: Double, val dip: Double)
+        val rows = ArrayList<Row>()
         for (c in cases) {
             val s = c.shaped.snip.samples
             val f = c.full.snip.samples
@@ -157,13 +160,29 @@ class HeldStartTest {
                 return t.toDouble() / RATE
             }
             val e = c.shaped.loopStartFrame.toInt()
-            worstLag = max(worstLag, abs(arrives(s, e) - arrives(f, ls)))
-            var t = 0
-            while (t + w <= e) { worstOver = max(worstOver, db(rms(s, t, w) / loop)); t += w / 2 }
+            var over = -99.0
+            var fullOver = -99.0
+            var dip = 0.0
+            var t = a
+            while (t + w <= e) {
+                val sl = db(rms(s, t, w) / loop)
+                val fl = db(rms(f, t, w) / loop)
+                over = max(over, sl - max(fl, 0.0))
+                fullOver = max(fullOver, fl)
+                if (fl > -20) dip = minOf(dip, sl - fl)
+                t += w / 2
+            }
+            rows += Row(c.label, arrives(s, e) - arrives(f, ls), over, fullOver, dip)
         }
-        println("HeldStart: the swell reaches -3 dB of the loop within %.0f ms of the whole start's; the start's loudest 20 ms sit %.2f dB re the loop".format(Locale.ROOT, 1000 * worstLag, worstOver))
-        assertTrue(worstLag <= 0.03, "the shaped swell arrives ${1000 * worstLag} ms away from the note's own")
-        assertTrue(worstOver < 1.0, "the shaped start runs $worstOver dB over the loop's level")
+        for (r in rows.sortedByDescending { abs(it.lag) }.take(4)) println("HeldStart swell, lag: ${r.label} %+.0f ms".format(Locale.ROOT, 1000 * r.lag))
+        for (r in rows.sortedByDescending { it.over }.take(4)) println("HeldStart swell, over: ${r.label} %.2f dB over max(full, loop); the full start's own loudest %.2f dB re the loop".format(Locale.ROOT, r.over, r.fullOver))
+        for (r in rows.sortedBy { it.dip }.take(4)) println("HeldStart swell, dip: ${r.label} %.2f dB under the full start".format(Locale.ROOT, r.dip))
+        // The swell reaches the note's level no later than the whole start does (it can be sooner: it follows the start's loudest
+        // level so far, so it does not sag where the low strings catch); the handover runs at most a dB over the louder of the
+        // whole start and the loop, and at most 2 dB under the whole start (measured 0.88 and 1.77 dB at the build).
+        assertTrue(rows.all { it.lag <= 0.02 }, "a shaped swell arrives late: ${rows.filter { it.lag > 0.02 }.joinToString { it.label }}")
+        assertTrue(rows.all { it.over < 1.0 }, "a handover swells: ${rows.filter { it.over >= 1.0 }.joinToString { "${it.label} ${it.over}" }}")
+        assertTrue(rows.all { it.dip > -2.0 }, "a handover dips: ${rows.filter { it.dip <= -2.0 }.joinToString { "${it.label} ${it.dip}" }}")
     }
 
     @Test

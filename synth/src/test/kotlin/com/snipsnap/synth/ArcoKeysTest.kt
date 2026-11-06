@@ -275,7 +275,8 @@ class ArcoKeysTest {
     @Test
     fun `the same inputs render the same samples`() {
         for ((voice, midi, layer) in listOf(Triple(ArcoVoice.CELLO, 48, ArcoKeys.Layer.HARD), Triple(ArcoVoice.ERHU, 81, ArcoKeys.Layer.SOFT))) {
-            val again = ArcoKeys.pad(voice, Arco.defaults(voice), midi, layer)
+            // The zone as first built (hit = null) against the fixture's, which padMeasured renders with its whole start.
+            val again = ArcoKeys.pad(voice, Arco.defaults(voice), midi, layer, hit = null)
             val first = defaults.first { it.voice == voice && it.midi == midi && it.layer == layer }
             assertContentEquals(first.samples, again.snip.samples, "$voice ${noteName(midi)} $layer")
             assertEquals(first.loopStart.toLong(), again.loopStartFrame)

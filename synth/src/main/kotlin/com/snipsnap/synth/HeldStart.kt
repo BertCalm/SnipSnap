@@ -1,11 +1,13 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -16,10 +18,14 @@ import kotlin.math.sqrt
  * 0.6 s; the difference was the hit itself (CELLO's bow bite, ERHU's shorter one, FLUTE's chiff, SAX's dark reed onset).
  * On the A/B of four lengths the owner picked [SHORT] ("Short sound good in audition", 2026-11-06), for both engines.
  *
- * [shape] keeps the zone's own audio for [Hit.pure] seconds, then hands it to the zone's own loop over a raised cosine
- * that ends at [Hit.handover]. The loop is turned to line up with the note (the best waveform match over a 30 ms window
- * where the handover is half done), and it plays under the start's own level rise (the start's 20 ms level against the
- * loop's, rising only), so the swell into the note stays the note's. The loop marker moves to where the handover and the
+ * [shape] keeps the zone's own audio for [Hit.pure] seconds, then hands it to the zone's own loop over a quarter turn
+ * that ends at [Hit.handover]. The loop is turned to line up with the note (the best match over the handover itself, so
+ * the vibrato's phase lines up as well as the waveform), and it plays under the start's own level rise (the start's 20 ms level against the
+ * loop's, rising only), so the swell into the note stays the note's. The handover's weights are BORE's blend law
+ * ([BoreKeys.assembleTail], [Bore.assembleLoop]): cos t / k on the note and sin t / k on the loop, k = sqrt(1 + r sin 2t),
+ * r the two waves' correlation where they were matched. So the level holds through the handover whether the waves line
+ * up (r near 1) or not (a soft stroke still settling): a plain crossfade of two waves that do not line up dips about
+ * 3 dB halfway. Where that law would take a frame over the zones' 0.99 ceiling, the handover runs at r = 1 instead. The loop marker moves to where the handover and the
  * swell are both done, after [SETTLED_FRAMES] frames of pure loop, and the loop after it is the zone's loop turned to
  * start there: its wrap is two consecutive frames of the shipped loop, so the seam ([Keys.seamError]) is the shipped one
  * or better, and nothing after the marker changes level.
@@ -42,9 +48,8 @@ object HeldStart {
      */
     const val SETTLED_FRAMES = 300
 
-    /** The waveform match's window, and where it sits: no earlier than this, where a tone has a period to match. */
-    private const val ALIGN_WINDOW_SECONDS = 0.03f
-    private const val ALIGN_EARLIEST_SECONDS = 0.15f
+    /** The zones' own ceiling ([ArcoKeys], [BoreKeys]): no frame of a shaped start passes it. */
+    private const val PEAK_CEILING = 0.99f
 
     /** The start's level is read over this half-width either side of each frame. */
     private const val LEVEL_HALF_SECONDS = 0.01f
@@ -65,35 +70,14 @@ object HeldStart {
         val lf = x.size - ls
         val a = (hit.pure * sr).roundToInt()
         val h = max(a + 1, (hit.handover * sr).roundToInt())
-        val w = (ALIGN_WINDOW_SECONDS * sr).roundToInt()
-        val t0 = max((a + h) / 2, (ALIGN_EARLIEST_SECONDS * sr).roundToInt())
-        if (note.snip.channels != 1 || ls <= 0 || lf <= w || t0 + w >= ls || h >= ls) return note
+        if (note.snip.channels != 1 || ls <= 0 || lf <= 0 || h >= ls) return note
         fun loop(i: Int) = x[ls + Math.floorMod(i, lf)]
 
-        // Turn the loop to match the note where the handover is half done: every other offset, then the best's neighbours.
-        fun match(d: Int): Double {
-            var dot = 0.0
-            var energy = 0.0
-            for (k in 0 until w) {
-                val l = loop(d + k)
-                dot += x[t0 + k] * l
-                energy += l * l
-            }
-            return dot / sqrt(energy + 1e-12)
-        }
-        var turn = 0
-        var best = Double.NEGATIVE_INFINITY
-        var d = 0
-        while (d < lf) {
-            val c = match(d)
-            if (c > best) { best = c; turn = d }
-            d += 2
-        }
-        for (dd in turn - 2..turn + 2) {
-            val c = match(dd)
-            if (c > best) { best = c; turn = dd }
-        }
-        fun held(t: Int) = loop(turn + t - t0)
+        // Turn the loop to match the note over the whole handover: there the vibrato's phase has to line up as well as the
+        // waveform's. A 30 ms match lined up the waveform alone, and at ERHU's high notes the two waves then drifted apart
+        // across the handover and dipped (2.5 dB at D5's soft layer).
+        val (turn, r) = match(x, a, h - a, ls, lf)
+        fun held(t: Int) = loop(turn + t - a)
 
         // The start's level against the loop's, rising only, capped at 1: the loop plays under the note's own swell.
         var loopEnergy = 0.0
@@ -117,16 +101,73 @@ object HeldStart {
         end += SETTLED_FRAMES
         if (end >= ls) return note
 
-        val out = FloatArray(end + lf)
-        for (t in 0 until end) {
-            val wgt = when {
-                t < a -> 0.0
-                t < h -> 0.5 - 0.5 * cos(PI * (t - a) / (h - a))
-                else -> 1.0
+        // The handover at the waves' correlation; if that would take a frame over the ceiling, at r = 1, whose weights sum to
+        // one, so no frame passes the louder of the two waves.
+        for (law in listOf(r, 1.0)) {
+            val out = FloatArray(end + lf)
+            for (t in 0 until end) {
+                out[t] = when {
+                    t < a -> x[t]
+                    t < h -> {
+                        val turnAngle = 0.5 * PI * (t - a) / (h - a)
+                        val k = sqrt(1.0 + law * sin(2.0 * turnAngle))
+                        ((cos(turnAngle) / k) * x[t] + (sin(turnAngle) / k) * gain[t] * held(t)).toFloat()
+                    }
+                    else -> (gain[t] * held(t)).toFloat()
+                }
             }
-            out[t] = ((1 - wgt) * x[t] + wgt * gain[t] * held(t)).toFloat()
+            for (t in end until end + lf) out[t] = held(t)
+            if (law == 1.0 || out.all { kotlin.math.abs(it) <= PEAK_CEILING }) {
+                return KeyNote(Snip(out, channels = 1, sampleRate = sr), loopStartFrame = end.toLong())
+            }
         }
-        for (t in end until end + lf) out[t] = held(t)
-        return KeyNote(Snip(out, channels = 1, sampleRate = sr), loopStartFrame = end.toLong())
+        error("unreachable: the r = 1 handover is always returned")
+    }
+
+    /**
+     * The turn of the loop ([ls] .. [ls] + [lf] of [x], read round) that best matches [x]'s [n] frames from [from], and how
+     * well they match there (normalised correlation, 0 to 1). Every turn at once, as a cross-correlation by FFT: the loop
+     * extended by the window, against the window reversed; each turn's score is its correlation over the loop's own energy
+     * under the window, so a loud stretch of the loop does not win by level.
+     */
+    private fun match(x: FloatArray, from: Int, n: Int, ls: Int, lf: Int): Pair<Int, Double> {
+        val ext = lf + n
+        var size = 1
+        while (size < ext + n) size = size shl 1
+        val re = FloatArray(size)
+        val im = FloatArray(size)
+        for (j in 0 until ext) re[j] = x[ls + j % lf]
+        val wRe = FloatArray(size)
+        val wIm = FloatArray(size)
+        var window = 0.0
+        for (k in 0 until n) {
+            val v = x[from + n - 1 - k]
+            wRe[k] = v
+            window += v.toDouble() * v
+        }
+        Fft.forward(re, im)
+        Fft.forward(wRe, wIm)
+        for (i in 0 until size) {
+            val pr = re[i] * wRe[i] - im[i] * wIm[i]
+            val pi = re[i] * wIm[i] + im[i] * wRe[i]
+            re[i] = pr
+            im[i] = pi
+        }
+        Fft.inverse(re, im)
+        val energy = DoubleArray(ext + 1)
+        for (j in 0 until ext) {
+            val v = x[ls + j % lf].toDouble()
+            energy[j + 1] = energy[j] + v * v
+        }
+        var best = 0
+        var bestScore = Double.NEGATIVE_INFINITY
+        for (d in 0 until lf) {
+            val e = energy[d + n] - energy[d]
+            if (e <= 0.0) continue
+            val score = re[d + n - 1] / sqrt(e)
+            if (score > bestScore) { bestScore = score; best = d }
+        }
+        val r = if (window > 0.0 && bestScore.isFinite()) (bestScore / sqrt(window)).coerceIn(0.0, 1.0) else 0.0
+        return best to r
     }
 }
