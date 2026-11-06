@@ -2841,6 +2841,24 @@ object Copy {
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
     /**
+     * The undo chip's words, ahead of the cleared track's name: UNDO CLEAR
+     * KICK. It names what it undoes because it sits in the header row for as
+     * long as it is offered, and a bare UNDO beside a screen that also has
+     * mutes and a tempo would not say which of them it takes back. One level,
+     * and it goes when the bench closes.
+     */
+    const val LOOP_UNDO_CLEAR = "UNDO CLEAR"
+    /** The track is back on the grid and in the file. */
+    const val LOOP_CLEAR_UNDONE = "TRACK IS BACK."
+    /**
+     * An undo whose restore could not be written: the track is on screen again
+     * because the engine took it, and the disk is what refused — so the file
+     * still says it is clear. The mirror of [LOOP_CLEAR_NOT_SAVED].
+     */
+    const val LOOP_UNDO_NOT_SAVED = "THE TRACK IS BACK, BUT IT DID NOT SAVE. IT WILL BE CLEAR NEXT TIME."
+    /** The visible twin of holding a block: clears the track the selected block is in. */
+    const val LOOP_CLEAR_BUTTON = "CLEAR TRACK"
+    /**
      * A tempo change, once the taps have stopped and it is on the grid.
      *
      * The new number is already on screen by then — this says it reached the
@@ -2951,11 +2969,13 @@ object Copy {
     fun loopBounceButton(bars: Int): String = "BOUNCE ${barsOf(bars)} TO SNIPS"
 
     /**
-     * LOOP's own legend. Both of the grid's gestures are invisible — a track
-     * name is not obviously a mute button and a block is not obviously
-     * clearable — and the hold is the one nobody can guess.
+     * LOOP's own legend. Both of the grid's tap gestures are invisible — a
+     * track name is not obviously a mute button and a block is not obviously
+     * selectable. Clearing is not here: it has a visible button
+     * ([LOOP_CLEAR_BUTTON]) and an undo, and holding a block stays as that
+     * button's shortcut rather than something only a sentence can teach.
      */
-    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT."
     /**
      * What a tapped block is, in the line the legend usually occupies.
      *

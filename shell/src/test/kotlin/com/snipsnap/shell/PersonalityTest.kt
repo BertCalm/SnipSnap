@@ -651,6 +651,9 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
+        // track's name follows it): labels, not landings.
+        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
         // SNAP's FIELD and CLOUD, while the photo is cut into grains and
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.

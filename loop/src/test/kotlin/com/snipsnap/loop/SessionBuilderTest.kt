@@ -6,6 +6,7 @@ import java.io.File
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -188,6 +189,39 @@ class SessionBuilderTest {
 
         assertTrue(dir.listFiles()!!.none { it.name.endsWith(".tmp") })
         assertTrue(before.contentEquals(File(dir, "snip_14_atomic_1.wav").readBytes()), "the same snip writes the same bytes")
+    }
+
+    @Test
+    fun `restoring a cleared track puts its blocks back and keeps what changed since`() {
+        val frames = SessionBuilder.chunkFrames(fresh(), rate)
+        val dir = tempDir()
+        val s0 = SessionBuilder.send(fresh(), 1, "KICK", "snip_1_kick", tone(frames * 2), dir)!!.session
+        val s1 = SessionBuilder.send(s0, 2, "HAT", "snip_2_hat", tone(frames), dir)!!.session
+        val cleared = s1.tracks[1]
+
+        // Clear, then the player changes the tempo and mutes the other track.
+        val later = SessionBuilder.clear(s1, 1).let { c ->
+            c.copy(
+                bpm = 100f,
+                tracks = c.tracks.mapIndexed { i, t -> if (i == 2) t.copy(engaged = false) else t },
+            )
+        }
+        assertTrue(SessionBuilder.isEmpty(later.tracks[1]))
+
+        val back = SessionBuilder.restoreTrack(later, 1, cleared)
+
+        assertEquals(cleared, back.tracks[1], "the track returns with its name, blocks and mute")
+        assertEquals(100f, back.bpm, "a tempo change made after the clear survives the undo")
+        assertFalse(back.tracks[2].engaged, "another track's mute survives the undo")
+        assertEquals(later.tracks[0], back.tracks[0])
+        assertEquals(later.tracks[3], back.tracks[3])
+    }
+
+    @Test
+    fun `restoring outside the session is refused`() {
+        assertFailsWith<IllegalArgumentException> {
+            SessionBuilder.restoreTrack(fresh(), Session.TRACK_COUNT, fresh().tracks[0])
+        }
     }
 
     @Test
