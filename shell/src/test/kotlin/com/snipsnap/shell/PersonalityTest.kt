@@ -653,6 +653,8 @@ class PersonalityTest {
         "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "USE_THIS_PART", "CAPTURE_BLOCKED_BUTTON",
+        // Headings over a group of controls (the deck's NEXT, the CUT screen's LAND AS) and the PAD CAPTURE tap twin's two labels.
+        "DECK_NEXT", "CHOP_LAND_AS", "PAD_CAPTURE_TAP_TO_REC", "PAD_CAPTURE_TAP_STOP",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
         // SNIPS' SHARE, while the snip is copied into the share cache under
         // a readable name — like every other *_BUSY here, an overlay line

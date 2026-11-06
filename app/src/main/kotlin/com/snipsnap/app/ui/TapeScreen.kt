@@ -544,8 +544,6 @@ private fun TapeDeckContent(
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
-    // DIG runs on this screen: it only moves the deck's own IN and OUT.
-    var digging by remember(tapeData) { mutableStateOf(false) }
     // The HITS stepper (RE-TRIM only): INSTANT KIT's slices of this tape,
     // found once per loaded tape, off the main thread — null until then.
     var hits by remember(tapeData) { mutableStateOf<List<IntRange>?>(null) }
@@ -1063,6 +1061,10 @@ private fun TapeDeckContent(
                 ) { model.setOut(); touch() }
                 DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
             }
+            // FIND BREAK only moves IN and OUT (DIG sets the deck's own
+            // selection and nothing else), so it sits with them, not under
+            // DESTINATIONS with the readings that leave the deck.
+            FindBreakButton(model, tapeData, Modifier.fillMaxWidth(), ::stopVoice, ::touch, onToast)
             if (retrim != null) {
                 // HITS (docs/RETRIM.md round 4): step IN and OUT through the
                 // hits INSTANT KIT would cut from this tape, so picking "the
@@ -1096,6 +1098,9 @@ private fun TapeDeckContent(
                     DeckButton("HIT ▶", Modifier.weight(1f)) { stepHit(1) }
                 }
             }
+            // NEXT: the three ways forward from a selection - keep the part,
+            // chop the lot in one tap, or catch hits onto the pads.
+            TapeText(Copy.DECK_NEXT, TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // BACK ONTO A02 replaces USE THIS PART while a RE-TRIM is live
                 // (docs/RETRIM.md §4): the request owns the primary. The
@@ -1188,48 +1193,11 @@ private fun TapeDeckContent(
             }
 
             TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink2.tape)
-            // Wave ZZ, the phone reads: three more readings of the same tape.
-            // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
-            // the next tap; READ AS GROOVE hears the tape as a rhythm for the
-            // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
+            // Wave ZZ, the phone reads: more readings of the same tape.
+            // READ AS GROOVE hears the tape as a rhythm for the open kit's
+            // pads; COPY GROOVE keeps only its timing and accent. (FIND BREAK
+            // lives with IN and OUT: it only moves those points.)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Batch 3, Task 4: no ▸ — DIG runs in place on this deck; it
-                // moves IN/OUT, it doesn't navigate or open a panel.
-                DeckButton("FIND BREAK", Modifier.weight(1f), enabled = !digging) {
-                    if (model.playing) model.togglePlay()
-                    stopVoice()
-                    touch()
-                    digging = true
-                    onToast(Copy.DIG_BUSY)
-                    digScope.launch {
-                        try {
-                            val found = withContext(Dispatchers.IO) {
-                                Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
-                            }
-                            if (found == null) {
-                                onToast(Copy.NO_BREAK)
-                            } else {
-                                model.select(found.startFrame, found.endFrame)
-                                // IN/OUT just moved off the model, outside any
-                                // DeckButton tap — same reasoning as every other
-                                // direct `model` mutation in this file: the
-                                // IN/OUT engaged state and LEN readout only see
-                                // it once this composable recomposes.
-                                touch()
-                                onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            // Law 3: when it breaks, say exactly what happened -
-                            // the exception's own detail goes to logcat, not the toast.
-                            Log.e("TapeScreen", "dig: failed", e)
-                            onToast(Copy.DIG_FAILED)
-                        } finally {
-                            digging = false
-                        }
-                    }
-                }
                 // READ AS GROOVE ▸ / COPY GROOVE ▸ keep the glyph (Task 4):
                 // both navigate away to GROOVE on success (`App.readGroove`/
                 // `App.stealFeel` set `screen = AppScreen.GROOVE`), unlike
@@ -1250,6 +1218,63 @@ private fun TapeDeckContent(
                 }
             }
         }
+        }
+    }
+}
+
+/**
+ * FIND BREAK: DIG finds the tape's break and sets the deck's own IN and OUT to
+ * it, so the next tap (INSTANT KIT, USE THIS PART) has a selection. A private
+ * non-inline child so its handler is not counted in [TapeDeckContent]'s
+ * registers, and it owns the `digging` flag nothing else reads.
+ */
+@Composable
+private fun FindBreakButton(
+    model: TapeDeckModel,
+    tapeData: LoadedTape,
+    modifier: Modifier,
+    stopVoice: () -> Unit,
+    touch: () -> Unit,
+    onToast: (String) -> Unit,
+) {
+    val digScope = rememberCoroutineScope()
+    // DIG runs on this screen: it only moves the deck's own IN and OUT.
+    var digging by remember(tapeData) { mutableStateOf(false) }
+    // Batch 3, Task 4: no ▸ — DIG runs in place on this deck; it
+    // moves IN/OUT, it doesn't navigate or open a panel.
+    DeckButton("FIND BREAK", modifier, enabled = !digging) {
+        if (model.playing) model.togglePlay()
+        stopVoice()
+        touch()
+        digging = true
+        onToast(Copy.DIG_BUSY)
+        digScope.launch {
+            try {
+                val found = withContext(Dispatchers.IO) {
+                    Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+                }
+                if (found == null) {
+                    onToast(Copy.NO_BREAK)
+                } else {
+                    model.select(found.startFrame, found.endFrame)
+                    // IN/OUT just moved off the model, outside any
+                    // DeckButton tap — same reasoning as every other
+                    // direct `model` mutation in this file: the
+                    // IN/OUT engaged state and LEN readout only see
+                    // it once this composable recomposes.
+                    touch()
+                    onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened -
+                // the exception's own detail goes to logcat, not the toast.
+                Log.e("TapeScreen", "dig: failed", e)
+                onToast(Copy.DIG_FAILED)
+            } finally {
+                digging = false
+            }
         }
     }
 }
