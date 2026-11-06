@@ -367,6 +367,13 @@ class PersonalityTest {
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
 
+    /** ORBIT's UNDO chip says how deep the undo goes, and drops the count when there is nothing to undo. */
+    @Test
+    fun `the ORBIT undo chip counts its steps`() {
+        assertEquals("UNDO", Copy.orbitUndo(0))
+        assertEquals("UNDO (3)", Copy.orbitUndo(3))
+    }
+
     /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
     @Test
     fun `the SPLICE and STACK landings say where the undo is`() {

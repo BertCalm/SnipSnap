@@ -1906,6 +1906,9 @@ object Copy {
     /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
     const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
 
+    /** BEAT's ORBIT UNDO chip: how many edits it can step back through (the history holds sets, not edit names). */
+    fun orbitUndo(steps: Int): String = if (steps > 0) "UNDO ($steps)" else "UNDO"
+
     /** A print kept on a robin pad: its UNDO needs the takes lifted, which turning round robin off does. */
     const val ROBIN_NO_UNDO = "UNDO WORKS WITH ROUND ROBIN OFF. TURN IT OFF FIRST."
 
