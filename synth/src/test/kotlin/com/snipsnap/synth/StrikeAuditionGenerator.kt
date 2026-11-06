@@ -59,7 +59,7 @@ object StrikeAuditionGenerator {
         )
         sections += Section(
             "ROLL", "Fast roll",
-            "Eight hits, 160 ms apart, cycling four takes. SAME is one take eight times (the machine gun), OLD is Robin's re-pitched takes, NEW is Robin's re-struck takes.",
+            "Eight hits, 160 ms apart. NO ROUND ROBIN plays one recording eight times, the machine-gun sound round robin exists to avoid. OLD cycles Robin's four re-pitched takes; NEW cycles its four re-struck takes.",
             rolls(),
         )
         sections += Section(
@@ -144,7 +144,7 @@ object StrikeAuditionGenerator {
             val ref = p.render()
             val label = p.name.uppercase()
             listOf(
-                Clip("${id}_same", "$label ROLL, SAME TAKE", roll(List(4) { ref })),
+                Clip("${id}_same", "$label ROLL, NO ROUND ROBIN", roll(List(4) { ref })),
                 Clip("${id}_old", "$label ROLL, OLD TAKES", roll(takes(ref, p, restrike = false))),
                 Clip("${id}_new", "$label ROLL, NEW TAKES", roll(takes(ref, p, restrike = true))),
             )
@@ -270,7 +270,7 @@ object StrikeAuditionGenerator {
         |    {"id": "buzz", "title": "Buzz pads: the rattle only wakes on a firm hit. Right amount?",
         |     "clips": ["TERRA/cajon_slap_v25", "TERRA/cajon_slap_v60", "TERRA/cajon_slap_v100", "TERRA/balafon_key_v25", "TERRA/balafon_key_v60", "TERRA/balafon_key_v100"],
         |     "options": ["Right", "Soft still too buzzy", "Soft too clean"]},
-        |    {"id": "roll", "title": "A fast roll: which sounds most like one drummer?",
+        |    {"id": "roll", "title": "A fast roll: which sounds most like one drummer? (NO ROUND ROBIN is the reference: one recording repeated.)",
         |     "clips": ["ROLL/kick_same", "ROLL/kick_old", "ROLL/kick_new", "ROLL/djembe_open_same", "ROLL/djembe_open_old", "ROLL/djembe_open_new"],
         |     "options": ["New takes", "Old takes", "Can't tell"]},
         |    {"id": "keys", "title": "A held OBBLIGATO key: the duet carrying on, or a phrase on repeat?",

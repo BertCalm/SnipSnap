@@ -125,10 +125,21 @@ start jitter. Both spreads are shapes.
   brightness test on Cajon Low).
 - **Measured:** the tables above, Kotlin, at the commit this lands in.
 - **Proposed:** `R`, `a`, `FORCE_SPREAD`, `POSITION_SPREAD`.
-- **Not heard:** nothing here has had the owner's listen. The audition
-  question is whether a soft SKIN kick and a soft TERRA djembe sound like a
-  softer hit on the same drum, not a quieter copy, and whether a re-struck
-  chain sounds like one drummer.
+- **Heard (2026-11-06, the owner, through the gate below; each verdict
+  covers only the levelled clips its question played):**
+  - The soft SKIN kick (TAPE SKIN, old soft against new soft, medium,
+    hard): "Same to me." The new law is no audible step for this kick.
+  - Soft hand drums (Djembe Bass, Tabla Tun): "New is better."
+  - A soft hit bending less (BEND TOM, Bayan Drag): "Natural."
+  - The buzz waiting for a firm hit (Cajon Slap, Balafon Key): "Right."
+    Note: "Cajon and balafon sound very similar. Cajon doesn't have the
+    bassy resonance." Read from the kit, not heard: Cajon Slap (TERRA kit
+    A07) is a TUNED_BAR voice like Balafon Key (A16), so the two share the
+    bar's mode table and differ mainly in pitch; no box resonance sits
+    under the slap. Open.
+  - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
+    the one-take reference ("same takes") was unclear; the gate now names
+    it NO ROUND ROBIN.
 - **The gate (2026-11-06):** `./gradlew :synth:generateStrikeAudition`
   (`StrikeAuditionGenerator`) renders 127 clips at one loudness under
   `testkit/strike-audition/`: every SKIN kick, tom and TERRA kit pad as its
