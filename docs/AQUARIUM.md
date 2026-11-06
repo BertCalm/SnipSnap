@@ -44,7 +44,7 @@ Every SURFACE PRINT now keeps both output channels, including dual-mono dry outp
 
 ## ORBIT → OPEN THE SET → AQUARIUM
 
-**USE KIT FX** saves an explicit opt-in in orbits.json and references the kit's saved PERFORMANCE sound. Both the ring mix and tapped-pad audition use ORBIT's own tempo, on separate processors. An unused route starts dry. Ordinary edits and section changes keep history; RESET TAIL and rewind use the accepted smooth reset, and a new PLAY starts fresh.
+**USE KIT FX** saves an explicit opt-in in orbits.json and references the kit's saved PERFORMANCE sound. Both the ring mix and tapped-pad audition use the project's tempo, on separate processors. *(2026-11-06 ruling: there is one project tempo, set from BEAT, and ORBIT follows it. Until then this read "ORBIT's own tempo".)* An unused route starts dry. Ordinary edits and section changes keep history; RESET TAIL and rewind use the accepted smooth reset, and a new PLAY starts fresh.
 
 BOUNCE renders a fresh turn with the same post-sum processor, then zero input for the chosen 0..30-second FX tail (default 3). It matches fresh playback, not a later live lap's history or changing controls. Taps are excluded. Bypass/all-zero mixes add no tail. The complete print must fit the shelf's three-minute cap, including tail, or it is refused before rendering. SNIPS retains both file channels at the MPC rate; TAPE's editor still reads mono. A wet bounce is baked, may have a seam or cut a long decay, and receives FX again if played through KIT FX. CLIP TO KIT carries notes only. See the [ORBIT and storage contract](superpowers/specs/2026-11-01-aquarium-orbit-design.md).
 

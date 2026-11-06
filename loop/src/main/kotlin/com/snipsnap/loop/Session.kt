@@ -100,8 +100,11 @@ data class Track(
  * against each other and only realign after the least common multiple of their
  * lengths — which is the entire point of the feature.
  *
- * [bpm] is live. [barsPerInterval] is not: every baked buffer is exactly one
- * interval long, so changing it would invalidate all of them at once and
+ * [bpm] is live, and since the 2026-11-06 ruling it is the project's tempo
+ * (`Project.tempoBpm`, set from BEAT) that LOOP puts on it when the grid opens
+ * and whenever it changes; the value `loop.json` holds is only what the session
+ * was last written with. [barsPerInterval] is not live: every baked buffer is
+ * exactly one interval long, so changing it would invalidate all of them at once and
  * require truncation rules nobody wants mid-performance.
  */
 data class Session(
@@ -137,7 +140,9 @@ data class Session(
          *
          * `OrbitSet` has its own pair with the same values. They are not this
          * one: the ring set and the grid are separate features that each chose
-         * a range, and either could move without the other.
+         * a range, and either could move without the other. The project's tempo
+         * (`Project.MIN_BPM`..`MAX_BPM`, the same numbers) is held to them
+         * before either screen sees it.
          */
         const val MIN_BPM = 40f
         const val MAX_BPM = 220f

@@ -91,6 +91,14 @@ object Copy {
      */
     const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
 
+    /**
+     * The one-time migration to the one project tempo (the 2026-11-06 ruling):
+     * the project had no tempo of its own, and the ORBIT set it holds was at a
+     * different one than the kit, so the project took the ORBIT set's rather
+     * than silently moving it. Said once, in the dock; [bpm] is the number.
+     */
+    fun projectTempoAdopted(bpm: Int): String = "PROJECT TEMPO IS NOW $bpm BPM, TAKEN FROM YOUR ORBIT SET."
+
     /** BEAT's BPM − / + could not write project.json: the project, and so every screen, keeps the tempo it had. */
     const val PROJECT_TEMPO_NOT_SAVED = "TEMPO DID NOT SAVE. THE PROJECT KEEPS THE OLD ONE."
 
@@ -2999,28 +3007,6 @@ object Copy {
     const val LOOP_UNDO_NOT_SAVED = "THE TRACK IS BACK, BUT IT DID NOT SAVE. IT WILL BE CLEAR NEXT TIME."
     /** The visible twin of holding a block: clears the track the selected block is in. */
     const val LOOP_CLEAR_BUTTON = "CLEAR TRACK"
-    /**
-     * A tempo change, once the taps have stopped and it is on the grid.
-     *
-     * The new number is already on screen by then — this says it reached the
-     * disk, which is the half the screen cannot show. The BPM itself is not
-     * repeated here: it is three inches away in the control the player just
-     * used, and a toast that quotes it would be the same number in two places
-     * on one screen.
-     */
-    const val LOOP_TEMPO_SET = "TEMPO SAVED."
-
-    /**
-     * The tempo's own failure line.
-     *
-     * It exists because the clear's line was being used for both, and that
-     * line says the track is clear and will be back — true of a clear, and
-     * three kinds of wrong about a tempo: nothing was cleared, nothing is
-     * coming back, and the number on screen is the one thing that did not
-     * survive. A toast that describes the wrong action is worse than no
-     * toast, because the player goes looking for a track they never touched.
-     */
-    const val LOOP_TEMPO_NOT_SAVED = "TEMPO DID NOT SAVE. THE OLD ONE IS WHAT COMES BACK NEXT TIME."
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**
@@ -3210,8 +3196,8 @@ object Copy {
      * finds it either way.
      */
     val ROOMS_LEGEND: String = "HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS"
-    /** ORBIT's SET ▸ TEMPO confirm row: what accepting the offered tempo actually does to the ring, since SET is otherwise silent about it. */
-    const val ORBIT_SET_TEMPO_HINT = "SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT."
+    /** ORBIT's SET PROJECT TO ▸ confirm row: what accepting the offered tempo actually does, since SET is otherwise silent about it — the one project tempo moves, BEAT and LOOP with it. */
+    const val ORBIT_SET_TEMPO_HINT = "MOVES THE PROJECT'S TEMPO, BEAT AND LOOP WITH IT, AND RE-SIZES THE RING TO FIT."
     /**
      * ORBIT's own on-screen legend: the ring/cell gestures, permanent
      * furniture under the deck, plus one of two closing clauses depending
@@ -3223,7 +3209,7 @@ object Copy {
     fun orbitLegend(hasSnips: Boolean): String =
         "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · " +
             if (hasSnips) {
-                "HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
+                "BPM IS THE PROJECT'S, SET IN BEAT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
             } else {
                 "NO SNIPS ON THE SHELF YET FOR + SNIP."
             }

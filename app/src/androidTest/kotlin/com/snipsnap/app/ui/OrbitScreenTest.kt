@@ -77,6 +77,20 @@ class OrbitScreenTest : ComposeScreenTest() {
         org.junit.Assert.assertArrayEquals(wave, File(entry.dir, "kick.wav").readBytes())
     }
 
+    /**
+     * The one project tempo (2026-11-06): ORBIT has no BPM buttons, and a set
+     * saved at another tempo than the project's (the kit says 92, the file
+     * says 120) opens and plays without them. The entry is App's effective
+     * kit, so its tempo is the project's.
+     */
+    @Test fun there_are_no_BPM_buttons_and_an_old_set_at_another_tempo_still_opens() {
+        val entry = kit()
+        OrbitStore.save(OrbitPresets.fromKit(entry.dir.name, entry.kit, 120f, 48_000), entry.dir)
+        show(entry)
+        assertTrue("no SLOWER button", !present("SLOWER"))
+        assertTrue("no FASTER button", !present("FASTER"))
+    }
+
     private val folders = mutableListOf<File>()
     // Written by the screen on the main thread, read by the test's own.
     private val toasts = CopyOnWriteArrayList<String>()

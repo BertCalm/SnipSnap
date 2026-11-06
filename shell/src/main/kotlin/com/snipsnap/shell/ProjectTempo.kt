@@ -46,4 +46,21 @@ object ProjectTempo {
     /** The kit as it should be saved: [effective] undone, back to [onDisk]'s own tempo (null when the file has none). */
     fun stored(effective: Kit, onDisk: Kit?): Kit =
         if (effective.tempoBpm == onDisk?.tempoBpm) effective else effective.copy(tempoBpm = onDisk?.tempoBpm)
+
+    /**
+     * The one-time migration from ORBIT's own tempo: a project with no tempo of
+     * its own, whose ORBIT set was fitted at a different one than the kit
+     * reads as, adopts the ORBIT set's ([orbitBpm], held to
+     * [Project.MIN_BPM]..[Project.MAX_BPM]) so the set does not change under
+     * the person. Null when there is nothing to adopt: the project already has
+     * a tempo (it is the authority, and this never overrides it), or the two
+     * agree to the whole BPM. Once adopted the project has a tempo, so it
+     * cannot happen twice.
+     */
+    fun adoptable(project: Project?, kit: Kit, orbitBpm: Float): Float? {
+        if (project == null || project.tempoBpm != null || !orbitBpm.isFinite()) return null
+        val kitBpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+        if (Math.round(orbitBpm) == Math.round(kitBpm)) return null
+        return orbitBpm.coerceIn(Project.MIN_BPM, Project.MAX_BPM)
+    }
 }

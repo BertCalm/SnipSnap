@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -94,6 +95,7 @@ import com.snipsnap.app.ui.DoorChip
 import com.snipsnap.app.ui.GearSheet
 import com.snipsnap.app.ui.InstrumentsBench
 import com.snipsnap.app.ui.PlaceRow
+import com.snipsnap.app.ui.LocalProjectTempoSetter
 import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
@@ -173,6 +175,7 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PedalSlate
+import com.snipsnap.shell.ProjectTempo
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
@@ -195,6 +198,7 @@ import com.snipsnap.synth.PhotoKit
 import com.snipsnap.synth.SirenDrone
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -3515,6 +3519,11 @@ fun App(shelf: KitShelf) {
             if (project?.name == updated.name) project = updated
         }
     }
+    // One instance for the life of the app, so what ORBIT reads it through does
+    // not change on every recomposition; it calls whichever `setProjectTempo`
+    // is current.
+    val latestSetProjectTempo = rememberUpdatedState(::setProjectTempo)
+    val projectTempoSetter = remember { { bpm: Float -> latestSetProjectTempo.value(bpm) } }
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -3534,6 +3543,27 @@ fun App(shelf: KitShelf) {
                     .onFailure { Log.e(TAG, "mirrorBeat: the project's beat did not follow", it) }
             }
         }
+    }
+
+    // The one-time migration to the one project tempo (the 2026-11-06 ruling):
+    // the first time a kit opens in a project that has no tempo of its own, an
+    // ORBIT set fitted at a different tempo than the kit's gives the project
+    // its own, so the set the person made does not change under them. Said in
+    // the dock. Once the project has a tempo this never runs again; a set that
+    // agrees with the kit leaves the project as it is (kit, else 92).
+    LaunchedEffect(project?.name, project?.tempoBpm == null, open?.dir) {
+        val p = project ?: return@LaunchedEffect
+        val entry = open ?: return@LaunchedEffect
+        if (p.tempoBpm != null) return@LaunchedEffect
+        val orbitBpm = withContext(Dispatchers.IO) {
+            runCatching { if (OrbitStore.exists(entry.dir)) OrbitStore.load(entry.dir).bpm else null }.getOrNull()
+        } ?: return@LaunchedEffect
+        // Read live: the project or the kit may have changed while the file read.
+        val live = project ?: return@LaunchedEffect
+        val kitNow = open?.takeIf { it.dir == entry.dir }?.kit ?: return@LaunchedEffect
+        val adopted = ProjectTempo.adoptable(live, kitNow, orbitBpm) ?: return@LaunchedEffect
+        setProjectTempo(adopted)
+        dock.say(Copy.projectTempoAdopted(adopted.roundToInt()))
     }
 
     // The gear's two-row sheet. Open/closed state, not a navigation: the
@@ -4644,32 +4674,34 @@ fun App(shelf: KitShelf) {
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 )
                             } else {
-                                OrbitScreen(
-                                    entry = orbitEntry,
-                                    kitsRoot = shelf.root,
-                                    backLabel = checkNotNull(nav.backChip) { "ORBIT is a bench, so it has something to go back to" },
-                                    onBack = { nav.closeBench() },
-                                    onToast = { dock.say(it) },
-                                    // CLIP ▸ KIT rewrites the open kit's groove.json
-                                    // (OrbitClip.save) the same way TAPE's READ AS
-                                    // GROOVE / STEAL THE FEEL do — so it bumps the
-                                    // same reload request they do.
-                                    onGrooveWritten = { grooveReload++ },
-                                    // The six hoisted above, so leaving the bench
-                                    // and coming back finds the same session.
-                                    history = orbitHistory,
-                                    onHistoryChange = { orbitHistory = it },
-                                    selected = orbitSelected,
-                                    onSelectedChange = { orbitSelected = it },
-                                    solo = orbitSolo,
-                                    onSoloChange = { orbitSolo = it },
-                                    set = orbitSet,
-                                    onSetChange = { orbitSet = it },
-                                    scrambleSeed = orbitScrambleSeed,
-                                    onScrambleSeedChange = { orbitScrambleSeed = it },
-                                    brush = orbitBrush,
-                                    onBrushChange = { orbitBrush = it },
-                                )
+                                CompositionLocalProvider(LocalProjectTempoSetter provides projectTempoSetter) {
+                                    OrbitScreen(
+                                        entry = orbitEntry,
+                                        kitsRoot = shelf.root,
+                                        backLabel = checkNotNull(nav.backChip) { "ORBIT is a bench, so it has something to go back to" },
+                                        onBack = { nav.closeBench() },
+                                        onToast = { dock.say(it) },
+                                        // CLIP ▸ KIT rewrites the open kit's groove.json
+                                        // (OrbitClip.save) the same way TAPE's READ AS
+                                        // GROOVE / STEAL THE FEEL do — so it bumps the
+                                        // same reload request they do.
+                                        onGrooveWritten = { grooveReload++ },
+                                        // The six hoisted above, so leaving the bench
+                                        // and coming back finds the same session.
+                                        history = orbitHistory,
+                                        onHistoryChange = { orbitHistory = it },
+                                        selected = orbitSelected,
+                                        onSelectedChange = { orbitSelected = it },
+                                        solo = orbitSolo,
+                                        onSoloChange = { orbitSolo = it },
+                                        set = orbitSet,
+                                        onSetChange = { orbitSet = it },
+                                        scrambleSeed = orbitScrambleSeed,
+                                        onScrambleSeedChange = { orbitScrambleSeed = it },
+                                        brush = orbitBrush,
+                                        onBrushChange = { orbitBrush = it },
+                                    )
+                                }
                             }
                         }
                         top == Bench.LOOP -> LoopBench(
@@ -4680,6 +4712,7 @@ fun App(shelf: KitShelf) {
                             // the stack, so Back from it returns to BEAT, where the
                             // LOOP ▸ chip is.
                             onGoToSnips = { nav.closeBench(); nav.open(Bench.SNIPS) },
+                            tempo = ProjectTempo.clamped(project, open?.kit),
                         )
                         top == Bench.KEYS -> {
                             val inst = openInstrument

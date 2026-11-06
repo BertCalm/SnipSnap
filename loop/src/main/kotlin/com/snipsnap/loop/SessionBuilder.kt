@@ -54,8 +54,12 @@ object SessionBuilder {
      * lockstep, no drift. A one-bar interval is what lets an ordinary catch
      * become a chain of two or three.
      *
-     * Neither is adjustable from the grid yet: there is no tempo control on
-     * the screen, so these are what a session gets.
+     * The grid has no tempo control: the project's tempo, set from BEAT (the
+     * 2026-11-06 ruling), replaces [DEFAULT_BPM] when LOOP opens a session and
+     * follows it while LOOP is open. [DEFAULT_BPM] is what a session is *sent*
+     * at, before any screen has put the project's tempo on it. The bar count is
+     * not adjustable from the grid either, so [DEFAULT_BARS] is what a session
+     * gets.
      */
     const val DEFAULT_BPM = 90f
     const val DEFAULT_BARS = 1
