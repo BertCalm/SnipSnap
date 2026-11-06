@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -42,6 +43,8 @@ import com.snipsnap.app.LoopWrites
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.KitSampleSource
@@ -363,12 +366,19 @@ fun LoopBench(
         var undo by remember { mutableStateOf<ClearUndo?>(null) }
         val scope = rememberCoroutineScope()
 
+        // Drawn as ORBIT's and SONG's headers are: the LCD panel, the back chip,
+        // the bench's name in the LCD's 21-point type. LOOP was the one BEAT
+        // bench with no title. The title sits straight after BACK and the
+        // UNDO chip at the far end, because UNDO CLEAR <NAME> can run to
+        // twenty-odd characters and would not leave room to centre it.
         Row(
-            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
+            TapeText(Copy.LOOP_TITLE, TapeType.lcd(21), scheme.lcdInk.tape, Modifier.padding(start = 2.dp))
+            Spacer(Modifier.weight(1f))
             undo?.let { u ->
                 HeaderChip(
                     label = u.label,
@@ -604,7 +614,7 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
@@ -612,6 +622,6 @@ private fun HeaderChip(
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }

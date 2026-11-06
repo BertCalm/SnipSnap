@@ -142,30 +142,32 @@ fun LoopGrid(
                 )
             }
         }
+        androidx.compose.material3.Text(
+            // The readout takes the legend's place while a block is
+            // selected: short, and the question just asked is worth
+            // more than the instructions for asking it.
+            text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
+                ?: Copy.LOOP_LEGEND,
+            color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace,
+            // Its own full-width line, two lines tall: beside the tempo
+            // stepper, CLEAR TRACK and the bounce button it was left a few
+            // characters of a single line and the legend was cut off. A
+            // renamed snip's name is user text with no length cap
+            // (Names.isMpcSafe checks characters, not length), so two lines
+            // is also the most it can take from the grid above.
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TempoControl(bpm = session.bpm, onBpm = onBpm)
-            androidx.compose.material3.Text(
-                // The readout takes the legend's place while a block is
-                // selected: one line, and the question just asked is worth
-                // more than the instructions for asking it.
-                text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
-                    ?: Copy.LOOP_LEGEND,
-                color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
-                fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace,
-                // A renamed snip's name is user text with no length cap
-                // (Names.isMpcSafe checks characters, not length), and this
-                // row sits above the fixed bounce button — matching
-                // TapeText's own one-line-and-ellipsis rule keeps a long
-                // name from pushing that button off the bottom of the screen.
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Spacer(Modifier.weight(1f))
             ClearButton(enabled = clearable) { selectedTrack?.let(clearTrack) }
             BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
         }
