@@ -2976,6 +2976,8 @@ object Copy {
      * button's shortcut rather than something only a sentence can teach.
      */
     const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT."
+    /** LOOP's title in its header row, drawn the way ORBIT and SONG draw theirs. A title, not a landing. */
+    const val LOOP_TITLE = "LOOP"
     /**
      * What a tapped block is, in the line the legend usually occupies.
      *
