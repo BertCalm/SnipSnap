@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -173,8 +174,8 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * content living at the edge to protect: the row was padded in from
  * a gutter on both sides, so the cue never overlapped a tab (that row is
  * the four-place row now, which does not scroll).
- * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
- * GROOVE / the write-and-doors row run edge to edge, so whichever control the
+ * This screen's scroll region has no such margin — GO TO / SHAPE THE
+ * GROOVE / SEND IT OUT run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
  * repro) is bisected by the same hard clip a gutter would have avoided.
  * A fade reads as "this continues" where a hard clip reads as "this
@@ -2153,7 +2154,7 @@ fun GrooveScreen(
                         // below, outside their scrollable region, rather
                         // than folded into any one group — it is a
                         // time-boxed decision about the take that just
-                        // landed, not a standing SHAPE/SEND/TRANSPORT
+                        // landed, not a standing GO TO/SHAPE/SEND
                         // control, and it must stay on screen the instant
                         // the take lands, not wait behind a scroll.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2212,95 +2213,33 @@ fun GrooveScreen(
                             Modifier.fillMaxSize().verticalScroll(groupedControlsScroll),
                             verticalArrangement = Arrangement.spacedBy(9.dp),
                         ) {
-                            // ► PLAY / ■ STOP are the dock's now (plan §3.4):
-                            // the frame's foot carries the transport on every
-                            // screen and asks the beat for the flip itself.
-                            // BOUNCE stays here — it prints what the clock is
-                            // playing and needs the clip's own controls beside
-                            // it.
-                            TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink2.tape)
-                            // Needs a loop already running, over a clip that
-                            // actually has something in it (`currentClip`,
-                            // not just `playing` — a from-scratch screen
-                            // still advances the clock with nothing to hit,
-                            // and BOUNCE tapped there would land a silent
-                            // SNIP) and a bank that has actually finished
-                            // loading (`bankReady` — the bank loads
-                            // independently of the transport, so `playing`
-                            // alone does not mean there is anything for the
-                            // print to capture). See BOUNCE's own wrap-based
-                            // logic in the frame clock above for why it
-                            // needs the loop already running at all: it
-                            // prints the pattern as it plays, starting at
-                            // the next downbeat, so there is nothing to
-                            // start it against otherwise. Not offered
-                            // mid-take either: RECORD owns this same clock
-                            // while it runs, and a bounce racing a take that
-                            // has not landed yet is scope this PR leaves for
-                            // later, not a case handled here.
-                            // Cancel is STOP, not a second tap — the frame
-                            // effect's own `finally` discards an armed or
-                            // in-flight bounce the instant playback stops,
-                            // so a dedicated cancel would do the same thing
-                            // through a second door.
-                            // SHARE ▸ sits beside it: BOUNCE prints the beat INTO the app, this
-                            // renders it offline and sends it OUT, so the two answer different
-                            // questions and neither waits on the other. Short enough to share the
-                            // row, and it says what it opens - the share sheet - with its arrow.
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                GrooveActionButton(
-                                    label = when {
-                                        bounceArmed -> "WAITING…"
-                                        bouncing || landingBounce -> "BOUNCING…"
-                                        else -> Copy.GROOVE_BOUNCE_BUTTON
-                                    },
-                                    scheme = scheme,
-                                    modifier = Modifier.weight(2f),
-                                    // `playing` is deliberately not in this gate: a
-                                    // stopped loop is a stable state a user can sit
-                                    // in, not a transient one, so it gets the same
-                                    // toast-beats-gating treatment RECORD's own
-                                    // `!bankReady` case gets (Finding #8) rather
-                                    // than a dimmed button with no explanation.
-                                    enabled = currentClip != null && host.bankReady &&
-                                        !recording && !countingIn &&
-                                        !bounceArmed && !bouncing && !landingBounce,
-                                ) {
-                                    if (!beat.playing) {
-                                        onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
-                                    } else {
-                                        bounceSnapshot = currentClip
-                                        bounceArmed = true
-                                    }
-                                }
-                                GrooveActionButton(
-                                    label = Places.SHARE_BEAT,
-                                    scheme = scheme,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = currentClip != null && !shareBusy,
-                                    accent = true,
-                                    spoken = Places.SHARE_BEAT_SPOKEN,
-                                ) { shareBeat() }
-                            }
-
-                            TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
-                            Row(
-                                Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
-                                }
-                                SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
-                            }
-
-                            FeelRow(
+                            // The scroll region reads top to bottom as GO TO (the three
+                            // benches), SHAPE THE GROOVE, SEND IT OUT. Each group is its
+                            // own composable below, which is also what keeps this method
+                            // under the dex register cliff (256 registers).
+                            //
+                            // ► PLAY / ■ STOP are the dock's now (plan §3.4): the frame's
+                            // foot carries the transport on every screen, so there is no
+                            // heading here for controls that live elsewhere. BOUNCE stays
+                            // with SEND IT OUT - it prints what the clock is playing.
+                            BeatGoTo(
+                                scheme = scheme,
+                                swingPercent = swingPercent,
+                                feel = feel,
+                                feelTemplate = feelTemplate,
+                                clearJustLanded = ::clearJustLanded,
+                                onOrbit = onOrbit,
+                                onArrange = onArrange,
+                                onLoop = onLoop,
+                            )
+                            BeatShape(
+                                scheme = scheme,
+                                swingPercent = swingPercent,
+                                onSwingChange = { swingPercent = it },
                                 feel = feel,
                                 seed = seed,
-                                scheme = scheme,
+                                busy = busy,
+                                onFeelChange = { feel = it },
                                 // Deliberately does NOT clearJustLanded — FEEL is a
                                 // non-destructive preview lens, same as `► PLAY`
                                 // above. The take is already written to disk once
@@ -2308,101 +2247,46 @@ fun GrooveScreen(
                                 // dismissing it just because the user nudged FEEL to
                                 // audition the take tighter or looser would strand
                                 // them with no undo. See `justLanded`'s own KDoc.
-                                onChange = { feel = it },
                                 onRecentre = {
                                     if (feel != 0) {
                                         feel = 0
                                         onToast(Copy.FEEL_RECENTRED)
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                // HUMANIZE ⚄ is gone (feel axis, task 6): RESEED only
+                                // rerolls the template feel is currently drawing from, so
+                                // it's disabled at feel <= 0 and never touches progIndex.
+                                onReseed = {
+                                    clearJustLanded()
+                                    seed++
+                                    onToast(Copy.feelRolled(seed))
+                                },
                             )
-
-                            // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
-                            // PROG A once and forced a jump to it — a control
-                            // whose whole job the feel axis now does continuously,
-                            // on every program the axis rides. RESEED only rerolls
-                            // the template feel is currently drawing from, so it's
-                            // disabled at feel <= 0 (nothing is applying it yet)
-                            // and, unlike the old button, never touches progIndex:
-                            // the axis reaches A, C and D alike, so there is no
-                            // one program to jump to.
-                            GrooveActionButton("⚄ RESEED", scheme, Modifier.fillMaxWidth(), enabled = !busy && feel > 0) {
-                                clearJustLanded()
-                                seed++
-                                onToast(Copy.feelRolled(seed))
-                            }
-
-                            // "SEND IT SOMEWHERE" until J46, which is true of
-                            // two of these four: SONG ▸ and ORBIT ▸ leave the
-                            // screen, while MIDI and CHART write a file where
-                            // you stand and leave you on GROOVE. One legend
-                            // over both, with the two kinds interleaved
-                            // (MIDI, SONG ▸, ORBIT ▸, CHART), left the ▸ glyph
-                            // as the only thing telling a player which was
-                            // which. The row is now sorted by what the button
-                            // does, and the legend names both halves in the
-                            // order they sit.
-                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink2.tape)
-                            // Batch 3, Task 1: one row of four rather than a
-                            // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
-                            // label here is five characters or fewer at 9sp, so
-                            // a single row reads fine and costs this column one
-                            // fewer row than any split would, which is the row
-                            // NeedleRoll actually needed back. J46 keeps the one
-                            // row and sorts it rather than splitting it, for the
-                            // same reason.
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // Batch 3, Task 4: MIDI writes files in place —
-                                // no navigation, no panel — so it lost the ▸ a
-                                // navigate/panel-opener keeps.
-                                GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
-                                // CHART writes a text file in place — no
-                                // navigation, no panel — so it lost its ▸ too
-                                // (Task 4).
-                                GrooveActionButton(
-                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
-                                    scheme,
-                                    Modifier.weight(1f),
-                                    enabled = !chartBusy,
-                                    accent = true,
-                                ) { exportChart() }
-                            }
-                            // The three benches off BEAT, one row (plan §3.4).
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // ORBIT ▸ — the kit on rings of different lengths, one
-                                // needle speed: polymeter and polyrhythm from the same
-                                // pads this screen already has loaded.
-                                GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onOrbit()
-                                }
-                                // SONG ▸ — the same four programs laid into a structure, not
-                                // just cycled: intro/theme/variation/the turn/reprise/outro,
-                                // one tap away from what this screen already has loaded.
-                                GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onArrange(swingPercent, feel / 100f, feelTemplate)
-                                }
-                                // LOOP ▸ — the six-track grid of snips, with its own
-                                // engine; it used to be the shelf's door and its own
-                                // Activity, and is a bench inside the frame now.
-                                GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onLoop()
-                                }
-                            }
-
-                            TapeText(
-                                "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
-                                TapeType.pixelSmall,
-                                scheme.ink2.tape,
-                                Modifier.fillMaxWidth(),
-                                maxLines = 2,
+                            BeatSendOut(
+                                scheme = scheme,
+                                bounceArmed = bounceArmed,
+                                bouncing = bouncing,
+                                landingBounce = landingBounce,
+                                hasClip = currentClip != null,
+                                bankReady = host.bankReady,
+                                recording = recording,
+                                countingIn = countingIn,
+                                shareBusy = shareBusy,
+                                midiBusy = midiBusy,
+                                chartBusy = chartBusy,
+                                offLaneCount = offLaneCount,
+                                onBounce = {
+                                    if (!beat.playing) {
+                                        onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
+                                    } else {
+                                        bounceSnapshot = currentClip
+                                        bounceArmed = true
+                                    }
+                                },
+                                onShare = ::shareBeat,
+                                onMidi = ::exportMidi,
+                                onChart = ::exportChart,
                             )
-                            if (offLaneCount > 0) {
-                                TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
-                            }
 
                             // Trailing clearance, sized to match the scrim
                             // below: without it the last control (the off-lane
@@ -2611,6 +2495,162 @@ private fun FeelRow(
             TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
+    }
+}
+
+/**
+ * BEAT's GO TO group: the three benches off this screen, one row (plan §3.4).
+ * A child of [GrooveScreen] rather than inline in it - the method sits at the
+ * dex register cliff (256) and every group that can leave it, must.
+ */
+@Composable
+private fun ColumnScope.BeatGoTo(
+    scheme: Scheme,
+    swingPercent: Int,
+    feel: Int,
+    feelTemplate: GrooveFeel.Template,
+    clearJustLanded: () -> Unit,
+    onOrbit: () -> Unit,
+    onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit,
+    onLoop: () -> Unit,
+) {
+    TapeText(Copy.BEAT_HEADING_GO_TO, TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // ORBIT ▸ — the kit on rings of different lengths, one
+        // needle speed: polymeter and polyrhythm from the same
+        // pads this screen already has loaded.
+        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onOrbit()
+        }
+        // SONG ▸ — the same four programs laid into a structure, not
+        // just cycled: intro/theme/variation/the turn/reprise/outro,
+        // one tap away from what this screen already has loaded.
+        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onArrange(swingPercent, feel / 100f, feelTemplate)
+        }
+        // LOOP ▸ — the six-track grid of snips, with its own
+        // engine; it used to be the shelf's door and its own
+        // Activity, and is a bench inside the frame now.
+        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onLoop()
+        }
+    }
+}
+
+/** BEAT's SHAPE THE GROOVE group: the SWING stepper, the FEEL stepper and RESEED. */
+@Composable
+private fun ColumnScope.BeatShape(
+    scheme: Scheme,
+    swingPercent: Int,
+    onSwingChange: (Int) -> Unit,
+    feel: Int,
+    seed: Int,
+    busy: Boolean,
+    onFeelChange: (Int) -> Unit,
+    onRecentre: () -> Unit,
+    onReseed: () -> Unit,
+) {
+    TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(
+        Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SwingStepper("−", scheme, description = "SWING DOWN") { onSwingChange((swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN)) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+            TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        SwingStepper("+", scheme, description = "SWING UP") { onSwingChange((swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX)) }
+    }
+    FeelRow(
+        feel = feel,
+        seed = seed,
+        scheme = scheme,
+        onChange = onFeelChange,
+        onRecentre = onRecentre,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    GrooveActionButton("⚄ RESEED", scheme, Modifier.fillMaxWidth(), enabled = !busy && feel > 0, onClick = onReseed)
+}
+
+/**
+ * BEAT's SEND IT OUT group: everything that takes the beat somewhere else.
+ * BOUNCE prints the beat INTO the app, SHARE renders it offline and sends it
+ * OUT, MIDI and CHART write a file where you stand. The enable gates are the
+ * ones BOUNCE and SHARE always had: BOUNCE needs a clip with something in it
+ * and a bank that has finished loading (not just a running loop - a stopped
+ * loop gets the toast-beats-gating treatment RECORD's `!bankReady` case does),
+ * and never mid-take; SHARE needs only a clip.
+ */
+@Composable
+private fun ColumnScope.BeatSendOut(
+    scheme: Scheme,
+    bounceArmed: Boolean,
+    bouncing: Boolean,
+    landingBounce: Boolean,
+    hasClip: Boolean,
+    bankReady: Boolean,
+    recording: Boolean,
+    countingIn: Boolean,
+    shareBusy: Boolean,
+    midiBusy: Boolean,
+    chartBusy: Boolean,
+    offLaneCount: Int,
+    onBounce: () -> Unit,
+    onShare: () -> Unit,
+    onMidi: () -> Unit,
+    onChart: () -> Unit,
+) {
+    TapeText(Copy.BEAT_HEADING_SEND_OUT, TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        GrooveActionButton(
+            label = when {
+                bounceArmed -> "WAITING…"
+                bouncing || landingBounce -> "BOUNCING…"
+                else -> Copy.GROOVE_BOUNCE_BUTTON
+            },
+            scheme = scheme,
+            modifier = Modifier.weight(2f),
+            enabled = hasClip && bankReady && !recording && !countingIn &&
+                !bounceArmed && !bouncing && !landingBounce,
+            onClick = onBounce,
+        )
+        GrooveActionButton(
+            label = Places.SHARE_BEAT,
+            scheme = scheme,
+            modifier = Modifier.weight(1f),
+            enabled = hasClip && !shareBusy,
+            accent = true,
+            spoken = Places.SHARE_BEAT_SPOKEN,
+            onClick = onShare,
+        )
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // MIDI and CHART write a file in place - no navigation, no panel -
+        // so neither carries the ▸ a navigate/panel-opener keeps.
+        GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true, onClick = onMidi)
+        GrooveActionButton(
+            if (chartBusy) Copy.CHART_BUSY else "CHART",
+            scheme,
+            Modifier.weight(1f),
+            enabled = !chartBusy,
+            accent = true,
+            onClick = onChart,
+        )
+    }
+    TapeText(
+        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+        TapeType.pixelSmall,
+        scheme.ink2.tape,
+        Modifier.fillMaxWidth(),
+        maxLines = 2,
+    )
+    if (offLaneCount > 0) {
+        TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
     }
 }
 

@@ -2644,6 +2644,10 @@ object Copy {
         "FROZE ${"%.1f".format(java.util.Locale.ROOT, seconds)} S OF ${if (appAudio) "APP AUDIO" else "THE MIC"} ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK."
 
     // ---- GROOVE: BOUNCE ----
+    /** BEAT's heading over the three benches off the screen (ORBIT, SONG, LOOP). */
+    const val BEAT_HEADING_GO_TO = "GO TO"
+    /** BEAT's heading over everything that takes the beat out: BOUNCE TO SNIPS, SHARE, MIDI, CHART. */
+    const val BEAT_HEADING_SEND_OUT = "SEND IT OUT"
     /**
      * GROOVE's BOUNCE button.
      *

@@ -630,6 +630,8 @@ class PersonalityTest {
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // BEAT's GO TO and SEND IT OUT group headings: labels over a run of controls, not landings.
+        "BEAT_HEADING_GO_TO", "BEAT_HEADING_SEND_OUT",
         // MAKE's two group headings: labels, not landings.
         "MAKE_A_SOUND", "WHAT_YOU_MADE",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
