@@ -256,6 +256,17 @@ tasks.register<JavaExec>("generateKeelKeys") {
     args("${rootDir}/testkit/keel-keys")
 }
 
+/** BORE held: the held keygroup's zones as held keys beside the loop-only zones they replace. See BoreHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateBoreHeldAudition") {
+    group = "distribution"
+    description = "Render BORE's held keygroup as held keys (hard and soft layers) beside the loop-only zones, at three notes a voice, under testkit/bore-held-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoreHeldAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("boreHeldOutput").orElse("${rootDir}/testkit/bore-held-audition").get())
+}
+
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     group = "distribution"
     description = "Render BELLOWS native/program A/B and release previews through exported WAVs and the JVM player."
