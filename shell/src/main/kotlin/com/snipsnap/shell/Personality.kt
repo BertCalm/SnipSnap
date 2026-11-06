@@ -1923,15 +1923,21 @@ object Copy {
         "A STACKED PAD IS LAYERED. TREAT, MUTATE, SPLICE AND OUTSIDE WAIT UNTIL SOFT HITS IS CLEARED - AND CLEARING DELETES THE COPIES."
     /** Shown, not fixed: no auto-gain, ever. */
     const val STACK_NO_GAIN = "LEVELS ARE SHOWN, NOT FIXED. NO AUTO-GAIN - THE MPC'S VELOCITY CURVE OWNS LOUDNESS."
-    /** COMMIT: how many real takes now sit under LIVE, and what that costs. */
+    /** KEEP: how many real takes now sit under LIVE, and what that costs. */
     fun stacked(soft: Int): String =
         "$soft REAL ${if (soft == 1) "TAKE" else "TAKES"} STACKED UNDER LIVE. THIS PAD IS LAYERED NOW - CLEAR SOFT HITS TO TREAT IT AGAIN."
+    /**
+     * Said after STACK's KEEP, beside [stacked]: where the way back lives. STACK has no UNDO button; the
+     * stack is the pad's velocity layers, and the pad editor's SOFT HITS chip, turned off, clears them
+     * (`clearGhostLayers`, which deletes the copies and leaves LIVE and the bin as they were).
+     */
+    const val STACK_UNDO_AT = "TO TAKE IT BACK, TURN SOFT HITS OFF ON THE PAD EDITOR."
     /** A soft-zone take that peaks over the live one, said beside its row and left exactly that loud. */
     fun stackOverLive(zone: String, db: Float): String =
         "$zone IS +${String.format(java.util.Locale.ROOT, "%.1f", db)} DB OVER LIVE. THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS."
 
     /**
-     * COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. Either way
+     * KEEP: [crossfaded] is honest about whether the raw cut needed a declick overlap. Either way
      * the line ends on where the take before the splice went, as DE-SAMPLE's, MUTATE's and DRIFT's
      * landings do: the pad sheet's UNDO SPLICE brings it back ([UNSPLICED]).
      */
@@ -1941,6 +1947,11 @@ object Copy {
         } else {
             "SPLICED CLEAN. NO OVERLAP NEEDED. THE TAKE BEFORE IT SLEEPS IN THE BIN."
         }
+    /**
+     * Said after SPLICE's KEEP, beside [spliced]: where the undo lives. It is on the pad editor, in the
+     * row beside SPLICE ▸.
+     */
+    const val SPLICE_UNDO_AT = "TO TAKE IT BACK, USE UNDO SPLICE ON THE PAD EDITOR."
     /**
      * The pad sheet's UNDO SPLICE. It restores the newest take of the pad's file from the bin, which
      * after two splices is the first splice's result, not the original; so the line says exactly

@@ -367,6 +367,14 @@ class PersonalityTest {
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
 
+    /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
+    @Test
+    fun `the SPLICE and STACK landings say where the undo is`() {
+        assertTrue("UNDO SPLICE" in Copy.SPLICE_UNDO_AT && "PAD EDITOR" in Copy.SPLICE_UNDO_AT, Copy.SPLICE_UNDO_AT)
+        assertTrue("SOFT HITS" in Copy.STACK_UNDO_AT && "PAD EDITOR" in Copy.STACK_UNDO_AT, Copy.STACK_UNDO_AT)
+        assertEquals("USE THIS PART ▸", Copy.USE_THIS_PART)
+    }
+
     /**
      * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
      * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
