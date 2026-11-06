@@ -342,10 +342,13 @@ fun PadCaptureScreen(
     // the second is exactly a release (endHold), so a take is cut, capped and
     // placed by the same code whichever control made it: the ring has been
     // recording all along, and the take is the last `elapsed` of it, capped at
-    // PadCapture.MAX_HOLD_FRAMES. A second tap inside MIN_HOLD_MS gets the same
-    // "too short" answer a short hold does.
+    // PadCapture.MAX_HOLD_FRAMES. A second tap inside MIN_HOLD_MS is ignored:
+    // the take keeps recording and nothing is said, because the hold's "HOLD TO
+    // RECORD." hint is the wrong instruction for a tap button and a sliver
+    // should not end the take.
     fun toggleTapRecording() {
         if (tapRecording) {
+            if (SystemClock.elapsedRealtime() - holdStart < MIN_HOLD_MS) return
             tapRecording = false
             endHold()
         } else {
