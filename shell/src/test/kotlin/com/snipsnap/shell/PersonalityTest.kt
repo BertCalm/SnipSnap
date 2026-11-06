@@ -671,6 +671,8 @@ class PersonalityTest {
         // SETUP's MIDI OUT heading and the two words beside a device's port
         // (OUT / BUSY): labels, not landings.
         "SETUP_MIDI_OUT_HEADING", "SETUP_MIDI_OUT_PORT_OK", "SETUP_MIDI_OUT_PORT_BUSY",
+        // SETUP's LISTEN FROM heading: a label over two rows, not a landing.
+        "SETUP_LISTEN_HEADING", "SETUP_LISTEN_ASKS",
         // The MIDI screen's CLOCK CHECK button and its label while it runs:
         // button labels, not landings. The other three MIDI_CLOCK_* lines are
         // sentences and keep their full stops.
