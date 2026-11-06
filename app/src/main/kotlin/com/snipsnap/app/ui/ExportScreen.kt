@@ -849,6 +849,14 @@ private fun ExportContent(
         if (model.stage != ExportWizardModel.Stage.COMPLETE) {
             FindingsCard(model.preflight, scheme)
         }
+        // What is going out, before any card says how: the kit, or the kit and
+        // the open project (each has its own write button below).
+        TapeText(
+            if (project != null && shelfRoot != null) Copy.exportingKitAndProject(kit.name, project.name) else Copy.exportingKit(kit.name),
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 2,
+        )
         OutCard("THIS KIT", scheme) {
             Box(
                 Modifier
@@ -1453,6 +1461,19 @@ private fun CardRow(
         // caption under the door, not a warn-weight row.
         if (tree == null) {
             TapeText(Copy.CARD_NONE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
+        }
+        // The visible way to forget the card (the hold below stays as the
+        // shortcut). Same `onForget`, so the same release, the same prefs
+        // write and the same CARD_FORGOTTEN line; `enabled` is the row's own,
+        // so it dims for the length of a dub exactly as the hold is dropped.
+        if (tree != null) {
+            ActionButton(
+                Copy.CARD_FORGET,
+                scheme,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onForget,
+            )
         }
         // September UAT, finding 21: holding this row is the only way to
         // forget a card anywhere in the app.

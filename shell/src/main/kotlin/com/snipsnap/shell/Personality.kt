@@ -627,6 +627,18 @@ object Copy {
     /** The switch at the top of EXPORT. */
     const val EXPORT_SUBJECT_KIT = "KIT"
     const val EXPORT_SUBJECT_EXPANSION = "EXPANSION"
+    /**
+     * OUT's first line when the KIT subject is up: what the screen is about to write. Names the kit; the player
+     * who opened OUT from a bench they did not choose still reads which kit is going out.
+     */
+    fun exportingKit(kit: String): String = "EXPORTING THE KIT $kit."
+    /**
+     * OUT's first line when a project is open as well: the kit's card and THE PROJECT's card are both on the
+     * screen and each has its own write button, so the line names both rather than pretend there is one subject.
+     */
+    fun exportingKitAndProject(kit: String, project: String): String = "EXPORTING THE KIT $kit AND THE PROJECT $project."
+    /** OUT's first line when the EXPANSION subject is up: the expansion [title] the panel below writes. */
+    fun exportingExpansion(title: String): String = "EXPORTING THE EXPANSION $title."
     /** The row heading over the expansions to choose from. */
     const val EXPANSION_PICK = "WHICH EXPANSION"
     /** The members row heading. */
@@ -2460,6 +2472,11 @@ object Copy {
     const val CARD_PICKED = "CARD ▸"
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."
+    /**
+     * The visible FORGET button under the CARD row once a card is picked: the same move as holding the row
+     * ([EXPORT_CARD_LEGEND]), which stays as the shortcut. A label, not a landing; the landing is [CARD_FORGOTTEN].
+     */
+    const val CARD_FORGET = "FORGET CARD"
 
     /**
      * The legend under EXPORT's DESTINATION row (September UAT, finding 21).

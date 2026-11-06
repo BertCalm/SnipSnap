@@ -243,6 +243,7 @@ internal fun ExpansionExportPanel(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        TapeText(Copy.exportingExpansion(e.title), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Heading(Copy.EXPANSION_PICK)
         ChipLine {
             for (x in now.all) Chip(x.title, x.id == e.id) { onPick(x.id) }
