@@ -2976,6 +2976,12 @@ cycles per loop, so the delay returns to where it started at the wrap:
   there is 1 cent.
 * *It costs*: R1's loop renders in 285 ms at CELLO C3 and 394 ms at ERHU C5, the shipped loop in 366 and 475 ms
   (median of three, one thread): about 80 ms more a loop, the humanised swing's few sines at every raw sample.
+  The test's bound (at most 2.5 times R1's) now reads this thread's CPU time, the two taken in turn five times
+  and the fastest of each kept. On CI on 2026-11-06 the wall clock read 188 ms against 545 for the same pair
+  (MEASURED: the CI report), because the build's other test JVMs took the CPU between the two blocks of three.
+  MEASURED: with busy threads started between the blocks on purpose, the old wall-clock reading went to 485
+  against 1554 (3.20, failing) and the new one read 277 against 360 (1.30); with none, 272 against 355 (CELLO)
+  and 377 against 462 (ERHU).
 * *Through the loop instrument*: `LoopPadMaker`, unchanged, renders every zone of a BUZZ 1 patch with the
   vibrato on with a clean join (its `wrapRatio` at most 1.36, at ERHU D#4, against its bar of 2.0; the seam
   bar is met inside the engine).
