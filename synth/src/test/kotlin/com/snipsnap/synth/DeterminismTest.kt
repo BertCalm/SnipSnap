@@ -563,15 +563,15 @@ class DeterminismTest {
         }
     }
 
-    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29) and
-    // BUZZ's noise (13, 23) per voice (Terra.kt), so a saved pad
-    // regenerates only if all of them stay fixed. One per voice, with BUZZ
-    // and CLACK up so the noise paths run.
+    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29),
+    // BUZZ's noise (13, 23) and BOX's grit and wires (41, 43) per voice
+    // (Terra.kt), so a saved pad regenerates only if all of them stay fixed.
+    // One per voice, with BUZZ and CLACK up so the noise paths run.
     @Test
-    fun `TERRA is byte-identical across renders, all four voices`() {
+    fun `TERRA is byte-identical across renders, every voice`() {
         for (voice in TerraVoice.entries) {
             val loud = when (voice) {
-                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR -> mapOf("BUZZ" to 1f)
+                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR, TerraVoice.BOX -> mapOf("BUZZ" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }

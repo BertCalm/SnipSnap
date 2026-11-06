@@ -10,12 +10,24 @@ package com.snipsnap.synth
  * The pads are written out here, copied from TerraKits.kt in the same macro
  * order, rather than read back through PadRecipe and TerraPatch: the HIT
  * work rewrites that decoder, and a guard must not lean on what it guards.
+ *
+ * Since 2026-11-06 A07 is a BOX pad, which came after the freeze, so [KIT]
+ * (the shipped kit) and [all] (the frozen grid) part at that one pad: the
+ * grid keeps the cavity slap A07 shipped as before it ([RETIRED_A07]), so it
+ * still holds RESONANT_CAVITY at a hard, buzzy edge strike, and stays forty.
  */
 internal object TerraCases {
 
     class Case(val label: String, val voice: TerraVoice, val macros: Map<String, Float>)
 
     class KitPad(val slot: String, val name: String, val voice: TerraVoice, val macros: Map<String, Float>)
+
+    /** The four voices Phase 0 froze ([LegacyTerraBank]); BOX came after and has no frozen copy. */
+    val FROZEN_VOICES: List<TerraVoice> =
+        listOf(TerraVoice.COMPOUND_MEMBRANE, TerraVoice.RESONANT_CAVITY, TerraVoice.CONICAL_BELL, TerraVoice.TUNED_BAR)
+
+    /** A07 as it shipped from PR #890 until BOX replaced it (2026-11-06): the cavity slap, kept in the frozen grid. */
+    val RETIRED_A07 = KitPad("A07", "Cajon Slap (cavity)", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f))
 
     val PROBES: List<Map<String, Float>> = listOf(
         mapOf("TUNE" to 0.30f, "DECAY" to 0.55f),
@@ -32,7 +44,7 @@ internal object TerraCases {
         KitPad("A04", "Cajon Low", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.1516f, "FORCE" to 0.20f, "CAVITY" to 0.70f, "BUZZ" to 0.15f)),
         KitPad("A05", "Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f)),
         KitPad("A06", "Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
-        KitPad("A07", "Cajon Slap", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f)),
+        KitPad("A07", "Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)),
         KitPad("A08", "Djembe Open", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
         KitPad("A09", "Tabla Tin", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
         KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
@@ -45,7 +57,7 @@ internal object TerraCases {
     )
 
     val all: List<Case> =
-        TerraVoice.entries.map { Case("default ${it.name}", it, emptyMap()) } +
-            TerraVoice.entries.flatMap { v -> PROBES.mapIndexed { i, m -> Case("probe ${i + 1} ${v.name}", v, m) } } +
-            KIT.map { Case("pad ${it.slot} ${it.name}", it.voice, it.macros) }
+        FROZEN_VOICES.map { Case("default ${it.name}", it, emptyMap()) } +
+            FROZEN_VOICES.flatMap { v -> PROBES.mapIndexed { i, m -> Case("probe ${i + 1} ${v.name}", v, m) } } +
+            KIT.map { if (it.slot == "A07") RETIRED_A07 else it }.map { Case("pad ${it.slot} ${it.name}", it.voice, it.macros) }
 }

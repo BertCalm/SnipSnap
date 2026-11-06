@@ -36,6 +36,13 @@ import kotlin.math.tanh
  * no user in the spec's own 16-pad kit (S5) and is deferred indefinitely,
  * not landed-later work like the other four topologies were.
  *
+ * BOX (a cajón, 2026-11-06) is the fifth voice and not from the spec: a
+ * plate's dense modes driven by the slap, the port's air mode driven by the
+ * plate, and noise wires ([TerraBox]). It came from a listening verdict that
+ * a cajón on RESONANT_CAVITY read as a drum machine's rimshot. It shares
+ * TERRA's macros by name, its [Body] and HIT, its velocity and its takes,
+ * not the bank or the output stage: no DROOP, no PUNCH.
+ *
  * Unlike [Modes.ring], the modal bank here can't be a fixed two-pole
  * recursion: DROOP needs the fundamental itself to slide during the decay,
  * so each mode is rung by a phase-accumulated oscillator re-tuned every
@@ -45,7 +52,7 @@ import kotlin.math.tanh
  * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
  * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR }
+enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX }
 
 object Terra {
 
@@ -104,6 +111,7 @@ object Terra {
             MacroSpec("POS", 0.25f),
             MacroSpec("BUZZ", 0f),
         )
+        TerraVoice.BOX -> TerraBox.macros()
     }
 
     /** The factory macro settings for [voice]. */
@@ -176,11 +184,15 @@ object Terra {
         // into the audible band - the source spec's own reference code ran
         // its nonlinear stages straight at 44.1kHz with no oversample.
         val renderRate = RATE * Dsp.OVERSAMPLE
+        // BOX has its own output stage (TerraBox.finish): the prototype the
+        // owner picked had no PUNCH.
+        if (voice == TerraVoice.BOX) return Snip(TerraBox.finish(box(m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
         val (raw, clackFrames) = when (voice) {
             TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate, inputsFor, velocity, take) to 0
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity, take)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
+            TerraVoice.BOX -> error("BOX returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -235,7 +247,21 @@ object Terra {
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, bankOnly = true, velocity = velocity)
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity).first
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, bankOnly = true, velocity = velocity)
+            TerraVoice.BOX -> box(m, renderRate, inputsFor, velocity, plateOnly = true)
         }
+    }
+
+    /**
+     * BOX ([TerraBox]) at the render [rate]: its [Body] is the plate's modes
+     * from the (1, 1) mode, no droop, no pre-roll, so HIT colours the plate.
+     * The modes are not tilted by velocity (TerraBox.render says why). A
+     * pitch curve is refused: the box has no droop line for one to bend.
+     */
+    private fun box(m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)?, velocity: Float, take: Int = 0, plateOnly: Boolean = false): FloatArray {
+        val modes = TerraBox.modes(m, rate)
+        val inputs = inputsFor?.invoke(Body(modes, TerraBox.fundamentalHz(m), 0f, TerraBox.frames(rate), rate, onsetSamples = 0))
+        require(inputs?.pitch == null) { "BOX has no droop line for a pitch curve to bend" }
+        return TerraBox.render(m, rate, velocity, noiseSeed = seedOf(41, take), wireSeed = seedOf(43, take), level = inputs?.level, plateOnly = plateOnly)
     }
 
     /**
