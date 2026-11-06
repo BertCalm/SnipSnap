@@ -968,6 +968,9 @@ one opening before a continuously moving sustain. Nine minor-third roots,
 explicit internal loop markers and note-off release use the shared keygroup
 writer for the phone and MPC 2/3. It retains the complete authored source and
 motion recipe in a versioned delivery companion.
+After the HOLD cutoff repair, the owner accepted the sustain/release audition
+behavior on 2026-11-02 and confirmed it as the baseline on 2026-11-06. Individual
+held-preset voicing and physical phone/MPC verification remain separate checks.
 
 ### SHOAL — materials animated by moving energy
 

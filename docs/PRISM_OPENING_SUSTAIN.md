@@ -2,8 +2,9 @@
 
 Repository baseline: `fde661771fcbb6345a76f76e65537bfd9bb7c7ce`.
 Status: implemented, with focused JVM checks and Android compilation verified.
-The accompanying pull request records the full release checks. The new
-performance has not received a listening approval.
+The accompanying pull requests record the full release checks. The owner accepted
+the sustain/release audition behavior on 2026-11-02; physical phone and MPC checks
+remain outstanding.
 
 The characteristic gesture is **body attack → opening colour → repeating colour
 and body → release when the key is lifted**.
@@ -172,13 +173,32 @@ Warmed public renders for the eight instrument cases took 124–310 ms on this
 JVM, with a median of 189 ms. These are single-run container measurements,
 excluding recipe replay, probes and file writes, and are not phone timing claims.
 
+## Accepted playback baseline
+
+After the HOLD cutoff repair in [PR #803](https://github.com/BertCalm/SnipSnap/pull/803),
+the owner's feedback on 2026-11-02 was **“Works well.”** On 2026-11-06 the owner
+instructed work to proceed with that sustain/release behavior as the baseline.
+
+The accepted interaction is one opening, the marked sustain repeating while held,
+then the saved release. The published audition uses a release of 0.6 seconds.
+This acceptance covers the audition's sustain/release behavior. Individual held
+preset voicing and physical phone/MPC playback remain separate listening checks.
+
+PR #803's historical JVM test-path failure was repaired by
+[PR #816](https://github.com/BertCalm/SnipSnap/pull/816). Its Android screen verifier
+failure was repaired by [PR #817](https://github.com/BertCalm/SnipSnap/pull/817),
+which extracted the controls into a separate composable method. Later emulator
+runs passed that screen's verification. These are software checks; phone response
+and physical MPC behavior still require actual-device validation.
+
 | Claim | Status | Evidence |
 | --- | --- | --- |
 | Opening, bridge and sustain close without a disguised seam | Measured | New DSP tests and eight independent preceding-cycle audition comparisons. |
 | Delivery recipe and sampler marker replay exactly | Verified | Production Spec round trips, workflow tests and generated WAV readback. |
 | Phone player keeps the prefix once and loops only the sustain | Verified in JVM playback model | InstrumentEngine workflow test; device execution remains separate. |
 | Both APK variants and new UI tests compile | Verified | Android build exit 0 at the implementation commit. |
-| New performance has the preferred musical character | Awaiting listening | The owner's earlier approval covers the body-opening direction, not this new held delivery. |
+| Opening → repeating sustain → release interaction | Accepted by owner | “Works well” on 2026-11-02 after the cutoff repair; baseline confirmed on 2026-11-06. |
+| Individual held-preset musical character | Awaiting per-preset listening | Body-opening direction is preferred; the current acceptance covers the sustain/release interaction. |
 | Physical MPC behavior and phone response | Unverified on hardware | Actual-device checks remain outstanding. |
 
 ## Why it is built this way
