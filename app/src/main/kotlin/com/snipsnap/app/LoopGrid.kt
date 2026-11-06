@@ -91,12 +91,6 @@ fun LoopGrid(
     onClearTrack: (Int) -> Unit,
     /** BOUNCE: what the grid is doing, rendered offline into SNIPS. */
     onBounce: () -> Unit,
-    /**
-     * A nudge to the tempo, in whole BPM. The grid shows the new number at
-     * once; what the caller does about the audio is its own business — see
-     * `LoopBench`, which warms the new interval before applying it.
-     */
-    onBpm: (Int) -> Unit,
     /** True while that render runs — it is seconds of work, and the button says so rather than looking dead. */
     bouncing: Boolean = false,
     modifier: Modifier = Modifier,
@@ -152,7 +146,7 @@ fun LoopGrid(
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
             // Its own full-width line, two lines tall: beside the tempo
-            // stepper, CLEAR TRACK and the bounce button it was left a few
+            // readout, CLEAR TRACK and the bounce button it was left a few
             // characters of a single line and the legend was cut off. A
             // renamed snip's name is user text with no length cap
             // (Names.isMpcSafe checks characters, not length), so two lines
@@ -166,7 +160,7 @@ fun LoopGrid(
             horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TempoControl(bpm = session.bpm, onBpm = onBpm)
+            TempoReadout(bpm = session.bpm)
             Spacer(Modifier.weight(1f))
             ClearButton(enabled = clearable) { selectedTrack?.let(clearTrack) }
             BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
@@ -176,8 +170,8 @@ fun LoopGrid(
 
 /**
  * CLEAR TRACK: the visible twin of holding a block, for the track the selected
- * block is in. Dimmed (not removed) until a filled block is selected, the way
- * [TempoStep] dims at its ends, so the control is findable before it is usable.
+ * block is in. Dimmed (not removed) until a filled block is selected, so the
+ * control is findable before it is usable.
  */
 @Composable
 private fun ClearButton(enabled: Boolean, onClear: () -> Unit) {
@@ -243,54 +237,23 @@ private fun describe(session: Session, track: Int, block: Int): String? {
 }
 
 /**
- * The tempo, and one step either way.
- *
- * Whole BPM per tap rather than a drag: this is a landscape screen with six
- * columns on it and no room for a slider, and a grid is usually being matched
- * to something by ear a beat at a time. The clamp lives in [Session] — the
- * same range its own `require` refuses — so the buttons cannot ask for a
- * tempo the session would throw on.
+ * The tempo, read-only: the project's, set from BEAT (the 2026-11-06 ruling,
+ * `docs/UAT_2026_11.md`). LOOP follows it — `LoopBench` re-bakes the grid
+ * when it changes — and has no say in it, so there is nothing here to tap.
+ * Held to [Session]'s own range by the caller, the same numbers its
+ * `require` refuses.
  */
 @Composable
-private fun TempoControl(bpm: Float, onBpm: (Int) -> Unit) {
+private fun TempoReadout(bpm: Float) {
     val scheme = LocalScheme.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = LayoutArrangement.spacedBy(2.dp)) {
-        TempoStep(label = "−", enabled = bpm > Session.MIN_BPM) { onBpm(-1) }
-        androidx.compose.material3.Text(
-            text = "${bpm.toInt()} BPM",
-            color = scheme.amber.tape,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.background(scheme.lcd.tape).padding(horizontal = 8.dp, vertical = 6.dp),
-        )
-        TempoStep(label = "+", enabled = bpm < Session.MAX_BPM) { onBpm(1) }
-    }
-}
-
-@Composable
-private fun TempoStep(label: String, enabled: Boolean, onStep: () -> Unit) {
-    val scheme = LocalScheme.current
-    Box(
-        modifier = Modifier
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
-            .background(if (enabled) scheme.gray.tape else scheme.lcd.tape)
-            .border(width = 2.dp, color = scheme.ink2.tape)
-            // A label, because the glyph is a single character TalkBack would
-            // otherwise read as punctuation — the exception `tapeClick`'s own
-            // KDoc names.
-            .tapeClick(label = if (label == "+") "TEMPO UP" else "TEMPO DOWN", enabled = enabled, onClick = onStep),
-        contentAlignment = Alignment.Center,
-    ) {
-        androidx.compose.material3.Text(
-            text = label,
-            color = if (enabled) scheme.ink.tape else scheme.lcdInk.tape.dim(),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-        )
-    }
+    androidx.compose.material3.Text(
+        text = "${bpm.toInt()} BPM",
+        color = scheme.amber.tape,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        modifier = Modifier.background(scheme.lcd.tape).padding(horizontal = 8.dp, vertical = 6.dp),
+    )
 }
 
 /**
@@ -517,7 +480,7 @@ private fun BlockCell(
     // lambdas closing over the new session on every recomposition, and
     // without this a HOLD gesture that started before such an edit would
     // still fire the stale one — clearing a track from state that no
-    // longer includes the mute or the tempo the player just set.
+    // longer includes the mute or the tempo the project just took.
     // `rememberUpdatedState` keeps the detector itself stable while every
     // read inside it sees the latest callback.
     val currentOnSelect by rememberUpdatedState(onSelect)

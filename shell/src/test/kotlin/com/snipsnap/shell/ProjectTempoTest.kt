@@ -101,4 +101,33 @@ class ProjectTempoTest {
         KitStore.save(ProjectTempo.stored(effective, KitStore.load(dir)), dir)
         assertEquals(92f, KitStore.load(dir).tempoBpm)
     }
+
+    @Test
+    fun `an ORBIT set at another tempo than the kit is adopted by a project with none`() {
+        assertEquals(96f, ProjectTempo.adoptable(Project("P"), kit(92f), 96f))
+        assertEquals(96f, ProjectTempo.adoptable(Project("P"), kit(null), 96f), "a kit with no tempo reads as 92")
+        assertEquals(40f, ProjectTempo.adoptable(Project("P"), kit(92f), 12f), "held to the range the screens require")
+    }
+
+    @Test
+    fun `nothing is adopted when there is nothing to keep`() {
+        assertNull(ProjectTempo.adoptable(Project("P"), kit(92f), 92f), "the set agrees with the kit")
+        assertNull(ProjectTempo.adoptable(Project("P"), kit(92f), 92.4f), "to the whole BPM")
+        assertNull(ProjectTempo.adoptable(Project("P"), kit(null), 92f), "the default is what the kit reads as")
+        assertNull(ProjectTempo.adoptable(Project("P", tempoBpm = 120f), kit(92f), 96f), "the project's own tempo is never overridden")
+        assertNull(ProjectTempo.adoptable(null, kit(92f), 96f), "no project, nowhere to keep it")
+        assertNull(ProjectTempo.adoptable(Project("P"), kit(92f), Float.NaN))
+    }
+
+    @Test
+    fun `adoption happens once, because the project has a tempo afterwards`() {
+        val first = ProjectTempo.adoptable(Project("P"), kit(92f), 96f)!!
+        val adopted = Project("P").withTempo(first)
+        assertNull(ProjectTempo.adoptable(adopted, kit(92f), 110f))
+    }
+
+    @Test
+    fun `the adopted line says the number and where it came from`() {
+        assertEquals("PROJECT TEMPO IS NOW 96 BPM, TAKEN FROM YOUR ORBIT SET.", Copy.projectTempoAdopted(96))
+    }
 }
