@@ -71,9 +71,9 @@ object BoreKeys {
 
     /** One zone's two layers at [midi], soft first, each its attack then its loop ([padLayer]), each start shaped by [hit]. */
     fun pad(
-        voice: BoreVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false },
-        hit: HeldStart.Hit? = HeldStart.SHORT,
-    ): List<KeyNote> = layerBreaths(voice, macros).map { padLayer(voice, macros, midi, it, cancelled, hit) }
+        voice: BoreVoice, macros: Map<String, Float>, midi: Int, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): List<KeyNote> = layerBreaths(voice, macros).map { padLayer(voice, macros, midi, it, hit, cancelled) }
 
     /**
      * One layer of one zone: the held note at [midi] blown at [breath], from its first sample to the end of its loop, with
@@ -88,8 +88,8 @@ object BoreKeys {
      * built, for the audition's reference.
      */
     fun padLayer(
-        voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, cancelled: () -> Boolean = { false },
-        hit: HeldStart.Hit? = HeldStart.SHORT,
+        voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
     ): KeyNote = HeldStart.shape(padMeasured(voice, macros, midi, breath, cancelled).note, hit)
 
     /**

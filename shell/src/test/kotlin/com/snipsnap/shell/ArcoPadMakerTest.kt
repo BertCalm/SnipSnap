@@ -69,7 +69,10 @@ class ArcoPadMakerTest {
             for (note in zone) {
                 val s = note.snip.samples
                 assertEquals(1, note.snip.channels)
-                assertTrue(note.loopStartFrame > 2 * 44_100 - 1, "zone $i: the loop starts at ${note.loopStartFrame}, inside the warm-up")
+                // The owner's pick (HeldStart.SHORT): the loop starts once the stroke's 80 ms have handed over by 300 ms, never inside it.
+                val handedOver = (com.snipsnap.synth.HeldStart.SHORT.handover * 44_100).toLong() + com.snipsnap.synth.HeldStart.SETTLED_FRAMES
+                assertTrue(note.loopStartFrame >= handedOver, "zone $i: the loop starts at ${note.loopStartFrame}, inside the stroke's handover")
+                assertTrue(note.loopStartFrame < 44_100, "zone $i: the loop starts at ${note.loopStartFrame}, a second or more into the key")
                 assertTrue(Keys.seamError(s, note.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)
                 assertTrue(s.all { it.isFinite() && it in -0.99f..0.99f })
             }

@@ -103,13 +103,13 @@ object ArcoKeys {
      * is asked before every pass of the retune (a pass is a few hundred milliseconds).
      */
     fun pad(
-        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, layer: Layer, cancelled: () -> Boolean = { false },
-        hit: HeldStart.Hit? = HeldStart.SHORT,
+        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, layer: Layer, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
     ): KeyNote = HeldStart.shape(padMeasured(voice, macros, midi, layer, cancelled).note, hit)
 
     /** Both layers of the zone at [midi], soft first, each with its start shaped by [hit]. */
     fun layers(
-        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false },
-        hit: HeldStart.Hit? = HeldStart.SHORT,
-    ): List<KeyNote> = Layer.entries.map { pad(voice, macros, midi, it, cancelled, hit) }
+        voice: ArcoVoice, macros: Map<String, Float>, midi: Int, hit: HeldStart.Hit? = HeldStart.SHORT,
+        cancelled: () -> Boolean = { false },
+    ): List<KeyNote> = Layer.entries.map { pad(voice, macros, midi, it, hit, cancelled) }
 }
