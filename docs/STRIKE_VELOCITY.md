@@ -27,7 +27,9 @@ renders) against hashes taken before the change. The factory sound is the
 hard hit; the softer layers are new.
 
 Which voices read it: SKIN's KICK and TOM (`Skin.STRUCK`) and all four
-TERRA topologies. SKIN's snare, hats, ride and shaker are noise through
+TERRA topologies. TERRA's BOX (2026-11-06, [TERRA_BOX.md](TERRA_BOX.md))
+takes the velocity through its slap's own pulse width instead of the mode
+tilt. SKIN's snare, hats, ride and shaker are noise through
 filters or wires, which a contact law does not describe; they keep the
 touch `Velocity` already gives them. SKIN's STICK keeps `soften()` too:
 every factory STICK is one partial, so there is no balance to move.
@@ -75,7 +77,8 @@ First 30 ms centroid, v = 0.25 to 1, rising at every step:
 | TERRA membranes and cavities (defaults and kit pads) | +50% to +185% |
 | TERRA TUNED_BAR default | +57% |
 | TERRA CONICAL_BELL (default and the three agogô pads) | +8% to +13% |
-| TERRA buzz pads (Cajon Low, Cajon Slap, Balafon Key) | +290% to +740% (the buzz now waits for the hit) |
+| TERRA buzz pads (Cajon Low, Balafon Key) | +290% to +740% (the buzz now waits for the hit) |
+| TERRA BOX (Cajon Slap since 2026-11-06, its own contact law) | +105% |
 | SKIN KICK presets | +25% to +29% |
 | SKIN TOM presets | +5% to +8% |
 
@@ -145,8 +148,11 @@ start jitter. Both spreads are shapes.
     third-octave bands 60 Hz to 8 kHz (21.3 before), and still classified
     PERC; plates tuned to 150 or 180 Hz classified TOM or KICK and were
     passed over. `TerraCases.KIT` and the literal A07 pin in
-    `TerraFrozenTest` follow it. Not yet heard: the gate's question 8 plays
-    it beside the old slap, Balafon Key and Cajon Low.
+    `TerraFrozenTest` follow it. Heard the same day (question 8, answered
+    in conversation): "Cajon is still not right. Too much like a drum
+    machine rimshot." A07 is now TERRA's BOX voice, from the prototype the
+    owner then picked ([TERRA_BOX.md](TERRA_BOX.md)); the gate's CAJON
+    section plays all three slaps.
   - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
     the one-take reference ("same takes") was unclear; the gate now names
     it NO ROUND ROBIN.
