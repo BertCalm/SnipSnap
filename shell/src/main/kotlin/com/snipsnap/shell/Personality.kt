@@ -1906,6 +1906,14 @@ object Copy {
     /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
     const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
 
+    /**
+     * The one line under the LAYERS heading, and what the code enforces: soft hits, STRIKE FX and stacked
+     * takes are all velocity layers, so a pad holds one set at a time (SOFT HITS and STRIKE FX ask before
+     * replacing each other; STACK refuses a layered pad), and round robin refuses layers and layers refuse
+     * round robin ([ROBIN_NO_LAYERS], [ROBIN_LAYERED]).
+     */
+    const val LAYERS_RULE = "ONE SET OF LAYERS PER PAD, AND NONE WITH ROUND ROBIN."
+
     /** A print kept on a robin pad: its UNDO needs the takes lifted, which turning round robin off does. */
     const val ROBIN_NO_UNDO = "UNDO WORKS WITH ROUND ROBIN OFF. TURN IT OFF FIRST."
 
