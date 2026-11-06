@@ -13,6 +13,8 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import subprocess
+from datetime import datetime, timezone
 import numpy as np
 from scipy.linalg import eigh
 import playable as p
@@ -155,12 +157,57 @@ def development(source, out):
     p.write(out/'development.json', receipt)
 
 
+def validate(source, out):
+    receipt = json.loads((out/'development.json').read_text())
+    rank = receipt['selectedComponents']
+    require(rank is not None, 'no development candidate passed')
+    locked = np.load(out/'locked-basis.npz')
+    for key, name in [('basis', 'basisSha256'), ('coefficients', 'coefficientsSha256'), ('offsets', 'offsetsSha256')]:
+        require(p.sha(locked[key].tobytes()) == receipt[name], f'locked {key} changed')
+    fresh = json.loads((out/'fresh-positions.json').read_text())
+    require(p.sha(np.asarray(fresh['cuts'],dtype='<i4').tobytes()) == receipt['freshPositionsSha256'], 'fresh cuts changed')
+    # Explicit reuse of the immutable accepted circuit binaries, not a current
+    # source build mislabeled as the accepted model.
+    original = json.loads((source/'raw/provenance.json').read_text())
+    jar_hashes = lambda: {str(j):p.sha(j.read_bytes()) for j in p.p.classpath()}
+    require(jar_hashes() == original['jars'], 'accepted Kotlin binaries changed')
+    raw = out/'fresh'; require(not raw.exists(), 'fresh validation already exists')
+    raw.mkdir()
+    cuts_file = out/'fresh-cuts.txt'
+    cuts_file.write_text(''.join(str(c)+'\n' for c in fresh['cuts']))
+    classes = raw/'classes'; classes.mkdir()
+    cp = os.pathsep.join(map(str,p.p.classpath()))
+    bins = p.p.jdk()
+    java_sources = [Path(__file__).with_name(x) for x in ['CreaseReleaseExperiment.java','CreaseSharedHoldouts.java']]
+    subprocess.run([str(bins/'javac'),'--release','17','-cp',cp,'-d',str(classes),*map(str,java_sources)],check=True)
+    cmd = [str(bins/'java'),'-Xmx1g','-cp',cp+os.pathsep+str(classes),'CreaseSharedHoldouts',str(raw),str(cuts_file)]
+    with (raw/'capture.log').open('w') as log:
+        result = subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT)
+    require(result.returncode == 0, 'fresh capture failed: see capture.log')
+    require(jar_hashes() == original['jars'], 'Kotlin binaries changed during capture')
+    require((raw/'held.f32').read_bytes() == (source/'raw/held.f32').read_bytes(), 'accepted held trajectory changed')
+    meta = json.loads((raw/'capture.json').read_text())
+    require(meta['publicPrefixError'] == meta['forkStateError'] == 0 and meta['testCuts'] == fresh['cuts'], 'capture receipt differs')
+    m = json.loads((source/'manifest.json').read_text())
+    data = (source/'raw/native-pcm.i16').read_bytes()
+    require(p.sha(data) == receipt['baselinePcmSha256'], 'baseline PCM changed')
+    held = np.frombuffer(data,dtype='<i2')[:m['heldFrames']].astype(np.float64)/32767
+    banks = reconstruct(m,locked['basis'],locked['coefficients'],locked['offsets'])
+    result = measure(m,held,banks,fresh['cuts'],raw)
+    result.update(scope='Python measurements of locked quantized basis versus fresh actual Kotlin continuations',
+                  capturedAt=datetime.now(timezone.utc).isoformat(),renderSource=original['sourceCommit'],jars=original['jars'],
+                  capture=meta,development=receipt,javaSources={str(j):p.sha(j.read_bytes()) for j in java_sources})
+    p.write(out/'fresh-validation.json', result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ['cases','capture','development','jars','javaSources']}),flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', type=Path, default=p.ROOT/'testkit/crease-phone-release-r2')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--validate', action='store_true')
     args = parser.parse_args()
-    development(args.source, args.output)
+    (validate if args.validate else development)(args.source, args.output)
 
 if __name__ == '__main__':
     main()
