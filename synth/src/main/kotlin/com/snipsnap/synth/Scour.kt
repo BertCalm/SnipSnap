@@ -35,7 +35,8 @@ enum class ScourVoice { PLATE, PANE, SHEET, BEAM, DISC, ROD }
  *
  * Computed: the roller's spin-up, read against a fixed surface at its contact phase; a seeded Poisson
  * shot schedule whose rate rises twentyfold over the build; coverage by the random-dent recursion
- * `S += κ·e·(1 − S)`; the plate, a [Modes.Bank]. Analogy: coverage moving the modal frequencies and damping (real cold work raises
+ * `S += κ·e·(1 − S)`; the plate, a [Modes.Bank]. Analogy: coverage moving the modal frequencies (R1's law also shortened their damping; since R2 the ring is
+ * left alone, the owner's pick at RING .5) (real cold work raises
  * yield strength and barely the stiffness). Not simulated: plastic flow, residual stress, curvature,
  * rebound, stick-slip, air. The design is
  * docs/superpowers/specs/2026-10-26-scour-engine-engineering-spec.md; every constant marked shape

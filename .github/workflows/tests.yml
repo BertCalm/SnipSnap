@@ -17,21 +17,33 @@ name: tests
 #    completion on a commit nobody will look at again. Default-branch runs
 #    are never cancelled: they write the cache and record what merged.
 # 3. Documentation does not build anything. No test reads docs/ or a .md
-#    file (`reference/` is fixture data and is deliberately NOT listed here -
-#    the audio and MPC-importer suites read it).
+#    file, with two exceptions: ConventionTest reads README.md and
+#    app/README.md (the picker lists and counts), so those two are listed
+#    back in below. A later positive pattern re-includes what an earlier
+#    `!` excluded; `paths` and `paths-ignore` cannot be combined. (`reference/`
+#    is fixture data and is deliberately NOT excluded - the audio and
+#    MPC-importer suites read it.)
 on:
   push:
     branches: [claude/mobile-mpc-drum-sampler-t58x74]
     # Repeated rather than shared with a YAML anchor: GitHub Actions'
     # workflow parser does not support anchors or aliases, however happily
     # every other YAML tool reads them.
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
+    paths:
+      - "**"
+      - ".github/**"
+      - "!docs/**"
+      - "!**/*.md"
+      - "README.md"
+      - "app/README.md"
   pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
+    paths:
+      - "**"
+      - ".github/**"
+      - "!docs/**"
+      - "!**/*.md"
+      - "README.md"
+      - "app/README.md"
 
 concurrency:
   # One in flight per PR (or per branch for the default-branch push).
