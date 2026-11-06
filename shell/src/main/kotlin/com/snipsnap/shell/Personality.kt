@@ -3049,6 +3049,17 @@ object Copy {
      */
     const val MAKE_HEADER = "SOUND FROM NOTHING."
     /**
+     * MAKE's header with the kit named: the labs write a pad of the active
+     * kit, so with one open the header says which. [MAKE_HEADER] alone when
+     * [kitName] is null (no kit open).
+     */
+    fun makeHeader(kitName: String?): String =
+        if (kitName == null) MAKE_HEADER else "$MAKE_HEADER NEW PADS GO TO ${kitName.uppercase(java.util.Locale.ROOT)}."
+    /** MAKE's heading over the rows that make a sound: SYNTH, SNAP, SURFACE, CONFLUENCE VOICES, MY VOICE. */
+    const val MAKE_A_SOUND = "MAKE A SOUND"
+    /** MAKE's heading over the row that lists what was made: INSTRUMENTS. */
+    const val WHAT_YOU_MADE = "WHAT YOU MADE"
+    /**
      * The line under MAKE's header when no kit is active, and the same
      * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).
      */

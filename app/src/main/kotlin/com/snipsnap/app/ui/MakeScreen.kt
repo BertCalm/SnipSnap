@@ -44,7 +44,8 @@ import com.snipsnap.shell.Scheme
  */
 
 /**
- * The MAKE list: SYNTH ▸, SNAP ▸, SURFACE ▸, INSTRUMENTS ▸, each a row
+ * The MAKE list: under MAKE A SOUND, SYNTH ▸, SNAP ▸, SURFACE ▸, CONFLUENCE
+ * VOICES ▸ and MY VOICE ▸; under WHAT YOU MADE, INSTRUMENTS ▸. Each is a row
  * 72 dp tall that opens its bench, under a header that says what MAKE is
  * and where it lands, and a line under each name that says what the word
  * means (SNAP and SURFACE meant nothing before they were tapped; the words
@@ -58,12 +59,13 @@ import com.snipsnap.shell.Scheme
  * sub-line is drawn but not part of the name, which tests and the
  * uiautomator walks read.
  *
+ * [kitName] is the active kit's name, named in the header when [hasKit].
  * [hasKit] is whether a kit is active: every lab lands its sound on the
  * active kit, so without one the header is followed by the one line that
  * says what to do first.
  */
 @Composable
-fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? = null) {
+fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? = null, kitName: String? = null) {
     val scheme = LocalScheme.current
     Column(
         Modifier
@@ -80,17 +82,28 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            TapeText(Copy.MAKE_HEADER, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            TapeText(Copy.makeHeader(kitName.takeIf { hasKit }), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         if (!hasKit) {
             TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "OPEN A KIT FOR NEW PADS. MY VOICE CAN KEEP A PERSONAL SOURCE FIRST.",
                 TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
-        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS, Bench.CONFLUENCE_VOICES)) {
+        MakeGroupHeading(Copy.MAKE_A_SOUND)
+        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.CONFLUENCE_VOICES)) {
             MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
         }
         if (onMyVoice != null) MakeRow("MY VOICE ▸", "A SHORT VOWEL INTO A PERSONAL VOICE. KEPT ON THIS PHONE.", scheme, onMyVoice)
+        MakeGroupHeading(Copy.WHAT_YOU_MADE)
+        for (bench in listOf(Bench.INSTRUMENTS)) {
+            MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
+        }
     }
+}
+
+/** A group heading on the MAKE list: a quiet label over the rows it names. */
+@Composable
+private fun MakeGroupHeading(text: String) {
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
 }
 
 /** One MAKE row: the lab's name and arrow, and under it what the word means. */

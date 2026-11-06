@@ -4710,6 +4710,7 @@ fun App(shelf: KitShelf) {
                         }
                         top == null && location.place == Place.MAKE -> MakeList(
                             onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
+                            kitName = open?.kit?.name,
                         )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
