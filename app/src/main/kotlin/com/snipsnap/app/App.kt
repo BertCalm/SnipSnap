@@ -374,7 +374,10 @@ fun App(shelf: KitShelf) {
     // this removes, moved.
     var kitsLoaded by remember { mutableStateOf(false) }
     var shelfListsLoaded by remember { mutableStateOf(false) }
-    var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // The project is read by `open` (its tempo rides on the kit the screens see),
+    // so it is declared first; the shelf's project half follows below.
+    var project by remember { mutableStateOf<Project?>(null) }
+    var open by rememberOpenKit { project }
     // The dock (§1): the strip at the foot of every screen. Its `now` is
     // the line the toast used to say, and the door the toast used to carry
     // (J10). They are one value in `DockModel.Now`, so a plain `say` after
@@ -606,7 +609,6 @@ fun App(shelf: KitShelf) {
     // `KitShelf`; both are over the same root.
     val shelfModel = remember { ShelfModel(shelf.root) }
     var projects by remember { mutableStateOf<List<ShelfModel.ProjectRow>>(emptyList()) }
-    var project by remember { mutableStateOf<Project?>(null) }
     // Keyed on the place, not the whole location: a bench opening over the
     // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf. The
     // one exception is BIN, whose leaving is the edge that re-counts the bins.
@@ -3490,6 +3492,31 @@ fun App(shelf: KitShelf) {
             KitBench.verdict(Bench.SONG, arrangeKitDir?.path, open?.dir?.path) == KitBench.Verdict.DRAW)
 
     /**
+     * BEAT's BPM control: [bpm] becomes the open project's tempo, saved to
+     * project.json through [ShelfModel.setTempo] (which clamps to 40..220).
+     * Everything that follows it reads the new value from `open`, whose kit
+     * carries the project's tempo in memory ([rememberOpenKit]); kit.json is
+     * not touched. A failed save leaves the project, and so the tempo, as it
+     * was, and says so.
+     */
+    fun setProjectTempo(bpm: Float) {
+        val name = project?.name ?: return
+        scope.launch {
+            val updated = try {
+                withContext(Dispatchers.IO) { shelfModel.setTempo(name, bpm) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "setProjectTempo: failed", e)
+                dock.say(Copy.PROJECT_TEMPO_NOT_SAVED)
+                return@launch
+            }
+            // The project may have been closed or swapped while the write ran.
+            if (project?.name == updated.name) project = updated
+        }
+    }
+
+    /**
      * After every groove write on BEAT, the project's beat follows: the
      * kit-side `groove.json` is copied to the project's `beat/`, so OUT's
      * session card exports what BEAT shows. The kit keeps its file because
@@ -4562,6 +4589,7 @@ fun App(shelf: KitShelf) {
                                 onLoop = { nav.open(Bench.LOOP) },
                                 beat = beat,
                                 onBeatWritten = ::mirrorBeat,
+                                onTempo = if (project != null) ::setProjectTempo else null,
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,
                                 onAddFromShelf = ::addFromShelf,
