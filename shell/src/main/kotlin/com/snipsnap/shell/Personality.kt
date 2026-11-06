@@ -626,6 +626,16 @@ object Copy {
     const val SYNTH_HEADING_PLAYING = "PLAYING"
     /** SYNTH's heading over the buttons that take the sound somewhere (SPREAD, MAKE INSTRUMENT, REOPEN PAD). */
     const val SYNTH_HEADING_USE = "USE THIS SOUND"
+    /** The starter picker's group headings (see [StarterShelf]): labels over a run of starters, not landings. */
+    const val STARTER_HEADING_START_HERE = "START HERE"
+    const val STARTER_HEADING_BASS = "BASS"
+    const val STARTER_HEADING_KEYS = "KEYS AND CHORDS"
+    const val STARTER_HEADING_PLUCKS = "PLUCKS AND STRINGS"
+    const val STARTER_HEADING_BREATH = "BREATH AND REEDS"
+    const val STARTER_HEADING_VOICES = "VOICES"
+    const val STARTER_HEADING_METAL = "METAL WOOD AND GLASS"
+    const val STARTER_HEADING_SKINS = "SKINS"
+    const val STARTER_HEADING_MOVING = "MOVING AND STRANGE"
     /** An expansion row whose kits are all gone or binned. */
     const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
     /** The rename dialog's title for an expansion. */
