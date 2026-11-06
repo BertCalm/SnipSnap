@@ -53,9 +53,9 @@ import kotlin.math.sin
  * nothing left to undo, says so in the refusal the dimmed button stands for. The rules are
  * PadSheetTest's and KitBuilderTest's; these tests check the wiring.
  *
- * UNDO SPLICE sits in the sheet's always-composed foot, so it carries its own label: with every box
- * closed there is still no bare "UNDO" on the sheet for WidePadSheetScreenTest's lookup to trip on.
- * DE-SAMPLE's UNDO sits in the MAKE box, open here, and is spoken as "UNDO DE-SAMPLE".
+ * UNDO SPLICE sits in the sheet's always-composed foot, and every per-tool UNDO is named in full
+ * (`Copy.UNDO_*`): there is no bare "UNDO" on the editor. DE-SAMPLE's UNDO sits in the MAKE box, open
+ * here, and reads "UNDO DE-SAMPLE".
  *
  * The de-sampled pad is written the way `KitBuilderModel.desamplePad` writes one once its search
  * has picked a patch: the patch's own render through `replaceAudio` with the bare patch as its

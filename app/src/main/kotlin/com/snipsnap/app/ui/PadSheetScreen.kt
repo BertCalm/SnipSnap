@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -3485,6 +3485,8 @@ fun PadSheetScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // One scroll position per page: a short page would otherwise clamp the editor's, and Back would land at the top.
+        val pageScrolls = remember { PadSheetPage.entries.associateWith { ScrollState(0) } }
         PadSheetHeader(
             slot = slot,
             pad = pad,
@@ -3524,7 +3526,7 @@ fun PadSheetScreen(
         )
 
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(pageScrolls.getValue(page)),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (page == PadSheetPage.EDITOR) PadPageBody {
@@ -3701,8 +3703,8 @@ fun PadSheetScreen(
             // not the Column trap GRAIN ▸'s comment describes). Always drawn
             // and dimmed when it cannot act, so the sheet does not rearrange
             // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
-            // nothing. Its own label, not a bare UNDO: this section is always
-            // composed, so a second "UNDO" would sit beside the open box's.
+            // nothing. Named in full like every per-tool UNDO on the sheet
+            // (Copy.UNDO_*), since the pages draw several.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
                 ActionButton(
