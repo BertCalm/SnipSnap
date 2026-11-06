@@ -177,11 +177,12 @@ FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
 a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes,
 HANDOFF, MATCH and LOSS controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryLossAudition`; [implementation notes](docs/FERRY.md)
+`./gradlew :synth:generateFerryReleaseAudition`; [implementation notes](docs/FERRY.md)
 record the aligned and MATCH listening approvals. LOSS varies physical decay
-over finite one-to-eight-second observations; the neutral sound and model-1/2
-recipes stay unchanged. LOSS listening, natural tails, HOLD and phone acceptance
-remain separate gates.
+over finite observations. After the owner reported an abrupt short ending,
+model 4 adds up to 350 ms of shaped release to short settings. Neutral/bloom
+audio and model-1/2/3 recipes stay unchanged. The revised ending, natural tails,
+HOLD and phone acceptance remain separate listening gates.
 
 CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, TUMBLE a
 tightening rebound cascade, and the new SING a soft contact opening into smooth,

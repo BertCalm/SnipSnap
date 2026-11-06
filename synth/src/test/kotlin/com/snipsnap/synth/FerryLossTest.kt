@@ -93,8 +93,8 @@ class FerryLossTest {
         var minConfidence = 1f
         for (midi in listOf(36, 48, 72)) for (handoff in listOf(.25f, .5f, 1f)) {
             for (match in listOf(0f, .25f, .5f, .75f, 1f)) for (loss in listOf(0f, .25f, .5f, .75f, 1f)) {
-                val snip = Ferry.render(midi = midi, macros = mapOf("HANDOFF" to handoff, "MATCH" to match, "LOSS" to loss))
-                assertEquals(Ferry.outputFrames(loss), snip.frameCount)
+                val snip = Ferry.render(model = 3, midi = midi, macros = mapOf("HANDOFF" to handoff, "MATCH" to match, "LOSS" to loss))
+                assertEquals(Ferry.outputFrames(loss, 3), snip.frameCount)
                 assertEquals(44100, snip.sampleRate)
                 assertEquals(1, snip.channels)
                 assertTrue(snip.samples.all { it.isFinite() })
@@ -114,15 +114,15 @@ class FerryLossTest {
                 assertTrue(Classifier.classify(snip).drumClass !in setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM))
             }
         }
-        assertEquals(8 * Dsp.RATE, Ferry.outputFrames(0f))
-        assertEquals(4 * Dsp.RATE, Ferry.outputFrames(.5f))
-        assertEquals(Dsp.RATE, Ferry.outputFrames(1f))
+        assertEquals(8 * Dsp.RATE, Ferry.outputFrames(0f, 3))
+        assertEquals(4 * Dsp.RATE, Ferry.outputFrames(.5f, 3))
+        assertEquals(Dsp.RATE, Ferry.outputFrames(1f, 3))
         println("FERRY LOSS 225 native cases: maximum cents $maxCents; minimum confidence $minConfidence")
     }
 
     @Test
     fun `saved LOSS recipes survive edits and cold cache while old models refuse the new control`() {
-        val patch = FerryPatch("Long bloom", midi = 57, velocity = .6f, seed = Long.MIN_VALUE, macros = mapOf("LOSS" to 0f, "MATCH" to .25f))
+        val patch = FerryPatch("Long bloom", model = 3, midi = 57, velocity = .6f, seed = Long.MIN_VALUE, macros = mapOf("LOSS" to 0f, "MATCH" to .25f))
         val samples = patch.render().samples
         assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
         assertEquals(patch.copy(name = "Edited"), Patches.edited(patch, "Edited", patch.macros))
@@ -130,7 +130,7 @@ class FerryLossTest {
         Ferry.clearCache()
         for (i in 0..35) Ferry.plan(36 + i, .5f, .5f, i / 35f)
         assertContentEquals(samples, patch.render().samples)
-        assertContentEquals(Ferry.render().samples, Ferry.render(macros = mapOf("LOSS" to Float.NaN, "unknown" to .3f)).samples)
+        assertContentEquals(Ferry.render(model = 3).samples, Ferry.render(model = 3, macros = mapOf("LOSS" to Float.NaN, "unknown" to .3f)).samples)
         for (model in 1..2) {
             val old = FerryPatch("Old", model = model)
             val text = old.toJsonText().replace("\"macros\": {}", "\"macros\": {\"LOSS\": 0.5}")
@@ -141,6 +141,6 @@ class FerryLossTest {
         for (scale in listOf(0.0, -.5, Double.NaN, Double.POSITIVE_INFINITY, 4.1)) {
             assertTrue(assertFailsWith<IllegalArgumentException> { FerryNetwork.build(48, 1.0, lossScale = scale) }.message.orEmpty().contains("loss scale"))
         }
-        for (loss in listOf(0f, .5f, 1f)) assertContentEquals(FloatArray(Ferry.outputFrames(loss)), Ferry.render(velocity = 0f, macros = mapOf("LOSS" to loss)).samples)
+        for (loss in listOf(0f, .5f, 1f)) assertContentEquals(FloatArray(Ferry.outputFrames(loss, 3)), Ferry.render(model = 3, velocity = 0f, macros = mapOf("LOSS" to loss)).samples)
     }
 }

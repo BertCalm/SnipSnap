@@ -117,7 +117,10 @@ with 0–6 cents of upper-B detuning while retaining every fundamental, the alig
 output and model-1 recipes. MATCH passed the owner's listening gate on 2026-11-01.
 Model 3 adds LOSS, scaling physical damping .5×–4× with one-to-eight-second
 observations. Neutral LOSS and both older recipe models keep the accepted sound.
-`generateFerryLossAudition` supplies the next comparison. LOSS listening,
+The owner rejected the one-second dry cutoff on 2026-11-06. Model 4 adds a
+proposed 350 ms cosine release at the driest setting, preserving neutral/bloom
+audio and saved model-1/2/3 recipes. `generateFerryReleaseAudition` supplies
+the revised comparison. Revised LOSS listening,
 production tail termination, SPAN/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).

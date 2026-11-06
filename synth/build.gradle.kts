@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFerryReleaseAudition") {
+    group = "distribution"
+    description = "Render Ferry's revised short-note release with saved recipes and ending measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryReleaseAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryReleaseOutput").orNull ?: "${rootDir}/testkit/ferry-release-audition")
+}
+
 tasks.register<JavaExec>("generateFerryLossAudition") {
     group = "distribution"
     description = "Render Ferry LOSS comparisons with complete recipes, physical decay and timing evidence."
