@@ -62,6 +62,7 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.KitFromMade
+import com.snipsnap.app.ui.OverlayAsk
 import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
@@ -214,8 +215,6 @@ private const val PREF_HAPTICS = "haptics"
 private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
 private const val PREF_SHELF_SORT = "shelf_sort"
-/** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
-private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 /**
  * LISTEN FROM (UAT E2-CHOOSER): the capture source the player last chose, [CaptureSource.stored].
  * Absent on a first run, which is what keeps the dock's sheet asking; an unknown value reads as
@@ -1091,36 +1090,6 @@ fun App(shelf: KitShelf) {
     // go on to the projection consent.
     var armInsidePending by remember { mutableStateOf(false) }
 
-    // The Bubble's overlay permission (Task 5): SYSTEM_ALERT_WINDOW is
-    // optional — it has no runtime-permission dialog, only a Settings
-    // screen (ACTION_MANAGE_OVERLAY_PERMISSION). Whatever the user does
-    // there (grant, deny, or just back out), this fires once and
-    // PREF_OVERLAY_ASKED below makes sure it's never asked again. If the
-    // grant lands while a session is already armed, re-running arm() is
-    // how MicSessionService.handleArm's re-entry path (ring != null) picks
-    // it up and attaches the bubble without touching the AudioRecord.
-    val overlayPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {
-        if (Settings.canDrawOverlays(context) && MicSessionService.armed.value) {
-            MicSessionService.arm(context)
-        }
-    }
-
-    // The Bubble's one-time offer, shared by both arms — arming must never
-    // wait on it, so callers run it after arm() is already underway.
-    fun offerBubbleOnce() {
-        if (!prefs.getBoolean(PREF_OVERLAY_ASKED, false) && !Settings.canDrawOverlays(context)) {
-            prefs.edit().putBoolean(PREF_OVERLAY_ASKED, true).apply()
-            overlayPermissionLauncher.launch(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${context.packageName}"),
-                ),
-            )
-        }
-    }
-
     // The projection consent (INSIDE): the system's own dialog, asked
     // afresh on every ARM APP AUDIO — Android 14+ honours each consent for
     // exactly one projection, so the result is never cached. Dismissed
@@ -1132,7 +1101,6 @@ fun App(shelf: KitShelf) {
         if (result.resultCode == Activity.RESULT_OK && data != null) {
             MicSessionService.armInside(context, result.resultCode, data)
             dock.say(Copy.APP_AUDIO_ARMED)
-            offerBubbleOnce()
         } else {
             dock.say(Copy.APP_AUDIO_REFUSED)
         }
@@ -1168,7 +1136,6 @@ fun App(shelf: KitShelf) {
                 haptics.arm()
                 MicSessionService.arm(context)
                 dock.say(Copy.SESSION_ARMED)
-                offerBubbleOnce()
             }
         } else {
             // A denied RECORD_AUDIO is not a DRM/dead-air refusal — see
@@ -4754,6 +4721,8 @@ fun App(shelf: KitShelf) {
                 // bar's three cells live on: where you are is the two rows
                 // above, the shelf count is on the SHELF, the busy line is
                 // the dock's.
+                // The Bubble's permission, said before it is asked (UAT E2-OVERLAY).
+                OverlayAsk(onFailed = { dock.say(Copy.actionFailed("ALLOW")) })
                 Dock(
                     dock = dock,
                     busy = busy ?: jobs.current ?: screenBusy,
