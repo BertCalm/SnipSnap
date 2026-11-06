@@ -5,12 +5,15 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.SongBus
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
+import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
+import com.snipsnap.kit.PlanSection
+import com.snipsnap.kit.SongPlan
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
@@ -63,8 +66,21 @@ object Arranger {
      * One section: a variation clip played [repeats] times through, plus
      * [reason] — the rule that picked this clip, stated in words, so a
      * screen can show its work instead of asking the player to trust it.
+     *
+     * [ref] is the clip's name in a kept song ([ClipRef]), [locked] whether
+     * REROLL leaves it alone, and [seed] the draw its ghosts and fill came
+     * from; [Arranger.toPlan] turns a run of these into a [SongPlan] and
+     * [Arranger.resolve] turns one back.
      */
-    data class Section(val name: String, val clip: Mpc3Clip, val repeats: Int, val reason: String) {
+    data class Section(
+        val name: String,
+        val clip: Mpc3Clip,
+        val repeats: Int,
+        val reason: String,
+        val ref: String = "",
+        val locked: Boolean = false,
+        val seed: Int = 0,
+    ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
         }
@@ -101,123 +117,269 @@ object Arranger {
         /** The rolled template [feel] scales. Null alongside a non-zero [feel] is a no-op, not an error: a caller with no template has no feel to apply. */
         feelTemplate: GrooveFeel.Template? = null,
     ): Arrangement {
-        val stored = GrooveStore.load(kitDir)
-        // `firstOrNull { !isProgE }`, not a bare `firstOrNull()`. The two
-        // said the same thing only by luck: `GrooveEdit.save` appends the
-        // user program last, so the first stored clip happened to be the
-        // captured base. But `GrooveEdit.fork` already picks the base with
-        // the predicate, and two rules for "which clip is the base" is the
-        // shape of defect this repo keeps finding. Now there is one, and a
-        // sidecar that ever put the user program first would arrange the
-        // captured take rather than deriving swing and half from somebody's
-        // hand-edit.
-        val base = stored.firstOrNull { !GrooveEdit.isProgE(it) }
-            ?: throw IllegalArgumentException(
-                "no groove to arrange - chop with --groove, or import a .mid",
-            )
-        // The user's own programs, in slot order. Not derived and never
-        // regenerated: whatever they last left in the step editor. The
-        // note-less ones are dropped rather than played —
-        // `GrooveEdit.startEmpty` forks an empty program whenever GROOVE
-        // opens on a kit that has recorded nothing, so that is the common
-        // state, and a silent section is not a section.
-        val yours = GrooveEdit.loadAll(kitDir).filter { it.notes.isNotEmpty() }
-        // A stored groove with no notes is a real state, not a corrupt
-        // one: GrooveEdit.startEmpty writes exactly this when GROOVE opens
-        // on a kit that has recorded nothing yet. ORBIT used to be able to
-        // write one too, until OrbitClip learned to refuse every no-note
-        // shape, so a groove.json from before that can still carry one.
-        // There is no song to plan out of silence either way, so it
-        // refuses by name here - above the median arithmetic below
-        // (`velocities[velocities.size / 2]`), which has no element to
-        // index and would otherwise raise a bare IndexOutOfBoundsException
-        // instead of saying what is wrong.
-        require(base.notes.isNotEmpty()) {
-            "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
-        }
-        val felt = if (feel != 0f && feelTemplate != null) GrooveFeel.applyFeel(base, feel, feelTemplate) else base
-        // Deliberately uniform, unlike GrooveScreen's exportMidi: this is
-        // NOT mirroring the A-E selector (that's what GrooveProgram.compute
-        // is for), it's picking clips for song SECTIONS by name - captured /
-        // tight / half / sparse are a song-structure choice, and "tight"
-        // here is the section named "variation", not a stand-in for PROG B.
-        // So every clip below is derived from felt, not base: std's four
-        // slots via GrooveVariations.standard(felt, swingPercent), and
-        // ghosted/fill further down take felt too - all six arrangement
-        // sections carry the feel. ARRANGE differs from the screen's
-        // PROG B feel-exemption on purpose.
-        val std = GrooveVariations.standard(felt, swingPercent)
-        val captured = std[0]
-        val tight = std[1]
-        val half = std[2]
-        val sparse = std[3]
+        val palette = Palette.load(kit, kitDir, swingPercent, feel, feelTemplate)
+        return Arrangement("${kit.name} Song", seed, palette.draft(seed))
+    }
 
-        // A measured number, not a coin flip: the base groove's own
-        // dynamic range decides whether the variation has room for a
-        // whisper between its hits.
-        val velocities = base.notes.map { it.velocity }.sorted()
-        val median = velocities[velocities.size / 2]
-        val loudest = velocities.last()
-        val dynamicRange = if (median > 0f) loudest / median else 0f
-        val preferGhosts = dynamicRange >= VARIATION_GHOST_DYNAMIC_RANGE
-        val ghosted = try {
+    // ---- a kept song (SongPlan) -------------------------------------------
+
+    /** A plan resolved against the kit as it is now, and the references that could not be. */
+    data class Resolved(
+        val arrangement: Arrangement,
+        /** The clip names the kept plan asked for that no longer exist, in plan order, each once (`yours:3`, `fill`). */
+        val refused: List<String>,
+    )
+
+    /**
+     * The song's sections as a [SongPlan]: each section's clip by name,
+     * its repeats, its lock and the seed it was drawn with. The first plan
+     * a kit gets is `toPlan(arrange(..., seed = 0))`, so the first open is
+     * the arranger's own draft and everything after it is the person's.
+     */
+    fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
+        seed = arrangement.seed,
+        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed) },
+    )
+
+    /**
+     * [plan] laid out again from the kit as it is now. Every clip is
+     * derived afresh from its NAME, so a beat edited since still flows into
+     * the song while the order, repeats and locks the person chose stay.
+     *
+     * A name that does not resolve (a program deleted, a fill the kit can
+     * no longer roll) is refused: that section is planned again, as the
+     * arranger's own draft section of the same name when it has one and as
+     * the captured groove when it does not, and the name comes back in
+     * [Resolved.refused] for the screen to say. Repeats are cut to what a
+     * 64-bar sequence can hold ([maxRepeats]). Throws as [arrange] does
+     * when the kit has no groove to plan from.
+     */
+    fun resolve(
+        kit: Kit,
+        kitDir: File,
+        plan: SongPlan,
+        swingPercent: Int? = null,
+        feel: Float = 0f,
+        feelTemplate: GrooveFeel.Template? = null,
+    ): Resolved {
+        val palette = Palette.load(kit, kitDir, swingPercent, feel, feelTemplate)
+        val refused = mutableListOf<String>()
+        val sections = plan.sections.map { s ->
+            val clip = palette.clip(s.clip, s.seed)
+            if (clip != null) {
+                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed)
+            } else {
+                if (s.clip !in refused) refused += s.clip
+                val draft = palette.draft(s.seed)
+                val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
+                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed)
+            }
+        }
+        return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
+    }
+
+    /** A clip name the kit can play, and how many bars one play of it is. */
+    data class Pick(val ref: String, val bars: Int)
+
+    /**
+     * Every clip the kit can play right now, in the order a picker lists
+     * them: the derived ones it can make, then each of the person's
+     * programs that has notes. The same test [resolve] applies, so a name
+     * offered here always resolves.
+     */
+    fun available(
+        kit: Kit,
+        kitDir: File,
+        swingPercent: Int? = null,
+        feel: Float = 0f,
+        feelTemplate: GrooveFeel.Template? = null,
+    ): List<Pick> {
+        val palette = Palette.load(kit, kitDir, swingPercent, feel, feelTemplate)
+        return ClipRef.DERIVED.mapNotNull { ref -> palette.clip(ref, 0)?.let { Pick(ref, it.bars) } } +
+            palette.yours.map { (id, clip) -> Pick(ClipRef.yours(id), clip.bars) }
+    }
+
+    /** How many times [clip] may repeat: [SongPlan.MAX_REPEATS], and no more than fit in the 64 bars a sequence holds. */
+    fun maxRepeats(clip: Mpc3Clip): Int = maxRepeats(clip.bars)
+
+    fun maxRepeats(clipBars: Int): Int = minOf(SongPlan.MAX_REPEATS, MAX_CLIP_BARS / clipBars).coerceAtLeast(1)
+
+    /** The most bars one MPC sequence (and so one section, repeats included) holds: `Mpc3Clip`'s own bound. */
+    private const val MAX_CLIP_BARS = 64
+
+    /**
+     * Everything a section's clip can be, derived once from the kit's base
+     * groove: the four standard variations, the user's programs, and the
+     * two seeded ones ([ghosted], [fill]) on request.
+     */
+    private class Palette(
+        val kit: Kit,
+        val felt: Mpc3Clip,
+        val captured: Mpc3Clip,
+        val tight: Mpc3Clip,
+        val half: Mpc3Clip,
+        val sparse: Mpc3Clip,
+        /** The user's programs with notes, in slot order, each with its own number. */
+        val yours: List<Pair<Int, Mpc3Clip>>,
+        val dynamicRange: Float,
+    ) {
+        val preferGhosts: Boolean get() = dynamicRange >= VARIATION_GHOST_DYNAMIC_RANGE
+
+        fun ghosted(seed: Int): Mpc3Clip? = try {
             GrooveVariations.ghosted(felt, kit, seed = seed + 1)
         } catch (e: IllegalArgumentException) {
             null
         }
-        val variation = yours.firstOrNull() ?: if (preferGhosts && ghosted != null) ghosted else tight
-        val variationReason = when {
-            // Ahead of the measured rules below, and the only thing that
-            // outranks them: the variation section is where the song says
-            // "here is the same beat, different" — which is exactly what a
-            // hand-edit is. A measurement about ghost notes is a good way to
-            // invent a variation and a poor reason to ignore one.
-            //
-            // It is handed over as stored, not `felt`, while every other
-            // section carries the feel. Same exemption `GrooveProgram` makes
-            // for it on screen, for the same reason: these steps are already
-            // where somebody put them, and leaning on them would move hits
-            // that were placed by hand.
-            yours.isNotEmpty() -> "yours — the program you stepped in, exactly as you left it"
-            preferGhosts && ghosted != null ->
-                "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
-            preferGhosts ->
-                "tight — dynamic range %.1fx ≥ %.0fx threshold, but no snare or clap to whisper on"
-                    .format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
-            else ->
-                "tight — dynamic range %.1fx < %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
-        }
-        val turn = try {
+
+        fun fill(seed: Int): Mpc3Clip? = try {
             GrooveVariations.fill(felt, kit, seed = seed + 2)
         } catch (e: IllegalArgumentException) {
             null
         }
 
-        fun repeats(clip: Mpc3Clip, target: Int) = maxOf(1, target / clip.bars)
-        val sections = buildList {
-            add(Section("intro", sparse, repeats(sparse, INTRO_BARS), "sparse — only the hits at or above the base groove's median velocity"))
-            add(Section("theme", captured, repeats(captured, BODY_BARS), "captured — the break exactly as played"))
-            add(Section("variation", variation, repeats(variation, BODY_BARS), variationReason))
-            // Your other programs, each its own section, in slot order and
-            // straight after the first. This is the chaining half of what a
-            // wall of pattern buttons is for: filling several and playing
-            // them in a row. They sit together rather than being scattered
-            // through the structure because they are the part of the song
-            // somebody wrote, and a song reads better when that part is
-            // continuous than when the app interleaves itself into it.
-            for ((i, extra) in yours.drop(1).withIndex()) {
-                add(
-                    Section(
-                        "yours ${i + 2}", extra, repeats(extra, BODY_BARS),
-                        "yours — your program ${i + 2}, exactly as you left it",
-                    ),
-                )
-            }
-            turn?.let { add(Section("the turn", it, repeats(it, BODY_BARS), "fill — the last bar of every four rolls into the turn")) }
-            add(Section("reprise", captured, repeats(captured, BODY_BARS), "captured — the theme repeats"))
-            add(Section("outro", half, repeats(half, OUTRO_BARS), "half — the same feel, stretched to half time"))
+        /** The clip a name stands for, drawn with [seed]; null when the kit cannot make it now. */
+        fun clip(ref: String, seed: Int): Mpc3Clip? = when (ref) {
+            ClipRef.CAPTURED -> captured
+            ClipRef.TIGHT -> tight
+            ClipRef.HALF -> half
+            ClipRef.SPARSE -> sparse
+            ClipRef.GHOSTED -> ghosted(seed)
+            ClipRef.FILL -> fill(seed)
+            else -> ClipRef.yoursId(ref)?.let { id -> yours.firstOrNull { it.first == id }?.second }
         }
-        return Arrangement("${kit.name} Song", seed, sections)
+
+        /** The rule behind a kept section, in words: what the name means, not how the draft came to pick it. */
+        fun reason(ref: String): String = when {
+            ref == ClipRef.CAPTURED -> "captured — the break exactly as played"
+            ref == ClipRef.TIGHT -> "tight — the break re-quantized"
+            ref == ClipRef.HALF -> "half — the same feel, stretched to half time"
+            ref == ClipRef.SPARSE -> "sparse — only the hits at or above the base groove's median velocity"
+            ref == ClipRef.GHOSTED -> "ghosted — quiet hits added between the break's own"
+            ref == ClipRef.FILL -> "fill — the last bar of every four rolls into the turn"
+            ClipRef.yoursId(ref) != null -> "yours — your program ${ClipRef.yoursId(ref)!! + 1}, exactly as you left it"
+            else -> ref
+        }
+
+        /** The arranger's own song for [seed]: intro, theme, variation, your other programs, the turn, reprise, outro. */
+        fun draft(seed: Int): List<Section> {
+            val ghosted = ghosted(seed)
+            val variation = yours.firstOrNull()?.second ?: if (preferGhosts && ghosted != null) ghosted else tight
+            val variationRef = when {
+                yours.isNotEmpty() -> ClipRef.yours(yours.first().first)
+                preferGhosts && ghosted != null -> ClipRef.GHOSTED
+                else -> ClipRef.TIGHT
+            }
+            val variationReason = when {
+                // Ahead of the measured rules below, and the only thing that
+                // outranks them: the variation section is where the song says
+                // "here is the same beat, different" — which is exactly what a
+                // hand-edit is. A measurement about ghost notes is a good way to
+                // invent a variation and a poor reason to ignore one.
+                //
+                // It is handed over as stored, not `felt`, while every other
+                // section carries the feel. Same exemption `GrooveProgram` makes
+                // for it on screen, for the same reason: these steps are already
+                // where somebody put them, and leaning on them would move hits
+                // that were placed by hand.
+                yours.isNotEmpty() -> "yours — the program you stepped in, exactly as you left it"
+                preferGhosts && ghosted != null ->
+                    "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+                preferGhosts ->
+                    "tight — dynamic range %.1fx ≥ %.0fx threshold, but no snare or clap to whisper on"
+                        .format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+                else ->
+                    "tight — dynamic range %.1fx < %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+            }
+            val turn = fill(seed)
+
+            fun repeats(clip: Mpc3Clip, target: Int) = maxOf(1, target / clip.bars)
+            fun section(name: String, ref: String, clip: Mpc3Clip, target: Int, reason: String) =
+                Section(name, clip, repeats(clip, target), reason, ref, locked = false, seed = seed)
+            return buildList {
+                add(section("intro", ClipRef.SPARSE, sparse, INTRO_BARS, reason(ClipRef.SPARSE)))
+                add(section("theme", ClipRef.CAPTURED, captured, BODY_BARS, "captured — the break exactly as played"))
+                add(section("variation", variationRef, variation, BODY_BARS, variationReason))
+                // Your other programs, each its own section, in slot order and
+                // straight after the first. This is the chaining half of what a
+                // wall of pattern buttons is for: filling several and playing
+                // them in a row. They sit together rather than being scattered
+                // through the structure because they are the part of the song
+                // somebody wrote, and a song reads better when that part is
+                // continuous than when the app interleaves itself into it.
+                for ((i, extra) in yours.drop(1).withIndex()) {
+                    add(
+                        section(
+                            "yours ${i + 2}", ClipRef.yours(extra.first), extra.second, BODY_BARS,
+                            "yours — your program ${i + 2}, exactly as you left it",
+                        ),
+                    )
+                }
+                turn?.let { add(section(TURN, ClipRef.FILL, it, BODY_BARS, reason(ClipRef.FILL))) }
+                add(section("reprise", ClipRef.CAPTURED, captured, BODY_BARS, "captured — the theme repeats"))
+                add(section("outro", ClipRef.HALF, half, OUTRO_BARS, reason(ClipRef.HALF)))
+            }
+        }
+
+        companion object {
+            fun load(kit: Kit, kitDir: File, swingPercent: Int?, feel: Float, feelTemplate: GrooveFeel.Template?): Palette {
+                val stored = GrooveStore.load(kitDir)
+                // `firstOrNull { !isProgE }`, not a bare `firstOrNull()`. The two
+                // said the same thing only by luck: `GrooveEdit.save` appends the
+                // user program last, so the first stored clip happened to be the
+                // captured base. But `GrooveEdit.fork` already picks the base with
+                // the predicate, and two rules for "which clip is the base" is the
+                // shape of defect this repo keeps finding. Now there is one, and a
+                // sidecar that ever put the user program first would arrange the
+                // captured take rather than deriving swing and half from somebody's
+                // hand-edit.
+                val base = stored.firstOrNull { !GrooveEdit.isProgE(it) }
+                    ?: throw IllegalArgumentException(
+                        "no groove to arrange - chop with --groove, or import a .mid",
+                    )
+                // The user's own programs, in slot order. Not derived and never
+                // regenerated: whatever they last left in the step editor. The
+                // note-less ones are dropped rather than played —
+                // `GrooveEdit.startEmpty` forks an empty program whenever GROOVE
+                // opens on a kit that has recorded nothing, so that is the common
+                // state, and a silent section is not a section.
+                val yours = GrooveEdit.loadAll(kitDir).filter { it.notes.isNotEmpty() }
+                    .map { (GrooveEdit.progIndexOf(it) ?: 0) to it }
+                // A stored groove with no notes is a real state, not a corrupt
+                // one: GrooveEdit.startEmpty writes exactly this when GROOVE
+                // opens on a kit that has recorded nothing yet. ORBIT used to be able to
+                // write one too, until OrbitClip learned to refuse every no-note
+                // shape, so a groove.json from before that can still carry one.
+                // There is no song to plan out of silence either way, so it
+                // refuses by name here - above the median arithmetic below
+                // (`velocities[velocities.size / 2]`), which has no element to
+                // index and would otherwise raise a bare IndexOutOfBoundsException
+                // instead of saying what is wrong.
+                require(base.notes.isNotEmpty()) {
+                    "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
+                }
+                val felt = if (feel != 0f && feelTemplate != null) GrooveFeel.applyFeel(base, feel, feelTemplate) else base
+                // Deliberately uniform, unlike GrooveScreen's exportMidi: this is
+                // NOT mirroring the A-E selector (that's what GrooveProgram.compute
+                // is for), it's picking clips for song SECTIONS by name - captured /
+                // tight / half / sparse are a song-structure choice, and "tight"
+                // here is the section named "variation", not a stand-in for PROG B.
+                // So every clip below is derived from felt, not base: std's four
+                // slots via GrooveVariations.standard(felt, swingPercent), and
+                // ghosted/fill take felt too - all six arrangement
+                // sections carry the feel. ARRANGE differs from the screen's
+                // PROG B feel-exemption on purpose.
+                val std = GrooveVariations.standard(felt, swingPercent)
+
+                // A measured number, not a coin flip: the base groove's own
+                // dynamic range decides whether the variation has room for a
+                // whisper between its hits.
+                val velocities = base.notes.map { it.velocity }.sorted()
+                val median = velocities[velocities.size / 2]
+                val loudest = velocities.last()
+                val dynamicRange = if (median > 0f) loudest / median else 0f
+                return Palette(kit, felt, std[0], std[1], std[2], std[3], yours, dynamicRange)
+            }
+        }
     }
 
     // ---- the mixdown (KK3) ------------------------------------------------
@@ -227,6 +389,9 @@ object Arranger {
 
     /** The bed sits under the body sections only — never the intro or the turn. */
     private val BED_SECTIONS = setOf("theme", "variation", "reprise")
+
+    /** The section a pull-up leads into. */
+    private const val TURN = "the turn"
 
     /** The Answer plays under the song at bed level. */
     private const val BED_GAIN = 0.8f
@@ -277,8 +442,13 @@ object Arranger {
         val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
         val starts = plan.sections.indices.map { frameAt(startPulses[it]) }
 
-        val turn = plan.sections.indexOfFirst { it.name == "the turn" }
-        val stretches = if (turn > 0) listOf(0 until turn, turn until plan.sections.size) else listOf(plan.sections.indices)
+        // Every section named "the turn" (past the first) is preceded by a
+        // pull-up, so a song with the turn played twice pulls up twice. The
+        // plan's sections can be moved, copied and removed by the person, so
+        // there may be none, or several; the name is the cue, as it always was.
+        val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].name == TURN }
+        val cuts = listOf(0) + turns + listOf(plan.sections.size)
+        val stretches = cuts.zipWithNext { from, to -> from until to }
 
         val pieces = stretches.map { range ->
             val first = range.first
@@ -295,9 +465,10 @@ object Arranger {
                     }
                 }
             }
-            if (range.last + 1 == turn) {
-                val lastBeat = frameAt(startPulses[turn] - Mpc3Clip.PULSES_PER_BEAT) - starts[first]
-                audio = pullUpOver(audio, cut = lastBeat, end = starts[turn] - starts[first])
+            val next = range.last + 1
+            if (next in turns) {
+                val lastBeat = frameAt(startPulses[next] - Mpc3Clip.PULSES_PER_BEAT) - starts[first]
+                audio = pullUpOver(audio, cut = lastBeat, end = starts[next] - starts[first])
             }
             starts[first] to audio
         }
