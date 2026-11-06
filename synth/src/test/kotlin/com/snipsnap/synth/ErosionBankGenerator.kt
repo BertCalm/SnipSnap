@@ -18,7 +18,7 @@ import kotlin.math.*
 
 /** Saved recipes produce every sound; the browser only plays encoded WAVs. */
 object ErosionBankGenerator {
-    private const val KIT_NAME="SnipSnap Erosion Bank"
+    private const val KIT_NAME="SnipSnap Erosion Contrast"
     private fun json(v: Any?): JsonValue = when(v) {
         null -> JsonValue.Null
         is JsonValue -> v
@@ -53,12 +53,15 @@ object ErosionBankGenerator {
     @JvmStatic fun main(args: Array<String>) {
         val root=File(args.single()).canonicalFile
         root.mkdirs();File(root,"audio").mkdirs();File(root,"recipes").mkdirs()
+        val entries=ErosionBank.entries()
+        val padCount=entries.size
+        val sampleCount=padCount*ErosionBank.velocities.size
         val rows=mutableListOf<Map<String,Any?>>()
         val cards=StringBuilder()
         val arranged=mutableListOf<ArrangedPad?>()
         val frozen=mutableListOf<List<Snip>>()
         Erosion.render(ErosionVoice.ARC) // warm one local render; no phone timing claim
-        for((i,entry) in ErosionBank.entries().withIndex()) {
+        for((i,entry) in entries.withIndex()) {
             val id="pad-${i+1}"
             val layers=ErosionBank.velocities.map { velocity ->
                 val patch=entry.patch.copy(velocity=velocity)
@@ -68,13 +71,14 @@ object ErosionBankGenerator {
                 val stem="$id-${(velocity*100).toInt()}"
                 val file=WavWriter.write(File(root,"audio/$stem.wav"),snip)
                 val delivered=WavReader.read(file)
+                val matchedFile=WavWriter.write(File(root,"audio/$stem-matched.wav"),scaled(snip,matchGain(snip.samples)))
                 check(delivered.samples.all { it.isFinite() && abs(it)<=1f })
                 File(root,"recipes/$stem.json").writeText(recipe.toJsonText())
                 rows+=mapOf("id" to stem,"pad" to i+1,"name" to entry.name,"role" to entry.role,
                     "voice" to patch.voice.name,"velocity" to velocity,"seconds" to delivered.durationSeconds,
                     "class" to Classifier.classify(delivered).drumClass.name,"peak" to delivered.samples.maxOf { abs(it) },
                     "mean" to delivered.samples.sumOf { it.toDouble() }/delivered.samples.size,
-                    "wav" to "audio/$stem.wav","recipe" to "recipes/$stem.json","sha256" to hash(file),"localRenderMs" to ms)
+                    "wav" to "audio/$stem.wav","matched" to "audio/$stem-matched.wav","matchedSha256" to hash(matchedFile),"recipe" to "recipes/$stem.json","sha256" to hash(file),"localRenderMs" to ms)
                 snip
             }
             val hard=layers.last()
@@ -84,14 +88,14 @@ object ErosionBankGenerator {
                 displayName=entry.name,softVariants=zoneLayers.take(2),layerNames=listOf("SOFT","MEDIUM","HARD"),
                 source=mapOf("engine" to "EROSION","role" to entry.role,"touch" to "0.35,0.65,1.0; soft zones peak-matched to hard"),muteGroup=0)
             cards.append("<article><h3>${PadNoteMap.labelForPad(i+1)} · ${entry.name}</h3><p>${entry.role} · ${entry.patch.voice}</p>")
-            for(v in ErosionBank.velocities) cards.append("<label>${if(v<.5f) "Soft" else if(v<1f) "Medium" else "Hard"}<audio controls preload='none' src='audio/$id-${(v*100).toInt()}.wav'></audio></label>")
+            for(v in ErosionBank.velocities) cards.append("<label>${if(v<.5f) "Soft" else if(v<1f) "Medium" else "Hard"}<audio controls preload='none' src='audio/$id-${(v*100).toInt()}-matched.wav'></audio></label>")
             cards.append("</article>\n")
         }
         val work=Files.createTempDirectory("erosion-bank-source-").toFile()
         val kitDir=File(root,"kit").also { it.mkdirs() }
         val kit=try {
             val k=KitAssembler.assembleArranged(KIT_NAME,arranged,work)
-            check(k.pads.size==16 && k.pads.all { it.velocityLayers.size==3 })
+            check(k.pads.size==padCount && k.pads.all { it.velocityLayers.size==3 })
             val result=Mpc3Exporter.exportTrack(k,work,kitDir,overwrite=true,mpc2Twin=true)
             val data=File(kitDir,Mpc3TrackWriter.trackDataDirName(k.name))
             KitStore.save(k,data)
@@ -101,11 +105,11 @@ object ErosionBankGenerator {
                 ExportOutcome(ExportFormat.PROGRAM_FOLDER,File(data,"$KIT_NAME.xpm"),null,result.findings)
             ).flatMap { ExportReadBack.verify(k,it) }
             check(!findings.blocked()) { findings.joinToString { it.message } }
-            check(result.samples.size==48) { "expected 48 exported velocity samples, got ${result.samples.size}" }
+            check(result.samples.size==sampleCount) { "expected $sampleCount exported velocity samples, got ${result.samples.size}" }
             // Verify actual encoded export samples against all three native
             // touch renders, including the house zone peak-matching policy.
             for((i,pad) in k.pads.sortedBy { it.slot }.withIndex()) {
-                val entry=ErosionBank.entries()[i]
+                val entry=entries[i]
                 assertZones(pad.velocityLayers)
                 for((j,layer) in pad.velocityLayers.withIndex()) {
                     val actual=File(data,layer.sampleFile)
@@ -115,24 +119,25 @@ object ErosionBankGenerator {
                     File(data,"${layer.sampleStem}.recipe.json").writeText(PadRecipe(p).toJsonText())
                 }
             }
-            writeJson(File(root,"kit-verification.json"),mapOf("pads" to 16,"zonesPerPad" to 3,"sampleFiles" to 48,
+            writeJson(File(root,"kit-verification.json"),mapOf("pads" to padCount,"zonesPerPad" to 3,"sampleFiles" to sampleCount,
                 "MPC3ReadBack" to true,"MPC2ReadBack" to true,"allEncodedLayersMatch" to true,
                 "hardware" to "not tested","velocityPolicy" to "soft native touch is peak-matched to hard; hardware supplies level response"))
-            File(kitDir,"README.txt").writeText("EROSION provisional playing bank. Sixteen ARC/CRATER pads, three native touch zones each.\nMPC 3: load $KIT_NAME.xtd. MPC 2: load $KIT_NAME.xpm inside TrackData. Keep the folder together.\nSOFT/MEDIUM/HARD windows are 1-41, 42-84 and 85-127. Velocity zero is note-off.\nSoft zones are peak-matched to the hard zone; the MPC's velocity curve controls level.\nLayer .recipe.json files recreate the native touch before peak matching; kit.json retains the editable hard patch.\nSCAR remains a separate experiment. No seamless HOLD or hardware acceptance is claimed.\n")
+            File(kitDir,"README.txt").writeText("EROSION provisional playing bank. Eight contrast roles using ARC, CRATER and SCAR, three native touch zones each.\nMPC 3: load $KIT_NAME.xtd. MPC 2: load $KIT_NAME.xpm inside TrackData. Keep the folder together.\nSOFT/MEDIUM/HARD windows are 1-41, 42-84 and 85-127. Velocity zero is note-off.\nSoft zones are peak-matched to the hard zone; the MPC's velocity curve controls level.\nLayer .recipe.json files recreate the native touch before peak matching; kit.json retains the editable hard patch.\nSCAR is the eighth role; its default aftershock study is included in the audition. No seamless HOLD or hardware acceptance is claimed.\n")
             k
         } finally { work.deleteRecursively() }
-        zip(kitDir,File(root,"erosion-mpc-bank.zip"),"$KIT_NAME/")
+        zip(kitDir,File(root,"erosion-contrast-mpc-bank.zip"),"$KIT_NAME/")
         // This phrase uses the ACTUAL exported PCM zones, selected by their
         // declared velocity windows. The documented level law is linear.
         val data=File(kitDir,Mpc3TrackWriter.trackDataDirName(KIT_NAME))
         val bpm=112.0;val beat=60/bpm
         val score=mutableListOf<Map<String,Any>>()
         for(bar in 0..3) {
-            for(step in 0..7) score+=mapOf("beat" to bar*4+step*.5,"pad" to if(step%2==0) 1 else 2,"velocity" to if(step%2==0) 90 else 48)
-            for(b in listOf(0.0,2.0)) score+=mapOf("beat" to bar*4+b,"pad" to 9,"velocity" to 118)
-            for(b in listOf(1.0,3.0)) score+=mapOf("beat" to bar*4+b,"pad" to 10,"velocity" to 110)
-            score+=mapOf("beat" to bar*4+2.75,"pad" to 4,"velocity" to 38)
-            if(bar%2==1) score+=mapOf("beat" to bar*4+3.5,"pad" to 6,"velocity" to 78)
+            for(step in 0..7) score+=mapOf("beat" to bar*4+step*.5,"pad" to 4,"velocity" to if(step%2==0) 90 else 48)
+            for(b in listOf(0.0,2.0)) score+=mapOf("beat" to bar*4+b,"pad" to 1,"velocity" to 118)
+            for(b in listOf(1.0,3.0)) score+=mapOf("beat" to bar*4+b,"pad" to 2,"velocity" to 110)
+            score+=mapOf("beat" to bar*4+2.75,"pad" to 7,"velocity" to 38)
+            if(bar==3) score+=mapOf("beat" to bar*4+.5,"pad" to 8,"velocity" to 90)
+            if(bar%2==1) score+=mapOf("beat" to bar*4+3.5,"pad" to 5,"velocity" to 78)
         }
         val phrase=FloatArray(((16*beat+1.5)*Dsp.RATE).toInt())
         for(event in score) {
@@ -147,28 +152,59 @@ object ErosionBankGenerator {
         WavWriter.write(File(root,"bank-pattern.wav"),scaled(Snip(phrase,1,Dsp.RATE),phraseGain))
         writeJson(File(root,"pattern.json"),mapOf("bpm" to bpm,"events" to score,"masterGain" to phraseGain,
             "audioSource" to "actual exported PCM velocity zones","velocityGainLaw" to "linear velocity/127; not a hardware simulation"))
+        // A short, matched palette makes the eight roles easy to compare.
+        val palette=ArrayList<Float>()
+        for (i in entries.indices) {
+            val x=WavReader.read(File(root,"audio/pad-${i+1}-100-matched.wav"))
+            x.samples.forEach { palette.add(it) }
+            repeat((.20*Dsp.RATE).toInt()) { palette.add(0f) }
+        }
+        WavWriter.write(File(root,"palette.wav"),Snip(palette.toFloatArray(),1,Dsp.RATE))
+        val grainComparisons=mutableListOf<Map<String,Any>>()
+        for (name in listOf("THUD","CHIP","DROPS")) {
+            val patch=entries.single { it.name==name }.patch
+            val comparison=linkedMapOf<String,Any>("name" to name)
+            for ((label,p) in listOf("on" to patch,"off" to patch.copy(macros=patch.macros+("GRAIN" to 0f)))) {
+                val snip=p.render()
+                val path="audio/grain-${name.lowercase()}-$label.wav"
+                WavWriter.write(File(root,path),scaled(snip,matchGain(snip.samples)))
+                File(root,"recipes/grain-${name.lowercase()}-$label.json").writeText(PadRecipe(p).toJsonText())
+                val trace=Erosion.schedule(p.voice,p.macros)
+                comparison["$label-events"]=trace.events.size
+                comparison["$label-maxEventEnergy"]=trace.events.maxOf { it.energy }
+                comparison["$label-audio"]=path
+                comparison["$label-parameters"]=p.macros
+            }
+            grainComparisons+=comparison
+        }
+        writeJson(File(root,"grain-comparisons.json"),grainComparisons)
         val scar=scar(root)
         val sourceHashes=listOf("src/main/kotlin/com/snipsnap/synth/Erosion.kt","src/main/kotlin/com/snipsnap/synth/ErosionBank.kt",
             "src/main/kotlin/com/snipsnap/synth/Dsp.kt","src/main/kotlin/com/snipsnap/synth/Tide.kt",
             "../audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt").associateWith { hash(File(it)) }
-        writeJson(File(root,"manifest.json"),mapOf("bank" to rows,"scar" to scar,"sourceSha256" to sourceHashes,
+        writeJson(File(root,"manifest.json"),mapOf("bank" to rows,"scar" to scar,"grainComparisons" to grainComparisons,"paletteOrder" to entries.map { it.name },"sourceSha256" to sourceHashes,
             "status" to "provisional; new bank and SCAR await owner listening","originalVoices" to "198 frozen float-render comparisons tested separately"))
-        File(root,"index.html").writeText("""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EROSION playing bank and SCAR</title>
+        File(root,"index.html").writeText("""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EROSION contrast bank</title>
 <style>body{margin:40px auto;max-width:1120px;padding:20px;background:#131a20;color:#e4edf4;font:16px/1.5 system-ui}a{color:#8cdbd5}article{display:inline-block;vertical-align:top;margin:8px;padding:16px;width:min(290px,calc(100% - 48px));background:#202d36}audio{width:100%}h3{font-size:16px}label{display:block;margin-top:12px}</style>
-<h1>EROSION · playing bank</h1><p>Sixteen ARC/CRATER pads, three native touch layers per pad. These are provisional playing recipes; the original voices retain their renderer. SCAR is a separate first-listen experiment below.</p>
-<p><a href="../native-round/index.html">Previous native round</a> · <a href="../index.html">Original references</a> · <a href="erosion-mpc-bank.zip">Download MPC 3 / MPC 2 bank</a> · <a href="erosion-playing-round.zip">Download complete round</a> · <a href="manifest.json">Measurements and recipes</a></p>
+<h1>EROSION · eight contrasting roles</h1><p>Eight revised roles with three touch layers: low thud, coarse strike, rasp, wire, dust, tuned drops, crackle and an aftershock. GRAIN changes how charge forms packets. Older recipes default to GRAIN zero and retain their previous output.</p>
+<p><a href="../playing-bank/index.html">Previous sixteen-pad round</a> · <a href="../index.html">Original references</a> · <a href="erosion-contrast-mpc-bank.zip">Download MPC 3 / MPC 2 bank</a> · <a href="erosion-contrast-round.zip">Download complete round</a> · <a href="manifest.json">Measurements and recipes</a></p>
+<h2>Hear the eight roles</h2><audio controls preload="none" src="palette.wav"></audio><p>All eight hard hits, individually matched against their loudest 50 ms window, in pad order.</p>
+<h2>What GRAIN changes</h2><p>These pairs hold every other control fixed. Each clip uses the same audition-level target and peak cap. The first has the new packet size; the second uses GRAIN zero.</p>
+<article><h3>THUD · coarse / fine</h3><audio controls preload="none" src="audio/grain-thud-on.wav"></audio><audio controls preload="none" src="audio/grain-thud-off.wav"></audio></article>
+<article><h3>CHIP · coarse / fine</h3><audio controls preload="none" src="audio/grain-chip-on.wav"></audio><audio controls preload="none" src="audio/grain-chip-off.wav"></audio></article>
+<article><h3>DROPS · coarse / fine</h3><audio controls preload="none" src="audio/grain-drops-on.wav"></audio><audio controls preload="none" src="audio/grain-drops-off.wav"></audio></article>
 <h2>Hear the bank together</h2><audio controls preload="none" src="bank-pattern.wav"></audio><p>Four bars at 112 BPM, using the exported velocity samples. One master gain, linear velocity level, no effects. <a href="pattern.json">Score</a> · <a href="kit-verification.json">Export verification</a></p>
-<h2>Sixteen pads</h2><p>Clip players use the native patch output. Kit soft zones use the house peak match against their hard zone so the hardware can supply the level curve.</p>$cards
-<h2>SCAR · separate experiment</h2><p>Initial crack → clustered sparks → recovery gap → quieter aftershock. Twelve percent of the same energy budget is held for the aftershock. Listen to the gap and whether the final response earns a third voice.</p>
+<h2>Eight roles</h2><p>Players are level-matched against the loudest 50 ms window, with a .95 peak cap. Downloads retain native output. Kit soft zones use the house peak match against hard so the hardware can supply its level curve.</p>$cards
+<h2>SCAR · aftershock control</h2><p>Initial crack → clustered sparks → recovery gap → quieter aftershock. Twelve percent of the same energy budget is held for the aftershock. Listen to the gap and whether the final response earns a third voice.</p>
 <article><h3>SCAR native default</h3><audio controls preload="none" src="audio/scar-default.wav"></audio></article>
 <article><h3>Aftershock on · shared gain</h3><audio controls preload="none" src="audio/scar-after-on.wav"></audio></article>
 <article><h3>Aftershock off · same primary and gain</h3><audio controls preload="none" src="audio/scar-after-off.wav"></audio></article>
 <article><h3>Short recovery</h3><audio controls preload="none" src="audio/scar-short.wav"></audio></article>
 <article><h3>Long recovery</h3><audio controls preload="none" src="audio/scar-long.wav"></audio></article>
-<h2>Why it is built this way</h2><p>The bank turns the two existing voices into distinct pad roles. Native touch changes contact while retaining the pattern. SCAR spends a held reserve after a real gap; removing the reserve leaves its primary unchanged. HOLD remains a later loop-design round.</p>""")
-        zip(root,File(root,"erosion-playing-round.zip"))
-        check(File(root,"erosion-playing-round.zip").length()<25L*1024*1024)
-        println("EROSION bank: 16 pads x 3 touch layers; both MPC formats verified; 5 SCAR comparisons; $root")
+<h2>Why it is built this way</h2><p>The smaller bank leaves space between roles. GRAIN changes packet energy and recovery so coarse grains can separate from fine dust. Touch changes contact while retaining the pattern. Earlier recipes and audio remain available for comparison. HOLD remains a later round.</p>""")
+        zip(root,File(root,"erosion-contrast-round.zip"))
+        check(File(root,"erosion-contrast-round.zip").length()<25L*1024*1024)
+        println("EROSION bank: $padCount pads x 3 touch layers; both MPC formats verified; 5 SCAR comparisons; $root")
     }
     private fun assertZones(layers: List<KitLayer>) {
         check(layers.map { it.velStart to it.velEnd }==listOf(1 to 41,42 to 84,85 to 127))

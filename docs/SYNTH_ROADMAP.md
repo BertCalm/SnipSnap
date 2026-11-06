@@ -1,5 +1,6 @@
 # Synth roadmap — generate kits, not just capture them
 
+
 **EROSION playing bank and SCAR study (2026-11-02).** Sixteen provisional
 ARC/CRATER recipes receive three native touch zones, MPC 3/MPC 2 exports and
 an exported-sample groove. SCAR separately adds a held-energy aftershock after
@@ -7,6 +8,14 @@ a recovery gap. Original-voice corner/touch hashes protect the previous native
 renderer. `generateErosionBank` creates the next audition; new recipes and SCAR
 await listening. Factory promotion, picker work and HOLD remain later rounds.
 See [EROSION.md](EROSION.md).
+
+**EROSION contrast revision (2026-11-06).** Owner feedback identified overlap in
+the sixteen playing recipes. A zero-default GRAIN macro widens packet size and
+recovery, and an eight-role bank replaces the current audition selection while
+retaining all sixteen legacy recipes and historical WAVs. Three-zone MPC exports,
+matched palette and controlled GRAIN comparisons accompany the revision.
+Original float hashes and 51 prior PCM WAV replays remain exact. New listening,
+full regression and physical MPC loading remain open. See [EROSION.md](EROSION.md).
 
 **RIME — complete six-voice build (2026-11-01).** The restored engineering handoff
 supplies REED, FILIGREE and CRUST. Model 6 adds their contour/body profiles, six
