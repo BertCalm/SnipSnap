@@ -579,6 +579,14 @@ object Copy {
     fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
     /** The shelf's group heading over the expansions. */
     const val EXPANSIONS_HEADING = "EXPANSIONS"
+    /** SYNTH's heading over the voice chips. */
+    const val SYNTH_HEADING_VOICE = "VOICE"
+    /** SYNTH's heading over the preset strip and SAVE PRESET. */
+    const val SYNTH_HEADING_PRESETS = "PRESETS"
+    /** SYNTH's heading over an engine's own playing controls (velocity, note length), shown only on engines that have them. */
+    const val SYNTH_HEADING_PLAYING = "PLAYING"
+    /** SYNTH's heading over the buttons that take the sound somewhere (SPREAD, MAKE INSTRUMENT, REOPEN PAD). */
+    const val SYNTH_HEADING_USE = "USE THIS SOUND"
     /** An expansion row whose kits are all gone or binned. */
     const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
     /** The rename dialog's title for an expansion. */
