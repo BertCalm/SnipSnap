@@ -2992,8 +2992,8 @@ object Copy {
     const val SNAP_SOURCE = "SOURCE"
     /** SNAP's heading over CLOUD, SPECTRUM and TELEPHONE: each lands one pad (TELEPHONE after a pick). */
     const val SNAP_ONE_PAD = "ONE PAD"
-    /** SNAP's heading over KIT and CHORD: each builds a new kit of sixteen pads from the photo. */
-    const val SNAP_ALL_SIXTEEN = "ALL SIXTEEN PADS"
+    /** SNAP's heading over KIT and CHORD: each builds a NEW kit from the photo, not the open one, so "ALL SIXTEEN PADS" would mislead. */
+    const val SNAP_ALL_SIXTEEN = "A NEW KIT"
     /** SNAP's heading over FIELD: the photo played under a finger. */
     const val SNAP_PLAY_IT = "PLAY IT"
     /**
