@@ -764,4 +764,173 @@ class ArrangerTest {
         val lastFrame = mix.snip.frameCount - 1
         assertTrue(abs(mix.snip.samples[lastFrame * 2]) < 1e-3f, "the tape has stopped the long pad: ${mix.snip.samples[lastFrame * 2]}")
     }
+
+    // ---------- a kept song (SongPlan) ----------
+
+    private fun assertSameSong(a: Arranger.Arrangement, b: Arranger.Arrangement) {
+        assertEquals(a.sections.map { it.name }, b.sections.map { it.name })
+        assertEquals(a.sections.map { it.repeats }, b.sections.map { it.repeats })
+        assertEquals(a.sections.map { it.clip }, b.sections.map { it.clip })
+    }
+
+    @Test
+    fun `the draft carries a reference for every section, and the plan of it resolves to the same song`() {
+        val m = model("Keep")
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), yoursClip()))
+        val draft = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertTrue(draft.sections.all { it.ref.isNotBlank() }, draft.sections.map { it.ref }.toString())
+        assertEquals(
+            listOf("sparse", "captured", "yours:0", "fill", "captured", "half"),
+            draft.sections.map { it.ref },
+        )
+
+        val resolved = Arranger.resolve(m.kit, m.kitDir, Arranger.toPlan(draft))
+        assertEquals(emptyList(), resolved.refused)
+        assertSameSong(draft, resolved.arrangement)
+    }
+
+    @Test
+    fun `the same plan is the same song, notes and audio`() {
+        val m = model("Same", clip = dynamicGrooveClip())
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 2))
+        val a = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        val b = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertSameSong(a, b)
+        assertTrue(Arranger.mixdown(m.kit, m.kitDir, a).snip.samples.contentEquals(Arranger.mixdown(m.kit, m.kitDir, b).snip.samples))
+    }
+
+    @Test
+    fun `a beat edited since the plan was kept flows into the song, and the order and repeats stay`() {
+        val m = model("Flows")
+        var plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        plan = plan.moved(0, 1)!!.withRepeats(1, 3)!!      // theme first, then the intro, played x3
+        val before = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        GrooveStore.save(m.kitDir, listOf(Mpc3Clip("Fixture Groove", 1, grooveClip().notes.take(3))))
+        val after = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertEquals(before.sections.map { it.name }, after.sections.map { it.name })
+        assertEquals(listOf("theme", "intro"), after.sections.take(2).map { it.name })
+        assertEquals(listOf(4, 3), after.sections.take(2).map { it.repeats })
+        assertNotEquals(before.sections[0].clip.notes, after.sections[0].clip.notes, "the theme is the new capture")
+    }
+
+    @Test
+    fun `a reference that no longer resolves is refused by name and that section is planned again`() {
+        val m = model("Stale")
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), yoursClip()))
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        assertEquals("yours:0", plan.sections[2].clip)
+        // The program is deleted after the plan was kept.
+        GrooveStore.save(m.kitDir, listOf(grooveClip()))
+        val gone = plan.withRepeats(2, 3)!!.withLock(2, true)!!
+
+        val resolved = Arranger.resolve(m.kit, m.kitDir, gone)
+        assertEquals(listOf("yours:0"), resolved.refused, "named, and once")
+        val again = resolved.arrangement.sections[2]
+        assertEquals("variation", again.name, "the section stays where the person put it")
+        assertEquals("tight", again.ref, "planned again as the arranger would draft it")
+        assertEquals(3, again.repeats)
+        assertTrue(again.locked)
+        assertEquals(gone.sections.size, resolved.arrangement.sections.size, "no section is dropped")
+    }
+
+    @Test
+    fun `a name this build does not know is refused too, and a section with no draft of its name falls back to the capture`() {
+        val m = model("Unknown")
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).added("from-the-future")!!
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan)
+        assertEquals(listOf("from-the-future"), resolved.refused)
+        assertEquals("captured", resolved.arrangement.sections.last().ref)
+    }
+
+    @Test
+    fun `a fill the kit can no longer roll is refused`() {
+        val withSnare = model("Fills")
+        val plan = Arranger.toPlan(Arranger.arrange(withSnare.kit, withSnare.kitDir, seed = 0))
+        assertTrue(plan.sections.any { it.clip == "fill" })
+        val bare = model("NoSnare", withSnare = false)
+        val resolved = Arranger.resolve(bare.kit, bare.kitDir, plan)
+        assertEquals(listOf("fill"), resolved.refused)
+    }
+
+    @Test
+    fun `reroll keeps a locked section's take and redraws the unlocked ones`() {
+        val m = model("Reroll", clip = dynamicGrooveClip())
+        val base = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val variation = base.sections.indexOfFirst { it.name == "variation" }
+        val turn = base.sections.indexOfFirst { it.name == "the turn" }
+        assertEquals("ghosted", base.sections[variation].clip, "a dynamic groove ghosts its variation")
+        val locked = base.withLock(variation, true)!!
+
+        val before = Arranger.resolve(m.kit, m.kitDir, locked).arrangement
+        // Some seed gives a different fill (not every pair of seeds does).
+        val newSeed = (1..30).first { n ->
+            Arranger.resolve(m.kit, m.kitDir, locked.rerolled(n)).arrangement.sections[turn].clip != before.sections[turn].clip
+        }
+        val rerolled = locked.rerolled(newSeed)
+        val after = Arranger.resolve(m.kit, m.kitDir, rerolled).arrangement
+        assertEquals(before.sections[variation].clip, after.sections[variation].clip, "locked: the same ghosts")
+        assertNotEquals(before.sections[turn].clip, after.sections[turn].clip, "unlocked: a new fill")
+        assertEquals(newSeed, rerolled.seed)
+
+        // And the unlocked one is the arranger's own draw for that seed.
+        val direct = Arranger.arrange(m.kit, m.kitDir, seed = newSeed)
+        assertEquals(direct.sections.first { it.name == "the turn" }.clip, after.sections[turn].clip)
+    }
+
+    @Test
+    fun `repeats are cut to what one sequence holds, and the picker offers only what resolves`() {
+        val m = model("Reach")
+        assertEquals(16, Arranger.maxRepeats(grooveClip()))
+        assertEquals(4, Arranger.maxRepeats(Mpc3Clip("Long", 16, listOf(Mpc3Note(36, 0, 0.9f)))))
+        assertEquals(1, Arranger.maxRepeats(Mpc3Clip("Huge", 64, listOf(Mpc3Note(36, 0, 0.9f)))))
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).withRepeats(0, 16)!!
+        val s = Arranger.resolve(m.kit, m.kitDir, plan).arrangement.sections[0]
+        assertEquals(16, s.repeats)
+        assertEquals(s.clip.bars * 16, s.bars)
+
+        assertEquals(
+            listOf("captured", "tight", "half", "sparse", "ghosted", "fill"),
+            Arranger.available(m.kit, m.kitDir).map { it.ref },
+        )
+        val noSnare = model("Reach2", withSnare = false)
+        assertEquals(
+            listOf("captured", "tight", "half", "sparse"),
+            Arranger.available(noSnare.kit, noSnare.kitDir).map { it.ref },
+            "no snare, so no ghosts and no fill on offer",
+        )
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), yoursClip(), Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 2), 1, yoursClip().notes.take(2))))
+        assertEquals(
+            listOf("captured", "tight", "half", "sparse", "ghosted", "fill", "yours:0", "yours:2"),
+            Arranger.available(m.kit, m.kitDir).map { it.ref },
+            "every program of your own, by its own number",
+        )
+    }
+
+    @Test
+    fun `every turn after the first section is pulled up into, and a song with none is not`() {
+        val m = model("Turns")
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val turn = plan.sections.indexOfFirst { it.name == "the turn" }
+        val twice = plan.duplicated(turn)!!
+        val none = plan.without(turn)!!
+        val beat = (60.0 / com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm) * com.snipsnap.kit.KitPreview.RATE).toInt()
+
+        for ((p, turns) in listOf(plan to 1, twice to 2, none to 0)) {
+            val arr = Arranger.resolve(m.kit, m.kitDir, p).arrangement
+            assertEquals(turns, arr.sections.count { it.name == "the turn" })
+            val mix = Arranger.mixdown(m.kit, m.kitDir, arr)
+            assertEquals(arr.sections.size, mix.sectionStarts.size)
+            // The same song with its turns renamed: no cue, so no spinback.
+            val plain = Arranger.mixdown(m.kit, m.kitDir, arr.copy(sections = arr.sections.map { if (it.name == "the turn") it.copy(name = "fill") else it }))
+            for ((i, section) in arr.sections.withIndex()) {
+                if (section.name != "the turn") continue
+                val end = mix.sectionStarts[i]
+                val differs = (maxOf(0, end - beat) until end).any { f ->
+                    mix.snip.samples[f * 2] != plain.snip.samples[f * 2] || mix.snip.samples[f * 2 + 1] != plain.snip.samples[f * 2 + 1]
+                }
+                assertTrue(differs, "the last beat before turn #$i is the spinback")
+            }
+            if (turns == 0) assertTrue(mix.snip.samples.contentEquals(plain.snip.samples), "no turn, no pull-up")
+        }
+    }
 }

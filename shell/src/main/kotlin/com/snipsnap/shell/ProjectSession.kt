@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.ExportBlockedException
@@ -11,6 +12,7 @@ import com.snipsnap.kit.ProjectKitsMissingException
 import com.snipsnap.kit.ProjectStore
 import com.snipsnap.kit.SessionBuilder
 import com.snipsnap.kit.SessionMixdown
+import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.kit.blocked
 import java.io.File
 import java.util.Locale
@@ -26,6 +28,10 @@ import java.util.Locale
  * A held kit whose folder is gone is the one refusal the kit wizard does
  * not have: it is reported by name before anything is written, under
  * [missingKits], and blocks the write.
+ *
+ * The demo WAV beside the session is the active kit's kept song when it
+ * keeps one ([songMixdown]), and the one-loop [SessionMixdown] when not.
+ * The `.xpj` itself still carries the project's patterns, not the song.
  */
 class ProjectSessionModel(
     val project: Project,
@@ -94,7 +100,7 @@ class ProjectSessionModel(
             val result = SessionBuilder.build(project, shelfRoot, destRoot, overwrite = overwrite)
             val mixdown = if (withMixdown) {
                 val wav = File(destRoot, "${result.xpj.nameWithoutExtension}.wav")
-                WavWriter.write(wav, SessionMixdown.render(project, shelfRoot, result.tempoBpm))
+                WavWriter.write(wav, songMixdown(result.tempoBpm) ?: SessionMixdown.render(project, shelfRoot, result.tempoBpm))
                 wav
             } else {
                 null
@@ -113,6 +119,31 @@ class ProjectSessionModel(
         } catch (e: Exception) {
             stage = Stage.READY
             throw e
+        }
+    }
+
+    /**
+     * The demo WAV as the SONG the active kit keeps, when it keeps one: the
+     * stored plan laid out again from the kit as it is now and mixed down
+     * as SONG's own EXPORT does, so the WAV beside the project sounds like
+     * the song. Null when the project has no active kit, the kit has no kept
+     * plan, or the song cannot be mixed (no groove left to plan from): the
+     * caller then renders the one-loop demo, which is what it always did.
+     *
+     * Swing and FEEL are not kept with a song (they are per-visit settings
+     * on BEAT), so a song is laid out straight here, whatever it was
+     * played with.
+     */
+    private fun songMixdown(tempoBpm: Float?): Snip? {
+        val active = project.activeKit ?: return null
+        val plan = SongPlanStore.load(ProjectStore.dir(shelfRoot, project.name), active) ?: return null
+        val dir = File(shelfRoot, active)
+        return try {
+            val stored = KitStore.load(dir)
+            val kit = if (tempoBpm != null) stored.copy(tempoBpm = tempoBpm) else stored
+            Arranger.mixdown(kit, dir, Arranger.resolve(kit, dir, plan).arrangement).snip
+        } catch (e: Exception) {
+            null
         }
     }
 

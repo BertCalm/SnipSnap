@@ -1710,6 +1710,9 @@ class ConventionTest {
         // shelf root, named by its store and nowhere else — SYNTH and
         // SEND TO BENCH both reach it through UserPresets.file.
         "presets.json" to "UserPresets.kt",
+        // The song a project keeps (SONG, docs/plans/2026-10-30-song-making.md
+        // Phase 5): one file in the project's folder, named by its store.
+        "song.json" to "SongPlanStore.kt",
     )
 
     @Test
