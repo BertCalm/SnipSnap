@@ -143,4 +143,37 @@ class FillTest {
         }
         assertEquals(FillPresets.all().size, FillPresets.all().map { it.name }.toSet().size)
     }
+
+    @Test
+    fun `HUMANIZE loosens the run within its bounds, keeps the landing exact, and is repeatable`() {
+        for (voice in FillVoice.entries) for (density in listOf(0f, 1f)) {
+            val tight = Fill.schedule(voice, macros(voice, "DENSITY" to density))
+            val loose = Fill.schedule(voice, macros(voice, "DENSITY" to density, "HUMANIZE" to 1f))
+            val label = "$voice density $density"
+            assertEquals(tight.hits.size, loose.hits.size, label)
+            val run = tight.hits.size - 2
+            var moved = 0
+            for (i in 0 until run) {
+                val shift = loose.hits[i].seconds - tight.hits[i].seconds
+                assertTrue(abs(shift) <= .012 + 1e-12, "$label hit $i drifts ${shift * 1000} ms")
+                assertTrue(loose.hits[i].seconds >= 0.0, label)
+                if (abs(shift) > 1e-6) moved++
+                assertEquals(tight.hits[i].drum, loose.hits[i].drum, label)
+                assertTrue(loose.hits[i].velocity in 0f..1f, label)
+            }
+            assertTrue(moved > run / 2, "$label: only $moved of $run hits moved")
+            assertTrue(loose.hits.take(run).zipWithNext().all { (a, b) -> b.seconds > a.seconds }, "$label: the run stays in order")
+            assertTrue(loose.hits.take(run).indices.any { loose.hits[it].velocity != tight.hits[it].velocity }, "$label: strengths vary")
+            for (i in run until tight.hits.size) {
+                assertEquals(tight.hits[i].seconds, loose.hits[i].seconds, "$label: the landing never moves")
+                assertEquals(tight.hits[i].velocity, loose.hits[i].velocity, label)
+            }
+            val again = Fill.schedule(voice, macros(voice, "DENSITY" to density, "HUMANIZE" to 1f))
+            assertEquals(loose.hits.map { it.seconds to it.velocity }, again.hits.map { it.seconds to it.velocity }, label)
+            // Half the control is half the drift: turning HUMANIZE scales one fixed feel.
+            val half = Fill.schedule(voice, macros(voice, "DENSITY" to density, "HUMANIZE" to .5f))
+            for (i in 1 until run) assertEquals((loose.hits[i].seconds - tight.hits[i].seconds) / 2,
+                half.hits[i].seconds - tight.hits[i].seconds, 1e-9, label)
+        }
+    }
 }

@@ -52,6 +52,13 @@ object Fill {
     private const val RISE_FLOOR = .2f
     /** Velocities are rendered on this many steps, so a long run reuses its hits (shape: 1/12 is under 1 dB). */
     private const val VELOCITY_STEPS = 12
+    /** HUMANIZE 1's largest timing drift, in seconds (shape: a loose drummer, not a sloppy one). */
+    private const val DRIFT_SECONDS = .012
+    /** HUMANIZE 1's largest share of a hit's strength it can gain or lose, and the on-beat accent (shape). */
+    private const val LEVEL_SPREAD = .15f
+    private const val BEAT_ACCENT = .12f
+    /** The fixed seed of HUMANIZE's feel: the same patch always plays the same performance. */
+    private const val FEEL_SEED = 0x46494C4C
     /** SKIN's struck voices re-seed their click per take; two takes alternate so neighbours never share one. */
     private const val TAKES = 2
 
@@ -71,6 +78,7 @@ object Fill {
         MacroSpec("DENSITY", .5f, neutral = .5f),
         MacroSpec("RISE", .6f, neutral = .6f),
         MacroSpec("LAND", .7f, neutral = .7f),
+        MacroSpec("HUMANIZE", 0f, neutral = 0f),
     )
 
     fun defaults(voice: FillVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -107,6 +115,9 @@ object Fill {
      * last stage of DENSITY 1 is a sixty-fourth-note buzz. TOMS plays one note value throughout (eighths,
      * sixteenths or thirty-seconds by DENSITY) and walks the four toms in equal quarters of LENGTH. Every
      * stage boundary is a multiple of its notes, so no hit falls off the grid.
+     *
+     * HUMANIZE then loosens the run (see [humanize]); at 0, its default, the grid above is exact. The
+     * landing is never moved.
      */
     fun schedule(voice: FillVoice, macros: Map<String, Float>, velocity: Float = 1f): Schedule {
         val m = settled(voice, macros)
@@ -145,6 +156,8 @@ object Fill {
                 }
             }
         }
+        val run = humanize(voice, hits, m.getValue("HUMANIZE"), beat, length)
+        hits.clear(); hits += run
         val land = m.getValue("LAND")
         if (land > 0f) {
             val accent = if (voice == FillVoice.SNARE) Drum.SNARE else Drum.TOM_FLOOR
@@ -152,6 +165,32 @@ object Fill {
             hits += Hit(length, accent, vel * land, 0)
         }
         return Schedule(bpm, beats, length, finest, hits)
+    }
+
+    /**
+     * HUMANIZE [h] applied to the run [hits]: from 0 (the exact grid, unchanged) to 1 (a human feel). Each
+     * hit drifts early or late by up to [DRIFT_SECONDS] × [h], and never more than a third of the gap to
+     * either neighbour, so the order holds and a roll never smears into itself; no hit moves before the
+     * start. Each hit's strength moves by up to [LEVEL_SPREAD] × [h], and hits on a beat gain [BEAT_ACCENT] × [h],
+     * as a drummer leans on the count. The draws come from [FEEL_SEED] and the voice, one pair per hit in
+     * order, so the feel is fixed for a patch and turning HUMANIZE only scales it.
+     */
+    private fun humanize(voice: FillVoice, hits: List<Hit>, h: Float, beat: Double, length: Double): List<Hit> {
+        if (h <= 0f) return hits.toList()
+        val random = Random(FEEL_SEED + voice.ordinal)
+        return hits.mapIndexed { i, hit ->
+            // A triangular draw in -1..1: small drifts are common, large ones rare.
+            val drift = random.nextDouble() + random.nextDouble() - 1.0
+            val spread = random.nextFloat() + random.nextFloat() - 1f
+            val before = if (i == 0) Double.MAX_VALUE else hit.seconds - hits[i - 1].seconds
+            val after = (if (i == hits.lastIndex) length else hits[i + 1].seconds) - hit.seconds
+            val cap = minOf(DRIFT_SECONDS, before / 3, after / 3)
+            val t = (hit.seconds + h * cap * drift).coerceAtLeast(0.0)
+            val beats = hit.seconds / beat
+            val onBeat = kotlin.math.abs(beats - kotlin.math.round(beats)) < 1e-6
+            val level = hit.velocity * (1f + h * LEVEL_SPREAD * spread) * (if (onBeat) 1f + h * BEAT_ACCENT else 1f)
+            Hit(t, hit.drum, level.coerceIn(0f, 1f), hit.take)
+        }
     }
 
     /** The render's length: the fill, then the landing's ring, and never under [MIN_RENDER_SECONDS]. */

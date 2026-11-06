@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * FILL's first listen (R1, SNARE and TOMS), written to gitignored testkit/fill-audition/.
+ * FILL's listen (R1.1, SNARE and TOMS, with HUMANIZE), written to gitignored testkit/fill-audition/.
  * Run `./gradlew :synth:generateFillAudition`, then open index.html directly.
  *
  * The page leads with each fill in a phrase: two bars of THUMP's beat, the beat stops for the fill, and the
@@ -23,7 +23,7 @@ object FillAuditionGenerator {
     private class Case(val section: String, val group: String, val id: String, val name: String, val description: String,
                        val voice: FillVoice, val macros: Map<String, Float>, val velocity: Float = 1f)
 
-    private class Phrase(val id: String, val name: String, val description: String, val voice: FillVoice, val bpm: Int, val beats: Int)
+    private class Phrase(val id: String, val name: String, val description: String, val voice: FillVoice, val bpm: Int, val beats: Int, val humanize: Float = 0f)
 
     private val sections = linkedMapOf(
         "PHRASES" to ("A fill in the beat" to
@@ -31,7 +31,7 @@ object FillAuditionGenerator {
         "LENGTHS" to ("Each length" to
             "One beat, two beats, one bar and two bars at 120 BPM, every other control at its default."),
         "SWEEPS" to ("Each control swept" to
-            "TUNE, DENSITY, RISE and LAND at 0, .5 and 1, one bar at 120 BPM, the others at their defaults; then the pad hit at velocity .3, .65 and 1."),
+            "TUNE, DENSITY, RISE, LAND and HUMANIZE at 0, .5 and 1, one bar at 120 BPM, the others at their defaults; then the pad hit at velocity .3, .65 and 1."),
     )
 
     private fun fmt(v: Float) = "%.2f".format(java.util.Locale.ROOT, v).trimEnd('0').trimEnd('.')
@@ -46,7 +46,7 @@ object FillAuditionGenerator {
             for (beats in Fill.LENGTH_BEATS) add(Case("LENGTHS", v, "${low}_len_$beats", "$v · ${beatsName(beats)}",
                 "LENGTH ${beatsName(beats)} at 120 BPM; the landing is $beats beat${if (beats > 1) "s" else ""} in.",
                 voice, Fill.defaults(voice) + ("LENGTH" to Fill.lengthFor(beats))))
-            for (name in listOf("TUNE", "DENSITY", "RISE", "LAND")) for (x in listOf(0f, .5f, 1f)) add(Case("SWEEPS", "$v $name",
+            for (name in listOf("TUNE", "DENSITY", "RISE", "LAND", "HUMANIZE")) for (x in listOf(0f, .5f, 1f)) add(Case("SWEEPS", "$v $name",
                 "${low}_${name.lowercase()}_${tag(x)}", "$v · $name ${fmt(x)}", "$name at ${fmt(x)}, the others at their defaults.",
                 voice, Fill.defaults(voice) + (name to x)))
             for (vel in listOf(.3f, .65f, 1f)) add(Case("SWEEPS", "$v velocity", "${low}_vel_${tag(vel)}", "$v · velocity ${fmt(vel)}",
@@ -60,6 +60,8 @@ object FillAuditionGenerator {
         listOf(
             Phrase("${low}_bar_120", "$v · a bar's fill, 120 BPM", "A one-bar fill in place of bar 3, landing on bar 4.", voice, 120, 4),
             Phrase("${low}_two_90", "$v · two beats' fill, 90 BPM", "A two-beat fill over the second half of bar 3, landing on bar 4.", voice, 90, 2),
+            Phrase("${low}_bar_120_human", "$v · a bar's fill, 120 BPM, HUMANIZE .6",
+                "The same one-bar fill with HUMANIZE at .6: the run drifts and leans on the beats, and the landing stays on bar 4.", voice, 120, 4, .6f),
         )
     }
 
@@ -82,7 +84,7 @@ object FillAuditionGenerator {
         val bar = barFrames(p.bpm)
         val sixteenth = bar / 16.0
         val landing = 3 * bar
-        val fill = Fill.render(p.voice, Fill.defaults(p.voice) + ("TEMPO" to Fill.tempoFor(p.bpm)) + ("LENGTH" to Fill.lengthFor(p.beats))).samples
+        val fill = Fill.render(p.voice, Fill.defaults(p.voice) + ("TEMPO" to Fill.tempoFor(p.bpm)) + ("LENGTH" to Fill.lengthFor(p.beats)) + ("HUMANIZE" to p.humanize)).samples
         val start = landing - (p.beats * 60.0 / p.bpm * Dsp.RATE).roundToInt()
         val frames = max(4 * bar + Dsp.RATE, start + fill.size)
         val fillStem = FloatArray(frames).also { place(it, fill, start, 1f) }
@@ -137,7 +139,7 @@ object FillAuditionGenerator {
             )
         }
         val manifest = Json.write(value(linkedMapOf(
-            "engine" to "FILL", "model" to Fill.MODEL_VERSION, "auditionRevision" to "R1",
+            "engine" to "FILL", "model" to Fill.MODEL_VERSION, "auditionRevision" to "R1.1",
             "phrases" to phrases().size, "clips" to all.size, "wavFiles" to wavs, "sampleRate" to Dsp.RATE,
             "sections" to sections.map { (id, text) ->
                 mapOf("id" to id, "display" to text.first, "body" to text.second,

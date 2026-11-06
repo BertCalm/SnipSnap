@@ -1,6 +1,6 @@
 # FILL: a drum fill on one pad (design, R1)
 
-**Status:** R1 built, not yet heard. Listening page: https://claude.ai/artifact/8mBdGaFMw3XuGPdt9e4fLe
+**Status:** R1 heard and accepted (2026-11-06); R1.1 adds HUMANIZE, not yet heard. Listening page: https://claude.ai/artifact/8mBdGaFMw3XuGPdt9e4fLe
 (answers in its `verdicts` collection, ids `f1-*`). Prototype: in `PatchTypes.PROTOTYPES`, with eight
 provisional recipes in `FillPresets` (each voice at each LENGTH) outside the factory roster; no kit, not on
 the picker until the owner's listen.
@@ -48,6 +48,15 @@ Every stage boundary is a whole number of its notes, so every hit is on the fine
 - **RISE.** The crescendo. The first hit is at `1 − .8 × RISE` of the last, rising as `t^1.5`. RISE 0 is
   flat.
 - **LAND.** The landing's strength. 0 means no landing.
+- **HUMANIZE.** From 0 (the exact grid, the default, the sound the owner accepted) to 1 (a human feel).
+  - Each run hit drifts early or late by up to 12 ms × HUMANIZE. The drift is capped at a third of the
+    gap to either neighbour, so the order holds and a roll never smears.
+  - Each hit's strength moves by up to 15 % × HUMANIZE, and on-beat hits gain a 12 % × HUMANIZE accent.
+  - The landing never moves.
+  - The draws come from a fixed seed per voice, one pair per hit in order. A patch always plays the
+    same performance, and turning HUMANIZE scales one fixed feel (tested: half the control is half the
+    drift).
+  - All three amounts are shape constants.
 - **No HOLD.** A fill always ends.
 
 Velocity scales every hit. Toms and kick take SKIN's strike velocity, which changes the head's sound. The
@@ -61,7 +70,7 @@ engines. Hits are rendered on 12 velocity steps and cached per (drum, step, take
 - The 1/2–1/4–1/4 stage split.
 - The minor-third tom spacing.
 - The 1 s tail after the landing.
-- A rigid grid with no swing or human feel. This one is asked about directly.
+- The HUMANIZE amounts (12 ms drift, 15 % spread, 12 % accent).
 
 ## Tests (`FillTest`, plus the determinism canary)
 
@@ -88,7 +97,17 @@ engines. Hits are rendered on 12 velocity steps and cached per (drum, step, take
 - TUNE, DENSITY, RISE and LAND at 0, .5 and 1.
 - Velocity at .3, .65 and 1.
 
+## Listen record
+
+**R1, 2026-11-06, the owner on the listening page:**
+- Snare roll and tom run: "Yes, as it is".
+- Landing and DENSITY range: "Right".
+- Grid: "Add a little human feel". Note: "Would be good to be able to adjust".
+- Next fill: "Flams and drags".
+
+In chat: "good across the board. Humanize should be a control so it can range from machine like to
+human". R1.1 adds HUMANIZE as that control, with one question (`f1b-humanize`) on the same page.
+
 ## After the listen
 
-Factory presets, a kit (fills cut for 90 and 120 BPM beside a SKIN kit), and the picker entry. Then, if asked:
-mixed snare-and-tom fills, flams and drags, and a human-feel control.
+Factory presets, a kit (fills cut for 90 and 120 BPM beside a SKIN kit), and the picker entry. Then flams and drags (the owner's pick for the next fill).
