@@ -369,12 +369,17 @@ internal fun PlayPad(
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText(
-            pad.displayName,
-            TapeType.marker,
-            padNameInk(scheme, cls),
-            Modifier.align(Alignment.BottomStart),
-            maxLines = 2,
-        )
+        PadNameLabel(pad.displayName, padNameInk(scheme, cls), Modifier.align(Alignment.BottomStart))
     }
+}
+
+/**
+ * A pad cell's name, on ONE line: a long name steps its font down through [FitTapeText]'s steps,
+ * then ellipsizes, instead of wrapping to a second line that crowds the cell (E1). Shared by the
+ * PLAY grid here and the KIT grid in `KitScreen`, and its own composable because `KitScreen`
+ * sits near the dex register ceiling and an inline text call there is not free.
+ */
+@Composable
+internal fun PadNameLabel(name: String, color: Color, modifier: Modifier = Modifier) {
+    FitTapeText(name, TapeType.marker, color, modifier)
 }

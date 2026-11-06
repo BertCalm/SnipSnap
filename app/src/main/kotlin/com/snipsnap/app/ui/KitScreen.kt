@@ -1743,13 +1743,9 @@ private fun PadCell(
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
         // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
-        TapeText(
-            pad.displayName,
-            TapeType.marker,
-            padNameInk(scheme, cls),
-            Modifier.align(Alignment.BottomStart),
-            maxLines = 2,
-        )
+        // One line: a long name steps its font down, then ellipsizes,
+        // rather than wrapping to a second line that crowds the cell.
+        PadNameLabel(pad.displayName, padNameInk(scheme, cls), Modifier.align(Alignment.BottomStart))
         // The treated marker (J36): a dog-eared corner in the pad's own
         // class colour. A corner rather than a rim, because the rim is
         // already spoken for - its width is the held state (J15) and its
