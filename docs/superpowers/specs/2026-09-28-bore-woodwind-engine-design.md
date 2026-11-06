@@ -2412,6 +2412,8 @@ test is blind to the waveform still settling, and it was the correlation of the 
 
 ## R2: OVERBLOW, as built (2026-11-04)
 
+*Redesigned the same day: the knob no longer sets when the note cracks but how rough the crack is, in three candidate flavours; see "The redesign: the knob is the rasp" at the end of this section.*
+
 The owner asked for BORE's full round two on 2026-11-04 and chose **OVERBLOW** for the sixth macro over VIBRATO. The plan then
 went to research first (`2026-11-04-bore-r2-research.md`, which measured both mechanisms in a Python harness). The owner read it and
 said "proceed as recommended". This round builds what the research recommended: OVERBLOW on FLUTE only, as a crack whose moment
@@ -2549,6 +2551,224 @@ sliders from `macrosFor` and merges every saved FLUTE over the voice's defaults)
   `OVERBLOW_SEED_PERIODS` 8 (the smaller of the two seeds that worked in the harness), and the linear map from the knob to the
   moment of the crack.
 - **Heard:** nothing.
+
+### The redesign: the knob is the rasp (2026-11-04)
+
+The owner, after the first build: "instead of the parameter being how early or late the crack happens, we keep it close to the
+end and have the dial control rasp." Built the same day, with three candidate meanings of "rasp" behind one switch, because
+which one is right is a question for the ear. The owner chooses; the other two are then removed. Nothing here has been heard.
+Above, "When, not how far" and the timing rows of the table describe the first build and no longer hold; everything else does.
+
+**What changed.**
+
+- **The moment is fixed.** `Bore.crackFrame` leaves the note's last `OVERBLOW_TAIL_SHARE` (a quarter) of its blown part (the
+  attack and the held breath) overblown, and never less than `OVERBLOW_TAIL_MIN_SECONDS` (0.6 s), whatever the knob. The minimum
+  is FIGHT's longest crossing (0.3 s), the octave's settle after it (under 0.1 s with the seed) and about a fifth of a second of
+  the settled octave before the release. A note blown for less than 0.6 s is overblown from its first sample: a stab (HOLD 0,
+  about 0.34 s of breath) is all octave, with all of its rasp. Examples: CLEAN TONE at HOLD 0.8 cracks at 1.88 s of a 2.50 s
+  breath; BREATHY at its own HOLD at 0.31 s of 0.91 s; a 4 s note keeps its last 1.01 s.
+- **The knob is the rasp,** in the flavour `Bore.OVERBLOW_RASP` names (`Bore.Rasp`, FIGHT until the owner chooses; the audition and
+  the tests render all three through an internal `render(voice, macros, flavour)`):
+  - **A, FIGHT, the registers fighting.** The jet's transit time crosses from half a period to a quarter over a time the knob
+    sets, from the clean crack's 5 ms at its bottom to `OVERBLOW_FIGHT_SECONDS` (0.3 s) at 1, instead of always in 5 ms. On the
+    way the low register is pulled sharp and, at low notes, a wrong mode about 2.3 semitones over the note sounds before the
+    octave wins. The crack's seed goes in where the crossing ends.
+  - **B, GROWL.** Once the jet reaches the octave, the mouth pressure is modulated at `OVERBLOW_GROWL_HZ` (31 Hz) by up to
+    `OVERBLOW_GROWL_DEPTH` (0.3) of itself at the top of the knob, rising in over 30 ms: a flutter in the level and the tone.
+  - **C, BREATH.** Once the jet reaches the octave, the jet's turbulence rises by up to `OVERBLOW_BREATH_EXTRA` (0.8) at the top
+    of the knob, on top of BREATH's own, rising in over 30 ms.
+- **Unchanged:** OVERBLOW 0, absent or NaN never builds the crack, so `BoreFrozenSoundTest` and `ObbligatoCompatibilityTest` hold;
+  the LIP floor; the octave jump; a LOOP and every keygroup zone play the note uncracked; SCRAMBLE never rolls the knob; the
+  presets sit at 0.
+- **The audition** section is now the A/B: CLEAN TONE at HOLD 0.8 and BREATHY at its own length, off, then each flavour at .25, .5
+  and 1, each clip described with what was measured on it. `--args="<dir> rasp-ab"` writes the same 20 clips as WAVs named for the
+  A/B ("CLEAN_TONE A-fight 0.5.wav", "CLEAN_TONE 0 off.wav") with a notes file.
+
+**Measured (Kotlin, `BoreOverblowTest`, the raw bore wave, LIP 0.5, BREATH 0.6, 2 s of breath).** Settle: seconds from the crack
+until the note stays within 10 cents of the octave. After the crack: the energy between the octave's harmonics over the 0.4 s
+after the crack against the energy at them. Settled: the same over the octave's last 0.35 s. Level: how much the level moves
+there (spread over mean, on windows of two octave periods). End: the octave's pitch over the last 0.2 s before the release.
+
+Each cell: settle (s) / after the crack (dB) / settled (dB) / level / end (cents).
+
+| flavour, note | knob 0.25 | knob 0.5 | knob 1 |
+|---|---|---|---|
+| FIGHT, C4 | 0.16 / -9.7 / -34.7 / 0.01 / +1.2 | 0.20 / +0.1 / -29.1 / 0.07 / +1.4 | 0.36 / +33.0 / +12.0 / 0.17 / +1.7 |
+| FIGHT, C5 | 0.12 / -15.1 / -33.2 / 0.01 / +2.2 | 0.20 / -2.6 / -32.8 / 0.01 / +2.2 | 0.32 / +27.6 / +5.8 / 0.15 / +2.2 |
+| FIGHT, C6 | 0.12 / -16.5 / -29.9 / 0.01 / +2.5 | 0.20 / -3.9 / -30.3 / 0.01 / +2.6 | 0.32 / +23.5 / +2.3 / 0.15 / +2.5 |
+| GROWL, C4 | 0.08 / -24.6 / -34.6 / 0.04 / +1.8 | 0.08 / -24.5 / -34.6 / 0.07 / +1.7 | 0.08 / -24.4 / -34.6 / 0.16 / +1.4 |
+| GROWL, C5 | 0.04 / -30.4 / -32.6 / 0.05 / +2.3 | 0.04 / -30.4 / -32.7 / 0.11 / +2.4 | 0.04 / -30.8 / -33.4 / 0.25 / +2.6 |
+| GROWL, C6 | 0.04 / -30.2 / -31.0 / 0.06 / +2.4 | 0.04 / -30.1 / -30.8 / 0.13 / +2.6 | 0.04 / -30.2 / -30.9 / 0.33 / +3.0 |
+| BREATH, C4 | 0.08 / -24.5 / -31.0 / 0.01 / +1.5 | 0.08 / -24.2 / -28.7 / 0.01 / +1.2 | 0.08 / -23.5 / -26.2 / 0.02 / +0.7 |
+| BREATH, C5 | 0.04 / -28.2 / -28.7 / 0.01 / +2.1 | 0.04 / -26.4 / -26.5 / 0.02 / +2.0 | 0.04 / -24.2 / -24.1 / 0.03 / +1.6 |
+| BREATH, C6 | 0.04 / -26.3 / -26.6 / 0.02 / +2.4 | 0.04 / -23.7 / -24.0 / 0.03 / +2.2 | 0.04 / -21.1 / -21.6 / 0.05 / +1.8 |
+
+Each flavour's own measure rises with the knob at every note: FIGHT's settle and the energy off the octave after the crack, GROWL's
+level movement (0.04 to 0.16 at C4, 0.06 to 0.33 at C6), BREATH's energy between the settled octave's harmonics (+4.6 to +5.0 dB
+from 0.25 to 1). At FIGHT's top the "settled" window still holds the end of the 0.3 s crossing, which is why it reads high there;
+the octave at the end is in tune all the same.
+
+At the end of the note, over 27 corners (TUNE 0 / 0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 0.6 / 1):
+
+| flavour, knob | the octave at the end | the old fundamental under it | raw rms from | aperiodicity at most |
+|---|---|---|---|---|
+| FIGHT 0.25 | -2.3 to +5.9 cents | 44 dB or more | 0.422 | -22.6 dB |
+| FIGHT 1 | -2.4 to +5.8 | 44 | 0.420 | -20.1 |
+| GROWL 0.25 | -2.5 to +5.9 | 45 | 0.423 | -22.7 |
+| GROWL 1 | -2.3 to +6.4 | 44 | 0.376 | -21.8 |
+| BREATH 0.25 | -2.4 to +5.8 | 42 | 0.444 | -19.9 |
+| BREATH 1 | -2.3 to +6.1 | 37 | 0.393 | -16.1 |
+
+Every corner of every flavour is also finite, bounded (raw peak under 3) and speaking at the end of the note at OVERBLOW 0.5 and 1
+with CHIFF 1 and HOLD 0.98, and its finished render is clean at the loudness target. The A/B clips' own readings (the notes file
+beside them): CLEAN TONE settles on the octave 0.08, 0.16 and 0.28 s after the crack under FIGHT at .25, .5 and 1, its level moves
+0.08, 0.17 and 0.35 under GROWL, and its octave ends at +1.7 to +2.1 cents in every clip.
+
+The step at the crack against the note's own steepest ordinary step, knob 0.25: FIGHT 0.97, 1.01, 1.03; GROWL 0.97, 1.01, 1.07; BREATH 0.97, 1.01, 1.07 (C4, C5, C6), an ordinary step of the note in each.
+
+**Things that did not work, kept so they are not tried again.**
+
+- **A jet wavering across the boundary** (the harness, before FIGHT was built): the jet's transit time swung across every
+  measured break point at 9 Hz, to make the two registers trade places. They did not: once a note reached the octave it held it
+  at transit times where a note started fresh would play the low register (the model is bistable there), and at C4 it sat on the
+  sharp wrong mode until the swing ended. A fight that trades registers back and forth is not something this jet does, so FIGHT
+  is the slow crossing.
+- **The harness's forecast for FIGHT** was rough at C4 and nearly clean at C5 and C6 (there the octave took over at once in the
+  harness). The engine measured it rough at all three notes: the settle and the energy off the octave rise with the knob at each.
+- **BREATH at 0.4 extra**, the first guess: on the settled octave in the harness it added about 6 dB between the harmonics; 0.8
+  adds about 8.5 dB, into a breathy flute's range, so the top of the knob is clearly breathier. And read over the 0.4 s right after
+  the crack, BREATH barely moved (0.4 dB at C4), because the crack's own settle filled that window; it is read on the settled
+  octave.
+- **A settle reading at 10 cents on a note with vibrato** read CLEAN TONE at HOLD 0.8 (about 16 cents of vibrato) as never
+  settling; the audition's descriptions read within 40 cents, the tests run without vibrato.
+- **The test's "the octave leads" check** compared the octave's level with 0 dB exactly; the measure adds 1e-12 inside its
+  logarithm, so every corner failed though the octave led by 44 dB or more.
+
+**What it cost, said plainly.**
+
+- **Not heard,** any of it. The questions for the ear: which flavour is "rasp", and how much of it the knob's top should be.
+- **FIGHT is a pitch pull, not two notes at once.** It sounds as a glide or a squeal into the crack (a sharp low register, or a
+  wrong mode, then the octave). Whether that reads as registers fighting is the ear's call.
+- **GROWL is a regular 31 Hz modulation** the engine applies to the pressure, not a modelled throat: deterministic, one rate.
+- **BREATH thins the octave:** at the top of the knob the octave's raw level drops by about a third in the harness (0.98 to
+  0.69), and the level stage takes it back.
+- **A stab is all crack.** Under 0.6 s of breath the whole note is overblown, so the rasp is the whole note.
+- **The step at 0.** Any OVERBLOW above 0 cracks the note (and floors LIP), so the knob's bottom is a jump from a plain note to a
+  clean crack; the rasp starts from there.
+
+**Why it is built this way.**
+
+- **The crack sits near the end because it is the note's ending gesture.** The owner asked for it close to the end; a quarter of
+  the breath keeps it there on a long note, and the 0.6 s minimum keeps the roughest crossing and a settled octave inside the
+  note, so every setting still lands on the octave before the release.
+- **Three flavours behind one switch, each measured by its own yardstick,** because "rasp" names three different things a player
+  does (pushing through the break, growling, blowing breathy) and only the ear can say which one this knob is. Each is monotone in
+  its own measure, and each ends on the octave in tune, so whichever is chosen needs no further engineering.
+- **The seed goes in where the crossing ends,** because the octave only becomes the jet's stable state there; seeded earlier,
+  in the middle of FIGHT's crossing, it would be fighting the jet instead of finishing the crack.
+
+**Verification (the redesign).** `:synth:test` with `--tests 'com.snipsnap.synth.Bore*'`, `ObbligatoCompatibilityTest`,
+`DeterminismTest`, `PresetsTest` and `PadRecipeTest`, with `:synth:generateBoreAudition --args="<dir> rasp-ab"` in the same build:
+exit 0, 179 synth tests, none failing (`BoreOverblowTest` 12, the rest as before), and the 20 A/B clips written. Then `:shell:test`
+with `ConventionTest`, `PersonalityTest`, `LoopPadMakerTest`, `SynthRootTest` and `BoreOverblowKeysTest`: exit 0, 110 tests, none
+failing. Two earlier attempts at one combined build ended when the Gradle daemon was killed for memory while another agent's
+build ran beside it; that was not a test failure, and the split builds above are the record.
+
+**Ledger (the redesign).**
+
+- **Verified** (run on this branch): the crack's branch is never entered at 0, absent or NaN, in every flavour; every frozen hash
+  and OBBLIGATO's unchanged; the crack's moment is the same at every knob setting; a LOOP at any OVERBLOW is the LOOP at 0 in
+  every flavour; every flavour renders the same twice.
+- **Measured** (Kotlin): the tables above. **Measured** (Python harness): the wavering jet's failure, BREATH's 0.4 and 0.8.
+- **Proposed** (shape values): `OVERBLOW_TAIL_SHARE` 0.25, `OVERBLOW_TAIL_MIN_SECONDS` 0.6, `OVERBLOW_FIGHT_SECONDS` 0.3,
+  `OVERBLOW_GROWL_HZ` 31, `OVERBLOW_GROWL_DEPTH` 0.3, `OVERBLOW_BREATH_EXTRA` 0.8, `OVERBLOW_RASP_RISE_SECONDS` 0.03, and FIGHT as
+  the default until the owner picks.
+- **Heard:** the A/B, by the owner on 2026-11-06: "Growl, 1 is a little weak" (below: GROWL shipped, its top raised; FIGHT and
+  BREATH removed).
+
+#### Heard (2026-11-06): GROWL, its top raised
+
+**Heard.** The owner listened to the 20 A/B clips (CLEAN TONE and BREATHY, each flavour at .25, .5 and 1, and the knob off) on a
+listening page and said: "Growl, 1 is a little weak." That is the first listen to anything in OVERBLOW. It chooses the flavour
+and says the top of the knob is not strong enough. Everything else about the crack (where it falls, the octave, the seed) was
+heard only through these clips and drew no comment.
+
+**What changed.**
+
+- **GROWL ships alone.** The switch, FIGHT and BREATH are gone, with their constants (`OVERBLOW_FIGHT_SECONDS`,
+  `OVERBLOW_BREATH_EXTRA`), their code paths and their tests. Every crack is the 5 ms glide with the seed. Once the jet reaches the
+  octave, the mouth pressure flutters at `OVERBLOW_GROWL_HZ` (31 Hz), rising in over 30 ms.
+- **The top is deeper, the quarter is where it was.** Depth = `OVERBLOW_GROWL_DEPTH` (0.4, was 0.3) times OVERBLOW to the power
+  `OVERBLOW_GROWL_CURVE` (1.2, was linear). At 0.25 that is 0.076, the depth the owner heard there (0.075). At 0.5 it is 0.174,
+  at 0.75 0.283, and the old top's 0.3 now sits at OVERBLOW 0.787. ARCO's BUZZ recalibration curved its knob with a power law in
+  the same way.
+- **Depth alone was enough; no second flutter was added.** In the Python harness, depth 0.45 gave 1.7 to 1.9 times the old top's
+  waver, but left the softest corner (BREATH 0, LIP at its 0.35 floor) at a raw rms of 0.23. Depth 0.6 dropped that corner out at
+  C4 and C5. A subharmonic flutter (15.5 Hz at 0.6 of the depth) on top of the old 0.3 gave only about 1.4 times, so the growl's
+  character was left as the owner heard it, a single 31 Hz flutter, only deeper.
+- **Unchanged:** the crack's moment (the last quarter of the breath, at least 0.6 s), the octave, the LIP floor, the seed, a LOOP
+  and every keygroup zone uncracked, SCRAMBLE never rolling the knob, the presets at 0, and OVERBLOW 0 never building the crack.
+- **The audition** section and its `growl-v2` mode: CLEAN TONE at HOLD 0.8 and BREATHY at its own length, off, at .25, .5, .75 and
+  1, and at the old top for comparison.
+
+**Measured (Kotlin, `BoreOverblowTest`, LIP 0.5, BREATH 0.6, 2 s of breath).** The level waver is the spread of the rms on windows
+of two octave periods, over its mean, from 0.4 s to 0.05 s before the release. The pitch is the octave's over the last 0.2 s.
+
+| note | knob 0.25 | 0.5 | 0.75 | 1 | the old top (0.787) | 1 against the old top |
+|---|---|---|---|---|---|---|
+| C4 | 0.037, +1.8 c | 0.086, +1.7 c | 0.151, +1.5 c | 0.229, +1.2 c | 0.161, +1.4 c | 1.42 times |
+| C5 | 0.054, +2.3 c | 0.129, +2.4 c | 0.235, +2.6 c | 0.373, +2.8 c | 0.253, +2.6 c | 1.47 times |
+| C6 | 0.064, +2.4 c | 0.157, +2.6 c | 0.306, +2.9 c | 0.520, +3.2 c | 0.334, +3.0 c | 1.56 times |
+
+The knob's quarter reads what the owner heard there (0.04, 0.05 and 0.06 in the A/B's measurement). Over 27 corners (TUNE 0 /
+0.5 / 1, LIP 0 / 0.5 / 1, BREATH 0 / 0.6 / 1):
+- At knob 1 the note ends on the octave within -2.2 to +6.1 cents, with the old fundamental at least 44 dB under it. The raw rms
+  is at least 0.292 against a floor of 0.15, and the aperiodicity at most -19.2 dB, a tone.
+- At 0.25: -2.5 to +5.9 cents.
+- The step at the crack is 0.97, 1.01 and 1.07 times the note's own steepest at C4, C5 and C6, at 0.25 and at 1 alike: no click.
+- Every corner at 0.5 and 1 with CHIFF 1 and HOLD 0.98 is finite, peaks under 3, speaks at the end of the note, and renders clean
+  at the loudness target.
+
+The owner's clips (the notes file beside them) read:
+
+| clip | level waver at 1 | at the old top | ratio |
+|---|---|---|---|
+| CLEAN TONE (HOLD 0.8) | 0.48 | 0.35 | 1.37 |
+| BREATHY | 0.28 | 0.18 | 1.56 |
+
+Every one of those clips ends on the octave at +2.1 cents (CLEAN TONE) or +2.9 to +3.2 cents (BREATHY).
+
+**What it cost, said plainly.**
+
+- **The new top, heard (2026-11-06).** "A little weak" asked for stronger, not for a set amount, so about one and a half times the old
+  waver was the brief's reading of it. The owner heard the old top beside the new on a listening page of the clips and said "New top
+  is good." HEARD: the top at knob 1 stands as built.
+- **The growl now dips the level harder.** At knob 1 the softest corner's raw rms is 0.292, against 0.42 at the old top. The level
+  stage takes the loss back. Deeper than 0.4 the softest corners begin to drop out (the harness), so this is near the ceiling for
+  a growl made from pressure alone.
+- **CLEAN TONE's ratio is the smallest (1.37), under the brief's 1.5.** Its note is B4 (TUNE 0.45) with a soft breath (0.3) and
+  about 16 cents of vibrato (HOLD 0.8). Neither the soft breath nor the vibrato is in the swept grid, so why its ratio is lower is
+  not measured. It is the clip to judge the new top by.
+- **FIGHT and BREATH are gone** from the code and the audition. The research and the A/B are their record.
+
+**Why it is built this way.**
+
+- **Deeper, not different, because the owner chose this sound.** He picked the growl and asked only for more of it. Making the
+  flutter deeper keeps the sound he chose; adding a second flutter would change its character, and the harness said it was not
+  needed.
+- **A power curve so the bottom of the knob does not move.** The owner heard the quarter of the knob and said nothing against it.
+  With a curve, all the extra depth goes into the top half (0.5 rises from 0.15 to 0.17, 1 from 0.3 to 0.4) and the quarter stays
+  at 0.075.
+- **0.4 and not more,** because 0.45 already left the softest corner at a quarter of its usual raw level, and 0.6 dropped it out.
+  The growl is a modulation of the breath that blows the octave; breathe too little at the trough and the octave stops.
+
+**Ledger (the growl).**
+
+- **Heard:** the owner, 2026-11-06, on the 20 A/B clips: "Growl, 1 is a little weak."
+- **Verified** (run on this branch): FIGHT, BREATH and the switch removed; OVERBLOW 0 changes nothing (`BoreFrozenSoundTest`,
+  `ObbligatoCompatibilityTest`); the knob's quarter at 0.075 and the old top at 0.787 (tested).
+- **Measured** (Kotlin): the tables above. **Measured** (Python harness): depth 0.45 and 0.6, and the subharmonic flutter.
+- **Proposed** (not yet heard): `OVERBLOW_GROWL_DEPTH` 0.4 and `OVERBLOW_GROWL_CURVE` 1.2.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
