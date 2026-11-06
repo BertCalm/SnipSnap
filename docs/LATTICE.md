@@ -89,13 +89,29 @@ same files and event frames. `keys-measurements.json` records source fingerprint
 package readback, real preceding-cycle evidence and pitch fit; physical MPC
 playback and the owner's listening verdict are not inferred from those checks.
 
-This held renderer is separate from the finite TRACE patch renderer. It keeps
-the source's original decay through .30 reference seconds, then smoothly settles
-at .20 source amplitude by .45 reference seconds. The same source, gate chain
-and rejection collector run continuously from rest. SPEED changes the motion
-and source-envelope clock as before. Finite HOLD is retained in the saved source
-patch but has no effect on keyboard sustain; note length belongs to the player.
-The accepted finite B reference remains unchanged.
+This held renderer is separate from the finite TRACE patch renderer. Held model 2
+keeps the original source curve through .035 reference seconds, then joins a .80
+source-effort floor smoothly by .08 seconds. Its fixed collector pickup has
+reversed polarity and sensitivity 2. The passing tone and ringing pickup then
+reinforce during the handoff instead of nearly cancelling. These are authored
+source/pickup settings; output loudness does not select a gain or normalizer.
+The same source, gate chain and rejection collector run continuously from rest.
+SPEED changes the motion and source-envelope clock as before. Finite HOLD is
+retained in the saved source patch but has no effect on keyboard sustain; note
+length belongs to the player. The accepted finite B reference remains unchanged.
+
+Held model 1 remains available for exact saved-recipe replay. It uses the original
+.20 effort floor and collector pickup. New instrument captures use model 2, and
+the `.lattice-keys.json` recipe saves that version explicitly. Native finite
+patches remain synthesis model 2; the held-render version is a separate field.
+
+Why the keyboard balance changed: the first held audition dropped about 21 dB
+from its initial body to steady sustain, and its passing/ringing components
+nearly cancelled around .28 seconds. The owner reported that drop as jarring on
+2026-11-06. Reversing the pickup removes that cancellation; stronger steady
+source effort supports the ringing body. The early gate closure and plucked
+attack remain part of the movement. R7 offers an unnormalized before/after
+comparison and new full held-note recordings for a separate listening verdict.
 
 Nine roots, every minor third from MIDI 48 through 72, cover that range without
 extending the edge zones across the entire keyboard. Each root uses absolute

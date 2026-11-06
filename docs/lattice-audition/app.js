@@ -73,9 +73,14 @@
   function effectiveMode(clip, hero = false) { return !hero && !['focus', 'gesture'].includes(clipSection(clip)) && state.mode === 'matched' && safeUrl(clip.matchedFile) ? 'matched' : 'common'; }
   function clipUrl(clip, mode) { return safeUrl(mode === 'matched' ? clip.matchedFile : clip.file); }
   function recipeUrl(clip, mode) { return mode === 'matched' && safeUrl(clip.matchedRecipeFile) ? safeUrl(clip.matchedRecipeFile) : safeUrl(clip.recipeFile); }
-  function cardModeText(clip) { return `${effectiveMode(clip) === 'matched' ? 'RMS-MATCHED' : 'COMMON GAIN'}${clipSection(clip) === 'keys' ? ' · NOTE ON / OFF' : clipCues(clip).length > 1 ? ' · A/B' : ''}`; }
+  function cardModeText(clip) { return `${effectiveMode(clip) === 'matched' ? 'RMS-MATCHED' : 'COMMON GAIN'}${clip.comparison ? ' · A/B' : clipSection(clip) === 'keys' ? ' · NOTE ON / OFF' : clipCues(clip).length > 1 ? ' · A/B' : ''}`; }
   function isFeatured(clip) {
-    if (state.clips.some(item => clipSection(item) === 'keys')) return clipSection(clip) === 'keys';
+    if (state.clips.some(item => clipSection(item) === 'keys')) {
+      if (clipSection(clip) !== 'keys') return false;
+      const currentModel = Number(state.manifest?.keysEngine?.heldModel);
+      const clipModel = Number(clip.heldModel ?? (/^keys-/.test(String(clip.id)) ? 1 : NaN));
+      return !currentModel || !Number.isFinite(clipModel) || clipModel === currentModel;
+    }
     if (state.clips.some(item => clipSection(item) === 'trace')) return clipSection(clip) === 'trace';
     const native = state.clips.some(item => clipSection(item) === 'instrument');
     return native ? ['instrument', 'hold'].includes(clipSection(clip)) : clipSection(clip) === 'source';
@@ -157,12 +162,13 @@
   function renderSources() {
     const clips = state.clips.filter(clip => clip !== state.hero && isFeatured(clip)).sort((a, b) => sectionOrder.indexOf(clipSection(a)) - sectionOrder.indexOf(clipSection(b)));
     const keys = state.clips.some(clip => clipSection(clip) === 'keys');
+    const revisedKeys = keys && Number(state.manifest?.keysEngine?.heldModel) >= 2;
     const native = clips.some(clip => clipSection(clip) === 'instrument');
     const trace = clips.some(clip => clipSection(clip) === 'trace');
     $('#source-listen').hidden = !clips.length;
     $('#source-listen .eyebrow').textContent = keys ? 'THE KEYBOARD INSTRUMENT' : 'THE SAVED INSTRUMENT';
-    $('#source-listen-title').textContent = keys ? 'Keep the ringing tone.' : trace ? 'One motion. Three speeds.' : native ? 'Short notes. Held tones.' : 'Find a source you like.';
-    $('#source-listen-intro').innerHTML = keys ? 'Hold one note.<br>Then hear the voices overlap.' : trace ? 'Keep the reference.<br>Then try slower or quicker.' : native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
+    $('#source-listen-title').textContent = revisedKeys ? 'Listen across the handoff.' : keys ? 'Keep the ringing tone.' : trace ? 'One motion. Three speeds.' : native ? 'Short notes. Held tones.' : 'Find a source you like.';
+    $('#source-listen-intro').innerHTML = revisedKeys ? 'Try the octave and chord.<br>Then compare the same C3 press.' : keys ? 'Hold one note.<br>Then hear the voices overlap.' : trace ? 'Keep the reference.<br>Then try slower or quicker.' : native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
     $('#source-footnote').textContent = keys ? 'Choose LATTICE → TRACE → MAKE INSTRUMENT in SnipSnap. The instrument covers C3–C5 with nine sampled roots and one captured velocity timbre. SPEED is baked into the samples. Held mode replaces finite HOLD with key-controlled duration; release fades the whole sound.' : trace ? 'Choose LATTICE → TRACE in SnipSnap. SPEED .5 keeps B; lower values slow the movement and higher values speed it up. HOLD extends a finite note. Each Patch download saves these controls.' : native ? 'These three source voices keep their original fixed gate settings. Each HOLD recording repeats its loop four times. Their patches and the earlier listening studies remain available below.' : 'Each source uses the same phrase. Compare the source character, then try the listening studies.';
     $('#source-clips').innerHTML = clips.map(renderCard).join('');
     const firstTarget = state.hero ? '#passage-proof' : clips.length ? '#source-listen' : '#listen';
@@ -217,7 +223,7 @@
     if (keysEngine.sourceCommit) facts.push(['KEYGROUP SOURCE', String(keysEngine.sourceCommit).slice(0, 10)]);
     $('#engine-facts').innerHTML = facts.map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
     const downloads = manifest.downloads || {};
-    const links = [['keygroups', 'TRACE · C3–C5 MPC keyboard instrument', '↓'], ['keysMeasurements', 'Keyboard loop & playback measurements', '↗'], ['keysRecipes', 'Keyboard performance recipes', '↓'], ['keysSource', 'Keyboard instrument source', '↗'], ['traceKit', 'TRACE · 16 finite MPC pads', '↓'], ['tracePatches', 'TRACE · 3 saved speed patches', '↓'], ['traceNote', 'Ringing Trace · C3 note, PCM24', '↓'], ['kit', 'Original 16-pad MPC kit', '↓'], ['patches', 'Original 12 static patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Earlier study measurements', '↗'], ['source', 'Earlier instrument source', '↗'], ['nativeReference', 'R5 native TRACE audition archive', '↓'], ['motionReference', 'Accepted R4 motion audition', '↓'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
+    const links = [['keygroups', 'TRACE · C3–C5 MPC keyboard instrument', '↓'], ['keysMeasurements', 'Keyboard loop & playback measurements', '↗'], ['keysRecipes', 'Keyboard performance recipes', '↓'], ['keysSource', 'Keyboard instrument source', '↗'], ['keysPrevious', 'Original held-model-1 keyboard instrument', '↓'], ['traceKit', 'TRACE · 16 finite MPC pads', '↓'], ['tracePatches', 'TRACE · 3 saved speed patches', '↓'], ['traceNote', 'Ringing Trace · C3 note, PCM24', '↓'], ['kit', 'Original 16-pad MPC kit', '↓'], ['patches', 'Original 12 static patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Earlier study measurements', '↗'], ['source', 'Earlier instrument source', '↗'], ['nativeReference', 'R5 native TRACE audition archive', '↓'], ['motionReference', 'Accepted R4 motion audition', '↓'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
     $('#download-links').innerHTML = links.length ? links.map(([key, title, arrow]) => `<a href="${escape(safeUrl(downloads[key]))}" download>${title}<span aria-hidden="true">${arrow === '↗' ? linkIcon : arrow}</span></a>`).join('') : '<span class="muted">Use the WAV and recipe links on each study.</span>';
     const date = new Date(manifest.generatedAt);
     $('#footer-build').textContent = `Lattice instrument study${manifest.revision ? ` · R${manifest.revision}` : ''}${!Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : ''}`;
@@ -232,10 +238,11 @@
     $('#revision-note').hidden = !manifest.revisionNote;
     $('#revision-note').textContent = manifest.revisionNote || '';
     const keys = state.clips.some(clip => clipSection(clip) === 'keys');
+    const revisedKeys = keys && Number(manifest.keysEngine?.heldModel) >= 2;
     document.body.classList.toggle('keys-audition', keys);
-    $('#round-description').textContent = keys ? 'TRACE now has a keyboard version. A plucked opening gives way to a steady ringing tone while the key stays down. The accepted B one-shot remains below.' : 'The accepted movement is saved in TRACE patches. SPEED chooses how quickly the pluck becomes its ringing trace.';
-    $('#hold-description').textContent = keys ? 'MAKE INSTRUMENT keeps the source gently feeding its tuned halo. It replaces finite HOLD with keyboard duration. Releasing the key fades the whole sound over 0.6 seconds in these recordings; it does not trigger a separate resonator tail.' : 'TRACE HOLD keeps one finite source effort ringing longer, then releases. The original WARM, PLUCK and HOLLOW voices keep their existing static settings and loop behavior.';
-    $('#download-description').textContent = keys ? 'Download the C3–C5 keyboard instrument with MPC3 and MPC2 programs, loop-marked WAVs, and the editable held recipe. The finite TRACE pad kit and all earlier patches and studies remain available.' : 'Take TRACE patches, a C3 note, and a separate dry 16-pad TRACE kit. TRACE pads play once; keep sample looping disabled. The original static kit and its HOLD-loop instructions remain available.';
+    $('#round-description').textContent = revisedKeys ? 'Held model 2 changes the source pressure and fixed collector pickup to retain more body through the handoff. The original keyboard recordings and accepted B one-shot remain below.' : keys ? 'TRACE now has a keyboard version. A plucked opening gives way to a steady ringing tone while the key stays down. The accepted B one-shot remains below.' : 'The accepted movement is saved in TRACE patches. SPEED chooses how quickly the pluck becomes its ringing trace.';
+    $('#hold-description').textContent = revisedKeys ? 'MAKE INSTRUMENT keeps steadier source pressure feeding the tuned collector and uses a fixed inverted pickup. Keyboard duration replaces finite HOLD. Releasing the key fades the whole sound over 0.6 seconds; it does not trigger a separate resonator tail.' : keys ? 'MAKE INSTRUMENT keeps the source gently feeding its tuned halo. It replaces finite HOLD with keyboard duration. Releasing the key fades the whole sound over 0.6 seconds in these recordings; it does not trigger a separate resonator tail.' : 'TRACE HOLD keeps one finite source effort ringing longer, then releases. The original WARM, PLUCK and HOLLOW voices keep their existing static settings and loop behavior.';
+    $('#download-description').textContent = revisedKeys ? 'Download the held-model-2 C3–C5 keyboard instrument with MPC3 and MPC2 programs, loop-marked WAVs, and its versioned recipe. The original model-1 instrument, finite TRACE pad kit and earlier studies remain available.' : keys ? 'Download the C3–C5 keyboard instrument with MPC3 and MPC2 programs, loop-marked WAVs, and the editable held recipe. The finite TRACE pad kit and all earlier patches and studies remain available.' : 'Take TRACE patches, a C3 note, and a separate dry 16-pad TRACE kit. TRACE pads play once; keep sample looping disabled. The original static kit and its HOLD-loop instructions remain available.';
     $('meta[name="description"]').content = keys ? 'Play Lattice TRACE as a C3–C5 keyboard instrument: plucked attack, held ringing tone and key-release fade, with MPC keygroup downloads.' : 'The accepted Lattice ringing pluck, now saved as native TRACE patches with SPEED and finite HOLD controls.';
   }
 

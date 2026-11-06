@@ -22,6 +22,8 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.log10
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /** Actual TRACE keygroup delivery, read back through the normal sample player. */
@@ -29,6 +31,8 @@ object LatticeKeysAuditionGenerator {
     private const val RATE = 44_100
     private const val NAME = "Lattice Trace Keys"
     private const val RECIPE_VERSION = 1
+    private const val CONTENT = "keys2"
+    private const val HELD_MODEL = 2
     private val SOURCE_FILES = listOf(
         "synth/src/main/kotlin/com/snipsnap/synth/Lattice.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/LatticeKeys.kt",
@@ -44,6 +48,15 @@ object LatticeKeysAuditionGenerator {
     )
 
     private data class Event(val midi: Int, val on: Int, val off: Int, val velocity: Float = .75f)
+    private data class LegacyDependency(
+        val spec: LatticePadMaker.Spec,
+        val sidecar: File,
+        val instrument: InstrumentStore.Instrument,
+        val samples: Map<String, Snip>,
+        val source: Any,
+        val hashes: Map<String, String>,
+        val identityScope: String,
+    )
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -53,18 +66,23 @@ object LatticeKeysAuditionGenerator {
             println("Replayed held TRACE performance to ${args[2]}")
             return
         }
-        require(args.size <= 1) { "supply an optional, fresh output directory" }
+        require(args.size <= 2) { "supply an optional fresh output directory and optional published-v1 baseline directory" }
         val repo = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile && File(it, ".git").exists() }
         val output = File(args.firstOrNull() ?: File(repo, "testkit/lattice-keys-audition").path).canonicalFile
+        val baseline = args.getOrNull(1)?.let { File(it).canonicalFile.also { folder ->
+            require(folder.isDirectory && File(folder, "keys-manifest.json").isFile && File(folder, "keys-measurements.json").isFile) {
+                "Published-v1 baseline needs keys/, keys-manifest.json and keys-measurements.json: $folder"
+            }
+        } }
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }
         val revision = git(repo, "rev-parse", "HEAD")
         val dirty = git(repo, "status", "--porcelain", "--untracked-files=normal").isNotEmpty()
         val hashes = SOURCE_FILES.associateWith { sha(File(repo, it)) }
         val started = System.nanoTime()
         check(output.mkdirs() || output.isDirectory)
-        val bundle = File(output, "keys/instruments/$NAME").apply { check(mkdirs()) }
-        val spec = LatticePadMaker.Spec(LatticePresets.forVoice(LatticeVoice.TRACE).first())
+        val bundle = File(output, "$CONTENT/instruments/$NAME").apply { check(mkdirs()) }
+        val spec = LatticePadMaker.Spec(LatticePresets.forVoice(LatticeVoice.TRACE).first(), heldModel = HELD_MODEL)
         val roots = LatticePadMaker.zoneMidis(spec)
         val times = mutableListOf<Double>()
         val notes = roots.map { midi ->
@@ -100,6 +118,7 @@ object LatticeKeysAuditionGenerator {
                 "frames" to pcm.frameCount, "loopStartFrame" to loop.startFrame,
                 "loopEndFrameExclusive" to loop.endFrameExclusive,
                 "maxPcm24Error" to quantizationError, "renderMillis" to times[index],
+                "bodyAndHandoff" to bodyAndHandoff(pcm.samples, loop.startFrame.toInt(), spec.patch.macros.getValue("SPEED")),
             )
         }
         val nativeTrack = File(bundle, "$NAME.xty")
@@ -110,8 +129,8 @@ object LatticeKeysAuditionGenerator {
 
         // These three proofs come from real independent synthesis cycles before any playback repeats.
         val proofRows = listOf(48, 60, 72).map { midi ->
-            val proof = LatticeKeys.probe(spec.patch, midi)
-            val folder = File(output, "keys/diagnostics/${Scales.nameOf(midi).lowercase(Locale.ROOT)}").apply { check(mkdirs()) }
+            val proof = LatticeKeys.probe(spec.patch, midi, heldModel = spec.heldModel)
+            val folder = File(output, "$CONTENT/diagnostics/${Scales.nameOf(midi).lowercase(Locale.ROOT)}").apply { check(mkdirs()) }
             val samples = proof.note.snip.samples
             val prefix = WavWriter.write(File(folder, "attack-prefix.wav"), Snip(samples.copyOf(proof.prefixFrames), 1, RATE))
             val previous = WavWriter.write(File(folder, "actual-previous-cycle.wav"), Snip(proof.previousCycle, 1, RATE))
@@ -125,6 +144,7 @@ object LatticeKeysAuditionGenerator {
                 "pcm16MaxCycleDifference" to proof.pcm16MaxCycleDifference,
                 "pcm24MaxCycleDifference" to proof.pcm24MaxCycleDifference,
                 "stateError" to proof.stateError, "sourceGain" to proof.sourceGain,
+                "heldModel" to spec.heldModel,
                 "loopStateStart" to proof.loopStateStart.toList(), "loopStateEnd" to proof.loopStateEnd.toList(),
                 "directSustainPeak" to proof.directSustainPeak, "renderMillis" to proof.renderMillis,
                 "files" to listOf(prefix, previous, loop).map { mapOf("file" to relative(output, it), "sha256" to sha(it)) },
@@ -133,7 +153,7 @@ object LatticeKeysAuditionGenerator {
         }
         val source = linkedMapOf<String, Any?>(
             "engine" to "LATTICE", "voice" to "TRACE", "patchModel" to spec.patch.model,
-            "heldModel" to LatticeKeys.MODEL_VERSION, "sourceCommit" to revision,
+            "heldModel" to spec.heldModel, "sourceCommit" to revision,
             "workingTreeDirty" to dirty, "sourceFilesSha256" to hashes,
             "sampleRate" to RATE, "oversample" to 4,
         )
@@ -150,7 +170,7 @@ object LatticeKeysAuditionGenerator {
         }
         fun clip(id: String, title: String, description: String, events: List<Event>): Map<String, Any?> {
             val frames = events.maxOf { it.off } + releaseFrames + RATE / 5
-            val recipeFile = File(output, "keys/recipes/$id.json").apply { parentFile.mkdirs() }
+            val recipeFile = File(output, "$CONTENT/recipes/$id.json").apply { parentFile.mkdirs() }
             val recipe = linkedMapOf<String, Any?>(
                 "version" to RECIPE_VERSION, "kind" to "lattice-keygroup-performance", "source" to source,
                 "instrumentSidecar" to relative(output, sidecar), "exportedFilesSha256" to fileHashes,
@@ -162,7 +182,7 @@ object LatticeKeysAuditionGenerator {
             val rendered = performance(loaded, events, frames)
             val replayed = replay(recipeFile)
             check(rendered.samples.contentEquals(replayed.samples)) { "$id recipe Float replay differs" }
-            val audioFile = WavWriter.write(File(output, "keys/clips/$id.wav"), rendered, WavWriter.BitDepth.PCM_16)
+            val audioFile = WavWriter.write(File(output, "$CONTENT/clips/$id.wav"), rendered, WavWriter.BitDepth.PCM_16)
             val replayBytes = ByteArrayOutputStream().also { WavWriter.write(it, replayed, WavWriter.BitDepth.PCM_16) }.toByteArray()
             check(audioFile.readBytes().contentEquals(replayBytes)) { "$id recipe PCM16 replay differs" }
             val pcm = WavReader.read(audioFile)
@@ -195,22 +215,27 @@ object LatticeKeysAuditionGenerator {
                 "sha256" to sha(audioFile), "duration" to frames / RATE.toDouble(),
                 "waveform" to waveform(pcm.samples), "events" to eventRows, "cues" to cues,
                 "metrics" to statistics(pcm.samples), "commonGain" to true,
+                "heldModel" to spec.heldModel,
             )
         }
         val chordNotes = listOf(48, 51, 55)
         val chordOff = chordNotes.mapIndexed { index, midi -> heldFrames(midi) + index * RATE / 3 }.max()
-        val clips = listOf(
-            clip("keys-c3-hold", "Hold C3, then let go", "The opening movement leads into a steady ringing tone. The key stays down through a full loop, then releases over 0.6 seconds.",
+        val heldClips = listOf(
+            clip("keys2-c3-hold", "C3: keep the body through the handoff", "Held model 2 keeps the source driving the collector and changes its fixed pickup polarity. The key stays down through a full loop, then releases over 0.6 seconds. No level matching is applied.",
                 listOf(Event(48, 0, heldFrames(48)))),
-            clip("keys-c4-hold", "The same gesture, one octave up", "C4 uses its own rendered root. Listen across the marked sustain and the key release; no new strike happens at the loop.",
+            clip("keys2-c4-hold", "C4: the revised handoff one octave up", "C4 uses its own held-model-2 rendered root. Listen across the marked sustain and the key release; no new strike happens at the loop.",
                 listOf(Event(60, 0, heldFrames(60)))),
-            clip("keys-chord", "A held C minor chord", "Three staggered key presses settle into the collector together. Every note wraps before all three keys release.",
+            clip("keys2-chord", "A held C minor chord", "Three staggered key presses settle into the revised held collector together. Every note wraps before all three keys release.",
                 chordNotes.mapIndexed { index, midi -> Event(midi, index * RATE / 3, chordOff, .65f) }),
         )
+        val comparison = handoffComparison(output, spec, sidecar, instrument, decoded, source, fileHashes, baseline)
+        val clips = heldClips + comparison
         val validation = linkedMapOf<String, Any?>(
             "exportReadback" to true, "samplerMarkersReadback" to true, "mpc3ContainerReadback" to true,
             "recipesSampleIdentical" to true, "recipeReplayCount" to clips.size,
-            "allClipsWrapAndRelease" to true, "independentCycleProofCount" to proofRows.size,
+            "heldPerformancesWrapAndRelease" to true, "heldPerformanceCount" to heldClips.size,
+            "comparisonIsShortHandoffOnly" to true, "comparisonWrapRequired" to false,
+            "independentCycleProofCount" to proofRows.size, "exportedZoneBodyChecks" to zoneRows.size,
             "physicalPhoneValidated" to false, "mpcHardwareValidated" to false, "ownerListeningAcceptance" to false,
         )
         val measurements = linkedMapOf<String, Any?>(
@@ -223,46 +248,191 @@ object LatticeKeysAuditionGenerator {
             "releaseNote" to "Note-off fades the looping sample through the existing host amplitude envelope; it does not synthesize a separate physical free-decay tail.",
             "renderSeconds" to (System.nanoTime() - started) / 1e9,
         )
-        File(output, "keys-measurements.json").writeText(Json.write(json(measurements)) + "\n")
+        File(output, "$CONTENT/measurements.json").writeText(Json.write(json(measurements)) + "\n")
         File(bundle, "README.txt").writeText(readme(spec.releaseSeconds))
         val zip = archive(output, bundle)
         val manifest = linkedMapOf<String, Any?>(
-            "revision" to 6, "schemaVersion" to 1, "title" to "Lattice · hold the ringing trace",
-            "subtitle" to "TRACE as a keyboard instrument, with its movement, held tone and release.",
-            "revisionTitle" to "Keep the movement.\nHold the ringing tone.",
-            "revisionSummary" to "TRACE now has a separate C3–C5 keyboard instrument. Each key keeps the opening gesture, reaches a measured sustain loop, and fades when you let go.",
-            "revisionNote" to "The accepted B one-shot remains unchanged. These keyboard captures keep the source running at a steady level after the attack; they are a new listening proposal.",
-            "heroClipId" to "keys-c3-hold", "heroTitle" to "Hold C3, then let go",
-            "heroEyebrow" to "TRACE · A KEY HELD THROUGH SUSTAIN",
-            "heroDescription" to "Hear the moving pluck arrive at a held ringing tone. It passes the loop marker, wraps without another attack, then fades when the key is released.",
-            "heroFootnote" to "Playback uses the exported keygroup WAVs and the normal reference player. Release is the host's 0.6 second fade. The accepted B reference remains below.",
+            "revision" to 7, "schemaVersion" to 1, "title" to "Lattice · a steadier handoff",
+            "subtitle" to "Held TRACE model 2: steadier source pressure and a fixed inverted collector pickup.",
+            "revisionTitle" to "Keep the body.\nHold the ringing tone.",
+            "revisionSummary" to "The keyboard version now keeps more source pressure through the handoff and uses a fixed inverted collector pickup. Start with C3, then compare held models 1 and 2 on the same short key press.",
+            "revisionNote" to "This revises the held keyboard sound only. The accepted B one-shot and original held-model-1 files and recipes remain available unchanged. Listening acceptance of held model 2 is still open.",
+            "heroClipId" to "keys2-c3-hold", "heroTitle" to "Hold C3 through the revised handoff",
+            "heroEyebrow" to "TRACE · HELD MODEL 2",
+            "heroDescription" to "Listen to the body as the direct tone gives way to the ringing collector, then across the actual loop and key-release fade. The recording plays the exported samples without level matching.",
+            "heroFootnote" to "Playback uses exported held-model-2 WAVs and the normal reference player. The three held performances wrap before release; the short before/after comparison releases at two seconds and does not reach the loop.",
             "generatedAt" to Instant.now().toString(), "keysEngine" to source, "keysValidation" to validation,
             "clips" to clips, "instrument" to (measurements.getValue("instrument")),
-            "downloads" to mapOf("keygroups" to zip.name, "keysMeasurements" to "keys-measurements.json"),
+            "downloads" to mapOf("keygroups" to zip.name, "keysMeasurements" to "$CONTENT/measurements.json"),
             "archive" to mapOf("file" to zip.name, "sha256" to sha(zip), "bytes" to zip.length()),
         )
         File(output, "keys-manifest.json").writeText(Json.write(json(manifest)) + "\n")
-        File(output, "KEYS-REPLAY.txt").writeText("""
-            LATTICE TRACE KEYS, HELD MODEL ${LatticeKeys.MODEL_VERSION}
+        File(output, "$CONTENT/REPLAY.txt").writeText("""
+            LATTICE TRACE KEYS, HELD MODEL ${spec.heldModel}
 
             Generate: ./gradlew --no-daemon :shell:generateLatticeKeysAudition -PlatticeKeysOutput=/fresh/output
-            Replay: ./gradlew --no-daemon :shell:generateLatticeKeysAudition -PlatticeKeysRecipe=/path/keys/recipes/keys-c3-hold.json -PlatticeKeysReplayOutput=/path/replay.wav
+            Replay: ./gradlew --no-daemon :shell:generateLatticeKeysAudition -PlatticeKeysRecipe=/path/keys2/recipes/keys2-c3-hold.json -PlatticeKeysReplayOutput=/path/replay.wav
 
-            Keep recipes under keys/recipes and the exported instrument under keys/instruments.
+            Keep recipes under keys2/recipes and the exported instruments under keys2/instruments
+            and keys2/before-v1. Original model-1 keys/ recipes still use the same --replay entry point.
             Replay checks the exported sidecar and each WAV SHA-256, then drives InstrumentEngine
-            with the saved exact note-on/off frames. All three PCM16 performances replay byte-identically.
-            keys/diagnostics contains independent synthesis cycles at C3/C4/C5 before playback repeats.
-            keys-measurements.json records source fingerprints, cycle errors and package marker readback.
+            with the saved exact note-on/off frames. The three held performances and short before/after
+            comparison replay byte-identically. The comparison plays model 1 then model 2 at C3,
+            note-on 0 / note-off 2 seconds / release 0.6 seconds, with a nominal 0.2-second gap.
+            The recipe records exact frames; measurements record the Float release's actual silence.
+            That comparison is deliberately shorter than the first loop; the other three performances wrap.
+            keys2/diagnostics contains independent synthesis cycles at C3/C4/C5 before playback repeats.
+            keys2/measurements.json records source fingerprints, cycle errors, raw body/handoff windows
+            across all nine exported roots and package marker readback.
             Native package WAVs are PCM24; clips are PCM16. No loudness matching is applied.
             Physical phone/MPC listening and acceptance of the new held sound remain open.
             Source revision: $revision
         """.trimIndent() + "\n")
-        println("Wrote 9 TRACE keygroups, 3 replay-checked performances and 3 independent cycle proofs in ${(System.nanoTime() - started) / 1e9}s")
+        println("Wrote 9 held-model-2 TRACE keygroups, 4 replay-checked recordings and 3 independent cycle proofs in ${(System.nanoTime() - started) / 1e9}s")
+    }
+
+    private fun handoffComparison(
+        output: File,
+        spec: LatticePadMaker.Spec,
+        sidecar: File,
+        instrument: InstrumentStore.Instrument,
+        decoded: Map<String, Snip>,
+        source: Map<String, Any?>,
+        currentHashes: Map<String, String>,
+        baseline: File?,
+    ): Map<String, Any?> {
+        val legacy = legacyDependency(output, spec, source, baseline)
+        val legacySpec = legacy.spec
+        val legacySidecar = legacy.sidecar
+        val legacyInstrument = legacy.instrument
+        val legacyDecoded = legacy.samples
+
+        val event = Event(48, 0, 2 * RATE)
+        val releaseFrames = ceil(spec.releaseSeconds * RATE.toDouble()).toInt()
+        val gapFrames = RATE / 5
+        // The gap is a nominal .2 seconds after the .6-second host release. The normal
+        // Float envelope can finish a few frames beyond that nominal boundary; record
+        // the actual last nonzero frame rather than silently editing its fade.
+        val partFrames = event.off + releaseFrames + gapFrames
+        val dependencies = listOf(
+            mapOf("heldModel" to 1, "label" to "A · Original held model 1", "instrumentSidecar" to relative(output, legacySidecar),
+                "exportedFilesSha256" to legacy.hashes, "source" to legacy.source,
+                "identityScope" to legacy.identityScope, "sourceRecipe" to Json.parse(legacySpec.toJsonText())),
+            mapOf("heldModel" to spec.heldModel, "label" to "B · Revised held model 2", "instrumentSidecar" to relative(output, sidecar),
+                "exportedFilesSha256" to currentHashes, "source" to source, "sourceRecipe" to Json.parse(spec.toJsonText())),
+        )
+        val parts = listOf(
+            performance(InstrumentEngine.Loaded(legacyInstrument, RATE, legacyDecoded.mapValues { it.value.samples }), listOf(event), partFrames),
+            performance(InstrumentEngine.Loaded(instrument, RATE, decoded.mapValues { it.value.samples }), listOf(event), partFrames),
+        )
+        val recipeFile = File(output, "$CONTENT/recipes/keys2-handoff-before-after.json").apply { parentFile.mkdirs() }
+        val recipe = linkedMapOf<String, Any?>(
+            "version" to RECIPE_VERSION, "kind" to "lattice-keygroup-handoff-comparison", "sampleRate" to RATE,
+            "frames" to 2 * partFrames, "nominalReleaseSeconds" to spec.releaseSeconds,
+            "nominalGapFrames" to gapFrames, "normalization" to "none", "hostVoiceGain" to InstrumentEngine.VOICE_LEVEL,
+            "parts" to dependencies.mapIndexed { index, dependency -> dependency + mapOf(
+                "offsetFrame" to index * partFrames, "frames" to partFrames,
+                "events" to listOf(mapOf("midi" to event.midi, "velocity" to event.velocity,
+                    "noteOnFrame" to event.on, "noteOffFrame" to event.off)),
+            ) },
+        )
+        recipeFile.writeText(Json.write(json(recipe)) + "\n")
+        val joined = FloatArray(2 * partFrames)
+        parts.forEachIndexed { index, part -> part.samples.copyInto(joined, index * partFrames) }
+        val rendered = Snip(joined, 1, RATE)
+        val replayed = replay(recipeFile)
+        check(rendered.samples.contentEquals(replayed.samples)) { "Same-event comparison Float replay differs" }
+        val audioFile = WavWriter.write(File(output, "$CONTENT/clips/keys2-handoff-before-after.wav"), rendered, WavWriter.BitDepth.PCM_16)
+        val replayBytes = ByteArrayOutputStream().also { WavWriter.write(it, replayed, WavWriter.BitDepth.PCM_16) }.toByteArray()
+        check(audioFile.readBytes().contentEquals(replayBytes)) { "Same-event comparison PCM16 replay differs" }
+        val pcm = WavReader.read(audioFile)
+        val partMetrics = parts.mapIndexed { index, part ->
+            val last = part.samples.indexOfLast { it != 0f }
+            val partPcm = pcm.samples.copyOfRange(index * partFrames, (index + 1) * partFrames)
+            val zone = if (index == 0) legacyInstrument.zoneFor(48) else instrument.zoneFor(48)
+            val sourceFrames = requireNotNull(zone).let { if (index == 0) legacyDecoded.getValue(it.sample).frameCount else decoded.getValue(it.sample).frameCount }
+            check(event.off < sourceFrames) { "The short handoff comparison unexpectedly reaches a loop" }
+            mapOf("heldModel" to if (index == 0) 1 else spec.heldModel,
+                "offsetFrame" to index * partFrames, "noteOnFrame" to event.on, "noteOffFrame" to event.off,
+                "lastNonzeroFloatFrame" to last, "trailingSilentFloatFrames" to partFrames - last - 1,
+                "lastNonzeroPcm16Frame" to partPcm.indexOfLast { it != 0f },
+                "firstWrapFrame" to sourceFrames, "wrapsBeforeNoteOff" to false,
+                "statistics" to statistics(partPcm),
+                "bodyAndHandoff" to bodyAndHandoff(partPcm, null, spec.patch.macros.getValue("SPEED")))
+        }
+        val comparison = linkedMapOf<String, Any?>(
+            "id" to "keys2-handoff-before-after", "title" to "Same C3 press: original, then revised handoff",
+            "description" to "A plays held model 1; B plays held model 2 from their actual exported WAVs. Both press C3 at 0 and release at 2 seconds through the same 0.6-second host fade, with a nominal 0.2-second gap. No loudness matching. This short comparison does not reach the sustain loop.",
+            "section" to "keys", "comparison" to true, "tags" to listOf("RAW BEFORE / AFTER", "SAME NOTE ON / OFF"),
+            "file" to relative(output, audioFile), "recipeFile" to relative(output, recipeFile),
+            "sha256" to sha(audioFile), "duration" to joined.size / RATE.toDouble(),
+            "waveform" to waveform(pcm.samples), "commonGain" to true,
+            "cues" to listOf(mapOf("time" to 0.0, "label" to "A · Original held model 1"),
+                mapOf("time" to partFrames / RATE.toDouble(), "label" to "B · Revised held model 2")),
+            "metrics" to statistics(pcm.samples), "parts" to partMetrics,
+            "legacyIdentityScope" to legacy.identityScope,
+            "first35msMaxFloatDifference" to (0 until (RATE * .035).toInt()).maxOf { abs(parts[0].samples[it] - parts[1].samples[it]).toDouble() },
+        )
+        File(output, "$CONTENT/handoff-comparison.json").writeText(Json.write(json(comparison)) + "\n")
+        return comparison
+    }
+
+    private fun legacyDependency(output: File, spec: LatticePadMaker.Spec, source: Map<String, Any?>, baseline: File?): LegacyDependency {
+        val destination = File(output, "$CONTENT/before-v1").apply { check(mkdirs()) }
+        val legacySpec: LatticePadMaker.Spec
+        val legacySidecar: File
+        val legacyInstrument: InstrumentStore.Instrument
+        val legacySource: Any
+        val identityScope: String
+        if (baseline != null) {
+            val measurements = Json.parse(File(baseline, "keys-measurements.json").readText()).obj()
+            legacySpec = LatticePadMaker.Spec.fromJsonText(Json.write(measurements.getValue("sourceRecipe")))
+            require(legacySpec.heldModel == 1) { "The comparison baseline must be held model 1" }
+            require(legacySpec.patch == spec.patch && legacySpec.releaseSeconds == spec.releaseSeconds) {
+                "Before/after comparison requires the same source patch and release in both models"
+            }
+            val oldKeys = File(baseline, "keys")
+            require(oldKeys.isDirectory) { "The comparison baseline has no keys/ dependencies" }
+            oldKeys.walkTopDown().filter { it.isFile }.forEach { file ->
+                val copy = File(destination, "keys/${relative(oldKeys, file)}")
+                check(copy.parentFile.mkdirs() || copy.parentFile.isDirectory)
+                file.copyTo(copy)
+                check(sha(file) == sha(copy)) { "Published held-model-1 dependency changed while copying" }
+            }
+            for (name in listOf("keys-manifest.json", "keys-measurements.json")) {
+                val original = File(baseline, name)
+                original.copyTo(File(destination, name))
+                check(sha(original) == sha(File(destination, name)))
+            }
+            val oldSidecarPath = measurements.getValue("instrument").obj().getValue("sidecar").str()
+            legacySidecar = File(destination, oldSidecarPath).canonicalFile
+            require(legacySidecar.toPath().startsWith(destination.canonicalFile.toPath()))
+            legacyInstrument = InstrumentStore.read(legacySidecar)
+            legacySource = measurements.getValue("keysEngine")
+            identityScope = "Byte-identical published held-model-1 package copied with its original keys-manifest.json, keys-measurements.json and source fingerprints. Comparison recipe paths are scoped to keys2/before-v1; original keys/ artifacts remain unchanged."
+        } else {
+            legacySpec = spec.copy(heldModel = 1)
+            val bundle = File(destination, "instruments/$NAME").apply { check(mkdirs()) }
+            val notes = LatticePadMaker.zoneMidis(legacySpec).map { LatticePadMaker.renderZone(legacySpec, it) }
+            LatticePadMaker.export(NAME, legacySpec, notes, bundle)
+            val stored = InstrumentStore.list(bundle).single()
+            legacySidecar = stored.first
+            legacyInstrument = stored.second
+            legacySource = source + mapOf("heldModel" to 1)
+            identityScope = "Legacy held-model-1 renderer exported by this source snapshot. No published-v1 baseline was supplied; this is a fresh export, not a claim about the hashes or source snapshot of the original publication."
+        }
+        val samples = legacyInstrument.sampleFiles.associateWith { WavReader.read(File(legacySidecar.parentFile, it)) }
+        val hashes = (listOf(legacySidecar) + legacyInstrument.sampleFiles.map { File(legacySidecar.parentFile, it) })
+            .associate { relative(output, it) to sha(it) }
+        File(destination, "ORIGIN.txt").writeText(identityScope + "\n")
+        return LegacyDependency(legacySpec, legacySidecar, legacyInstrument, samples, legacySource, hashes, identityScope)
     }
 
     private fun replay(recipeFile: File): Snip {
         val recipe = Json.parse(recipeFile.readText()).obj()
-        require(recipe.getValue("version").int() == RECIPE_VERSION && recipe.getValue("kind").str() == "lattice-keygroup-performance")
+        require(recipe.getValue("version").int() == RECIPE_VERSION)
+        if (recipe.getValue("kind").str() == "lattice-keygroup-handoff-comparison") return replayComparison(recipeFile, recipe)
+        require(recipe.getValue("kind").str() == "lattice-keygroup-performance")
         require(recipe.getValue("sampleRate").int() == RATE)
         val root = recipeFile.canonicalFile.parentFile.parentFile.parentFile
         fun inside(path: String): File = File(root, path).canonicalFile.also { require(it.toPath().startsWith(root.toPath())) }
@@ -277,6 +447,36 @@ object LatticeKeysAuditionGenerator {
             Event(row.getValue("midi").int(), row.getValue("noteOnFrame").int(), row.getValue("noteOffFrame").int(), row.getValue("velocity").num().toFloat())
         }
         return performance(InstrumentEngine.Loaded(instrument, RATE, samples), events, recipe.getValue("frames").int())
+    }
+
+    private fun replayComparison(recipeFile: File, recipe: Map<String, JsonValue>): Snip {
+        require(recipe.getValue("sampleRate").int() == RATE)
+        require(recipe.getValue("normalization").str() == "none")
+        val root = recipeFile.canonicalFile.parentFile.parentFile.parentFile
+        fun inside(path: String): File = File(root, path).canonicalFile.also { require(it.toPath().startsWith(root.toPath())) }
+        val out = FloatArray(recipe.getValue("frames").int())
+        val occupied = BooleanArray(out.size)
+        recipe.getValue("parts").arr().forEach { value ->
+            val part = value.obj()
+            part.getValue("exportedFilesSha256").obj().forEach { (path, hash) ->
+                require(sha(inside(path)) == hash.str()) { "Exported comparison dependency changed: $path" }
+            }
+            val sidecar = inside(part.getValue("instrumentSidecar").str())
+            val instrument = InstrumentStore.read(sidecar)
+            val samples = instrument.sampleFiles.associateWith { WavReader.read(File(sidecar.parentFile, it)).samples }
+            val events = part.getValue("events").arr().map { row -> row.obj().let {
+                Event(it.getValue("midi").int(), it.getValue("noteOnFrame").int(), it.getValue("noteOffFrame").int(), it.getValue("velocity").num().toFloat())
+            } }
+            val rendered = performance(InstrumentEngine.Loaded(instrument, RATE, samples), events, part.getValue("frames").int())
+            val offset = part.getValue("offsetFrame").int()
+            require(offset >= 0 && offset <= out.size - rendered.frameCount)
+            for (i in rendered.samples.indices) {
+                require(!occupied[offset + i]) { "Comparison recipe contains overlapping parts" }
+                occupied[offset + i] = true
+                out[offset + i] = rendered.samples[i]
+            }
+        }
+        return Snip(out, 1, RATE)
     }
 
     private fun performance(loaded: InstrumentEngine.Loaded, events: List<Event>, frames: Int): Snip {
@@ -307,7 +507,7 @@ object LatticeKeysAuditionGenerator {
 
     private fun archive(output: File, bundle: File): File {
         val files = bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.toList()
-        val archive = File(output, "lattice-trace-keys.zip")
+        val archive = File(output, "lattice-trace-keys-v2.zip")
         ZipOutputStream(archive.outputStream().buffered()).use { zip ->
             files.forEach { file ->
                 zip.putNextEntry(ZipEntry("${bundle.name}/${relative(bundle, file)}").apply { time = 0 })
@@ -323,7 +523,7 @@ object LatticeKeysAuditionGenerator {
     }
 
     private fun readme(release: Float) = """
-        LATTICE TRACE KEYS
+        LATTICE TRACE KEYS, HELD MODEL 2
 
         Nine native roots C3–C5, every minor third. The program covers MIDI 48–72.
         Each mono PCM24 sample contains its real onset followed by one settled loop.
@@ -331,6 +531,12 @@ object LatticeKeysAuditionGenerator {
         inside TrackData. The .instrument.json sidecar is for SnipSnap's player.
         $NAME.lattice-keys.json preserves the complete finite source patch and
         separately versioned held recipe. The finite B rendering stays unchanged.
+
+        Held model 2 continues the pluck's source effort after reference time .035
+        and reaches .80 pressure by .08 seconds. A fixed -2 collector pickup changes
+        the signed readout before the direct/halo mix. There is no output makeup gain,
+        automatic level following or loop splice. These choices address the original
+        handoff loss; the owner's listening verdict on this revision remains open.
 
         Keyboard mode keeps the source driving the collector after the opening
         movement. SPEED changes movement timing. The saved finite HOLD value does
@@ -355,6 +561,70 @@ object LatticeKeysAuditionGenerator {
     }
     private fun rms(samples: FloatArray, begin: Int, end: Int): Double =
         sqrt((begin until end).sumOf { samples[it].toDouble() * samples[it] } / (end - begin))
+    private fun bodyAndHandoff(samples: FloatArray, loopStart: Int?, speed: Float): Map<String, Any?> {
+        fun at(seconds: Double) = (seconds * RATE).toInt().coerceIn(0, samples.size)
+        fun window(begin: Int, end: Int): Map<String, Any?> = mapOf(
+            "startFrame" to begin, "endFrameExclusive" to end,
+            "startSeconds" to begin / RATE.toDouble(), "endSeconds" to end / RATE.toDouble(),
+            "rms" to rms(samples, begin, end),
+        )
+        val bodyBegin = at(.05)
+        val bodyEnd = at(.15)
+        val body = rms(samples, bodyBegin, bodyEnd)
+        val initialBody = rms(samples, at(.02), at(.08))
+        val attack = rms(samples, at(.01), at(.035))
+        val steadyBegin = loopStart ?: at(1.0)
+        val steadyEnd = if (loopStart != null) samples.size else at(1.8)
+        val steady = rms(samples, steadyBegin, steadyEnd)
+        val width = RATE / 20
+        val hop = RATE / 200
+        fun scan(begin: Int, end: Int): Map<String, Any?> {
+            require(end - begin >= 2 * width)
+            var worstStart = begin
+            var largestSignedDrop = Double.NEGATIVE_INFINITY
+            for (start in begin..(end - 2 * width) step hop) {
+                val before = rms(samples, start, start + width)
+                val after = rms(samples, start + width, start + 2 * width)
+                val drop = 20.0 * log10(before.coerceAtLeast(1e-20) / after.coerceAtLeast(1e-20))
+                if (drop > largestSignedDrop) {
+                    largestSignedDrop = drop; worstStart = start
+                }
+            }
+            return mapOf(
+                "startFrame" to begin, "endFrameExclusive" to end,
+                "startSeconds" to begin / RATE.toDouble(), "endSeconds" to end / RATE.toDouble(),
+                "windowFrames" to width, "stepFrames" to hop,
+                "largestDownwardDb" to largestSignedDrop.coerceAtLeast(0.0),
+                "largestSignedBeforeAfterDb" to largestSignedDrop,
+                "before" to window(worstStart, worstStart + width),
+                "after" to window(worstStart + width, worstStart + 2 * width),
+                "definition" to "Largest downward dB change between adjacent 50ms RMS windows, scanned every approximately 5ms. A negative signed change is a rise; largestDownwardDb is zero when there is no drop.",
+            )
+        }
+        // This is the authored TRACE clock from LatticeMotion. Only the measurement
+        // window is warped; the exported samples are never time-warped or modified.
+        val scale = if (speed == .5f) 1.0 else 2.0.pow(1.0 - 2.0 * speed.toDouble())
+        fun physicalTime(reference: Double) = if (scale == 1.0 || reference <= .035) reference else .035 + (reference - .035) * scale
+        val handoffBegin = at(physicalTime(.20))
+        val handoffEnd = at(physicalTime(.50))
+        return linkedMapOf(
+            "measurementScope" to if (loopStart != null) "Exported PCM24 keygroup layer at its native root; fixed source gain, no host gain or normalization." else "Exported PCM16 host-performance segment, fixed event velocity and host voice gain; no output normalization.",
+            "initialBody" to window(at(.02), at(.08)), "initialBodyRms" to initialBody,
+            "fixedAttack" to window(at(.01), at(.035)), "fixedAttackRms" to attack,
+            "body" to window(bodyBegin, bodyEnd),
+            "steady" to window(steadyBegin, steadyEnd),
+            "steadyToInitialBodyDb" to 20.0 * log10(steady.coerceAtLeast(1e-20) / initialBody.coerceAtLeast(1e-20)),
+            "steadyToFixedAttackDb" to 20.0 * log10(steady.coerceAtLeast(1e-20) / attack.coerceAtLeast(1e-20)),
+            "steadyToBodyDb" to 20.0 * log10(steady.coerceAtLeast(1e-20) / body.coerceAtLeast(1e-20)),
+            "early50msWindows" to (1..19).map { index -> window(index * width, (index + 1) * width) },
+            "earlyPassageScan" to scan(at(.05), at(1.0)),
+            "earlyPassageNote" to "Includes the accepted early gate closure; this global .05–1.0s scan is not the isolated collector handoff result.",
+            "handoffScan" to (scan(handoffBegin, handoffEnd) + mapOf(
+                "referenceStartSeconds" to .20, "referenceEndSeconds" to .50,
+                "speed" to speed, "movementTimeScale" to scale,
+                "clock" to "Physical seconds = .035 + (reference seconds - .035) × 2^(1 - 2 × SPEED), preserving times through .035s.")),
+        )
+    }
     private fun statistics(samples: FloatArray): Map<String, Double> = mapOf(
         "peak" to samples.maxOf { abs(it).toDouble() }, "rms" to rms(samples, 0, samples.size),
         "dc" to samples.sumOf { it.toDouble() } / samples.size,

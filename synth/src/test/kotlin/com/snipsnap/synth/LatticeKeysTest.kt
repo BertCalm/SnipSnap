@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -10,6 +11,7 @@ import java.security.MessageDigest
 import java.util.concurrent.CancellationException
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -36,28 +38,116 @@ class LatticeKeysTest {
     }
 
     @Test
-    fun `the source keeps the accepted pluck then reaches a monotone nonzero floor`() {
+    fun `legacy held model keeps its original pluck and floor`() {
         val velocity = .75f
         val attack = .025 - .013 * velocity
-        assertEquals(0.0, LatticeKeys.sourceEffort(0.0, velocity), "the causal source must start at rest")
+        assertEquals(0.0, LatticeKeys.sourceEffort(0.0, velocity, 1), "the causal source must start at rest")
         for (i in 1..300) {
             val t = i / 1000.0
-            if (t >= attack) assertEquals(exp(-t / .23), LatticeKeys.sourceEffort(t, velocity), 1e-15)
+            if (t >= attack) assertEquals(exp(-t / .23), LatticeKeys.sourceEffort(t, velocity, 1), 1e-15)
         }
-        var previous = LatticeKeys.sourceEffort(.30, velocity)
+        var previous = LatticeKeys.sourceEffort(.30, velocity, 1)
         for (i in 1..1500) {
-            val value = LatticeKeys.sourceEffort(.30 + i / 10_000.0, velocity)
+            val value = LatticeKeys.sourceEffort(.30 + i / 10_000.0, velocity, 1)
             assertTrue(value <= previous + 1e-14, "source effort rose during transition at $i")
-            assertTrue(value >= LatticeKeys.SOURCE_FLOOR - 1e-14, "source effort undershot the floor at $i")
+            assertTrue(value >= .20 - 1e-14, "source effort undershot the floor at $i")
             previous = value
         }
-        assertEquals(LatticeKeys.SOURCE_FLOOR, LatticeKeys.sourceEffort(.45, velocity))
-        assertEquals(LatticeKeys.SOURCE_FLOOR, LatticeKeys.sourceEffort(20.0, velocity))
+        assertEquals(.20, LatticeKeys.sourceEffort(.45, velocity, 1))
+        assertEquals(.20, LatticeKeys.sourceEffort(20.0, velocity, 1))
         val epsilon = 1e-7
-        val before = (LatticeKeys.sourceEffort(.30, velocity) - LatticeKeys.sourceEffort(.30 - epsilon, velocity)) / epsilon
-        val after = (LatticeKeys.sourceEffort(.30 + epsilon, velocity) - LatticeKeys.sourceEffort(.30, velocity)) / epsilon
+        val before = (LatticeKeys.sourceEffort(.30, velocity, 1) - LatticeKeys.sourceEffort(.30 - epsilon, velocity, 1)) / epsilon
+        val after = (LatticeKeys.sourceEffort(.30 + epsilon, velocity, 1) - LatticeKeys.sourceEffort(.30, velocity, 1)) / epsilon
         assertEquals(before, after, 2e-5, "the decay slope jumped at the transition")
-        assertTrue(abs((LatticeKeys.sourceEffort(.45, velocity) - LatticeKeys.sourceEffort(.45 - epsilon, velocity)) / epsilon) < 2e-5)
+        assertTrue(abs((LatticeKeys.sourceEffort(.45, velocity, 1) - LatticeKeys.sourceEffort(.45 - epsilon, velocity, 1)) / epsilon) < 2e-5)
+    }
+
+    @Test
+    fun `new held pressure preserves onset and joins its sustained effort without a step or undershoot`() {
+        for (velocity in listOf(0f, .2f, .75f, 1f)) {
+            for (i in 0..350) {
+                val t = i / 10_000.0
+                assertEquals(LatticeKeys.sourceEffort(t, velocity, 1), LatticeKeys.sourceEffort(t, velocity, 2),
+                    "the held source changed the preserved onset at $t")
+            }
+            var previous = LatticeKeys.sourceEffort(LatticeKeys.TRANSITION_START, velocity)
+            for (i in 1..1000) {
+                val t = LatticeKeys.TRANSITION_START +
+                    (LatticeKeys.TRANSITION_END - LatticeKeys.TRANSITION_START) * i / 1000.0
+                val effort = LatticeKeys.sourceEffort(t, velocity)
+                assertTrue(effort <= previous + 1e-14, "held source rose at $t")
+                assertTrue(effort >= LatticeKeys.SOURCE_FLOOR - 1e-14, "held source undershot at $t")
+                previous = effort
+            }
+            val epsilon = 1e-7
+            val t = LatticeKeys.TRANSITION_START
+            val before = (LatticeKeys.sourceEffort(t, velocity) - LatticeKeys.sourceEffort(t - epsilon, velocity)) / epsilon
+            val after = (LatticeKeys.sourceEffort(t + epsilon, velocity) - LatticeKeys.sourceEffort(t, velocity)) / epsilon
+            assertEquals(before, after, 3e-5, "held source slope jumped at transition")
+            val end = LatticeKeys.TRANSITION_END
+            assertTrue(abs((LatticeKeys.sourceEffort(end, velocity) - LatticeKeys.sourceEffort(end - epsilon, velocity)) / epsilon) < 3e-5)
+            assertEquals(LatticeKeys.SOURCE_FLOOR, LatticeKeys.sourceEffort(20.0, velocity))
+        }
+    }
+
+    @Test
+    fun `saved held model one replays the frozen native samples at every measured corner`() {
+        val fixture = Json.parse(requireNotNull(javaClass.getResource("/lattice-held-v1.json")).readText()).obj()
+        assertEquals(1, fixture.getValue("heldModel").int())
+        for (value in fixture.getValue("examples").arr()) {
+            val row = value.obj()
+            val midi = row.getValue("midi").int()
+            val speed = row.getValue("speed").num().toFloat()
+            val velocity = row.getValue("velocity").num().toFloat()
+            val note = LatticeKeys.note(patch(speed, velocity), midi, heldModel = 1)
+            assertEquals(row.getValue("loopStartFrame").num().toLong(), note.loopStartFrame)
+            assertEquals(row.getValue("frameCount").int(), note.snip.frameCount)
+            val bytes = ByteBuffer.allocate(note.snip.samples.size * 4).order(ByteOrder.BIG_ENDIAN)
+            note.snip.samples.forEach { bytes.putInt(it.toRawBits()) }
+            val hash = MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it) }
+            assertEquals(row.getValue("float32Sha256").str(), hash, "legacy MIDI$midi SPEED$speed velocity$velocity changed")
+        }
+        for (bad in listOf(-1, 0, 3, Int.MAX_VALUE)) {
+            assertFalse(LatticeKeys.supportsHeldModel(bad))
+            assertFailsWith<IllegalArgumentException> { LatticeKeys.note(patch(), heldModel = bad) }
+        }
+    }
+
+    @Test
+    fun `held model two keeps the handoff audible without normalizing the finished note`() {
+        for (midi in listOf(48, 60, 72)) for (speed in listOf(0f, .5f, 1f)) for (velocity in listOf(.2f, .75f, 1f)) {
+            val p = if (velocity == .75f) examples.single { it.midi == midi && it.speed == speed }.probe
+                else LatticeKeys.probe(patch(speed, velocity), midi)
+            val samples = p.note.snip.samples
+            val steady = rms(samples.copyOfRange(p.prefixFrames, samples.size))
+            val attackBody = windowRms(samples, .010, .025)
+            val levelFromAttack = 20 * log10(steady / attackBody)
+            val label = "MIDI$midi SPEED$speed velocity$velocity"
+            assertTrue(levelFromAttack in -6.0..1.0, "$label lost held body relative to its attack: $levelFromAttack dB")
+            assertTrue(samples.maxOf { abs(it) } < .4f, "$label lost fixed-gain headroom")
+            // The accepted early gate closure may fall rapidly. This guard isolates the
+            // handoff that used to cancel, using reference time so SPEED cannot skip it.
+            val scale = LatticeMotion.timeScale(speed)
+            val start = LatticeMotion.physicalTime(.20, scale)
+            val end = LatticeMotion.physicalTime(.50, scale)
+            var t = start
+            var worstDip = 0.0
+            var largestDrop = 0.0
+            while (t + .020 <= end) {
+                val db = 20 * log10(windowRms(samples, t, .020) / steady)
+                assertTrue(db in -6.5..2.5, "$label handoff window at $t departed from held level by $db dB")
+                worstDip = minOf(worstDip, db)
+                if (t + .100 <= end) {
+                    val before = windowRms(samples, t, .050)
+                    val after = windowRms(samples, t + .050, .050)
+                    val drop = 20 * log10(before / after)
+                    largestDrop = maxOf(largestDrop, drop)
+                    assertTrue(drop <= 2.0, "$label handoff dropped $drop dB between adjacent 50 ms windows at $t")
+                }
+                t += .005
+            }
+            println("LATTICE KEYS V2 $label held-v-attack=$levelFromAttack dB handoffDip=$worstDip dB adjacentDrop=$largestDrop dB")
+        }
     }
 
     @Test
@@ -84,7 +174,7 @@ class LatticeKeysTest {
             assertTrue(abs(p.pitchErrorCents) < .02, "$label root fit moved pitch ${p.pitchErrorCents} cents")
             val detected = FineTuning.measuredHz(Snip(loop, 1, Dsp.RATE), Keys.midiHz(midi), .12f, .5f)
             assertTrue(abs(FineTuning.cents(detected, p.requestedHz)) < 10.0, "$label lost root pitch: $detected")
-            assertEquals(LatticeMotion.physicalTime(.45, LatticeMotion.timeScale(speed)), p.transitionEndSeconds, 1e-12)
+            assertEquals(LatticeMotion.physicalTime(LatticeKeys.TRANSITION_END, LatticeMotion.timeScale(speed)), p.transitionEndSeconds, 1e-12)
             println("LATTICE KEYS $label prefix=${p.prefixSeconds}s loop=${p.loopFrames} " +
                 "state=${p.stateError} cycle=${p.cycleError} seam=${p.seamError} " +
                 "pcm16=${p.pcm16MaxCycleDifference} pcm24=${p.pcm24MaxCycleDifference} renderMs=${p.renderMillis}")
@@ -174,6 +264,13 @@ class LatticeKeysTest {
     }
 
     private fun rms(samples: FloatArray): Double = sqrt(samples.sumOf { it.toDouble() * it } / samples.size)
+
+    private fun windowRms(samples: FloatArray, from: Double, seconds: Double): Double {
+        val start = (from * Dsp.RATE).roundToInt()
+        val end = minOf(samples.size, start + (seconds * Dsp.RATE).roundToInt())
+        require(start >= 0 && end > start)
+        return sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))
+    }
 
     private fun encoded(samples: FloatArray, depth: WavWriter.BitDepth): FloatArray =
         WavReader.read(ByteArrayOutputStream().also { WavWriter.write(it, Snip(samples, 1, Dsp.RATE), depth) }.toByteArray()).samples

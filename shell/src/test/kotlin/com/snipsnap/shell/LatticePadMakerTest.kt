@@ -46,7 +46,7 @@ class LatticePadMakerTest {
         assertEquals(patch.toJsonText(), restored.patch.toJsonText())
         assertEquals(.7f, restored.patch.macros.getValue("HOLD"), "keyboard capture must not rewrite finite HOLD")
         assertFailsWith<JsonException> {
-            LatticePadMaker.Spec.fromJsonText(spec.toJsonText().replace("\"heldModel\": 1", "\"heldModel\": 999"))
+            LatticePadMaker.Spec.fromJsonText(spec.toJsonText().replace("\"heldModel\": ${spec.heldModel}", "\"heldModel\": 999"))
         }
         assertFailsWith<JsonException> {
             LatticePadMaker.Spec.fromJsonText(spec.toJsonText().replaceFirst("\"version\": 1", "\"version\": 999"))
@@ -59,6 +59,31 @@ class LatticePadMakerTest {
         for (release in listOf(Float.NaN, Float.POSITIVE_INFINITY, 0f, 2f)) {
             assertFailsWith<IllegalArgumentException> { LatticePadMaker.Spec(patch, release) }
         }
+        val legacy = spec.copy(heldModel = 1)
+        assertEquals(legacy, LatticePadMaker.Spec.fromJsonText(legacy.toJsonText()))
+        assertEquals(1, LatticePadMaker.Spec.fromJsonText(legacy.toJsonText()).heldModel)
+        assertEquals(2, spec.heldModel)
+        assertFailsWith<IllegalArgumentException> { spec.copy(heldModel = 999) }
+    }
+
+    @Test
+    fun `reopened legacy recipe keeps its quiet capture while new instruments use the balanced handoff`() {
+        val legacy = LatticePadMaker.Spec.fromJsonText(spec.copy(heldModel = 1).toJsonText())
+        val old = LatticePadMaker.renderZone(legacy, 60)
+        val current = LatticePadMaker.renderZone(spec, 60)
+        fun loopRms(note: KeyNote): Double {
+            val samples = note.snip.samples
+            val start = note.loopStartFrame.toInt()
+            return kotlin.math.sqrt((start until samples.size).sumOf { samples[it].toDouble() * samples[it] } /
+                (samples.size - start))
+        }
+        val ratio = loopRms(current) / loopRms(old)
+        assertTrue(ratio in 7.5..8.5,
+            "held-model dispatch lost its authored source/pickup ratio: $ratio; old recipes must remain model 1")
+        assertContentEquals(old.snip.samples.copyOf(1000), current.snip.samples.copyOf(1000),
+            "balancing the collector must preserve the opening before the gate movement")
+        assertEquals(1, legacy.heldModel)
+        assertEquals(2, spec.heldModel)
     }
 
     @Test

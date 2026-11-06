@@ -548,7 +548,7 @@ object Lattice {
     )
 
     /** Keyboard-only causal run. The finite model above never enters this path. */
-    internal fun traceKeyProbe(patch: LatticePatch, midi: Int, cancelled: () -> Boolean): LatticeKeyProbe {
+    internal fun traceKeyProbe(patch: LatticePatch, midi: Int, cancelled: () -> Boolean, heldModel: Int): LatticeKeyProbe {
         val started = System.nanoTime()
         stopIfUnwanted(cancelled)
         val m = settled(LatticeVoice.TRACE, patch.macros)
@@ -578,11 +578,16 @@ object Lattice {
                 block = motion.block(i / CONTROL_BLOCK)
             }
             val t = motion.sourceTime(i.toDouble() / rate)
-            bank.next(groups, LatticeKeys.sourceEffort(t, patch.velocity))
+            bank.next(groups, LatticeKeys.sourceEffort(t, patch.velocity, heldModel))
             var dry = 0.0
             for (g in 0 until GROUPS) dry += groups[g] * block.geometry.groups[g].transmission
             val collected = halo.process(groups, block.drives)
-            val mixed = (1.0 - block.reject) * dry + block.reject * collected
+            // A rising projection angle gives the signed collector the opposite polarity
+            // to the passing carrier. Model 2's fixed pickup orientation prevents their
+            // readouts from nulling while the gate movement hands sound to the collector.
+            // Model 1 retains its exact arithmetic for saved keyboard recipes.
+            val mixed = if (heldModel == 1) (1.0 - block.reject) * dry + block.reject * collected
+                else (1.0 - block.reject) * dry + block.reject * LatticeKeys.COLLECTOR_PICKUP * collected
             check(mixed.isFinite()) { "LATTICE key generated a non-finite sample at $i" }
             raw[i] = mixed.toFloat()
             val cycle = i / cycleSamples
@@ -599,7 +604,7 @@ object Lattice {
             conditioned[i] -= dc.lp(conditioned[i], 8f)
         }
         check(conditioned.all { it.isFinite() && abs(it) <= .99f }) { "LATTICE key exceeds fixed-gain headroom" }
-        val transitionEnd = LatticeMotion.physicalTime(LatticeKeys.TRANSITION_END, motion.scale)
+        val transitionEnd = LatticeMotion.physicalTime(LatticeKeys.sourceTransitionEnd(heldModel), motion.scale)
         val layerGain = if (patch.velocity > 0f) patch.velocity.toDouble().pow(.72).toFloat() else 1f
         for (endCycle in 3..LatticeKeys.MAX_CYCLES) {
             stopIfUnwanted(cancelled)

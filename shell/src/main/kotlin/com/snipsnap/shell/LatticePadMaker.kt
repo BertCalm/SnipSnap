@@ -29,9 +29,11 @@ object LatticePadMaker {
     private const val RECIPE_VERSION = 1
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, .6f, exponential = true)
 
-    data class Spec(val patch: LatticePatch, val releaseSeconds: Float = RELEASE.default) {
+    data class Spec(val patch: LatticePatch, val releaseSeconds: Float = RELEASE.default,
+                    val heldModel: Int = LatticeKeys.MODEL_VERSION) {
         init {
             require(supports(patch)) { "LATTICE keys require model-2 TRACE" }
+            require(LatticeKeys.supportsHeldModel(heldModel)) { "unsupported LATTICE held model $heldModel" }
             require(releaseSeconds.isFinite() && releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
                 "release wants $RELEASE_MIN_SECONDS..$RELEASE_MAX_SECONDS s, got $releaseSeconds"
             }
@@ -40,7 +42,7 @@ object LatticePadMaker {
         /** Keyboard delivery has its own version; the original finite source patch stays replayable. */
         fun toJsonText(): String = Json.write(JsonValue.Obj(linkedMapOf(
             "version" to JsonValue.Num(RECIPE_VERSION.toDouble()),
-            "heldModel" to JsonValue.Num(LatticeKeys.MODEL_VERSION.toDouble()),
+            "heldModel" to JsonValue.Num(heldModel.toDouble()),
             "releaseSeconds" to JsonValue.Num(releaseSeconds.toDouble()),
             "patch" to patch.toJsonValue(),
         )))
@@ -51,10 +53,10 @@ object LatticePadMaker {
                 val version = obj["version"]?.int() ?: throw JsonException("LATTICE keys recipe has no version")
                 if (version != RECIPE_VERSION) throw JsonException("unsupported LATTICE keys recipe version $version")
                 val heldModel = obj["heldModel"]?.int() ?: throw JsonException("LATTICE keys recipe has no held model")
-                if (heldModel != LatticeKeys.MODEL_VERSION) throw JsonException("unsupported LATTICE held model $heldModel")
+                if (!LatticeKeys.supportsHeldModel(heldModel)) throw JsonException("unsupported LATTICE held model $heldModel")
                 val patch = LatticePatch.fromJsonValue(obj["patch"] ?: throw JsonException("LATTICE keys recipe has no patch"))
                 val release = obj["releaseSeconds"]?.num()?.toFloat() ?: throw JsonException("LATTICE keys recipe has no release")
-                return Spec(patch, release)
+                return Spec(patch, release, heldModel)
             }
         }
     }
@@ -69,7 +71,7 @@ object LatticePadMaker {
     /** Absolute roots override saved MIDI/TUNE. Remove capture gain once; keep its velocity-shaped spectrum. */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
         require(midi in zoneMidis(spec)) { "LATTICE zone root must be one of ${zoneMidis(spec)}" }
-        return LatticeKeys.layer(spec.patch, midi, cancelled)
+        return LatticeKeys.layer(spec.patch, midi, cancelled, heldModel = spec.heldModel)
     }
 
     fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> {
