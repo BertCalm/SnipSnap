@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { webcrypto } from 'node:crypto';
+import { webcrypto, createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { decodeCache, digest } from './player/cache.mjs';
 import { ReleaseReader } from './player/pcm-engine.mjs';
@@ -15,21 +15,28 @@ const decodedAt = performance.now();
 const pcm = await decodeCache(m, packed);
 const decodeMilliseconds = performance.now() - decodedAt;
 const fixture = JSON.parse(fs.readFileSync(path.join(out, 'raw/reader-fixtures.json')));
-const bytes = fs.readFileSync(path.join(out, 'raw/reader-fixtures.f32'));
-assert.equal(await digest(bytes), fixture.sha256);
-const expected = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+const fixturePath = path.join(out, 'raw/reader-fixtures.f32');
+const fixtureHash = createHash('sha256');
+for await (const chunk of fs.createReadStream(fixturePath)) fixtureHash.update(chunk);
+assert.equal(fixtureHash.digest('hex'), fixture.sha256);
+assert.equal(fs.statSync(fixturePath).size, fixture.cuts.length * fixture.frames * 4);
+const fixtureFile = fs.openSync(fixturePath, 'r');
+const expected = new Float32Array(fixture.frames);
+const expectedBytes = Buffer.from(expected.buffer);
 const block = new Float32Array(128);
 let maxPortError = 0;
 for (let row = 0; row < fixture.cuts.length; row++) {
+  assert.equal(fs.readSync(fixtureFile, expectedBytes, 0, expectedBytes.length, row * expectedBytes.length), expectedBytes.length);
   const reader = new ReleaseReader(m, pcm); reader.start(1);
   reader.voices[0].pos = fixture.cuts[row]; reader.release(1);
   for (let at = 0; at < fixture.frames; at += 128) {
     const part = block.subarray(0, Math.min(128, fixture.frames - at));
     reader.process(part);
-    for (let i = 0; i < part.length; i++) maxPortError = Math.max(maxPortError, Math.abs(part[i] - expected[row * fixture.frames + at + i]));
+    for (let i = 0; i < part.length; i++) maxPortError = Math.max(maxPortError, Math.abs(part[i] - expected[at + i]));
   }
   assert.equal(reader.voices.length, 0, `stuck release at ${fixture.cuts[row]}`);
 }
+fs.closeSync(fixtureFile);
 assert(maxPortError < 1e-7, `JS/Python transport differs: ${maxPortError}`);
 
 // Algebraic invariants catch coefficient errors independently of the Python port.
