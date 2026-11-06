@@ -776,7 +776,7 @@ object Copy {
      */
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
-        "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
+        "· HOLD A KIT ON THE SHELF TO RENAME IT, OR TO BIN IT.",
         "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
         "· TILT THE PHONE ON SURFACE FOR RESONANCE, EVEN IN MORPH.",
@@ -2989,11 +2989,13 @@ object Copy {
      */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
     /**
-     * MAKE's header: what the place is, and where its sounds land. Every lab
-     * sends to the active kit, so the line says the one thing the four rows
-     * under it share.
+     * MAKE's header: what the place is, and nothing about where it lands.
+     * "EACH ONE LANDS ON THE ACTIVE KIT" was false: SYNTH, SNAP, SURFACE,
+     * CONFLUENCE VOICES and MY VOICE write a pad, but INSTRUMENTS only lists
+     * what was made and does not touch the kit's pads. The rows say their own
+     * destinations ([makeSub], `Places.HELP`).
      */
-    const val MAKE_HEADER = "SOUND FROM NOTHING. EACH ONE LANDS ON THE ACTIVE KIT."
+    const val MAKE_HEADER = "SOUND FROM NOTHING."
     /**
      * The line under MAKE's header when no kit is active, and the same
      * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).
