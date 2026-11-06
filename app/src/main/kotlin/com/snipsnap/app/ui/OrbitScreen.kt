@@ -1399,6 +1399,17 @@ private fun padLabel(slot: Int): String {
 private fun padColor(kit: Kit, slot: Int, fallback: Color): Color =
     kit.pads.firstOrNull { it.slot == slot }?.let { Schemes.classColor(it.drumClass).tape } ?: fallback
 
+/**
+ * UNDO, in the ring's title row where it is always on screen (it used to be first in a sideways-scrolling
+ * chip row, off-screen on a narrow phone). The history keeps sets, not names for the edits that made
+ * them, and edits reach `commit` from dozens of ring controls, so the label says how many steps back there
+ * are ([Copy.orbitUndo]) rather than naming the last one.
+ */
+@Composable
+private fun RingUndoChip(steps: Int, scheme: Scheme, onUndo: () -> Unit) {
+    SmallChip(Copy.orbitUndo(steps), scheme, enabled = steps > 0, description = "UNDO THE LAST EDIT") { onUndo() }
+}
+
 @Composable
 private fun RingDetailPanel(
     ring: Orbit,
@@ -1426,17 +1437,20 @@ private fun RingDetailPanel(
     onOpenSpanPicker: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText(ring.name, TapeType.display, scheme.ink.tape)
-        TapeText(
-            when {
-                solo == selected -> "SOLO"
-                ring.content is SnipOrbit -> "SNIP"
-                ring.pads.size > 1 -> "${ring.pads.size} PADS"
-                else -> "PAD"
-            },
-            TapeType.pixelSmall,
-            if (solo == selected) scheme.accent.tape else scheme.ink3.tape,
-        )
+        TapeText(ring.name, TapeType.display, scheme.ink.tape, Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TapeText(
+                when {
+                    solo == selected -> "SOLO"
+                    ring.content is SnipOrbit -> "SNIP"
+                    ring.pads.size > 1 -> "${ring.pads.size} PADS"
+                    else -> "PAD"
+                },
+                TapeType.pixelSmall,
+                if (solo == selected) scheme.accent.tape else scheme.ink3.tape,
+            )
+            RingUndoChip(history.size, scheme, onUndo)
+        }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "ONE STEP FEWER") { onSetSteps(ring.steps - 1) }
@@ -1468,7 +1482,6 @@ private fun RingDetailPanel(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { onUndo() }
         SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged, description = if (ring.engaged) "RING ON — TAP TO MUTE" else "RING OFF — TAP TO HEAR") {
             onUpdateRing { it.copy(engaged = !it.engaged) }
         }

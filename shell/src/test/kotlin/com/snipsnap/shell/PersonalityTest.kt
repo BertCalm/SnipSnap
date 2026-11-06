@@ -367,6 +367,21 @@ class PersonalityTest {
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
 
+    /** ORBIT's UNDO chip says how deep the undo goes, and drops the count when there is nothing to undo. */
+    @Test
+    fun `the ORBIT undo chip counts its steps`() {
+        assertEquals("UNDO", Copy.orbitUndo(0))
+        assertEquals("UNDO (3)", Copy.orbitUndo(3))
+    }
+
+    /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
+    @Test
+    fun `the SPLICE and STACK landings say where the undo is`() {
+        assertTrue("UNDO SPLICE" in Copy.SPLICE_UNDO_AT && "PAD EDITOR" in Copy.SPLICE_UNDO_AT, Copy.SPLICE_UNDO_AT)
+        assertTrue("SOFT HITS" in Copy.STACK_UNDO_AT && "PAD EDITOR" in Copy.STACK_UNDO_AT, Copy.STACK_UNDO_AT)
+        assertEquals("USE THIS PART ▸", Copy.USE_THIS_PART)
+    }
+
     /**
      * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
      * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
@@ -635,7 +650,7 @@ class PersonalityTest {
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
         "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
-        "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
+        "COMMIT_NEEDS_SELECTION", "USE_THIS_PART", "CAPTURE_BLOCKED_BUTTON",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
         // SNIPS' SHARE, while the snip is copied into the share cache under
         // a readable name — like every other *_BUSY here, an overlay line
