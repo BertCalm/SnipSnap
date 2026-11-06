@@ -88,6 +88,7 @@ import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.LiveRecord
 import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.Project
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Audition
@@ -107,6 +108,7 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -375,6 +377,13 @@ fun GrooveScreen(
     onAuditionArmed: () -> Unit = {},
     /** AUDITION's own choose-a-winner write — same shape as every other screen's `onKitUpdated`. */
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit = {},
+    /**
+     * BEAT's BPM − / + (the 2026-11-06 ruling: one project tempo, set here):
+     * called with the new tempo once the taps settle, and App saves it to the
+     * project. Null (no project open to keep it in) leaves the control off,
+     * not drawn dead: the readout in the header is still the tempo.
+     */
+    onTempo: ((Float) -> Unit)? = null,
 ) {
     val scheme = LocalScheme.current
 
@@ -2012,25 +2021,7 @@ fun GrooveScreen(
                 Modifier.fillMaxSize().then(if (isEditing) Modifier.clearAndSetSemantics { } else Modifier),
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                Box(
-                    Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
-                        val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                        // The meter rides along only when it is not 4/4 —
-                        // ORBIT's "BAR 12 · 3/4" said it, and this readout
-                        // used to say "2 BARS" of the same clip.
-                        val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
-                        TapeText(
-                            "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
-                                Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
-                            TapeType.lcdSmall,
-                            scheme.lcdInk2,
-                        )
-                    }
-                }
+                BeatHeader(scheme, kit.tempoBpm, currentClip, appScope, onTempo)
 
                 ProgramSelector(
                     names = PROG_NAMES,
@@ -3130,3 +3121,82 @@ private fun StepEditorOverlay(
         }
     }
 }
+
+/**
+ * BEAT's header: the LCD panel naming the screen and reading the tempo, the
+ * bars and the notes of the program on screen, and under it BPM − / + when
+ * there is a project to keep the tempo in ([onTempo] non-null; see
+ * [BeatTempoRow]). Its own composable, and not inline in [GrooveScreen]: that
+ * method is within a register or two of the dex limit, and the header's own
+ * locals left it when the tempo control came in.
+ */
+@Composable
+private fun BeatHeader(
+    scheme: Scheme,
+    tempoBpm: Float?,
+    currentClip: Mpc3Clip?,
+    appScope: CoroutineScope,
+    onTempo: ((Float) -> Unit)?,
+) {
+    Box(
+        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
+            val bpm = tempoBpm ?: KitPreview.DEFAULT_BPM
+            // The meter rides along only when it is not 4/4 —
+            // ORBIT's "BAR 12 · 3/4" said it, and this readout
+            // used to say "2 BARS" of the same clip.
+            val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
+            TapeText(
+                "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
+                    Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
+                TapeType.lcdSmall,
+                scheme.lcdInk2,
+            )
+        }
+    }
+    if (onTempo != null) BeatTempoRow(scheme, tempoBpm ?: KitPreview.DEFAULT_BPM, appScope, onTempo)
+}
+
+/**
+ * BEAT's tempo control: BPM − and BPM +, hold to run, with the tempo
+ * between them. The readout moves at once; the save waits [TEMPO_SETTLE_MS]
+ * of quiet (ORBIT's old BPM row did the same), so a held run is one write to
+ * project.json and one restart of the clock, not forty. [bpm] is the
+ * project's tempo as the screen was handed it; the pending value is dropped
+ * when that changes, which is the save landing. The wait runs on [appScope],
+ * so leaving BEAT inside it does not lose the tempo. Its own composable, and
+ * not inline in [GrooveScreen]: that method is near the dex register limit.
+ */
+@Composable
+private fun BeatTempoRow(scheme: Scheme, bpm: Float, appScope: CoroutineScope, onSettled: (Float) -> Unit) {
+    var pending by remember(bpm) { mutableStateOf<Float?>(null) }
+    val job = remember { arrayOfNulls<Job>(1) }
+    val settled by rememberUpdatedState(onSettled)
+    fun step(by: Float) {
+        val next = ((pending ?: bpm) + by).coerceIn(Project.MIN_BPM, Project.MAX_BPM)
+        if (next == (pending ?: bpm)) return
+        pending = next
+        job[0]?.cancel()
+        job[0] = appScope.launch {
+            delay(TEMPO_SETTLE_MS)
+            settled(next)
+        }
+    }
+    val shown = pending ?: bpm
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RepeatButton("BPM −", "SLOWER", scheme, Modifier.weight(1f)) { step(-1f) }
+        TapeText(
+            (if (shown % 1f == 0f) "%.0f" else "%.1f").format(java.util.Locale.ROOT, shown) + " BPM",
+            TapeType.pixel,
+            scheme.ink2.tape,
+            Modifier.weight(1f),
+        )
+        RepeatButton("BPM +", "FASTER", scheme, Modifier.weight(1f)) { step(1f) }
+    }
+}
+
+/** How long the tempo waits for another tap before it is saved; ORBIT's `BPM_SETTLE_MS` and LOOP's `TEMPO_SETTLE_MS` are the same idea. */
+private const val TEMPO_SETTLE_MS = 400L

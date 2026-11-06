@@ -90,6 +90,10 @@ object Copy {
      * what happened, in the user's words, with the thing it happened to.
      */
     const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
+
+    /** BEAT's BPM − / + could not write project.json: the project, and so every screen, keeps the tempo it had. */
+    const val PROJECT_TEMPO_NOT_SAVED = "TEMPO DID NOT SAVE. THE PROJECT KEEPS THE OLD ONE."
+
     /**
      * A kit would not join the open project: the bookkeeping that records
      * it (`landKit` after a chop lands, `+ FROM SHELF`) failed on disk. The

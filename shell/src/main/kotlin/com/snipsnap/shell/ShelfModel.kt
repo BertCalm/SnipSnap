@@ -122,6 +122,18 @@ class ShelfModel(val root: File) {
         return updated
     }
 
+    /**
+     * BEAT's BPM control: [bpm] becomes the project's tempo ([Project.withTempo]
+     * holds it to 40..220), saved to project.json. Read from disk, so a caller
+     * holding an older [Project] cannot write its other fields back over a
+     * newer file.
+     */
+    fun setTempo(projectName: String, bpm: Float): Project {
+        val updated = openProject(projectName).withTempo(bpm)
+        ProjectStore.save(root, updated)
+        return updated
+    }
+
     companion object {
         const val EMPTY = "EMPTY"
         const val UNHELD = "IN NO PROJECT"
