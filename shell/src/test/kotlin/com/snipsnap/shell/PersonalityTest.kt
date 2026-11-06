@@ -647,6 +647,8 @@ class PersonalityTest {
         "PUT_ON_ROW",
         // MAKE's two group headings: labels, not landings.
         "MAKE_A_SOUND", "WHAT_YOU_MADE",
+        // SNAP's four group headings: labels, not landings.
+        "SNAP_SOURCE", "SNAP_ONE_PAD", "SNAP_ALL_SIXTEEN", "SNAP_PLAY_IT",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
         "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
