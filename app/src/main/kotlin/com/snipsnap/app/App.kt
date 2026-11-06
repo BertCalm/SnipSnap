@@ -152,6 +152,7 @@ import com.snipsnap.shell.BenchNotes
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Bench
+import com.snipsnap.shell.CaptureSource
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
@@ -215,6 +216,12 @@ private const val PREF_WORKSHOP = "workshop"
 private const val PREF_SHELF_SORT = "shelf_sort"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
+/**
+ * LISTEN FROM (UAT E2-CHOOSER): the capture source the player last chose, [CaptureSource.stored].
+ * Absent on a first run, which is what keeps the dock's sheet asking; an unknown value reads as
+ * absent too ([CaptureSource.parse]). Remembers the question only, never Android's own consent.
+ */
+private const val PREF_CAPTURE_SOURCE = "capture_source"
 
 /**
  * The benches that have no back chip of their own, so the frame draws one
@@ -384,6 +391,18 @@ fun App(shelf: KitShelf) {
     // landing. Remembered like the scheme, ON by default. The gate is read
     // at each call: off by the switch, and off while the dock's capture
     // light says ARMED - the phone's mic hears its own motor (Haptics' KDoc).
+    // LISTEN FROM (SETUP): the source the dock's LISTEN was last set to, read once at start. The read is
+    // guarded - a preferences file that cannot be read is a first run, which asks. The dock's chip names
+    // it; [chooseCaptureSource] is the one place that changes it, so the chip, the file and SETUP agree.
+    var captureSource by remember {
+        mutableStateOf(runCatching { CaptureSource.parse(prefs.getString(PREF_CAPTURE_SOURCE, null)) }.getOrNull())
+    }
+    remember { dock.captureSource = captureSource }
+    fun chooseCaptureSource(source: CaptureSource) {
+        captureSource = source
+        dock.captureSource = source
+        runCatching { prefs.edit().putString(PREF_CAPTURE_SOURCE, source.stored).apply() }
+    }
     var hapticsOn by remember { mutableStateOf(prefs.getBoolean(PREF_HAPTICS, true)) }
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
@@ -4294,6 +4313,8 @@ fun App(shelf: KitShelf) {
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 dock.say(if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF)
                             },
+                            listenSource = captureSource,
+                            onListenSource = ::chooseCaptureSource,
                             hapticsOn = hapticsOn,
                             onHaptics = { on ->
                                 hapticsOn = on
@@ -4736,7 +4757,14 @@ fun App(shelf: KitShelf) {
                 Dock(
                     dock = dock,
                     busy = busy ?: jobs.current ?: screenBusy,
-                    onArm = { captureSheetOpen = true },
+                    // A kept source skips the sheet (E2-CHOOSER); APP AUDIO still meets Android's consent in requestArmInside.
+                    onArm = {
+                        when (captureSource) {
+                            CaptureSource.MIC -> requestArm()
+                            CaptureSource.APP_AUDIO -> requestArmInside()
+                            null -> captureSheetOpen = true
+                        }
+                    },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's
                     // one control from anywhere. It is still offered on BEAT with
@@ -4780,8 +4808,8 @@ fun App(shelf: KitShelf) {
             }
             if (captureSheetOpen) {
                 CaptureSheet(
-                    onMic = { captureSheetOpen = false; requestArm() },
-                    onInside = { captureSheetOpen = false; requestArmInside() },
+                    onMic = { captureSheetOpen = false; chooseCaptureSource(CaptureSource.MIC); requestArm() },
+                    onInside = { captureSheetOpen = false; chooseCaptureSource(CaptureSource.APP_AUDIO); requestArmInside() },
                     onDismiss = { captureSheetOpen = false },
                 )
             }

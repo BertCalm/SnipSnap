@@ -1088,6 +1088,14 @@ object Copy {
     /** SETUP's PAD VELOCITY: the curve, under its chips. */
     const val SETUP_PAD_VELOCITY_CURVE_NOTE = "SOFT LIFTS LIGHT TAPS. HARD NEEDS A FIRM ONE. THE SOFTEST AND LOUDEST STAY WHERE THEY ARE."
 
+    // ---- Settings: LISTEN FROM, the source the dock's LISTEN remembers (UAT E2-CHOOSER) ----
+    /** The heading of SETUP's source group: what the dock's LISTEN listens to. */
+    const val SETUP_LISTEN_HEADING = "LISTEN FROM"
+    /** LISTEN FROM's closed line before a source has been chosen: the dock's sheet still asks. A label, not a toast. */
+    const val SETUP_LISTEN_ASKS = "ASKS FIRST"
+    /** Under the LISTEN FROM rows: what is kept, and the one thing that is not (Android's own consent). */
+    const val SETUP_LISTEN_NOTE = "LISTEN STARTS ON THIS SOURCE WITHOUT ASKING. APP AUDIO STILL ASKS ANDROID FOR ITS OK EACH TIME."
+
     // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
     /** The heading of the MIDI OUT section of SETUP. */
     const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"

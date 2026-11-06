@@ -39,6 +39,14 @@ object Places {
     const val LISTEN = "LISTEN · MIC"
 
     /**
+     * The dock's LISTEN, as the player has set it up. [LISTEN] stays the word before any choice is
+     * kept (the first run still shows the sheet, and the copy that points at "LISTEN · MIC" is
+     * true until then); once a source is kept the chip names it, so `LISTEN · APP AUDIO` is never
+     * mistaken for the mic.
+     */
+    fun listen(source: CaptureSource?): String = if (source == null) LISTEN else "LISTEN · ${source.label}"
+
+    /**
      * The cold shelf's one filled button: what LISTEN · MIC then SNIP does,
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.

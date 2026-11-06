@@ -56,6 +56,7 @@ import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.CaptureSource
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Layout
@@ -214,6 +215,16 @@ class DockState(
             captureState.value = value
         }
 
+    private val captureSourceState = mutableStateOf(model.captureSource)
+
+    /** The source LISTEN is set to; the idle chip names it ([DockModel.captureSource]). */
+    var captureSource: CaptureSource?
+        get() = captureSourceState.value
+        set(value) {
+            model.captureSource = value
+            captureSourceState.value = value
+        }
+
     fun say(text: String) {
         model.say(text, locationNow())
         now = model.now
@@ -241,7 +252,7 @@ class DockState(
         now = model.now
     }
 
-    val captureLabel: String get() { capture; return model.captureLabel }
+    val captureLabel: String get() { capture; captureSource; return model.captureLabel }
     val transportLabel: String get() { transport; return model.transportLabel }
 }
 
@@ -455,7 +466,7 @@ internal fun Dock(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .widthIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .tapeClick(label = Places.LISTEN, onClick = onArm)
+                        .tapeClick(label = dock.captureLabel, onClick = onArm)
                         // The light is an 8 dp dot: the state it shows, said.
                         .semantics { stateDescription = if (dock.capture is DockModel.Capture.Snipped) "SNIPPED" else "MIC IDLE" }
                         .padding(horizontal = 4.dp),
