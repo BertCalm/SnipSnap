@@ -276,6 +276,16 @@ object Copy {
     const val FIRST_CATCH_LANDED = "YOUR FIRST SOUND IS ON A01. TAP IT."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
+    /**
+     * The line over the Bubble's door while TAPE is rolling and Android has not yet let
+     * SnipSnap draw over other apps. It says what the Bubble is (a small ring that rides over
+     * whatever app is playing, a tap on it SNIPs) and what Android will ask, before anything
+     * opens: the settings page is only ever reached through [BUBBLE_ALLOW]. Gone the moment the
+     * permission is granted. Drawn only while armed, because the Bubble exists only then.
+     */
+    const val BUBBLE_WHY = "THE BUBBLE FLOATS OVER OTHER APPS, SO YOU CAN SNIP WITHOUT COMING BACK. ANDROID ASKS YOU TO ALLOW THAT ONCE."
+    /** [BUBBLE_WHY]'s door: the one tap that opens Android's "Display over other apps" page. A label, not a toast. */
+    const val BUBBLE_ALLOW = "ALLOW ▸"
     const val CAPTURE_BLOCKED =
         "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER; THE AUDIO PULLS OUT OF THAT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
