@@ -907,18 +907,30 @@ class ArrangerTest {
     }
 
     @Test
-    fun `a song with the turn twice pulls up twice, and one with none pulls up never`() {
+    fun `every turn after the first section is pulled up into, and a song with none is not`() {
         val m = model("Turns")
         val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
         val turn = plan.sections.indexOfFirst { it.name == "the turn" }
         val twice = plan.duplicated(turn)!!
         val none = plan.without(turn)!!
-        for (p in listOf(plan, twice, none)) {
+        val beat = (60.0 / com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm) * com.snipsnap.kit.KitPreview.RATE).toInt()
+
+        for ((p, turns) in listOf(plan to 1, twice to 2, none to 0)) {
             val arr = Arranger.resolve(m.kit, m.kitDir, p).arrangement
+            assertEquals(turns, arr.sections.count { it.name == "the turn" })
             val mix = Arranger.mixdown(m.kit, m.kitDir, arr)
             assertEquals(arr.sections.size, mix.sectionStarts.size)
-            assertTrue(mix.snip.frameCount > mix.sectionStarts.last())
+            // The same song with its turns renamed: no cue, so no spinback.
+            val plain = Arranger.mixdown(m.kit, m.kitDir, arr.copy(sections = arr.sections.map { if (it.name == "the turn") it.copy(name = "fill") else it }))
+            for ((i, section) in arr.sections.withIndex()) {
+                if (section.name != "the turn") continue
+                val end = mix.sectionStarts[i]
+                val differs = (maxOf(0, end - beat) until end).any { f ->
+                    mix.snip.samples[f * 2] != plain.snip.samples[f * 2] || mix.snip.samples[f * 2 + 1] != plain.snip.samples[f * 2 + 1]
+                }
+                assertTrue(differs, "the last beat before turn #$i is the spinback")
+            }
+            if (turns == 0) assertTrue(mix.snip.samples.contentEquals(plain.snip.samples), "no turn, no pull-up")
         }
-        assertEquals(plan.sections.size + 1, twice.sections.size)
     }
 }

@@ -28,6 +28,10 @@ import java.util.Locale
  * A held kit whose folder is gone is the one refusal the kit wizard does
  * not have: it is reported by name before anything is written, under
  * [missingKits], and blocks the write.
+ *
+ * The demo WAV beside the session is the active kit's kept song when it
+ * keeps one ([songMixdown]), and the one-loop [SessionMixdown] when not.
+ * The `.xpj` itself still carries the project's patterns, not the song.
  */
 class ProjectSessionModel(
     val project: Project,
