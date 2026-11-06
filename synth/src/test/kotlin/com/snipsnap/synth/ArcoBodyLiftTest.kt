@@ -498,6 +498,8 @@ class ArcoBodyLiftTest {
             tuned *= ratio
             raw = Arco.stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
+        // R2: the LOOP's vibrato, fitted to the loop, goes on the converged stretch before the box (BUZZ is 0 here, so it is the only new piece).
+        raw = Arco.loopVibrato(raw, voice, plan.frames)
         val conditioned = Arco.conditionedWithBody(raw, voice, m.getValue("BODY"), rawRate)
         val lifted = Arco.lifted(conditioned, voice, delivered)
         val seam = Keys.seamError(lifted.copyOfRange(warm, warm + plan.frames + seamFrames), seamFrames)

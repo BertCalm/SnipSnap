@@ -1,14 +1,17 @@
 # SCOUR Engine: Engineering Specification
-Version 1.7 · 2026-11-01 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+Version 1.8 · 2026-11-05 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
 1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
 listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, the SHEET voice and the
-kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C)
-Status: R1 to R5 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C;
+1.8 records the owner's request for six voices and R6, the DISC and ROD voices with their bank D)
+Status: R1 to R6 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1 to R4 auditions; the R5 page is published and not yet heard.
+renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
+on the R5 page). R6 is built and not yet heard (As built: R6).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. The phone's synth picker and a docs page remain.
+voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1), and its docs
+page is `docs/SCOUR.md`.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -428,7 +431,8 @@ Nothing below exists yet. Names grep at `f931efc6`.
   (the brief names no gear, so the blocklist needs no new terms); leave `PROTOTYPES`.
 - [ ] R4: `SynthKits.scour()`, `ScourKitGenerator.kt` and `generateScourKit`, docs
   (`docs/SCOUR.md`, a `docs/SYNTH_ROADMAP.md` row, the README engine count, "As built" here).
-- [ ] Deferred: the app picker (`app/.../SynthScreen.kt`), for a session with an Android SDK.
+- [x] The app picker (`app/.../SynthScreen.kt`) was deferred for a session with an Android SDK. It landed on the
+  default branch with #840 (As built: R5.1).
 
 ## 15. Probes and auditions
 
@@ -593,7 +597,12 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
 | the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
 | BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
-| bank B now varies enough, and BEAM sounds like a struck girder | heard? | the R5 page |
+| bank B now varies enough, and BEAM sounds like a struck girder | heard: bank B varied enough, yes; bank C as it is, yes; BEAM into a drop, yes; "a struck girder" | the R5 page (As built: R5) |
+| the free annulus values (DISC) | verified (solve) | the exact Bessel solution reproduces 24 entries of Leissa Table 2.35 within 0.46 % and PLATE's solid-plate limit (As built: R6) |
+| DISC's and ROD's notes read | measured | 37 of 37 asserted corners at both windows for each (As built: R6) |
+| ROD's harmonic series | verified (sources) | a BYU acoustics paper and an open solver's free-free rod page, found by search, not read in a book (As built: R6) |
+| DISC and ROD sound like a brake disc and a harmonic ping, and earn bank D | proposed | not heard (As built: R6) |
+| SCOUR sounds fine on the phone | heard: "Sounds fine on phone." (2026-11-05) | the owner, after the picker landed |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -1135,6 +1144,15 @@ same round, the owner said yes, with its own bank C.
   four notes.
 - SHEET's lowest octave on a phone speaker or an MPC is still unheard.
 
+### Heard on the R5 page (the owner, 2026-11-01)
+
+| Question | Answer |
+|---|---|
+| Is bank B varied enough now? | yes |
+| Would you load bank C as it is? | yes |
+| Would you reach for BEAM into a drop? | yes |
+| What does BEAM sound like to you? | a struck girder |
+
 ### Why R5 is built this way
 
 1. **Variation where the owner heard sameness.** The note named the pads, not the sound of SHEET, so the
@@ -1143,3 +1161,106 @@ same round, the owner said yes, with its own bank C.
    alike when they share a note and a short build. That is why the hits moved up the scale.
 3. **A beam is the sparse end of the family.** PLATE crowds, PANE is glassy, SHEET rumbles. BEAM's few,
    widely spaced modes are a clang, and it gets the same listening-point treatment for its note.
+
+## As built: R5.1, on the phone (2026-11-01)
+
+After the R5 listen the owner chose to put SCOUR on the phone's synth picker. The default branch already had it:
+#840 (`779f40a5`) put BORE, ARCO, SCOUR and KEEL on the picker together, so this spec records that change and does
+not repeat it.
+
+- **Where it sits.** After RIME, between ARCO and KEEL, so the picker's arrows reach it last. The catalogue files
+  it under PADS & FX and BELLS & MALLETS, described as "Shot-blasted plates that build to a slam, then ring".
+- **Its root.** `SynthRoot` (#837) gives every SCOUR voice a ROOT and OCT stepper through TUNE, using
+  `Scour.midiFor`.
+- **What it gives.** Factory presets browse by voice through `Presets`, which rosters SCOUR's sixteen. "Reopen in
+  the synth" can open the SCOUR starter's 48 pads, since it lists any pad whose engine and voice the picker knows.
+- **`MODEL_VERSION` stays 1.** Its comment no longer says that no saved SCOUR sound exists: a sound saved from the
+  phone regenerates through it, as the presets and the starter's pads do.
+
+### Disclosed, not fixed
+
+- SCOUR has not been opened on a phone yet. The app compiles and its emulator tests run in CI, not in the
+  sessions that built the engine.
+
+## As built: R6, the disc and the rod (2026-11-05)
+
+R6 adds two voices, DISC and ROD, and a bank D for them. It changes `Scour.kt`, `ScourPresets.kt` and
+`SynthKits.scour()`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; the audition
+and kit generators; and the docs page, which now describes six voices, twenty-four presets and sixty-four pads.
+
+### What the owner said
+
+- **The phone (2026-11-05):** "Sounds fine on phone."
+- **Voices:** asked "Shouldn't we have 6 voices?", the owner chose a free ring (a brake disc) and a rod out of four
+  proposals (a bowl or bell and a struck pipe were the others), both in one round, with a new bank D.
+
+### What changed
+
+- **DISC's body.** A completely free annular plate, hole radius .5 of the outer, ν = 0.3, nine modes at ratios
+  1, 2.181, 2.675, 4.027, 4.932, 7.285, 7.722, 11.019 and 11.112.
+  - The values are the roots of the exact free-free frequency determinant (Bessel J, Y, I and K of order n, with
+    M_r and the Kirchhoff shear V_r zero at both edges), solved in the Python harness.
+  - It reproduces 24 entries of Leissa Table 2.35 (b/a .1, .3, .5 and .7) to within 0.46 %; the table prints
+    three figures. The table's header reads ν = 1/3 but its numbers match ν = 0.3 (5.3034 against 5.30 at b/a .1),
+    which is the value used. As the hole closes (b/a .01) it gives 5.2506 and 12.2216 at ν = 1/3 against PLATE's
+    5.253 and 12.23 at ν = .33.
+  - b/a .5 was chosen over .4, .6 and .7 as the family farthest from the four other voices' partials. The hole
+    lifts the breathing mode from PLATE's 1.729 to 2.181 times the root, and puts (1,1), (4,0) and (6,0) near 4, 5
+    and 11.
+- **DISC's listening point.** .93 of the outer radius out and 69 degrees round, chosen by scoring 294 points on
+  a grid with a mirror of `Pitch.detect` (the first autocorrelation peak above .85 of the maximum). 31 read the root
+  in all 16 detections under five voicings; this one reads all 54 at the test's two windows across C3 to C5 under
+  three, including no pair reduction and slow-decaying upper modes. Its neighbours at .89 also pass, so it is not a
+  lucky spike. DISC takes no pair reduction (`pairLevel` and `pairRing` 1).
+- **ROD's body.** A uniform free-free rod in longitudinal vibration, struck on its end: the whole multiples of the
+  lowest mode, twelve kept, heard at the struck end where every mode moves alike. Sources are a BYU acoustics paper
+  and an open solver's verification page, found by search; no book text was read.
+  - The failure to design against is sharp reads, not octave errors. HARDEN stretches the upper modes, and a stretched
+    series with strong upper partials drags the detector's common period short: in the mirror, at a stretch of .3
+    and a gain law of .78, 18 of 54 reads came out 40 to 100 cents sharp. At a stretch of .15 and gain .70 to .78
+    all 54 read. ROD takes a stretch of .15 (about half the others' .25 to .35) and a .74 gain law, and its presets keep HARDEN at .6 or
+    under.
+- **Loudness.** The loudest raw corner peaks at 0.97 on DISC and 1.16 on ROD (every harmonic is struck alike), so
+  DISC takes a [Shape.trim] of .75 and ROD .6: 0.73 and 0.70 at the loudest corner, 0.46 and 0.44 at the defaults.
+- **Eight presets, four a voice.** DISC: ROTOR SLAM, CALIPER RISE, DRAG RUN and DISC BELL. ROD: NEEDLE PING, SPIKE
+  RISE, RAIL RUN and STRUT BELL. All are on C minor pentatonic and at least .2 apart within a voice.
+- **Bank D.** Laid out as bank A (DISC's four builds at 120 BPM, ROD's four at 90 BPM, then both voices' presets)
+  and varied as banks B and C are. The builds' notes, roller, shot, hardening and ring came from the same search,
+  now within a voice (a closest pair of .29 for DISC and .28 for ROD, among its four builds and four presets), with
+  ROD's hardening held to .5 or under. The kit is 64 pads, and the SCOUR starter's blurb names the disc and rod.
+- **The body test's probes.** DISC's 2.181, 4.932 and 7.285 and ROD's 3rd, 5th and 6th harmonics. The first choice
+  (DISC's 2.181, 2.675 and 7.722; ROD's 2nd, 3rd and 6th) failed: PANE's build sat 13.0 dB under its own partials
+  at DISC's 2.675 (the test needs 15), since PANE's 2.549 mode, 4.9 % away, spreads under the shot rain. Every
+  candidate partial was then measured in all six renders and the triples chosen from the numbers. ROD's 2nd and
+  4th harmonics are out, because SHEET's build already rings near 2 and 4. The narrowest new-voice margin is
+  PANE's against DISC's 2.181, 3.0 dB over the floor. The narrowest of all is the old SHEET against PLATE, 0.7 dB,
+  unchanged by R6 and recorded in the test.
+
+### Measured and checked
+
+| Check | Result |
+|---|---|
+| The free annulus solver against Leissa Table 2.35 | 24 of 24 entries within 0.46 % (ν = 0.3) |
+| DISC's and ROD's note, 37 corners at the hit and the tail | 37 of 37 and 37 of 37 for each |
+| Default render time | DISC 75 ms, ROD 84 ms (hot, in the scratch test) |
+| `ScourTest`, `ScourPresetsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DeterminismTest` | passing |
+
+### Disclosed, not fixed
+
+- DISC, ROD and bank D have not been heard. The audition page asks about them.
+- DISC is thin-plate theory on a flat annulus. A real brake disc has a hat and often vanes, and no thickness or shear
+  correction is applied. The hole's radius (.5) is a shape choice made for distinctness, not a measured rotor.
+- ROD is longitudinal only and exactly harmonic. A real rod's lateral inertia detunes its upper harmonics, and a struck
+  bar also rings bending modes (BEAM's). Its HARDEN reach is small by design.
+- DISC and ROD are on the picker with no code change there: `SCOUR -> ScourVoice.entries` lists them. That has not been
+  played on a phone.
+
+### Why R6 is built this way
+
+1. **A hole changes the sound in one place.** The solid plate's breathing mode sits near 1.7 times the root. Cutting the
+   hole lifts it to 2.2 and pulls others toward whole multiples, which is how a ring differs from a disc by ear.
+2. **A harmonic rod is the opposite of the rest.** Every other body is a crowd or a clang of unrelated partials; the rod
+   is a ping on a series. The design risk is that HARDEN detunes the series and the note reads sharp, so its stretch is
+   small.
+3. **Probes are chosen from numbers, not guesses.** The first pair failed a 15 dB floor by 2 dB. Measuring every
+   candidate in every voice's render found the safe triples and showed which old pairing already sits at 0.7 dB.

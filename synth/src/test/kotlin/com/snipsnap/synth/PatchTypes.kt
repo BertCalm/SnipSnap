@@ -53,18 +53,17 @@ internal object PatchTypes {
      * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed.
      */
-    val ROSTERLESS: Set<String> = setOf(SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
      * deliberately kept out of [Presets] until the owner's listening verdict.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
-     * NACRE's playable PEARL revision has three starting recipes while range acceptance is pending.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(ErosionPatch.ENGINE, CairnPatch.ENGINE, WickPatch.ENGINE, NacrePatch.ENGINE, FerryPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, ErosionPatch.ENGINE, CairnPatch.ENGINE, WickPatch.ENGINE, FerryPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

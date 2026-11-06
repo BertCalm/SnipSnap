@@ -155,9 +155,21 @@ data class Pad(
     val chain: ChainPlay? = null,
     /** Repeat the full sample while gated; one-shot and chain pads keep their existing playback. */
     val loop: Boolean = false,
+    /**
+     * Round-robin takes (`<ZonePlay>0</ZonePlay>`, Cycle): 2..4 full-range
+     * layers, each its own WAV, which the MPC alternates hit by hit. Null =
+     * not a cycling pad. Exclusive with [velocityLayers].
+     */
+    val cycleLayers: List<VelocityLayer>? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
+        cycleLayers?.let { takes ->
+            require(velocityLayers == null) { "a cycling pad has no velocity layers" }
+            require(chain == null) { "a cycling pad is already split into takes - it carries no chain" }
+            require(takes.size in 2..4) { "a cycle has 2..4 takes, got ${takes.size}" }
+            require(takes.all { it.velStart == 0 && it.velEnd == 127 }) { "cycle takes span the full velocity range" }
+        }
         if (chain != null) {
             require(velocityLayers == null) { "a chain pad is single-zone (velocity x round-robin grids come later)" }
         }

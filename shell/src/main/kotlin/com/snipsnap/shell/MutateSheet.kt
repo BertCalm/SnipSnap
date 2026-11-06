@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
@@ -252,7 +253,9 @@ object MutateSheet {
     fun source(model: KitBuilderModel, partner: Partner): Mutate.Source = when (partner) {
         is Partner.Pad -> {
             val pad = model.pad(partner.slot) ?: throw PartnerGone("no pad on ${padTag(partner.slot)}")
-            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(present(File(model.kitDir, pad.sampleFile))))
+            // A robin partner lends its first take, not the whole chain.
+            val heard = if (pad.isRobinChain) Robin.original(model, partner.slot) else WavReader.read(present(File(model.kitDir, pad.sampleFile)))
+            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", heard)
         }
         is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
         is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(present(partner.file)))
@@ -330,10 +333,10 @@ object MutateSheet {
     fun preview(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float, becomeFraction: Float = 0f): Snip {
         require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
         // The rewrite's own gate, not a copy of it: a velocity-layered pad
-        // or a round-robin chain refuses here exactly as it refuses inside
+        // or a chain round robin did not make refuses here exactly as it refuses inside
         // `replaceAudio`, so HEAR never plays a move KEEP would decline.
         val pad = model.requireRewritable(slot)
-        val base = WavReader.read(File(model.kitDir, pad.sampleFile))
+        val base = if (pad.isRobinChain) Robin.original(model, slot) else WavReader.read(File(model.kitDir, pad.sampleFile))
         val k = knobs(mode, fraction, becomeFraction)
         return Mutate.render(
             base, listOf(source(model, partner)), mode,
@@ -397,7 +400,7 @@ object MutateSheet {
      */
     fun lengthMs(model: KitBuilderModel, slot: Int): Int {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on ${padTag(slot)}")
-        return lengthMs(WavReader.read(File(model.kitDir, pad.sampleFile)))
+        return lengthMs(if (pad.isRobinChain) Robin.original(model, slot) else WavReader.read(File(model.kitDir, pad.sampleFile)))
     }
 
     // ---------- honest refusals (the redesign's round M1) ----------
@@ -434,7 +437,7 @@ object MutateSheet {
      */
     fun refusalBefore(pad: KitPad, partner: Partner?, needsPartner: Boolean): Refusal? = when {
         pad.velocityLayers.isNotEmpty() -> Refusal.Layered
-        pad.chain != null -> Refusal.Chained
+        pad.chain != null && !pad.isRobinChain -> Refusal.Chained
         needsPartner && partner == null -> Refusal.NoPartner
         else -> null
     }

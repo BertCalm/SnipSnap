@@ -31,9 +31,9 @@ object CairnTumbleAuditionGenerator {
         val coldMs=(System.nanoTime()-coldStart)/1e6
         val cases=mutableListOf<Case>()
         fun add(id:String,section:String,v:CairnVoice,m:Map<String,Float>,note:Int=60,velocity:Float=1f,isolated:Boolean=false) {
-            cases+=Case(id,section,CairnPatch(id,v,m,note,velocity),isolated)
+            cases+=Case(id,section,CairnPatch(id,v,m,note,velocity,model=3),isolated)
         }
-        for(v in CairnVoice.entries) for(held in listOf(false,true)) {
+        for(v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE)) for(held in listOf(false,true)) {
             val mode=if(held)"hold" else "shot";val flag=if(held)1f else 0f
             for(note in listOf(48,60,72)) add("${v.name.lowercase()}-$mode-$note","Voices",v,Cairn.defaults(v)+("HOLD" to flag),note)
             add("${v.name.lowercase()}-common-$mode","Common controls",v,middle+("HOLD" to flag))

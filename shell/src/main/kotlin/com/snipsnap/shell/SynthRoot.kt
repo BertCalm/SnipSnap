@@ -15,6 +15,8 @@ import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.Bellows
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.Bore
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinPatch
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
@@ -50,6 +52,8 @@ import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
+import com.snipsnap.synth.Hydroform
+import com.snipsnap.synth.HydroformPatch
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
@@ -290,11 +294,13 @@ object SynthRoot {
         is AerostatPatch -> tune(patch, { Aerostat.midiFor(it) })
         is ArcoPatch -> tune(patch, { Arco.midiFor(patch.voice, it) })
         is BallastPatch -> tune(patch, { Ballast.midiFor(patch.voice, it) })
+        is ChitinPatch -> tune(patch, { Chitin.midiFor(patch.voice, it) })
         is BorePatch -> tune(patch, { Bore.midiFor(patch.voice, it) })
         is CircuitPatch -> tune(patch, { Circuit.midiFor(it) })
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
+        is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
         is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
         is MagnetPatch -> tune(patch, { Magnet.rootMidi(patch.voice) + Magnet.semitonesFor(it) })

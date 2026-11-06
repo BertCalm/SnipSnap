@@ -243,6 +243,14 @@ object Copy {
      * exactly what was actually heard, up to that cap.
      */
     const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+    /**
+     * TAPE's empty deck while the session is armed: the tape is already
+     * rolling and nothing has been snipped, so [NO_TAPE_YET]'s "TAP LISTEN ·
+     * MIC BELOW" would send the user to a button they have pressed. It states
+     * what SNIP will keep instead, in the same words and cap as [SNIPPED]
+     * (heard since LISTEN, not "the last 60 seconds").
+     */
+    const val NO_TAPE_YET_ARMED = "$SESSION_ARMED SNIP KEEPS WHAT IT'S HEARD, UP TO 60s."
 
     /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
@@ -1866,6 +1874,34 @@ object Copy {
     /** A patch recipe replaces the sound outright, and the toast says so. */
     fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN."
     fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
+
+    // ---- ROUND ROBIN, WHOLE KIT ----
+    fun robinKitOn(pads: Int): String = "ROUND ROBIN ON ${countOf(pads, "PAD", "PADS")}."
+    const val ROBIN_KIT_BUSY = "DEALING THE TAKES…"
+    const val ROBIN_KIT_FAILED = "ROUND ROBIN STOPPED PART WAY. TURN IT OFF TO GET YOUR ORIGINALS BACK."
+    const val ROBIN_KIT_OFF = "ROUND ROBIN OFF. YOUR ORIGINALS ARE BACK."
+    const val ROBIN_SKIPPED_LOOPS = "LONG LOOPS LEFT AS THEY ARE."
+    const val ROBIN_KIT_NONE = "NO PAD HERE TAKES ROUND ROBIN."
+    const val ROBIN_SKIPPED_TONAL = "TONAL PADS KEEP THEIR PITCH."
+    const val ROBIN_SKIPPED_LAYERED = "LAYERED AND CHAINED PADS LEFT AS THEY ARE."
+    const val ROBIN_KIT_DIDNT_RUN = "ROUND ROBIN DIDN'T RUN. THE KIT IS AS IT WAS."
+    const val ROBIN_FOREIGN = "THIS PAD ALREADY CHAINS ITS OWN TAKES."
+
+    // ---- ROUND ROBIN, ONE PAD ----
+    const val ROBIN_ON = "ROUND ROBIN ON. TURN IT OFF TO GET THE ORIGINAL BACK."
+    const val ROBIN_OFF = "ROUND ROBIN OFF. THE ORIGINAL IS BACK."
+    const val ROBIN_OWN = "THIS PAD KEEPS ITS OWN ROUND ROBIN."
+
+    /** Soft hits, STRIKE FX and stacked takes are velocity layers; a layered pad cannot also cycle takes. */
+    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS, STRIKE FX OR STACKED TAKES. TURN ROUND ROBIN OFF FIRST."
+
+    /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
+    const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
+
+    /** A print kept on a robin pad: its UNDO needs the takes lifted, which turning round robin off does. */
+    const val ROBIN_NO_UNDO = "UNDO WORKS WITH ROUND ROBIN OFF. TURN IT OFF FIRST."
+
+    const val ROBIN_FOLLOWS = "THIS PAD FOLLOWS THE KIT'S ROUND ROBIN."
 
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =

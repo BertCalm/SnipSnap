@@ -126,7 +126,7 @@ class FilamentKeysTest {
                 assertTrue(!FilamentKeys.supports(patch.copy(model = model)))
                 assertFailsWith<IllegalArgumentException> { FilamentKeys.note(patch.copy(model = model)) }
             }
-            for (midi in listOf(47, 73)) {
+            for (midi in listOf(35, 85)) {
                 assertFailsWith<IllegalArgumentException> { FilamentKeys.note(patch, midi = midi) }
             }
         }

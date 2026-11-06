@@ -237,9 +237,11 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
     maxHeapSize = "1g"
     val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
     val touch = providers.gradleProperty("filamentKeysTouchLayers").orElse("false").get().toBooleanStrict()
+    val wide = providers.gradleProperty("filamentKeysWideKeys").orElse("false").get().toBooleanStrict()
+    val rangeTag = if (wide) "-wide" else ""
     val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
     val touchTag = if (touch) "-touch" else ""
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$touchTag-keys").get(), voice, touch.toString())
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$rangeTag$touchTag-keys").get(), voice, touch.toString(), wide.toString())
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
@@ -343,6 +345,7 @@ tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
     mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+    if (providers.gradleProperty("origamiPerformanceLegacyFold").orNull == "true") args("--legacy-fold")
 }
 
 /** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */

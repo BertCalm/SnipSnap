@@ -240,3 +240,29 @@ but the cleaner bound must not be generalized to every pitch and velocity.
 
 Live polyphony, cross-note legato, scale-aware replies, arbitrary
 arpeggiation and standalone plugin hosting are outside this port.
+
+## As built: CHORD STABS (2026-11-04)
+
+`ChordStabs.kit(key)` lays a key's chords across sixteen pads on STOOP's
+CHORD voice, one whole chord per pad: A01 to A07 the diatonic triads (I to
+vii, stacked in the key's own thirds), A08 the tonic with its root doubled an
+octave up, A09 to A15 the diatonic sevenths, A16 the tonic with an added
+ninth. It is the CHORD STABS starter (`StarterKits`, C minor). A seven-note
+key is required; a pentatonic or chromatic one is refused by name.
+
+Every chord is voiced near one centre, a major third above the tonic placed
+in G3 to F#4: of a chord's close-position inversions, the one whose mean
+pitch is nearest the centre, then the more compact, then the lower. Every
+key lands in the same band, and neighbouring triads move by at most six
+semitones on average, so two pads in a row sound like a progression rather
+than a register jump. The voicing is `chordIntervals` around the chord's
+root, so it may hold tones below the root. Names use the house's sharp
+spellings (D#maj7 rather than Ebmaj7 in C minor).
+
+The kit plays "Small Cinema" (the clean, short stab, WEAR 0). WEAR's
+saturator runs on the summed chord, so it intermodulates the tones:
+measured on C minor's sixteen stabs, 2.1% of the sustain's spectral
+magnitude falls between the chord tones' harmonics at WEAR 0 (2.5% at
+worst), 3.0% at WEAR 0.58 and 6.7% at WEAR 1. Each pad carries two softer
+takes (`Velocity.variantsAt`) for the MPC's velocity zones. Not heard.
+Tests: `ChordStabsTest`.

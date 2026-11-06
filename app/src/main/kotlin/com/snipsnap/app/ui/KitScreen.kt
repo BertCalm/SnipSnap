@@ -78,6 +78,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitRobin
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
@@ -170,6 +171,11 @@ fun KitScreen(
     onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
+    /** Kit-wide ROUND ROBIN: switch on with the kit's (or default) settings. */
+    onRobinOn: () -> Unit = {},
+    /** Re-deal the kit's followers on new dial settings (also UNDO). */
+    onRobinSet: (KitRobin) -> Unit = {},
+    onRobinOff: () -> Unit = {},
     onTwins: () -> Unit,
     /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
     onBankEmpty: (Int) -> Unit = {},
@@ -1105,6 +1111,11 @@ fun KitScreen(
 
                 // SHARE is OUT's now (plan §3.5): one file out the share sheet
                 // is an output, so it sits with the other outputs.
+
+                KitRobinRow(
+                    robin = kit.robin, kitKey = entry.dir, busy = busy, scheme = scheme,
+                    onOn = onRobinOn, onSet = onRobinSet, onOff = onRobinOff,
+                )
 
                 if (panelKind == KEY_PANEL) {
                     KeyPanel(

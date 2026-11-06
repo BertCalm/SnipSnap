@@ -54,6 +54,13 @@ class PersonalityTest {
     }
 
     @Test
+    fun `kit round robin copy counts pads in the singular and the plural`() {
+        assertEquals("ROUND ROBIN ON 1 PAD.", Copy.robinKitOn(1))
+        assertEquals("ROUND ROBIN ON 5 PADS.", Copy.robinKitOn(5))
+        assertEquals("ROUND ROBIN ON 0 PADS.", Copy.robinKitOn(0))
+    }
+
+    @Test
     fun `law 3 - funny copy still says exactly what happened`() {
         // The capture-blocked box names the problem and the way out.
         assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
@@ -766,7 +773,7 @@ class PersonalityTest {
         // kit moves (open a kit row, add a kit from the shelf, switch the
         // open project's kit) - the same `…`-suffixed dock line as every
         // other *_BUSY constant above.
-        "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
+        "KEY_BUSY", "IN_KEY_BUSY", "ROBIN_KIT_BUSY", "NEW_PROJECT_BUSY",
         "OPENING_KIT_BUSY", "ADDING_KIT_BUSY", "SWITCHING_KIT_BUSY",
         // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
         // are read off disk: the same `…`-suffixed dock line as every other
@@ -785,7 +792,7 @@ class PersonalityTest {
      * e.g. `tapeTruncated`/`imported`'s templated output) rather than a
      * violation of "TapeOS shouts". Still checked for the full-stop law.
      */
-    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED")
+    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED", "NO_TAPE_YET_ARMED")
 
     /**
      * The exact ~30 names the old hand-listed `listOf(Copy.A, Copy.B, ...)`
@@ -1268,6 +1275,16 @@ class PersonalityTest {
     @Test
     fun `chop names the kit sample it fell back to`() {
         assertEquals("FROM A03_SNARE", Copy.chopFromKit("A03_SNARE"))
+    }
+
+    @Test
+    fun `the armed empty deck makes the same claim as the snip toast and sends nobody to a pressed button`() {
+        // TAPE's empty deck, once LISTEN is armed, says what SNIP keeps. It must
+        // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
+        // not repeat NO_TAPE_YET's instruction to tap LISTEN.
+        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
+        assertTrue("UP TO 60s" in Copy.NO_TAPE_YET_ARMED && "UP TO 60s" in Copy.SNIPPED)
+        assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
     }
 
 }

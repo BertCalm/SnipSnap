@@ -10,6 +10,7 @@ import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.xpm.PadNoteMap
@@ -145,12 +146,14 @@ class KitBuilderModel private constructor(
      * caller names the treatment left behind (`Retrim.treatmentLeft`) in
      * the toast. A velocity-layered pad (GHOSTS, or STACK THE TAKES — the
      * model can't tell them apart, and either rides on the old file) and a
-     * round-robin chain (its boundaries index the old file) are refused,
-     * the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
-     * says so before TAPE ever opens. [save] archives a take, so UNDO on
+     * chain round robin did not make (its boundaries index the old file) are
+     * refused, the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
+     * says so before TAPE ever opens. A round-robin pad's chain is lifted, the
+     * original re-cut, and the takes re-rendered ([Robin.around]). [save] archives a take, so UNDO on
      * the sheet is the TAKES room, as for every other replacement.
      */
     fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { backOnto(slot, snip, cut) }
         val old = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(old.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - clear GHOSTS (or the stack) before re-trimming" }
         requireNotChained(old, "re-trimming")
@@ -248,6 +251,13 @@ class KitBuilderModel private constructor(
     fun setTempo(bpm: Float?) {
         if (kit.tempoBpm == bpm) return
         kit = kit.copy(tempoBpm = bpm)
+        dirty = true
+    }
+
+    /** Set or clear the kit-wide round-robin defaults that following pads read. */
+    fun setRobin(robin: com.snipsnap.kit.KitRobin?) {
+        if (kit.robin == robin) return
+        kit = kit.copy(robin = robin)
         dirty = true
     }
 
@@ -414,6 +424,7 @@ class KitBuilderModel private constructor(
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNoChain(pad, "adding soft hits to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
@@ -465,7 +476,7 @@ class KitBuilderModel private constructor(
      */
     fun strikeFxAudition(slot: Int, room: Float, slap: Float): List<com.snipsnap.audio.Snip> {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNotChained(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying STRIKE FX to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.recipe == null || Breed.recipeOf(pad) != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
         return com.snipsnap.synth.StrikeFxBank.render(com.snipsnap.audio.WavReader.read(strikeFxSource(slot)), room, slap)
@@ -480,7 +491,7 @@ class KitBuilderModel private constructor(
      */
     fun strikeFxLayers(slot: Int, room: Float, slap: Float): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNotChained(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying STRIKE FX to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val padRecipe = Breed.recipeOf(pad)
         require(pad.recipe == null || padRecipe != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
@@ -518,7 +529,7 @@ class KitBuilderModel private constructor(
     /** STRIKE FX, CLEAR: DRY goes back over the pad's file, ROOM and DRY files are deleted, the bank leaves the recipe. */
     fun clearStrikeFxLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNotChained(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying STRIKE FX to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val padRecipe = Breed.recipeOf(pad)
         require(com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3) { "pad $slot has no STRIKE FX to clear" }
@@ -563,7 +574,7 @@ class KitBuilderModel private constructor(
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeStack(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
-        requireNotChained(pad, "stacking")
+        requireNoChain(pad, "stacking")
         // The entries must be THIS kit's bin's: `originalName` alone is a
         // label anyone could forge, and copying a file from anywhere else
         // into the kit folder is not what "a prior take" means.
@@ -614,6 +625,7 @@ class KitBuilderModel private constructor(
      * stack; [untreatPad] pops the most recent one.
      */
     fun treatPad(slot: Int, treatment: String, amount: Float = 1f): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { treatPad(slot, treatment, amount) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) {
             "pad $slot is velocity-layered - `clearGhostLayers($slot)` before treating"
@@ -638,6 +650,7 @@ class KitBuilderModel private constructor(
         recipe: com.snipsnap.json.JsonValue.Obj?,
         transform: (Snip) -> Snip,
     ): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { replaceAudio(slot, recipe, transform) }
         val pad = requireRewritable(slot)
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val processed = transform(original)
@@ -671,10 +684,11 @@ class KitBuilderModel private constructor(
      * same shape as [smearPad] in every rule: restore-first when the bin
      * holds the original (so re-dusting, or dusting an aged pad, never
      * stacks), amount 0 takes an existing dust off and touches an
-     * undusted pad not at all, layers and chains refused, bin-backed
+     * undusted pad not at all, layers and foreign chains refused (a robin pad is lifted, dusted, re-rendered), bin-backed
      * through [replaceAudio].
      */
     fun dustPad(slot: Int, amount: Float, tape: String, print: com.snipsnap.audio.Dust.Print?): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { dustPad(slot, amount, tape, print) }
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
         require(amount <= 0f || print != null) { "dusting at $amount needs the tape's print" }
         require('/' !in tape && '\\' !in tape) { "tape is a bare file name: '$tape'" }
@@ -764,6 +778,7 @@ class KitBuilderModel private constructor(
      * rewrite so DO IT AGAIN can replay it; the screen calls this now.
      */
     fun smearPad(slot: Int, amount: Float): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { smearPad(slot, amount) }
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before smearing" }
@@ -876,6 +891,7 @@ class KitBuilderModel private constructor(
      * Originals go to the bin; the era recipe rides the pad.
      */
     fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { eraPad(slot, era, amount) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         if (amount <= 0f) return pad
         return rewriteEveryFile(pad, "aging") { original ->
@@ -894,6 +910,7 @@ class KitBuilderModel private constructor(
      * [unEraPad], the same "every file back out of the bin" either row needs.
      */
     fun characterPad(slot: Int, character: String, amount: Float = 1f): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { characterPad(slot, character, amount) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         // Validate the name before the AMT-0 exit: a typo must not read as "no treatment".
         com.snipsnap.synth.Treatments.chain(character, amount)
@@ -916,6 +933,7 @@ class KitBuilderModel private constructor(
      * a chip: the two boards do not share a key or a store. Undo is [unEraPad].
      */
     fun pedalPad(slot: Int, board: com.snipsnap.synth.PedalBoard): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { pedalPad(slot, board) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         BoardSheet.read(pad.recipe)?.let {
             throw IllegalArgumentException("pad $slot carries a ${it.type.name} board - remove it before adding pedals")
@@ -992,6 +1010,7 @@ class KitBuilderModel private constructor(
      * treatment's own words) comes before anything is touched.
      */
     fun keyedPad(slot: Int, name: String, amount: Float = 1f, seed: Long = 0, dials: Keyed.Dials = Keyed.Dials()): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { keyedPad(slot, name, amount, seed, dials) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         Keyed.require(name)
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
@@ -1064,6 +1083,7 @@ class KitBuilderModel private constructor(
 
     /** Undo an era or a character on one pad: every file it references comes back out of the bin. */
     fun unEraPad(slot: Int): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { unEraPad(slot) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         requireNotChained(pad, "un-aging")
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
@@ -1085,6 +1105,7 @@ class KitBuilderModel private constructor(
 
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { untreatPad(slot) }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         requireNotChained(pad, "un-treating")
         restoreFromBin(pad.sampleFile)
@@ -1282,7 +1303,33 @@ class KitBuilderModel private constructor(
         }
         kit = restored
         dirty = true
-        return restored
+        reconcileRobins()
+        return kit
+    }
+
+    /**
+     * After [restoreTake]: a robin pad whose file no longer holds its chain is dealt again. Turning
+     * round robin off (or re-dealing it) copies the original over the chain without binning the
+     * chain, so the bin often has only the single original to bring back for a take saved with round
+     * robin on: kit.json then names takes the WAV does not have. Re-dealing that original with the
+     * take's own settings is deterministic, so the chain comes back as it was saved, and the
+     * original goes into the bin as the newest row, where [Robin.undo] looks for it. A chain that
+     * still fits its file is left alone; an unreadable file is left to the doors that read it.
+     */
+    private fun reconcileRobins() {
+        for (pad in kit.pads.filter { it.isRobinChain }) {
+            val frames = try {
+                com.snipsnap.xpm.WavInfo.read(File(kitDir, pad.sampleFile)).frameCount
+            } catch (e: java.io.IOException) {
+                continue
+            } catch (e: IllegalArgumentException) {
+                continue
+            }
+            if (Robin.fits(pad.chain!!, frames)) continue
+            update(pad.slot) { Robin.lifted(it) }
+            Robin.apply(this, pad.slot, pad.robin!!)
+            update(pad.slot) { it.copy(recipe = pad.recipe) }
+        }
     }
 
     /**
@@ -1496,6 +1543,14 @@ class KitBuilderModel private constructor(
                 val entry = newest[name]?.takeIf { it.file !in ejected } ?: continue
                 keptFor.merge(entry.file, pad.slot, ::minOf)
             }
+            // A robin chain's undo brings back its newest row, the original; the pad it leaves then
+            // reads the row under that one when its own undo (an edit made on the original) needs it.
+            if (pad.isRobinChain && dependsOnBin(Robin.lifted(pad))) {
+                val under = entries.filter { it.originalName == pad.sampleFile }
+                if (under.firstOrNull()?.file !in ejected) {
+                    under.getOrNull(1)?.takeIf { it.file !in ejected }?.let { keptFor.merge(it.file, pad.slot, ::minOf) }
+                }
+            }
         }
         val purgeAt = entries.associateTo(HashMap()) { it.file to clock(it) }
         for (tombstoned in entries) {
@@ -1642,6 +1697,22 @@ class KitBuilderModel private constructor(
      * them. One gate for every audio door.
      */
     private fun requireNotChained(pad: KitPad, doing: String) {
+        require(pad.chain == null || pad.isRobinChain) {
+            "pad ${pad.slot} is a round-robin chain - `robin --undo` before $doing it"
+        }
+    }
+
+    /** [Robin.around] for a door that returns the pad: the pad it hands back is the re-rendered chain, not the lifted original. */
+    private fun viaRobin(slot: Int, door: () -> KitPad): KitPad {
+        val lifted = Robin.around(this, slot, door)
+        return kit.pad(slot) ?: lifted
+    }
+
+    /**
+     * The layer doors (STRIKE FX, STACK THE TAKES) refuse every chain, a robin's too: velocity
+     * layers and a chain cannot share a pad, so lifting the robin around them could never put it back.
+     */
+    private fun requireNoChain(pad: KitPad, doing: String) {
         require(pad.chain == null) {
             "pad ${pad.slot} is a round-robin chain - `robin --undo` before $doing it"
         }

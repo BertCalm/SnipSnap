@@ -5493,4 +5493,92 @@ class ConventionTest {
             "two literals against one waiver: the second has no owner",
         )
     }
+
+    // ---- Law: the strike strip shows what is on by its border, and draws its LCD marks in the LCD's ink ----
+
+    private val strikeStripUi = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStrip.kt")
+
+    /**
+     * The strike strip is played with a thumb mid-performance, so what is on has to read at a
+     * glance, and three shapes of that failed before this law:
+     *
+     * - The on state was `sunkenField`, whose fill is the `field` colour, where a raised button
+     *   draws `raised`. The two are one colour in every shipped scheme, so a sunken button was
+     *   pixel-identical to a raised one and the state rested on a word. `Bevel.kt` says why
+     *   `pressedBevel` exists (a 2dp accent border: a weight change, not only a hue one), and most
+     *   of the app's pickers already use it. The strip's two state sites, the layer chip and the
+     *   control, now do too.
+     * - The fader's tick marks were drawn in `ink2`, a chrome ink tuned against the gray and
+     *   2.3 to 2.8 against the dark LCD of the paper schemes, under the 3:1 a graphic needs. A
+     *   mark on the LCD reads the LCD's ink, `lcdInk2` (`TapeTheme.kt`).
+     * - Side, return and volume change nothing about a hit while STRIKE is off, so they read in
+     *   the quiet ink until it is on. `StrikeStripTest` in this module holds that for strength
+     *   and volume, the two inputs `StrikeStrip.hit` takes; the side is only ever read to place
+     *   the fader, which is drawn only when STRIKE is on. They are dimmed and not disabled: they
+     *   stay tappable and keep their value for when STRIKE comes on. Nothing is refused, so no
+     *   toast has anything to explain (ChopScreen's rule is "dimmed, not disabled; the toast
+     *   explains"); TalkBack is told in the state description instead. STRIKE itself never waits:
+     *   it is the switch the others wait on.
+     */
+    @Test
+    fun `law - the strike strip shows what is on by its border and draws its LCD marks in the LCD's ink`() {
+        val code = codeOnly(strikeStripUi.readText(Charsets.UTF_8))
+
+        assertFalse(
+            "sunkenField(" in code,
+            "StrikeStrip.kt draws a state with `sunkenField(`, which paints the same fill as the raised button " +
+                "beside it. A state that is on is `pressedBevel`, the 2dp accent border (Bevel.kt).",
+        )
+        val stateSites = Regex("""if \(active\) it\.pressedBevel\(scheme\) else it\.raisedBevel\(scheme\)""").findAll(code).count()
+        assertEquals(
+            2,
+            stateSites,
+            "the strike strip draws a state in two places, the last-hit layer chip and the control, and both " +
+                "read `if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme)`; found $stateSites",
+        )
+
+        val fader = blockAfter(code, "Canvas(Modifier.matchParentSize())")
+        assertFalse(
+            Regex("""scheme\.ink[23]?\b""").containsMatchIn(fader),
+            "the strike fader's canvas draws with a chrome ink (`scheme.ink`, `ink2` or `ink3`). Those are tuned " +
+                "against the gray, not the LCD this canvas sits on, so nothing holds them to a contrast floor " +
+                "there. Draw its marks with `scheme.lcdInk2`, which ContrastTest holds at AA over the LCD.",
+        )
+        assertTrue(
+            "val tickInk = scheme.lcdInk2" in fader && "drawLine(tickInk," in fader,
+            "the fader's tick marks no longer take their colour from `scheme.lcdInk2`, the LCD's second ink " +
+                "(TapeTheme.kt): expected `val tickInk = scheme.lcdInk2` and `drawLine(tickInk,` in the canvas",
+        )
+
+        val controls = blockAfter(code, "internal fun StrikeControls(")
+        assertTrue(
+            "val waiting = !state.enabled" in controls,
+            "StrikeControls no longer derives `waiting` from the strip being off; the settings behind STRIKE " +
+                "would look live while the strip ignores them",
+        )
+        assertEquals(
+            3,
+            Regex("""state\.\w+, waiting, Modifier\.weight""").findAll(controls).count(),
+            "exactly the three settings behind STRIKE (side, return, volume) wait on it",
+        )
+        assertTrue(
+            Regex(""""STRIKE STRIP", state\.enabled, false,""").containsMatchIn(controls),
+            "STRIKE itself must never wait on the strip it turns on",
+        )
+        assertTrue(
+            "if (waiting) scheme.ink2.tape else scheme.ink.tape" in controls,
+            "a waiting control no longer reads in the quiet ink (`ink2`) against `ink`; the settings behind " +
+                "STRIKE would look as live as STRIKE itself while the strip ignores them",
+        )
+        assertTrue(
+            "takes effect when STRIKE is on" in controls,
+            "a waiting control no longer tells TalkBack it takes effect when STRIKE is on, so the quiet ink " +
+                "would be the only cue",
+        )
+        assertFalse(
+            Regex("""tapeClick\([^)]*enabled""").containsMatchIn(controls),
+            "a control behind STRIKE passes `enabled` to tapeClick. These are dimmed, not disabled: they stay " +
+                "tappable and keep their value for when STRIKE comes on.",
+        )
+    }
 }

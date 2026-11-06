@@ -10,7 +10,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The new factory family uses existing expression and gestures without revoicing its sources. */
+/** Current factory recipes alongside the frozen FOLD family's measured compatibility contracts. */
 class OrigamiPerformancePresetsTest {
     @Test
     fun `performance family offers complementary editable dry recipes beneath the accepted fold ceiling`() {
@@ -25,7 +25,7 @@ class OrigamiPerformancePresetsTest {
             val accepted = OrigamiPresets.references().first { it.voice == voice }
             for (patch in pair) {
                 assertEquals(4, patch.model)
-                assertEquals(OrigamiExpression.FOLD, patch.expression)
+                assertEquals(OrigamiExpression.TOUCH, patch.expression)
                 assertEquals(accepted.seed, patch.seed)
                 assertEquals(accepted.velocity, patch.velocity)
                 assertNull(patch.midi, "${patch.name} must keep TUNE playable")
@@ -62,9 +62,9 @@ class OrigamiPerformancePresetsTest {
     }
 
     @Test
-    fun `factory gestures travel in opposite directions and soft hits change color after matching gain`() {
+    fun `published FOLD factories retain their geometric journeys and measured color differences`() {
         for (voice in OrigamiVoice.entries) {
-            val pair = OrigamiPresets.performance().filter { it.voice == voice }
+            val pair = OrigamiPresets.foldPerformance().filter { it.voice == voice }
             val bloom = pair.single { it.gesture == OrigamiGesture.BLOOM }
             val unfold = pair.single { it.gesture == OrigamiGesture.UNFOLD }
             val accepted = OrigamiPresets.references().first { it.voice == voice }
