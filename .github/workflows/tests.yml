@@ -132,13 +132,18 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # See jvm-other's identical step for why packages is empty.
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: ""
       # One shard of :synth's test classes. To run the same shard locally:
       # ./gradlew --no-daemon :synth:test -PtestShards=3 -PtestShard=<index>
       - name: Run one shard of :synth's tests
+        # No Android SDK here, unlike jvm-other: nothing excludes :app, and
+        # :synth needs nothing from it. The runner image presets both
+        # variables to its own SDK, so they are blanked rather than left
+        # unset. settings.gradle.kts then leaves :app out, as in a cloud
+        # session, and the shard does not install the NDK at configuration
+        # time (about 14 s, and a dl.google.com fetch that could fail it).
+        env:
+          ANDROID_HOME: ""
+          ANDROID_SDK_ROOT: ""
         run: >-
           ./gradlew --no-daemon
           -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
@@ -159,13 +164,17 @@ jobs:
 
   # The one check that says every JVM test passed, under the name the single
   # job had, so anything that waits on `jvm-tests` still waits on all of them.
+  # Its check appears only once all four jobs have ended.
   jvm-tests:
     needs: [jvm-other, jvm-synth]
-    # !cancelled() rather than always(): a superseded PR run is cancelled and
-    # this job goes with it, but a failed test job must still reach the step
-    # below and turn this red. Without the `if`, a failure upstream SKIPS this
-    # job, and GitHub counts a skipped check as passing.
-    if: ${{ !cancelled() }}
+    # always(), so this job is never skipped: GitHub counts a skipped check as
+    # passing. With no `if`, a failed test job would skip it. With
+    # !cancelled(), a cancelled run would: one cancelled by hand, or by a
+    # reopened PR starting again on the same commit. Here every one of those
+    # ends red, naming the result. always() is safe because nothing below can
+    # hang (no checkout, no download). A superseded run spends a few seconds
+    # on it before the next run in the concurrency group starts.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Every JVM test job passed
@@ -196,10 +205,12 @@ jobs:
           packages: ""
       # This job compiles :app three times at once (debug, strikeFx,
       # creaseStudy) in one Kotlin compiler, and the 3 GiB gradle.properties
-      # gives it ran out twice on 2026-11-06 ("Not enough memory to run
-      # compilation", #917 and #920; a re-run passed each time). 5 GiB is for
-      # this job only: the JVM test jobs compile less and keep 3 GiB beside
-      # their test JVMs. The runner has 16 GiB.
+      # gives it ran out twice on 2026-11-06. #917's failed in
+      # :app:compileCreaseStudyKotlin with "OutOfMemoryError: GC overhead
+      # limit exceeded" and passed on a re-run. #920's printed "Not enough
+      # memory to run compilation" and its next push passed. 5 GiB is for this
+      # job only: the JVM test jobs compile less and keep 3 GiB beside their
+      # test JVMs. The runner has 16 GiB.
       - name: Assemble the app and compile device tests
         run: ./gradlew --no-daemon -PcreaseStudyBuild=true -Pkotlin.daemon.jvmargs=-Xmx5g :app:testDebugUnitTest :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin :app:testCreaseStudyUnitTest :app:compileCreaseStudyKotlin
       # The job already builds a working APK and then throws it away with
@@ -216,10 +227,10 @@ jobs:
           name: snipsnap-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          # A private repo meters artifact storage as well as minutes, and
-          # the default is 90 days - hundreds of APKs nobody will install
-          # after the evening they were built. A week is longer than any of
-          # these has ever stayed interesting.
+          # The default is 90 days - hundreds of APKs nobody will install
+          # after the evening they were built (and, while the repo was
+          # private, metered storage). A week is longer than any of these
+          # has ever stayed interesting.
           retention-days: 7
 
       - name: Keep the separately installable STRIKE FX demo
