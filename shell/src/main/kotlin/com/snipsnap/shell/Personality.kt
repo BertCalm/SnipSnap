@@ -119,6 +119,22 @@ object Copy {
      * and showed nowhere - gets its words here (UX review P1/P3).
      */
     const val PADS_RESTING_LINE = "TAP A PAD · IT PLAYS. HOLD AN EMPTY ONE TO CATCH A SOUND INTO IT."
+
+    /**
+     * The one word above each of the STRIKE FX buttons, saying what that button sets (E1).
+     * The buttons keep their own words - STRIKE ON/OFF, LEFT/RIGHT, STAY/RETURN, VOL ON/OFF -
+     * because a STRIKE FX starter's description names STAY and VOL OFF; these only name the
+     * question each word answers. In the order of the row.
+     *
+     * STRIKE_CAPTION_STRIP is whether the strike strip is there at all. STRIKE_CAPTION_SIDE is
+     * which side the thumb strip sits on. STRIKE_CAPTION_RELEASE is what the strength does when the
+     * finger lifts: STAY holds, RETURN drops to zero. STRIKE_CAPTION_LEVEL is whether the strip
+     * also moves the hit's volume or only picks the layer.
+     */
+    const val STRIKE_CAPTION_STRIP = "STRIP"
+    const val STRIKE_CAPTION_SIDE = "SIDE"
+    const val STRIKE_CAPTION_RELEASE = "RELEASE"
+    const val STRIKE_CAPTION_LEVEL = "LEVEL"
     /**
      * GROOVE with a kit open and nothing in it yet: the way in that needs only
      * the pads, named; the other ways (START YOURS, ORBIT, SONG, LOOP) are the
@@ -579,6 +595,14 @@ object Copy {
     fun expansionBorn(expansion: String): String = "$expansion IS ON THE SHELF."
     /** The shelf's group heading over the expansions. */
     const val EXPANSIONS_HEADING = "EXPANSIONS"
+    /** SYNTH's heading over the voice chips. */
+    const val SYNTH_HEADING_VOICE = "VOICE"
+    /** SYNTH's heading over the preset strip and SAVE PRESET. */
+    const val SYNTH_HEADING_PRESETS = "PRESETS"
+    /** SYNTH's heading over an engine's own playing controls (velocity, note length), shown only on engines that have them. */
+    const val SYNTH_HEADING_PLAYING = "PLAYING"
+    /** SYNTH's heading over the buttons that take the sound somewhere (SPREAD, MAKE INSTRUMENT, REOPEN PAD). */
+    const val SYNTH_HEADING_USE = "USE THIS SOUND"
     /** An expansion row whose kits are all gone or binned. */
     const val EXPANSION_EMPTY = "NO KITS YET. HOLD A KIT AND TAP EXPANSION TO ADD ONE."
     /** The rename dialog's title for an expansion. */
@@ -1898,6 +1922,14 @@ object Copy {
     /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
     const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
 
+    /**
+     * The one line under the LAYERS heading, and what the code enforces: soft hits, STRIKE FX and stacked
+     * takes are all velocity layers, so a pad holds one set at a time (SOFT HITS and STRIKE FX ask before
+     * replacing each other; STACK refuses a layered pad), and round robin refuses layers and layers refuse
+     * round robin ([ROBIN_NO_LAYERS], [ROBIN_LAYERED]).
+     */
+    const val LAYERS_RULE = "ONE SET OF LAYERS PER PAD, AND NONE WITH ROUND ROBIN."
+
     /** A print kept on a robin pad: its UNDO needs the takes lifted, which turning round robin off does. */
     const val ROBIN_NO_UNDO = "UNDO WORKS WITH ROUND ROBIN OFF. TURN IT OFF FIRST."
 
@@ -2841,6 +2873,24 @@ object Copy {
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
     /**
+     * The undo chip's words, ahead of the cleared track's name: UNDO CLEAR
+     * KICK. It names what it undoes because it sits in the header row for as
+     * long as it is offered, and a bare UNDO beside a screen that also has
+     * mutes and a tempo would not say which of them it takes back. One level,
+     * and it goes when the bench closes.
+     */
+    const val LOOP_UNDO_CLEAR = "UNDO CLEAR"
+    /** The track is back on the grid and in the file. */
+    const val LOOP_CLEAR_UNDONE = "TRACK IS BACK."
+    /**
+     * An undo whose restore could not be written: the track is on screen again
+     * because the engine took it, and the disk is what refused — so the file
+     * still says it is clear. The mirror of [LOOP_CLEAR_NOT_SAVED].
+     */
+    const val LOOP_UNDO_NOT_SAVED = "THE TRACK IS BACK, BUT IT DID NOT SAVE. IT WILL BE CLEAR NEXT TIME."
+    /** The visible twin of holding a block: clears the track the selected block is in. */
+    const val LOOP_CLEAR_BUTTON = "CLEAR TRACK"
+    /**
      * A tempo change, once the taps have stopped and it is on the grid.
      *
      * The new number is already on screen by then — this says it reached the
@@ -2951,11 +3001,13 @@ object Copy {
     fun loopBounceButton(bars: Int): String = "BOUNCE ${barsOf(bars)} TO SNIPS"
 
     /**
-     * LOOP's own legend. Both of the grid's gestures are invisible — a track
-     * name is not obviously a mute button and a block is not obviously
-     * clearable — and the hold is the one nobody can guess.
+     * LOOP's own legend. Both of the grid's tap gestures are invisible — a
+     * track name is not obviously a mute button and a block is not obviously
+     * selectable. Clearing is not here: it has a visible button
+     * ([LOOP_CLEAR_BUTTON]) and an undo, and holding a block stays as that
+     * button's shortcut rather than something only a sentence can teach.
      */
-    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT."
     /**
      * What a tapped block is, in the line the legend usually occupies.
      *
@@ -3004,6 +3056,17 @@ object Copy {
      * destinations ([makeSub], `Places.HELP`).
      */
     const val MAKE_HEADER = "SOUND FROM NOTHING."
+    /**
+     * MAKE's header with the kit named: the labs write a pad of the active
+     * kit, so with one open the header says which. [MAKE_HEADER] alone when
+     * [kitName] is null (no kit open).
+     */
+    fun makeHeader(kitName: String?): String =
+        if (kitName == null) MAKE_HEADER else "$MAKE_HEADER NEW PADS GO TO ${kitName.uppercase(java.util.Locale.ROOT)}."
+    /** MAKE's heading over the rows that make a sound: SYNTH, SNAP, SURFACE, CONFLUENCE VOICES, MY VOICE. */
+    const val MAKE_A_SOUND = "MAKE A SOUND"
+    /** MAKE's heading over the row that lists what was made: INSTRUMENTS. */
+    const val WHAT_YOU_MADE = "WHAT YOU MADE"
     /**
      * The line under MAKE's header when no kit is active, and the same
      * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).

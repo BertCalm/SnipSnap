@@ -615,17 +615,23 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
+        "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading and the rename dialog title.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // SYNTH's four group headings: labels over a run of controls, not landings.
+        "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // MAKE's two group headings: labels, not landings.
+        "MAKE_A_SOUND", "WHAT_YOU_MADE",
         // SNAP's four group headings: labels, not landings.
         "SNAP_SOURCE", "SNAP_ONE_PAD", "SNAP_ALL_SIXTEEN", "SNAP_PLAY_IT",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
@@ -653,6 +659,9 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
+        // track's name follows it): labels, not landings.
+        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
         // SNAP's FIELD and CLOUD, while the photo is cut into grains and
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.

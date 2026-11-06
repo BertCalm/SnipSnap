@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import java.lang.management.ManagementFactory
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
@@ -88,23 +89,32 @@ class ArcoLoopVibratoTest {
     }
 
     /**
-     * What the vibrato costs a LOOP's render: R1's loop and the shipped one at CELLO C3 and ERHU C5, one after another on this thread, the median of
-     * three each. The humanised swing is a handful of sines a raw sample, at 176.4 kHz over the whole stretch; the bound (the shipped loop in at most
-     * 2.5 times R1's) is there to catch a cost that runs away, not to set one.
+     * What the vibrato costs a LOOP's render: R1's loop and the shipped one at CELLO C3 and ERHU C5 on this thread, taken in turn five times and the
+     * fastest of each kept. The time is this thread's CPU time, not the wall clock. The build runs as many test JVMs as there are CPUs, and their
+     * parallel renders take the CPU from this thread at moments of their own: the wall clock counts that wait and the thread's CPU time does not. On
+     * CI on 2026-11-06 the wall clock read R1's loop at 188 ms and the shipped one at 545, where an idle machine reads them alike. Taking the two in
+     * turn puts what slowing is left (a busy neighbouring core, a clock step) on both alike, and noise only ever adds time, so the fastest run is the
+     * truest. The humanised swing is a handful of sines a raw sample, at 176.4 kHz over the whole stretch; the bound (the shipped loop in at most 2.5
+     * times R1's) is there to catch a cost that runs away, not to set one.
      */
     @Test
     fun `what the loop vibrato costs a render`() {
+        val threads = ManagementFactory.getThreadMXBean()
+        val cpu = threads.isCurrentThreadCpuTimeSupported && threads.isThreadCpuTimeEnabled
+        fun now(): Long = if (cpu) threads.currentThreadCpuTime else System.nanoTime()
         for ((voice, tune) in listOf(ArcoVoice.CELLO to 0.5f, ArcoVoice.ERHU to 0.5f)) {
             val m = Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)
-            fun median(kind: Arco.LoopVibrato): Long = (0 until 3).map {
-                val t0 = System.nanoTime()
+            fun millis(kind: Arco.LoopVibrato): Long {
+                val t0 = now()
                 Arco.renderLoopMeasured(voice, m, loopVibrato = kind)
-                (System.nanoTime() - t0) / 1_000_000L
-            }.sorted()[1]
+                return (now() - t0) / 1_000_000L
+            }
             Arco.renderLoopMeasured(voice, m)
-            val off = median(Arco.LoopVibrato.OFF)
-            val human = median(Arco.LoopVibrato.HUMAN)
-            println("ARCO loop vibrato cost $voice midi ${Arco.midiFor(voice, tune)}: R1's loop $off ms, the shipped loop $human ms (median of three, one thread)")
+            val runs = (0 until 5).map { millis(Arco.LoopVibrato.OFF) to millis(Arco.LoopVibrato.HUMAN) }
+            val off = runs.minOf { it.first }
+            val human = runs.minOf { it.second }
+            val clock = if (cpu) "this thread's CPU time" else "the wall clock, no thread CPU time here"
+            println("ARCO loop vibrato cost $voice midi ${Arco.midiFor(voice, tune)}: R1's loop $off ms, the shipped loop $human ms (the fastest of five taken in turn, $clock); every run $runs")
             assertTrue(human <= 2.5 * off + 50, "$voice: the shipped loop takes $human ms against R1's $off")
         }
     }

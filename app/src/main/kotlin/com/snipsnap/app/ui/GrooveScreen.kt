@@ -82,6 +82,7 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
+import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.LiveRecord
 import com.snipsnap.kit.MidiGroove
@@ -249,15 +250,6 @@ private const val YOURS_INDEX = 4
 
 /** Lane display order, straight from [GrooveEdit.Lane]'s own declaration order. */
 private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
-private val LANE_LABEL: Map<GrooveEdit.Lane, String> = mapOf(
-    GrooveEdit.Lane.KICK to "KICK",
-    GrooveEdit.Lane.SNARE to "SNARE",
-    GrooveEdit.Lane.CLAP to "CLAP",
-    GrooveEdit.Lane.HAT_CLOSED to "HAT C",
-    GrooveEdit.Lane.HAT_OPEN to "HAT O",
-    GrooveEdit.Lane.TOM to "TOM",
-    GrooveEdit.Lane.PERC to "PERC",
-)
 private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
     GrooveEdit.Lane.KICK to DrumClass.KICK,
     GrooveEdit.Lane.SNARE to DrumClass.SNARE,
@@ -2482,6 +2474,7 @@ fun GrooveScreen(
                     onToggle = ::toggleCell,
                     onDone = ::closeEditor,
                     yoursCount = yoursAll.size,
+                    kit = entry.kit,
                 )
             }
         }
@@ -2872,7 +2865,7 @@ private fun NeedleRoll(
                         .background(scheme.lcd.tape, RoundedCornerShape(3.dp))
                         .padding(horizontal = 5.dp, vertical = 1.dp),
                 ) {
-                    TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, c)
+                    TapeText(LANE_DRUM_WORD.getValue(lane), TapeType.pixelSmall, c)
                 }
             }
             // Fix 3's eighth column, legended: same chip shape as the seven
@@ -2892,6 +2885,21 @@ private fun NeedleRoll(
         }
     }
 }
+
+/** One BEAT lane's row label: the pad's name on one line, shrunk to the 46dp box [laneLabel] fills. */
+@Composable
+private fun LaneNameCell(label: String, color: Color) {
+    FitTapeText(label, TapeType.pixelSmall, color)
+}
+
+/** Each lane's colour: the pad's own class ([laneClass]), else the lane's drum class, else LCD ink. */
+@Composable
+private fun laneColorsFor(kit: Kit, scheme: Scheme): Map<GrooveEdit.Lane, Color> =
+    remember(kit, scheme) {
+        LANE_ORDER.associateWith { lane ->
+            LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(laneClass(lane, kit, it)).tape } ?: scheme.lcdInk.tape
+        }
+    }
 
 /**
  * The fork-to-E step editor, full-screen over the groove screen. E keeps
@@ -2923,7 +2931,11 @@ private fun StepEditorOverlay(
     onDone: () -> Unit,
     /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
     yoursCount: Int,
+    /** The loaded kit: each lane's row is named and coloured after the pad it plays. */
+    kit: Kit,
 ) {
+    val laneNames = remember(kit) { LANE_ORDER.associateWith { laneLabel(it, kit) } }
+    val laneColors = laneColorsFor(kit, scheme)
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
     val barSteps = GrooveEdit.stepsPerBar(clip)
@@ -3025,14 +3037,14 @@ private fun StepEditorOverlay(
             // reclaiming exactly the gap that used to be unclickable.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (lane in LANE_ORDER) {
-                    val laneColor = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
+                    val laneColor = laneColors.getValue(lane)
                     val laneOnSteps = onSteps.getValue(lane)
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Box(
                             Modifier.width(46.dp).fillMaxHeight().sunkenField(scheme, 3.dp).padding(horizontal = 4.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, laneColor)
+                            LaneNameCell(laneNames.getValue(lane), laneColor)
                         }
                         Row(Modifier.weight(1f).fillMaxHeight()) {
                             for (col in 0 until barSteps) {
@@ -3053,7 +3065,7 @@ private fun StepEditorOverlay(
                                         // 16-cell grid with no name at all
                                         // read as identical unlabelled
                                         // squares to a screen reader.
-                                        .tapeClick(label = "${LANE_LABEL.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}") { onToggle(lane, step) }
+                                        .tapeClick(label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}") { onToggle(lane, step) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .border(

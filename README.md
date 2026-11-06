@@ -177,11 +177,12 @@ FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
 a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes,
 HANDOFF, MATCH and LOSS controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryLossAudition`; [implementation notes](docs/FERRY.md)
+`./gradlew :synth:generateFerryReleaseAudition`; [implementation notes](docs/FERRY.md)
 record the aligned and MATCH listening approvals. LOSS varies physical decay
-over finite one-to-eight-second observations; the neutral sound and model-1/2
-recipes stay unchanged. LOSS listening, natural tails, HOLD and phone acceptance
-remain separate gates.
+over finite observations. After the owner reported an abrupt short ending,
+model 4 adds up to 350 ms of shaped release to short settings. Neutral/bloom
+audio and model-1/2/3 recipes stay unchanged. The revised ending, natural tails,
+HOLD and phone acceptance remain separate listening gates.
 
 CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, TUMBLE a
 tightening rebound cascade, and the new SING a soft contact opening into smooth,
@@ -1301,8 +1302,9 @@ which sit beside the picker. `:synth` also holds engines that picker does not sh
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
-regenerable audition. Its provisional sixteen-pad playing bank has three touch
-zones and both MPC program formats; SCAR is a separate aftershock study.
+regenerable audition. Its current contrast bank has eight playing roles, three touch
+zones and both MPC program formats. GRAIN expands packet size and recovery;
+the original sixteen recipes and SCAR study remain available.
 It remains outside the picker and factory presets.
 
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing

@@ -2976,6 +2976,12 @@ cycles per loop, so the delay returns to where it started at the wrap:
   there is 1 cent.
 * *It costs*: R1's loop renders in 285 ms at CELLO C3 and 394 ms at ERHU C5, the shipped loop in 366 and 475 ms
   (median of three, one thread): about 80 ms more a loop, the humanised swing's few sines at every raw sample.
+  The test's bound (at most 2.5 times R1's) now reads this thread's CPU time, the two taken in turn five times
+  and the fastest of each kept. On CI on 2026-11-06 the wall clock read 188 ms against 545 for the same pair
+  (MEASURED: the CI report), because the build's other test JVMs took the CPU between the two blocks of three.
+  MEASURED: with busy threads started between the blocks on purpose, the old wall-clock reading went to 485
+  against 1554 (3.20, failing) and the new one read 277 against 360 (1.30); with none, 272 against 355 (CELLO)
+  and 377 against 462 (ERHU).
 * *Through the loop instrument*: `LoopPadMaker`, unchanged, renders every zone of a BUZZ 1 patch with the
   vibrato on with a clean join (its `wrapRatio` at most 1.36, at ERHU D#4, against its bar of 2.0; the seam
   bar is met inside the engine).
@@ -3034,3 +3040,156 @@ ships (`Arco.LOOP_VIBRATO` is HUMAN), so nothing changes; SNAPPED stays only as 
   the loop instrument's joins.
 * *Proposed:* the drift frequencies and the full depth (listening values), the reading of the sideband centre's
   spread as colour rather than pitch.
+
+## R2: the held keygroup, as built (2026-11-06)
+
+The owner asked on 2026-11-06 for the held instruments to "start at the top of the list", and ARCO's held keygroup is that row: the
+research pass's item 3 ([`2026-11-04-arco-research.md`](2026-11-04-arco-research.md), section 9) with its decisions 2 to 4 settled. The
+loop vibrato is the one the owner picked on 2026-11-04 ("Humanized is best", the section above), so where section 9.2 says "no vibrato" it
+predates that verdict. ERHU takes eight zones with A5 as its top root (decision 3's default) and the soft layer is BOW and GRIP at 0.28 of
+the patch's (decision 4's default). Nothing in this section has been heard.
+
+**What shipped.**
+
+* **`ArcoKeys`** (`synth/.../ArcoKeys.kt`, `BellowsKeys`' shape): the zone plan (`zoneMidis`), the two layers (`Layer.SOFT`, `Layer.HARD`,
+  soft first), the macros a layer renders at (`macrosFor`: the patch settled, TUNE set to the key, BOW and GRIP times `SOFT_SHARE` 0.28 for
+  the soft one), `pad` and `layers`, the one retry at twice the warm-up and the refusal by name (`Keys.requireSeam`). A key outside the
+  voice is refused by name ("ARCO ERHU keys are MIDI 62..81 (D4 to A5), got 83 (B5)").
+* **The hook in `Arco.kt`**, "the held key (R2)": `heldStretch` (the one-shot's own stroke on a gate whose bow-on length is the whole
+  stretch, so the ramp, the lift and the stop are never reached) and `renderHeldMeasured` (the render below), with `HeldRender`, what it
+  measured. The LOOP's retune moved, unchanged, into one function both now call (`retuned`), with the warm-up's length (`warmFramesFor`),
+  so a LOOP and a held key cannot retune differently. Every existing render is untouched (below).
+* **`ArcoPadMaker`** (`shell/.../ArcoPadMaker.kt`, `BellowsPadMaker`'s shape): `Spec(patch, releaseSeconds)`, RELEASE 0.1 to 1.5 s,
+  default 0.6, `supports`, `spec`, `zoneMidis` (absolute: the patch's TUNE plays no part), `renderZone` (a list of two `KeyNote`s, soft
+  first), `assemble` (velocity windows 1 to 63 and 64 to 127; inner zones reach halfway to their neighbours, the edge zones nine
+  semitones past their roots, so ERHU's top zone plays up to F#6), `export` (`OneNote.writePackage`), `preview` (a held key through
+  `InstrumentEngine`: the stroke and the loop twice by default, then the RELEASE fade).
+* **`LoopPadMaker.QUALIFIED` no longer lists ARCO**, and `LoopInstrumentScan.CANDIDATES` no longer lists it either. `ArcoBuzzLoopPadTest`,
+  which held every zone of a BUZZ 1 patch to `LoopPadMaker`'s join, now follows BUZZ through `ArcoPadMaker` (and checks the loop-only
+  maker no longer offers ARCO). `InstrumentPackGenerator` reads `QUALIFIED`, so it stops making the loop-only ARCO keys by itself; it
+  does not yet make the held ones.
+* **The A/B**, `:shell:generateArcoHeldAudition` (`ArcoHeldAuditionGenerator`), below.
+
+**The zone plan, as rendered at the defaults** (ArcoKeysTest's print):
+
+| voice | zones (roots) | keygroup span | loop starts at | file |
+|---|---|---|---|---|
+| CELLO | C2 D#2 F#2 A2 C3 D#3 F#3 A3 C4 | D#1 to A4 | 3.08 s at C2, 2.59 to 2.60 at D#2, 2.17 to 2.18 at F#2, 2.01 to 2.03 from A2 | 4.0 to 5.1 s |
+| ERHU | D4 F4 G#4 B4 D5 F5 G#5 A5 | F3 to F#6 | 2.01 to 2.03 s | 4.0 s |
+
+**The render, in order** (`Arco.renderHeldMeasured`):
+
+1. The macros at the key, TUNE exact; HOLD plays no part (a held key sustains).
+2. `heldStretch`: BOW's attack and, above BOW 0.5, its bite, then the bow held at the sustain velocity to the end. The stretch is as long as
+   the LOOP's: the warm-up (`max(2.0 s, 200 periods)`), the loop, 2048 frames of pad.
+3. `retuned`: BORE's route, as the LOOP has it. The played length of the plan's whole periods is measured after the warm-up
+   (`Bore.measureLoopSamples`, unchanged) and the whole stretch rendered again at `tuned * ratio` until the ratio is within 3e-7. So the
+   attack plays at the corrected pitch too, a fraction of a cent from the key, where a one-shot plays within 4.0 cents of it.
+4. The LOOP's vibrato (`loopVibrato`, `LOOP_VIBRATO` HUMAN, fitted to whole cycles per loop), which swells in from 0.35 s after the
+   stroke begins, as a one-shot's does; then BUZZ with its noise tabled one loop long from the warm-up's end; then the box and the output
+   chain (`conditionedWithBody`). All as the LOOP has them.
+5. The loop starts at the best zero crossing (`Siren.bestCut`) within 1024 frames after the warm-up and the seam's own 256-frame window,
+   and the file ends exactly one loop later, so the wrap joins the loop's last frame to its first. Never a crossfade.
+6. Levelled on the loop region to `Dsp.MELODIC_LOUDNESS_TARGET` by `Loudness.of` (`Keys.resinPad`'s rule: the loop sets the level, not the
+   attack), then `Dsp.limitPeak(0.99)`. Above BODY's knee the lift goes on at the plain's gain and is capped as the LOOP's is (`PEAK_CAP`),
+   so nothing levels the lift away.
+7. The seam is the file's own (`Keys.seamError` at the loop start); `ArcoKeys` refuses it by name above `Keys.MAX_SEAM_ERROR` (1e-3)
+   after one retry at twice the warm-up.
+
+**Measured** (Kotlin: ArcoKeysTest, ArcoPadMakerTest, ArcoBuzzLoopPadTest; 2026-11-06):
+
+* *Every zone closes.* All 34 zone-layers at the defaults (CELLO's nine and ERHU's eight, both layers), worst seam per voice and layer:
+  CELLO soft 1.57e-6 (F#3), CELLO hard 2.30e-6 (D#3), ERHU soft 7.44e-6 (D5), ERHU hard 5.88e-7 (D5), against the bar of 1e-3. The retry
+  fired for none of them, and the peak guard (`limitPeak`) turned none of them down: every loop region sits on the target. The retune
+  took one pitch correction at fifteen of CELLO's eighteen zone-layers (two at the other three) and two at fifteen of ERHU's sixteen
+  (one at the other).
+* *The corners close.* GRIP 0 and 1, BODY 0 and 1, BUZZ 1, BOW 0 and 1, at each voice's lowest, middle and top zone, both layers (84
+  zone-layers): the worst seam 8.53e-6 (ERHU D5 soft, BODY 0), no retry, no peak guard. At BODY 1 the lift delivered its full 6.00 dB
+  everywhere but CELLO C2, where the peak cap held it to 2.54 dB (soft) and 2.64 dB (hard), as it holds the one-shot's and the LOOP's
+  lowest notes.
+* *The attack is the stroke.* The held stretch's raw string is the one-shot's, sample for sample, for the whole of the one-shot's
+  bow-on time (0.85 s at the default HOLD), at BOW 0, 0.5 and 1, in both voices, at the same driven pitch; past it the one-shot's bow
+  ramps off and the held bow does not. On the finished file, the first 300 ms' 5 ms envelope against the one-shot's at the same key: 1.000
+  (CELLO C3, BOW 0 and BOW 1) and 1.000 and 0.999 (ERHU D5), against 0.236 to 0.252 for the other BOW's one-shot. The held key's first
+  30 ms sit -16.7 dB (CELLO C3) and -16.2 dB (ERHU D5) under its loop; the loop-only zone's first 30 ms sit 0.0 and -0.3 dB from its own
+  loop, which is what "no attack" means.
+* *The held loop is the LOOP's.* At the default BOW (0.5, no bite, the LOOP's own 63 ms stroke) the held stretch is the LOOP's stretch,
+  sample for sample, in both voices; at BOW 1 it is not.
+* *The soft layer is another sound.* The spectral centroid of its loop against the hard's: CELLO lower at every zone, by 3.8 percent at
+  C2 rising to 11.5 at C3 and 15.5 at C4; ERHU lower by 4.6 to 7.8 percent from D4 to D5 and only 2.0 and 1.7 at G#5 and A5. Its stroke
+  reaches 90 percent of its loop's level later at every zone (CELLO C3 0.55 s against 0.29; ERHU D5 0.23 against 0.11), but by only 10 ms
+  at CELLO F#2 and C4, where the string's own build sets the time.
+* *Determinism.* The same inputs render the same samples and the same loop start (CELLO C3 hard, ERHU A5 soft, CELLO C2 at BUZZ 0.5).
+* *The refusal works.* The LOOP's own failing control, BUZZ 1 with its noise running free, opens the seam to 7.39e-3 at the first try and
+  9.58e-3 at twice the warm-up, and the zone is refused: "ARCO CELLO hard layer at C3, retried at twice the warm-up (the first try's seam
+  7.39e-03): the loop does not close (seam 9.58e-03, bar 1e-03)". A cancelled key stops before it renders.
+* *What it costs.* One zone-layer takes 351 to 509 ms of this thread's CPU time on the JVM (the build machine, four cores; 359 to 492 on a
+  second run); CELLO's eighteen sum to 7.3 s (7.2 on the second run) and ERHU's sixteen to 7.5 s. The audio is 76.0 s (CELLO) and 64.3 s (ERHU), 10.1 MB and 8.5 MB as 24-bit mono,
+  as the research computed.
+* *The package.* ERHU's eight zones export and read back through the phone's sidecar with their roots, both velocity windows, every loop
+  start and every WAV's length; the zones tile without a gap (G#5's zone stops at G#5, A5's starts on itself). The preview reads the file
+  exactly through the hold and on across the wrap into its loop (both layers, every frame equal to the file times the touch's gain), and
+  the release ends in silence.
+* *Nothing else moved.* ArcoFrozenR1cTest, ArcoBuzzTest (the twenty hashes), ArcoLoopVibratoTest (the 450 loops), ArcoLoopFuzzTest, the
+  ARCO product, preset and body tests, DeterminismTest and PresetsTest pass unchanged after the retune moved into `retuned`.
+* *Python harness on the A/B clips, not Kotlin* (`probes.py`): CELLO C3's held hard key, held soft key and loop-only zone read centroids
+  of 260, 230 and 259 Hz.
+
+**What changed against the plan.**
+
+* The vibrato is in the loop (the owner's verdict), where section 9.2 had none; it enters 0.35 s after the stroke, as a one-shot's does.
+* The names: `ArcoKeys` (an object beside `BellowsKeys` and `CreaseKeys`) for the design's `Keys.arcoPad`, and `ArcoPadMaker` in `:shell`
+  for `InstrumentSuite.renderArco` and `HeldSpec.Arco`. There is no `attackSeconds` argument: the attack is BOW's stroke.
+* The cut is the best zero crossing in 1024 frames after the warm-up, not across a whole loop: the file must end exactly one loop after
+  its start and stay inside the stretch the retune measured.
+* The A/B is a `:shell` task, not a mode of `:synth:generateArcoAudition`: the maker and the player live in `:shell`, which `:synth`
+  cannot see.
+
+**Disclosed, not fixed.**
+
+* *The phone.* With ARCO out of `LoopPadMaker.QUALIFIED`, the SYNTH screen's MAKE INSTRUMENT (which asks `LoopPadMaker.offers`,
+  `SynthScreen.kt:2243`) no longer offers ARCO until it gets an arm for `ArcoPadMaker`. Not checked on a device.
+* *ERHU's top.* The soft layer there is mostly an attack difference: its loop is 2.0 percent (G#5) and 1.7 percent (A5) darker, as the
+  research predicted from GRIP's corner travel at the top.
+* *Phone render time* is not measured; the research's guess is 2 to 4 times the JVM's.
+* *The loop repeats every two seconds*, the humanised vibrato's drift and BUZZ's noise with it, by construction.
+
+**The A/B for the owner.** `./gradlew :shell:generateArcoHeldAudition` (or `-ParcoHeldOutput=<dir>`) writes, per voice at the lowest,
+middle and top zone (CELLO C2, C3, C4; ERHU D4, D5, A5), a key held for 8 s and then let go over RELEASE 0.6 s, through the instrument
+player, three ways: "1 held hard" (the new key's hard layer), "2 held soft" (its soft layer) and "3 loop only" (what ARCO's keys were until
+today: the shipped LOOP twice over with no attack, rendered at the same note). Each clip is levelled to one loudness, so the soft layer's
+touch gain is taken out and only its timbre is compared. What it lets the owner judge: whether the start of a key is a bow (hard and
+soft), whether the held loop still reads as cheap or mechanical once a real stroke leads into it, and whether the soft layer is a different
+enough sound, at ERHU's top especially.
+
+**Why it is built this way.**
+
+1. **The attack is rendered, not stitched.** A bow is a bow in its first few hundred milliseconds, and no loop can fake that. So the held
+   key runs the same stroke a one-shot runs (the test shows the raw string is the one-shot's, sample for sample, while the one-shot's bow
+   is on) and simply never lifts the bow. Remove it and the key is the loop-only instrument again, which starts in the middle of a note.
+2. **Everything after the warm-up is the shipped LOOP.** The same retune, the same humanised vibrato, the same BUZZ, the same box, from one
+   shared `retuned`. The owner has heard and chosen that loop; a held key that used a different one would need hearing again from the
+   start.
+3. **Whole periods, never a crossfade.** The loop is a whole number of the string's own periods, retuned until they fill whole frames, so
+   the wrap joins the string to itself. The seam is measured on the file that ships, retried once at twice the warm-up, and refused by
+   name if it still fails: a click is never shipped quietly.
+4. **Velocity is timbre.** The soft layer is a slower stroke and a lighter, darker grip, levelled to the same loudness as the hard one; the
+   sampler's own velocity curve sets how loud a touch is. Two sources of level would fight.
+5. **The risky decision** is that the loop under the key is still a two-second loop that repeats exactly. The humanised vibrato was the
+   owner's answer to "mechanical", but no one has yet heard it after a real stroke; the A/B is where that is judged.
+
+**Ledger.**
+
+* *Verified* (read in the repo at `a2f1fb80`): `Arco.play`'s gate (the release is 1 while the bow is on, the lift at the end of the ramp),
+  `stretch`, `renderLoopMeasured`, `loopVibrato`, `LOOP_VIBRATO`, `buzzed`, `conditionedWithBody`, `liftPlan`; `Bore.planLoop` and
+  `Bore.measureLoopSamples` (read, not changed); `Keys.resinPad`, `Keys.requireSeam`, `Keys.MAX_SEAM_ERROR`, `KeyNote`; `BellowsPadMaker`,
+  `LoopPadMaker`, `KeelPadMaker`, `ResinPadMaker`, `CreasePadMaker`; `InstrumentEngine` and `KeyHit` (the velocity window and the gain);
+  `SynthScreen.kt`'s `LoopPadMaker.offers` gate (read, not changed).
+* *Measured* (Kotlin: ArcoKeysTest, ArcoPadMakerTest, ArcoBuzzLoopPadTest, with ArcoFrozenR1cTest, ArcoBuzzTest, ArcoLoopVibratoTest and
+  the rest of the ARCO tests unchanged): the 34 default zone-layers and the 84 corners, their seams, the retries, the peak guard, the
+  lift at BODY 1; the stroke's raw identity, its envelope correlations and the onset levels; the held stretch equal to the LOOP's at BOW
+  0.5; the layers' centroids and rise times; determinism; the refusal; the cost and the sizes; the package and the preview. *Python
+  harness, not Kotlin:* the three centroids on the A/B clips.
+* *Proposed:* the soft share of 0.28 and the velocity split at 64 (listening values), the cut's 1024-frame search, the edge zones' reach
+  of nine semitones (the loop maker's layout), the guess at the phone's render time.
+* *Heard:* nothing. The A/B is where the owner hears it.

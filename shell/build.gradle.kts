@@ -256,6 +256,17 @@ tasks.register<JavaExec>("generateKeelKeys") {
     args("${rootDir}/testkit/keel-keys")
 }
 
+/** BORE held: the held keygroup's zones as held keys beside the loop-only zones they replace. See BoreHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateBoreHeldAudition") {
+    group = "distribution"
+    description = "Render BORE's held keygroup as held keys (hard and soft layers) beside the loop-only zones, at three notes a voice, under testkit/bore-held-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoreHeldAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("boreHeldOutput").orElse("${rootDir}/testkit/bore-held-audition").get())
+}
+
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     group = "distribution"
     description = "Render BELLOWS native/program A/B and release previews through exported WAVs and the JVM player."
@@ -357,6 +368,17 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     mainClass.set("com.snipsnap.shell.CausticCompleteAuditionGenerator")
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
+}
+
+/** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoHeldAudition") {
+    group = "distribution"
+    description = "Render ARCO's held keys, both layers, through the instrument player beside the loop-only zone, three notes per voice, under testkit/arco-held-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ArcoHeldAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("arcoHeldOutput").orElse("${rootDir}/testkit/arco-held-audition").get())
 }
 
 /** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */

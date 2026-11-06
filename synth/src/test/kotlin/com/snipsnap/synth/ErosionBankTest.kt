@@ -26,13 +26,13 @@ class ErosionBankTest {
         }
         assertEquals(198,count)
     }
-    @Test fun `bank has sixteen complete dry ARC CRATER recipes and three touch layers`() {
+    @Test fun `contrast bank has eight complete roles and three touch layers`() {
         val entries=ErosionBank.entries()
-        assertEquals(16,entries.size)
-        assertEquals(16,entries.map { it.name }.toSet().size)
+        assertEquals(8,entries.size)
+        assertEquals(8,entries.map { it.name }.toSet().size)
         assertEquals(listOf(.35f,.65f,1f),ErosionBank.velocities)
-        assertEquals(8,entries.count { it.patch.voice==ErosionVoice.ARC })
-        assertEquals(8,entries.count { it.patch.voice==ErosionVoice.CRATER })
+        assertEquals(5,entries.count { it.patch.voice==ErosionVoice.ARC })
+        assertEquals(2,entries.count { it.patch.voice==ErosionVoice.CRATER })
         for(entry in entries) {
             assertEquals(Erosion.defaults(entry.patch.voice).keys,entry.patch.macros.keys)
             assertTrue(entry.patch.macros.values.all { it in 0f..1f })
@@ -41,6 +41,17 @@ class ErosionBankTest {
                 assertEquals(p,Patches.fromJsonText(p.toJsonText()))
                 assertContentEquals(p.render().samples,PadRecipe.fromJsonText(PadRecipe(p).toJsonText()).render().samples)
             }
+        }
+    }
+    @Test fun `grain changes packet size while legacy recipes retain their exact maps`() {
+        assertEquals(16,ErosionBank.legacyEntries().size)
+        for (p in ErosionBank.legacyEntries()) assertFalse("GRAIN" in p.patch.macros)
+        for (voice in ErosionVoice.entries) {
+            val fine=Erosion.schedule(voice,mapOf("FEED" to .4f,"VOLTAGE" to .3f,"GRAIN" to 0f))
+            val coarse=Erosion.schedule(voice,mapOf("FEED" to .4f,"VOLTAGE" to .3f,"GRAIN" to 1f))
+            assertTrue(coarse.events.size < fine.events.size/3,"$voice packet count did not separate")
+            assertTrue(coarse.events.maxOf { it.energy } >= fine.events.maxOf { it.energy })
+            assertTrue(coarse.conservationError < 1e-12)
         }
     }
     @Test fun `SCAR reserves aftershock energy and retains an actual source gap`() {

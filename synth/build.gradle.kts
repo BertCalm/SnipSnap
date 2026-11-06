@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFerryReleaseAudition") {
+    group = "distribution"
+    description = "Render Ferry's revised short-note release with saved recipes and ending measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryReleaseAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryReleaseOutput").orNull ?: "${rootDir}/testkit/ferry-release-audition")
+}
+
 tasks.register<JavaExec>("generateFerryLossAudition") {
     group = "distribution"
     description = "Render Ferry LOSS comparisons with complete recipes, physical decay and timing evidence."
@@ -2075,6 +2085,16 @@ tasks.register<JavaExec>("generateForgeChargeAudition") {
     args("${rootDir}/testkit/forge-charge-audition", "${rootDir}")
 }
 
+/** Render the strike-velocity round's listening gate (clips, manifest, page) under testkit/strike-audition/. See StrikeAuditionGenerator. */
+tasks.register<JavaExec>("generateStrikeAudition") {
+    group = "distribution"
+    description = "Render the strike velocity, re-strike, OBBLIGATO keys and CHORD STABS listening gate under testkit/strike-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StrikeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/strike-audition", "${rootDir}")
+}
+
 /** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeAudition") {
     group = "distribution"
@@ -3035,14 +3055,14 @@ tasks.register<JavaExec>("generateLorentzKit") {
     args("${rootDir}/testkit/lorentz-kit")
 }
 
-/** Sixteen dry percussion pads with three native touch zones and a separate SCAR study. */
+/** Eight contrasting percussion roles with three native touch zones and an aftershock control. */
 tasks.register<JavaExec>("generateErosionBank") {
     group = "distribution"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ErosionBankGenerator")
     maxHeapSize = "768m"
     workingDir = projectDir
-    args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-playable-bank")
+    args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-contrast-bank")
 }
 
 tasks.register<JavaExec>("generateHydroformAudition") {

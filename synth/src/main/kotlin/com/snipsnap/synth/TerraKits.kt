@@ -63,8 +63,14 @@ object TerraKits {
         slot("Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f), // A05
         // Dumbek Doum: 110Hz, hardness 0.40, droop 0.18 ("full center mass displacement") - measured TOM: centroidHz=125.4, lowRatio=0.642, same honest bass-family reasoning as Djembe Bass above.
         slot("Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f), // A06
-        // Cajon Corner Slap: TUNED_BAR, 220Hz, hardness 0.85, BUZZ 0.75 ("high rattleAmount, fast decay").
-        slot("Cajon Slap", TerraVoice.TUNED_BAR, DrumClass.PERC, "TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f), // A07
+        // Cajon Slap: a box. The spec's TUNED_BAR slap shared the balafon's bar modes and had no low end
+        // (heard 2026-11-06 as "very similar" to Balafon Key); its RESONANT_CAVITY rebuild the same day
+        // had the bass but read "too much like a drum machine rimshot". Now the BOX voice (TerraBox) at
+        // the Python prototype the owner picked ("C (deeper box)", the rimshot "Gone"): a birch plate's
+        // 98 modes from 75 Hz struck near its top edge, the port's air at 85 Hz, the wires at half. Its
+        // macros are spelled out (BOX's defaults) so the pad never moves with them. Classified SNARE, as
+        // the wires lift the high band past half (0.54); a cajón's slap is its backbeat.
+        slot("Cajon Slap", TerraVoice.BOX, DrumClass.SNARE, "TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f), // A07
         // Djembe Open Tone: 245Hz, hardness 0.50, droop 0.05, POS 0.5 ("harmonic mode resonance").
         slot("Djembe Open", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f), // A08
         // Tabla Dayan (Tin): D4/293.6Hz, hardness 0.80, droop 0.02, POS 0.95 ("high-edge rim strike").

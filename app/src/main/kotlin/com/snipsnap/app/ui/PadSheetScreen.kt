@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -3545,9 +3546,45 @@ fun PadSheetScreen(
                 },
             )
 
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ToggleChip("ONE-SHOT", pad.oneShot, classColor, scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
+                    editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
+                }
+                ToggleChip(
+                    "CHOKE GRP",
+                    pad.muteGroup != 0,
+                    classColor,
+                    scheme,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    editPadMetadata { m ->
+                        m.update(slot) { p ->
+                            val newGroup = if (p.muteGroup != 0) {
+                                0
+                            } else {
+                                AutoPlace.muteGroupFor(p.drumClass).takeIf { it != 0 } ?: 1
+                            }
+                            p.copy(muteGroup = newGroup)
+                        }
+                    }
+                }
+            }
+
+            SectionHeading("LAYERS", scheme)
+            TapeText(Copy.LAYERS_RULE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // ROUND ROBIN: the pad plays a different take each hit. Edits above and below still work on
             // the original; the takes re-render from it.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ToggleChip(
+                    "SOFT HITS",
+                    pad.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(pad),
+                    classColor,
+                    scheme,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                    onToggle = ::onGhostsToggle,
+                )
                 ToggleChip(
                     "ROUND ROBIN", robinOn, classColor, scheme,
                     enabled = !busy && !robinBlocked, modifier = Modifier.weight(1f), onToggle = ::onRobinToggle,
@@ -3596,40 +3633,6 @@ fun PadSheetScreen(
                 onFractionCommit = ::onRobinOwn,
             )
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ToggleChip("ONE-SHOT", pad.oneShot, classColor, scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
-                }
-                ToggleChip(
-                    "CHOKE GRP",
-                    pad.muteGroup != 0,
-                    classColor,
-                    scheme,
-                    enabled = !busy,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    editPadMetadata { m ->
-                        m.update(slot) { p ->
-                            val newGroup = if (p.muteGroup != 0) {
-                                0
-                            } else {
-                                AutoPlace.muteGroupFor(p.drumClass).takeIf { it != 0 } ?: 1
-                            }
-                            p.copy(muteGroup = newGroup)
-                        }
-                    }
-                }
-                ToggleChip(
-                    "SOFT HITS",
-                    pad.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(pad),
-                    classColor,
-                    scheme,
-                    enabled = !busy,
-                    modifier = Modifier.weight(1f),
-                    onToggle = ::onGhostsToggle,
-                )
-            }
-
             StrikeFxSection(
                 pad = pad,
                 room = strikeRoom,
@@ -3645,6 +3648,54 @@ fun PadSheetScreen(
                 classColor = classColor,
             )
 
+            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
+            // when the pad already has layers, since STACK wants a
+            // single-sample pad to build on. Still tappable: the screen
+            // says which of the two it is.
+            ActionButton(
+                "STACK ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { if (pad.isRobinChain) onToast(Copy.ROBIN_NO_LAYERS) else onStack(slot) },
+            )
+
+            SectionHeading("EDIT", scheme)
+            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
+            // Dimmed, not disabled, when there's no prior take yet - same
+            // "still tappable, the destination explains why" convention as
+            // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
+            // pad's file has at least one recoverable prior take," the
+            // same signal `refreshPadAudio` computes for the undo buttons.
+            //
+            // UNDO SPLICE shares the row, half each (a weight inside a Row,
+            // not the Column trap GRAIN ▸'s comment describes). Always drawn
+            // and dimmed when it cannot act, so the sheet does not rearrange
+            // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
+            // nothing. Its own label, not a bare UNDO: this section is always
+            // composed, so a second "UNDO" would sit beside the open box's.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
+                ActionButton(
+                    "SPLICE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = binDaysLeft == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::openSplice,
+                )
+                ActionButton(
+                    "UNDO SPLICE",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onUnsplice,
+                )
+            }
+
+            SectionHeading("EFFECTS", scheme)
             GroupBox(
                 legend = PadSheetBoxes.Box.TREATMENT.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.TREATMENT),
@@ -3796,6 +3847,27 @@ fun PadSheetScreen(
                     }
                 },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
+                afterRowOne = {
+                // The tape this pad's dust comes from — or would come from — and
+                // the door to borrow another's.
+                DustFromRow(
+                    tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
+                    open = dustFromOpen,
+                    tapes = dustFromTapes,
+                    scheme = scheme,
+                    busy = busy,
+                    onOpen = {
+                        pedalPlacing = null
+                        openDustFrom()
+                    },
+                    onClose = { dustFromOpen = false },
+                    onPick = { file ->
+                        pedalPlacing = null
+                        dustFromOpen = false
+                        applyDustFrom(file.name)
+                    },
+                )
+                },
                 // AMT re-runs the treatment at the new amount, which is the
                 // same second-and-a-bit of work a chip tap starts - so it
                 // records the segment too. Finding 14 is about the treatment
@@ -3838,25 +3910,6 @@ fun PadSheetScreen(
                     onPutOnRow = { key -> pedalPlacing = if (pedalPlacing == key) null else key },
                 )
             }
-            // The tape this pad's dust comes from — or would come from — and
-            // the door to borrow another's.
-            DustFromRow(
-                tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
-                open = dustFromOpen,
-                tapes = dustFromTapes,
-                scheme = scheme,
-                busy = busy,
-                onOpen = {
-                    pedalPlacing = null
-                    openDustFrom()
-                },
-                onClose = { dustFromOpen = false },
-                onPick = { file ->
-                    pedalPlacing = null
-                    dustFromOpen = false
-                    applyDustFrom(file.name)
-                },
-            )
             // DO IT AGAIN: the recipe as a thing you can carry to another
             // pad. Dimmed, not disabled, when there's nothing to copy or
             // nothing copied yet - the toast explains, same convention as
@@ -3957,6 +4010,7 @@ fun PadSheetScreen(
             )
             }
 
+            SectionHeading("VARIATIONS", scheme)
             GroupBox(
                 legend = PadSheetBoxes.Box.MUTATE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MUTATE),
@@ -4036,6 +4090,7 @@ fun PadSheetScreen(
         )
             }
 
+            SectionHeading("MAKE FROM THIS PAD", scheme)
             GroupBox(
                 legend = PadSheetBoxes.Box.MAKE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
@@ -4204,50 +4259,7 @@ fun PadSheetScreen(
                     )
                 }
             }
-            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
-            // Dimmed, not disabled, when there's no prior take yet - same
-            // "still tappable, the destination explains why" convention as
-            // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
-            // pad's file has at least one recoverable prior take," the
-            // same signal `refreshPadAudio` computes for the undo buttons.
-            //
-            // UNDO SPLICE shares the row, half each (a weight inside a Row,
-            // not the Column trap GRAIN ▸'s comment describes). Always drawn
-            // and dimmed when it cannot act, so the sheet does not rearrange
-            // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
-            // nothing. Its own label, not a bare UNDO: this foot is always
-            // composed, so a second "UNDO" would sit beside the open box's.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
-                ActionButton(
-                    "SPLICE ▸",
-                    scheme,
-                    enabled = !busy,
-                    dimmed = binDaysLeft == null,
-                    modifier = Modifier.weight(1f),
-                    onClick = ::openSplice,
-                )
-                ActionButton(
-                    "UNDO SPLICE",
-                    scheme,
-                    enabled = !busy,
-                    dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
-                    modifier = Modifier.weight(1f),
-                    onClick = ::onUnsplice,
-                )
-            }
-            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
-            // when the pad already has layers, since STACK wants a
-            // single-sample pad to build on. Still tappable: the screen
-            // says which of the two it is.
-            ActionButton(
-                "STACK ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { if (pad.isRobinChain) onToast(Copy.ROBIN_NO_LAYERS) else onStack(slot) },
-            )
+            SectionHeading("TRY IN THE BEAT", scheme)
             // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
             // sibling exists to compare against - dimmed rather than hidden,
             // same "still tappable, the destination explains why" convention
@@ -5151,6 +5163,36 @@ private fun ObliterateBoardControls(
         TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
 }
 
+/**
+ * A section heading on the pad editor's scrolling page (LAYERS, EDIT, EFFECTS, VARIATIONS, MAKE FROM THIS
+ * PAD, TRY IN THE BEAT): a plain label above the controls it names, announced as a heading. A private
+ * composable on purpose: [PadSheetScreen] is one method already past the dex register limit's comfort,
+ * and an inline Column here would compile into it.
+ */
+@Composable
+private fun SectionHeading(text: String, scheme: Scheme) {
+    TapeText(
+        text,
+        TapeType.pixel,
+        scheme.ink.tape,
+        Modifier.fillMaxWidth().padding(top = 6.dp).semantics { heading() },
+        maxLines = 1,
+    )
+}
+
+/** The small heading over one row of TREATMENT's chips ([PadSheet.ROW_HEADINGS]); nothing for a row without one. */
+@Composable
+private fun RowHeading(text: String?, scheme: Scheme) {
+    if (text == null) return
+    TapeText(
+        text,
+        TapeType.pixelSmall,
+        scheme.ink3.tape,
+        Modifier.fillMaxWidth().semantics { heading() },
+        maxLines = 1,
+    )
+}
+
 @Composable
 private fun TreatmentCard(
     rows: List<List<String>>,
@@ -5180,6 +5222,8 @@ private fun TreatmentCard(
     onSegmentTap: (String) -> Unit,
     onAmountChange: (Float) -> Unit,
     onAmountCommit: () -> Unit,
+    /** Drawn directly under row one, where DUST lives: DUST's tape picker ([DustFromRow]). */
+    afterRowOne: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // The card says when it is working, and on what (September UAT,
@@ -5208,7 +5252,9 @@ private fun TreatmentCard(
         // not by which family implements it). One segment lights across
         // every row, since a pad carries one recipe.
         val widest = rows.maxOf { it.size }
-        for (row in rows) {
+        for ((rowIndex, row) in rows.withIndex()) {
+            // Each row names what its chips do ([PadSheet.ROW_HEADINGS], one per row of [PadSheet.ROWS]).
+            RowHeading(PadSheet.ROW_HEADINGS.getOrNull(rowIndex), scheme)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
                     val isPedal = seg in PadSheet.PEDAL_SEGMENTS
@@ -5269,6 +5315,7 @@ private fun TreatmentCard(
                 // A short row keeps the same chip width as a full one.
                 repeat(widest - row.size) { Spacer(Modifier.weight(1f)) }
             }
+            if (rowIndex == 0) afterRowOne()
         }
         StepperSlider(
             label = amountLabel,

@@ -8,7 +8,7 @@ kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM 
 Status: R1 to R6 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
 renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
-on the R5 page). R6 is built and not yet heard (As built: R6).
+on the R5 page). The owner said R6 sounds good (As built: R6, Heard).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
 voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1), and its docs
 page is `docs/SCOUR.md`.
@@ -601,7 +601,7 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | the free annulus values (DISC) | verified (solve) | the exact Bessel solution reproduces 24 entries of Leissa Table 2.35 within 0.46 % and PLATE's solid-plate limit (As built: R6) |
 | DISC's and ROD's notes read | measured | 37 of 37 asserted corners at both windows for each (As built: R6) |
 | ROD's harmonic series | verified (sources) | a BYU acoustics paper and an open solver's free-free rod page, found by search, not read in a book (As built: R6) |
-| DISC and ROD sound like a brake disc and a harmonic ping, and earn bank D | proposed | not heard (As built: R6) |
+| DISC and ROD sound like a brake disc and a harmonic ping, and earn bank D | heard: "they sound good" | the owner in chat, 2026-11-06; the page's questions not answered one by one (As built: R6) |
 | SCOUR sounds fine on the phone | heard: "Sounds fine on phone." (2026-11-05) | the owner, after the picker landed |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
@@ -1245,9 +1245,14 @@ and kit generators; and the docs page, which now describes six voices, twenty-fo
 | Default render time | DISC 75 ms, ROD 84 ms (hot, in the scratch test) |
 | `ScourTest`, `ScourPresetsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DeterminismTest` | passing |
 
+### Heard (the owner, 2026-11-06)
+
+Asked whether they had heard DISC, ROD and bank D, the owner answered "Yes, they sound good".
+
 ### Disclosed, not fixed
 
-- DISC, ROD and bank D have not been heard. The audition page asks about them.
+- The R6 verdict is one overall "they sound good", given in chat. The page's six questions (bank D, each voice into a drop,
+  each voice's character, six voices) were not answered one by one, so no single pad or voice has its own verdict.
 - DISC is thin-plate theory on a flat annulus. A real brake disc has a hat and often vanes, and no thickness or shear
   correction is applied. The hole's radius (.5) is a shape choice made for distinctness, not a measured rotor.
 - ROD is longitudinal only and exactly harmonic. A real rod's lateral inertia detunes its upper harmonics, and a struck

@@ -25,19 +25,19 @@ pack and through the phone's own EXPANSION export.
   `Samples/<Name>/`, beside the kits. On the phone, MAKE > INSTRUMENTS rows have
   EXPANSION >, and EXPORT's EXPANSION subject lists and writes them.
 - **A factory pack**: `./gradlew :shell:generateInstrumentPack` renders MERCURY's three picker
-  voices, KEEL's three and every qualifier, and packs them as `SnipSnap New Keys` (folder and
+  voices, KEEL's three, ARCO's two (through `ArcoPadMaker`, at their defaults), BORE's two
+  (through `BorePadMaker`, from FLUTE STEADY LOOP and SAX SOLO LOOP) and every qualifier,
+  and packs them as `SnipSnap New Keys` (folder and
   `.xpn`) under `testkit/loop-instruments-pack/`. `-Pengines=THAW,ARCO` limits it.
 
 ## Who qualified
 
-63 voices across 15 engines, each from its first factory preset:
+59 voices across 13 engines, each from its first factory preset:
 
 | Engine | Voices |
 |---|---|
 | AEROSTAT | FLOAT |
 | ALLOY | BASS, KEY, PLUCK, BRASS, STRING, SOFT |
-| ARCO | CELLO, ERHU |
-| BORE | FLUTE, SAX |
 | COROLLA | TONGUE, CHOIR, CHATTER, ORBIT |
 | EMBOUCHURE | REED, BRASS, BASS, SOFT, BOW, WHISTLE (octave to check by ear) |
 | FLOTILLA | KNOCK, DRIFT |
@@ -66,9 +66,16 @@ the owner's ear decides.
 | SHOAL | its factory voices are WOOD, which refuses HOLD loops by design |
 | CAIRN, WICK | prototypes with no factory presets |
 
-BORE and ARCO have their own round-two specs for dedicated held instruments (breath and bow
-attention, an attack before the loop). The shared maker gives them a held instrument now;
-the dedicated ones remain possible later.
+ARCO and BORE qualified here on 2026-11-04 and left the shared maker on 2026-11-06 for
+makers of their own, each in a soft and a hard touch layer:
+
+- **`ArcoPadMaker`:** each key starts with the bow's own stroke, then holds the LOOP's loop,
+  retuned to close on itself (the ARCO design spec's "R2: the held keygroup, as built").
+- **`BorePadMaker`:** each key plays the note's own breath, then its loop, closed by BORE's
+  blend at the loop's end; OVERBLOW stays off in a held key (the BORE design spec's "R2: the
+  held keygroup, as built").
+
+Neither has been heard yet; both are on a listening page for the owner.
 
 ## How to try it
 

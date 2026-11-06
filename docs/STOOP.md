@@ -264,5 +264,8 @@ saturator runs on the summed chord, so it intermodulates the tones:
 measured on C minor's sixteen stabs, 2.1% of the sustain's spectral
 magnitude falls between the chord tones' harmonics at WEAR 0 (2.5% at
 worst), 3.0% at WEAR 0.58 and 6.7% at WEAR 1. Each pad carries two softer
-takes (`Velocity.variantsAt`) for the MPC's velocity zones. Not heard.
+takes (`Velocity.variantsAt`) for the MPC's velocity zones. Heard
+(2026-11-06, the owner, the strike gate's question 7: the three C minor
+progressions): "Yes, as is." The single pads and the soft takes had no
+question of their own.
 Tests: `ChordStabsTest`.

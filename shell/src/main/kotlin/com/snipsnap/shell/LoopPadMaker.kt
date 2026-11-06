@@ -51,13 +51,13 @@ object LoopPadMaker {
      * the lowest, root and highest note. EMBOUCHURE reads exactly an octave above every
      * key, the same at each note: a weak fundamental can fool the detector that way, so
      * its octave waits on the owner's ear. FLOTILLA's CROSSWAVE and GATHER are left out
-     * because their octave jumps between notes.
+     * because their octave jumps between notes. ARCO and BORE passed too and left on
+     * 2026-11-06 for makers of their own, [ArcoPadMaker] (each key begins with the bow's
+     * stroke) and [BorePadMaker] (each zone plays the note's own attack).
      */
     val QUALIFIED: Map<String, Set<String>> = mapOf(
         "AEROSTAT" to setOf("FLOAT"),
         "ALLOY" to setOf("BASS", "KEY", "PLUCK", "BRASS", "STRING", "SOFT"),
-        "ARCO" to setOf("CELLO", "ERHU"),
-        "BORE" to setOf("FLUTE", "SAX"),
         "COROLLA" to setOf("TONGUE", "CHOIR", "CHATTER", "ORBIT"),
         "EMBOUCHURE" to setOf("REED", "BRASS", "BASS", "SOFT", "BOW", "WHISTLE"),
         "FLOTILLA" to setOf("KNOCK", "DRIFT"),

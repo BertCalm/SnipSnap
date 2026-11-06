@@ -27,7 +27,9 @@ renders) against hashes taken before the change. The factory sound is the
 hard hit; the softer layers are new.
 
 Which voices read it: SKIN's KICK and TOM (`Skin.STRUCK`) and all four
-TERRA topologies. SKIN's snare, hats, ride and shaker are noise through
+TERRA topologies. TERRA's BOX (2026-11-06, [TERRA_BOX.md](TERRA_BOX.md))
+takes the velocity through its slap's own pulse width instead of the mode
+tilt. SKIN's snare, hats, ride and shaker are noise through
 filters or wires, which a contact law does not describe; they keep the
 touch `Velocity` already gives them. SKIN's STICK keeps `soften()` too:
 every factory STICK is one partial, so there is no balance to move.
@@ -75,7 +77,8 @@ First 30 ms centroid, v = 0.25 to 1, rising at every step:
 | TERRA membranes and cavities (defaults and kit pads) | +50% to +185% |
 | TERRA TUNED_BAR default | +57% |
 | TERRA CONICAL_BELL (default and the three agogô pads) | +8% to +13% |
-| TERRA buzz pads (Cajon Low, Cajon Slap, Balafon Key) | +290% to +740% (the buzz now waits for the hit) |
+| TERRA buzz pads (Cajon Low, Balafon Key) | +290% to +740% (the buzz now waits for the hit) |
+| TERRA BOX (Cajon Slap since 2026-11-06, its own contact law) | +105% |
 | SKIN KICK presets | +25% to +29% |
 | SKIN TOM presets | +5% to +8% |
 
@@ -125,10 +128,57 @@ start jitter. Both spreads are shapes.
   brightness test on Cajon Low).
 - **Measured:** the tables above, Kotlin, at the commit this lands in.
 - **Proposed:** `R`, `a`, `FORCE_SPREAD`, `POSITION_SPREAD`.
-- **Not heard:** nothing here has had the owner's listen. The audition
-  question is whether a soft SKIN kick and a soft TERRA djembe sound like a
-  softer hit on the same drum, not a quieter copy, and whether a re-struck
-  chain sounds like one drummer.
+- **Heard (2026-11-06, the owner, through the gate below; each verdict
+  covers only the levelled clips its question played):**
+  - The soft SKIN kick (TAPE SKIN, old soft against new soft, medium,
+    hard): "Same to me." The new law is no audible step for this kick.
+  - Soft hand drums (Djembe Bass, Tabla Tun): "New is better."
+  - A soft hit bending less (BEND TOM, Bayan Drag): "Natural."
+  - The buzz waiting for a firm hit (Cajon Slap, Balafon Key): "Right."
+    Note: "Cajon and balafon sound very similar. Cajon doesn't have the
+    bassy resonance." Read from the kit, not heard: Cajon Slap (TERRA kit
+    A07) is a TUNED_BAR voice like Balafon Key (A16), so the two share the
+    bar's mode table and differ mainly in pitch; no box resonance sits
+    under the slap. Rebuilt the same day, at the owner's yes: A07 is now a
+    RESONANT_CAVITY voice, its 220 Hz front plate struck hard near the edge
+    (FORCE 0.9, POS 0.9, DROOP 0) over the port's resonance (CAVITY 0.8),
+    the wires kept (BUZZ 0.75, so the HIT audition still names it the BUZZ
+    pad), a shorter ring (DECAY 0.35). Measured in Kotlin: 55% of its first
+    300 ms below 150 Hz (0% before), 39.5 dB RMS from Balafon Key over
+    third-octave bands 60 Hz to 8 kHz (21.3 before), and still classified
+    PERC; plates tuned to 150 or 180 Hz classified TOM or KICK and were
+    passed over. `TerraCases.KIT` and the literal A07 pin in
+    `TerraFrozenTest` follow it. Heard (2026-11-06, the owner, after the
+    gate's question 8, old and new slap beside Balafon Key and Cajon Low):
+    "Cajon is still not right. Too much like a drum machine rimshot." Read
+    from the code, not heard: every TERRA voice is four to six pure sine
+    modes with the strike pulse mixed beside them, the shape of a drum
+    machine's rim; the cavity voice adds the port's low end under that
+    crack but not a wooden one. A real tapa has dense plate modes driven by
+    the slap, the port's air mode driven by the plate, and wires buzzing in
+    noise. Measured: the cavity slap's first 40 ms are the most tonal attack
+    on the gate (spectral flatness 0.058; the old bar slap 0.40, Cajon Low
+    0.44). A Python prototype of that box (97 plate modes for a 3 mm birch
+    tapa, 0.30 by 0.47 m, driven by the slap; an 85 Hz Helmholtz mode driven
+    by the plate; wires as noise gated by the plate's motion) reaches 0.49
+    at the same bass share (54% below 150 Hz), and 0.28 on a soft hit. Heard
+    the same day on the prototype page
+    (https://claude.ai/artifact/8FteYwEt1FLXDz6CioA65V): variant C, twice
+    the port's air, is "most like a real cajon slap", and against the cavity
+    slap the rimshot is "Gone". A07 is now TERRA's BOX voice, ported from C
+    ([TERRA_BOX.md](TERRA_BOX.md)); the gate's CAJON section plays all three
+    slaps.
+  - A fast roll (TAPE SKIN kick, Djembe Open): "New takes." The note said
+    the one-take reference ("same takes") was unclear; the gate now names
+    it NO ROUND ROBIN.
+- **The gate (2026-11-06):** `./gradlew :synth:generateStrikeAudition`
+  (`StrikeAuditionGenerator`) renders 127 clips at one loudness under
+  `testkit/strike-audition/`: every SKIN kick, tom and TERRA kit pad as its
+  old soft hit, then the new soft, medium and hard; fast rolls with one take,
+  Robin's old re-pitched takes and the new re-struck ones; OBBLIGATO keys held
+  ten seconds; CHORD STABS progressions. Seven questions, published as the
+  listening artifact at https://claude.ai/artifact/KSRzJCMRVCYTdQ9uKFgtf3,
+  whose answers save to its `answers` collection.
 - **Disclosed, not fixed:** TERRA's FORCE is not monotone in onset
   brightness on the rim pads (above). THUMP's and ONSET's kicks still take
   `soften()`.
