@@ -3045,6 +3045,8 @@ object Copy {
             } else {
                 "NO SNIPS ON THE SHELF YET FOR + SNIP."
             }
+    /** SNAP with no kit open - SEND TO PAD, CLOUD and SPECTRUM write pads and are greyed until one is. */
+    const val SNAP_NEEDS_KIT = "OPEN A KIT TO SEND SOUNDS TO PADS."
     /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
     const val SURFACE_NEEDS_KIT = "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD."
     /** SPLICE's own picker hint before a head and a tail are chosen. */
