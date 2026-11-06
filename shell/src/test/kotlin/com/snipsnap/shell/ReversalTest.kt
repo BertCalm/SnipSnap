@@ -134,6 +134,8 @@ class ReversalTest {
         "STACK_LOCKS" to "a standing caveat; the landing is Copy.stacked()",
         // A legend on the export card row, naming the gesture. Nothing has happened yet.
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
+        // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
+        "CARD_FORGET" to "a button label, not a landing",
     )
 
     /**

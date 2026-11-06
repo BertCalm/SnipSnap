@@ -691,7 +691,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED", "CARD_FORGET",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -1277,6 +1277,14 @@ class PersonalityTest {
         )
     }
 
+
+    /** OUT's first line names what is going out, in a sentence that ends on a full stop. */
+    @Test
+    fun `out names what it is exporting`() {
+        assertEquals("EXPORTING THE KIT BREAKS.", Copy.exportingKit("BREAKS"))
+        assertEquals("EXPORTING THE KIT BREAKS AND THE PROJECT DEMO.", Copy.exportingKitAndProject("BREAKS", "DEMO"))
+        assertEquals("EXPORTING THE EXPANSION VOL 1.", Copy.exportingExpansion("VOL 1"))
+    }
 
     /** J30: CHOP's fallback source, named only when the app picked it rather than the player. */
     @Test
