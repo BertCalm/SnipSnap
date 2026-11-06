@@ -134,11 +134,27 @@ internal object TerraBox {
         val gritLevel = 0.35f * (force / 0.8f) * v.toDouble().pow(1.5).toFloat()
         for (i in 0 until nn) exc[i] += grit.next() * (0.5f - 0.5f * cos(2.0 * PI * i / (nn - 1)).toFloat()) * gritLevel
 
-        // The plate: every mode a resonator driven by the slap. The gain carries sin(theta), so a
-        // mode's peak no longer grows as its frequency falls (Modes.ring's own gain does not).
-        val f11 = fundamentalHz(m)
         val modes = modes(m, rate)
         if (level != null) require(level.size == modes.size && level.all { it.isNotEmpty() }) { "a level curve per mode (${modes.size}), each at least one value long" }
+        val plate = plate(exc, modes, fundamentalHz(m), rate, level)
+        if (plateOnly) return plate
+        // Each stage below is scaled to its own peak, which would bend HIT's colouring (a factor
+        // on each mode) before it is heard: measured, a BEATBOX KICK head moved the body's
+        // overtone balance from -5.0 dB to +6.8 at HIT .25 and back to +5.7 at .5. Under HIT the
+        // stages take the unstruck box's levels instead (then +7.2 and +8.0), so the colouring
+        // reaches them in proportion, as it reaches the shared bank's later stages on the other
+        // voices. Unstruck, each level is the stage's own peak: today's box, byte for byte.
+        val levels = if (level == null) null else stages(plate(exc, modes, fundamentalHz(m), rate, null), m, v, rate, wireSeed, null).second
+        return stages(plate, m, v, rate, wireSeed, levels).first
+    }
+
+    /**
+     * The plate: every mode a resonator driven by [exc], each output times its [level] curve when
+     * there is one. The gain carries sin(theta), so a mode's peak no longer grows as its
+     * frequency falls (Modes.ring's own gain does not).
+     */
+    private fun plate(exc: FloatArray, modes: List<Modes.Mode>, f11: Float, rate: Int, level: Array<FloatArray>?): FloatArray {
+        val frames = exc.size
         val plate = FloatArray(frames)
         for ((k, mode) in modes.withIndex()) {
             val hz = f11 * mode.ratio
@@ -157,8 +173,21 @@ internal object TerraBox {
                 plate[i] += if (curve == null) y.toFloat() else (y * curve[min(i, curve.size - 1)]).toFloat()
             }
         }
-        if (plateOnly) return plate
-        peakNormalize(plate)
+        return plate
+    }
+
+    /** The four levels the stages scale by: the plate's peak, the port's, the wires' envelope top and the wires' peak. */
+    private class Levels(val plate: Float, val air: Float, val envelope: Float, val wires: Float)
+
+    /**
+     * Plate, port and wires mixed, from [plate] (which is scaled in place), with the [Levels] it
+     * used. With [levels] null each stage is scaled to its own peak, today's box; otherwise by
+     * [levels].
+     */
+    private fun stages(plate: FloatArray, m: Map<String, Float>, v: Float, rate: Int, wireSeed: Int, levels: Levels?): Pair<FloatArray, Levels> {
+        val frames = plate.size
+        val platePeak = levels?.plate ?: peakOf(plate)
+        divide(plate, platePeak)
 
         // The port: an air mode driven by the plate's net motion (low-passed), harder with the hit.
         val drive = lowpass(plate, 250f, rate)
@@ -179,22 +208,24 @@ internal object TerraBox {
                 air[i] = y.toFloat()
             }
         }
-        peakNormalize(air)
+        val airPeak = levels?.air ?: peakOf(air)
+        divide(air, airPeak)
 
         // The wires: noise gated by how far the plate's envelope rises above a threshold; a soft
         // hit's envelope is scaled down by the hit first, so it barely sets them off.
         val env = FloatArray(frames) { abs(plate[it]) * v }
         val smooth = lowpass(env, 60f, rate)
-        val top = smooth.maxOrNull()?.takeIf { it > 1e-9f } ?: 1f
+        val top = levels?.envelope ?: (smooth.maxOrNull()?.takeIf { it > 1e-9f } ?: 1f)
         val wires = Dsp.Noise(wireSeed)
         val hiss = FloatArray(frames) { wires.next() }
         val buzz = highpass(hiss, 1800f, rate)
         for (i in buzz.indices) buzz[i] *= max(0f, smooth[i] / top * v - 0.12f)
-        peakNormalize(buzz)
+        val buzzPeak = levels?.wires ?: peakOf(buzz)
+        divide(buzz, buzzPeak)
 
         val airMix = m.getValue("CAVITY") * (0.6f + 0.4f * v)
         val wireMix = m.getValue("BUZZ") * 0.5f
-        return FloatArray(frames) { plate[it] + air[it] * airMix + buzz[it] * wireMix }
+        return FloatArray(frames) { plate[it] + air[it] * airMix + buzz[it] * wireMix } to Levels(platePeak, airPeak, top, buzzPeak)
     }
 
     /** The output stage's DC high-pass, the house one-pole's corner (the harness's OUTPUT_DC_HZ). */
@@ -227,10 +258,15 @@ internal object TerraBox {
         return out
     }
 
-    private fun peakNormalize(x: FloatArray) {
+    private fun peakOf(x: FloatArray): Float {
         var p = 0f
         for (s in x) p = max(p, abs(s))
-        if (p > 1e-9f) for (i in x.indices) x[i] /= p
+        return p
+    }
+
+    /** [x] over [peak], in place; nothing for a silent [peak], as the prototype's max(1e-9, peak) left it. */
+    private fun divide(x: FloatArray, peak: Float) {
+        if (peak > 1e-9f) for (i in x.indices) x[i] /= peak
     }
 
     /** A second-order Butterworth low-pass at [hz], bilinear and pre-warped (scipy's butter(2)). */

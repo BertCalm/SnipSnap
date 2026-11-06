@@ -63,8 +63,28 @@ off. BOX does not apply `StrikeVelocity.modeFactors`: the wider pulse
 already takes energy out of the plate's upper modes, which is the tilt the
 other voices apply as a filter, and doing both would count the contact
 twice. Re-struck takes (`Restrike`) re-seed the grit and the wires, nudge
-POS and soften the hit, as on every TERRA voice. HIT colours the plate's
-modes through the shared `Terra.Body`.
+POS and soften the hit, as on every TERRA voice.
+
+## HIT on the box
+
+HIT (another pad's first 20 ms colouring how hard each mode rings) reaches
+the plate's modes through the shared `Terra.Body` and `Terra.hitLevel`.
+Under HIT, the port and the wires are scaled by the unstruck box's own
+levels, not their own peaks. Otherwise the per-stage normalising bent the
+colouring: a BEATBOX KICK head moved the overtone balance from -5.0 dB to
++6.8 at HIT .25, then back to +5.7 at .5. With the fix it reads +7.2 then
++8.0. An unstruck box is byte-identical either way.
+
+Disclosed, not fixed: HIT is much stronger on the box than on the four
+voices Phase 0 measured. Those voices' modes outlive the 20 ms head; the
+plate's die in as little as 15 ms. So the head plays into the plate, and
+its projection gives the top modes gains in the thousands. At HIT .5, a
+dark head leaves the slap's first 5 ms at about 0.2 of the peak (the other
+voices keep 1.0), and FACTORY KICK turns the wire-less box into a KICK.
+`TerraTest` holds the box only to direction: a bright head brightens it and
+a dark one darkens it, by more than 3 dB at HIT 1. Not yet heard. A cap on
+HIT's gain for the box is the obvious next step if a struck cajón sounds
+wrong.
 
 ## The output stage
 
@@ -104,8 +124,8 @@ The cavity slap was declared PERC. With BUZZ at 0 the box reads PERC.
 - **Heard (2026-11-06):** prototype C, "most like a real cajón slap". Against
   the cavity slap, the rimshot is "Gone". Both answers were for the Python
   clip.
-- **Not yet heard:** the Kotlin port. The cajón prototype page now plays it
-  beside C.
+- **Not yet heard:** the Kotlin port (the cajón prototype page now plays it
+  beside C), and HIT on the box.
 - **Measured:** the table above, Kotlin, at the commit this lands in.
 - **Proposed (design shapes):** the 12% wire threshold, the 250 Hz drive and
   60 Hz envelope corners, FORCE's 3 to 0.5 ms span, the 2 ms soft widening,
