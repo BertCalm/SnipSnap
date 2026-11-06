@@ -72,11 +72,13 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # :app is included only when an SDK is located (settings.gradle.kts).
-      # This job installs one so :app is in the graph and `-x :app:test`
-      # has something to exclude. A machine with no SDK leaves :app out
-      # and the nine JVM modules configure on their own; copying the
-      # `-x :app:test` line into that session fails because there is no
-      # :app to exclude.
+      # The runner image has one and presets ANDROID_HOME and
+      # ANDROID_SDK_ROOT to it, so :app is in this job's graph and
+      # `-x :app:test` has something to exclude. This step points both
+      # variables at that SDK and accepts its licences. A machine with no
+      # SDK leaves :app out and the nine JVM modules configure on their own;
+      # copying the `-x :app:test` line into that session fails because
+      # there is no :app to exclude.
       #
       # packages: '' skips this action's own default install (`tools
       # platform-tools`) — Google removed the legacy `tools` package from
@@ -172,8 +174,9 @@ jobs:
     # !cancelled(), a cancelled run would: one cancelled by hand, or by a
     # reopened PR starting again on the same commit. Here every one of those
     # ends red, naming the result. always() is safe because nothing below can
-    # hang (no checkout, no download). A superseded run spends a few seconds
-    # on it before the next run in the concurrency group starts.
+    # hang (no checkout, no download). A superseded run still needs a runner
+    # for this job before the next run in the concurrency group starts:
+    # seconds while runners are free (5 s in #925's first run).
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -185,7 +188,8 @@ jobs:
           echo "jvm-other, jvm-synth: $RESULTS"
           for result in $RESULTS; do
             if [ "$result" != "success" ]; then
-              echo "A JVM test job ended '$result'. Its log names the failing test."
+              echo "A JVM test job ended '$result', so not every JVM test passed."
+              echo "A failed job's log names the failing test; a cancelled one was stopped or superseded."
               exit 1
             fi
           done

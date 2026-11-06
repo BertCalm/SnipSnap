@@ -137,7 +137,9 @@ and a red one there is not your PR's problem.
 
 A red `jvm-tests` means one of the jobs it waits on failed or was cancelled;
 open that one. Its check appears only once all four have ended, so while
-they run it is missing, not pending. It is never skipped.
+they run it is missing, not pending - unless an earlier run on the same
+commit was cancelled, in which case that run's red `jvm-tests` shows until
+this one reports. It is never skipped.
 Each `:synth` test class runs in exactly one shard, chosen by a hash of its
 name (root `build.gradle.kts`, "Sharding by test class"). To re-run the
 shard a failing job ran, `./gradlew --no-daemon :synth:test -PtestShards=3
@@ -176,11 +178,13 @@ showing "cancelled" after you pushed again is expected.
 
 The comment above `setup-android` in `jvm-other` matches that. With no
 SDK, `settings.gradle.kts` leaves `:app` out and the nine JVM modules
-configure. What `setup-android` buys `jvm-other` is that `:app` *is* in
-the graph there, which is why that job can exclude it. The `jvm-synth`
-shards want the opposite: they blank `ANDROID_HOME` and `ANDROID_SDK_ROOT`
-(the runner image presets both), so `:app` stays out there, as it does in
-a cloud session. A no-SDK run is not a configuration failure. An older comment on that step said the
+configure. On the CI runner `:app` *is* in the graph, which is why
+`jvm-other` can exclude it: the runner image has its own SDK and presets
+`ANDROID_HOME` and `ANDROID_SDK_ROOT` to it (`setup-android` points them
+at the same SDK and accepts its licences; it is not what includes
+`:app`). The `jvm-synth` shards want the opposite: they blank both
+variables, so `:app` stays out there, as it does in a cloud session. A
+no-SDK run is not a configuration failure. An older comment on that step said the
 opposite — that `:app` existing made every module fail to configure
 without an SDK. That was true only while `:app` was included
 unconditionally (`a0a8fb0`, 2026-08-24), and the conditional include

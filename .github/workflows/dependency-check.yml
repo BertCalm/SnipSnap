@@ -4,10 +4,11 @@ name: dependency-check
 # move between two commits ten minutes apart the way a code change does,
 # so this job's real cadence is "at least once a week", not "every push".
 # (The schedule dates from when the repo was private and its CI minutes
-# were metered - see tests.yml's header - but this reason stands alone.) A High/Critical finding does fail this job
-# (build.gradle.kts sets failBuildOnCVSS = 7.0), so it shows red in
-# Actions and the report still uploads via if: always() - it just never
-# blocks a PR merge, since this workflow isn't part of what gates one.
+# were metered - see tests.yml's header - but this reason stands alone.)
+# A High/Critical finding does fail this job (build.gradle.kts sets
+# failBuildOnCVSS = 7.0), so it shows red in Actions and the report still
+# uploads via if: always() - it just never blocks a PR merge, since this
+# workflow isn't part of what gates one.
 on:
   schedule:
     - cron: "0 6 * * 1" # Monday 06:00 UTC
@@ -27,7 +28,9 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # dependencyCheckAggregate configures :app to see its Android/AndroidX
-      # dependencies too - same reason jvm-other needs this in tests.yml.
+      # dependencies too, as jvm-other in tests.yml does. The runner image's
+      # own SDK (it presets ANDROID_HOME) is what puts :app in the graph;
+      # this step points the variables at that SDK and accepts its licences.
       # packages: '' for the same reason as tests.yml's setup-android steps -
       # the action's own default ("tools platform-tools") requests a package
       # Google has removed from the live SDK repository.
