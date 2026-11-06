@@ -37,7 +37,7 @@ object FerryLossAuditionGenerator {
         for ((register, midi) in linkedMapOf("low" to 36, "middle" to 48, "high" to 72)) {
             for ((character, loss) in linkedMapOf("reference" to .5f, "dry" to 1f, "bloom" to 0f)) {
                 val id = "$register-$character"
-                val patch = FerryPatch("Passage $register $character", midi = midi, macros = Ferry.defaults() + ("LOSS" to loss))
+                val patch = FerryPatch("Passage $register $character", model = 3, midi = midi, macros = Ferry.defaults(model = 3) + ("LOSS" to loss))
                 Ferry.clearCache()
                 val start = System.nanoTime()
                 val snip = patch.render()
@@ -72,7 +72,7 @@ object FerryLossAuditionGenerator {
             }
         }
         File(output, "manifest.json").writeText(Json.write(json(linkedMapOf(
-            "title" to "Ferry LOSS listening", "model" to Ferry.MODEL_VERSION,
+            "title" to "Ferry LOSS listening", "model" to 3,
             "base_commit" to "e4e7b29320da3af052715268319aeff1c2b1514d", "entries" to entries,
             "heard" to listOf("Ferry first listen: Yes, clearly.", "Ferry second listen: Clear throughout.",
                 "Ferry Kotlin listen: Same character. (2026-10-30)", "Ferry MATCH listen: Clear change, note stays clear. (2026-11-01)"),

@@ -35,6 +35,7 @@ testkit/nacre-audition/
 testkit/ferry-audition/
 testkit/ferry-match-audition/
 testkit/ferry-loss-audition/
+testkit/ferry-release-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
 testkit/confluence-audition/
@@ -78,6 +79,7 @@ design/*/*.html
 !design/ferry-audition/index.html
 !design/ferry-match-audition/index.html
 !design/ferry-loss-audition/index.html
+!design/ferry-release-audition/index.html
 !design/nacre-gentle-audition/index.html
 !design/nacre-presence-audition/index.html
 !design/nacre-playable-audition/index.html
