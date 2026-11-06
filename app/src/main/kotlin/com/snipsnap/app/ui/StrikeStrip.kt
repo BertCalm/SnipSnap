@@ -32,6 +32,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
@@ -46,6 +47,7 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.StrikeStrip
 import com.snipsnap.kit.KitPad
@@ -132,37 +134,43 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
 @Composable
 internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
+    // Each button wears a one-word caption saying what it sets (E1). The caption is for eyes only:
+    // the button's own label already names it for TalkBack, so announcing "SIDE" and then
+    // "STRIKE THUMB SIDE" would say the same thing twice.
     @Composable
-    fun Control(text: String, label: String, active: Boolean, waiting: Boolean, modifier: Modifier, click: () -> Unit) {
-        Box(
-            modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                .semantics {
-                    selected = active
-                    stateDescription = if (waiting) "$text, takes effect when STRIKE is on" else text
-                }
-                .tapeClick(label = label, onClick = click)
-                .padding(horizontal = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText(text, TapeType.pixelSmall, if (waiting) scheme.ink2.tape else scheme.ink.tape, maxLines = 1)
+    fun Control(caption: String, text: String, label: String, active: Boolean, waiting: Boolean, modifier: Modifier, click: () -> Unit) {
+        Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { })
+            Box(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                    .semantics {
+                        selected = active
+                        stateDescription = if (waiting) "$text, takes effect when STRIKE is on" else text
+                    }
+                    .tapeClick(label = label, onClick = click)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(text, TapeType.pixelSmall, if (waiting) scheme.ink2.tape else scheme.ink.tape, maxLines = 1)
+            }
         }
     }
     // STRIKE itself is never waiting; the three settings behind it wait on it.
     val waiting = !state.enabled
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Control(if (state.enabled) "STRIKE ON" else "STRIKE OFF", "STRIKE STRIP", state.enabled, false, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_STRIP, if (state.enabled) "STRIKE ON" else "STRIKE OFF", "STRIKE STRIP", state.enabled, false, Modifier.weight(1f)) {
             state.releaseTouch()
             state.enabled = !state.enabled
         }
-        Control(if (state.right) "RIGHT" else "LEFT", "STRIKE THUMB SIDE", state.right, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_SIDE, if (state.right) "RIGHT" else "LEFT", "STRIKE THUMB SIDE", state.right, waiting, Modifier.weight(1f)) {
             state.releaseTouch()
             state.right = !state.right
         }
-        Control(if (state.returns) "RETURN" else "STAY", "STRIKE ON RELEASE", state.returns, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_RELEASE, if (state.returns) "RETURN" else "STAY", "STRIKE ON RELEASE", state.returns, waiting, Modifier.weight(1f)) {
             state.returns = !state.returns
         }
-        Control(if (state.volume) "VOL ON" else "VOL OFF", "STRIKE CHANGES VOLUME", state.volume, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_LEVEL, if (state.volume) "VOL ON" else "VOL OFF", "STRIKE CHANGES VOLUME", state.volume, waiting, Modifier.weight(1f)) {
             state.volume = !state.volume
         }
     }

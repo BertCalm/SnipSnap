@@ -119,6 +119,22 @@ object Copy {
      * and showed nowhere - gets its words here (UX review P1/P3).
      */
     const val PADS_RESTING_LINE = "TAP A PAD · IT PLAYS. HOLD AN EMPTY ONE TO CATCH A SOUND INTO IT."
+
+    /**
+     * The one word above each of the STRIKE FX buttons, saying what that button sets (E1).
+     * The buttons keep their own words - STRIKE ON/OFF, LEFT/RIGHT, STAY/RETURN, VOL ON/OFF -
+     * because a STRIKE FX starter's description names STAY and VOL OFF; these only name the
+     * question each word answers. In the order of the row.
+     *
+     * STRIKE_CAPTION_STRIP is whether the strike strip is there at all. STRIKE_CAPTION_SIDE is
+     * which side the thumb strip sits on. STRIKE_CAPTION_RELEASE is what the strength does when the
+     * finger lifts: STAY holds, RETURN drops to zero. STRIKE_CAPTION_LEVEL is whether the strip
+     * also moves the hit's volume or only picks the layer.
+     */
+    const val STRIKE_CAPTION_STRIP = "STRIP"
+    const val STRIKE_CAPTION_SIDE = "SIDE"
+    const val STRIKE_CAPTION_RELEASE = "RELEASE"
+    const val STRIKE_CAPTION_LEVEL = "LEVEL"
     /**
      * GROOVE with a kit open and nothing in it yet: the way in that needs only
      * the pads, named; the other ways (START YOURS, ORBIT, SONG, LOOP) are the

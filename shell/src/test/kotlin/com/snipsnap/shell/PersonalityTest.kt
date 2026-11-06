@@ -615,6 +615,8 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
+        "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
