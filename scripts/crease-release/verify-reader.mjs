@@ -58,6 +58,10 @@ for (let i = 0; i < 345; i++) { full.process(block); peak = Math.max(peak, full.
 const millisecondsPerAudioSecond = performance.now() - begin;
 assert(peak < 1, 'eight-voice bus clips');
 assert(full.voices.every((voice) => voice.pos > 44100));
+for (const voice of full.voices) full.release(voice.id);
+const releaseBegin = performance.now();
+for (let i = 0; i < 345; i++) { full.process(block); assert(block.every(Number.isFinite)); }
+const releaseMilliseconds = performance.now() - releaseBegin;
 const at48k = new ReleaseReader(m, pcm); at48k.start(1);
 at48k.process(new Float32Array(48000), 48000);
 assert(Math.abs(at48k.voices[0].pos - 44100) < 1e-5, '48k source clock');
@@ -73,6 +77,7 @@ const report = { result: 'passed', cacheIdentity: m.cacheIdentity, cases: fixtur
   zeroLiveGainSilent: true, rapidRetriggersEnd: true, output48kClockAndEnd: true,
   eightVoicePeak: peak, desktopEightVoiceMillisecondsPerAudioSecond: millisecondsPerAudioSecond,
   desktopDecodeMilliseconds: decodeMilliseconds,
+  desktopEightUnfoldVoicesMillisecondsPerAudioSecond: releaseMilliseconds,
   scope: 'Node PCM decoder and actual streaming JS reader. Not hardware or speaker latency.' };
 fs.writeFileSync(path.join(out, 'reader-verification.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({...report, cacheIdentity: "bound in receipt"}));
