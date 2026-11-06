@@ -146,6 +146,7 @@ testkit/stringmachine-audition/
 # The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
 # and published as the listening artifact; never committed.
 testkit/bore-audition/
+testkit/bore-held-audition/
 
 # The ARCO audition clips, manifest and page, rendered by :synth:generateArcoAudition
 # and published as the listening artifact; never committed.

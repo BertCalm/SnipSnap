@@ -878,8 +878,8 @@ object Bore {
 
     /**
      * [m] as a held note plays it: OVERBLOW is a gesture in time, a crack at a moment of a one-shot, so a LOOP (HOLD's top
-     * step, which every keygroup maker renders through: `LoopPadMaker` moves the patch to HOLD 1 and each zone's note) plays
-     * the note as if the knob were at 0, and every keygroup zone stays on its key.
+     * step) and every held keygroup zone (`BoreKeys`, through `BorePadMaker`) play the note as if the knob were at 0, and
+     * every zone stays on its key. Both are cut from [heldNote], which applies this.
      */
     internal fun held(m: Map<String, Float>): Map<String, Float> = if (OVERBLOW in m) m + (OVERBLOW to 0f) else m
 
@@ -1322,15 +1322,38 @@ object Bore {
         // Held, so no crack: OVERBLOW is a one-shot's gesture ([held]).
         val m = held(settled(macros, voice))
         val name = "BORE $voice ${midiFor(voice, m.getValue("TUNE"))}"
-        val rate = RATE * Dsp.OVERSAMPLE
-        val hz = tunedHz(voice, frequencyFor(voice, m.getValue("TUNE")))
-        val raw = blow(voice, hz, m + ("HOLD" to LOOP_HOLD), rate, gateSeconds = LOOP_HELD_SECONDS)
-        val x = condition(raw, rate, biteBoostDb(voice, m.getValue("LIP")), raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH")), voicingFor(voice))
-
-        val attack = (attackSeconds(m.getValue("CHIFF")) * RATE).toInt()
-        val usableEnd = minOf(x.size, attack + (LOOP_HELD_SECONDS * RATE).toInt() - (LOOP_MARGIN_SECONDS * RATE).toInt())
-        return cutLoop(x, usableEnd, name)
+        val x = heldNote(voice, m)
+        return cutLoop(x, heldUsableEnd(x, m), name)
     }
+
+    /**
+     * The held note a LOOP ([renderLoopMeasured]) and a held keygroup zone (`BoreKeys`) are both cut from, at [RATE]: the
+     * one-shot's own blow with its gate stretched to [LOOP_HELD_SECONDS] and HOLD at [LOOP_HOLD] (the vibrato's depth),
+     * conditioned like the one-shot ([condition]) and not levelled. Held, so OVERBLOW plays as 0 ([held]): a held note
+     * never cracks. [m] must be settled ([settled]). One place, so the two cuts can never be cut from different notes.
+     */
+    internal fun heldNote(voice: BoreVoice, m: Map<String, Float>): FloatArray {
+        val h = held(m)
+        val rate = RATE * Dsp.OVERSAMPLE
+        val hz = tunedHz(voice, frequencyFor(voice, h.getValue("TUNE")))
+        val raw = blow(voice, hz, h + ("HOLD" to LOOP_HOLD), rate, gateSeconds = LOOP_HELD_SECONDS)
+        return condition(raw, rate, biteBoostDb(voice, h.getValue("LIP")), raspAmount(voice, h.getValue("LIP"), h.getValue("BREATH")), voicingFor(voice))
+    }
+
+    /** How much of [heldNote]'s [x] a cut may use: the attack and the held breath, less [LOOP_MARGIN_SECONDS] before the release. */
+    internal fun heldUsableEnd(x: FloatArray, m: Map<String, Float>): Int {
+        val attack = (attackSeconds(m.getValue("CHIFF")) * RATE).toInt()
+        return minOf(x.size, attack + (LOOP_HELD_SECONDS * RATE).toInt() - (LOOP_MARGIN_SECONDS * RATE).toInt())
+    }
+
+    /**
+     * The blend and the bounds of the length search in frames at [RATE], from [LOOP_BLEND_SECONDS], [LOOP_SECONDS] and
+     * [LOOP_SLACK_SECONDS]: one place for [cutLoop] and the held keygroup's cut (`BoreKeys.cutHeld`), so the two search the
+     * same lengths with the same blend and the keygroup zone's join is the LOOP's join.
+     */
+    internal val LOOP_BLEND_FRAMES = (LOOP_BLEND_SECONDS * RATE).toInt()
+    internal val LOOP_LENGTH_LOW_FRAMES = ((LOOP_SECONDS - LOOP_SLACK_SECONDS) * RATE).toInt()
+    internal val LOOP_LENGTH_HIGH_FRAMES = ((LOOP_SECONDS + LOOP_SLACK_SECONDS) * RATE).toInt()
 
     /**
      * The loop cut from [x], a held note conditioned like the one-shot, using it up to [usableEnd]: where the stretch starts
@@ -1338,9 +1361,9 @@ object Bore {
      * ([rotateOntoCrossing]) and the level, with the join read off the result. [name] is the note, for the refusals.
      */
     internal fun cutLoop(x: FloatArray, usableEnd: Int, name: String): LoopRender {
-        val blend = (LOOP_BLEND_SECONDS * RATE).toInt()
-        val lengthLow = ((LOOP_SECONDS - LOOP_SLACK_SECONDS) * RATE).toInt()
-        val lengthHigh = ((LOOP_SECONDS + LOOP_SLACK_SECONDS) * RATE).toInt()
+        val blend = LOOP_BLEND_FRAMES
+        val lengthLow = LOOP_LENGTH_LOW_FRAMES
+        val lengthHigh = LOOP_LENGTH_HIGH_FRAMES
 
         stopIfUnwanted()
         val (start, settledAt) = loopStart(x, usableEnd, lengthHigh, blend, name)
