@@ -409,6 +409,11 @@ object Copy {
      * [backOnto].
      */
     const val USE_THIS_PART = "USE THIS PART ▸"
+    /**
+     * The deck's heading over its three ways forward from a selection: USE THIS PART, INSTANT KIT and CATCH A HIT.
+     * A heading, not a landing.
+     */
+    const val DECK_NEXT = "NEXT"
     /** The deck glided onto an onset after a coast. */
     const val SNAPPED = "SNAPPED TO THE HIT."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
@@ -2129,6 +2134,11 @@ object Copy {
      * States what actually happened instead of inventing a slice number.
      */
     const val RECHOPPED = "RE-CHOPPED."
+    /**
+     * The CUT screen's heading over CLASSIC, FOLD and MELODIC, which sit directly above SEND TO PADS: they change
+     * how the slices land on the pads, not where the cuts fall. A heading, not a landing.
+     */
+    const val CHOP_LAND_AS = "LAND AS"
 
     // ---- CHOP's CUT bench (docs/CHOP_CONTROLS.md) ----
     /** HITS ▶ asked for one more than the detector can hear at this ear: the count did not move, and the ear is the way to more. */
@@ -2759,6 +2769,13 @@ object Copy {
 
     // ---- PAD CAPTURE: GRAB/HOLD's own too-short guard ----
     const val PAD_CAPTURE_HOLD_TOO_SHORT = "HOLD TO RECORD."
+    /**
+     * PAD CAPTURE's tap twin of HOLD TO REC: one tap starts the recording, the next ends it, for a thumb that cannot
+     * hold. The button reads this while idle, [PAD_CAPTURE_TAP_STOP] while it records. A label, not a landing.
+     */
+    const val PAD_CAPTURE_TAP_TO_REC = "TAP TO REC"
+    /** The tap twin's label while it records: the next tap ends the take, as letting go of HOLD TO REC does. */
+    const val PAD_CAPTURE_TAP_STOP = "STOP"
     /** GRAB/HOLD attempted before LISTEN was ever pressed - `MicSessionService.armed` is false, so there is no ring to snapshot at all. */
     const val PAD_CAPTURE_NOT_LISTENING = "NOT LISTENING YET."
     /** GRAB's own empty snapshot - the ring had nothing in it to cut. */
