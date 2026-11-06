@@ -2988,6 +2988,14 @@ object Copy {
      * [NO_PROJECT_OPEN] and [PROJECT_HAS_NO_KIT]).
      */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
+    /** SNAP's heading over TAKE PHOTO and LIVE: where the picture comes from. */
+    const val SNAP_SOURCE = "SOURCE"
+    /** SNAP's heading over CLOUD, SPECTRUM and TELEPHONE: each lands one pad (TELEPHONE after a pick). */
+    const val SNAP_ONE_PAD = "ONE PAD"
+    /** SNAP's heading over KIT and CHORD: each builds a new kit of sixteen pads from the photo. */
+    const val SNAP_ALL_SIXTEEN = "ALL SIXTEEN PADS"
+    /** SNAP's heading over FIELD: the photo played under a finger. */
+    const val SNAP_PLAY_IT = "PLAY IT"
     /**
      * MAKE's header: what the place is, and nothing about where it lands.
      * "EACH ONE LANDS ON THE ACTIVE KIT" was false: SYNTH, SNAP, SURFACE,
