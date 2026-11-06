@@ -44,7 +44,8 @@ import com.snipsnap.shell.Scheme
  * A Win9x group box, TapeOS-sized (Pad Sheet v2): a pixel [legend] on
  * the etched edge, a 44dp strip reading [summary] - what the pad already
  * carries from this bench - with a drawn chevron, and [content] below it
- * only while [open]. The design language's own rule: group boxes with
+ * only while [open]. [also] is a second closed line naming what else
+ * the group holds. The design language's own rule: group boxes with
  * pixel-font legends replace cards.
  */
 @Composable
@@ -57,6 +58,7 @@ fun GroupBox(
     enabled: Boolean = true,
     summaryColor: Color = scheme.ink2.tape,
     modifier: Modifier = Modifier,
+    also: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(modifier.fillMaxWidth()) {
@@ -101,6 +103,11 @@ fun GroupBox(
                     maxLines = 1,
                 )
                 Chevron(open, if (!enabled) scheme.ink3.tape else scheme.ink2.tape)
+            }
+            // A second closed line, for a group that holds more than its
+            // summary names: drawn only while closed, under the strip.
+            if (also != null && !open) {
+                TapeText(also, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 8.dp), maxLines = 2)
             }
             if (open) {
                 Column(

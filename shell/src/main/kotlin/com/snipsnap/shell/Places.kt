@@ -132,6 +132,22 @@ object Places {
     /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
+    /**
+     * The closed THIS KIT group's second line: the tools inside that
+     * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
+     * button's label inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     */
+    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
+
+    /** THIS KIT's heading over REMIX BANK B. */
+    const val KIT_BANK_B = "BANK B"
+
+    /** THIS KIT's heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
+    const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
+
+    /** THIS KIT's heading over VERSIONS + BIN and BREED. */
+    const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
+
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
         val parts = mutableListOf<String>()
