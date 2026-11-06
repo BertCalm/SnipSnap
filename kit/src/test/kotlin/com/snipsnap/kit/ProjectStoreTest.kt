@@ -55,6 +55,14 @@ class ProjectStoreTest {
     }
 
     @Test
+    fun `a tempo set with withTempo round-trips, and a project with none stays none`() {
+        ProjectStore.save(shelf, Project("Tempoed").withTempo(133f))
+        ProjectStore.save(shelf, Project("Plain"))
+        assertEquals(133f, ProjectStore.load(ProjectStore.dir(shelf, "Tempoed")).tempoBpm)
+        assertNull(ProjectStore.load(ProjectStore.dir(shelf, "Plain")).tempoBpm)
+    }
+
+    @Test
     fun `a project is a folder under Projects, named after itself`() {
         val file = ProjectStore.save(shelf, sampleProject())
         assertEquals(File(shelf, "Projects/Late Set/project.json"), file)

@@ -124,9 +124,11 @@ one-shot export. Relevant checks are:
 Android CI builds the app and runs the focused `OverlapSynthScreenTest` on an
 emulator. Local JVM checks do not establish physical phone or MPC behavior.
 The owner accepted the separate held MPC trial on 2026-10-31; the acceptance
-ledger below records the limit of that report. The finite starter and real-phone
-checks below still need their own recorded results. Save a custom preset before
-leaving SYNTH to retain its note and velocity across recreation.
+ledger below records the limit of that report. The owner also reported “Works”
+for the held phone workflow on 2026-11-01, without device details, per-check
+results or timing measurements. The manual checklists below remain useful for
+recording those details. Save a custom preset before leaving SYNTH to retain
+its note and velocity across recreation.
 
 ## Manual real phone pass
 
@@ -329,8 +331,9 @@ The generator records uncached setup, settling and conditioning milliseconds in
 `metrics-runtime.json`, outside the deterministic download archive. Settling is
 capped by a T60-derived budget and an absolute 192-period limit, with cancellation
 checks during simulation. Those host timings do not establish phone performance.
-Josh has approved the steady held listening proof. Moving-breath loops and an
-engine-specific aliasing bound remain unverified.
+Josh has approved the steady held listening proof. The separate breathing
+audition below adds constrained moving-loop evidence; an engine-specific
+aliasing bound remains unverified.
 
 ### Why it is built this way
 
@@ -400,7 +403,8 @@ The package records deterministic audio and source hashes separately from
 host render-time measurements. Generation is an offline, bounded export job;
 it does not establish interactive phone performance. Saved held recipes,
 phone controls and completed-note caching are the integration scope below.
-Loopable breathing and GLOW remain deferred.
+This package retains steady playback. The separate breathing audition below
+does not change its sources; held GLOW remains deferred.
 
 ### Why it is built this way
 
@@ -420,7 +424,7 @@ Loopable breathing and GLOW remain deferred.
 | Finite factory bank | The owner accepted the twelve model-2 musical recipes. Their registration and finite audio remain separate from held playback. |
 | Steady held listening proof | The owner accepted the steady proof. Its recorded host tests establish recurrence, independent-neighbour seam checks and source-withdrawal behavior under the tested settings. |
 | Held MPC keygroup trial | Owner accepted in conversation on 2026-10-31. No MPC model, OS/firmware or per-check hardware measurements were supplied. Do not infer a particular device, measured release time or polyphony limit. |
-| Phone integration | Implementation revision `2b07c5ef` has passing Android/native CI and a 355-test emulator run with no failures and one unrelated benchmark skip. The separate clean local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies. Physical-phone listening and timing remain unmeasured. |
+| Phone integration | The owner reported “Works” on 2026-11-01. No device/model details, per-check results or timing measurements accompanied that acceptance. Implementation revision `2b07c5ef` has passing Android/native CI and a 355-test emulator run with no failures and one unrelated benchmark skip. The separate clean local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies. |
 | Production audio compatibility | Local checkpoint `8b6d0aea` rechecked all twelve complete production PCM24 WAVs, including sampler metadata, against the accepted trial: all are byte-identical. The measured held-source files match implementation revision `2b07c5ef`; the local checkpoint was not published as the PR head. |
 
 Owner acceptance is a listening and use decision. It does not replace a measured
@@ -436,8 +440,9 @@ ordinary instrument-library/MPC export. The baseline for this update is
 `2b3e1688`. Implementation revision `2b07c5ef` has passing Android/native CI
 and a successful emulator run. The separate clean local `8b6d0aea` gate passed
 7,452 JVM cases and all three APK assemblies. Local focused, accepted-audio,
-benchmark and mutation evidence is recorded separately below. No physical-phone
-listening or timing is claimed.
+benchmark and mutation evidence is recorded separately below. The owner reported
+“Works” on 2026-11-01; that records acceptance of use without device/model
+details, individual checklist results or measured phone timing.
 
 ### Saved playback and controls
 
@@ -616,11 +621,11 @@ prepared release without name/release recapture, and MAKE INSTRUMENT's three
 roots. The save/send cases also exercise the actual SPREAD overlay and compare
 complete recipes and PCM. APK builds do not execute the instrumentation cases.
 
-A physical-phone pass still needs listening, press/early-release and
-cancellation behavior, background/focus loss, saved preset/instrument reopening
-and MPC export from the phone. Record device/build and cold/warm timing rather
-than treating host timings, emulator results, APK compilation or earlier MPC
-acceptance as that physical pass.
+The detailed physical-phone checklist remains unrecorded: press/early-release,
+cancellation, background/focus loss, saved preset/instrument reopening and MPC
+export from the phone. A future bench report should include device/build and
+cold/warm timing alongside the owner's acceptance, host measurements and
+emulator results.
 
 ### Why it is built this way
 
@@ -636,3 +641,133 @@ acceptance as that physical pass.
   bounds and owned copies limit memory use and accidental PCM mutation.
 - The sampled release follows the phone and MPC instrument path; keeping it
   distinct from physical network decay makes the approximation explicit.
+
+## Loopable breathing audition
+
+This separate proof asks whether a held body can breathe inside its six-node
+circuit while returning to a repeatable loop. It fixes TREFOIL at reference
+MIDI `48`, KNOT `1`, RING `.6`, velocity `.8`, GLOW `0` and HOLD `1`.
+Reference MIDI describes the geometry, not the strongest perceived partial.
+Accepted finite and steady sources, saved `heldVersion = 1` recipes, the
+completed-note cache and phone controls retain their behavior.
+
+| Mode | Physical control cycle | Node breathing |
+| --- | --- | --- |
+| STEADY | Original source period: `66,076` frames, about `1.5 s` | No moving gates or extra absorption |
+| INDEPENDENT | Four source periods: `264,304` frames, `5.993288 s` | `3/4/4/5/3/5` breaths with fixed staggered offsets |
+| SYNCHRONIZED | The same four-source-period cycle | Four aligned breaths at every node |
+
+The moving modes have equal average breath rates. INDEPENDENT means distinct
+fixed, commensurate rates and phases, rather than unbounded drift. STEADY
+repeats twelve original periods and each moving preview repeats three longer
+cycles: all contain `792,912` frames, or `17.979864 s`. The original source-grid
+fit and requested geometry remain intact. These loops have no tempo-sync
+contract.
+
+Each node's phase gates its noise excitation and changes its absorption of
+circulating energy. Closing a gate withdraws that drive and increases loss;
+there is no moving gain on the combined output. These are constrained periodic
+LOCK endpoints: `0` selects INDEPENDENT and `1` selects SYNCHRONIZED.
+Intermediate values are refused. This does not demonstrate free-running
+Kuramoto entrainment or a general PULSE control.
+
+The solver requires numerical convergence of complete physical state, including
+cursor-relative delay memories, persistent filters, source/control cursors and
+cached controls. A further real cycle confirms recurrence. Synthesis runs at
+4× rate, and shared decimation receives genuine guards before and after the
+three independently evolved neighbouring cycles. Seam checks use those real
+neighbours. No onset ramp, end fade or crossfade repairs the boundary.
+Settling is bounded and rejects failure. Cancellation is cooperative during
+preparation and simulation; `Dsp.decimate` has no internal callback, so checks
+surround its bounded conditioning step. No interactive cache or phone-cost
+claim is added by this offline audition.
+
+### Levels and measured behavior
+
+RAW applies one collection-wide, only-down safety scalar to unlevelled physical
+audio. That scalar was `1` in the measured render. MATCHED adds one constant
+per whole clip to a common achievable RMS no greater than `.10`, with a `.90`
+peak ceiling. The measured common target was `.10`. There is no per-breath or
+window leveling. This matches RMS, not perceived loudness. STEADY retains the
+approved physical raw source before house leveling; its new RAW WAV differs
+from the earlier house-leveled native download.
+
+The 2026-11-04 pre-commit render reported these Float metrics:
+
+| Mode | Raw RMS | Matched peak | 50 ms RMS coefficient of variation | Largest node-read power-share range |
+| --- | --- | --- | --- | --- |
+| STEADY | `.008860` | `.434` | `.0858` | `.0927` |
+| INDEPENDENT | `.001493` | `.679` | `.4658` | `.4243` |
+| SYNCHRONIZED | `.002022` | `.830` | `1.5446` | `.0687` |
+
+Node shares measure windowed mean-square damped delay-read signals before
+pickup or gain, not total energy stored in the delay lines. Both moving modes
+converged in `4` of their `6` allowed cycles, with reported state/audio errors
+and both true-adjacent seam errors `0` for this fixed recipe. STEADY converged
+in `7/11` cycles; its state error was `6.34e-10`, audio error `1.84e-14`, and
+both seams below `1.03e-15`. All observed loop gains stayed below `1`.
+Example host-JDK-21 total renders were approximately `323/510/515 ms` in
+table order. These are offline host timings, not phone touch or render times.
+
+### Source, downloads and replay
+
+[Listen to the breathing comparison](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/breathing/index.html).
+Generate local downloads from the repository root:
+
+```sh
+./gradlew --no-daemon :synth:generateOverlapBreathingAudition
+```
+
+The default `testkit/overlap-breathing-audition/` contains six mono
+44.1 kHz PCM24 previews, three standalone prototype recipes, diagnostics and
+circuit traces under `assets/`, with `manifest.json`, `README.txt`,
+`SHA256SUMS.txt` and `overlap-breathing-proof.zip`. The manifest records source revision, dirty-tree
+status, source hashes, exact gains and output hashes. Host timings remain in
+`metrics-runtime.json`, outside the deterministic ZIP and checksum inventory.
+Use `-PoverlapBreathingOutput=/absolute/dedicated/output` to change destination.
+
+Replay a downloaded recipe with its recorded source files:
+
+```sh
+./gradlew --no-daemon :synth:generateOverlapBreathingAudition \
+  -PoverlapBreathingRecipe="$PWD/testkit/overlap-breathing-audition/assets/recipes/independent.json" \
+  -PoverlapBreathingWav="$PWD/testkit/overlap-independent-replay.wav" \
+  -PoverlapBreathingVariant=raw
+```
+
+Choose `raw` or `matched`; the output must not exist. Replay verifies the
+source inventory, physical audio and both PCM24 variants before writing.
+These experimental recipes are outside ordinary `OverlapPatch`/`PadRecipe`
+import. See [the prototype](../synth/src/main/kotlin/com/snipsnap/synth/OverlapBreathingPrototype.kt)
+and [the generator](../synth/src/test/kotlin/com/snipsnap/synth/OverlapBreathingAuditionGenerator.kt).
+
+### Evidence ledger
+
+| Label | Evidence and limit |
+| --- | --- |
+| Verified | Fixed endpoint plans, literal node excitation/absorption, bounded recurrence, genuine two-sided context and hash-checked replay. Existing production sources and formats are unchanged. |
+| Measured | The focused Gradle run exited `0`: `34` tests across `6` reports, no failures, errors or skips, with identical source before/after. It includes exact STEADY raw parity, full-neighbour context checks, physical reconstruction of all six PCM24 outputs and replay of every hash. The artifact metrics above come from that pre-commit source at base `482c55a1`. |
+| Negative control | Reversing only the absorption exponent sign made the named physical-motion test fail with `breathing proof non-finite or unbounded state`, actual Gradle exit `1`. The original core SHA-256 `38252d71685534dbd49fa45e14e61c59acafd2298f168163ddc733271aca61ae` was restored exactly; all `7` restored core tests passed, exit `0`. |
+| Proposed | A later moving held articulation needs its own production parameter contract, intermediate synchronization decision and measured interactive cost/cache design. |
+| Heard | Owner listening to these breathing examples is pending. Earlier finite, steady and phone acceptance does not establish acceptance of the moving loops. |
+
+To reproduce the unfiltered root gate without an Android SDK:
+
+```sh
+./gradlew --no-daemon test
+```
+
+When an SDK is located, use `./gradlew --no-daemon test -x :app:test` for the
+pure-JVM gate. A full-regression result for this change is not recorded here.
+
+### Why it is built this way
+
+- The unchanged steady source gives a reference for what movement adds.
+- Moving six drives and losses tests resonator interaction that a master volume
+  clock would leave untouched.
+- Integer breath counts allow slower motion that closes, at the cost of a
+  longer repeating pattern.
+- Genuine neighbouring evolution and filter guards test the boundary without
+  hiding it under a fade.
+- Shared RAW gain and fixed MATCHED gain preserve the envelope while exposing
+  physical-level and RMS-controlled comparisons.

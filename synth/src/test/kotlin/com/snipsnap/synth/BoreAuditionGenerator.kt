@@ -5,6 +5,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -36,6 +37,14 @@ import kotlin.math.roundToInt
  * shipped one and a stronger one, so its strength is a choice made by ear. The clips are one-shots; a LOOP
  * is cut from a one-shot, so it has the same rasp and voicing ([Bore.RASP_DRIVE], [Bore.VOICE_LOW_DB]).
  *
+ * The newest section comes first: OVERBLOW (round two), FLUTE's crack to its upper register near the end of the note, the knob
+ * the growl of the overblown octave (the owner's choice of three flavours, heard 2026-11-06: "Growl, 1 is a little weak", so the
+ * top is now deeper). CLEAN TONE at HOLD 0.8 (a 2.6 s note) and BREATHY at its own length, each off, at .25, .5, .75 and 1, and
+ * at the first build's top for comparison; each clip's description carries what was measured on that very note. A LOOP plays
+ * without the crack. `--args="<dir> quick"` writes this section alone, with the page, for a fast look; `--args="<dir> growl-v2"`
+ * writes the same clips as plain WAVs named for the owner ("CLEAN_TONE growl v2 0.5.wav", "CLEAN_TONE growl old 1.wav",
+ * "CLEAN_TONE 0 off.wav") and a notes file, and nothing else.
+ *
  * Nothing in BORE has been heard by anyone when this is first run: it is the gate that decides
  * whether the measured engine is a woodwind. The page says so.
  */
@@ -65,6 +74,43 @@ object BoreAuditionGenerator {
         root.mkdirs()
         var count = 0
         val sections = StringBuilder()
+        val quick = args.getOrNull(1) == "quick"
+
+        // OVERBLOW (round two): the crack near the end, the knob its growl, with the first build's top beside the new one.
+        val overblow = overblowClips()
+        if (args.getOrNull(1) == "growl-v2") {
+            val notes = StringBuilder("BORE FLUTE OVERBLOW, the growl's new top. Each clip levelled to the same loudness. Measured on the raw blow of each note.\n\n")
+            for (clip in overblow) {
+                WavWriter.write(File(root, "${clip.fileName}.wav"), clip.snip, WavWriter.BitDepth.PCM_16)
+                notes.append("${clip.fileName}: ${clip.desc}\n")
+            }
+            File(root, "notes.txt").writeText(notes.toString())
+            println("wrote ${overblow.size} growl clips and notes.txt under ${root.absolutePath}")
+            return
+        }
+        val overblowDir = File(root, "OVERBLOW")
+        for (clip in overblow) {
+            WavWriter.write(File(overblowDir, "${clip.id}.wav"), clip.snip, WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        sections.append(
+            sectionJson(
+                id = "OVERBLOW", display = "OVERBLOW",
+                body = "FLUTE's sixth knob: any OVERBLOW cracks the note up to its octave near its end, and the knob is how hard the octave growls. You chose the growl and found its top a little weak; the top is now deeper, with the old top beside it. Is 1 strong enough now?",
+                readout = listOf(
+                    "CLEAN TONE (2.6 S) " + DOT + " BREATHY (ITS OWN 0.9 S)",
+                    "OFF, .25, .50, .75, 1 " + DOT + " AND THE OLD 1",
+                ),
+                groups = overblow.groupBy { it.preset }.map { (preset, clips) ->
+                    Group(preset, key = preset == "CLEAN TONE", clips = clips.map { Clip(it.id, it.name, it.desc) })
+                },
+            ),
+        )
+        if (quick) {
+            writePage(root, sections, count)
+            return
+        }
+        sections.append(",\n")
 
         val phrase = listOf(7f / 24, 0.5f, 19f / 24)
         // The reed's loop: cut from the held middle of a long one-shot, beside the one-shot it is cut from.
@@ -351,11 +397,88 @@ object BoreAuditionGenerator {
             )
         }
 
+        writePage(root, sections, count)
+    }
+
+    /** The manifest the page builds itself from, and the page. */
+    private fun writePage(root: File, sections: StringBuilder, count: Int) {
         File(root, "manifest.json").writeText("{\"voices\": [\n$sections\n]}\n")
         val page = BoreAuditionGenerator::class.java.getResourceAsStream("/audition/bore-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+    }
+
+    /** One OVERBLOW clip: its page id and name, its file name for the owner, what was measured on it, and the levelled audio. */
+    private class OverblowClip(val preset: String, val id: String, val name: String, val fileName: String, val desc: String, val snip: Snip)
+
+    /** The knob setting at which the growl is the first build's top (a depth of 0.3, heard as "a little weak"). */
+    private val OLD_GROWL_TOP: Float = (0.3f / Bore.OVERBLOW_GROWL_DEPTH).pow(1f / Bore.OVERBLOW_GROWL_CURVE)
+
+    /**
+     * The growl's clips: CLEAN TONE at HOLD 0.8 (a 2.6 s note) and BREATHY at its own length, each off, at .25, .5, .75 and 1,
+     * and at [OLD_GROWL_TOP], the first build's top (the depth law is the only thing that changed, so the old top is the new law
+     * at that setting), levelled to one loudness.
+     */
+    private fun overblowClips(): List<OverblowClip> {
+        val presets = listOf(
+            BorePresets.forVoice(BoreVoice.FLUTE).single { it.name == "CLEAN TONE" }.macros + ("HOLD" to 0.8f) to "CLEAN TONE",
+            BorePresets.forVoice(BoreVoice.FLUTE).single { it.name == "BREATHY" }.macros to "BREATHY",
+        )
+        val out = ArrayList<OverblowClip>()
+        for ((macros, preset) in presets) {
+            val tag = preset.replace(' ', '_')
+            val off = macros + ("OVERBLOW" to 0f)
+            out += OverblowClip(preset, "${tag.lowercase()}_off", "OFF", "$tag 0 off", "OVERBLOW 0: the preset as it plays, no crack",
+                AuditionLevel.level(Bore.render(BoreVoice.FLUTE, off)))
+            for (amount in listOf(0.25f, 0.5f, 0.75f, 1f)) {
+                val m = macros + ("OVERBLOW" to amount)
+                out += OverblowClip(
+                    preset, "${tag.lowercase()}_growl_${(amount * 100).roundToInt()}", "GROWL ${fmt(amount)}",
+                    "$tag growl v2 ${amount.toString().trimEnd('0').trimEnd('.')}", overblowLine(m),
+                    AuditionLevel.level(Bore.render(BoreVoice.FLUTE, m)),
+                )
+            }
+            val old = macros + ("OVERBLOW" to OLD_GROWL_TOP)
+            out += OverblowClip(
+                preset, "${tag.lowercase()}_growl_old_top", "OLD 1", "$tag growl old 1",
+                "the first build's top, for comparison (the new law at %.3f): ".format(java.util.Locale.ROOT, OLD_GROWL_TOP) + overblowLine(old),
+                AuditionLevel.level(Bore.render(BoreVoice.FLUTE, old)),
+            )
+        }
+        return out
+    }
+
+    /**
+     * What an OVERBLOW clip does, measured on the raw blow of the very macros it renders: where the note cracks, the growl's
+     * depth, how much the level moves on the overblown note (the spread of the rms on windows of two octave periods, over its
+     * mean, from 0.4 s to 0.05 s before the release), and the octave's pitch over the last 0.2 s before the release.
+     */
+    private fun overblowLine(macros: Map<String, Float>): String {
+        val m = Bore.settled(macros, BoreVoice.FLUTE)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val hz = Bore.frequencyFor(BoreVoice.FLUTE, m.getValue("TUNE"))
+        val raw = Bore.blow(BoreVoice.FLUTE, Bore.tunedHz(BoreVoice.FLUTE, hz), m, rate)
+        val attackN = (Bore.attackSeconds(m.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
+        val holdN = (Bore.holdSeconds(m.getValue("HOLD")) * rate).toInt()
+        val crack = Bore.crackFrame(BoreVoice.FLUTE, m, attackN, holdN, rate)!!.toFloat() / rate
+        val breath = (attackN + holdN).toFloat() / rate
+        val n = (2 * rate / (2 * hz)).toInt()
+        val levels = ArrayList<Double>()
+        var a = ((breath - 0.4f).coerceAtLeast(crack + 0.05f) * rate).toInt()
+        while (a + n <= ((breath - 0.05f) * rate).toInt()) {
+            var sum = 0.0
+            for (i in a until a + n) sum += raw[i].toDouble() * raw[i]
+            levels.add(kotlin.math.sqrt(sum / n))
+            a += n
+        }
+        val mean = levels.average()
+        val waver = kotlin.math.sqrt(levels.sumOf { (it - mean) * (it - mean) } / levels.size) / mean
+        val cents = BoreMeasure.cents(raw, 2 * hz, breath - 0.2f, breath)
+        val depth = Bore.OVERBLOW_GROWL_DEPTH * m.getValue("OVERBLOW").pow(Bore.OVERBLOW_GROWL_CURVE)
+        return "cracks at %.2f s of a %.2f s breath; growl depth %.3f; the level wavers %.2f; the octave ends %+.1f cents".format(
+            java.util.Locale.ROOT, crack, breath, depth, waver, cents,
+        )
     }
 
     /**

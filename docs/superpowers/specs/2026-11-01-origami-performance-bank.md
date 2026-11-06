@@ -3,6 +3,10 @@
 Status: implementation and audition preparation; the new preset shapes await listening.
 Repository baseline: `82a1f9c74086d574d4de3eb1b7dc0944069c89d6`, read 2026-11-01.
 
+Historical note, 2026-11-05: the owner reported that soft and hard sounded the same.
+The [TOUCH response brief](2026-11-05-origami-touch-response.md) records the explicit
+new factory mode; this brief retains the original FOLD bank contract.
+
 The characteristic gesture is **strike softly or firmly → the paper opens or folds → a stable note remains → release**.
 
 ## Scope and landing

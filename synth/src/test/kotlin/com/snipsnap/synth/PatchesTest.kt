@@ -41,6 +41,9 @@ class PatchesTest {
      * note and velocity beside its first factory preset (the set of engines below ignores the repeat).
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
+        HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
+        ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
+        FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
         ErosionPatch("Door", ErosionVoice.ARC),
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
@@ -51,7 +54,6 @@ class PatchesTest {
         OverlapPresets.all().first(),
         CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
         WickPresets.all().first(),
-        NacrePresets.all().first(),
         RimePresets.all().first(),
         FerryPresets.all().first(),
         ScourPresets.all().first(),

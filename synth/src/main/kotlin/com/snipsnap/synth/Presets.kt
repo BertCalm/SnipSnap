@@ -57,6 +57,10 @@ object Presets {
             val v = TrioVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TrioPresets.forVoice(v)
         }
+        NacrePatch.ENGINE -> {
+            val v = NacreVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            NacrePresets.forVoice(v)
+        }
         ThumpPatch.ENGINE -> {
             val v = ThumpVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThumpPresets.forVoice(v)
@@ -333,7 +337,7 @@ object Presets {
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +
-        TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() +
+        TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() + NacrePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() + MeridianPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +

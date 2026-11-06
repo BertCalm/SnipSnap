@@ -1637,6 +1637,28 @@ class CliTest {
         assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)
     }
 
+    /** A print over the pad refuses `desample` in the pad sheet's words, exit 2 as its other refusals, touching nothing (2026-11-02). */
+    @Test
+    fun `desample refuses a printed pad, touching nothing, and the print still comes off`() {
+        val kitDir = File(temp, "ds-printed")
+        val m = KitBuilderModel.create("DSP", kitDir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val underPrint = m.pad(1)!!
+        val printed = com.snipsnap.shell.BoardSheet.apply(m, 1, .7f)
+        m.save()
+        val saved = KitStore.load(kitDir).pad(1)
+        val wet = File(kitDir, printed.sampleFile).readBytes()
+
+        val (code, stdout, stderr) = cli("desample", kitDir.path, "A01", "--force")
+        assertEquals(2, code, "stdout: $stdout stderr: $stderr")
+        assertContains(stderr, com.snipsnap.shell.Copy.boardRemoveBeforeDesample("WIDE"))
+        assertEquals(saved, KitStore.load(kitDir).pad(1), "the refusal leaves the pad and its print alone")
+        assertTrue(wet.contentEquals(File(kitDir, printed.sampleFile).readBytes()), "and its audio")
+
+        val removed = com.snipsnap.shell.BoardSheet.remove(KitBuilderModel.open(kitDir), 1)
+        assertEquals(underPrint.sampleFile, removed.sampleFile, "REMOVE still lands")
+    }
+
     @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
@@ -2019,11 +2041,6 @@ class CliTest {
         assertEquals(4, chained!!.sliceCount)
         assertTrue(padFile.readBytes().size > before.size * 3, "four takes ride in the WAV")
 
-        // A chained pad refuses the other audio doors with a pointer home.
-        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
-        assertTrue(guardCode != 0)
-        assertContains(guardErr, "robin --undo")
-
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "undo is byte-identical")
         assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain)
@@ -2039,12 +2056,38 @@ class CliTest {
         val grid = KitStore.load(kitDir).pad(1)!!.chain!!
         assertEquals(6, grid.sliceCount)
         assertEquals(3, grid.zones!!.size)
+
+        // A zone-grid chain refuses the other audio doors with a pointer home (a plain robin chain lifts instead).
+        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
+        assertTrue(guardCode != 0)
+        assertContains(guardErr, "robin --undo")
+
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "grid undo is byte-identical too")
 
         val (bzCode, _, bzErr) = cli("robin", kitDir.path, "A01", "--zones", "9")
         assertTrue(bzCode != 0)
         assertContains(bzErr, "zones")
+
+        // --amount renders on the dial and records typed settings; --undo still restores.
+        val (aCode, aOut, aErr) = cli("robin", kitDir.path, "A01", "--amount", "0.6", "--takes", "5", "--seed", "2")
+        assertEquals(0, aCode, "stderr: $aErr")
+        assertContains(aOut, "amount 0.6")
+        val dialed = KitStore.load(kitDir).pad(1)!!
+        assertEquals(5, dialed.chain!!.sliceCount)
+        assertEquals(com.snipsnap.kit.RobinSettings(0.6f, 5, 2, followsKit = false), dialed.robin)
+        assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "dial undo is byte-identical too")
+        val (baCode, _, baErr) = cli("robin", kitDir.path, "A01", "--amount", "1.5")
+        assertTrue(baCode != 0)
+        assertContains(baErr, "amount")
+        val (btCode, _, btErr) = cli("robin", kitDir.path, "A01", "--amount", "0.5", "--takes", "1")
+        assertTrue(btCode != 0)
+        assertContains(btErr, "takes")
+        assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain, "a refused robin leaves the pad alone")
+        val (bxCode, _, bxErr) = cli("robin", kitDir.path, "A01", "--amount", "0.5", "--zones", "3")
+        assertTrue(bxCode != 0)
+        assertContains(bxErr, "zones")
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import java.io.File
 
 /**
@@ -237,6 +238,13 @@ object Mutate {
         // loud instead of quiet.
         require("become" !in extraRecipe) { "an extra recipe field named 'become' would overwrite the BECOME ramp - rename it" }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        if (pad.isRobinChain) {
+            // The move is made on the original (take one) and the takes re-render from the result.
+            val done = Robin.around(model, slot) {
+                apply(model, slot, sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands, becomeMs, extraRecipe)
+            }
+            return Outcome(model.pad(slot) ?: done.pad, done.flipped)
+        }
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
         val (result, flipped) = render(

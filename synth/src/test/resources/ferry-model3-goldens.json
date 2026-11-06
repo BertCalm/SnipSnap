@@ -1,0 +1,46 @@
+{
+  "source_commit": "86283ac23ee80e087a4d7b4de5db0c163d65bac5",
+  "model": 3,
+  "cases": [
+    {
+      "midi": 36,
+      "handoff": 0.25,
+      "match": 0.0,
+      "loss": 1.0,
+      "velocity": 0.4,
+      "seed": "-9223372036854775808",
+      "frames": 44100,
+      "float_le_sha256": "f0f29500ef1e1abab7cade87e1cf786a3ba06f4f04c819d135bbaa1549d78a19"
+    },
+    {
+      "midi": 48,
+      "handoff": 0.5,
+      "match": 1.0,
+      "loss": 0.0,
+      "velocity": 1.0,
+      "seed": "7",
+      "frames": 352800,
+      "float_le_sha256": "f6eb242be5ae549a7c67d353dc26feade371c9903062af1fab58893169cdabfd"
+    },
+    {
+      "midi": 57,
+      "handoff": 1.0,
+      "match": 0.25,
+      "loss": 0.75,
+      "velocity": 0.6,
+      "seed": "9223372036854775807",
+      "frames": 88200,
+      "float_le_sha256": "8d4e9be38593e358dc1f3c517fd8403002243e684a89eb6f1acfa5abe751f7fd"
+    },
+    {
+      "midi": 72,
+      "handoff": 0.5,
+      "match": 0.75,
+      "loss": 0.5,
+      "velocity": 0.8,
+      "seed": "9007199254740993",
+      "frames": 176400,
+      "float_le_sha256": "b794f313c14e531452a854954700bf4646eefe0496da20da6ea6f6e980164f89"
+    }
+  ]
+}

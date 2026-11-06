@@ -15,12 +15,15 @@ import kotlin.test.assertTrue
  * "Testing", test 1). [LegacyTerraBank] is the frozen copy and [TerraCases]
  * Phase 0's 40-case grid. Landed before any TERRA change and passing
  * against the unchanged source, which is the proof it guards something.
+ * BOX (2026-11-06) came after the freeze: the guard holds the four voices it
+ * froze, and the kit's one BOX pad, A07, is pinned by its recipe instead.
  */
 class TerraFrozenTest {
 
     @Test
     fun `the frozen copy's macro table is today's`() {
-        for (voice in TerraVoice.entries) assertEquals(LegacyTerraBank.macrosFor(voice), Terra.macrosFor(voice), voice.name)
+        for (voice in TerraCases.FROZEN_VOICES) assertEquals(LegacyTerraBank.macrosFor(voice), Terra.macrosFor(voice), voice.name)
+        assertEquals(TerraVoice.entries - TerraCases.FROZEN_VOICES, listOf(TerraVoice.BOX), "only BOX came after the freeze")
     }
 
     @Test
@@ -33,22 +36,34 @@ class TerraFrozenTest {
         assertEquals(40, cases)
     }
 
-    /** The audio the kit ships with, through whatever path TerraPatch.render takes - the routing Task 5 rewrites. */
+    /**
+     * The audio the kit ships with, through whatever path TerraPatch.render
+     * takes - the routing Task 5 rewrites. The fifteen pads on frozen voices
+     * against the frozen copy; A07, the BOX, against its own voice.
+     */
     @Test
     fun `the shipped Terra Kit is the frozen TERRA, pad for pad`() {
         val kit = TerraKits.classic()
         assertEquals(TerraCases.KIT.size, kit.size)
+        var frozen = 0
         for ((i, pad) in TerraCases.KIT.withIndex()) {
             val shipped = requireNotNull(kit[i]) { "pad ${pad.slot} is empty" }
-            assertContentEquals(LegacyTerraBank.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
+            if (pad.voice in TerraCases.FROZEN_VOICES) {
+                assertContentEquals(LegacyTerraBank.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
+                frozen++
+            } else {
+                assertEquals("A07" to TerraVoice.BOX, pad.slot to pad.voice, "the one pad off the frozen voices")
+                assertContentEquals(Terra.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
+            }
         }
+        assertEquals(15, frozen)
     }
 
     /**
      * A plain recipe keeps today's bytes, so every saved TERRA pad and the
      * Terra Kit stay byte-stable (spec, "Data flow and compatibility"; test
-     * 1, "pinned as text"). Three literal pins: a synthetic patch, the BUZZ
-     * pad A07 and the CLACK pad A15. The numbers are the floats widened to
+     * 1, "pinned as text"). Three literal pins: a synthetic patch, the BOX
+     * pad A07 (the BUZZ pad before 2026-11-06) and the CLACK pad A15. The numbers are the floats widened to
      * double and spelled by Double.toString, as Json.write spells them;
      * the build's JVM and a shortest round-trip spelling agree on all six. The other
      * pads are held to [todaysText], which rebuilds today's JSON without
@@ -74,11 +89,14 @@ class TerraFrozenTest {
               "engine": "TERRA",
               "version": 1,
               "name": "Cajon Slap",
-              "voice": "TUNED_BAR",
+              "voice": "BOX",
               "macros": {
-                "TUNE": 0.2513999938964844,
-                "FORCE": 0.8500000238418579,
-                "BUZZ": 0.75
+                "TUNE": 0.4000000059604645,
+                "DECAY": 0.5,
+                "FORCE": 0.800000011920929,
+                "POS": 0.875,
+                "CAVITY": 0.30000001192092896,
+                "BUZZ": 0.5
               }
             }
         """.trimIndent()
@@ -98,7 +116,7 @@ class TerraFrozenTest {
         val kit = TerraKits.classic()
         assertEquals(a07, Json.write(requireNotNull(kit[6]?.recipe?.entries?.get("patch"))), "A07's stored recipe")
         assertEquals(a15, Json.write(requireNotNull(kit[14]?.recipe?.entries?.get("patch"))), "A15's stored recipe")
-        assertEquals(a07, TerraPatch("Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f)).toJsonText())
+        assertEquals(a07, TerraPatch("Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)).toJsonText())
         assertEquals(a15, TerraPatch("Agogo Clack", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.6108f, "FORCE" to 0.95f, "CLACK" to 0.6667f)).toJsonText())
         for ((i, pad) in TerraCases.KIT.withIndex()) {
             val today = todaysText(pad.name, pad.voice, pad.macros)

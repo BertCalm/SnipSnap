@@ -117,4 +117,35 @@ class XpnPackagerTest {
             )
         }
     }
+
+    @Test
+    fun `the xpn carries the take files and a cycling program`() {
+        val kitDir = File(temp, "robin")
+        kitDir.mkdirs()
+        val frames = 1000
+        val snip = Snip(FloatArray(5 * frames) { i -> ((i / frames + 1) * 0.1f) * (if (i % 2 == 0) 1f else -1f) }, 1, 44_100)
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), snip)
+        val kit = Kit(
+            "Robin Zip",
+            listOf(
+                KitPad(
+                    slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK,
+                    chain = ChainInfo((0 until 5).map { it * 1000L }, cycle = 5), robin = RobinSettings(0.5f, 5),
+                ),
+            ),
+        )
+        KitStore.save(kit, kitDir)
+        val out = File(temp, "RobinZip.xpn")
+        XpnPackager.write(kit, kitDir, out, meta)
+
+        ZipFile(out).use { zip ->
+            val names = zip.entries().asSequence().map { it.name }.toSet()
+            for (n in 1..4) assertTrue("Samples/Robin Zip/A01_Kick_01_RR$n.wav" in names, "RR$n")
+            assertTrue("Samples/Robin Zip/A01_Kick_01_RR5.wav" !in names)
+            assertTrue("Samples/Robin Zip/A01_Kick_01.wav" !in names, "no whole chain")
+            val xpm = zip.getInputStream(zip.getEntry("Programs/Robin Zip.xpm")).readBytes().decodeToString()
+            assertTrue("<ZonePlay>0</ZonePlay>" in xpm)
+            assertEquals(4, Regex("<SampleName>A01_Kick_01_RR\\d</SampleName>").findAll(xpm).count())
+        }
+    }
 }

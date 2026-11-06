@@ -328,7 +328,7 @@ class RushBoardIntegrationTest {
         assertEquals(BoardType.RUSH, BoardSheet.read(BoardSheet.undo(m, 1).recipe)?.type)
     }
 
-    @Test fun `RUSH names and refuses soft hit changes stacking and spreading before any mutation`() {
+    @Test fun `RUSH names and refuses soft hit changes stacking spreading splicing and de-sampling before any mutation`() {
         for (layered in listOf(false, true)) {
             val m = model("Guards-$layered", layered = layered)
             m.assign(17, hit(550.0))
@@ -349,6 +349,9 @@ class RushBoardIntegrationTest {
                         Spread.Sound("Rush", rush.drumClass, "#19645B", recipe = rush.recipe, like = rush),
                     )
                 },
+                // Asked before the layered refusal too: a print over soft hits names the print.
+                Copy.boardRemoveBeforeSplice("RUSH") to { m.splicePad(1, hit(), 1200, hit(440.0), 1800) },
+                Copy.boardRemoveBeforeDesample("RUSH") to { m.desamplePad(1, evenIfFar = true) },
             )
             for ((message, action) in refusals) {
                 val error = assertFailsWith<IllegalArgumentException> { action() }

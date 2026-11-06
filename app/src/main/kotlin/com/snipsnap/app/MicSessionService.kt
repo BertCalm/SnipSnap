@@ -142,7 +142,7 @@ class MicSessionService : Service() {
     /**
      * Re-entry for an already-armed session of either source. Still worth
      * a call — this is also the path for a just-granted overlay permission
-     * (App's ACTION_MANAGE_OVERLAY_PERMISSION result calls arm() again on
+     * (OverlayAsk calls arm() again when it sees the grant on
      * return): attachBubbleIfAllowed() is a no-op if a bubble is already
      * up, and doesn't touch the AudioRecord either way.
      *
@@ -689,11 +689,11 @@ class MicSessionService : Service() {
         val title = if (source == Source.INSIDE) Copy.APP_AUDIO_ARMED else Copy.SESSION_ARMED
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_mark_symbol)
             .setOngoing(true)
             .addAction(
                 Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_btn_speak_now),
+                    Icon.createWithResource(this, R.drawable.ic_mark_symbol),
                     "SNIP",
                     snipPending,
                 ).build(),

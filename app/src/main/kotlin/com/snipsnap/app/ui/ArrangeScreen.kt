@@ -7,6 +7,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -365,7 +367,17 @@ private fun SectionRow(
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(if (selected) scheme.field.tape else scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (active) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            // Selected is the app's border-plus-word (pressedBevel's 2 dp
+            // accent line and the SELECTED line below), not the fill alone:
+            // the field fill is a hair from the lcd fill, and a state shown
+            // by a fill that close is colour-only. The playing row keeps its
+            // amber, at the same 2 dp, with the play glyph.
+            .border(
+                if (selected) 2.dp else 1.dp,
+                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.grayEdge.tape,
+                RoundedCornerShape(4.dp),
+            )
+            .semantics { this.selected = selected }
             .tapeClick(label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.countOf(section.bars, "BAR", "BARS")}") { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -373,7 +385,12 @@ private fun SectionRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TapeText(if (active) "▶" else "%02d".format(java.util.Locale.ROOT, index + 1), TapeType.pixel, scheme.amber.tape)
-            TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
+            Column {
+                TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
+                // Reserved on every row, blank on the others, so no row
+                // grows only when it is the chosen one.
+                TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
+            }
         }
         TapeText(Copy.countOf(section.bars, "BAR", "BARS"), TapeType.pixelSmall, scheme.ink2.tape)
     }

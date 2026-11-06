@@ -151,7 +151,7 @@ class FilamentTouchKeysTest {
             val failure = assertFailsWith<IllegalArgumentException> { FilamentTouchKeys.render(patch.copy(model = model)) }
             assertTrue(failure.message.orEmpty().contains("model-3"))
         }
-        for (midi in listOf(47, 73)) assertFailsWith<IllegalArgumentException> { FilamentTouchKeys.render(patch, midi) }
+        for (midi in listOf(35, 85)) assertFailsWith<IllegalArgumentException> { FilamentTouchKeys.render(patch, midi) }
         assertFailsWith<CancellationException> { FilamentTouchKeys.render(patch) { true } }
         var checks = 0
         assertFailsWith<CancellationException> { FilamentTouchKeys.render(patch) { ++checks > 6 } }

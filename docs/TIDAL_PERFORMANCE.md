@@ -72,7 +72,14 @@ are part of that key. Geometry remains separately bounded to eight settings.
 - Completed audio belongs to the cache. Copies on insertion and return protect
   future playback from a caller trimming or applying effects to its own pad.
 - Preview cancellation stops obsolete edits, including requests that encounter
-  a completed-cache hit. No expensive synthesis runs while a cache lock is held.
+  a completed-cache hit. No expensive synthesis runs while the lock on the
+  cache's completed entries is held; the only lock held across synthesis is
+  the recipe's own flight lock, which other recipes never take.
+- One recipe renders once at a time. A request whose key is already being
+  rendered (a preview and a SEND pressed during it) waits, still cancellable
+  by its own check or an interrupt, then takes the completed copy. Other
+  recipes never wait; if the first request is cancelled the next renders.
+  Two held fields side by side had overrun the emulator's 192 MB heap.
 
 JFR sampling identified source generation and output conditioning as the main
 costs. The separate before/after profiles are supporting evidence, not the

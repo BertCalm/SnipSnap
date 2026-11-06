@@ -17,6 +17,10 @@ import kotlin.math.tanh
  * nothing else changed. TerraFrozenTest holds the live engine to it, sample
  * for sample. Never edit this file to make that test pass: a difference is a
  * change to every saved TERRA pad.
+ *
+ * BOX (2026-11-06) came after the freeze and has no frozen copy: its two
+ * arms below refuse it, so the guard runs on the four voices it froze
+ * ([TerraCases.FROZEN_VOICES]). They are the only lines added since.
  */
 internal object LegacyTerraBank {
 
@@ -51,6 +55,7 @@ internal object LegacyTerraBank {
             MacroSpec("POS", 0.25f),
             MacroSpec("BUZZ", 0f),
         )
+        TerraVoice.BOX -> error("BOX came after the freeze and has no frozen copy")
     }
 
     fun defaults(voice: TerraVoice): Map<String, Float> =
@@ -65,6 +70,7 @@ internal object LegacyTerraBank {
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate) to 0
+            TerraVoice.BOX -> error("BOX came after the freeze and has no frozen copy")
         }
         Dsp.normalize(raw)
         val out = if (clackFrames > 0) {

@@ -50,6 +50,34 @@ top of a pad is soft, bottom hard. The strip is a separate vertical fader,
 whose direction follows its visible HARD / SOFT labels. Accessibility
 adjustments and arrow keys also change its value.
 
+How the controls read at a glance, on PADS and in FULL alike:
+
+- A setting that is on wears the accent border, the selected form most of
+  the app's pickers use. It used to be a "sunken" button, which paints the
+  same fill as a raised one in every scheme, so the state rested on the word
+  alone. The last-hit layer chip that sounded wears the same border.
+- LEFT/RIGHT, STAY/RETURN and VOL change nothing about a hit while STRIKE is
+  off: the touch velocity passes through untouched and the fader is not
+  drawn. They read in the quieter ink until it is on. They stay tappable and
+  keep their value (dimmed, not disabled), so a side chosen first is still
+  there when STRIKE comes on. Each carries the state description "takes
+  effect when STRIKE is on" for TalkBack. Turning STRIKE ON before choosing
+  LEFT or RIGHT is the order step 2 of "Use your own sounds" gives.
+- The fader's tick marks are drawn in the LCD's own second ink, so they stay
+  visible on the paper schemes' dark LCD.
+
+Not changed, and worth a decision: turning STRIKE on still adds a layer row
+above the pads and a fader beside them, so the pads shrink a little. EXIT FULL
+still sits close above the top-right pad. Both are layout questions for a
+phone audition, not a restyle. The BANK chips just above this strip on PADS
+have the same fault the strip had: the bank you are on is a raised chip and
+the others are sunken, which paint one fill, so the difference is the label's
+colour. That is a separate follow-up.
+
+In FULL the controls sit on the dark LCD header. On the paper schemes the
+accent ring reads against the button's own face and not against that dark
+panel, which is the contrast the pressed look is checked at.
+
 ## What this pass changes
 
 - The strip maps 0–100% to MIDI 1–127 for layer selection, giving each

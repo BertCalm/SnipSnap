@@ -11,8 +11,12 @@ The characteristic gesture is choose a kit sound → opt a ring set into KIT FX
 
 OPEN THE SET exposes AQUARIUM · ORBIT. USE KIT FX references the containing
 kit's saved KIT → PERFORMANCE settings: all controls, seed, gain and global
-bypass. It does not copy them into a second editor. ORBIT supplies its own BPM,
-including to tapped-pad audition; a kit's different BPM is not substituted.
+bypass. It does not copy them into a second editor. ORBIT supplies the
+project's BPM, including to tapped-pad audition; a kit's different BPM is not
+substituted. *(Ruling of 2026-11-06: there is one project tempo, set from BEAT,
+and ORBIT follows it with no tempo of its own. This line used to read "ORBIT
+supplies its own BPM". `orbits.json` still carries a `bpm`, now only the tempo
+the set was last fitted at.)*
 Fresh opt-in requests a reset to the saved seed, retained if UI updates coalesce.
 
 `orbits.json` has optional `aquariumFromKit` (default false) and

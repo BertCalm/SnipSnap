@@ -112,8 +112,10 @@ class NacrePatchTest {
         assertEquals(6, recipes.size)
         assertEquals(6, recipes.map { it.name }.toSet().size)
         assertEquals(recipes, NacreModel2Presets.forVoice(NacreVoice.PEARL))
-        assertTrue(Presets.all().none { it.engine == NacrePatch.ENGINE })
-        assertTrue(Presets.forVoice(NacrePatch.ENGINE, NacreVoice.PEARL.name).isEmpty())
+        assertTrue(Presets.all().none { it is NacrePatch && it.model == 2 },
+            "the frozen second listening recipes stay outside the factory roster")
+        assertEquals(NacrePresets.forVoice(NacreVoice.PEARL),
+            Presets.forVoice(NacrePatch.ENGINE, NacreVoice.PEARL.name))
         for (recipe in recipes) {
             assertEquals(setOf("TOUCH", "DUET", "CURRENT", "VENUE", "BLOOM", "HOLD"), recipe.macros.keys)
             assertEquals(0f, recipe.macros.getValue("HOLD"))

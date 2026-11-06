@@ -32,6 +32,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
@@ -41,10 +42,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
-import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.StrikeStrip
 import com.snipsnap.kit.KitPad
@@ -80,7 +83,12 @@ internal class StrikeState(
     }
 }
 
-/** Kept across thumb moves and RETURN, so the highlight describes the WAV that was triggered. */
+/**
+ * Kept across thumb moves and RETURN, so the highlight describes the WAV that was triggered.
+ * The layer that sounded wears the accent border (`pressedBevel`), the selected form most of
+ * the app's pickers use. `sunkenField` drew the same fill as the raised chips beside it, so
+ * the highlight rested on the label's colour alone.
+ */
 @Composable
 internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifier) {
     if (!state.enabled) return
@@ -96,7 +104,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
                 val active = index == hit.selected
                 Box(
                     Modifier.weight(1f).heightIn(min = 28.dp)
-                        .let { if (active) it.sunkenField(scheme) else it.raisedBevel(scheme) }
+                        .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                         .semantics {
                             contentDescription = "STRIKE LAYER ${index + 1}: $label"
                             selected = active
@@ -110,36 +118,59 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
     }
 }
 
-/** Four short controls fit both a narrow phone and the fullscreen header. */
+/**
+ * Four short controls fit both a narrow phone and the fullscreen header.
+ *
+ * A setting that is on wears the accent border (`pressedBevel`), the selected form most of the
+ * app's pickers use. The old `sunkenField` drew the same fill as the raised button in every
+ * scheme, so the state rested on the word alone. The three after STRIKE change nothing about a
+ * hit while the strip is off (`StrikeStrip.hit` returns the touch velocity untouched, and the
+ * fader is not drawn), so they read in `ink2` until it is on. They are dimmed, not disabled:
+ * they stay tappable and keep their value for when STRIKE comes on. Nothing is refused, so
+ * there is no toast to explain; the state description tells TalkBack instead. The dim is
+ * `ink2`, the app's AA-checked second ink, and not an alpha-faded `ink`: `PadGrid.kt` records
+ * that a faded tag fell to 2.1 to 3.0 against its card.
+ */
 @Composable
 internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
+    // Each button wears a one-word caption saying what it sets (E1). The caption is for eyes only:
+    // the button's own label already names it for TalkBack, so announcing "SIDE" and then
+    // "STRIKE THUMB SIDE" would say the same thing twice.
     @Composable
-    fun Control(text: String, label: String, active: Boolean, modifier: Modifier, click: () -> Unit) {
-        Box(
-            modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .let { if (active) it.sunkenField(scheme) else it.raisedBevel(scheme) }
-                .semantics { selected = active; stateDescription = text }
-                .tapeClick(label = label, onClick = click)
-                .padding(horizontal = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText(text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
+    fun Control(caption: String, text: String, label: String, active: Boolean, waiting: Boolean, modifier: Modifier, click: () -> Unit) {
+        Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { })
+            Box(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                    .semantics {
+                        selected = active
+                        stateDescription = if (waiting) "$text, takes effect when STRIKE is on" else text
+                    }
+                    .tapeClick(label = label, onClick = click)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(text, TapeType.pixelSmall, if (waiting) scheme.ink2.tape else scheme.ink.tape, maxLines = 1)
+            }
         }
     }
+    // STRIKE itself is never waiting; the three settings behind it wait on it.
+    val waiting = !state.enabled
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Control(if (state.enabled) "STRIKE ON" else "STRIKE OFF", "STRIKE STRIP", state.enabled, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_STRIP, if (state.enabled) "STRIKE ON" else "STRIKE OFF", "STRIKE STRIP", state.enabled, false, Modifier.weight(1f)) {
             state.releaseTouch()
             state.enabled = !state.enabled
         }
-        Control(if (state.right) "RIGHT" else "LEFT", "STRIKE THUMB SIDE", state.right, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_SIDE, if (state.right) "RIGHT" else "LEFT", "STRIKE THUMB SIDE", state.right, waiting, Modifier.weight(1f)) {
             state.releaseTouch()
             state.right = !state.right
         }
-        Control(if (state.returns) "RETURN" else "STAY", "STRIKE ON RELEASE", state.returns, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_RELEASE, if (state.returns) "RETURN" else "STAY", "STRIKE ON RELEASE", state.returns, waiting, Modifier.weight(1f)) {
             state.returns = !state.returns
         }
-        Control(if (state.volume) "VOL ON" else "VOL OFF", "STRIKE CHANGES VOLUME", state.volume, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_LEVEL, if (state.volume) "VOL ON" else "VOL OFF", "STRIKE CHANGES VOLUME", state.volume, waiting, Modifier.weight(1f)) {
             state.volume = !state.volume
         }
     }
@@ -217,9 +248,12 @@ internal fun StrikeFader(state: StrikeState, modifier: Modifier = Modifier) {
                 val y = inset + travel * (1f - state.strength)
                 drawLine(scheme.grayEdge.tape, Offset(center.x, inset), Offset(center.x, size.height - inset), 5.dp.toPx())
                 drawLine(scheme.lcdInk.tape, Offset(center.x, y), Offset(center.x, size.height - inset), 5.dp.toPx())
+                // The LCD's own second ink: `ink2` is tuned against the chrome gray and fell to 2.3 to
+                // 2.8 against the dark LCD of the paper schemes, under the 3:1 a graphic needs.
+                val tickInk = scheme.lcdInk2
                 for (tick in 1..3) {
                     val at = inset + travel * tick / 4f
-                    drawLine(scheme.ink2.tape, Offset(10.dp.toPx(), at), Offset(16.dp.toPx(), at), 1.dp.toPx())
+                    drawLine(tickInk, Offset(10.dp.toPx(), at), Offset(16.dp.toPx(), at), 1.dp.toPx())
                 }
                 drawRoundRect(
                     scheme.lcdInk.tape,

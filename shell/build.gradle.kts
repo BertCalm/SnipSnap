@@ -237,9 +237,11 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
     maxHeapSize = "1g"
     val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
     val touch = providers.gradleProperty("filamentKeysTouchLayers").orElse("false").get().toBooleanStrict()
+    val wide = providers.gradleProperty("filamentKeysWideKeys").orElse("false").get().toBooleanStrict()
+    val rangeTag = if (wide) "-wide" else ""
     val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
     val touchTag = if (touch) "-touch" else ""
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$touchTag-keys").get(), voice, touch.toString())
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$rangeTag$touchTag-keys").get(), voice, touch.toString(), wide.toString())
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
@@ -252,6 +254,17 @@ tasks.register<JavaExec>("generateKeelKeys") {
     mainClass.set("com.snipsnap.shell.KeelKeysGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/keel-keys")
+}
+
+/** BORE held: the held keygroup's zones as held keys beside the loop-only zones they replace. See BoreHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateBoreHeldAudition") {
+    group = "distribution"
+    description = "Render BORE's held keygroup as held keys (hard and soft layers) beside the loop-only zones, at three notes a voice, under testkit/bore-held-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoreHeldAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("boreHeldOutput").orElse("${rootDir}/testkit/bore-held-audition").get())
 }
 
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
@@ -343,6 +356,7 @@ tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
     mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+    if (providers.gradleProperty("origamiPerformanceLegacyFold").orNull == "true") args("--legacy-fold")
 }
 
 /** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */
@@ -369,5 +383,49 @@ tasks.register<JavaExec>("generateLatticeKeysAudition") {
         args("--replay", recipe, providers.gradleProperty("latticeKeysReplayOutput").get())
     } else {
         args(providers.gradleProperty("latticeKeysOutput").orElse(rootDir.resolve("testkit/lattice-keys-audition").absolutePath).get())
+        providers.gradleProperty("latticeKeysBaseline").orNull?.let { args(it) }
     }
+}
+
+/** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoHeldAudition") {
+    group = "distribution"
+    description = "Render ARCO's held keys, both layers, through the instrument player beside the loop-only zone, three notes per voice, under testkit/arco-held-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ArcoHeldAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("arcoHeldOutput").orElse("${rootDir}/testkit/arco-held-audition").get())
+}
+
+/** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */
+tasks.register<JavaExec>("scanLoopInstruments") {
+    group = "verification"
+    description = "Measure each HOLD-loop engine's loop as a keys instrument (wrap, pitch, steadiness) under testkit/loop-instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LoopInstrumentScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory expansion of the new held instruments (MERCURY, KEEL, LoopPadMaker's qualifiers). See InstrumentPackGenerator. */
+tasks.register<JavaExec>("generateInstrumentPack") {
+    group = "distribution"
+    description = "Render the new held instruments and pack them as one MPC expansion (.xpn) under testkit/loop-instruments-pack/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/loop-instruments-pack") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
+/** The factory instruments again, one expansion per engine, from the packages generateInstrumentPack left. */
+tasks.register<JavaExec>("splitInstrumentPack") {
+    group = "distribution"
+    description = "Pack the rendered new held instruments one expansion per engine under testkit/loop-instruments-pack/By engine/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/loop-instruments-pack", "--split")
 }

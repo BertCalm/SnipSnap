@@ -2695,6 +2695,50 @@ class ConventionTest {
         )
     }
 
+    /**
+     * A printed pad is refused by SPLICE ▸ and by DE-SAMPLE's MAKE SYNTH in words, on the tap, before
+     * TAPE SPLICE opens and before the search starts (2026-11-02), as SPREAD ▸ refuses one before its
+     * panel opens and SOFT HITS before it writes. Both doors write their own recipe where the print's
+     * sits, so `KitBuilderModel.splicePad` and `desamplePad` refuse a print too; this law keeps a
+     * player from picking two takes and setting a needle only to be refused at COMMIT.
+     *
+     * - SPLICE ▸ goes through `openSplice`, whose body asks `PrintedPads.has(p.recipe)`, toasts
+     *   `Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe))` and returns before `onSplice(slot)`.
+     * - `onDesample` asks the same, toasts `Copy.boardRemoveBeforeDesample(...)` and returns before
+     *   `appScope.launch`.
+     * - In both, the toast and the `return` sit inside the print branch's own `{ }`, and the door
+     *   opens after it closes.
+     */
+    @Test
+    fun `law - SPLICE and MAKE SYNTH refuse a printed pad in words before they open or launch`() {
+        val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
+        val splice = undoButton(code, "\"SPLICE ▸\"")
+        assertTrue(
+            "onClick = ::openSplice" in splice,
+            "SPLICE ▸ does not go through `openSplice`, the door that refuses a printed pad before TAPE SPLICE opens:\n  $splice",
+        )
+        for ((door, line, opens) in listOf(
+            Triple("fun openSplice() {", "Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe))", "onSplice(slot)"),
+            Triple("fun onDesample() {", "Copy.boardRemoveBeforeDesample(PrintedPads.label(p.recipe))", "appScope.launch"),
+        )) {
+            val body = codeOnly(blockAfter(code, door))
+            val ask = body.indexOf("if (PrintedPads.has(p.recipe))")
+            // The toast and the return are looked for inside the print branch's own braces, and the
+            // door must open after that branch ends. A return found anywhere after the toast would
+            // pass on onDesample's next check, the layered one, with the print's return deleted (2026-11-02).
+            val branch = if (ask >= 0) blockAfter(body.substring(ask), "if (PrintedPads.has(p.recipe))") else ""
+            val branchEnd = if (ask >= 0) body.indexOf(branch, ask) + branch.length else -1
+            val toast = branch.indexOf("onToast($line)")
+            val back = if (toast >= 0) branch.indexOf("return", toast) else -1
+            val open = body.indexOf(opens)
+            assertTrue(
+                ask >= 0 && toast >= 0 && back > toast && open > branchEnd,
+                "`$door` does not ask `PrintedPads.has(p.recipe)`, toast `$line` and return before `$opens`, so a " +
+                    "printed pad reaches a door that would write over the print's recipe, or is refused only after the work:\n  $body",
+            )
+        }
+    }
+
     /** The whole `ActionButton(...)` call around [marker], whitespace-normalised. */
     private fun undoButton(code: String, marker: String): String {
         val at = code.indexOf(marker)
@@ -4339,7 +4383,7 @@ class ConventionTest {
         // 2. :app main — no AWT, no direct call to an AWT entry point.
         val appFiles = ktFiles(appMain)
         assertTrue(appFiles.isNotEmpty(), "scan found no :app sources, so it is broken rather than the code being clean")
-        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render)|Lineage\.\w+)\b|\bJCard::awtPng\b""")
+        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render|awtPng)|Lineage\.\w+)\b|\b(?:JCard|KitArt)::awtPng\b""")
         val strayApp = mutableListOf<String>()
         for (f in appFiles) {
             val code = stripCommentsAndStrings(f.readText())
@@ -5359,9 +5403,9 @@ class ConventionTest {
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
         "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
-        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
+        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 11
+    private val BACK_LABEL_WAIVER_CEILING = 8
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5447,6 +5491,94 @@ class ConventionTest {
             1,
             backLabelProblems(mapOf("ui/XScreen.kt" to listOf("◄ KIT", "◄ KIT")), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3E, "◄ KIT"))).size,
             "two literals against one waiver: the second has no owner",
+        )
+    }
+
+    // ---- Law: the strike strip shows what is on by its border, and draws its LCD marks in the LCD's ink ----
+
+    private val strikeStripUi = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStrip.kt")
+
+    /**
+     * The strike strip is played with a thumb mid-performance, so what is on has to read at a
+     * glance, and three shapes of that failed before this law:
+     *
+     * - The on state was `sunkenField`, whose fill is the `field` colour, where a raised button
+     *   draws `raised`. The two are one colour in every shipped scheme, so a sunken button was
+     *   pixel-identical to a raised one and the state rested on a word. `Bevel.kt` says why
+     *   `pressedBevel` exists (a 2dp accent border: a weight change, not only a hue one), and most
+     *   of the app's pickers already use it. The strip's two state sites, the layer chip and the
+     *   control, now do too.
+     * - The fader's tick marks were drawn in `ink2`, a chrome ink tuned against the gray and
+     *   2.3 to 2.8 against the dark LCD of the paper schemes, under the 3:1 a graphic needs. A
+     *   mark on the LCD reads the LCD's ink, `lcdInk2` (`TapeTheme.kt`).
+     * - Side, return and volume change nothing about a hit while STRIKE is off, so they read in
+     *   the quiet ink until it is on. `StrikeStripTest` in this module holds that for strength
+     *   and volume, the two inputs `StrikeStrip.hit` takes; the side is only ever read to place
+     *   the fader, which is drawn only when STRIKE is on. They are dimmed and not disabled: they
+     *   stay tappable and keep their value for when STRIKE comes on. Nothing is refused, so no
+     *   toast has anything to explain (ChopScreen's rule is "dimmed, not disabled; the toast
+     *   explains"); TalkBack is told in the state description instead. STRIKE itself never waits:
+     *   it is the switch the others wait on.
+     */
+    @Test
+    fun `law - the strike strip shows what is on by its border and draws its LCD marks in the LCD's ink`() {
+        val code = codeOnly(strikeStripUi.readText(Charsets.UTF_8))
+
+        assertFalse(
+            "sunkenField(" in code,
+            "StrikeStrip.kt draws a state with `sunkenField(`, which paints the same fill as the raised button " +
+                "beside it. A state that is on is `pressedBevel`, the 2dp accent border (Bevel.kt).",
+        )
+        val stateSites = Regex("""if \(active\) it\.pressedBevel\(scheme\) else it\.raisedBevel\(scheme\)""").findAll(code).count()
+        assertEquals(
+            2,
+            stateSites,
+            "the strike strip draws a state in two places, the last-hit layer chip and the control, and both " +
+                "read `if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme)`; found $stateSites",
+        )
+
+        val fader = blockAfter(code, "Canvas(Modifier.matchParentSize())")
+        assertFalse(
+            Regex("""scheme\.ink[23]?\b""").containsMatchIn(fader),
+            "the strike fader's canvas draws with a chrome ink (`scheme.ink`, `ink2` or `ink3`). Those are tuned " +
+                "against the gray, not the LCD this canvas sits on, so nothing holds them to a contrast floor " +
+                "there. Draw its marks with `scheme.lcdInk2`, which ContrastTest holds at AA over the LCD.",
+        )
+        assertTrue(
+            "val tickInk = scheme.lcdInk2" in fader && "drawLine(tickInk," in fader,
+            "the fader's tick marks no longer take their colour from `scheme.lcdInk2`, the LCD's second ink " +
+                "(TapeTheme.kt): expected `val tickInk = scheme.lcdInk2` and `drawLine(tickInk,` in the canvas",
+        )
+
+        val controls = blockAfter(code, "internal fun StrikeControls(")
+        assertTrue(
+            "val waiting = !state.enabled" in controls,
+            "StrikeControls no longer derives `waiting` from the strip being off; the settings behind STRIKE " +
+                "would look live while the strip ignores them",
+        )
+        assertEquals(
+            3,
+            Regex("""state\.\w+, waiting, Modifier\.weight""").findAll(controls).count(),
+            "exactly the three settings behind STRIKE (side, return, volume) wait on it",
+        )
+        assertTrue(
+            Regex(""""STRIKE STRIP", state\.enabled, false,""").containsMatchIn(controls),
+            "STRIKE itself must never wait on the strip it turns on",
+        )
+        assertTrue(
+            "if (waiting) scheme.ink2.tape else scheme.ink.tape" in controls,
+            "a waiting control no longer reads in the quiet ink (`ink2`) against `ink`; the settings behind " +
+                "STRIKE would look as live as STRIKE itself while the strip ignores them",
+        )
+        assertTrue(
+            "takes effect when STRIKE is on" in controls,
+            "a waiting control no longer tells TalkBack it takes effect when STRIKE is on, so the quiet ink " +
+                "would be the only cue",
+        )
+        assertFalse(
+            Regex("""tapeClick\([^)]*enabled""").containsMatchIn(controls),
+            "a control behind STRIKE passes `enabled` to tapeClick. These are dimmed, not disabled: they stay " +
+                "tappable and keep their value for when STRIKE comes on.",
         )
     }
 }

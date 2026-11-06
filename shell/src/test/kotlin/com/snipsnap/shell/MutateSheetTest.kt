@@ -155,7 +155,7 @@ class MutateSheetTest {
         // one pad, and a velocity-layered pad has more than one sound to
         // replace. Heard-then-refused is worse than never heard.
         val chained = model("Chained")
-        Robin.apply(chained, 2, takes = 2)
+        Robin.apply(chained, 2, takes = 2, seed = 0, zones = 2)
         val why = assertFailsWith<IllegalArgumentException> {
             MutateSheet.preview(chained, 2, MutateSheet.Partner.Pad(1), Mutate.Mode.MORPH, 0.5f)
         }.message
@@ -542,7 +542,7 @@ class MutateSheetTest {
         assertEquals(MutateSheet.Refusal.Layered, MutateSheet.refusalBefore(layered, null, needsPartner = false))
 
         val chainedKit = model("PreChain")
-        Robin.apply(chainedKit, 2, takes = 2)
+        Robin.apply(chainedKit, 2, takes = 2, seed = 0, zones = 2)
         val chained = chainedKit.pad(2)!!
         assertEquals(MutateSheet.Refusal.Chained, MutateSheet.refusalBefore(chained, null, needsPartner = true))
         assertEquals(
@@ -595,7 +595,7 @@ class MutateSheetTest {
         // that refusal is a real failure, never "the shelf is empty".
         val chained = model("DriftChain")
         model("DriftChain2")
-        Robin.apply(chained, 2, takes = 2)
+        Robin.apply(chained, 2, takes = 2, seed = 0, zones = 2)
         val gate = assertFailsWith<IllegalArgumentException> { MutateSheet.drift(chained, 2, root = temp, seed = 0, fraction = 0.5f) }
         assertNull(MutateSheet.refusalOf(gate), "a chained pad's DRIFT read as ${MutateSheet.refusalOf(gate)}: ${gate.message}")
         assertContains(gate.message!!, "round-robin")

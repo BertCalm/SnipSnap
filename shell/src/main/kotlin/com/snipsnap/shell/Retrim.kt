@@ -4,6 +4,7 @@ import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import java.io.File
 import java.util.Locale
 
@@ -121,10 +122,11 @@ sealed class Retrim {
          * or an import — unless `origin=chop` says the pad was chopped
          * before tapes were remembered, which gets its own line since the
          * fix (RE-CHOP) is different. A pad with velocity layers (GHOSTS,
-         * or STACK THE TAKES) or a round-robin chain refuses too: both are
-         * renderings of, or indexes into, the old file, so the same doors
+         * or STACK THE TAKES) or a chain round robin did not make refuses too: both
+         * are renderings of, or indexes into, the old file, so the same doors
          * that rewrite audio (`treatPad`, `smearPad`) refuse them, and the
-         * PAD SHEET can clear them first. A named tape that isn't in
+         * PAD SHEET can clear them first. A round-robin pad does not refuse:
+         * the re-cut lands on its original and the takes re-render. A named tape that isn't in
          * [snipsDir] (deleted past the bin, never copied to this phone,
          * or a name that isn't bare) is gone; the pad keeps what it has.
          */
@@ -132,7 +134,7 @@ sealed class Retrim {
             val name = tapeName(pad)
                 ?: return Refused(if (pad.source["origin"] == "chop") Copy.RETRIM_OLD_CHOP else Copy.RETRIM_NO_TAPE)
             if (pad.velocityLayers.isNotEmpty()) return Refused(Copy.RETRIM_LAYERED)
-            if (pad.chain != null) return Refused(Copy.RETRIM_CHAINED)
+            if (pad.chain != null && !pad.isRobinChain) return Refused(Copy.RETRIM_CHAINED)
             if ('/' in name || '\\' in name) return Refused(Copy.RETRIM_TAPE_GONE)
             val file = File(snipsDir, name)
             if (!file.isFile) return Refused(Copy.RETRIM_TAPE_GONE)
