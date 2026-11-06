@@ -8,7 +8,8 @@ import { ReleaseReader } from './player/pcm-engine.mjs';
 globalThis.crypto ??= webcrypto;
 
 const out = process.argv[2];
-const m = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json')));
+const manifestBytes = fs.readFileSync(path.join(out, 'manifest.json'));
+const m = JSON.parse(manifestBytes);
 const packed = fs.readFileSync(path.join(out, m.container.file));
 const decodedAt = performance.now();
 const pcm = await decodeCache(m, packed);
@@ -72,7 +73,8 @@ let corruptRejected = false;
 const corrupt = Buffer.from(packed); corrupt[corrupt.length >> 1] ^= 1;
 try { await decodeCache(m, corrupt); } catch { corruptRejected = true; }
 assert(corruptRejected, 'corrupt cache accepted');
-const report = { result: 'passed', cacheIdentity: m.cacheIdentity, cases: fixture.cuts.length, maxJsPythonSampleError: maxPortError,
+assert.deepEqual(fs.readFileSync(path.join(out, 'manifest.json')), manifestBytes, 'manifest changed during verification');
+const report = { result: 'passed', cacheIdentity: m.cacheIdentity, manifestSha256: await digest(manifestBytes), cases: fixture.cuts.length, maxJsPythonSampleError: maxPortError,
   cacheIntegerIdentity: true, interpolationInvariants: true, corruptRejected,
   zeroLiveGainSilent: true, rapidRetriggersEnd: true, output48kClockAndEnd: true,
   eightVoicePeak: peak, desktopEightVoiceMillisecondsPerAudioSecond: millisecondsPerAudioSecond,

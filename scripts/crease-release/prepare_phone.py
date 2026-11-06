@@ -22,6 +22,8 @@ def stage(source, target):
     c=m['container']
     require(0<c['pcmBytes']<=32*1024**2 and 0<c['compressedBytes']<=12*1024**2, 'Study exceeds its byte limits')
     if m['format']=='crease-shared-pcm-v1':
+        manifest_hash=hashlib.sha256((source/'manifest.json').read_bytes()).hexdigest()
+        require(v.get('manifestSha256')==manifest_hash and n.get('manifestSha256')==manifest_hash, 'Shared manifest changed after verification')
         require(0<m['shared']['residentBytes']<=8*1024**2 and r['residentBytes']==m['shared']['residentBytes'], 'Shared study exceeds 8 MiB')
         require(n.get('sharedCoefficientsSha256')==m['shared']['coefficientsSha256'], 'Native reader receipt belongs to other coefficients')
     require(Path(c['file']).name==c['file'] and c['file'].endswith('.cpcb'), 'Invalid study payload name')

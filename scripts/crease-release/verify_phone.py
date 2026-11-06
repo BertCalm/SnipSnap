@@ -20,6 +20,7 @@ def native_sources():
 
 def main():
     out=Path(sys.argv[1]).resolve();raw=out/'raw'
+    manifest_hash=sha(out/'manifest.json')
     m=json.loads((out/'manifest.json').read_text());fixture=json.loads((raw/'reader-fixtures.json').read_text())
     require(sha(raw/'native-pcm.i16')==m['container']['pcmSha256'],'Native PCM fixture differs from delivered cache')
     require(sha(raw/'reader-fixtures.f32')==fixture['sha256'],'Python fixture changed')
@@ -39,9 +40,10 @@ def main():
     require(before==native_sources(),'Native sources changed during build')
     subprocess.run([str(ROOT/'build/native-tests/crease_study_tests'),str(out)],check=True)
     require(before==native_sources(),'Native sources changed during validation')
+    require(manifest_hash==sha(out/'manifest.json'),'Manifest changed during native validation')
     r=json.loads((out/'native-verification.json').read_text())
     require(r['cases']==m['accuracy']['total'] and r['output48kCases']==24,'Native coverage differs from the study')
-    r.update(receiptVersion=2,builtFromCurrentCheckout=True,pcmSha256=m['container']['pcmSha256'],nativeSources=before,
+    r.update(receiptVersion=2,builtFromCurrentCheckout=True,manifestSha256=manifest_hash,pcmSha256=m['container']['pcmSha256'],nativeSources=before,
         executableSha256=sha(ROOT/'build/native-tests/crease_study_tests'),
         reference48kSha256=sha(raw/'native-48k-fixtures.bin'),pythonFixtureSha256=fixture['sha256'])
     if m['format']=='crease-shared-pcm-v1':

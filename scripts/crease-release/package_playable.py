@@ -54,6 +54,10 @@ plt.close(fig)
 for name in ['manifest.json','report.json','README.txt','reader-verification.json','137ms-transition.png','137ms-transition.pdf']:
     entries[name]=(out/name).read_bytes()
 entries['playable-protocol.md']=Path(__file__).with_name('playable-protocol.md').read_bytes()
+if m['format']=='crease-shared-pcm-v1':
+    entries['shared-protocol.md']=Path(__file__).with_name('shared-protocol.md').read_bytes()
+    for name in ['development.json','fresh-positions.json','native-verification.json']:
+        entries[name]=(out/name).read_bytes()
 zip_path=out/'crease-playable-reference-wavs.zip'
 with zipfile.ZipFile(zip_path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for name,data in sorted(entries.items()):
