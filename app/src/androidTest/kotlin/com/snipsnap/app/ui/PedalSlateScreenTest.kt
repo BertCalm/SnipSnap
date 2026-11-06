@@ -364,10 +364,14 @@ class PedalSlateScreenTest : ComposeScreenTest() {
 
         show(entry)
         val pad = padName(entry)
+        // show() leaves the sheet on EFFECTS, where the slate is, but the
+        // provenance line is the editor page's: read it there, then come back.
+        compose.runOnIdle { pageState = PadSheetPage.EDITOR }
         waitFor("the provenance line to say the bin keeps the original", timeoutMillis = 60_000) {
             compose.onAllNodesWithText("original in bin, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("original in bin, kept", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        compose.runOnIdle { pageState = PadSheetPage.EFFECTS }
 
         activate(PadSheet.NONE)
         waitForToast(Copy.unTreated(pad))
