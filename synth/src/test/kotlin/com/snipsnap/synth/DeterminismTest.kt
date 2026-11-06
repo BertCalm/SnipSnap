@@ -708,6 +708,18 @@ class DeterminismTest {
     }
 
     @Test
+    fun `FILL is byte-identical across renders, every voice, a saved recipe and a soft hit included`() {
+        for (voice in FillVoice.entries) {
+            val patch = FillPatch("Canary", voice, Fill.defaults(voice) + ("DENSITY" to 1f))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
+            assertContentEquals(Fill.render(voice, patch.macros, velocity = .3f).samples,
+                Fill.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
+        }
+    }
+
+    @Test
     fun `KEEL is byte-identical across renders, every voice`() {
         for (voice in KeelVoice.entries) {
             val patch = KeelPatch("Canary", voice, Keel.defaults(voice), midi = 36, velocity = .8f)

@@ -1932,6 +1932,15 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
+tasks.register<JavaExec>("generateFillAudition") {
+    group = "distribution"
+    description = "Render FILL's snare roll and tom run inside a beat at 120 and 90 BPM, each length alone and every control swept, with a listening page under testkit/fill-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FillAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fill-audition")
+}
+
 /** Export SCOUR's sixty-four dry pads over four banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's, bank C BEAM's, bank D DISC's and ROD's) to testkit/SnipSnap Scour Kit/. */
 tasks.register<JavaExec>("generateScourKit") {
     group = "distribution"

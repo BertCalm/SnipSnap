@@ -58,7 +58,8 @@ the owner's ear decides.
 
 | Engine | Reason |
 |---|---|
-| APSIS, CIRCUIT, CISTERN, MURK, REVEL, SCOUR, SPOOL, SUTURE | the loop pulses (7 to 95 dB spread): a rhythm, not a held note |
+| APSIS, CIRCUIT, CISTERN, MURK, REVEL, SPOOL, SUTURE | the loop pulses (7 to 95 dB spread): a rhythm, not a held note |
+| SCOUR | no loop at all: since R3 HOLD only sets how long the ring lasts, so every sound is a build, a slam and a decay (corrected 2026-11-06; this scan first filed it with the pulsing loops) |
 | NIMBUS | cymbals: no keyboard pitch (readings hundreds of cents off) |
 | RELAY, TESSERA | in every voice the join clicks, the loop pulses, or both (TESSERA CHAMBER would not settle) |
 | COROLLA BLOSSOM and HUSK, MURMUR LEAD and CHOIR, PITCHWHEEL CLUNK and RECOIL, STOOP BASS and CHORD, TANGLE BASS and KNOT, FLOTILLA RIPPLE, HOLLOW, CROSSWAVE and GATHER | that voice's pitch, octave or steadiness failed; the engine's other voices passed |

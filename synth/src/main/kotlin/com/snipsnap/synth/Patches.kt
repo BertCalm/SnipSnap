@@ -87,6 +87,7 @@ object Patches {
             NimbusPatch.ENGINE -> NimbusPatch.fromJsonValue(value)
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
             ScourPatch.ENGINE -> ScourPatch.fromJsonValue(value)
+            FillPatch.ENGINE -> FillPatch.fromJsonValue(value)
             UndertowPatch.ENGINE -> UndertowPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             SuturePatch.ENGINE -> SuturePatch.fromJsonValue(value)

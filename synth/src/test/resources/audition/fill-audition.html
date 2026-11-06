@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FILL audition</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f5f2; --fg: #1d1c1a; --muted: #6b675f; --line: #d9d5cc; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #171614; --fg: #ece9e2; --muted: #a39e93; --line: #36332e; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h2 { margin-top: 40px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  h3 { margin: 24px 0 8px; font-size: 15px; color: var(--muted); }
+  .clip { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .clip p { margin: 2px 0 6px; color: var(--muted); font-size: 13px; }
+  audio { width: 100%; }
+</style>
+</head>
+<body>
+<main>
+<h1>FILL · R1</h1>
+<p>Each clip is the engine's own render, no effects. Open this file from <code>testkit/fill-audition/</code>.</p>
+<div id="sections"></div>
+</main>
+<script>
+const manifest = __FILL_MANIFEST__;
+const root = document.getElementById("sections");
+for (const s of manifest.sections) {
+  const h = document.createElement("h2"); h.textContent = s.display; root.append(h);
+  const p = document.createElement("p"); p.textContent = s.body; root.append(p);
+  for (const g of s.groups) {
+    const gh = document.createElement("h3"); gh.textContent = g.label; root.append(gh);
+    for (const c of g.clips) {
+      const d = document.createElement("div"); d.className = "clip";
+      const b = document.createElement("strong"); b.textContent = c.name;
+      const t = document.createElement("p"); t.textContent = c.description;
+      const a = document.createElement("audio"); a.controls = true; a.preload = "none"; a.src = c.file;
+      d.append(b, t, a); root.append(d);
+    }
+  }
+}
+</script>
+</body>
+</html>
