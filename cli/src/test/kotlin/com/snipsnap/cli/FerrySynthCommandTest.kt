@@ -13,6 +13,30 @@ import kotlin.test.assertTrue
 
 class FerrySynthCommandTest {
     @Test
+    fun `published dry recipe keeps its old cut and an explicit upgrade saves the smooth release`() {
+        val root = kotlin.io.path.createTempDirectory("ferry-release-cli").toFile()
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            val source = File(root, "dry.patch").also {
+                it.writeText(FerryPatch("Published dry", model = 3, macros = mapOf("LOSS" to 1f)).toJsonText())
+            }
+            for ((version, frames) in listOf(3 to 44100, 4 to 59535)) {
+                val dir = File(root, "model-$version")
+                assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--patch", source.path,
+                    "--model", version.toString(), "--out", dir.path), out))
+                val recipe = dir.listFiles()!!.single { it.extension == "patch" }
+                val saved = Patches.fromJsonText(recipe.readText()) as FerryPatch
+                assertEquals(version, saved.model)
+                val audio = WavReader.read(dir.listFiles()!!.single { it.extension == "wav" })
+                assertEquals(frames, audio.frameCount)
+                val replay = File(dir, "replay")
+                assertEquals(0, SynthCommand.run(listOf("FERRY", "PASSAGE", "--patch", recipe.path, "--out", replay.path), out))
+                assertTrue(audio.samples.contentEquals(WavReader.read(replay.listFiles()!!.single { it.extension == "wav" }).samples))
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `passage exports native audio and complete replayable performance recipe`() {
         val directory = kotlin.io.path.createTempDirectory("ferry-cli").toFile()
         try {

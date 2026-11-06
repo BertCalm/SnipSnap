@@ -961,23 +961,13 @@ fun KitScreen(
             GroupBox(
                 legend = "THIS KIT",
                 summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),
+                also = Places.THIS_KIT_ALSO,
                 open = thisKitOpen,
                 onToggle = { thisKitOpen = !thisKitOpen },
                 scheme = scheme,
             ) {
+                KitGroupHeading(Places.KIT_BANK_B)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
-                    // followups) - matches TakesBinScreen.kt's own renamed
-                    // header; the destination screen and its Kotlin symbol are
-                    // unchanged, only this entry-point label.
-                    // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
-                    // (name-and-find followups, truncation pass): three equal
-                    // weights on labels of 37/21/5 characters rendered as
-                    // "VERSIONS + BIN …" on a device - the worst truncation in
-                    // the app. "ROLL BACK OR RESTORE" also dropped to
-                    // "RESTORE": RESTORE alone says the same thing the longer
-                    // phrase did.
-                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
                     // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
                     // second press rerolls. REROLL means twins are there — not
                     // merely something on B, which since bank B round 2 can be
@@ -996,6 +986,9 @@ fun KitScreen(
                         modifier = Modifier.weight(2f),
                         onClick = onTwins,
                     )
+                }
+                KitGroupHeading(Places.KIT_WHOLE_SOUND)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
                     // Still the fourth door's shape - a bevel that lights amber
                     // while its panel is open - not an ActionButton.
@@ -1018,19 +1011,6 @@ fun KitScreen(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // SPLIT is a screen rather than a panel: three faders, three
-                    // REVERSE buttons and a print want more room than a drawer
-                    // under the grid, and the loop wants to keep playing while
-                    // you work it.
-                    ActionButton(
-                        "SPLIT ▸ SINES · TRANSIENT · AIR",
-                        scheme,
-                        enabled = !busy && kit.pads.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onSplit,
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // DUST ALL: the per-pad DUST chip on every pad at one amount,
                     // from the tape each pad came off (else the kit's), so the
                     // kit shares one room and one floor (docs/DUST.md). Only
@@ -1041,32 +1021,6 @@ fun KitScreen(
                         enabled = !busy && DustPrints.kitTape(kit) != null,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onDustAll,
-                    )
-                }
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    // BREED: this kit's own recipes crossed with a second kit's
-                    // into a new child, kept beside this one — the shelf-level
-                    // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
-                    // next, the same shape SNIPS → PAD already uses to pick a
-                    // kit for a snip. The button always opens that picker, so
-                    // its label is constant; the line under it counts the pads
-                    // with a recipe to cross (`Breed.recipePads`), so "0 PADS
-                    // CROSSED" is never the first word of the explanation.
-                    // Still enabled at zero: the other kit's racks can cross
-                    // over this one's audio.
-                    ActionButton(
-                        Copy.BREED_BUTTON,
-                        scheme,
-                        enabled = !busy && kit.pads.isNotEmpty() && canBreed,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onBreed,
-                    )
-                    TapeText(
-                        Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
-                        TapeType.pixelSmall,
-                        scheme.ink2.tape,
-                        Modifier.fillMaxWidth(),
-                        maxLines = 1,
                     )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1117,6 +1071,19 @@ fun KitScreen(
                     onOn = onRobinOn, onSet = onRobinSet, onOff = onRobinOff,
                 )
 
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // SPLIT is a screen rather than a panel: three faders, three
+                    // REVERSE buttons and a print want more room than a drawer
+                    // under the grid, and the loop wants to keep playing while
+                    // you work it.
+                    ActionButton(
+                        "SPLIT ▸ SINES · TRANSIENT · AIR",
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onSplit,
+                    )
+                }
                 if (panelKind == KEY_PANEL) {
                     KeyPanel(
                         key = kit.key,
@@ -1149,6 +1116,47 @@ fun KitScreen(
                             val seed = Random.nextLong(0L, 1_000_000L)
                             onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
                         },
+                    )
+                }
+                KitGroupHeading(Places.KIT_VERSIONS_AND_KITS)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
+                    // followups) - matches TakesBinScreen.kt's own renamed
+                    // header; the destination screen and its Kotlin symbol are
+                    // unchanged, only this entry-point label.
+                    // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
+                    // (name-and-find followups, truncation pass): three equal
+                    // weights on labels of 37/21/5 characters rendered as
+                    // "VERSIONS + BIN …" on a device - the worst truncation in
+                    // the app. "ROLL BACK OR RESTORE" also dropped to
+                    // "RESTORE": RESTORE alone says the same thing the longer
+                    // phrase did.
+                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // BREED: this kit's own recipes crossed with a second kit's
+                    // into a new child, kept beside this one — the shelf-level
+                    // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
+                    // next, the same shape SNIPS → PAD already uses to pick a
+                    // kit for a snip. The button always opens that picker, so
+                    // its label is constant; the line under it counts the pads
+                    // with a recipe to cross (`Breed.recipePads`), so "0 PADS
+                    // CROSSED" is never the first word of the explanation.
+                    // Still enabled at zero: the other kit's racks can cross
+                    // over this one's audio.
+                    ActionButton(
+                        Copy.BREED_BUTTON,
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty() && canBreed,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onBreed,
+                    )
+                    TapeText(
+                        Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
+                        TapeType.pixelSmall,
+                        scheme.ink2.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 1,
                     )
                 }
             }
@@ -1255,6 +1263,12 @@ fun KitScreen(
     }
 }
 
+
+/** A heading inside THIS KIT, over the tools it names: a quiet label, its own composable so KitScreen grows by a call. */
+@Composable
+private fun KitGroupHeading(text: String) {
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+}
 
 /**
  * The footer's LEARN, beside MIDI MAP while a keyboard is plugged in: opens
@@ -1743,13 +1757,9 @@ private fun PadCell(
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
         // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
-        TapeText(
-            pad.displayName,
-            TapeType.marker,
-            padNameInk(scheme, cls),
-            Modifier.align(Alignment.BottomStart),
-            maxLines = 2,
-        )
+        // One line: a long name steps its font down, then ellipsizes,
+        // rather than wrapping to a second line that crowds the cell.
+        PadNameLabel(pad.displayName, padNameInk(scheme, cls), Modifier.align(Alignment.BottomStart))
         // The treated marker (J36): a dog-eared corner in the pad's own
         // class colour. A corner rather than a rim, because the rim is
         // already spoken for - its width is the held state (J15) and its

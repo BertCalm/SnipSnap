@@ -82,7 +82,12 @@ fun LoopGrid(
     session: Session,
     interval: Int,
     onToggleTrack: (Int) -> Unit,
-    /** HOLD a block: the track goes back to empty. Nothing on screen can say this, so [Copy.LOOP_LEGEND] does. */
+    /**
+     * The track goes back to empty. Two ways in, one meaning: the visible
+     * [Copy.LOOP_CLEAR_BUTTON] beside the readout (it acts on the selected
+     * block's track), and HOLDing a block, which stays as that button's
+     * shortcut. The caller owns the undo.
+     */
     onClearTrack: (Int) -> Unit,
     /** BOUNCE: what the grid is doing, rendered offline into SNIPS. */
     onBounce: () -> Unit,
@@ -108,6 +113,16 @@ fun LoopGrid(
         // lives here rather than in the activity: nothing outside this grid
         // acts on it, and it should not survive the screen.
         var selected by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+        // One path for the button and the hold. The selection goes with the
+        // track: its block is gone, and a readout describing nothing would
+        // be the legend's place taken by a blank.
+        val clearTrack = { t: Int ->
+            if (selected?.first == t) selected = null
+            onClearTrack(t)
+        }
+        val selectedTrack = selected?.first
+        val clearable = selectedTrack != null &&
+            session.tracks.getOrNull(selectedTrack)?.let { !SessionBuilder.isEmpty(it) } == true
 
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -118,7 +133,7 @@ fun LoopGrid(
                     track = track,
                     playing = Arrangement.indexAt(track.chain.size, interval),
                     onToggle = { onToggleTrack(t) },
-                    onClear = { onClearTrack(t) },
+                    onClear = { clearTrack(t) },
                     // A second tap on the same block puts the legend back:
                     // the readout is an answer to a question, not a mode.
                     onSelect = { b -> selected = if (selected == t to b) null else t to b },
@@ -127,32 +142,62 @@ fun LoopGrid(
                 )
             }
         }
+        androidx.compose.material3.Text(
+            // The readout takes the legend's place while a block is
+            // selected: short, and the question just asked is worth
+            // more than the instructions for asking it.
+            text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
+                ?: Copy.LOOP_LEGEND,
+            color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace,
+            // Its own full-width line, two lines tall: beside the tempo
+            // stepper, CLEAR TRACK and the bounce button it was left a few
+            // characters of a single line and the legend was cut off. A
+            // renamed snip's name is user text with no length cap
+            // (Names.isMpcSafe checks characters, not length), so two lines
+            // is also the most it can take from the grid above.
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TempoControl(bpm = session.bpm, onBpm = onBpm)
-            androidx.compose.material3.Text(
-                // The readout takes the legend's place while a block is
-                // selected: one line, and the question just asked is worth
-                // more than the instructions for asking it.
-                text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
-                    ?: Copy.LOOP_LEGEND,
-                color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
-                fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace,
-                // A renamed snip's name is user text with no length cap
-                // (Names.isMpcSafe checks characters, not length), and this
-                // row sits above the fixed bounce button — matching
-                // TapeText's own one-line-and-ellipsis rule keeps a long
-                // name from pushing that button off the bottom of the screen.
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Spacer(Modifier.weight(1f))
+            ClearButton(enabled = clearable) { selectedTrack?.let(clearTrack) }
             BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
         }
+    }
+}
+
+/**
+ * CLEAR TRACK: the visible twin of holding a block, for the track the selected
+ * block is in. Dimmed (not removed) until a filled block is selected, the way
+ * [TempoStep] dims at its ends, so the control is findable before it is usable.
+ */
+@Composable
+private fun ClearButton(enabled: Boolean, onClear: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        modifier = Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(if (enabled) scheme.gray.tape else scheme.lcd.tape)
+            .border(width = 2.dp, color = scheme.ink2.tape)
+            .tapeClick(label = Copy.LOOP_CLEAR_BUTTON, enabled = enabled, onClick = onClear)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Text(
+            text = Copy.LOOP_CLEAR_BUTTON,
+            color = if (enabled) scheme.ink.tape else scheme.lcdInk.tape.dim(),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+        )
     }
 }
 

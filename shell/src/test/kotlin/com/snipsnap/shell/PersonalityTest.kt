@@ -367,6 +367,21 @@ class PersonalityTest {
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
 
+    /** ORBIT's UNDO chip says how deep the undo goes, and drops the count when there is nothing to undo. */
+    @Test
+    fun `the ORBIT undo chip counts its steps`() {
+        assertEquals("UNDO", Copy.orbitUndo(0))
+        assertEquals("UNDO (3)", Copy.orbitUndo(3))
+    }
+
+    /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
+    @Test
+    fun `the SPLICE and STACK landings say where the undo is`() {
+        assertTrue("UNDO SPLICE" in Copy.SPLICE_UNDO_AT && "PAD EDITOR" in Copy.SPLICE_UNDO_AT, Copy.SPLICE_UNDO_AT)
+        assertTrue("SOFT HITS" in Copy.STACK_UNDO_AT && "PAD EDITOR" in Copy.STACK_UNDO_AT, Copy.STACK_UNDO_AT)
+        assertEquals("USE THIS PART ▸", Copy.USE_THIS_PART)
+    }
+
     /**
      * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
      * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
@@ -615,21 +630,33 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The Bubble permission line's door: a label, not a toast.
+        "BUBBLE_ALLOW",
+        // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
+        "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading and the rename dialog title.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // SYNTH's four group headings: labels over a run of controls, not landings.
+        "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // MAKE's two group headings: labels, not landings.
+        "MAKE_A_SOUND", "WHAT_YOU_MADE",
+        // SNAP's four group headings: labels, not landings.
+        "SNAP_SOURCE", "SNAP_ONE_PAD", "SNAP_ALL_SIXTEEN", "SNAP_PLAY_IT",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
         "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
-        "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
+        "COMMIT_NEEDS_SELECTION", "USE_THIS_PART", "CAPTURE_BLOCKED_BUTTON",
+        // Headings over a group of controls (the deck's NEXT, the CUT screen's LAND AS) and the PAD CAPTURE tap twin's two labels.
+        "DECK_NEXT", "CHOP_LAND_AS", "PAD_CAPTURE_TAP_TO_REC", "PAD_CAPTURE_TAP_STOP",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
         // SNIPS' SHARE, while the snip is copied into the share cache under
         // a readable name — like every other *_BUSY here, an overlay line
@@ -651,6 +678,11 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
+        // track's name follows it): labels, not landings.
+        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
+        // LOOP's header title, like the other benches' names: a title, not a landing.
+        "LOOP_TITLE",
         // SNAP's FIELD and CLOUD, while the photo is cut into grains and
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.
@@ -684,7 +716,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED", "CARD_FORGET",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -1270,6 +1302,14 @@ class PersonalityTest {
         )
     }
 
+
+    /** OUT's first line names what is going out, in a sentence that ends on a full stop. */
+    @Test
+    fun `out names what it is exporting`() {
+        assertEquals("EXPORTING THE KIT BREAKS.", Copy.exportingKit("BREAKS"))
+        assertEquals("EXPORTING THE KIT BREAKS AND THE PROJECT DEMO.", Copy.exportingKitAndProject("BREAKS", "DEMO"))
+        assertEquals("EXPORTING THE EXPANSION VOL 1.", Copy.exportingExpansion("VOL 1"))
+    }
 
     /** J30: CHOP's fallback source, named only when the app picked it rather than the player. */
     @Test

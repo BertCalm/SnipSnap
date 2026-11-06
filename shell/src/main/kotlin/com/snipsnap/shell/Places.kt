@@ -132,6 +132,22 @@ object Places {
     /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
+    /**
+     * The closed THIS KIT group's second line: the tools inside that
+     * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
+     * button's label inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     */
+    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
+
+    /** THIS KIT's heading over REMIX BANK B. */
+    const val KIT_BANK_B = "BANK B"
+
+    /** THIS KIT's heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
+    const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
+
+    /** THIS KIT's heading over VERSIONS + BIN and BREED. */
+    const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
+
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
         val parts = mutableListOf<String>()
@@ -155,7 +171,7 @@ object Places {
         "SHELF" to listOf(
             "· YOUR PROJECTS, AND THE KITS, SNIPS AND INSTRUMENTS THEY SHARE.",
             "· A KIT IS AN MPC PROGRAM. A PROJECT IS AN MPC PROJECT. THE CARD READS BOTH.",
-            "· HOLD A ROW TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
+            "· HOLD A KIT TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
             "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, X-RAY A FILE, FIND DOUBLES.",
         ),
         "TAPE" to listOf(
@@ -175,6 +191,8 @@ object Places {
             "· SYNTH, SNAP AND SURFACE MAKE A SOUND FROM NOTHING AND SEND IT TO A PAD.",
             "· SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
+            "· CONFLUENCE VOICES: HEAR A RECORDED PASSAGE, THEN SAVE IT AS A PAD.",
+            "· MY VOICE: A SHORT VOWEL OF YOURS BECOMES A VOICE, KEPT ON THIS PHONE.",
         ),
         "THE DOCK" to listOf(
             "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING ON PADS, OUT, MAKE AND A PAD BENCH.",

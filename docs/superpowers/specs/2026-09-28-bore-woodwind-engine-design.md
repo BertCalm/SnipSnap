@@ -1079,7 +1079,9 @@ plumbing:
   LOOP regardless (`Classifier.kt:72, :137`), so a LOOP is filed by name,
   as SIREN's is (`Siren.kt:176-177`).
 
-**The held keygroup (round two).** MAKE INSTRUMENT is gated to RESIN and
+**The held keygroup (round two).** *(Superseded: built on 2026-11-06 as `BoreKeys` and `BorePadMaker`, each zone the LOOP's
+own held note closed by Round 1.7's blend moved to the loop's end, not by a seam; see "R2: the held keygroup, as built" at the
+end.)* MAKE INSTRUMENT is gated to RESIN and
 SIREN (`SynthScreen.kt:583, :619-621, :1083-1087`) because each closes
 its own loop. `Keys.borePad(voice, macros, midi, attackSeconds,
 cancelled): KeyNote` is `resinPad`'s body (`Keys.kt:216-259`):
@@ -2769,6 +2771,171 @@ Every one of those clips ends on the octave at +2.1 cents (CLEAN TONE) or +2.9 t
   `ObbligatoCompatibilityTest`); the knob's quarter at 0.075 and the old top at 0.787 (tested).
 - **Measured** (Kotlin): the tables above. **Measured** (Python harness): depth 0.45 and 0.6, and the subharmonic flutter.
 - **Proposed** (not yet heard): `OVERBLOW_GROWL_DEPTH` 0.4 and `OVERBLOW_GROWL_CURVE` 1.2.
+
+## R2: the held keygroup, as built (2026-11-06)
+
+The owner asked for BORE's held keygroup with the breath attack ("start at the top of the list"). This round builds the research's
+§3 (`2026-11-04-bore-r2-research.md`) with its default decisions. It started from a draft parked on `bore-held-keygroup-wip`
+(`0d5c0b8c`), which was never compiled and predates OVERBLOW; the draft was ported by hand onto today's `Bore.kt` (after OVERBLOW
+and the growl), then compiled and tested. Nothing here has been heard.
+
+**What shipped.**
+
+- **One held note for both cuts.** `Bore.renderLoopMeasured`'s held note is pulled out into `Bore.heldNote(voice, m)` (the one-shot's
+  blow with its gate stretched to `LOOP_HELD_SECONDS`, HOLD at `LOOP_HOLD`, conditioned like the one-shot, not levelled) and
+  `Bore.heldUsableEnd(x, m)`. The blend and the length search's bounds are named once, as `Bore.LOOP_BLEND_FRAMES`,
+  `LOOP_LENGTH_LOW_FRAMES` and `LOOP_LENGTH_HIGH_FRAMES`, and `cutLoop` reads them. The LOOP makes the same calls in the same order,
+  so it is unchanged: `BoreFrozenSoundTest`'s hashes, `ObbligatoCompatibilityTest` and every LOOP test pass as before.
+- **A held note never cracks, in one place.** `heldNote` applies `Bore.held` itself (OVERBLOW as 0). The draft predates OVERBLOW and
+  did not. Ported as it was, a zone of an overblown FLUTE would crack inside its loop; with that line taken out, such a zone is
+  refused ("settles too late (3.50 s)"), which is how the guard sweep below caught it.
+- **The zone** (`BoreKeys`, in `:synth`). Each zone is that held note from its first sample. The reference block starts where Round
+  1.7's stretch does (`loopStart`: settled, and no sooner than 1.5 s), the loop starts 0.3 s later, and its length comes from
+  `bestLength` with the LOOP's arguments. The loop's last 0.3 s fade into the 0.3 s just before the loop start (`assembleTail`: cos t
+  / k on the loop's own wave, sin t / k on the audio before the loop start, t at (i + 1) / blend of a quarter turn, k as in
+  `assembleLoop`). So the file's last frame is the loop start's own predecessor, and everything before the blend, the attack and
+  the first pass into the loop included, is the held note untouched. A join that does not hold is refused by name through
+  `Bore.checkJoin`. Then one gain: the loop region at the melodic target, unless that would take the peak over 0.99, in which case
+  the peak sets it.
+- **The layers.** Two per zone, soft first: 0.45 of the patch's BREATH (soft) and the patch's BREATH (hard), in velocity windows
+  1..63 and 64..127.
+- **The zones.** Nine per voice, every minor third across TUNE's two octaves with both ends included, the draft's `padMidis`: FLUTE
+  C4 to C6 (60, 63, ..., 84), SAX C3 to C5 (48, 51, ..., 72). That is each voice's whole range. The outer zones reach nine semitones
+  past the ends, and the package writer stretches them to the whole keyboard, as it does for every held instrument
+  (`OneNote.writePackage`'s `spanKeyboard`).
+- **The maker** (`BorePadMaker`, in `:shell`), in `BellowsPadMaker`'s shape: `Spec(patch, releaseSeconds)`, RELEASE 0.1 to 1.5 s
+  (default 0.6), `supports` (FLUTE and SAX; a voice added later is not offered until its zones are measured), `spec`, `zoneMidis`
+  (the patch's own TUNE does not move them), `renderZone` (two layers, soft first), `assemble`, `export` through
+  `OneNote.writePackage`, and `preview`: the middle zone's hard layer held 6 s at velocity 0.8 through `InstrumentEngine`, then
+  released.
+- **BORE left `LoopPadMaker.QUALIFIED`**, whose zones had no attack. `BoreOverblowKeysTest` now tests `BorePadMaker`, so "keygroups
+  ignore OVERBLOW" stays pinned.
+- **The audition:** `:shell:generateBoreHeldAudition`, in `:shell` because `:synth`'s `generateBoreAudition` cannot see the maker.
+  Each voice's LOOP preset (FLUTE STEADY LOOP, SAX SOLO LOOP) at its lowest, middle and highest zone, held 8 s and released: the hard
+  layer, the soft layer, and the loop-only zone at the same note for the A/B, all at one velocity and raised by one common gain,
+  with `clips.txt` saying where each clip wraps.
+
+**Measured (Kotlin, `BoreKeysTest` unless named).** Every zone of both voices and both layers at the defaults, 36 renders:
+
+| | FLUTE soft | FLUTE hard | SAX soft | SAX hard |
+|---|---|---|---|---|
+| weakest correlation of the blended waves | 0.9987 (A5) | 0.9978 (A5) | 0.9954 (C3) | 0.9919 (C3) |
+| deepest dip in the blend | -0.06 dB | -0.06 dB | -0.24 dB (D#3) | -0.29 dB (D#3) |
+| widest step at the wrap, over the steepest ordinary step | 0.94 | 0.46 | 0.10 | 0.41 |
+| loop start | 1.80 s | 1.80 s | 1.80 s | 1.80 s |
+| loop length | 1.921 to 2.117 s | 1.922 to 2.118 s | 1.921 to 2.117 s | 1.921 to 2.115 s |
+| the loop's level against the target | 0.00 dB | 0.00 dB | C3 -1.00, D#3 -0.05, the rest 0.00 | C3 -2.36, D#3 -1.30, F#3 -0.17, the rest 0.00 |
+
+- **The corners** (`the corners hold their join`): BREATH 0 and 1, CHIFF 0 (with BREATH 0) and 1, and LIP 0 and 1 with BREATH 0 and
+  1, at the lowest and highest zone of each voice, each distinct layer breath once, 24 renders a voice. FLUTE: weakest correlation
+  0.9955, deepest dip -0.09 dB. SAX: 0.9898 and -0.49 dB. Every loop starts at 1.80 s, so the 1.5 s floor, not the settle, sets the
+  start everywhere measured, as in Round 1.7.
+- **The LOOP's own cycle** (`a zone's loop is the LOOP's own cycle`): at SAX C3 and F#4 and FLUTE C4 and C6 the zone's loop has
+  exactly the LOOP's length, correlation and settle frame, starts one blend after the LOOP's stretch, and dips within 0.05 dB of it.
+- **The wrap** (`the wrap`): on three real zones every frame before the blend is the held note times one gain, bit for bit, and the
+  last frame is the frame before the loop start, bit for bit. On a synthetic note the same, and the power holds for uncorrelated
+  waves where a linear fade dips. Through the player (`BorePadMakerTest`'s preview test) the key reads the file frame for frame and,
+  from its end, the loop start again.
+- **The attack** (`the attack is the note's own`): the zone's opening 0.3 s against the one-shot of the same key and breath at the
+  patch's own HOLD, at three zones a voice and both layers: 0.9932 to 0.9999. Against the one-shot three semitones off: -0.022 to 0.065.
+- **The layers** (`the soft layer is the same note blown softer`): the loops are at the same loudness (0.1834) wherever the ceiling
+  did not set the gain. The soft layer is darker at every zone. Its 1.5 to 8 kHz share is lower by 1.19 to 3.94 dB on FLUTE (mean
+  2.06) and by 0.07 to 1.01 dB on SAX (mean 0.64). Its spectral centroid is 7 to 29 Hz lower on FLUTE and 30 to 202 Hz lower on SAX.
+  The breath between its harmonics is 3.3 to 3.9 dB less on FLUTE and 2.5 to 5.5 dB less on SAX.
+- **The key:** every zone's loop plays within 7 cents of its key (the LOOP's own bound).
+- **The same twice, and what a zone ignores** (`a zone ignores OVERBLOW, TUNE and HOLD`): a zone rendered twice is the same bytes. A
+  FLUTE patch at OVERBLOW 1, TUNE 0 and HOLD 0.98, and a SAX patch at TUNE 1, HOLD 0 and OVERBLOW 1, make the zones the defaults
+  make; CHIFF 0.9 does not (the control). In `:shell`, `BoreOverblowKeysTest`: a cracked FLUTE's lowest zone is the uncracked one's,
+  both layers.
+- **Render time** (wall clock, one thread a render, 18 renders an instrument): the median 320 to 430 ms a layer and 5.9 to 8.3 s an
+  instrument over four runs. The low end is the test JVM alone on the machine; the high end is with three other test JVMs on its four
+  CPUs. The fastest layer took 299 ms; the slowest, 492 to 1,126 ms, is each JVM's first render, before the JIT has compiled the
+  loop. `BorePadMakerTest` made a whole FLUTE instrument in 5.7 and 8.7 s on two runs. A phone was not measured (the research
+  estimated 2 to 4 times).
+- **Size:** 3.72 to 3.92 s a sample, 9.0 MB (SAX) and 9.1 MB (FLUTE) an instrument at PCM_24. The export of FLUTE STEADY LOOP wrote
+  18 WAVs, 9.1 MB.
+- **The clips** (`clips.txt`): every held loudness is -15.6 dBFS except SAX C3, where the hard layer reads -17.9, the soft -16.6 and
+  the loop-only zone -17.0. So the loop-only zone of SOLO LOOP already sat 1.4 dB low at C3 (its own peaks reach the ceiling), and
+  the attack takes the hard layer 0.9 dB further.
+
+**The guards, broken one at a time.** Three were broken in one build, each aimed at a different test, and the first again alone
+with the synthetic check removed; the code was restored after each. The tail's weights one index early (the last frame no longer
+the loop start's predecessor) failed `the wrap`, and alone failed only it, at the real zones' exact check. The length search
+started one blend late failed `a zone's loop is the LOOP's own cycle`. `heldNote` without `held` failed `a zone ignores OVERBLOW,
+TUNE and HOLD` and `:shell`'s `BoreOverblowKeysTest`.
+
+**What it cost, said plainly.**
+
+- **Not heard.** The questions for the ear: whether the attack runs into the loop unnoticed, whether the blend's breath dip and the
+  exact repeat can be heard, and whether the two layers are far enough apart.
+- **The bottom of SAX sits low on its loop.** At C3 and D#3 the attack's overshoot sets the gain under the 0.99 ceiling, so the hard
+  layer's loop is 2.36 dB (C3) and 1.30 dB (D#3) under the target, and the soft layer's 1.00 dB at C3. At C3 the hard layer's loop is
+  1.36 dB quieter than the soft one's. The research predicted this (Round 1.7's +1.08 dB overshoot); this is its first measurement.
+  Not fixed: the rule is the loop at the target, then the ceiling. A limiter on the attack alone would lift the loop and change the
+  attack the player hears. That is proposed only, if the ear minds.
+- **SAX's layers are close in brightness.** 0.07 dB apart in the 1.5 to 8 kHz share at F#3 and 0.64 dB on average, against FLUTE's
+  2.06; they are 2.5 to 5.5 dB apart in breath and 30 to 202 Hz apart in centroid. What narrows SAX's brightness gap is not
+  measured. Whether 0.45 of the breath is soft enough is decision 7's question for the ear.
+- **At BREATH 0 the two layers are one note** (0.45 of 0 is 0), so a patch at BREATH 0 makes two identical layers.
+- **The loop starts at 1.80 s.** A key held for less plays only the note's own audio, which is correct, but the loop is reached
+  only on long notes.
+- **What the guards cannot see** is Round 1.7's open question, unchanged: the breath dips about 3 dB through the 0.3 s blend once a
+  loop, and the same breath and vibrato come round every 1.92 or 2.12 s.
+- **The soft layer's onset at the bottom of SAX** is slow (the research: 0.31 s at C3, BREATH 0, CHIFF 0.4). It was not re-measured.
+- **No BORE instrument on the phone until it is wired.** `LoopPadMaker` no longer offers BORE and the SYNTH screen is not yet built
+  against `BorePadMaker`. `InstrumentPackGenerator`, which walks `LoopPadMaker.QUALIFIED`, no longer makes BORE FLUTE or BORE SAX.
+- **The margin is still untested.** `LOOP_MARGIN_SECONDS` guards a case no zone meets (every cut ends by about 3.9 s of a 4.45 s
+  note), as Round 1.7 found for the LOOP.
+
+**Things that did not work, kept so they are not tried again.**
+
+- **Darker by the high band alone.** The first check of the soft layer asked for a lower 1.5 to 8 kHz share at every zone; SAX F#3
+  passed it by 0.07 dB, too close to hold a test to. The check is now "never brighter" at each zone with a 0.3 dB mean for each
+  voice, and the centroid and the breath, which separate the layers at every zone, carry the per-zone claim.
+- **A loose check on the wrap.** The real zones' last frame was first held to the loop start's predecessor within 1e-6, and the
+  tail's weights one index early passed it: the two frames either side of a real wrap match too closely. Held exactly equal, the
+  check fails on that mistake. At the last frame the loop's own wave weighs cos(pi/2), 6e-17, so the right weights are exact.
+- **A preview that promised two wraps.** The first preview test wanted the 6 s hold to cross the file's end and one more loop; that
+  holds only when the length search lands on ten vibrato cycles (1.92 s), not eleven (2.12 s). The hold now crosses the first wrap
+  with about two seconds to spare.
+- **A Goertzel sweep for brightness** cost 23.7 s of test time for 36 readings; one FFT a reading costs a fraction of a second.
+
+**Why it is built this way.**
+
+- **One note gives both the attack and the loop.** The zone is the LOOP's own held note played from its start, so the attack is the
+  note's real attack, not a one-shot glued onto a loop, and the two can never disagree about pitch, breath or tone.
+- **The blend moved to the loop's end because the attack must run on untouched.** The first time through, the player simply keeps
+  playing from the attack into the loop. Only at the file's end does it jump back, and by then the end has been faded into the
+  audio just before the loop start, so the jump lands between two neighbouring samples of the same note. Without the fade the jump
+  would join two places that only nearly match: a small step and a swell every two seconds.
+- **The same length search with the same arguments** is what lets Round 1.7's 1,071 measured corners speak for the zones too. A test
+  holds the zone's loop to the LOOP's length and correlation exactly, so a change to one cut cannot quietly leave the other behind.
+- **Two layers by breath, levelled alike.** The player sets a key's loudness from its velocity, so the layer only has to change the
+  colour. BREATH is mapped onto the range where the reed or the jet actually speaks, so the soft layer is a soft note, never air.
+- **The risky decision is the level.** Levelling on the loop under a 0.99 ceiling keeps a held key at the house's loudness, but at
+  the bottom of SAX the attack's peak wins and the loop sits up to 2.4 dB low. It is disclosed, not hidden behind a limiter that
+  would change the attack.
+
+**Verification.** `:synth:test` with `BoreFrozenSoundTest`, `BoreLoopFuzzTest`, `BoreTest`, `BoreKeysTest`, `BorePresetsTest`,
+`BorePlayerTest`, `BoreOverblowTest`, `ObbligatoCompatibilityTest`, `DeterminismTest`, `PresetsTest` and `PadRecipeTest`, then
+`:shell:test` with `ConventionTest`, `PersonalityTest`, `LoopPadMakerTest`, `SynthRootTest`, `BoreOverblowKeysTest` and
+`BorePadMakerTest`, then `:shell:generateBoreHeldAudition`, in one build on the code as committed: exit 0. 191 synth tests
+(`BoreKeysTest` 9, `BoreFrozenSoundTest` 3, `BoreOverblowTest` 12, `BoreTest` 51, `BorePresetsTest` 10, `BorePlayerTest` 5,
+`BoreLoopFuzzTest` 1, `DeterminismTest` 66, `ObbligatoCompatibilityTest` 1, `PadRecipeTest` 25, `PresetsTest` 8) and 118 shell tests
+(`ConventionTest` 68, `PersonalityTest` 31, `SynthRootTest` 7, `LoopPadMakerTest` 6, `BorePadMakerTest` 5, `BoreOverblowKeysTest`
+1), none failing, and the 18 clips with `clips.txt`. `BoreKeysTest` took 32 to 40 s and `BorePadMakerTest` 10 to 14 s. Not run: the
+whole suite, anything under `app/` (no SDK here, and the SYNTH screen is the owner's to wire), the kit generator (no kit pad
+changed).
+
+**Ledger.**
+
+- **Verified** (read or run on this branch): a zone's `bestLength` call is the LOOP's, argument for argument; `heldNote` holds
+  OVERBLOW at 0; the LOOP and every frozen hash are unchanged; the package writer spans the keyboard; `LoopPadMaker` no longer offers
+  BORE, and `InstrumentPackGenerator` takes its loop list from `LoopPadMaker.QUALIFIED`.
+- **Measured** (Kotlin): the table and the readings above, and the guards broken one at a time.
+- **Proposed** (shape values, not set by ear): `SOFT_BREATH_SHARE` 0.45, the velocity windows 1..63 and 64..127, the preview's 6 s
+  hold at velocity 0.8, the audition's 8 s hold, and an attack limiter for the bottom of SAX if its level is heard as a fault.
+- **Heard:** nothing yet.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

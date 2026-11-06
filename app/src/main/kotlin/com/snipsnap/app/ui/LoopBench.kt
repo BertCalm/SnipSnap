@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -42,6 +43,8 @@ import com.snipsnap.app.LoopWrites
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.KitSampleSource
@@ -51,6 +54,7 @@ import com.snipsnap.loop.SampleSource
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
+import com.snipsnap.loop.Track
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneSource
 import com.snipsnap.shell.Layout
@@ -343,15 +347,10 @@ fun LoopBench(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
-        }
-
         // remember, or every recomposition resets the session to what was
         // loaded from disk and throws away the mutes the user just tapped.
+        // Declared above the header row because the UNDO chip in it acts on
+        // them.
         var session by remember { mutableStateOf(boot.loaded) }
         // What the sidecar says, as opposed to what this screen is
         // currently doing — they differ by exactly the mutes below, which
@@ -359,8 +358,70 @@ fun LoopBench(
         // one, so clearing a track does not also quietly save the mutes
         // tapped beside it.
         var onDisk by remember { mutableStateOf(boot.loaded) }
-        var interval by remember { mutableIntStateOf(0) }
+        // The last clear, held in memory for as long as UNDO is offered.
+        // One level and per visit, by design: `remember` (not a saveable)
+        // so it dies with the bench; a second clear replaces it; using it
+        // clears it. A clear is written to disk at once, so this is the only
+        // place the track still exists as an arrangement.
+        var undo by remember { mutableStateOf<ClearUndo?>(null) }
         val scope = rememberCoroutineScope()
+
+        // Drawn as ORBIT's and SONG's headers are: the LCD panel, the back chip,
+        // the bench's name in the LCD's 21-point type. LOOP was the one BEAT
+        // bench with no title. The title sits straight after BACK and the
+        // UNDO chip at the far end, because UNDO CLEAR <NAME> can run to
+        // twenty-odd characters and would not leave room to centre it.
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
+            TapeText(Copy.LOOP_TITLE, TapeType.lcd(21), scheme.lcdInk.tape, Modifier.padding(start = 2.dp))
+            Spacer(Modifier.weight(1f))
+            undo?.let { u ->
+                HeaderChip(
+                    label = u.label,
+                    scheme = scheme,
+                    onClick = {
+                        // Taken first so a double tap cannot restore twice.
+                        undo = null
+                        scope.launch {
+                            // Only the track's blocks go back, into whatever
+                            // the grid and the file are NOW: a tempo change
+                            // made since the clear (or still settling) is
+                            // kept, which a swap back to the old whole
+                            // session would lose. The refit re-slices a
+                            // restored drone for that tempo.
+                            val live = session ?: return@launch
+                            val restored = DroneFit.refit(SessionBuilder.restoreTrack(live, u.index, u.onScreen))
+                            // Warm before apply: the clear left the engine
+                            // holding no bake of these blocks (Residency.update
+                            // drops what the session no longer names), so
+                            // applying cold would decode and resample them
+                            // on the audio thread at the next boundary.
+                            val at = rig.engine?.position() ?: 0
+                            withContext(Dispatchers.IO) { rig.residency?.warm(restored, at + 1, at + 2) }
+                            // Live AGAIN after the wait: a mute or tempo tap
+                            // landing during the warm must not be undone by
+                            // applying `restored`.
+                            val toApply = DroneFit.refit(
+                                SessionBuilder.restoreTrack(session ?: restored, u.index, u.onScreen),
+                            )
+                            rig.engine?.apply(toApply)
+                            session = toApply
+                            val written = DroneFit.refit(
+                                SessionBuilder.restoreTrack(onDisk ?: toApply, u.index, u.onDisk),
+                            )
+                            onDisk = written
+                            persist(written, Copy.LOOP_CLEAR_UNDONE, Copy.LOOP_UNDO_NOT_SAVED)
+                        }
+                    },
+                )
+            }
+        }
+
+        var interval by remember { mutableIntStateOf(0) }
         // A run of taps on − or + is one tempo change, not eight: each tap
         // moves the number on screen at once and restarts this, so the
         // bake-and-apply happens once, when the player stops. ORBIT's own
@@ -404,13 +465,23 @@ fun LoopBench(
                     // one is written.
                 },
                 onClearTrack = { t ->
-                    val next = SessionBuilder.clear(s, t)
+                    // Read live, not the `s` this lambda closed over, so a
+                    // tempo settling in between is not lost by the clear.
+                    val before = session ?: s
+                    val beforeDisk = onDisk ?: before
+                    // Keep what is about to go, for both copies: the
+                    // on-screen track carries this run's mute, the disk one
+                    // does not, and UNDO has to put each back where it was.
+                    before.tracks.getOrNull(t)?.takeUnless(SessionBuilder::isEmpty)?.let { gone ->
+                        undo = ClearUndo(t, gone, beforeDisk.tracks.getOrNull(t) ?: gone)
+                    }
+                    val next = SessionBuilder.clear(before, t)
                     session = next
                     rig.engine?.apply(next)
                     // Written from the disk-backed copy, not from `next`:
                     // `next` carries this run's mutes, and the whole point
                     // of not saving a mute is not saving it here either.
-                    val written = SessionBuilder.clear(onDisk ?: next, t)
+                    val written = SessionBuilder.clear(beforeDisk, t)
                     onDisk = written
                     persist(written)
                 },
@@ -515,6 +586,22 @@ fun LoopBench(
     }
 }
 
+/**
+ * The track the last clear took, as both copies held it. [onScreen] has this
+ * run's mute state; [onDisk] is what the sidecar said. Per visit: see the
+ * `undo` state in [LoopBench].
+ */
+private class ClearUndo(val index: Int, val onScreen: Track, val onDisk: Track) {
+    /** UNDO CLEAR <NAME>, the name as the grid's header prints it, cut short so the chip cannot crowd BACK off the row. */
+    val label: String = run {
+        val name = onScreen.name.uppercase()
+        val shown = if (name.length > MAX_NAME) name.take(MAX_NAME - 1) + "\u2026" else name
+        "${Copy.LOOP_UNDO_CLEAR} $shown"
+    }
+
+    private companion object { const val MAX_NAME = 12 }
+}
+
 /** Duplicated from `BinScreen.kt`'s own private `HeaderChip` rather than exported — every screen-local button in this codebase stays private to its own file, per that file's own stated convention. */
 @Composable
 private fun HeaderChip(
@@ -527,7 +614,7 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
@@ -535,6 +622,6 @@ private fun HeaderChip(
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }
