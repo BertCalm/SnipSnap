@@ -112,12 +112,14 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
+import com.snipsnap.shell.ArcoPadMaker
 import com.snipsnap.shell.BallastPadMaker
 import com.snipsnap.shell.KeelPadMaker
 import com.snipsnap.shell.LoopPadMaker
 import com.snipsnap.shell.MercuryPadMaker
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
+import com.snipsnap.shell.BorePadMaker
 import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
@@ -2233,10 +2235,11 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL ||
+    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
+        (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
@@ -2293,6 +2296,13 @@ fun SynthScreen(
         Engine.BALLAST -> HeldSpec.Ballast(BallastPadMaker.spec(voice as BallastVoice, macros, heldSheet.holdRelease))
         Engine.MERCURY -> HeldSpec.Mercury(MercuryPadMaker.spec(voice as MercuryVoice, macros, heldSheet.holdRelease))
         Engine.KEEL -> HeldSpec.Keel(KeelPadMaker.spec(voice as KeelVoice, macros, heldSheet.holdRelease))
+        Engine.ARCO -> HeldSpec.Arco(ArcoPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as ArcoPatch, heldSheet.holdRelease,
+        ))
+        Engine.BORE -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch
+            if (BorePadMaker.supports(patch)) HeldSpec.Bore(BorePadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.ORPHICA -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
             HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, heldSheet.holdRelease))
@@ -2402,7 +2412,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2411,12 +2421,15 @@ fun SynthScreen(
                         // FILAMENT similarly bounds its network history to one root.
                         // BALLAST simulates a frame, six strings and six tiles at 4x for
                         // each of its thirteen zones. A MERCURY zone is seconds of audio
-                        // rendered several times over, and a KEEL zone runs up to 15 s at 4x.
+                        // rendered several times over, a KEEL zone runs up to 15 s at 4x,
+                        // an ARCO zone is two layers of a bowed string at 4x, each
+                        // re-rendered until its loop is in tune, and a BORE zone is two
+                        // layers of a 4x bore with a join search over each loop.
                         // Render serially so phones never hold nine
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -4752,6 +4765,30 @@ internal sealed interface HeldSpec {
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LoopPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = LoopPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = LoopPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    /** ARCO's own maker ([ArcoPadMaker]): each key starts with the bow's own stroke, then holds the LOOP's loop, in a soft and a hard layer. */
+    class Arco(private val spec: ArcoPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = ArcoPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val progressPerZone get() = ArcoPadMaker.VELOCITY_WINDOWS.size
+        override val knobLabel get() = "RELEASE ${ArcoPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE BOW'S OWN STROKE, THEN HOLDS WHILE YOU KEEP IT DOWN."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = ArcoPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = ArcoPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ArcoPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    /** BORE's own maker ([BorePadMaker]): each key starts with the note's own breath, then holds its loop, in a soft and a hard layer. OVERBLOW stays off in a held key. */
+    class Bore(private val spec: BorePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = BorePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val progressPerZone get() = BorePadMaker.VELOCITY_WINDOWS.size
+        override val knobLabel get() = "RELEASE ${BorePadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE NOTE'S OWN BREATH, THEN HOLDS WHILE YOU KEEP IT DOWN. OVERBLOW STAYS OFF."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = BorePadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = BorePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BorePadMaker.export(name, spec, notes, destRoot)
     }
 
     class Keel(private val spec: KeelPadMaker.Spec) : HeldSpec {
