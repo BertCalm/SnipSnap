@@ -171,7 +171,7 @@ class UatSimTest {
         }
         // Back from a pad tool lands on the pad editor, not on the grid (the spec's
         // §7.3.1, PR 3d). The model half; ConventionTest pins the App's wiring.
-        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)) {
+        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS)) {
             var landed: Location? = null
             journey("Back from ${tool.label} to the pad editor", planned = 2, setup = { go(Place.PROJECT); open(Bench.PAD_SHEET) }) {
                 open(tool) // GRAIN ▸, SPLICE ▸ or STACK ▸ on the editor

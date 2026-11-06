@@ -1895,6 +1895,28 @@ object Copy {
      * then lands.
      */
     const val UNDO_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. UNDO WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
+
+    /**
+     * The pad editor's two doors to its own screens (`▸` is "opens a screen"): the closed line under each
+     * says what is applied or what is inside ([PadSheetBoxes.effectsLine], [PadSheetBoxes.variationsLine]).
+     */
+    const val PAD_EFFECTS_DOOR = "EFFECTS ▸"
+    const val PAD_VARIATIONS_DOOR = "VARIATIONS ▸"
+
+    /** The words over the EFFECTS and VARIATIONS screens, the screens' own titles. */
+    const val PAD_EFFECTS_TITLE = "EFFECTS"
+    const val PAD_VARIATIONS_TITLE = "VARIATIONS"
+
+    /**
+     * Each per-tool UNDO on the pad editor, named in full: the sheet draws several (and says one failure
+     * per tool), so a bare UNDO would not say whose it is. There is no single undo for the sheet; each
+     * tool's walks back its own last keep. The words are also the tool's failure word ([actionFailed]).
+     */
+    const val UNDO_MUTATE = "UNDO MUTATE"
+    const val UNDO_SPLICE = "UNDO SPLICE"
+    const val UNDO_DESAMPLE = "UNDO DE-SAMPLE"
+    const val UNDO_OUTSIDE = "UNDO OUTSIDE"
+    const val UNDO_BOARD = "UNDO BOARD"
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 

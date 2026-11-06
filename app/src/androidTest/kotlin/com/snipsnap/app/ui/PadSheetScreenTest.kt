@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -25,6 +26,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -126,6 +128,9 @@ class PadSheetScreenTest : ComposeScreenTest() {
     private var currentSlot by mutableStateOf(1)
     private var openBoxState by mutableStateOf<String?>(null)
 
+    /** The page the sheet draws, hoisted the way App's `Navigation` holds it: EFFECTS and VARIATIONS open from their doors and Back returns to the editor. */
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
+
     /** The app's job board, handed to the sheet the way `App` hands it to every screen. */
     private val jobs = AppJobs()
 
@@ -190,6 +195,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
     private fun show(entry: KitShelf.Entry, slot: Int, openBox: String? = null) {
         currentSlot = slot
         openBoxState = openBox
+        pageState = PadSheetPage.EDITOR
         sheetShown = true
         setPhoneContent {
             CompositionLocalProvider(LocalJobs provides jobs) {
@@ -197,9 +203,12 @@ class PadSheetScreenTest : ComposeScreenTest() {
                     PadSheetScreen(
                         entry = entry,
                         slot = currentSlot,
-                        backLabel = "◄ PADS",
+                        backLabel = if (pageState == PadSheetPage.EDITOR) "◄ PADS" else "◄ PAD",
                         onSlotChange = { currentSlot = it },
-                        onBack = { backs++ },
+                        page = pageState,
+                        onOpenEffects = { pageState = PadSheetPage.EFFECTS },
+                        onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                        onBack = { if (pageState == PadSheetPage.EDITOR) backs++ else pageState = PadSheetPage.EDITOR },
                         onToast = {},
                         onNavigateTape = {},
                         onGrainField = {},
@@ -311,10 +320,20 @@ class PadSheetScreenTest : ComposeScreenTest() {
     @Test
     fun an_untouched_pad_shows_untouched_on_every_bench_strip_but_make() {
         show(padSheetKit(listOf(1)), slot = 1)
-        assertEquals(
-            4,
-            compose.onAllNodesWithText(PadSheetBoxes.UNTOUCHED, useUnmergedTree = true).fetchSemanticsNodes().size,
-        )
+        // The editor itself draws only the two doors, with their closed lines: no strip is on it.
+        fun untouched() = compose.onAllNodesWithText(PadSheetBoxes.UNTOUCHED, useUnmergedTree = true).fetchSemanticsNodes().size
+        assertEquals("the editor draws no strips of its own", 0, untouched())
+        compose.onNodeWithText(PadSheetBoxes.NOTHING_APPLIED, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText(PadSheetBoxes.MUTATE_OFFERS, useUnmergedTree = true).assertExists()
+
+        // EFFECTS holds TREATMENT, SHAPE and OUTSIDE.
+        activate(Copy.PAD_EFFECTS_DOOR)
+        assertEquals(3, untouched())
+        tap("BACK TO PAD ${PadBanks.tag(1)}")
+        assertEquals("Back from EFFECTS lands on the editor", 0, backs)
+        // VARIATIONS holds MUTATE.
+        activate(Copy.PAD_VARIATIONS_DOOR)
+        assertEquals(1, untouched())
     }
 
     /**
@@ -356,13 +375,31 @@ class PadSheetScreenTest : ComposeScreenTest() {
         )
     }
 
+    /**
+     * Every per-tool UNDO names what it undoes (`Copy.UNDO_*`): OUTSIDE's sits on EFFECTS and MUTATE's on
+     * VARIATIONS, each in its own opened box, and neither is a bare UNDO.
+     */
+    @Test
+    fun each_pages_undo_names_the_tool_it_undoes() {
+        show(padSheetKit(listOf(1)), slot = 1, openBox = PadSheetBoxes.Box.OUTSIDE.name)
+        activate(Copy.PAD_EFFECTS_DOOR)
+        compose.onNodeWithContentDescription(Copy.UNDO_OUTSIDE, useUnmergedTree = true).assertExists()
+        assertTrue("no bare UNDO on EFFECTS", compose.onAllNodesWithContentDescription("UNDO", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+
+        tap("BACK TO PAD ${PadBanks.tag(1)}")
+        openBoxState = PadSheetBoxes.Box.MUTATE.name
+        activate(Copy.PAD_VARIATIONS_DOOR)
+        compose.onNodeWithContentDescription(Copy.UNDO_MUTATE, useUnmergedTree = true).assertExists()
+        assertTrue("no bare UNDO on VARIATIONS", compose.onAllNodesWithContentDescription("UNDO", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+    }
+
     /** Takes the sheet out of the composition, as leaving the screen does, and lets the frames run. */
     private fun closeTheSheet(slot: Int) {
         sheetShown = false
         pump()
         assertTrue(
             "the sheet is still on screen",
-            compose.onAllNodesWithText("PAD ${PadBanks.tag(slot)}", useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
+            compose.onAllNodesWithContentDescription("▶ HIT", useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
         )
     }
 
@@ -378,6 +415,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
     /** The pad editor's board card, opened in TREATMENT: KEEP and the HEAR buttons run real jobs on a kit. */
     private fun showTheBoardCard() {
         show(padSheetKit(listOf(1)), slot = 1, openBox = PadSheetBoxes.Box.TREATMENT.name)
+        activate(Copy.PAD_EFFECTS_DOOR)
         waitFor("the board card", timeoutMillis = 60_000) {
             compose.onAllNodesWithText("WIDE · STEREO CHARACTER", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }

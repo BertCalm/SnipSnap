@@ -26,6 +26,7 @@ import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.Robin
 import kotlinx.coroutines.CoroutineScope
@@ -60,6 +61,8 @@ class PadSheetRobinTest : ComposeScreenTest() {
     private val kitDirs = mutableListOf<File>()
     private val toasts = CopyOnWriteArrayList<String>()
     private var openBoxState by mutableStateOf<String?>(null)
+    /** The page the sheet draws, hoisted the way App's `Navigation` holds it: a door opens EFFECTS and Back returns to the editor. */
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
     private val heard = CopyOnWriteArrayList<Snip>()
 
     @After
@@ -94,13 +97,17 @@ class PadSheetRobinTest : ComposeScreenTest() {
 
     private fun show(entry: KitShelf.Entry, openBox: String? = null) {
         openBoxState = openBox
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             PadSheetScreen(
                 entry = entry,
                 slot = 1,
                 backLabel = "◄ PADS",
                 onSlotChange = {},
-                onBack = {},
+                page = pageState,
+                onOpenEffects = { pageState = PadSheetPage.EFFECTS },
+                onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = { toasts += it },
                 onNavigateTape = {},
                 onGrainField = {},
@@ -192,6 +199,8 @@ class PadSheetRobinTest : ComposeScreenTest() {
         m.save()
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = "TREATMENT")
+        // KEEP is the board card's, on EFFECTS.
+        activate(Copy.PAD_EFFECTS_DOOR)
         assertFalse("no refusal text on a robin pad", hasText("Undo round-robin", substring = true))
         assertFalse("KEEP is enabled", isDisabled("KEEP"))
         activate("KEEP")
