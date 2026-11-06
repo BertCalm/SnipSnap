@@ -3035,14 +3035,14 @@ tasks.register<JavaExec>("generateLorentzKit") {
     args("${rootDir}/testkit/lorentz-kit")
 }
 
-/** Sixteen dry percussion pads with three native touch zones and a separate SCAR study. */
+/** Eight contrasting percussion roles with three native touch zones and an aftershock control. */
 tasks.register<JavaExec>("generateErosionBank") {
     group = "distribution"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ErosionBankGenerator")
     maxHeapSize = "768m"
     workingDir = projectDir
-    args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-playable-bank")
+    args(providers.gradleProperty("erosionBankOutput").orNull ?: "${rootDir}/testkit/erosion-contrast-bank")
 }
 
 tasks.register<JavaExec>("generateHydroformAudition") {

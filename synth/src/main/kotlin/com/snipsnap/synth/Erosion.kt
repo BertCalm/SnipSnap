@@ -19,13 +19,13 @@ object Erosion {
     private const val CLOCK = 8000
     private const val GAIN = .035
     private val RATIOS = doubleArrayOf(1.0, 1.39, 1.91, 2.67)
-    private val controls = listOf("TUNE", "VOLTAGE", "FEED", "FLUID", "SLAG")
+    private val controls = listOf("TUNE", "VOLTAGE", "FEED", "FLUID", "SLAG", "GRAIN")
 
     fun macrosFor(voice: ErosionVoice): List<MacroSpec> {
         val values = when (voice) {
-            ErosionVoice.ARC -> listOf(.5f, .65f, .35f, .6f, .08f)
-            ErosionVoice.CRATER -> listOf(.5f, .3f, .5f, .6f, .65f)
-            ErosionVoice.SCAR -> listOf(.45f, .45f, .35f, .65f, .35f)
+            ErosionVoice.ARC -> listOf(.5f, .65f, .35f, .6f, .08f, 0f)
+            ErosionVoice.CRATER -> listOf(.5f, .3f, .5f, .6f, .65f, 0f)
+            ErosionVoice.SCAR -> listOf(.45f, .45f, .35f, .65f, .35f, 0f)
         }
         return controls.zip(values).map { (name, value) -> MacroSpec(name, value) }
     }
@@ -37,6 +37,11 @@ object Erosion {
     fun scramble(voice: ErosionVoice, random: Random): Map<String, Float> =
         defaults(voice).mapValues { random.nextFloat() }
     private fun map(x: Float, lo: Double, hi: Double) = lo * (hi / lo).pow(x.toDouble())
+
+    private fun packetThreshold(base: Double, grain: Double) =
+        if (grain == 0.0) base else min(.10, base * (1 + 40 * grain * grain))
+    private fun packetRecovery(base: Double, grain: Double) =
+        if (grain == 0.0) base else base * (1 + 20 * grain * grain)
 
     data class Event(val seconds: Double, val energy: Double, val variation: Double)
     data class ScarStages(val clusterEnd: Double, val aftershockStart: Double, val reservedEnergy: Double)
@@ -51,9 +56,15 @@ object Erosion {
         if (voice == ErosionVoice.SCAR) return scarSchedule(m, scarAftershock)
         val noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, voice.name, "schedule"))
         val tau = map(m.getValue("FEED"), .018, .14)
-        val threshold = map(m.getValue("VOLTAGE"), .012, .00065) *
+        val baseThreshold = map(m.getValue("VOLTAGE"), .012, .00065) *
             if (voice == ErosionVoice.CRATER) 1.6 else 1.0
-        val recoveryTime = map(m.getValue("VOLTAGE"), .0018, .00018)
+        val grain = m.getValue("GRAIN").toDouble()
+        // Zero keeps the original arithmetic and random draw order exactly.
+        // Larger packets and longer recovery expose separate grains rather
+        // than spending the same budget as a dense, noise-like event cloud.
+        val threshold = packetThreshold(baseThreshold, grain)
+        val baseRecovery = map(m.getValue("VOLTAGE"), .0018, .00018)
+        val recoveryTime = packetRecovery(baseRecovery, grain)
         var reservoir = 1.0
         var charge = 0.0
         var emitted = 0.0
@@ -90,8 +101,11 @@ object Erosion {
         val clusterEnd = .025 + .100 * feed
         val afterStart = clusterEnd + .095 + .100 * feed
         val afterDuration = .048 + .088 * feed
-        val threshold = map(m.getValue("VOLTAGE"), .012, .00065)
-        val recoveryTime = map(m.getValue("VOLTAGE"), .0018, .00018)
+        val grain = m.getValue("GRAIN").toDouble()
+        val baseThreshold = map(m.getValue("VOLTAGE"), .012, .00065)
+        val threshold = packetThreshold(baseThreshold, grain)
+        val baseRecovery = map(m.getValue("VOLTAGE"), .0018, .00018)
+        val recoveryTime = packetRecovery(baseRecovery, grain)
         val reserve = .12
         val events = arrayListOf(Event(0.0, .30, noise.next().toDouble()))
         var reservoir = .70
@@ -165,8 +179,12 @@ object Erosion {
         // One lookup per source: the long collapse kernel need not be
         // recalculated for hundreds of events. Interpolate fractional ages.
         val kernel = DoubleArray(ceil(duration * rate).toInt() + 1) { collapse(it.toDouble() / rate) / bodyNorm }
+        val grain = m.getValue("GRAIN").toDouble()
+        // Coarse packets raise crest factor. A fixed smooth transduction
+        // law retains source headroom; no event is independently normalized.
+        val masterGain = if (grain == 0.0) GAIN else GAIN * (1 - .25 * grain * grain)
         for (event in trace.events) {
-            val gain = GAIN * sqrt(event.energy) * v
+            val gain = masterGain * sqrt(event.energy) * v
             val start = ceil(event.seconds * rate).toInt()
             val end = min(sparks.size, ceil((event.seconds + 8 * width) * rate).toInt())
             for (i in start until end) {

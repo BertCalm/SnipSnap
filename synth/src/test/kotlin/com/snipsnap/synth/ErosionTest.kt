@@ -14,7 +14,7 @@ class ErosionTest {
         var rawPeak = 0.0
         var dc = 0.0
         var conservation = 0.0
-        for (voice in ErosionVoice.entries) for (bits in 0 until 32) {
+        for (voice in ErosionVoice.entries) for (bits in 0 until (1 shl Erosion.defaults(voice).size)) {
             val macros = Erosion.defaults(voice).keys.mapIndexed { i, k -> k to ((bits shr i) and 1).toFloat() }.toMap()
             val trace = Erosion.schedule(voice, macros)
             conservation = max(conservation, trace.conservationError)
@@ -32,7 +32,7 @@ class ErosionTest {
             assertTrue(out.size.toDouble()/Dsp.RATE < 1.5)
             assertTrue(out.maxOf { abs(it) } > .01f)
         }
-        println("EROSION ${ErosionVoice.entries.size * 32} corners rawPeak=$rawPeak maxAbsDC=$dc conservation=$conservation")
+        println("EROSION ${ErosionVoice.entries.sumOf { 1 shl Erosion.defaults(it).size }} corners rawPeak=$rawPeak maxAbsDC=$dc conservation=$conservation")
     }
     @Test fun `invalid direct controls fall back and audio controls preserve events`() {
         for (voice in ErosionVoice.entries) {
@@ -84,8 +84,8 @@ class ErosionTest {
     }
     @Test fun `matched output filters converge at four and eight times rate`() {
         for (voice in ErosionVoice.entries) {
-            for (slag in listOf(0f,1f)) {
-                val m=mapOf("TUNE" to 1f,"FLUID" to 1f,"VOLTAGE" to 1f,"SLAG" to slag)
+            for (slag in listOf(0f,1f)) for (grain in listOf(0f,1f)) {
+                val m=mapOf("TUNE" to 1f,"FLUID" to 1f,"VOLTAGE" to 1f,"SLAG" to slag,"GRAIN" to grain)
                 val four=Erosion.source(voice,m)
                 val eight=Erosion.source(voice,m,rate=Dsp.RATE*8)
                 // Independently evaluate the source at 8x, resample to 4x,
@@ -94,8 +94,8 @@ class ErosionTest {
                 val a=Erosion.finish(four);val b=Erosion.finish(down)
                 assertEquals(a.size,b.size)
                 val residual=sqrt(a.indices.sumOf { (a[it]-b[it]).toDouble().pow(2) }/a.size)/rms(a)
-                println("EROSION $voice SLAG=$slag 4x/8x relativeRMS=$residual")
-                assertTrue(residual < .05, "matched-chain convergence: $voice SLAG=$slag residual=$residual")
+                println("EROSION $voice SLAG=$slag GRAIN=$grain 4x/8x relativeRMS=$residual")
+                assertTrue(residual < .05, "matched-chain convergence: $voice SLAG=$slag GRAIN=$grain residual=$residual")
             }
         }
     }

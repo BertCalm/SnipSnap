@@ -1301,8 +1301,9 @@ which sit beside the picker. `:synth` also holds engines that picker does not sh
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
-regenerable audition. Its provisional sixteen-pad playing bank has three touch
-zones and both MPC program formats; SCAR is a separate aftershock study.
+regenerable audition. Its current contrast bank has eight playing roles, three touch
+zones and both MPC program formats. GRAIN expands packet size and recovery;
+the original sixteen recipes and SCAR study remain available.
 It remains outside the picker and factory presets.
 
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
