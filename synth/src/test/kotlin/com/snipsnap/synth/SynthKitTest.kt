@@ -330,7 +330,7 @@ class SynthKitTest {
             listOf(
                 "UPRIGHT WARM GUT", "UPRIGHT BRIGHT PICK", "BELLY SOFT PILLOW", "BELLY TOOTH MARK",
                 "REDUCE QUICK SINK", "REDUCE LOW HULL",
-                "UPRIGHT BOWED NOTE", "BELLY WARM HUSH",
+                "UPRIGHT BOWED NOTE", "BELLY WARM CALM",
             ),
             patches.drop(8).map { "${it.voice} ${it.name}" },
         )
