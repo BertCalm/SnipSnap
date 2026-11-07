@@ -22,11 +22,22 @@ import java.io.File
  */
 object GrooveEdit {
 
-    /** The step editor's seven lanes, fixed order per the GROOVE screen. */
+    /**
+     * The step editor's seven lanes, fixed order per the GROOVE screen. The
+     * lanes are rows; which pad a row plays is per pattern ([setLanePad],
+     * stored by [GrooveStore.saveLanePads]) and starts at [LANE_SLOT].
+     */
     enum class Lane { KICK, SNARE, CLAP, HAT_CLOSED, HAT_OPEN, TOM, PERC }
 
     /**
-     * Lane → 1-based pad slot, the finger-drumming convention from
+     * The DEFAULT lane → 1-based pad slot. Lanes are reassignable per
+     * pattern now ([setLanePad]); this is where every pattern starts and
+     * what a file with no lane map gets. The promise below — each lane's
+     * note lands where a same-class sample would auto-place — holds for
+     * THIS map and for no other: a reassigned lane plays the pad the
+     * player chose, which is the point of choosing.
+     *
+     * The convention itself: the finger-drumming convention from
      * `docs/KIT_BEST_PRACTICES.md` "Pad layout" and `AutoPlace`: kick A01,
      * snare A02, closed hat A03, open hat A04. CLAP and TOM take
      * `AutoPlace.PREFERENCES`'s own first choices for their classes — slot
@@ -49,8 +60,49 @@ object GrooveEdit {
         Lane.PERC to 12,
     )
 
+    /** [LANE_SLOT] in [Lane] order — the lane map of a pattern nobody has reassigned. */
+    val DEFAULT_LANE_PADS: List<Int> = Lane.entries.map { LANE_SLOT.getValue(it) }
+
+    /** Pads a lane can be given: bank A, the sixteen on the screen. */
+    const val PAD_COUNT = 16
+
+    /** A lane map is one pad per lane, each of the sixteen at most once. */
+    fun isValidLanePads(pads: List<Int>): Boolean =
+        pads.size == Lane.entries.size && pads.all { it in 1..PAD_COUNT } && pads.toSet().size == pads.size
+
+    /**
+     * [lane] plays [slot] in [pads]. A pad that is already some other
+     * lane's swaps places with it (that lane takes [lane]'s old pad), so
+     * two rows never edit the same cell. Notes are not touched here: the
+     * ones on the pad a lane leaves are still in the clip, now on no lane,
+     * and [offLaneNotes] reads them.
+     */
+    fun setLanePad(pads: List<Int>, lane: Lane, slot: Int): List<Int> {
+        require(isValidLanePads(pads)) { "not a lane map: $pads" }
+        require(slot in 1..PAD_COUNT) { "pad out of range: $slot" }
+        val old = pads[lane.ordinal]
+        if (old == slot) return pads
+        return pads.mapIndexed { i, s ->
+            when {
+                i == lane.ordinal -> slot
+                s == slot -> old
+                else -> s
+            }
+        }
+    }
+
     /** Which note plays a lane's pad — [Mpc3Note.noteFor], the one map. */
-    fun noteFor(lane: Lane): Int = Mpc3Note.noteFor(LANE_SLOT.getValue(lane))
+    fun noteFor(lane: Lane, pads: List<Int> = DEFAULT_LANE_PADS): Int = Mpc3Note.noteFor(pads[lane.ordinal])
+
+    /**
+     * The notes of [clip] that no lane in [pads] plays: every pad the lane
+     * map does not reach. The editor draws them as an extra row so they
+     * stay visible, and nothing here ever removes one.
+     */
+    fun offLaneNotes(clip: Mpc3Clip, pads: List<Int> = DEFAULT_LANE_PADS): List<Mpc3Note> {
+        val on = Lane.entries.mapTo(HashSet()) { noteFor(it, pads) }
+        return clip.notes.filter { it.note !in on }
+    }
 
     /** Cells per bar in the step editor, for a 4/4 bar. See [stepsPerBar]. */
     const val STEPS_PER_BAR = 16
@@ -95,6 +147,47 @@ object GrooveEdit {
 
     private fun velocityFor(lane: Lane): Float =
         if (lane == Lane.HAT_CLOSED) VELOCITY_HAT_CLOSED else VELOCITY_DEFAULT
+
+    /**
+     * The four velocities a step can be set to. Chosen so what the editor
+     * and the live take already write reads as a level: a new step's 0.9
+     * and the loud hits of a played take are HARD, the closed hat's 0.6 is
+     * MED, and a ghost note (0.32, [GrooveVariations]) is SOFT. [levelOf]
+     * names any stored velocity by its nearest level, so a played-in 0.7
+     * shows as MED or HARD and nothing is rewritten until the player sets it.
+     */
+    enum class VelocityLevel(val velocity: Float) {
+        SOFT(0.35f), MED(0.6f), HARD(0.85f), ACCENT(1.0f),
+    }
+
+    /** The level nearest [velocity]; ties go to the louder. */
+    fun levelOf(velocity: Float): VelocityLevel =
+        VelocityLevel.entries.minWith(
+            compareBy<VelocityLevel> { kotlin.math.abs(it.velocity - velocity) }.thenByDescending { it.velocity },
+        )
+
+    /** The velocity of the note at ([lane], [step]) in [pads], or null when there is none. */
+    fun velocityAt(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = DEFAULT_LANE_PADS): Float? {
+        val note = noteFor(lane, pads)
+        val pulses = step * STEP_PULSES
+        return clip.notes.filter { it.note == note && it.timePulses == pulses }.maxOfOrNull { it.velocity }
+    }
+
+    /**
+     * Sets the velocity of the note at ([lane], [step]). Returns [clip]
+     * unchanged when there is no note there: setting a level never adds a
+     * hit (a tap does that, [toggleStep]) and never touches any other
+     * note, its length or its time. [velocity] is clamped to 0.01..1.
+     */
+    fun setStepVelocity(clip: Mpc3Clip, lane: Lane, step: Int, velocity: Float, pads: List<Int> = DEFAULT_LANE_PADS): Mpc3Clip {
+        val steps = stepsInClip(clip)
+        require(step in 0 until steps) { "step out of range for a ${clip.bars}-bar clip: $step" }
+        val note = noteFor(lane, pads)
+        val pulses = step * STEP_PULSES
+        if (clip.notes.none { it.note == note && it.timePulses == pulses }) return clip
+        val v = velocity.coerceIn(0.01f, 1f)
+        return clip.copy(notes = clip.notes.map { if (it.note == note && it.timePulses == pulses) it.copy(velocity = v) else it })
+    }
 
     /** The naming convention that makes E findable among stored clips. */
     const val NAME_SUFFIX = " E"
@@ -285,6 +378,10 @@ object GrooveEdit {
 
         val baseName = baseNameFor(stored, source)
         val e = quantized(source, progEName(baseName, index))
+        // REPLACE starts the program over, lanes included: a fresh take's
+        // kick is on the default kick pad, and a lane map left over from
+        // the program it replaced would draw it on a row nobody asked for.
+        GrooveStore.loadLanePads(kitDir).let { m -> if (e.name in m) GrooveStore.saveLanePads(kitDir, m - e.name) }
         save(kitDir, e)
         return e
     }
@@ -342,10 +439,10 @@ object GrooveEdit {
      * address, so a stray duplicate never survives one tap. The result is
      * always time-sorted, so repeated toggles round-trip byte-for-byte.
      */
-    fun toggleStep(clip: Mpc3Clip, lane: Lane, step: Int): Mpc3Clip {
+    fun toggleStep(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = DEFAULT_LANE_PADS): Mpc3Clip {
         val steps = stepsInClip(clip)
         require(step in 0 until steps) { "step out of range for a ${clip.bars}-bar clip: $step" }
-        val note = noteFor(lane)
+        val note = noteFor(lane, pads)
         val pulses = step * STEP_PULSES
         val without = clip.notes.filterNot { it.note == note && it.timePulses == pulses }
         val notes = if (without.size == clip.notes.size) {
@@ -357,17 +454,17 @@ object GrooveEdit {
     }
 
     /**
-     * Wipes [bar] (0-based) across all seven editor lanes — CLEAR BAR is a
+     * Wipes [bar] (0-based) across all seven editor lanes (the pads [pads] gives them) — CLEAR BAR is a
      * whole-bar action, not a per-lane one, but it's scoped to the seven
      * lanes the step editor actually draws: a note that rides some other
-     * MIDI note number (never placed by this editor, and unreachable by any
-     * of its cells) survives the wipe untouched, same as every other bar.
+     * MIDI note number (a pad no lane plays, whether it was never given one or
+     * its lane was reassigned, drawn on the OTHER row and not editable there) survives the wipe untouched, same as every other bar.
      */
-    fun clearBar(clip: Mpc3Clip, bar: Int): Mpc3Clip {
+    fun clearBar(clip: Mpc3Clip, bar: Int, pads: List<Int> = DEFAULT_LANE_PADS): Mpc3Clip {
         require(bar in 0 until clip.bars) { "bar out of range for a ${clip.bars}-bar clip: $bar" }
         val from = bar * clip.pulsesPerBar
         val until = from + clip.pulsesPerBar
-        val laneNotes = Lane.entries.mapTo(HashSet()) { noteFor(it) }
+        val laneNotes = Lane.entries.mapTo(HashSet()) { noteFor(it, pads) }
         return clip.copy(notes = clip.notes.filterNot { it.timePulses in from until until && it.note in laneNotes })
     }
 }

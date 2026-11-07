@@ -1491,7 +1491,48 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY — THE OTHER FOUR STAY UNTOUCHED"
+    /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
+    fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
+
+    /** A pad in the picker that holds no sound: it can still be chosen, and says so. */
+    const val STEP_PAD_EMPTY = "EMPTY"
+
+    /** The picker's close chip, and the strip's. Labels, not toasts. */
+    const val STEP_DETAIL_CLOSE = "CLOSE"
+
+    /** Under a pad in the picker, when it has hits in this pattern that no row draws. */
+    fun stepPadOffRows(n: Int): String = "${countOf(n, "HIT", "HITS")} ON PADS WITH NO ROW"
+
+    /** The step-detail strip's four velocity levels (kit.GrooveEdit.VelocityLevel), left to right. Labels, not toasts. */
+    const val VEL_SOFT = "SOFT"
+    const val VEL_MED = "MED"
+    const val VEL_HARD = "HARD"
+    const val VEL_ACCENT = "ACCENT"
+
+    /** Spoken names: a pad in the picker, a velocity level, a lane's name as the door to its picker. */
+    fun stepPadSpoken(slot: Int, name: String): String = "PAD $slot: $name"
+    fun stepVelocitySpoken(level: String): String = "VELOCITY $level"
+    fun stepLanePadSpoken(laneWord: String, padName: String): String = "PAD FOR $laneWord: $padName"
+
+    /** The strip's heading: which row, which bar, which step of it. */
+    fun stepDetailTitle(lane: String, bar: Int, step: Int): String = "$lane · BAR $bar · STEP $step"
+
+    /** The strip's exact reading of the stored velocity, 1..100, beside the four levels. */
+    fun stepDetailVelocity(percent: Int): String = "VELOCITY $percent"
+
+    /** A step cell's long-press, as a screen reader names it. A label, not a toast. */
+    const val STEP_DETAIL_LONG_LABEL = "SET VELOCITY"
+
+    /** The pad choice could not be written; it holds until the editor is left. */
+    const val STEP_PADS_NOT_SAVED = "COULDN'T SAVE THE PAD CHOICE. IT HOLDS UNTIL YOU LEAVE THIS SCREEN."
+
+    /** The row under the lanes that draws hits on pads no lane plays. A label, not a toast. */
+    const val STEP_OTHER_ROW = "OTHER"
+
+    /** The strip over a step with no hit: it names what to do rather than offering levels that would do nothing. */
+    const val STEP_DETAIL_EMPTY = "NO HIT HERE. TAP THE STEP ON FIRST."
+
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."

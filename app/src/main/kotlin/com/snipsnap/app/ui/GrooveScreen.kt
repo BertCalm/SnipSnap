@@ -1284,23 +1284,21 @@ fun GrooveScreen(
         }
     }
 
-    fun toggleCell(lane: GrooveEdit.Lane, step: Int) {
-        val c = eClip ?: return
-        val note = GrooveEdit.noteFor(lane)
-        val pulses = step * GrooveEdit.STEP_PULSES
-        val turningOn = c.notes.none { it.note == note && it.timePulses == pulses }
-        setYours(GrooveEdit.toggleStep(c, lane, step))
-        editorDirty = true
-        editorSaveTick++
-        if (turningOn) beat.hit(GrooveEdit.LANE_SLOT.getValue(lane))
-    }
-
-    fun clearEditorBar() {
-        val c = eClip ?: return
-        setYours(GrooveEdit.clearBar(c, editorBar))
-        editorDirty = true
-        editorSaveTick++
-        onToast(Copy.BAR_WIPED)
+    /**
+     * Every change the step editor makes arrives here as one [StepEdit]: a
+     * new clip (a toggle, a velocity, CLEAR BAR), a pad to sound, a toast.
+     * The editor owns the lane map, so it says what to change; this applies
+     * that to the live clip, marks it for the autosave, and sounds the pad.
+     */
+    fun applyStepEdit(edit: StepEdit) {
+        edit.change?.let { change ->
+            val live = eClip ?: return
+            setYours(change(live))
+            editorDirty = true
+            editorSaveTick++
+        }
+        edit.toast?.let(onToast)
+        edit.previewSlot?.let { beat.hit(it, edit.previewVelocity) }
     }
 
     /**
@@ -2348,8 +2346,8 @@ fun GrooveScreen(
                     posSteps = posSteps,
                     scheme = scheme,
                     onBarSelect = { editorBar = it },
-                    onClear = ::clearEditorBar,
-                    onToggle = ::toggleCell,
+                    onEdit = ::applyStepEdit,
+                    kitDir = kitDir,
                     onDone = ::closeEditor,
                     yoursCount = yoursAll.size,
                     kit = entry.kit,
@@ -2928,10 +2926,10 @@ private fun LaneNameCell(label: String, color: Color) {
 
 /** Each lane's colour: the pad's own class ([laneClass]), else the lane's drum class, else LCD ink. */
 @Composable
-private fun laneColorsFor(kit: Kit, scheme: Scheme): Map<GrooveEdit.Lane, Color> =
-    remember(kit, scheme) {
+private fun laneColorsFor(kit: Kit, scheme: Scheme, pads: List<Int>): Map<GrooveEdit.Lane, Color> =
+    remember(kit, scheme, pads) {
         LANE_ORDER.associateWith { lane ->
-            LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(laneClass(lane, kit, it)).tape } ?: scheme.lcdInk.tape
+            LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(laneClass(lane, kit, it, pads)).tape } ?: scheme.lcdInk.tape
         }
     }
 
@@ -2960,16 +2958,18 @@ private fun StepEditorOverlay(
     posSteps: Float,
     scheme: Scheme,
     onBarSelect: (Int) -> Unit,
-    onClear: () -> Unit,
-    onToggle: (GrooveEdit.Lane, Int) -> Unit,
+    onEdit: (StepEdit) -> Unit,
+    kitDir: File,
     onDone: () -> Unit,
     /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
     yoursCount: Int,
     /** The loaded kit: each lane's row is named and coloured after the pad it plays. */
     kit: Kit,
 ) {
-    val laneNames = remember(kit) { LANE_ORDER.associateWith { laneLabel(it, kit) } }
-    val laneColors = laneColorsFor(kit, scheme)
+    val state = rememberStepEditorState(kitDir, clip.name, onEdit)
+    val pads = state.lanePads
+    val laneNames = remember(kit, pads) { LANE_ORDER.associateWith { laneLabel(it, kit, pads) } }
+    val laneColors = laneColorsFor(kit, scheme, pads)
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
     val barSteps = GrooveEdit.stepsPerBar(clip)
@@ -2979,14 +2979,9 @@ private fun StepEditorOverlay(
 
     // Recomputed only when the clip or the visible bar changes, not every
     // animation frame while the playhead ring is live.
-    val onSteps = remember(clip, editorBar) {
-        LANE_ORDER.associateWith { lane ->
-            val note = GrooveEdit.noteFor(lane)
-            (0 until barSteps).filter { col ->
-                val step = editorBar * barSteps + col
-                clip.notes.any { it.note == note && it.timePulses == step * GrooveEdit.STEP_PULSES }
-            }.toSet()
-        }
+    val onSteps = remember(clip, editorBar, pads) { velocitiesByLane(clip, editorBar, barSteps, pads) }
+    val otherSteps = remember(clip, editorBar, pads) {
+        if (GrooveEdit.offLaneNotes(clip, pads).isEmpty()) null else offLaneVelocities(clip, editorBar, barSteps, pads)
     }
 
     Box(Modifier.fillMaxSize().background(scheme.lcd.tape).padding(8.dp)) {
@@ -3047,7 +3042,7 @@ private fun StepEditorOverlay(
                     }
                 }
                 Box(
-                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = "CLEAR BAR", onClick = onClear).padding(horizontal = 10.dp),
+                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = "CLEAR BAR") { onEdit(clearedBar(editorBar, state)) }.padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("CLEAR BAR", TapeType.pixelSmall, scheme.ink2.tape)
@@ -3075,17 +3070,20 @@ private fun StepEditorOverlay(
                     val laneOnSteps = onSteps.getValue(lane)
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Box(
-                            Modifier.width(46.dp).fillMaxHeight().sunkenField(scheme, 3.dp).padding(horizontal = 4.dp),
+                            Modifier.width(46.dp).fillMaxHeight().sunkenField(scheme, 3.dp)
+                                .tapeClick(label = Copy.stepLanePadSpoken(LANE_DRUM_WORD.getValue(lane), laneNames.getValue(lane))) { state.pickLane = lane }
+                                .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             LaneNameCell(laneNames.getValue(lane), laneColor)
                         }
                         Row(Modifier.weight(1f).fillMaxHeight()) {
                             for (col in 0 until barSteps) {
-                                val on = col in laneOnSteps
+                                val vel = laneOnSteps[col]
+                                val on = vel != null
                                 val isPlayhead = col == playheadCol
                                 val fillColor = when {
-                                    on -> laneColor
+                                    on -> laneColor.copy(alpha = 0.22f)
                                     col % 4 == 0 -> scheme.field.tape
                                     else -> scheme.lcd.tape
                                 }
@@ -3099,12 +3097,17 @@ private fun StepEditorOverlay(
                                         // 16-cell grid with no name at all
                                         // read as identical unlabelled
                                         // squares to a screen reader.
-                                        .tapeClick(label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}") { onToggle(lane, step) }
+                                        .stepCellClick(
+                                            label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}",
+                                            onLongClick = { state.select(lane, step) },
+                                        ) { onEdit(toggledStep(clip, lane, step, state)) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
+                                        .velocityFill(vel, laneColor)
                                         .border(
-                                            1.dp,
-                                            if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            if (state.selLane == lane && state.selStep == step) 2.dp else 1.dp,
+                                            if (state.selLane == lane && state.selStep == step) scheme.amber.tape
+                                            else if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
                                             RoundedCornerShape(3.dp),
                                         ),
                                 )
@@ -3112,7 +3115,10 @@ private fun StepEditorOverlay(
                         }
                     }
                 }
+                OffLaneRow(otherSteps, barSteps, scheme)
             }
+
+            StepEditorPanel(state, clip, kit, scheme, laneNames, editorBar, onEdit)
 
             TapeText(
                 Copy.stepEditFooter(totalSteps, sourceLabel),
