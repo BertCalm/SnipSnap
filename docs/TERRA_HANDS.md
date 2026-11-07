@@ -41,6 +41,17 @@ levelled to one loudness.
    Heard: the dumbek's B (ceramic, more ring); the djembe soft, medium and
    hard "Yes", a softer hand on the same drum; the tabla "C but tighter, more
    forceful snap", built in at three settings for the app's listening page.
+4. **The app** (https://claude.ai/artifact/44wk4wFgMPjVxXCkkG84ZU): the three
+   Kotlin voices beside the prototypes picked. Heard: the dumbek "Same drum";
+   the tabla's setting 3 (FORCE 0.9, CLICK 0.65), now the kit's and the
+   voice's defaults; the djembe "Close, but not it"; soft and medium hits
+   "Can't tell". That page said every clip played at one loudness, but it did
+   not: the app's clips were levelled by `AuditionLevel` and the prototypes by
+   the harness's `level_to`, which left the app's 5 to 9 dB quieter (djembe
+   5.2, dumbek 7.8, tabla 8.6 dB, as RMS). A quieter clip reads thinner. The
+   three tabla settings were levelled alike, so that pick stands. The djembe
+   went back to the owner with every clip on one meter (`Loudness.of`):
+   https://claude.ai/artifact/DaDn9mYg8ajVCjWS6p5nnD.
 
 ## The model
 
@@ -107,30 +118,41 @@ take. Each burst is now scaled to the RMS of the one the owner heard (smack
 
 ## Measured: the app against the prototype
 
-Spectral flatness over the first 40 ms; magnitude centroid over the first
-30 ms; ring is the time from the peak to -30 dB; "first 5 ms" is the share of
-the first 5 ms above 3 kHz.
+Each clip is the WAV as heard, trimmed to its onset (the first sample above 1%
+of its peak). Flatness is spectral flatness over the first 40 ms (Hann
+window); centroid is the magnitude centroid over the first 30 ms (Hann); ring
+is the time from the envelope's peak to -30 dB; "first 5 ms" is the share of
+the first 5 ms's power above 3 kHz. The table was re-measured this way on
+round 4; the first version's numbers came from code that was not kept.
 
 | | Flatness | Centroid | Ring | First 5 ms |
 |---|---|---|---|---|
-| Djembe, prototype (round 2 A, picked) | 0.034 | 921 Hz | 86 ms | 3.5% |
-| SLAP in the app | 0.036 | 893 Hz | 85 ms | 5.3% |
-| Dumbek, prototype (round 3 B, picked) | 0.010 | 1621 Hz | 160 ms | 7.9% |
-| DARBUKA in the app | (re-measured on the listening page) | 1591 Hz | 162 ms | 6.6% |
-| Tabla, prototype (round 3 C, the base) | 0.014 | 827 Hz | 192 ms | 4.6% |
-| DAYAN in the app, setting 1 (the kit's for now) | 0.009 | 780 Hz | 162 ms | 8.6% |
+| Djembe, prototype (round 2 A, picked) | 0.027 | 837 Hz | 86 ms | 3.3% |
+| SLAP in the app | 0.029 | 840 Hz | 85 ms | 3.2% |
+| Dumbek, prototype (round 3 B, picked) | 0.005 | 1593 Hz | 160 ms | 7.9% |
+| DARBUKA in the app | 0.006 | 1593 Hz | 162 ms | 6.6% |
+| Tabla, prototype (round 3 C, the base) | 0.006 | 743 Hz | 192 ms | 4.5% |
+| DAYAN in the app, setting 3 (picked) | 0.010 | 867 Hz | 159 ms | 12.1% |
 
 The noise generators differ (the harness's 64-bit LCG, `Dsp.Noise`'s 31-bit
-one), so the app is the same model, not the same bytes.
+one), so the app is the same model, not the same bytes. The djembe shows how
+little that moves: the prototype's own "first 5 ms" runs from 1.5% to 4.9%
+across 24 seeds, and three of the app's re-struck takes read 1.8% to 3.7%.
+Band by band (nine octave bands, five windows to 300 ms), the app's djembe
+sits within 1.5 dB of the prototype's below 5.6 kHz wherever it is above
+-60 dB from its peak. From 5.6 to 11.2 kHz its first 15 ms is 2 to 5 dB
+stronger, which is inside the prototype's own spread across seeds (the
+hand's smack is noise).
 
-Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 442 / 601 / 893 Hz, DAYAN
-416 / 529 / 780, DARBUKA 1055 / 1179 / 1591. Each is brighter at every step.
+Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 437 / 580 / 840 Hz, DAYAN
+458 / 579 / 867, DARBUKA 1058 / 1182 / 1593. Each is brighter at every step.
 
 ## Ledger
 
-- **Heard:** the three rounds above, each for the Python clips it played.
-- **Not yet heard:** the app's three voices against the prototypes, and the
-  tabla's final setting among three.
+- **Heard:** the three rounds above, each for the Python clips it played; the
+  app's dumbek as the same drum; the tabla's setting 3.
+- **Not yet heard:** the app's djembe against the prototype at one level
+  (round 4's page played it 5.2 dB quieter).
 - **Proposed (design shapes):** the strip widths and the finger timings, the
   split range, each drum's T60 and tilt, the bowl's 72 Hz and the shells'
   modes, the noise bursts' bands and lengths, and the mix levels.
