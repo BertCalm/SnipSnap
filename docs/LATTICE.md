@@ -1,5 +1,10 @@
 # Lattice native instrument
 
+The [November 7 handoff](handoffs/2026-11-07-lattice-trace-keys.md) records the
+merged TRACE keyboard implementation, R7 volume revision, passing final CI and
+remaining listening/physical-device checks. Use it for current delivery status;
+the dated evidence below retains earlier milestones.
+
 Lattice carries one sample-free pitched source through ordered two-component
 projection gates. Crossing the entrance and exit removes direct transmission;
 intermediate gates restore a route. Four harmonic groups can encounter different
@@ -85,7 +90,7 @@ The CLI provides the same path with `--instrument --release 0.6`.
 The keyboard audition reloads the exported PCM24 samples and instrument sidecar
 through `InstrumentEngine`, drives exact note-on/off events, and verifies that
 each note wraps and releases to silence. Saved performance recipes replay the
-same files and event frames. `keys-measurements.json` records source fingerprints,
+same files and event frames. R7's `keys2/measurements.json` records source fingerprints,
 package readback, real preceding-cycle evidence and pitch fit; physical MPC
 playback and the owner's listening verdict are not inferred from those checks.
 

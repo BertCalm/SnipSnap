@@ -1,5 +1,11 @@
 # Which document to trust
 
+**Lattice.** [`LATTICE.md`](LATTICE.md) records the native projection-gate
+instrument and accepted finite TRACE gesture. The
+[November 7 handoff](handoffs/2026-11-07-lattice-trace-keys.md) records the merged
+TRACE keyboard instrument, revised held balance, passing JVM/Android/native/emulator
+checks and remaining listening and physical phone/MPC acceptance.
+
 **Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
 BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
 Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)
