@@ -1,9 +1,7 @@
 package com.snipsnap.synth
 
-/** One provisional starting point per voice for listening, deliberately absent from the factory roster. */
+/** The eight accepted contrast recipes, shared with the playing bank without retuning. */
 object ErosionPresets {
-    fun forVoice(voice: ErosionVoice): List<ErosionPatch> = listOf(
-        ErosionPatch("${voice.name.lowercase().replaceFirstChar { it.uppercase() }} starting point", voice, Erosion.defaults(voice))
-    )
-    fun all() = ErosionVoice.entries.flatMap(::forVoice)
+    fun forVoice(voice: ErosionVoice): List<ErosionPatch> = all().filter { it.voice == voice }
+    fun all(): List<ErosionPatch> = ErosionBank.entries().map { it.patch }
 }
