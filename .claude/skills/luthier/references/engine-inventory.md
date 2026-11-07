@@ -117,7 +117,7 @@ from the audio.
 | VENT (from Omnibus Ouroboros) | chaos: one Rössler trajectory is the audio | CHAOS LEASH VIEW DAMP PUSH LENGTH | T |
 | FLOCK (from Omnibus Oceanic) | 24 audible oscillators following separation, alignment, cohesion | SPREAD PULL FLOW SCATTER EDGE HOLD | T |
 | OVERLAP (from Omnibus) | six audible delay lines with topology-specific scattering (knot FDN) | KNOT PULSE LOCK GLOW RING HOLD | T |
-| WICK† | one complex source into three low-pass gates whose releases trigger the next (CLI only) | SPARK FEED CASCADE TIMBRE RECOVERY HOLD | T/L |
+| WICK | one complex source into three recovering low-pass gates whose releases trigger the next; six voices, 36 factory recipes and three saved RATTLE bodies | SPARK FEED CASCADE TIMBRE RECOVERY HOLD | T/L |
 | SIREN | dub siren: LFO-swept PolyBLEP square | TUNE RATE DEPTH SWEEP GRIT HOLD | T/L |
 | LATTICE | a harmonic source passes ordered two-component projection gates; the rejected parts excite a resonant outline (WARM, PLUCK, HOLLOW, TRACE) | TUNE TURN STAGES TWIST COLOR REJECT HOLD (TRACE: TUNE SPEED HOLD) | T/L (TRACE finite only) |
 | LORENTZ† | a falling sweep, one collision, irreversible capture and a steady sub tail: a pulse-welding analogy (FUSE, LORENTZ); HOLD lengthens the decay toward 1.2 s and never loops | TUNE CAPACITOR GAP IMPACT WELD HOLD | classified from the render |
@@ -165,8 +165,9 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
   `Layer.loopStartFrame`), so an instrument can hold an attack and then loop. The roadmap
   still says a pad in a kit has no attack-plus-loop region field, so HOLD engines export
   loop-only material to a pad.
-- **Phone picker**: 15 of the 84 are absent: ARCO, BORE, CAIRN, EROSION, FERRY, GYRE, KEEL,
-  LORENTZ, MAGNET, SCANNED CHAIN, SCOUR, SILK, SNAP, TERRA, WICK. That is
+- **Phone picker**: the earlier scan listed 15 of the 84 as absent: ARCO, BORE, CAIRN, EROSION, FERRY, GYRE, KEEL,
+  LORENTZ, MAGNET, SCANNED CHAIN, SCOUR, SILK, SNAP, TERRA, WICK. WICK now has a picker adapter,
+  six voices and the shared 36-recipe factory bank, plus a sixteen-pad FRESH TAPE starter. That earlier list is
   `docs/ENGINE_STANDARD_SCAN_2026_11.md`'s list plus LORENTZ and SCANNED CHAIN; its count of 82
   predates ACCORD and one more. Recount rather than quote either.
 - **Roadmap open items** recur in `docs/SYNTH_ROADMAP.md` rows: the S4 keygroup export still

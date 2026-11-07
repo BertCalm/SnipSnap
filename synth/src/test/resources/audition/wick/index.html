@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eeeadf">
-  <meta name="description" content="Listen to Wick, an experimental dry synthesis engine for SnipSnap. A shared source, three low-pass gates, and a chain reaction.">
+  <meta name="description" content="Listen to Wick's six voices and 36 editable factory patches for SnipSnap. A shared source, three low-pass gates, and a chain reaction.">
   <title>Wick — a SnipSnap listening lab</title>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
@@ -13,17 +13,18 @@
   <a class="skip-link" href="#listening-room">Skip to the listening room</a>
   <header class="masthead wrap">
     <a class="brand" href="./" aria-label="Wick listening lab home"><span class="brand-symbol" aria-hidden="true">s/s</span><span>SnipSnap <span class="brand-divider">/</span> WICK</span></a>
-    <span class="edition"><span class="status-dot" aria-hidden="true"></span> Listening prototype <span class="edition-number">01</span></span>
+    <span class="edition"><span class="status-dot" aria-hidden="true"></span> Factory bank <span class="edition-number">36</span></span>
   </header>
 
   <main>
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow">The Wick experiment</p>
+        <p class="eyebrow">The Wick instrument</p>
         <h1 id="hero-title">A spark.<br>Three gates.<br><em>Listen to what follows.</em></h1>
-        <p class="hero-intro">One pitched source. Three low-pass gates that wake one another as they close. An experiment in articulation, recovery, and little chain reactions.</p>
+        <p class="hero-intro">One pitched source. Three low-pass gates that wake one another as they close. Six voices shaped by articulation, recovery, and little chain reactions.</p>
         <button id="first-play" class="primary-button" type="button" disabled><span class="play-icon" aria-hidden="true"></span><span id="first-play-label">Hear Warm wire at C4</span><span class="button-arrow" aria-hidden="true">→</span></button>
         <p class="hero-note">RATTLE · FLICKER · BREATH · WOOD · PLUCK · BUBBLE · Dry renders</p>
+        <p id="factory-bank-intro" class="hero-note" hidden><span id="factory-bank-count">36 factory patches · six per voice</span><br><a href="#group-new-recipes" data-tab-link="range">Try the nine new recipes ↓</a></p>
       </div>
       <div class="instrument" aria-label="Wick's three-gate concept">
         <div class="instrument-topline"><span>WICK / 001</span><span>CAUSAL GATE NETWORK</span></div>
@@ -68,7 +69,7 @@
         <div class="group-host" data-host="held"></div>
       </div>
       <div id="panel-range" role="tabpanel" aria-labelledby="tab-range" data-panel="range" class="tab-panel" hidden>
-        <div class="panel-intro"><h3>Find its useful corners.</h3><p>Try the provisional recipes, register and velocity changes, and paired control settings. Each clip includes its exact patch or diagnostic recipe.</p></div>
+        <div class="panel-intro"><h3>Find its useful corners.</h3><p>The factory bank has six patches per voice. Nine new recipes complete the set and are ready for your listening review. Try them alongside the established variations, register and velocity changes, and paired control settings. Each clip includes its exact patch or diagnostic recipe.</p></div>
         <div class="group-host" data-host="range"></div>
       </div>
       <section class="feedback" aria-labelledby="feedback-title" hidden>
@@ -78,8 +79,8 @@
     </section>
 
     <section class="about wrap" aria-labelledby="about-title">
-      <div><p class="eyebrow">Work in progress</p><h2 id="about-title">An engine worth<br>listening into.</h2></div>
-      <div class="about-copy"><p>Wick is a provisional engine study for <a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true">↗</span></a>. <span id="audition-scope">RATTLE now uses Warm wire by default, with Hollow reed and Rubbed glass as saved variants. The five accepted voices remain available. Single notes, short musical phrases, and held sounds are all dry, with an empty effects chain.</span></p><p>This is a six-voice listening prototype. Its playable kit includes all three RATTLE bodies at C4. Hardware validation and the full preset bank remain separate work. Downloads preserve the exact patches, sequence recipes, and render evidence so the sounds can be reviewed and reproduced.</p><details class="build-details"><summary>Build & validation notes <span aria-hidden="true">+</span></summary><div id="build-info"><p>Loading build information…</p></div></details><div class="download-links"><a href="manifest.json" download>Audio manifest <span aria-hidden="true">↓</span></a><a id="source-study-download" href="source-study.json" download hidden>RATTLE body manifest <span aria-hidden="true">↓</span></a><a href="downloads/SnipSnap-Wick-Prototype-Kit.zip" download>Playable kit ZIP <span aria-hidden="true">↓</span></a><a href="downloads/wick-source.zip" download>Prototype source ZIP <span aria-hidden="true">↓</span></a></div></div>
+      <div><p class="eyebrow">Inside SnipSnap</p><h2 id="about-title">An engine worth<br>listening into.</h2></div>
+      <div class="about-copy"><p>Wick is a six-voice synthesis engine for <a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true">↗</span></a>. <span id="audition-scope">RATTLE uses Warm wire by default, with Hollow reed and Rubbed glass as saved variants. The established voices remain available. Single notes, short musical phrases, and held sounds are all dry, with an empty effects chain.</span></p><p>The complete factory bank contains 36 normal editable patches, six per voice. Nine new recipes extend the established sounds and await listening. The playable kit includes all three RATTLE bodies at C4. Downloads preserve the exact patches, sequence recipes, and render evidence. Phone performance and MPC hardware checks are reported separately in the validation notes.</p><details class="build-details"><summary>Build & validation notes <span aria-hidden="true">+</span></summary><div id="build-info"><p>Loading build information…</p></div></details><div class="download-links"><a href="manifest.json" download>Audio manifest <span aria-hidden="true">↓</span></a><a id="factory-bank-download" href="factory/wick-factory-patches.zip" download hidden>36-patch bank ZIP <span aria-hidden="true">↓</span></a><a id="source-study-download" href="source-study.json" download hidden>RATTLE body manifest <span aria-hidden="true">↓</span></a><a href="downloads/SnipSnap-Wick-Prototype-Kit.zip" download>Playable kit ZIP <span aria-hidden="true">↓</span></a><a href="downloads/wick-source.zip" download>Implementation source ZIP <span aria-hidden="true">↓</span></a></div></div>
     </section>
   </main>
   <footer class="footer wrap"><span>SnipSnap / Wick</span><span>A spark is only the beginning.</span><a href="#hero-title">Back to the top ↑</a></footer>

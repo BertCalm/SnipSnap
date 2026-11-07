@@ -105,7 +105,8 @@ object Cli {
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
         |                        --instrument [--release .02..3] exports C3..C5 held keys;
         |                        new instruments use model 4; saved model 3|4 recipes retain their renderer)
-        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; six factory recipes per voice;
+        |                         --midi 24..84 --velocity 0..1; saved RATTLE patches retain their body)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;

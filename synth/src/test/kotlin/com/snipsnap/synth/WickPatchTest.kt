@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-/** Recipes are the public persistence contract of this provisional engine. */
+/** Recipes are the public persistence contract of the six-voice engine. */
 class WickPatchTest {
     @Test
     fun `finite and held recipes save all controls requested note and velocity and regenerate exactly`() {
@@ -71,21 +71,23 @@ class WickPatchTest {
     }
 
     @Test
-    fun `provisional library remains outside factory routing and every recipe is valid and recoverable`() {
+    fun `factory library covers every voice and every recipe is valid and recoverable`() {
         val recipes = WickPresets.all()
-        assertEquals(27, recipes.size)
+        assertEquals(36, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
-        assertTrue(Presets.all().none { it.engine == WickPatch.ENGINE })
+        assertEquals(recipes, Presets.all().filter { it.engine == WickPatch.ENGINE })
+        assertTrue(WickPatch.ENGINE !in PatchTypes.PROTOTYPES && WickPatch.ENGINE !in PatchTypes.ROSTERLESS)
         for (voice in WickVoice.entries) {
-            assertEquals(when (voice) { WickVoice.BUBBLE -> 5; WickVoice.RATTLE -> 6; else -> 4 },
-                WickPresets.forVoice(voice).size)
+            assertEquals(6, WickPresets.forVoice(voice).size)
             assertEquals(recipes.filter { it.voice == voice }, WickPresets.forVoice(voice))
-            assertTrue(Presets.forVoice(WickPatch.ENGINE, voice.name).isEmpty())
-            assertTrue(WickPresets.forVoice(voice).any { Wick.isLoop(it.macros.getValue("HOLD")) }, "$voice has no held audition recipe")
+            assertEquals(WickPresets.forVoice(voice), Presets.forVoice(WickPatch.ENGINE, voice.name))
+            assertTrue(WickPresets.forVoice(voice).any { Wick.isLoop(it.macros.getValue("HOLD")) }, "$voice has no held factory recipe")
         }
+        assertTrue(Presets.forVoice(WickPatch.ENGINE, "MISSING").isEmpty())
         for (recipe in recipes) {
             assertEquals(Wick.defaults(recipe.voice).keys, recipe.macros.keys)
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(recipe.name), recipe.name)
+            assertEquals(recipe, Presets.byName(WickPatch.ENGINE, recipe.voiceName, recipe.name))
             assertEquals(recipe, Patches.fromJsonText(recipe.toJsonText()))
         }
     }

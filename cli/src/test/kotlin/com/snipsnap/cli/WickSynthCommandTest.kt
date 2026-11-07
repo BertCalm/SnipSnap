@@ -17,20 +17,21 @@ import kotlin.test.assertTrue
 
 class WickSynthCommandTest {
     @Test
-    fun `WICK all auditions use the provisional roster and native note and velocity`() {
+    fun `WICK all exports use the shared factory roster and native note and velocity`() {
         val dir = kotlin.io.path.createTempDirectory("wick-cli-all").toFile()
         try {
-            for (voice in listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)) {
-                assertTrue(Presets.forVoice("WICK", voice.name).isEmpty(), "CLI must find the provisional table directly")
+            for (voice in WickVoice.entries) {
+                val presets = WickPresets.forVoice(voice)
+                assertEquals(6, presets.size)
+                assertEquals(presets, Presets.forVoice("WICK", voice.name), "CLI and the app share the same factory table")
                 val output = ByteArrayOutputStream()
                 val voiceDir = File(dir, voice.name)
                 assertEquals(0, SynthCommand.run(
                     listOf("WICK", voice.name, "--all", "--midi", "72", "--velocity", "0.35", "--out", voiceDir.path),
                     PrintStream(output),
                 ))
-                val presets = WickPresets.forVoice(voice)
                 val wavs = voiceDir.listFiles { file -> file.extension == "wav" }!!.sortedBy { it.name }
-                assertEquals(presets.size, wavs.size, "--all exports each provisional $voice recipe")
+                assertEquals(presets.size, wavs.size, "--all exports each factory $voice recipe")
                 val expected = presets.first().copy(midi = 72, velocity = .35f)
                 val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
                 assertContentEquals(encoded, wavs.first().readBytes(), "both flags reach the $voice saved-recipe renderer")
@@ -64,7 +65,7 @@ class WickSynthCommandTest {
                     PrintStream(ByteArrayOutputStream()),
                 ))
                 val wav = dir.listFiles { file -> file.extension == "wav" }!!.single()
-                assertTrue("Slow_Feed" in wav.name, "--preset selects the second provisional BUBBLE recipe")
+                assertTrue("Slow_Feed" in wav.name, "--preset selects the second factory BUBBLE recipe")
                 val actual = wav.readBytes()
                 val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
                 assertContentEquals(encoded, actual, "CLI preserves unsupplied fields for $flags")

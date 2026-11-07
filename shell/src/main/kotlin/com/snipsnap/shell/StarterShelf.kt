@@ -53,7 +53,7 @@ object StarterShelf {
         Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel")),
         Group(
             Copy.STARTER_HEADING_MOVING,
-            listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay"),
+            listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),
         ),
     )
 
