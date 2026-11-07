@@ -1,5 +1,6 @@
 import java.util.Locale
 
+
 plugins {
     kotlin("jvm")
 }
@@ -459,4 +460,14 @@ tasks.register<JavaExec>("splitInstrumentPack") {
     mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/loop-instruments-pack", "--split")
+}
+
+tasks.register<JavaExec>("generateFilamentHaloAudition") {
+    group = "distribution"
+    description = "Capture CURL body/halo once and compare independent release from exported PCM24."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FilamentHaloAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("filamentHaloOutput").orElse("${rootDir}/testkit/filament-halo-release").get())
 }

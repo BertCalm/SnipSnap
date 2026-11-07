@@ -37,7 +37,7 @@ class InstrumentPlayer(context: Context) {
     private var framesOf: Map<String, Long> = emptyMap()
 
     /** A sounding voice: its key, and the gain its zone and velocity gave it before [volume]. */
-    private class Voice(val note: Int, val gain: Float)
+    private class Voice(val note: Int, val gain: Float, val zoneIndex: Int, val group: Int)
 
     /** Sounding voices by id, in the order they started - the oldest first. */
     private val voices = LinkedHashMap<Int, Voice>()
@@ -88,6 +88,7 @@ class InstrumentPlayer(context: Context) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
             }
+            if (i < 0) continue
             index[file] = i
             frames[file] = snip.frameCount.toLong()
         }
@@ -175,8 +176,10 @@ class InstrumentPlayer(context: Context) {
         reap()
         sendBend()
         val inst = instrument ?: return false
-        val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
-        val sample = sampleIndex[hit.sampleFile] ?: return false
+        val components = KeyHit.resolveAll(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] }
+        if (components.isEmpty()) return false
+        val hit = components.first().hit
+        val samples = components.map { sampleIndex[it.hit.sampleFile] ?: return false }.toIntArray()
         // LEAD and GLIDE are one voice: a new note takes every sounding one with it.
         // Released voices leave `voices` once noteOff ran, so a release tail is not choked by a new
         // LEAD/GLIDE note on the phone (the reference engine chokes it); a native choke is the owner's follow-up.
@@ -184,18 +187,24 @@ class InstrumentPlayer(context: Context) {
             for (id in voices.keys.toList()) NativePads.stopVoice(handle, id, PadEngine.CHOKE_FADE_MS)
             voices.clear()
         }
-        while (voices.size >= InstrumentEngine.MAX_VOICES) {
-            val oldest = voices.keys.first()
-            NativePads.stopVoice(handle, oldest, PadEngine.CHOKE_FADE_MS)
-            voices.remove(oldest)
+        while (voices.values.map { it.group }.distinct().size >= InstrumentEngine.MAX_VOICES) {
+            val oldest = voices.values.first().group
+            for (id in voices.filterValues { it.group == oldest }.keys.toList()) {
+                NativePads.stopVoice(handle, id, PadEngine.CHOKE_FADE_MS)
+                voices.remove(id)
+            }
         }
-        val id = nextVoice++
-        val queued = NativePads.noteOn(
-            handle, id, sample,
-            0L, hit.frames, hit.loopStartFrame, hit.gain * volume, hit.gain * volume, hit.pitchRatio,
-            reverse = false,
-        )
-        if (queued) voices[id] = Voice(note, hit.gain)
+        val group = nextVoice
+        val ids = IntArray(components.size) { nextVoice++ }
+        val gains = FloatArray(components.size) { components[it].hit.gain * volume }
+        val queued = if (components.size == 1) NativePads.noteOn(
+            handle, ids[0], samples[0], 0L, hit.frames, hit.loopStartFrame,
+            gains[0], gains[0], hit.pitchRatio, reverse = false,
+        ) else NativePads.noteOnLayers(handle, ids, samples, 0L, hit.frames, hit.loopStartFrame,
+            gains, gains, hit.pitchRatio, BooleanArray(components.size))
+        if (queued) components.forEachIndexed { i, component ->
+            voices[ids[i]] = Voice(note, component.hit.gain, component.zoneIndex, group)
+        }
         return queued
     }
 
@@ -203,9 +212,8 @@ class InstrumentPlayer(context: Context) {
     @Synchronized
     fun noteOff(note: Int) {
         if (!open) return
-        val release = instrument?.let { KeyHit.releaseMs(it) } ?: 1f
         for (id in voices.filterValues { it.note == note }.keys.toList()) {
-            NativePads.stopVoice(handle, id, release)
+            NativePads.stopVoice(handle, id, releaseMs(voices.getValue(id)))
             voices.remove(id)
         }
     }
@@ -213,9 +221,15 @@ class InstrumentPlayer(context: Context) {
     @Synchronized
     fun allOff() {
         if (!open) return
-        NativePads.allOff(handle, instrument?.let { KeyHit.releaseMs(it) } ?: 1f)
+        if (instrument?.zones?.any { it.release != null } == true) {
+            for ((id, voice) in voices) NativePads.stopVoice(handle, id, releaseMs(voice))
+        } else NativePads.allOff(handle, instrument?.let { KeyHit.releaseMs(it) } ?: 1f)
         voices.clear()
     }
+
+    private fun releaseMs(voice: Voice): Float = instrument?.let { inst ->
+        (inst.releaseFor(inst.zones[voice.zoneIndex]) * 1000f).coerceAtLeast(1f)
+    } ?: 1f
 
     /** Voices the engine reports ended (an unlooped zone playing out) leave the count. */
     private fun reap() {

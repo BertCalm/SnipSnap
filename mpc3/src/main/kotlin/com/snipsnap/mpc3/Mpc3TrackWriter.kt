@@ -735,7 +735,7 @@ class Mpc3TrackWriter(
             lowNote = kg?.lowNote ?: 0,
             highNote = kg?.highNote ?: 127,
             whichMuteGroup = 0,
-            synthSection = synthSection(filled, version = 15, sustained = filled, release = release),
+            synthSection = synthSection(filled, version = 15, sustained = filled, release = kg?.volumeRelease?.toDouble() ?: release),
             triggerMode = 2,
             layers = (0 until 8).map { slot ->
                 layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = kg?.rootNote ?: 0)
