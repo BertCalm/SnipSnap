@@ -18,10 +18,12 @@ import kotlin.math.pow
  * falling fastest at the start (an exponential, which is how an analog pitch envelope falls) toward
  * 2^(-DROP/12). The head position is the running sum of that speed, not a closed form, so the
  * pitch at output time t is exactly the speed at t. Because the head ends up slower than it began,
- * the pad comes out longer by up to 2x at DROP 12 (the same trade PITCH makes and the reason this
- * is a TRANSPORT stage: only that stage may add length, outside the rack's tail cap).
+ * the pad comes out longer: about 2x for a 12 semitone dive and up to 4x at the top of DROP (the
+ * same trade PITCH makes and the reason this is a TRANSPORT stage: only that stage may add length,
+ * outside the rack's tail cap).
  *
- * DROP is 0..12 semitones (continuous, not snapped: a dive is a glide, not an interval). OVER is how
+ * DROP is 0..[MAX_SEMITONES] semitones, two octaves (continuous, not snapped: a dive is a glide, not
+ * an interval), so its middle is the 12 semitone dive the owner chose for a tap. OVER is how
  * long the fall takes, 30 ms to 1 s on a log scale (the ear hears ratios of time), and means 95
  * percent of the fall (tau is a third of it). OVER's neutral is its default, so AMT, which walks a
  * character toward its neutral, shortens the dive by shrinking DROP and never moves OVER.
@@ -32,6 +34,14 @@ import kotlin.math.pow
  * Sits straight after PITCH, in the TRANSPORT stage, so SWELL's head, REVERSE and the whole rack
  * see the dived pad. Known hazards, not hidden: a tonal pad leaves its key (the pitch is where DROP
  * puts it, nothing re-snaps it), and a rim is 40 ms long, so the dive happens inside its click.
+ *
+ * For held sounds. At its gate (2026-11-07) the owner heard it on a snare, a tom, a rim and the CHUG
+ * guitar, each beside PITCH down six semitones, at 3, 6 and 12 semitones and with a 60 ms and a 500 ms
+ * fall: only the guitar sounded like a dive, and the drums were too short for one. So the 808-envelope
+ * use the pedal brainstorm hoped for did not survive the listen, nothing here tries to rescue a drum,
+ * and the chip is a pedal in front of the amp (a whammy bar's place), not a transport chip on every pad.
+ * The owner chose a 12 semitone dive at the default fall (about 170 ms) for a tap, which is why DROP
+ * reaches two octaves: at one octave a tap (AMT 70) could only reach 8.4 semitones.
  */
 object Dive {
 
@@ -40,8 +50,8 @@ object Dive {
         MacroSpec("OVER", 0.5f, neutral = 0.5f),  // how long the fall takes: FAST_SEC .. SLOW_SEC; its own neutral, so AMT never moves it
     )
 
-    /** The top of DROP. */
-    const val MAX_SEMITONES = 12f
+    /** The top of DROP: two octaves, so a tap (AMT 70) can reach the owner's 12 semitones with room above. */
+    const val MAX_SEMITONES = 24f
 
     /** The ends of OVER: 95 percent of the fall happens inside this time. */
     const val FAST_SEC = 0.03f
@@ -57,6 +67,9 @@ object Dive {
 
     /** The fall in semitones for a DROP macro. */
     fun semitones(drop: Float): Float = drop.coerceIn(0f, 1f) * MAX_SEMITONES
+
+    /** The DROP macro that falls [semitones] (the inverse of [semitones]). */
+    fun dropFor(semitones: Float): Float = (semitones / MAX_SEMITONES).coerceIn(0f, 1f)
 
     /** The time in seconds in which 95 percent of the fall is done, for an OVER macro (log scale). */
     fun overSec(over: Float): Float = FAST_SEC * (SLOW_SEC / FAST_SEC).pow(over.coerceIn(0f, 1f))

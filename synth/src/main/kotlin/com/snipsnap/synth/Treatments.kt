@@ -143,6 +143,14 @@ object Treatments {
         // A held sound's pedal: the choir (loud for 0.48 s, 2.6 cycles at 5.5 Hz) and the snare (0.09 s, half a cycle) are too short
         // for a vibrato to read, so nothing here tries to rescue them. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
         "vibratoed" to FxChain(vibrato = mapOf("DEPTH" to 1.0f)),
+        // DIVE: the pitch falls after the hit and holds there. The owner heard it at its gate (2026-11-07) on a snare, a tom, a rim
+        // and the CHUG guitar, and only the guitar sounded like a dive: the drums were too short for one. They chose a 12 semitone
+        // dive at the default fall (about 170 ms) for a tap. A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and
+        // BoardSheet.DEFAULT_AMOUNT, which synth cannot see; PadSheetTest pins that they still land here) and DROP fades linearly
+        // toward 0, so DROP 0.5 / 0.7 makes a tap DROP 0.5: 12 of DIVE's 24 semitones (the ROOM chip's lesson, set so the tap lands
+        // on the heard setting). AMT 1 falls about 17 semitones. OVER is left at its default, which is also its neutral, so AMT
+        // never moves the fall time. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
+        "dived" to FxChain(dive = mapOf("DROP" to 0.5f / 0.7f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

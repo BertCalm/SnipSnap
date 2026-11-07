@@ -11,13 +11,14 @@ import java.util.Locale
  * pad, PITCH down six semitones (the nearest thing the rack has today: one fixed ratio, no fall),
  * DIVE at three depths (3, 6 and 12 semitones, at the default fall of about 170 ms) and at six
  * semitones with a fast (60 ms) and a slow (500 ms) fall. CHUG is heard as the kit has it and DIVE sits
- * before its amp, in the rig order. Every clip shares one loudness ([AuditionLevel]). Run via
+ * before its amp, in the rig order. Clips are named in semitones, so widening DROP to two octaves after the
+ * gate (2026-11-07) left them exactly as heard. Every clip shares one loudness ([AuditionLevel]). Run via
  * `./gradlew :synth:generateDiveAudition`.
  */
 object DiveAuditionGenerator {
 
     /** The DROP macros heard: 3, 6 and 12 semitones. */
-    internal val DROPS = listOf(0.25f to "3st", 0.5f to "6st", 1f to "12st")
+    internal val DROPS = listOf(Dive.dropFor(3f) to "3st", Dive.dropFor(6f) to "6st", Dive.dropFor(12f) to "12st")
 
     /** OVER macros for a 60 ms and a 500 ms fall. */
     internal val FAST = Dive.overFor(0.06f)
@@ -50,8 +51,8 @@ object DiveAuditionGenerator {
             val clips = linkedMapOf<String, Snip>("dry" to dry)
             clips["pitch_down_6st"] = put("speed", PITCHED)
             for ((drop, label) in DROPS) clips["dive_$label"] = put("dive", mapOf("DROP" to drop))
-            clips["dive_6st_fast"] = put("dive", mapOf("DROP" to 0.5f, "OVER" to FAST))
-            clips["dive_6st_slow"] = put("dive", mapOf("DROP" to 0.5f, "OVER" to SLOW))
+            clips["dive_6st_fast"] = put("dive", mapOf("DROP" to Dive.dropFor(6f), "OVER" to FAST))
+            clips["dive_6st_slow"] = put("dive", mapOf("DROP" to Dive.dropFor(6f), "OVER" to SLOW))
 
             val dir = File(root, name).apply { mkdirs() }
             for ((id, clip) in clips) {

@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.sin
 import kotlin.test.Test
@@ -68,7 +69,7 @@ class DiveTest {
         val three = Snip(floatArrayOf(0.5f, -0.5f, 0.25f), 1, rate)
         val tiny = Dive.process(three, mapOf("DROP" to 1f, "OVER" to 0f))
         assertTrue(tiny.samples.all { it.isFinite() }, "a three-frame pad broke the render")
-        assertTrue(tiny.frameCount >= 1 && tiny.frameCount <= 2 * three.frameCount + 2, "a three-frame pad came out ${tiny.frameCount} frames")
+        assertTrue(tiny.frameCount >= 1 && tiny.frameCount <= 4 * three.frameCount + 2, "a three-frame pad came out ${tiny.frameCount} frames")
         for (bad in listOf(Float.NaN, Float.POSITIVE_INFINITY)) {
             val out = Dive.process(snare, mapOf("DROP" to bad, "OVER" to bad))
             assertTrue(out.samples.all { it.isFinite() }, "a non-finite macro broke the render")
@@ -79,7 +80,7 @@ class DiveTest {
     @Test
     fun `the pitch falls on the exponential law, fastest at the hit, and holds at DROP semitones`() {
         val pad = tone(4f)
-        val drop = 0.5f   // 6 semitones
+        val drop = Dive.dropFor(6f)
         val over = 0.5f
         val out = Dive.process(pad, mapOf("DROP" to drop, "OVER" to over))
         val track = centsTrack(out.samples, 220.0)
@@ -104,7 +105,7 @@ class DiveTest {
     fun `OVER sets how long the fall takes`() {
         val pad = tone(5f)
         for (over in listOf(0.2f, 0.5f, 0.8f)) {
-            val track = centsTrack(Dive.process(pad, mapOf("DROP" to 1f, "OVER" to over)).samples, 220.0)
+            val track = centsTrack(Dive.process(pad, mapOf("DROP" to Dive.dropFor(12f), "OVER" to over)).samples, 220.0)
             val target = -0.95 * 1200.0
             val reached = track.first { it.second <= target }.first
             val sec = Dive.overSec(over)
@@ -119,15 +120,19 @@ class DiveTest {
     @Test
     fun `the attack is read at its own pitch, and the pad grows as a lower pitch does`() {
         val pad = tone(2f)
-        val out = Dive.process(pad, mapOf("DROP" to 1f, "OVER" to 0.5f))
+        val out = Dive.process(pad, mapOf("DROP" to Dive.dropFor(12f), "OVER" to 0.5f))
         for (f in 0 until 8) assertEquals(pad.samples[f], out.samples[f], 5e-3f, "frame $f of the attack moved")
-        // The head ends up at half speed, so the pad is nearly twice as long, never more than twice.
+        // After a 12 semitone dive the head reads at half speed, so the pad is nearly twice as long, never more than twice.
         val ratio = out.frameCount.toDouble() / pad.frameCount
-        println("DIVE DROP 1: ${pad.frameCount} -> ${out.frameCount} frames, x${"%.3f".format(ratio)}")
+        println("DIVE 12 semitones: ${pad.frameCount} -> ${out.frameCount} frames, x${"%.3f".format(ratio)}")
         assertTrue(ratio in 1.85..2.0, "a 12 semitone dive made the pad x$ratio")
-        val half = Dive.process(pad, mapOf("DROP" to 0.5f, "OVER" to 0.5f))
+        val half = Dive.process(pad, mapOf("DROP" to Dive.dropFor(6f), "OVER" to 0.5f))
         val halfRatio = half.frameCount.toDouble() / pad.frameCount
         assertTrue(halfRatio in 1.3..1.4143, "a 6 semitone dive made the pad x$halfRatio")
+        // The top of DROP is two octaves: a quarter speed, so up to four times as long.
+        val full = Dive.process(pad, mapOf("DROP" to 1f, "OVER" to 0.5f))
+        val fullRatio = full.frameCount.toDouble() / pad.frameCount
+        assertTrue(fullRatio in 3.6..4.0, "a 24 semitone dive made the pad x$fullRatio")
     }
 
     @Test
@@ -137,6 +142,28 @@ class DiveTest {
             assertEquals(pad.peak(), out.peak(), 0.02f, "the dive changed the loudness")
             assertTrue(out.frameCount > pad.frameCount, "the pad did not grow")
         }
+    }
+
+    @Test
+    fun `a tap of the DIVE chip drops the pitch the 12 semitones the owner chose, and AMT walks the depth alone`() {
+        val tap = 0.7f
+        val pad = tone(3f)
+        assertEquals(setOf("DROP"), Treatments.chain("dived").dive!!.keys, "the dived character set more than DROP")
+        fun settled(amount: Float): Double = meanCents(centsTrack(Treatments.apply("dived", pad, amount).snip.samples, 220.0), 1.3, 1.7)
+        println("DIVE chip: tap ${"%.1f".format(settled(tap))} cents, AMT 1 ${"%.1f".format(settled(1f))}, AMT 0.35 ${"%.1f".format(settled(0.35f))}")
+        assertEquals(-1200.0, settled(tap), 3.0, "a tap no longer drops the 12 semitones the owner chose")
+        assertEquals(-100.0 * Dive.MAX_SEMITONES * (0.5 / 0.7), settled(1f), 4.0, "AMT 1 is not the full character")
+        assertTrue(settled(0.35f) > settled(tap), "a lower AMT did not shrink the dive")
+        // The tap is the 12 semitone clip the owner heard (DROP 0.5 at the default fall), up to the float rounding of 0.5 / 0.7 x 0.7.
+        assertEquals(0.5f, Treatments.chain("dived", tap).dive!!.getValue("DROP"), 1e-6f, "the tap's DROP is not the heard 12 semitones")
+        val guitar = Magnet.render(MagnetVoice.CHUG)
+        val heard = Dive.process(guitar, mapOf("DROP" to Dive.dropFor(12f))).samples
+        val tapped = Treatments.apply("dived", guitar, tap).snip.samples
+        assertTrue(abs(heard.size - tapped.size) <= 2, "the tap's length differs from the heard clip: ${tapped.size} vs ${heard.size}")
+        var worst = 0f
+        for (i in 0 until minOf(heard.size, tapped.size)) worst = maxOf(worst, abs(heard[i] - tapped[i]))
+        assertTrue(worst < 1e-3f, "the tap is not the heard dive: worst sample difference $worst")
+        assertContentEquals(guitar.samples, Treatments.apply("dived", guitar, 0f).snip.samples, "AMT 0 is not a copy")
     }
 
     @Test
