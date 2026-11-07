@@ -100,11 +100,13 @@ object Cli {
         |                         MATCH requires model 2+; LOSS requires model 3+; model 4 adds a dry release;
         |                         finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
-        |                        (OHM STRING: five finite family encounters; --midi 48..72
+        |                        (OHM STRING: five original encounters plus five Reply/Ring choices; --midi 48..72
         |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
         |                        --instrument [--release .02..3] exports C3..C5 held keys;
-        |                        new instruments use model 4; saved model 3|4 recipes retain their renderer)
+        |                        source instruments use model 4; saved model 3|4 recipes retain their renderer;
+        |                        --model 5 or --ohm-reply 0..1 / --ohm-ring 0..1 select seven-second finite replies;
+        |                        model 5 --instrument has note-off release and no sustain loop)
         |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;

@@ -168,7 +168,7 @@ object SynthKits {
      * a long tail is not a held loop and must remain available to IN KEY.
      */
     fun ohm(): List<ArrangedPad?> {
-        val encounters = OhmPresets.all().associateBy { it.name }
+        val encounters = OhmPresets.all().filter { it.model == 2 }.associateBy { it.name }
         fun note(name: String, midi: Int): ArrangedPad {
             val original = encounters.getValue(name)
             val displayName = "$name ${Scales.nameOf(midi)}"

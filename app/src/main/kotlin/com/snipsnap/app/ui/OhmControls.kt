@@ -45,8 +45,8 @@ import kotlinx.coroutines.launch
 
 /** Legacy encounters change model only through the player's explicit EXTEND action. */
 internal fun extendedOhmPatch(patch: OhmPatch): OhmPatch = if (patch.model >= 3) patch else patch.copy(
-    model = Ohm.MODEL_VERSION,
-    macros = Ohm.defaults(Ohm.MODEL_VERSION) + patch.macros,
+    model = Ohm.SOURCE_MODEL,
+    macros = Ohm.defaults(Ohm.SOURCE_MODEL) + patch.macros,
 )
 
 /**
@@ -82,7 +82,9 @@ internal fun OhmControls(
                     val read = WavReader.readCapped(File(kitEntry.dir, pad.sampleFile), 2f)
                     OhmCapture.fromSnip(read.snip, (pad.displayName ?: PadBanks.tag(pad.slot)).take(64))
                 }
-                val latest = extendedOhmPatch(currentPatch)
+                val latest = currentPatch
+                // A preset can change while decoding. Its saved source capabilities win.
+                if (!Ohm.supportsSources(latest.model)) return@launch
                 changePatch(latest.copy(options = latest.options.copy(exciter = OhmExciter.CAPTURED, capture = capture)))
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -99,16 +101,29 @@ internal fun OhmControls(
             label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
             onValueChange = { changePatch(currentPatch.copy(velocity = it.coerceIn(0f, 1f))) },
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (gesture in OhmGesture.entries) {
-                ActionButton(
-                    gesture.name, scheme, enabled = !busy, lit = patch.gesture == gesture,
-                    modifier = Modifier.weight(1f).semantics { selected = patch.gesture == gesture },
-                    accessibilityLabel = "OHM ${gesture.name}",
-                ) { changePatch(currentPatch.copy(gesture = gesture)) }
+        if (patch.model < 5) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (gesture in OhmGesture.entries) {
+                    ActionButton(
+                        gesture.name, scheme, enabled = !busy, lit = patch.gesture == gesture,
+                        modifier = Modifier.weight(1f).semantics { selected = patch.gesture == gesture },
+                        accessibilityLabel = "OHM ${gesture.name}",
+                    ) { changePatch(currentPatch.copy(gesture = gesture)) }
+                }
             }
         }
-        if (patch.model < 3) {
+        if (patch.model == 5) {
+            MacroSlider("REPLY", patch.reply, fillColor, scheme, onValueChange = {
+                changePatch(currentPatch.copy(reply = it.coerceIn(0f, 1f)))
+            })
+            TapeText("COMPANION ENTRY TIMING: CLOSER TO FARTHER APART.",
+                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            MacroSlider("RING", patch.ring, fillColor, scheme, onValueChange = {
+                changePatch(currentPatch.copy(ring = it.coerceIn(0f, 1f)))
+            })
+            TapeText("COMPANION DURATION: SHORT TO LONG.",
+                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        } else if (patch.model < 3) {
             TapeText(
                 when {
                     (patch.macros["MEDDLING"] ?: .55f) == 0f -> "ONE FINITE NOTE. MEDDLING AT ZERO PLAYS SOLO."
@@ -120,11 +135,11 @@ internal fun OhmControls(
                 modifier = Modifier.fillMaxWidth(), accessibilityLabel = "OHM EXTEND") {
                 changePatch(extendedOhmPatch(currentPatch))
             }
-        } else {
+        } else if (Ohm.supportsSources(patch.model)) {
             if (patch.model == 3) {
                 LabButton("UPDATE SOURCES", scheme, enabled = !busy,
                     modifier = Modifier.fillMaxWidth(), accessibilityLabel = "OHM UPDATE SOURCES") {
-                    changePatch(currentPatch.copy(model = Ohm.MODEL_VERSION))
+                    changePatch(currentPatch.copy(model = Ohm.SOURCE_MODEL))
                 }
             }
             TapeText("EXCITER", TapeType.pixelSmall, scheme.ink2.tape)

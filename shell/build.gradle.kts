@@ -184,6 +184,17 @@ tasks.register<JavaExec>("generateOhmExpandedHandoff") {
     args(providers.gradleProperty("ohmExpandedHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-handoff")
 }
 
+/** The five approved finite OHM Reply/Ring factories through the production keygroup exporter. */
+tasks.register<JavaExec>("generateOhmReplyRingHandoff") {
+    group = "distribution"
+    description = "Export five OHM Reply/Ring keygroups, 45 finite native zones, replay recipes and a verified MPC 2/3 ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OhmReplyRingHandoffGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("ohmReplyRingHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-reply-ring-handoff")
+}
+
 /** Package and play the approved CREASE sounds as continuous-onset held keys. */
 tasks.register<JavaExec>("generateCreaseKeysAudition") {
     group = "distribution"
