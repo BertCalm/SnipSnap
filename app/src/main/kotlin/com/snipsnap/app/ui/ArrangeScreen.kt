@@ -282,6 +282,7 @@ fun ArrangeScreen(
                     sections = currentPlan.sections,
                     readoutIndex = readoutIndex,
                     activeIndex = if (playing) activeIndex else null,
+                    names = keeper.names,
                     onTap = { keeper.selected = it },
                     modifier = Modifier.weight(1f),
                 )
@@ -313,6 +314,7 @@ private fun SectionList(
     sections: List<Arranger.Section>,
     readoutIndex: Int,
     activeIndex: Int?,
+    names: Map<Int, String>,
     onTap: (Int) -> Unit,
     modifier: Modifier,
 ) {
@@ -329,6 +331,7 @@ private fun SectionList(
                 section = section,
                 selected = i == readoutIndex,
                 active = i == activeIndex,
+                names = names,
                 onTap = { onTap(i) },
             )
         }
@@ -416,7 +419,7 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
             ) { keeper.toggleLock() }
         }
         if (picking && section != null && !busy) {
-            ClipPicker(keeper.picks, current = section.ref) { ref ->
+            ClipPicker(keeper.picks, current = section.ref, names = keeper.names) { ref ->
                 picking = false
                 keeper.swap(ref)
             }
@@ -436,7 +439,7 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
 
 /** Every clip the kit can play, as chips in a row that scrolls. The one in use is lit and says NOW. */
 @Composable
-private fun ClipPicker(picks: List<Arranger.Pick>, current: String, onPick: (String) -> Unit) {
+private fun ClipPicker(picks: List<Arranger.Pick>, current: String, names: Map<Int, String>, onPick: (String) -> Unit) {
     val scheme = LocalScheme.current
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -444,7 +447,7 @@ private fun ClipPicker(picks: List<Arranger.Pick>, current: String, onPick: (Str
     ) {
         for (pick in picks) {
             val now = pick.ref == current
-            val name = Copy.songClipLabel(pick.ref)
+            val name = Copy.songClipLabel(pick.ref, names)
             ActionButton(
                 if (now) "$name · ${Copy.SONG_PICK_NOW}" else name,
                 scheme,
@@ -463,6 +466,7 @@ private fun SectionRow(
     section: Arranger.Section,
     selected: Boolean,
     active: Boolean,
+    names: Map<Int, String>,
     onTap: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -483,7 +487,7 @@ private fun SectionRow(
             )
             .semantics { this.selected = selected }
             .tapeClick(
-                label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.songClipLabel(section.ref)}, " +
+                label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.songClipLabel(section.ref, names)}, " +
                     "${Copy.countOf(section.repeats, "TIME", "TIMES")}, ${Copy.countOf(section.bars, "BAR", "BARS")}" +
                     if (section.locked) ", ${Copy.SONG_LOCKED}" else "",
             ) { onTap() }
@@ -506,7 +510,7 @@ private fun SectionRow(
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            TapeText("${Copy.songClipLabel(section.ref)} ×${section.repeats}", TapeType.pixelSmall, scheme.ink.tape)
+            TapeText("${Copy.songClipLabel(section.ref, names)} ×${section.repeats}", TapeType.pixelSmall, scheme.ink.tape)
             TapeText(Copy.countOf(section.bars, "BAR", "BARS"), TapeType.pixelSmall, scheme.ink2.tape)
         }
     }

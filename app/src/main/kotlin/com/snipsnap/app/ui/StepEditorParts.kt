@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -40,11 +41,14 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.pressedBevel
+import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.kit.GrooveBars
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.StepHistory
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
@@ -66,6 +70,9 @@ import kotlin.math.roundToInt
  * plain class plus private-to-the-module composables that each take one state
  * object, and the model lives in GrooveEdit where a JVM test can reach it.
  */
+
+/** DOUBLE stops here: the editor's bar tabs hold this many. A clip may hold up to 64 ([GrooveBars.MAX_BARS]) and HALF works on any even count. */
+internal const val STEP_EDITOR_MAX_BARS = 8
 
 /**
  * What the editor asks of its host: a [change] to apply to the open program
@@ -117,15 +124,52 @@ internal class StepEditorState(
         if (stored != null && !touched) lanePads = stored
     }
 
+    /** What one undo goes back to: the clip and the lane map as they were before an edit. */
+    private class Before(val clip: Mpc3Clip, val pads: List<Int>)
+
+    private val history = StepHistory<Before>()
+
+    /** How many step edits can be undone now; read by the UNDO STEP EDIT button. */
+    var undoDepth: Int by mutableIntStateOf(0)
+        private set
+
+    /** The bar COPY BAR took, for PASTE BAR; none until one is copied. Kept for this program's visit to the editor. */
+    var copied: GrooveBars.BarCopy? by mutableStateOf(null)
+        private set
+
+    /**
+     * [change] with one more thing done when the host applies it: the clip it
+     * was applied to goes on the undo stack, unless the change did nothing.
+     * The host calls this with the live clip, so the stack holds what was
+     * really there, not what the editor last drew.
+     */
+    fun recorded(change: (Mpc3Clip) -> Mpc3Clip): (Mpc3Clip) -> Mpc3Clip = { before ->
+        val after = change(before)
+        if (after != before) pushBefore(before, lanePads)
+        after
+    }
+
+    private fun pushBefore(clip: Mpc3Clip, pads: List<Int>) {
+        history.push(Before(clip, pads))
+        undoDepth = history.size
+    }
+
     /** Lane [lane] now plays [slot]; written to groove.json beside the clips, off the main thread. */
     fun assign(lane: GrooveEdit.Lane, slot: Int) {
         touched = true
-        val next = GrooveEdit.setLanePad(lanePads, lane, slot)
+        val before = lanePads
+        val next = GrooveEdit.setLanePad(before, lane, slot)
         lanePads = next
         pickLane = null
         selLane = null
         selStep = -1
-        onEdit(StepEdit(previewSlot = slot))
+        // A lane change is undoable too, though the clip does not change: the change rides along only to record it.
+        val record: ((Mpc3Clip) -> Mpc3Clip)? = if (next == before) null else { clip -> pushBefore(clip, before); clip }
+        onEdit(StepEdit(change = record, previewSlot = slot))
+        if (next != before) persistPads()
+    }
+
+    private fun persistPads() {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 withContext(NonCancellable + Dispatchers.IO) {
@@ -139,6 +183,91 @@ internal class StepEditorState(
                 onEdit(StepEdit(toast = Copy.STEP_PADS_NOT_SAVED))
             }
         }
+    }
+
+    /** UNDO STEP EDIT: the clip and the lane map go back to before the last edit. */
+    fun undo() {
+        if (history.size == 0) {
+            onEdit(StepEdit(toast = Copy.STEP_NOTHING_TO_UNDO))
+            return
+        }
+        pickLane = null
+        clearSelection()
+        onEdit(
+            StepEdit(
+                change = { live ->
+                    val back = history.pop()
+                    undoDepth = history.size
+                    if (back == null) {
+                        live
+                    } else {
+                        if (back.pads != lanePads) {
+                            touched = true
+                            lanePads = back.pads
+                            persistPads()
+                        }
+                        back.clip
+                    }
+                },
+                toast = Copy.STEP_UNDONE,
+            ),
+        )
+    }
+
+    fun copyBar(clip: Mpc3Clip, bar: Int) {
+        copied = GrooveBars.copyBar(clip, bar)
+        onEdit(StepEdit(toast = Copy.stepBarCopied(bar + 1)))
+    }
+
+    fun pasteBar(clip: Mpc3Clip, bar: Int) {
+        val bars = copied ?: return
+        if (!GrooveBars.fits(clip, bars)) {
+            onEdit(StepEdit(toast = Copy.STEP_PASTE_WRONG_LENGTH))
+            return
+        }
+        clearSelection()
+        onEdit(
+            StepEdit(
+                change = recorded { live -> if (bar in 0 until live.bars) GrooveBars.pasteBar(live, bar, bars) else live },
+                toast = Copy.stepBarPasted(bar + 1),
+            ),
+        )
+    }
+
+    fun doubleLength(clip: Mpc3Clip) {
+        if (!GrooveBars.canDouble(clip, STEP_EDITOR_MAX_BARS)) {
+            onEdit(StepEdit(toast = Copy.stepDoubleFull(STEP_EDITOR_MAX_BARS)))
+            return
+        }
+        onEdit(StepEdit(change = recorded { GrooveBars.doubled(it, STEP_EDITOR_MAX_BARS) }, toast = Copy.stepDoubled(clip.bars * 2)))
+    }
+
+    fun halveLength(clip: Mpc3Clip) {
+        if (!GrooveBars.canHalve(clip)) {
+            onEdit(StepEdit(toast = Copy.STEP_CANT_HALVE))
+            return
+        }
+        pickLane = null
+        clearSelection()
+        onEdit(StepEdit(change = recorded { GrooveBars.halved(it) }, toast = Copy.stepHalved(clip.bars / 2)))
+    }
+
+    /** APPLY SWING: [percent] baked into the notes, from their straight positions ([GrooveEdit.bakeSwing]). */
+    fun applySwing(percent: Int) {
+        onEdit(StepEdit(change = recorded { GrooveEdit.bakeSwing(it, percent) }, toast = Copy.stepSwingBaked(percent)))
+    }
+
+    /** Back with a panel open closes that panel; false when there was none, so the caller leaves the editor. */
+    fun closePanel(): Boolean {
+        if (pickLane != null) {
+            pickLane = null
+            return true
+        }
+        if (selLane != null && selStep >= 0) {
+            clearSelection()
+            return true
+        }
+        return false
     }
 
     fun select(lane: GrooveEdit.Lane, step: Int) {
@@ -186,8 +315,10 @@ internal fun Modifier.velocityFill(velocity: Float?, color: Color): Modifier =
     }
 
 /**
- * Either the pad picker (a lane's name was tapped) or the step-detail strip
- * (a step was held), or nothing. Shown below the grid.
+ * The pad picker (a lane's name was tapped) or the step-detail strip (a step
+ * was held) when one is open, and the tools under it always. Shown below the
+ * grid. System back closes an open picker or strip, and only then leaves the
+ * editor ([onDone]).
  */
 @Composable
 internal fun StepEditorPanel(
@@ -197,14 +328,56 @@ internal fun StepEditorPanel(
     scheme: Scheme,
     laneNames: Map<GrooveEdit.Lane, String>,
     editorBar: Int,
+    swingPercent: Int,
     onEdit: (StepEdit) -> Unit,
+    onDone: () -> Unit,
 ) {
+    // Registered after the screen's own, so it is asked first; it hands back to DONE's own function when no panel is open.
+    BackHandler(onBack = { if (!state.closePanel()) onDone() })
     val pick = state.pickLane
     val sel = state.selLane
-    if (pick != null) {
-        LanePadPicker(state, pick, clip, kit, scheme, laneNames.getValue(pick))
-    } else if (sel != null && state.selStep >= 0) {
-        StepDetailStrip(state, sel, clip, scheme, laneNames.getValue(sel), editorBar, onEdit)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (pick != null) {
+            LanePadPicker(state, pick, clip, kit, scheme, laneNames.getValue(pick))
+        } else if (sel != null && state.selStep >= 0) {
+            StepDetailStrip(state, sel, clip, scheme, laneNames.getValue(sel), editorBar, onEdit)
+        }
+        StepTools(state, clip, scheme, editorBar, swingPercent)
+    }
+}
+
+/**
+ * The tools, two rows of three: undo, bar copy and paste, then length and
+ * swing. A tool that cannot do anything now is dimmed, not hidden, so the
+ * rows do not move.
+ */
+@Composable
+private fun StepTools(state: StepEditorState, clip: Mpc3Clip, scheme: Scheme, editorBar: Int, swingPercent: Int) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            StepToolButton(Copy.STEP_UNDO, scheme, state.undoDepth > 0, Modifier.weight(1.3f)) { state.undo() }
+            StepToolButton(Copy.STEP_COPY_BAR, scheme, true, Modifier.weight(1f)) { state.copyBar(clip, editorBar) }
+            StepToolButton(Copy.STEP_PASTE_BAR, scheme, state.copied != null, Modifier.weight(1f)) { state.pasteBar(clip, editorBar) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            StepToolButton(Copy.STEP_DOUBLE, scheme, GrooveBars.canDouble(clip, STEP_EDITOR_MAX_BARS), Modifier.weight(1f)) { state.doubleLength(clip) }
+            StepToolButton(Copy.STEP_HALF, scheme, GrooveBars.canHalve(clip), Modifier.weight(1f)) { state.halveLength(clip) }
+            StepToolButton(Copy.stepApplySwing(swingPercent), scheme, true, Modifier.weight(1.3f)) { state.applySwing(swingPercent) }
+        }
+    }
+}
+
+@Composable
+private fun StepToolButton(label: String, scheme: Scheme, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .raisedBevel(scheme)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        FitTapeText(label, TapeType.pixelSmall, if (enabled) scheme.ink.tape else scheme.ink3.tape)
     }
 }
 
@@ -308,7 +481,7 @@ internal fun StepDetailStrip(
                             .tapeClick(label = Copy.stepVelocitySpoken(name)) {
                                 onEdit(
                                     StepEdit(
-                                        change = { GrooveEdit.setStepVelocity(it, lane, step, level.velocity, state.lanePads) },
+                                        change = state.recorded { GrooveEdit.setStepVelocity(it, lane, step, level.velocity, state.lanePads) },
                                         previewSlot = pads[lane.ordinal],
                                         previewVelocity = level.velocity,
                                     ),
@@ -358,9 +531,7 @@ internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: Lis
         val out = HashMap<Int, Float>()
         for (n in clip.notes) {
             if (n.note != note) continue
-            val at = n.timePulses
-            if (at % GrooveEdit.STEP_PULSES != 0L) continue
-            val col = (at / GrooveEdit.STEP_PULSES).toInt() - bar * barSteps
+            val col = GrooveEdit.cellOf(n.timePulses) - bar * barSteps
             if (col in 0 until barSteps) out[col] = maxOf(out[col] ?: 0f, n.velocity)
         }
         out
@@ -370,9 +541,7 @@ internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: Lis
 internal fun offLaneVelocities(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: List<Int>): Map<Int, Float> {
     val out = HashMap<Int, Float>()
     for (n in GrooveEdit.offLaneNotes(clip, pads)) {
-        val at = n.timePulses
-        if (at % GrooveEdit.STEP_PULSES != 0L) continue
-        val col = (at / GrooveEdit.STEP_PULSES).toInt() - bar * barSteps
+        val col = GrooveEdit.cellOf(n.timePulses) - bar * barSteps
         if (col in 0 until barSteps) out[col] = maxOf(out[col] ?: 0f, n.velocity)
     }
     return out
@@ -385,14 +554,13 @@ internal fun offLaneVelocities(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: Li
  */
 internal fun toggledStep(clip: Mpc3Clip, lane: GrooveEdit.Lane, step: Int, state: StepEditorState): StepEdit {
     val note = GrooveEdit.noteFor(lane, state.lanePads)
-    val pulses = step * GrooveEdit.STEP_PULSES
-    val turningOn = clip.notes.none { it.note == note && it.timePulses == pulses }
+    val turningOn = clip.notes.none { it.note == note && GrooveEdit.cellOf(it.timePulses) == step }
     return StepEdit(
-        change = { GrooveEdit.toggleStep(it, lane, step, state.lanePads) },
+        change = state.recorded { GrooveEdit.toggleStep(it, lane, step, state.lanePads) },
         previewSlot = if (turningOn) state.lanePads[lane.ordinal] else null,
     )
 }
 
 /** CLEAR BAR for [bar], on the live clip and the live lane map. */
 internal fun clearedBar(bar: Int, state: StepEditorState): StepEdit =
-    StepEdit(change = { GrooveEdit.clearBar(it, bar, state.lanePads) }, toast = Copy.BAR_WIPED)
+    StepEdit(change = state.recorded { GrooveEdit.clearBar(it, bar, state.lanePads) }, toast = Copy.BAR_WIPED)

@@ -600,6 +600,7 @@ scripts/__pycache__/
 
 # Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
 testkit/apsis-populations/
+testkit/apsis-acceptance/
 testkit/obliterate-board/
 
 # Accord's regenerable native audio, numerical sweeps and MPC exports.
@@ -658,3 +659,5 @@ testkit/obbligato-performance-audition/
 
 # Model-2 Relay musical listening exports.
 /testkit/relay-pulse-musical-audition/
+
+testkit/dive-audition/

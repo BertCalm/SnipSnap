@@ -1215,7 +1215,13 @@ rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH
 (the transport itself: a varispeed head snapped to semitones, native at
 the centre, running before everything else so the whole rack — SWELL's
-stretched head and REVERSE's flip included — sees the pitched sound), EQ
+stretched head and REVERSE's flip included — sees the pitched sound), DIVE
+(the transport again, moving: the head reads at the pad's own pitch on the hit and
+slows on an exponential, so the pitch falls DROP semitones, 0 to 24, fastest at the
+hit, over OVER, 30 ms to 1 s, and holds there, the pad growing as a lower pitch does;
+the DIVE pedal, the `dived` character, drops 12 semitones over about 170 ms at a tap
+(AMT 70), in front of the amp where a whammy bar lives, for held sounds: a snare, a tom
+and a rim are too short for a dive), EQ
 (three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
@@ -1278,7 +1284,7 @@ clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
-share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
+share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
 dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,

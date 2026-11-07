@@ -102,13 +102,14 @@ class GrooveScreenTest : ComposeScreenTest() {
         kitDirs += dir
         WavWriter.write(File(dir, "kick.wav"), Snip(FloatArray(4410), channels = 1, sampleRate = WavWriter.MPC_SAMPLE_RATE))
         val base = Mpc3Clip(BASE_NAME, bars = 1, notes = listOf(Mpc3Note(note = 36, timePulses = 0L, velocity = 1f)))
-        // One note each, at a different step, so the programs are not
-        // merely differently named copies of each other.
+        // One note each, at a different step (or, past fifteen, on a
+        // different pad), so the programs are not merely differently named
+        // copies of each other and every note stays inside the one bar.
         val yours = (0 until userPrograms).map { i ->
             Mpc3Clip(
                 GrooveEdit.progEName(BASE_NAME, i),
                 bars = 1,
-                notes = listOf(Mpc3Note(note = 36, timePulses = GrooveEdit.STEP_PULSES * (i + 1), velocity = 1f)),
+                notes = listOf(Mpc3Note(note = 36 + i / 15, timePulses = GrooveEdit.STEP_PULSES * (i % 15 + 1), velocity = 1f)),
             )
         }
         GrooveStore.save(dir, listOf(base) + yours)
@@ -200,7 +201,7 @@ class GrooveScreenTest : ComposeScreenTest() {
             if (i > 0) tap(PROG_NAMES[i])
             if (i == YOURS_INDEX) {
                 // With more than one of yours the count replaces the sub.
-                assertReadsInFull("PROGRAM · " + Copy.yoursOf(1, GrooveEdit.MAX_USER_PROGRAMS))
+                assertReadsInFull("PROGRAM · " + Copy.yoursOf(1, GrooveEdit.MAX_USER_PROGRAMS, listed = true))
             } else {
                 assertReadsInFull("PROGRAM · $sub")
             }

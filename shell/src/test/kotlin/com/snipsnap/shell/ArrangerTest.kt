@@ -6,9 +6,11 @@ import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.AnswerStore
+import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
+import com.snipsnap.kit.SongPlan
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
@@ -811,6 +813,44 @@ class ArrangerTest {
         assertEquals(listOf("theme", "intro"), after.sections.take(2).map { it.name })
         assertEquals(listOf(4, 3), after.sections.take(2).map { it.repeats })
         assertNotEquals(before.sections[0].clip.notes, after.sections[0].clip.notes, "the theme is the new capture")
+    }
+
+    @Test
+    fun `a pattern made after another was deleted is not picked up by the old section`() {
+        // The aliasing this guards: a SONG section keeps `yours:<number>`. When
+        // a deleted program's number went back to the next new pattern, the
+        // section quietly played that stranger.
+        val m = model("Retired")
+        val base = grooveClip()
+        GrooveStore.save(m.kitDir, listOf(base))
+        repeat(3) { GrooveEdit.forkNew(m.kitDir, yoursClip()) }
+        val third = GrooveEdit.loadAll(m.kitDir).last()
+        assertEquals(2, GrooveEdit.progIndexOf(third))
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        assertTrue(plan.sections.any { it.clip == ClipRef.yours(2) }, "the song uses the third pattern")
+
+        assertTrue(GrooveEdit.deleteProgE(m.kitDir) { it == 2 })
+        val fresh = GrooveEdit.forkNew(m.kitDir, yoursClip())!!
+        assertEquals(3, GrooveEdit.progIndexOf(fresh), "the new pattern does not take the retired number")
+
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan)
+        assertEquals(listOf(ClipRef.yours(2)), resolved.refused)
+        assertTrue(resolved.arrangement.sections.none { it.ref == ClipRef.yours(2) }, "nothing plays the retired number")
+        val replaced = resolved.arrangement.sections.filterIndexed { i, _ -> plan.sections[i].clip == ClipRef.yours(2) }
+        assertTrue(replaced.isNotEmpty() && replaced.all { ClipRef.yoursId(it.ref) == null }, "planned again as a derived clip, never as another of yours")
+    }
+
+    @Test
+    fun `a named pattern gives its section the name and a draft never overflows a song`() {
+        val m = model("Named")
+        GrooveStore.save(m.kitDir, listOf(grooveClip()))
+        repeat(GrooveEdit.MAX_USER_PROGRAMS) { GrooveEdit.forkNew(m.kitDir, yoursClip()) }
+        GrooveEdit.rename(m.kitDir, GrooveEdit.loadAll(m.kitDir)[1], "verse")
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertTrue(plan.sections.size <= SongPlan.MAX_SECTIONS, "${plan.sections.size} sections")
+        assertTrue(plan.sections.any { it.name == "verse" && it.ref == ClipRef.yours(1) }, plan.sections.map { it.name }.toString())
+        assertEquals("yours — your pattern VERSE, exactly as you left it", plan.sections.first { it.ref == ClipRef.yours(1) }.reason)
+        Arranger.toPlan(plan)
     }
 
     @Test

@@ -3552,7 +3552,7 @@ fun App(shelf: KitShelf) {
         val kitDir = open?.dir ?: return
         scope.launch {
             withContext(Dispatchers.IO) {
-                runCatching { ProjectStore.saveBeat(ProjectStore.dir(shelf.root, p.name), GrooveStore.load(kitDir)) }
+                runCatching { ProjectStore.saveBeat(ProjectStore.dir(shelf.root, p.name), GrooveStore.load(kitDir), GrooveStore.loadLanePads(kitDir)) }
                     .onFailure { Log.e(TAG, "mirrorBeat: the project's beat did not follow", it) }
             }
         }

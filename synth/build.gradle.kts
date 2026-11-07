@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateApsisAcceptance") {
+    group = "distribution"
+    description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAcceptanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisAcceptanceOutput").orNull ?: "${rootDir}/testkit/apsis-acceptance")
+}
+
 tasks.register<JavaExec>("generateFerryReleaseAudition") {
     group = "distribution"
     description = "Render Ferry's revised short-note release with saved recipes and ending measurements."
@@ -3232,4 +3242,14 @@ tasks.register<JavaExec>("generateTrefoilHeldAudition") {
     maxHeapSize = "768m"
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("trefoilHeldOutput").orNull ?: "${rootDir}/testkit/trefoil-held-native")
+}
+
+/** Render DIVE's listening gate (the real section on a snare, a tom, a rim and the CHUG guitar, beside PITCH) under testkit/dive-audition/. See DiveAuditionGenerator. */
+tasks.register<JavaExec>("generateDiveAudition") {
+    group = "distribution"
+    description = "Render DIVE's listening gate clips under testkit/dive-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DiveAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/dive-audition")
 }

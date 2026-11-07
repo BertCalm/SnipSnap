@@ -182,16 +182,19 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02) and VIBRATO (2026-11-04). The rack has 25 sections in a fixed order (`FxChain.SECTIONS`): speed,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04) and DIVE (2026-11-07). The rack has 26 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
 swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
 vinyl, tape, vibrato, ensemble, phase, echo, spring, room, motion. The pedal library (`Pedals.kt`) has
-ten pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO) and one board (RIG). Rack
+eleven pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
 the pedal brainstorm (`docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`) specs both
 as new sections, not chips over an existing one. FADE IN (the VOLUME section, character `eased`) passed
 its gate on 2026-11-02, and VIBRATO (the VIBRATO section, character `vibratoed`) on 2026-11-04. Both are for held sounds only:
-a choir and a snare are too short for a vibrato to read (loud for 0.48 s and 0.09 s). A pedal needs its own listening gate, and its
+a choir and a snare are too short for a vibrato to read (loud for 0.48 s and 0.09 s). DIVE (the DIVE section, character `dived`,
+right after PITCH in the transport) passed on 2026-11-07 on the guitar only: the drums were too short for a dive, so the
+brainstorm's 808-envelope use did not survive. Three pedals in a row heard the same way is a pattern: a move that unfolds
+over time needs a held sound, so a gate for one should lead with a held source. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 
