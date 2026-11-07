@@ -9,7 +9,8 @@ import java.util.Collections
  * An editable ONSET hit. The complete six-control map and renderer version travel
  * with the sample, so reopening a pad cannot pick up a newer voice's defaults.
  * Model 1 retains the original kick; model 2 retains the accepted membrane kick.
- * Snare and open hat first exist in model 3.
+ * Snare and open hat first exist in model 3. Tom, pluck, wood and metal first
+ * exist in model 4; their voice identity selects the auditioned source model.
  */
 class OnsetPatch(
     override val name: String,
@@ -26,10 +27,7 @@ class OnsetPatch(
         require(this.macros.keys == Onset.macrosFor(voice).map { it.name }.toSet()) {
             "ONSET patches must save all six macros"
         }
-        require(modelVersion in 1..Onset.MODEL_VERSION) { "unsupported ONSET model version: $modelVersion" }
-        require(modelVersion >= 3 || voice == OnsetVoice.KICK || voice == OnsetVoice.HAT_CLOSED) {
-            "$voice was introduced in ONSET model 3"
-        }
+        Onset.requireModelVersion(voice, modelVersion)
     }
 
     override val engine get() = ENGINE

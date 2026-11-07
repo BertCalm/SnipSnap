@@ -82,7 +82,7 @@ class EngineCatalogTest {
     /** Hand-written voices for a handful of real engine names; THUMP and ONSET have a kick, only ONSET has hats. */
     private val voices = mapOf(
         "THUMP" to listOf("KICK", "SNARE", "CLAP"),
-        "ONSET" to listOf("KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN"),
+        "ONSET" to listOf("KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN", "TOM", "PERC_PLUCK", "PERC_WOOD", "PERC_METAL"),
         "TINES" to listOf("BELL", "CHIME", "KALIMBA"),
         "SCANNED_CHAIN" to listOf("PLUCK", "METAL", "BLOOM"),
         "FATHOM" to listOf("DEEP", "GRIND", "GLASS"),
@@ -121,6 +121,16 @@ class EngineCatalogTest {
         assertTrue("ONSET" in filter("hat"), "hat must find ONSET: ${filter("hat")}")
         // The voice alone is enough: an engine the catalogue has never heard of, so no description to help.
         assertEquals(listOf("MYSTERY"), filterEngines(listOf("MYSTERY"), { listOf("HAT_CLOSED") }, "hat", emptySet()))
+    }
+
+    @Test
+    fun `onset percussion can be found by its material or full voice name`() {
+        for (voice in listOf("perc pluck", "perc wood", "perc metal")) {
+            assertEquals(listOf("ONSET"), filter(voice, setOf(EngineCategory.DRUMS)))
+        }
+        for (word in listOf("tom", "pluck", "wood", "metal")) {
+            assertTrue("ONSET" in filter(word, setOf(EngineCategory.DRUMS)), "$word must find ONSET")
+        }
     }
 
     @Test

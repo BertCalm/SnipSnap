@@ -64,6 +64,7 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.KitFromMade
 import com.snipsnap.app.ui.OverlayAsk
+import com.snipsnap.app.ui.RouteDockLine
 import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
@@ -4529,6 +4530,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            appScope = scope,
                             backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
@@ -4809,6 +4811,8 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 // The Bubble's permission, said before it is asked (UAT E2-OVERLAY).
                 OverlayAsk(onFailed = { dock.say(Copy.actionFailed("ALLOW")) })
+                // The audio route, watched; and the dock's line when KIT or BEAT is on Bluetooth.
+                RouteDockLine(dock, location)
                 Dock(
                     dock = dock,
                     busy = busy ?: jobs.current ?: screenBusy,

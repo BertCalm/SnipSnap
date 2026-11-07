@@ -369,7 +369,10 @@ unmeasured. An independently versioned HOLD path periodically traverses the same
 physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
 exports its real onset, verified sustain loop and player amplitude release.
 Generation is serial and cancellable, and fresh renders take seconds on the cloud
-JVM. The new held transport awaits owner listening and phone/MPC checks.
+JVM. Optional [two-touch captures](LIBRATION_TOUCH.md) add soft/hard samples at
+each root, selected at MIDI velocity 63/64; the phone maker opens with layers on.
+Version-one single-layer delivery and the three-voice roster remain unchanged.
+New held/layered transport awaits owner listening and phone/MPC checks.
 [LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
 [held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
@@ -940,6 +943,11 @@ R5 adds three TRACE factory positions, native speed comparisons and a separate
 MPC kit. The rest of the original engineering specification remains open.
 `generateLatticeAudition` preserves the earlier listening evidence and exports
 the native patches and MPC 3/XPM kits.
+The next milestone adds TRACE MAKE INSTRUMENT and CLI `--instrument`: nine
+roots across C3–C5, a causal opening followed by a measured sustain loop, host
+note-off release, and a separately versioned held recipe. The finite B render
+and existing static HOLD behavior remain intact. Keyboard sustain and hardware
+playback still require their own listening/device verdict.
 
 ### PRISM — harmonics with different lifetimes
 
@@ -3218,3 +3226,20 @@ progression.
 ## CHITIN finite-note prototype
 
 SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.
+
+## ONSET native tom and percussion extension (2026-11-03)
+
+Study 009's seven setups now have native model-4 identities: TOM, PERC_PLUCK,
+PERC_WOOD and PERC_METAL, alongside the four original voices. The same six
+controls work in SYNTH, complete recipes survive pad reopening and editing,
+and a separate seven-pad standalone XTD/XPM kit retains editable sidecars.
+The original twelve presets and sixteen-pad acceptance kit remain model 3.
+All 21 studied raw renders match their frozen WAV hashes, with older-model
+and approved-bank compatibility covered by independent references.
+
+Android debug assembly and instrumentation-source compilation passed. The full
+JVM result and remaining device checks belong to the integration validation
+record. The pre-existing saved-pad device callback failure above is not claimed
+fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
+is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
+See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
