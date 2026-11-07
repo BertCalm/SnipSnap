@@ -83,6 +83,8 @@ contracts, dry MPC kit, musical phrases, held-loop strategy and private audition
 The original 27 recipes are preserved; the nine additions await listening.
 Physical-phone performance and MPC hardware acceptance remain separate checks.
 The supplied [`engineering specification`](WICK_SPEC.md) is preserved as the proposal.
+The [November 7 handoff](handoffs/2026-11-07-wick.md) pins the delivered artifacts,
+merged source, refreshed CI record and remaining listening/hardware work.
 
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved
