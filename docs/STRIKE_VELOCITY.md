@@ -225,9 +225,19 @@ start jitter. Both spreads are shapes.
   listening artifact at https://claude.ai/artifact/KSRzJCMRVCYTdQ9uKFgtf3,
   whose answers save to its `answers` collection.
 - **Disclosed, not fixed:** TERRA's FORCE is not monotone in onset
-  brightness on the rim pads (above). PUNCH's onset click (THUMP's and
+  brightness on the rim pads (above), and the owner hears it too. The
+  cause, measured 2026-11-07: FORCE shortens the palm pulse (12 ms to 3 ms)
+  at a fixed peak, so a harder hand lands less momentum, and its grit
+  (loudness times length) peaks near FORCE 0.89. On every hand-struck voice
+  the first-30-ms centroid rises to about FORCE 0.5 and falls after; from
+  2.5 ms on and before PUNCH it does the same. PUNCH's onset click (THUMP's and
   ONSET's kicks, above).
-- **Not yet heard:** THUMP's and ONSET's soft kicks. The listening page
-  https://claude.ai/artifact/SuVE4Hed1heDrm4Fa1Gs7s plays four THUMP and
-  three ONSET kicks, each as the old filtered soft hit, then the new soft,
-  medium and hard.
+- **Heard (2026-11-07, the owner, through
+  https://claude.ai/artifact/SuVE4Hed1heDrm4Fa1Gs7s, which plays each kick
+  as the old filtered soft hit, then the new soft, medium and hard):**
+  - A soft THUMP kick (DUSTY BOOM, FOUR FLOOR): "New is better".
+  - A soft ONSET kick (HYBRID KICK, MEMBRANE KICK): "New is better".
+  - The same page's hand-drum questions: Djembe Slap, Tabla Tin and Dumbek
+    Tek each read as a "Drum machine", and TERRA's FORCE from 0.2 to 1.0 did
+    not sound like a harder hand at every step ("No"). Their rebuild is
+    separate work; FORCE's measured shape is above.
