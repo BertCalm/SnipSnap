@@ -170,9 +170,9 @@ fingerprints in that model-1 compatibility probe remained identical, covering
 factory recipes, macro sweeps, velocity, source edits and the long custom loop.
 Those measurements describe the earlier source optimization. Model 2 adds one
 bounded pass over the finished note and, for HOLD, its real preceding cycle.
-It has no solver or additional source simulation. The new response's render
-cost needs its own measurements; the earlier figures are not a phone timing
-guarantee or a measurement of that additional stage.
+It has no solver or additional source simulation. The model-2 measurements
+below record that additional cost; the earlier figures describe the source
+optimization.
 
 ## Audition and checks
 
@@ -266,3 +266,15 @@ added cost was 2.30 ms (about 3.8%). Model-2 finite case medians ranged 28.6–6
 39.9 ms median of case medians; held cases ranged 64.6–147.8 ms, median 90.1 ms. These are
 desktop measurements, not a phone or MPC latency claim. Complete probe artifacts are
 retained with the published audition's integration evidence.
+
+<!-- relay-final-validation:begin -->
+### Integration validation
+
+The complete local JVM run finished with exit 0: 8,770 tests across
+all nine JVM modules, 0 failures, 0 errors and 0 skipped. The command was
+`./gradlew --no-daemon :synth:generateRelayPulseMusicalAudition test` at source revision `20f4e75f67b17a4fc2840ad469f5de3c6998f0bd`.
+
+Android main Kotlin and instrumentation-test Kotlin compilation passed locally
+with the pinned SDK/NDK and Temurin 17.0.21. The four new UI tests were compiled;
+they were not executed on a device.
+<!-- relay-final-validation:end -->
