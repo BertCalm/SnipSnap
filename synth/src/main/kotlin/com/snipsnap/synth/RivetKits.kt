@@ -2,7 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.kit.ArrangedPad
 
-/** Sixteen candidate roles. Room variants retain the same source recipe on every pad. */
+/** Sixteen accepted roles. Room variants retain the same source recipe on every pad. */
 object RivetKits {
     val velocities = listOf(.3f, .6f, 1f)
 
@@ -38,7 +38,7 @@ object RivetKits {
             softVariants = velocities.dropLast(1).map { Velocity.peakMatch(hard, Velocity.atVelocity(patch, it)) },
             oneShot = true, displayName = patch.name, muteGroup = if (hats) 1 else 0,
             layerNames = listOf("Soft", "Middle", "Hard"), source = mapOf(
-                "engine" to RivetPatch.ENGINE, "status" to "candidate-awaiting-listen",
+                "engine" to RivetPatch.ENGINE, "status" to "accepted-audition",
                 "modelVersion" to patch.modelVersion.toString(), "velocities" to velocities.joinToString(",")))
     }
 }

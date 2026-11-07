@@ -402,7 +402,7 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
-        is RivetPatch -> Rivet.render(patch.voice, patch.macros, patch.modelVersion, velocity = v)
+        is RivetPatch -> patch.copy(velocity = patch.velocity * v).render()
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()

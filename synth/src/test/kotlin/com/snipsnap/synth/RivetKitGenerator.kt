@@ -49,7 +49,7 @@ object RivetKitGenerator {
 
     @JvmStatic fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "testkit/rivet-kit").absoluteFile.apply { mkdirs() }
-        val html = StringBuilder("<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>RIVET kit trial</title><style>body{font:17px/1.5 system-ui;max-width:960px;margin:40px auto;padding:0 20px;background:#181b1d;color:#eee}audio{display:block;width:100%;margin:8px 0}article{padding:16px 0;border-bottom:1px solid #485057}a{color:#ecb871}</style><h1>RIVET · the full drum kit</h1><p>The first kick/snare sound was approved. Tom, metal percussion, the hat pair and these sixteen candidate roles await this listen.</p><p>Three rooms, the same source recipes and the same four-bar 120 BPM score. Grooves play the exported velocity WAVs, with hats choking each other. Preview dynamics use a linear velocity gain and a 2 ms choke fade; this is a software audition, not recorded MPC playback.</p>")
+        val html = StringBuilder("<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>RIVET kit trial</title><style>body{font:17px/1.5 system-ui;max-width:960px;margin:40px auto;padding:0 20px;background:#181b1d;color:#eee}audio{display:block;width:100%;margin:8px 0}article{padding:16px 0;border-bottom:1px solid #485057}a{color:#ecb871}</style><h1>RIVET · the full drum kit</h1><p>The full six-voice audition was accepted. These sixteen roles also appear in the phone factory bank and three room starters. Physical MPC playback remains pending.</p><p>Three rooms, the same source recipes and the same four-bar 120 BPM score. Grooves play the exported velocity WAVs, with hats choking each other. Preview dynamics use a linear velocity gain and a 2 ms choke fade; this is a software audition, not recorded MPC playback.</p>")
         val allRows = mutableListOf<Map<String, Any?>>()
         val grooves = linkedMapOf<String, FloatArray>()
         for ((space, size) in linkedMapOf("Workshop" to .1f, "Factory" to .55f, "Warehouse" to 1f)) {
@@ -112,7 +112,7 @@ object RivetKitGenerator {
                     }
                 }
                 grooves[space] = groove
-                File(folder, "PAD-LAYOUT.txt").writeText("RIVET candidate kit: native MPC 3 .xtd, MPC 2 .xpm inside TrackData.\nThree native strike zones per pad. Hat pads 3, 4, 15, 16 share mute group 1.\n" +
+                File(folder, "PAD-LAYOUT.txt").writeText("RIVET accepted audition kit: native MPC 3 .xtd, MPC 2 .xpm inside TrackData.\nThree native strike zones per pad. Hat pads 3, 4, 15, 16 share mute group 1.\n" +
                     patches.mapIndexed { i, p -> "A${(i + 1).toString().padStart(2, '0')} ${p.name} (${p.voice})" }.joinToString("\n") + "\nPhysical MPC loading remains unverified for this kit.\n")
             } finally { staging.deleteRecursively() }
             zip(folder, File(root, "${space.lowercase()}-mpc-kit.zip"))
@@ -123,7 +123,7 @@ object RivetKitGenerator {
             for (i in x.indices) x[i] *= commonGain
             WavWriter.write(File(root, "groove-${space.lowercase()}.wav"), Snip(x, 1, 44100))
         }
-        val manifest = mapOf("status" to "candidate new voices; first kick/snare core approved",
+        val manifest = mapOf("status" to "full kit audition accepted; physical MPC playback pending",
             "modelVersion" to Rivet.MODEL_VERSION, "bpm" to 120, "grooveCommonGain" to commonGain,
             "events" to events().map { mapOf("slot" to it.slot, "beat" to it.beat, "velocity" to it.velocity) }, "zones" to allRows)
         File(root, "manifest.json").writeText(Json.write(value(manifest)))

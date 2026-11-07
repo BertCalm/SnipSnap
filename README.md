@@ -429,7 +429,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 71 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 74 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -479,6 +479,14 @@ for the complete bank, dry samples, source comparisons and MPC 2/3 kit. The
 [implementation notes](docs/WICK.md) retain the accepted sounds and identify the
 nine additional recipes for listening. Hardware performance and MPC acceptance
 are recorded separately from software validation.
+
+RIVET makes industrial drums whose room grows from workshop to warehouse. Six
+voices and sixteen accepted factory sounds share TUNE, STRIKE, METAL, DRIVE,
+SIZE and WALLS, with saved strike velocity and finite playback. SYNTH → RIVET
+edits individual hits; FRESH TAPE supplies WORKSHOP, FACTORY and WAREHOUSE kits,
+each with sixteen pads, three strike layers and choking hats. The
+[audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
+[implementation notes](docs/RIVET.md) include the pending hardware check.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1082,8 +1090,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN and GRAINS round out the lineup —
-76 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, RIVET and GRAINS round out the lineup —
+77 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1313,7 +1321,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, RIVET, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 

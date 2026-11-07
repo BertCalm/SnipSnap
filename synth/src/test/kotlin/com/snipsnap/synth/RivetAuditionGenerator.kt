@@ -23,7 +23,7 @@ object RivetAuditionGenerator {
         for (voice in RivetVoice.entries) {
             repeat(3) { Rivet.render(voice) } // Warm the JVM separately from the recorded calls.
             val cases = linkedMapOf<String, Pair<Map<String, Float>, Float>>()
-            for (patch in RivetPresets.forVoice(voice))
+            for (patch in RivetPresets.spaceCases(voice))
                 cases[patch.name.substringBefore(' ').lowercase()] = patch.macros to 1f
             for (tune in listOf(.1f, .5f, .9f)) cases["tune-$tune"] = mapOf("TUNE" to tune) to 1f
             for (key in Rivet.defaults(voice).keys.filter { it != "HOLD" })
@@ -101,7 +101,7 @@ object RivetAuditionGenerator {
         File(root, "index.html").writeText(template.replace("{{ROWS}}", rows.toString()).replace("{{SUMMARY}}", summary))
         File(root, "manifest.json").writeText(Json.write(JsonValue.Arr(manifest)))
         File(root, "metrics.csv").writeText(metrics.toString())
-        File(root, "README.txt").writeText("RIVET model ${Rivet.MODEL_VERSION}, Kotlin prototype. Original kick/snare core approved; new voices and candidates await listening.\n$summary\nOpen index.html. Each clip's saved patch is in recipes/. Replay soft clips with Rivet.render(voice, patch.macros, patch.modelVersion, velocity); velocity is in manifest.json. Grooves contain complete event patches and one shared gain. HOLD is refused. No factory kit or Android picker yet.\n")
+        File(root, "README.txt").writeText("RIVET model ${Rivet.MODEL_VERSION}. Full kit audition accepted; phone integration includes six voices and sixteen factory roles.\n$summary\nOpen index.html. Each clip's saved patch is in recipes/. Replay soft clips with Rivet.render(voice, patch.macros, patch.modelVersion, velocity); velocity is in manifest.json. Grooves contain complete event patches and one shared gain. HOLD is refused. Physical MPC playback remains pending.\n")
         println("RIVET audition: ${root.absolutePath}\n$summary")
     }
 }

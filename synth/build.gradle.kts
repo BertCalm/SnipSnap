@@ -4,7 +4,7 @@ plugins {
 
 tasks.register<JavaExec>("generateRivetKit") {
     group = "distribution"
-    description = "Export three RIVET sixteen-pad, three-zone candidate kits with native MPC 3 and MPC 2 read-back."
+    description = "Export three RIVET sixteen-pad, three-zone industrial drum kits with native MPC 3 and MPC 2 read-back."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.RivetKitGenerator")
     workingDir = rootProject.projectDir

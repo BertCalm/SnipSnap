@@ -135,6 +135,7 @@ object EngineCatalog {
         // Last, as it is in the `Engine` enum: the picker steps in the enum's order and a device test
         // holds that walk to this map's order, so a new engine goes at the end of both.
         "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
+        "RIVET" to EngineEntry(listOf(EngineCategory.DRUMS), "Industrial drums from a small room to a warehouse"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
