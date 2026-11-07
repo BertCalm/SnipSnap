@@ -1,0 +1,87 @@
+{
+  "baselinePcmSha256": "b47e935c4890e0c6ce06134584f133ab826dd3c5b9fc8b6f134b581a6c3d5ff4",
+  "baselineManifestSha256": "4fd6d62788625b56b2742a0880362e0cd9617542904da288dacf5ca373382c62",
+  "thresholds": {
+    "normalizedErrorRms": 0.031623,
+    "peakError": 0.025,
+    "harmonicTv": 0.02,
+    "keyUpStepError": 0.001,
+    "residentBytes": 8388608,
+    "compressedBytes": 12582912
+  },
+  "candidates": [
+    {
+      "total": 1628,
+      "passed": 0,
+      "failed": 1628,
+      "maxNormalizedErrorRms": 0.17538459171532364,
+      "maxPeakError": 0.5410063928337423,
+      "maxHarmonicTv": null,
+      "components": 4,
+      "residentBytes": 1162390,
+      "memoryPassed": true
+    },
+    {
+      "total": 1628,
+      "passed": 209,
+      "failed": 1419,
+      "maxNormalizedErrorRms": 0.04263784978513387,
+      "maxPeakError": 0.16883374028858933,
+      "maxHarmonicTv": 0.0003461873990123216,
+      "components": 8,
+      "residentBytes": 1594118,
+      "memoryPassed": true
+    },
+    {
+      "total": 1628,
+      "passed": 688,
+      "failed": 940,
+      "maxNormalizedErrorRms": 0.02282967533866494,
+      "maxPeakError": 0.11121871874863914,
+      "maxHarmonicTv": 0.0003835911441760816,
+      "components": 12,
+      "residentBytes": 2025846,
+      "memoryPassed": true
+    },
+    {
+      "total": 1628,
+      "passed": 1257,
+      "failed": 371,
+      "maxNormalizedErrorRms": 0.015902552171128067,
+      "maxPeakError": 0.07726586337453245,
+      "maxHarmonicTv": 0.0003798048768231681,
+      "components": 16,
+      "residentBytes": 2457574,
+      "memoryPassed": true
+    },
+    {
+      "total": 1628,
+      "passed": 1624,
+      "failed": 4,
+      "maxNormalizedErrorRms": 0.008872635622165252,
+      "maxPeakError": 0.030712984887542927,
+      "maxHarmonicTv": 0.00034392340407609024,
+      "components": 24,
+      "residentBytes": 3321030,
+      "memoryPassed": true
+    },
+    {
+      "total": 1628,
+      "passed": 1628,
+      "failed": 0,
+      "maxNormalizedErrorRms": 0.008671393768769945,
+      "maxPeakError": 0.02420659414287618,
+      "maxHarmonicTv": 0.00023653167765956792,
+      "components": 32,
+      "residentBytes": 4184486,
+      "memoryPassed": true
+    }
+  ],
+  "selectedComponents": 32,
+  "freshPositionsSha256": "96239caa1e5c28ff30ad07d48faa4284ce60fced7e827510a1e56e5f117fdc42",
+  "freshCount": 1623,
+  "protocolSha256": "1dc7be7ac1ee94b3a60835f08862b94789d4c67467fe0f9443b9bfe425a8c958",
+  "basisSha256": "f797a03344fe1ea1bf3234629f3c033a70606a3e2d5f3f7fec5e59ca436450bc",
+  "coefficientsSha256": "673619220e5a07e5fb43d64b515876092ce7459ea6234a407d258c266d81ea49",
+  "offsetsSha256": "f2ce68cf9c213507bba772a5a6cfb604418efe95d0a4bbeb1a96e61a0838e7b2"
+}

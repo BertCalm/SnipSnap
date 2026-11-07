@@ -532,6 +532,9 @@ testkit/crease-release-experiment/
 testkit/crease-phone-release/
 testkit/crease-phone-release-r2/
 
+# Quantized shared-basis Crease transport experiment.
+testkit/crease-shared-cache-r1/
+
 # Rebuildable native CAUSTIC voice comparisons and four-voice kit.
 testkit/caustic-native-voices-audition/
 testkit/caustic-native-voices-kit/
