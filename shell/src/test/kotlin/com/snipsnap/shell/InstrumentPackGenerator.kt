@@ -18,8 +18,8 @@ import java.io.File
 /**
  * The factory expansion of the instruments made reachable on 2026-11-04: MERCURY's three
  * picker voices and KEEL's three through their own makers, and every [LoopPadMaker]
- * qualifier through the shared one, each voice from its first factory preset. ARCO's two
- * voices joined on 2026-11-06 through [ArcoPadMaker] (the bow's stroke, then the loop, in
+ * qualifier through the shared one, each voice from its first factory preset. ARCO's first two
+ * voices joined on 2026-11-06 (SARANGI, the third, on 2026-11-07: [ArcoVoice.entries]) through [ArcoPadMaker] (the bow's stroke, then the loop, in
  * two touch layers), at their defaults, and BORE's two through [BorePadMaker] (the note's
  * own breath, then the loop) from FLUTE STEADY LOOP and SAX SOLO LOOP: each from the patch
  * its listening clips use. Each is

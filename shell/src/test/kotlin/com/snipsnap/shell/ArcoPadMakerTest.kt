@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * [ArcoPadMaker]: ARCO's held keygroup as the shop exports it. The zones are absolute (TUNE does not move them), every zone has two
  * layers soft first in their velocity windows, each with a stroke and a loop start past it; the package survives the export and the
  * phone's sidecar; and the preview is a held key through the instrument player that crosses the loop's wrap and then releases.
- * ArcoKeysTest (`:synth`) holds every zone of both voices to the seam bar; this renders ERHU's eight zones once, both layers.
+ * ArcoKeysTest (`:synth`) holds every zone of every voice to the seam bar; this renders ERHU's eight zones once, both layers, and SARANGI's nine.
  */
 class ArcoPadMakerTest {
 
@@ -40,14 +40,62 @@ class ArcoPadMakerTest {
     }
 
     @Test
-    fun `the zones are absolute, two voices' plans, and TUNE does not move them`() {
+    fun `the zones are absolute, each voice's own plan, and TUNE does not move them`() {
         for (voice in ArcoVoice.entries) {
             val at = listOf(0f, 0.5f, 1f).map { tune -> ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("T", voice, Arco.defaults(voice) + ("TUNE" to tune)))) }
             assertTrue(at.all { it == at.first() }, "$voice: TUNE moved the zones: $at")
         }
         assertEquals(listOf(36, 39, 42, 45, 48, 51, 54, 57, 60), ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("C", ArcoVoice.CELLO, Arco.defaults(ArcoVoice.CELLO)))))
         assertEquals(listOf(62, 65, 68, 71, 74, 77, 80, 81), ArcoPadMaker.zoneMidis(spec))
+        assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("S", ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI)))))
         for (preset in ArcoPresets.all()) assertTrue(ArcoPadMaker.supports(preset), preset.name)
+    }
+
+    /**
+     * SARANGI (R2), the third voice, through the same maker: nine zones D3 to D5 every minor third, both layers, each the stroke shaped by the owner's
+     * Short start ([com.snipsnap.synth.HeldStart.SHORT]: its loop starts once the stroke's 80 ms have handed over by 300 ms) and then a loop that
+     * closes; the zones tile from F2 (nine semitones under D3) to B5 (nine over D5); and the package survives the export and the sidecar. The tarab
+     * (WASH 0.5 at the defaults) rings in every zone, as in the one-shot and the LOOP.
+     */
+    @Test
+    fun `SARANGI's nine zones render with the short start, tile from F2 to B5 and survive the export`() {
+        val sarangi = ArcoPatch("Sarangi Held", ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI))
+        val sSpec = ArcoPadMaker.spec(sarangi, ArcoPadMaker.RELEASE.fraction(.6f))
+        val midis = ArcoPadMaker.zoneMidis(sSpec)
+        assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), midis)
+        val sNotes = midis.parallelStream().map { ArcoPadMaker.renderZone(sSpec, it) }.toList()
+        val handedOver = (com.snipsnap.synth.HeldStart.SHORT.handover * 44_100).toLong() + com.snipsnap.synth.HeldStart.SETTLED_FRAMES
+        val rows = ArrayList<String>()
+        for ((i, zone) in sNotes.withIndex()) {
+            assertEquals(2, zone.size, "SARANGI zone $i: not two layers")
+            for ((l, note) in zone.withIndex()) {
+                val s = note.snip.samples
+                val seam = Keys.seamError(s, note.loopStartFrame.toInt())
+                assertTrue(note.loopStartFrame >= handedOver, "SARANGI zone $i layer $l: the loop starts at ${note.loopStartFrame}, inside the stroke's handover")
+                assertTrue(note.loopStartFrame < 44_100, "SARANGI zone $i layer $l: the loop starts at ${note.loopStartFrame}, a second or more into the key: the Short start did not apply")
+                assertTrue(seam < Keys.MAX_SEAM_ERROR, "SARANGI zone $i layer $l: seam $seam")
+                assertTrue(s.all { it.isFinite() && it in -0.99f..0.99f }, "SARANGI zone $i layer $l: not finite or over 0.99")
+                rows += "%s %s loop at %.3f s seam %.1e".format(java.util.Locale.ROOT, com.snipsnap.audio.Scales.nameOf(midis[i]), if (l == 0) "soft" else "hard", note.loopStartFrame / 44_100.0, seam)
+            }
+            assertTrue(!zone[0].snip.samples.contentEquals(zone[1].snip.samples), "SARANGI zone $i: the layers are the same samples")
+        }
+        println("ARCO held SARANGI zones: ${rows.joinToString("; ")}")
+        val name = "SARANGI HELD"
+        val (program, samples) = ArcoPadMaker.assemble(name, sSpec, sNotes)
+        assertEquals(midis, program.keygroups.map { it.rootNote })
+        assertEquals(41, program.keygroups.first().lowNote, "the lowest zone reaches F2")
+        assertEquals(83, program.keygroups.last().highNote, "the top zone reaches B5")
+        for (k in 1 until program.keygroups.size) assertEquals(program.keygroups[k - 1].highNote + 1, program.keygroups[k].lowNote, "SARANGI's zones tile without gaps")
+        assertEquals(2 * midis.size, samples.size)
+        ArcoPadMaker.export(name, sSpec, sNotes, dest)
+        val instrument = InstrumentStore.read(InstrumentStore.sidecar(dest, name))
+        assertEquals(midis, instrument.zones.map { it.rootNote })
+        for ((i, z) in instrument.zones.withIndex()) for ((l, layer) in z.layers.withIndex()) {
+            assertEquals(sNotes[i][l].loopStartFrame, layer.loopStartFrame)
+            assertEquals(sNotes[i][l].snip.frameCount, WavReader.read(File(dest, layer.sample)).frameCount)
+        }
+        val bytes = sNotes.flatten().sumOf { it.snip.frameCount.toLong() } * 3
+        println("ARCO held SARANGI package: ${instrument.zones.size} zones, ${samples.size} samples, %.1f MB of 24-bit audio".format(java.util.Locale.ROOT, bytes / 1e6))
     }
 
     @Test

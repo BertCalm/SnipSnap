@@ -128,7 +128,7 @@ object EngineCatalog {
         // BORE, ARCO, SCOUR and KEEL reached the picker together (2026-11-01). Classified from each
         // engine's KDoc, its spec and KEEL.md, not from a listen.
         "BORE" to EngineEntry(listOf(EngineCategory.WINDS), "Blown flute and saxophone tones with breath and chiff"),
-        "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello and erhu notes, from slow swells to stabs"),
+        "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello, erhu and sarangi, from slow swells to stabs"),
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
         "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
