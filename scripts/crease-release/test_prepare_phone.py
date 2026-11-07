@@ -63,15 +63,15 @@ class PhoneAdmissionTest(unittest.TestCase):
         manifest_hash=hashlib.sha256((self.source/'manifest.json').read_bytes()).hexdigest()
         self.native['manifestSha256']=manifest_hash;self.save('native-verification.json',self.native)
         self.save('reader-verification.json',{'result':'passed','cacheIdentity':self.manifest['cacheIdentity'],'manifestSha256':manifest_hash})
-        with self.assertRaisesRegex(ValueError,'other coefficients'): stage(self.source,self.target)
+        with self.assertRaisesRegex(ValueError,'other coefficients',msg='coefficient receipt guard must reject a different basis mix'): stage(self.source,self.target)
         self.native['sharedCoefficientsSha256']='test-weights';self.save('native-verification.json',self.native)
         stage(self.source,self.target);stage(self.source,self.target)
         self.manifest['shared']['residentBytes']=8*1024**2+1;self.save('manifest.json',self.manifest)
-        with self.assertRaisesRegex(ValueError,'manifest changed'): stage(self.source,self.target)
+        with self.assertRaisesRegex(ValueError,'manifest changed',msg='complete manifest binding guard must reject changed metadata'): stage(self.source,self.target)
         manifest_hash=hashlib.sha256((self.source/'manifest.json').read_bytes()).hexdigest()
         self.native['manifestSha256']=manifest_hash;self.save('native-verification.json',self.native)
         self.save('reader-verification.json',{'result':'passed','cacheIdentity':self.manifest['cacheIdentity'],'manifestSha256':manifest_hash})
-        with self.assertRaisesRegex(ValueError,'8 MiB'): stage(self.source,self.target)
+        with self.assertRaisesRegex(ValueError,'8 MiB',msg='8 MiB residency guard must reject an oversized shared cache'): stage(self.source,self.target)
 
 
 if __name__=='__main__': unittest.main()

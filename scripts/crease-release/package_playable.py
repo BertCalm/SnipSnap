@@ -77,4 +77,8 @@ worklet=(player/'release-worklet.mjs').read_text()
 import_line="import { ReleaseReader } from './pcm-engine.mjs';\n"
 b.p.require(worklet.startswith(import_line),'worklet import boundary changed')
 (out/'release-worklet-bundle.mjs').write_text('// Generated from the canonical PCM reader and worklet; no separate DSP implementation.\n'+engine+'\n'+worklet[len(import_line):])
+decoder=(player/'cache.mjs').read_text()
+decoder_import="import { validateManifest } from './pcm-engine.mjs';\n"
+b.p.require(decoder.startswith(decoder_import),'decoder import boundary changed')
+(out/'cache-bundle.mjs').write_text('// Generated from the canonical PCM reader and decoder; no separate DSP implementation.\n'+engine+'\n'+decoder[len(decoder_import):])
 print(json.dumps(delivery))
