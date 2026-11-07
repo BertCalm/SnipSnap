@@ -353,6 +353,18 @@ tasks.register<JavaExec>("generateUprightKit") {
     args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
+/** The held singing-bowl motion beside its saved model-4 reference. */
+tasks.register<JavaExec>("generateCairnSingMotionAudition") {
+    group = "distribution"
+    description = "Compare held SING rim motion with model 4, including real continuations and source recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnSingMotionAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnSingMotionOutput").orNull ?: "${rootDir}/testkit/cairn-sing-motion")
+    providers.gradleProperty("cairnSingMotionLegacyRoots").orNull?.split(";")?.forEach { args("--legacy-root", it) }
+}
+
 /** SING's continuous traction beside the preserved three contact gestures. */
 tasks.register<JavaExec>("generateCairnSingAudition") {
     group = "distribution"

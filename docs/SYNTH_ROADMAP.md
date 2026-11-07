@@ -151,6 +151,14 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
+**Cairn held SING motion (2026-11-07).** Model 5 gives held SING a slow,
+bowl-inspired shimmer through opposed harmonic contact weights on its existing
+two-second pressure cycle. Finite SING, earlier contact voices and saved model-4
+recipes retain their rendering. All 40 focused Kotlin checks and the complete
+8,848-test JVM gate pass. Sixteen native comparisons include fourteen checked
+held continuations; 600 earlier WAVs replay byte for byte. Owner listening and phone/MPC checks
+remain open. See [CAIRN_SING_MOTION.md](CAIRN_SING_MOTION.md).
+
 **Cairn SING listening gate (2026-11-04).** Model 4 adds a fourth role: one soft
 contact opens into sustained, smooth pitched rubbing. A bounded regenerative-energy
 analogy drives six stone/body modes; the maintained two-second stroke continues
