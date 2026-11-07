@@ -7,9 +7,18 @@ on 2026-11-01. R3's 119 focused tests and encoded asset audit passed; PR
 Android and native CI and was merged by the owner. The local full run ended
 without a terminal result; it is not counted as a pass.
 
-This round keeps the R3 source and control ranges intact and adds six proposed
-recipe neighborhoods for individual listening. Repository baseline for this
-round: `9c100267` (2026-11-01). Phone timing and MPC hardware loading remain pending.
+Josh completed the later full-range contrast check on 2026-11-07: Attack,
+Metallic ring and Brightness were all **Clearly different**. Keep the R3 DSP
+and control ranges as the working baseline. The six fine recipe neighborhoods
+all received **They sound the same** on 2026-11-04; no recipe favorites or factory
+presets are inferred from either result. Phone timing and MPC hardware loading
+remain pending.
+
+The [November 7 handoff](handoffs/2026-11-07-spark-r3.md) contains current commits,
+the separate Site source map, completed CI references, a portable player with
+audio, and the reproduction warning for newer unrelated `Thump.kt`/`Dsp.kt`
+changes. The recipe study below remains a historical account, not the current
+listening task.
 
 The characteristic gesture is soft contact or hard strike → metallic material
 → falling pitch → settled body. SPARK remains one provisional THUMP voice with
@@ -273,16 +282,23 @@ the exact source PCM with zero-filled gaps.
 The generated page's preference logic passed a Node DOM/storage harness:
 saved and undecided choices, unavailable storage, complete five-control JSON
 exports, and pausing other players. This is not a browser playback or listening
-test. The current source's full JVM regression run is in progress; R3's earlier
-completed CI result is recorded separately below.
+test. PR #788 subsequently passed full JVM, Android and native CI and was merged
+by the owner. The incomplete local full-run log is not counted as a pass.
+
+The owner later reported all six fine comparisons as the same. The live Site
+now uses a separate three-pair contrast guide, built from preserved R3 endpoint
+WAVs. `generateThumpSparkSweetSpots` still generates this historical six-choice
+study; it does not recreate the current Site UI. The owner's November 7 answers
+confirm full-range audibility, not a preference among these proposed recipes.
 
 ## Revision 3 verification ledger
 
 The final focused Gradle run and generator exited 0 in 2 min 03 s. All 119 tests
 passed with zero failures, errors or skips: SPARK 13, families 5, THUMP 38,
 presets 6, DE-SAMPLE 5, PUNCH 6 and determinism 46. Report:
-`spark-r3-validation.json`. The full nine-module JVM suite is running on
-Temurin 17; focused success does not establish a full-suite pass.
+`spark-r3-validation.json`. The completed PR #729 CI supplies the full JVM,
+Android and native result. Focused success and incomplete local logs do not
+independently establish a full-suite pass.
 
 | R3 measured probe | Result | Scope |
 |---|---:|---|
@@ -315,6 +331,8 @@ and CRC checks passed.
 | Focused regression checks, recipes and encoded audition integrity | Passed | Successful Gradle exit and the source/WAV/baseline/train/ZIP audit above. |
 | R3 full JVM, Android and native CI | Passed | PR #729 checks at `5704db39`; the local incomplete full run is not counted as a pass. |
 | R3 control-range improvement | Heard by owner | “Much better,” 2026-10-31; retained as the working baseline. Individual sweet-spot examples remain proposed. |
+| Full-range contrast check | Heard by owner | Attack, Metallic ring and Brightness all “Clearly different,” 2026-11-07; TUNE 0.5, DECAY 0.7, one control at 0 versus 1. |
+| Fine recipe preferences | No favorite established | All six nearby comparisons were “They sound the same,” 2026-11-04. |
 | Phone performance and MPC loading | Pending | Local JVM and file checks do not establish these. |
 
 The convergence residual includes filter phase, integration and resampling
