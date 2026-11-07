@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class OnsetPatchTest {
     @Test
-    fun `all four voices and five audition blends save reopen and regenerate unchanged`() {
+    fun `all current voices and five audition blends save reopen and regenerate unchanged`() {
         for (voice in OnsetVoice.entries) {
             for (blend in listOf(0f, .25f, .5f, .75f, 1f)) {
                 val patch = OnsetPatch("Saved $voice $blend", voice, Onset.defaults(voice) + ("BLEND" to blend))
@@ -21,9 +21,9 @@ class OnsetPatchTest {
                 assertEquals(patch, restored)
                 assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
                 assertEquals(patch.toJsonText(), restored.toJsonText())
-                assertEquals(3, restored.modelVersion)
+                assertEquals(Onset.MODEL_VERSION, restored.modelVersion)
                 assertEquals(MACROS, restored.macros.keys)
-                val original = Onset.render(voice, patch.macros, modelVersion = 3)
+                val original = Onset.render(voice, patch.macros, modelVersion = Onset.MODEL_VERSION)
                 val regenerated = restored.render()
                 assertContentEquals(original.samples, regenerated.samples, "$voice $blend saved render")
                 assertEquals(original.sampleRate, regenerated.sampleRate)
@@ -63,7 +63,7 @@ class OnsetPatchTest {
     @Test
     fun `legacy kick models survive editing and retain their original renderer`() {
         for (model in listOf(1, 2, 3)) {
-            for (voice in listOf(OnsetVoice.KICK, OnsetVoice.HAT_CLOSED)) {
+            for (voice in CORE_VOICES.filter { model >= 3 || it == OnsetVoice.KICK || it == OnsetVoice.HAT_CLOSED }) {
                 val patch = OnsetPatch("Legacy $model", voice, modelVersion = model)
                 val controls = patch.macros + ("BLEND" to .75f) + ("BODY" to .83f)
                 val edited = Patches.edited(patch, "Edited $model", controls) as OnsetPatch
@@ -86,7 +86,7 @@ class OnsetPatchTest {
         fun changed(name: String, value: JsonValue?) = JsonValue.Obj(
             LinkedHashMap(patch.toJsonValue().entries).also { if (value == null) it.remove(name) else it[name] = value },
         )
-        for (value in listOf(null, JsonValue.Null, JsonValue.Num(0.0), JsonValue.Num(4.0),
+        for (value in listOf(null, JsonValue.Null, JsonValue.Num(0.0), JsonValue.Num(Onset.MODEL_VERSION + 1.0),
             JsonValue.Num(2.5), JsonValue.Num(Double.NaN), JsonValue.Num(Double.POSITIVE_INFINITY), JsonValue.Str("3"))) {
             assertFailsWith<JsonException>("modelVersion=$value") {
                 OnsetPatch.fromJsonValue(changed("modelVersion", value))
@@ -121,7 +121,7 @@ class OnsetPatchTest {
     fun `constructors refuse incomplete nonfinite controls and voices absent from old models`() {
         val patch = OnsetPatch("Saved", OnsetVoice.KICK)
         assertEquals(Onset.defaults(patch.voice), patch.macros)
-        for (model in listOf(0, 4, Int.MAX_VALUE)) {
+        for (model in listOf(0, Onset.MODEL_VERSION + 1, Int.MAX_VALUE)) {
             assertFailsWith<IllegalArgumentException> { patch.copy(modelVersion = model) }
         }
         assertFailsWith<IllegalArgumentException> { patch.copy(name = " ") }
@@ -138,16 +138,24 @@ class OnsetPatchTest {
                 assertFailsWith<JsonException> { Patches.fromJsonValue(value) }
             }
         }
+        for (voice in OnsetVoice.entries.filter { it !in CORE_VOICES }) {
+            for (model in 1..3) {
+                assertFailsWith<IllegalArgumentException> { OnsetPatch("Absent", voice, modelVersion = model) }
+                val value = JsonValue.Obj(OnsetPatch("Current", voice).toJsonValue().entries +
+                    ("modelVersion" to JsonValue.Num(model.toDouble())))
+                assertFailsWith<JsonException> { Patches.fromJsonValue(value) }
+            }
+        }
     }
 
     @Test
-    fun `twelve dry presets expose the unchanged audition endpoints and midpoint`() {
-        val all = OnsetPresets.all()
+    fun `twelve core presets preserve model three audition endpoints and midpoint`() {
+        val all = OnsetPresets.all().filter { it.voice in CORE_VOICES }
         assertEquals(12, all.size)
         assertEquals(12, all.map { it.name }.toSet().size)
         assertTrue(Presets.all().containsAll(all))
         assertTrue(Presets.forVoice("ONSET", "UNKNOWN").isEmpty())
-        for (voice in OnsetVoice.entries) {
+        for (voice in CORE_VOICES) {
             val presets = OnsetPresets.forVoice(voice)
             assertEquals(presets, Presets.forVoice("ONSET", voice.name))
             assertEquals(listOf(0f, .5f, 1f), presets.map { it.macros.getValue("BLEND") })
@@ -182,15 +190,21 @@ class OnsetPatchTest {
     @Test
     fun `velocity layers leave saved blend and renderer intact through the soften fallback`() {
         for (voice in OnsetVoice.entries) {
-            val patch = OnsetPatch("Velocity", voice, modelVersion = if (voice == OnsetVoice.KICK) 1 else 3)
+            val model = when {
+                voice == OnsetVoice.KICK -> 1
+                voice in CORE_VOICES -> 3
+                else -> 4
+            }
+            val patch = OnsetPatch("Velocity", voice, modelVersion = model)
             assertNull(Velocity.brightnessSpec(patch), "$voice has no measured monotonic brightness macro")
             assertContentEquals(Velocity.soften(patch.render(), .75f).samples, Velocity.atVelocity(patch, .25f).samples)
             assertEquals(.5f, patch.macros.getValue("BLEND"))
-            assertEquals(if (voice == OnsetVoice.KICK) 1 else 3, patch.modelVersion)
+            assertEquals(model, patch.modelVersion)
         }
     }
 
     private companion object {
         val MACROS = setOf("TUNE", "DECAY", "BLEND", "SNAP", "BODY", "EDGE")
+        val CORE_VOICES = listOf(OnsetVoice.KICK, OnsetVoice.HAT_CLOSED, OnsetVoice.SNARE, OnsetVoice.HAT_OPEN)
     }
 }

@@ -935,7 +935,12 @@ logcat tag to grab when something is wrong.
   then SEND: the pad should repeat while held and stop on release. NOTE restores
   finite playback and its saved LENGTH. MAKE INSTRUMENT keeps the real attack,
   renders keyboard zones serially, and exposes RELEASE. Cancel a render, make a
-  replacement, hold a key through a loop, then release it. The
+  replacement, hold a key through a loop, then release it.
+  MAKE INSTRUMENT opens with TOUCH LAYERS ON: soft/hard playing selects separate
+  excitation captures at MIDI velocity 63/64. Toggle OFF for the older single-layer
+  delivery; neither choice edits the source patch. Check cancellation/retry,
+  both touches through long holds, and key-up release. The
+  [two-touch notes](../docs/LIBRATION_TOUCH.md) record compatibility and replay.
   [held design](../docs/LIBRATION_HOLD.md) records the new version and software evidence;
   this new transport still needs an owner phone/MPC pass.
 - **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,

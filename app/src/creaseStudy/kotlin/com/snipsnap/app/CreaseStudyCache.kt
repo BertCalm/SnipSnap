@@ -14,7 +14,7 @@ internal object CreaseStudyCache {
     const val MAX_DELIVERY = 12 * 1024 * 1024
     data class Manifest(val native: IntArray, val frames: Int, val file: String,
         val bytes: Int, val pcmHash: String, val packedHash: String, val order: Int,
-        val cases: Int)
+        val cases: Int, val coefficients: FloatArray = floatArrayOf())
     data class Decoded(val manifest: Manifest, val pcm: ShortArray)
 
     fun manifest(text: String): Manifest {
@@ -22,7 +22,8 @@ internal object CreaseStudyCache {
         val m = Json.parse(text).obj()
         fun Map<String, JsonValue>.value(key: String) = getValue(key)
         fun int(key: String) = m.value(key).int()
-        require(m.value("format").str() == "crease-playable-pcm-v1" && int("phoneStudy") == 1 &&
+        val shared = m.value("format").str() == "crease-shared-pcm-v1"
+        require((shared || m.value("format").str() == "crease-playable-pcm-v1") && int("phoneStudy") == 1 &&
             int("rate") == 44100 && int("midi") == 60 && int("model") == 3 &&
             m.value("releaseSeconds").num() == 1.2 && int("maxVoices") == 8) { "Unsupported C4 study" }
         require(m.value("approximationPassed").bool()) { "Study has not passed its accuracy gate" }
@@ -43,7 +44,31 @@ internal object CreaseStudyCache {
         val period = loop.toDouble() / root
         require(period in 168.0..169.0 && lead >= kotlin.math.ceil(period/2)+3 &&
             tail >= lead+release+kotlin.math.ceil(period/2)+3) { "Insufficient interpolation padding" }
-        val frames = held.toLong() + cuts.size.toLong()*tail
+        var frames = held.toLong() + cuts.size.toLong()*tail
+        var native = intArrayOf(held,start,loop,root,lead,tail,blend,release)+cuts.toIntArray()
+        var coefficients = floatArrayOf()
+        if(shared) {
+            val s=m.value("shared").obj()
+            val rank=s.value("components").int(); val pad=s.value("pad").int()
+            val offsets=s.value("offsets").arr().map { it.int() }
+            require(rank in 1..64 && pad==89 && s.value("frames").int()==tail+2*pad &&
+                s.value("storage").str()=="frame-major" && offsets.size==cuts.size &&
+                offsets.all { it in -85..85 }) { "Invalid shared basis dimensions" }
+            val values=s.value("coefficients").arr()
+            require(values.size==cuts.size*rank) { "Invalid shared coefficient dimensions" }
+            coefficients=FloatArray(values.size) { i ->
+                val value=values[i].num()
+                require(value.isFinite() && value in -8.0..8.0 && value.toFloat().toDouble()==value) { "Invalid shared coefficient" }
+                value.toFloat()
+            }
+            val bytes=ByteArray(coefficients.size*4)
+            coefficients.forEachIndexed { i,v -> val bits=v.toRawBits();repeat(4) { j -> bytes[i*4+j]=(bits ushr (8*j)).toByte() } }
+            require(sha(bytes)==s.value("coefficientsSha256").str()) { "Shared coefficient hash differs" }
+            frames=held.toLong()+rank.toLong()*(tail+2*pad)
+            val resident=frames*2+coefficients.size*4L+offsets.size*8L+8192
+            require(resident==s.value("residentBytes").long() && resident<=8*1024*1024) { "Shared study exceeds 8 MiB" }
+            native=intArrayOf(held,start,loop,root,lead,tail,blend,release,rank,pad)+cuts.toIntArray()+offsets.toIntArray()
+        }
         require(frames*2 <= MAX_PCM) { "Study exceeds 32 MiB PCM" }
         val c = m.value("container").obj()
         val file = c.value("file").str(); val packed = c.value("compressedBytes").int()
@@ -53,8 +78,7 @@ internal object CreaseStudyCache {
             c.value("bytePlanes").int() == 2 && order in 0..2 && packed in 1..MAX_DELIVERY &&
             Regex("[A-Za-z0-9_.-]+\\.cpcb").matches(file) && !file.contains("..") &&
             Regex("[a-f0-9]{64}").matches(pcmHash) && Regex("[a-f0-9]{64}").matches(packedHash)) { "Invalid study integrity data" }
-        return Manifest(intArrayOf(held,start,loop,root,lead,tail,blend,release)+cuts.toIntArray(),
-            frames.toInt(),file,packed,pcmHash,packedHash,order,cases)
+        return Manifest(native,frames.toInt(),file,packed,pcmHash,packedHash,order,cases,coefficients)
     }
 
     fun decode(m: Manifest, input: InputStream): Decoded {

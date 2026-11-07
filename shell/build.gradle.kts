@@ -4,6 +4,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateLibrationTouchAudition") {
+    group = "distribution"
+    description = "Render two-touch Libration instruments and performances of their exported PCM24 samples."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationTouchAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("librationTouchOutput").orNull ?: "${rootDir}/testkit/libration-touch")
+}
+
 repositories {
     mavenCentral()
 }
@@ -379,6 +389,23 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     mainClass.set("com.snipsnap.shell.CausticCompleteAuditionGenerator")
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
+}
+
+/** Held TRACE delivery and note-on/off recordings from the exported keygroup samples. */
+tasks.register<JavaExec>("generateLatticeKeysAudition") {
+    group = "distribution"
+    description = "Render TRACE attack/sustain keygroups, independent-cycle evidence and exported-file listening clips."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LatticeKeysAuditionGenerator")
+    workingDir = rootDir
+    val recipe = providers.gradleProperty("latticeKeysRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("latticeKeysReplayOutput").get())
+    } else {
+        args(providers.gradleProperty("latticeKeysOutput").orElse(rootDir.resolve("testkit/lattice-keys-audition").absolutePath).get())
+        providers.gradleProperty("latticeKeysBaseline").orNull?.let { args(it) }
+    }
 }
 
 /** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */

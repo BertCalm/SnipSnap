@@ -57,7 +57,7 @@ object EngineCatalog {
         "THUMP" to EngineEntry(listOf(EngineCategory.DRUMS), "Analog-style kick, snare, hats, clap, tom, cowbell, rim"),
         "SCANNED_CHAIN" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Evolving pitched notes: springy plucks, metal and swells"),
         "SKIN" to EngineEntry(listOf(EngineCategory.DRUMS), "Acoustic-style kick, snare, hats, toms, ride and shaker"),
-        "ONSET" to EngineEntry(listOf(EngineCategory.DRUMS), "Kick, snare and hats that blend electronic and acoustic"),
+        "ONSET" to EngineEntry(listOf(EngineCategory.DRUMS), "Kick, snare, hats, tom and pluck, wood or metal percussion"),
         "TINES" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Bells, chimes, kalimba and small percussion hits"),
         "VELVET" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BASS), "Classic subtractive synth: bass, brass, acid and chip"),
         "VOX" to EngineEntry(listOf(EngineCategory.VOICES, EngineCategory.PADS), "Choir, robot, speech, throat singing and beatbox"),

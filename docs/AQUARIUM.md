@@ -32,7 +32,7 @@ Changes audition immediately. **SAVE TO KIT** stores the full versioned settings
 
 Old kits open dry without a write. Unknown/damaged live metadata is preserved during ordinary kit edits, shown as unreadable, and played dry until the owner explicitly saves a replacement. `:kit` stores this optional JSON opaquely, while `:shell` validates it using the synth codec; this avoids a circular dependency.
 
-This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE and ORBIT can explicitly opt into these saved settings on their own independent stereo buses. SPLIT, held instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
+This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE, ORBIT and SPLIT can explicitly opt into these saved settings on their own independent stereo buses. Held instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
 
 ## SURFACE → FX
 
@@ -47,6 +47,12 @@ Every SURFACE PRINT now keeps both output channels, including dual-mono dry outp
 **USE KIT FX** saves an explicit opt-in in orbits.json and references the kit's saved PERFORMANCE sound. Both the ring mix and tapped-pad audition use the project's tempo, on separate processors. *(2026-11-06 ruling: there is one project tempo, set from BEAT, and ORBIT follows it. Until then this read "ORBIT's own tempo".)* An unused route starts dry. Ordinary edits and section changes keep history; RESET TAIL and rewind use the accepted smooth reset, and a new PLAY starts fresh.
 
 BOUNCE renders a fresh turn with the same post-sum processor, then zero input for the chosen 0..30-second FX tail (default 3). It matches fresh playback, not a later live lap's history or changing controls. Taps are excluded. Bypass/all-zero mixes add no tail. The complete print must fit the shelf's three-minute cap, including tail, or it is refused before rendering. SNIPS retains both file channels at the MPC rate; TAPE's editor still reads mono. A wet bounce is baked, may have a seam or cut a long decay, and receives FX again if played through KIT FX. CLIP TO KIT carries notes only. See the [ORBIT and storage contract](superpowers/specs/2026-11-01-aquarium-orbit-design.md).
+
+## SPLIT → FX → AQUARIUM
+
+**USE KIT FX** saves an explicit per-kit opt-in in split.json. KIT supplies the sound, seed, bypass, output gain and tempo; one stereo bus follows SPLIT's combined stems. The FX panel supplies RESET TAIL, stream/queue/fault status and a 0..30-second print tail (default 3). Stop, background release and kit switching silence the outgoing desk; foreground playback waits for a fresh PLAY.
+
+PRINT freezes the desk for a fresh pass at the source rate, followed by exact zero input for the selected wet tail. Saved wet mute is silent from frame zero. Bypass/all-zero mixes add no tail. An unused route keeps the exact legacy dry render, including floating overs; the opted-in route uses the player's +/-1 input clamp and protected wet output. The print must fit the three-minute shelf cap including tail and the native stereo allocation bound. It can cut a decay or have a loop seam. Stream resampling and accumulated history can differ from a fresh source-rate print. SNIPS/PAD preserve stereo; TAPE edits in mono; KIT FX applies the effects again to baked audio. See the [SPLIT contract](superpowers/specs/2026-11-07-aquarium-split-design.md).
 
 ## Finite render contract
 

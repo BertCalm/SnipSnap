@@ -3308,4 +3308,62 @@ TEST(pads_aquarium_bank_swap_never_carries_the_previous_banks_room_into_new_note
     CHECK(peak(std::vector<float>(replacement.begin() + 2 * 2000, replacement.end())) <= peak(aquariumIdle(s, 5000)) + 1e-30f);
 }
 
+TEST(split_aquarium_combined_stems_match_a_fresh_post_sum_bus_and_print_with_zero_input_tail) {
+    using namespace snipsnap::aquarium;
+    constexpr int frames = 2049, tail = 4097;
+    std::vector<std::vector<float>> parts(3, std::vector<float>(frames));
+    for (int i = 0; i < frames; ++i) {
+        parts[0][i] = .7f * std::sin(.1f * i);
+        parts[1][i] = .4f * std::cos(.07f * i);
+        parts[2][i] = .2f * static_cast<float>((i % 11) - 5) / 5;
+    }
+    const float gains[] = {2.f, 1.5f, .5f};
+    const bool reverse[] = {true, false, false};
+    PadEngine live(kRate);
+    live.beginBank();
+    for (const auto& p : parts) live.addSample(std::vector<float>(p), 1, kRate);
+    live.commitBank(); callback(live, 8); ended(live);
+    PerformanceSettings s; s.enabled = true; s.outputGain = .125f; s.seed = 0xffff'ffffu; s.bpm = 123.5;
+    CHECK(setParameter(s.parameters, "aqua_tide_mix", 1));
+    CHECK(setParameter(s.parameters, "aqua_tide_depth", .8f));
+    CHECK(setParameter(s.parameters, "aqua_tide_stereoPhase", 180));
+    CHECK(setParameter(s.parameters, "aqua_reef_mix", .7f));
+    CHECK(live.configureAquarium(s));
+    // Reprepare with the selected controls, as a configured fresh stream
+    // does. Runtime enable transitions are covered by the bus suite.
+    live.stop(); CHECK(live.configureAquarium(s));
+    PerformanceBus printed; CHECK(printed.publish(s)); CHECK(printed.prepare(kRate));
+    PadCommand group[3];
+    for (int i = 0; i < 3; ++i) {
+        group[i] = noteOn(i + 1, i, 0, frames, gains[i], gains[i]);
+        group[i].reverse = reverse[i];
+    }
+    CHECK(live.pushCommands(group, 3)); CHECK(live.armPrint(frames + tail));
+    int at = 0; bool hot = false, stereo = false, ringing = false;
+    std::vector<float> heard;
+    for (int n : {37, 256, 4097, 1756}) {
+        std::vector<float> expected(n * 2, 0);
+        for (int i = 0; i < n; ++i) {
+            const int f = at + i;
+            if (f >= frames) continue;
+            float sum = 0;
+            for (int p = 0; p < 3; ++p) sum += parts[p][reverse[p] ? frames - 1 - f : f] * gains[p];
+            hot = hot || std::abs(sum) > 1;
+            expected[2 * i] = expected[2 * i + 1] = std::clamp(sum, -1.f, 1.f);
+        }
+        printed.beginCallback(); printed.process(expected.data(), n);
+        const auto actual = callback(live, n);
+        for (int i = 0; i < n * 2; ++i) CHECK_NEAR(actual[i], expected[i], 1e-6);
+        for (int i = 0; i < n; ++i) {
+            stereo = stereo || std::abs(actual[2 * i] - actual[2 * i + 1]) > 1e-4f;
+            ringing = ringing || (at + i > frames + 100 && std::abs(actual[2 * i]) > 1e-7f);
+        }
+        heard.insert(heard.end(), actual.begin(), actual.end()); at += n;
+    }
+    CHECK_EQ(at, frames + tail); CHECK(hot); CHECK(stereo); CHECK(ringing);
+    CHECK_EQ(live.printSamples(), heard.size());
+    for (size_t i = 0; i < heard.size(); ++i) CHECK_EQ(live.printData()[i], heard[i]);
+    CHECK(!live.aquariumFaulted());
+}
+
 int main() { return check::runAll(); }

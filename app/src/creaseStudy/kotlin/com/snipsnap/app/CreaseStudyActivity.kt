@@ -120,7 +120,8 @@ class CreaseStudyActivity : ComponentActivity(), AudioVoice {
                 if(workerHandle==0L) {
                     val m=assets.open("crease/manifest.json").use { CreaseStudyCache.readLimited(it,1024*1024).toString(Charsets.UTF_8) }.let(CreaseStudyCache::manifest)
                     val data=CreaseStudyCache.decode(m,assets.open("crease/${m.file}"))
-                    workerHandle=NativeCreaseStudy.create(m.native,data.pcm)
+                    workerHandle=if(m.coefficients.isEmpty()) NativeCreaseStudy.create(m.native,data.pcm)
+                        else NativeCreaseStudy.createShared(m.native,data.pcm,m.coefficients)
                     check(workerHandle!=0L) { "Native reader refused the study cache" }
                 }
                 check(NativeCreaseStudy.start(workerHandle)) { "Could not open low-latency audio" }

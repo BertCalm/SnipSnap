@@ -110,3 +110,7 @@ The [SURFACE stereo contract](../specs/2026-10-31-aquarium-surface-stereo-design
 ### ORBIT route milestone, 2026-11-01
 
 The [ORBIT contract](../specs/2026-11-01-aquarium-orbit-design.md) connects its final stereo mix and fresh finite bounce to the same accepted continuous processor. OPEN THE SET holds its opt-in and 0..30-second bounce tail. ORBIT tempo reaches the mix and its separate tapped-pad audition; taps stay out of BOUNCE. The exact source endpoint precedes zero-input tail processing. Stereo shelf storage now explicitly preserves ORBIT bounces and SURFACE prints, while ordinary imports and TAPE's editor remain mono. The frozen-clock SURFACE test waits for both disk and UI completion. SPLIT, held instruments, other players and physical phone/MPC checks remain open.
+
+### SPLIT route milestone, 2026-11-07
+
+The [SPLIT contract](../specs/2026-11-07-aquarium-split-design.md) adds its combined-stem player and fresh finite stereo PRINT. FX saves an explicit per-kit route and 0..30-second tail; KIT owns the sound and tempo. PRINT retains the exact legacy dry mix when unused, and prepares the selected wet bus before rendering so a saved mute has no dry attack. Kit switching disposes the outgoing player and cancels delivery while accepted sidecar saves retain their original kit. Tail preflight, stereo storage and interrupted playback have host/device test coverage supplied; execution results belong in the PR. Held instruments, other players and physical phone/MPC checks remain open.
