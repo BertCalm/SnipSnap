@@ -210,10 +210,20 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
             val saved = saveAs("MY ${voice.name}", root)
             assertEquals(selected.copy(name = saved.name, midi = midi, velocity = velocity,
                 macros = selected.macros + mapOf("TUNE" to .75f, "MEMORY" to .70f, "HOLD" to .975f)), saved)
+            // SAVE names the sound through this voice's YOURS highlight. It lands when the
+            // save's shelf write returns to the main thread and the next frame runs.
+            val highlight = "preset.MERIDIAN.${voice.name}"
+            waitFor("the ${saved.name} highlight") { settings[highlight] == saved.name }
             compose.runOnIdle { generation++ }
             pump()
             waitFor("restored ${voice.name} native root") { rootIs(midi) }
-            assertEquals(saved, draft())
+            // The draft is the working recipe, not the preset. SAVE does not relabel it, and
+            // VELOCITY, like other engines' performance edits, labels it with the voice's
+            // display name. Every field of the sound must come back; the saved name comes
+            // back as the restored highlight.
+            val restored = draft() ?: error("No restored ${voice.name} draft")
+            assertEquals(saved.copy(name = restored.name), restored)
+            assertEquals(saved.name, settings[highlight])
             assertEquals(voice.name, settings["voice"])
             assertEquals(.75f, progress("TUNE"), 1e-6f)
             assertEquals(.70f, progress("MEMORY"), 1e-6f)
