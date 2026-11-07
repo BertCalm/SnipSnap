@@ -70,8 +70,8 @@ class ObbligatoSynthCommandTest {
         val destination = File(root, "not-created")
         try {
             for (flags in listOf(
-                listOf("--midi", "${Obbligato.MIDI_MIN - 1}"),
-                listOf("--midi", "${Obbligato.MIDI_MAX + 1}"),
+                listOf("--midi", "${Obbligato.midiRange().first - 1}"),
+                listOf("--midi", "${Obbligato.midiRange().last + 1}"),
                 listOf("--midi", "60.5"), listOf("--midi", "2147483648"),
                 listOf("--velocity", "NaN"), listOf("--velocity", "Infinity"),
                 listOf("--velocity", "-.01"), listOf("--velocity", "1.001"),
@@ -91,4 +91,39 @@ class ObbligatoSynthCommandTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun `expanding a saved narrow patch applies model and root together in either flag order`() {
+        val root = kotlin.io.path.createTempDirectory("obbligato-cli-expanded").toFile()
+        try {
+            val original = ObbligatoPatch("Saved narrow note", Obbligato.defaults(), model = 10)
+            val text = original.toJsonText()
+            val input = File(root, "source.patch").also { it.writeText(text) }
+            val cells = listOf(
+                48 to listOf("--model", "11", "--midi", "48"),
+                84 to listOf("--midi", "84", "--model", "11"),
+            )
+            for ((midi, flags) in cells) {
+                val destination = File(root, "wide-$midi")
+                val errors = ByteArrayOutputStream()
+                assertEquals(0, Cli.run((listOf("synth", "OBBLIGATO", "AIR_REED", "--patch", input.path) +
+                    flags + listOf("--out", destination.path)).toTypedArray(),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors)), errors.toString())
+                val saved = destination.listFiles { it.extension == "patch" }!!.single()
+                assertEquals(original.copy(model = 11, midi = midi), Patches.fromJsonText(saved.readText()))
+                assertEquals(1, destination.listFiles { it.extension == "wav" }!!.size)
+            }
+            assertEquals(text, input.readText(), "upgrading an audition rewrites its saved source")
+            val refused = File(root, "refused")
+            val errors = ByteArrayOutputStream()
+            assertEquals(2, Cli.run(arrayOf("synth", "OBBLIGATO", "AIR_REED", "--patch", input.path,
+                "--model", "10", "--midi", "48", "--out", refused.path),
+                PrintStream(ByteArrayOutputStream()), PrintStream(errors)))
+            assertTrue("60..72" in errors.toString(), "a saved narrow renderer loses its range diagnostic")
+            assertFalse(refused.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }

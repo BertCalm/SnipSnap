@@ -43,7 +43,7 @@ class ObbligatoStarterTest {
                 val patch = assertIs<ObbligatoPatch>(recipe.patch)
                 assertEquals(expected[pad.slot - 1], patch,
                     "pad ${pad.slot} lost its relationship, note, strike, seed or accepted renderer")
-                assertEquals(10, patch.model)
+                assertEquals(11, patch.model)
                 assertNull(recipe.fx, "the approved duet is dry")
                 assertEquals(DrumClass.TONAL, pad.drumClass)
                 assertTrue(pad.oneShot && !pad.loop, "a finite duet must not turn into a sustain loop")
@@ -56,7 +56,7 @@ class ObbligatoStarterTest {
                 assertEquals(listOf("0.3", "0.6", "0.8"),
                     listOf("velocitySoft", "velocityMid", "velocityMain").map { pad.source[it] })
                 assertEquals("peak-match-main", pad.source["velocityNormalization"])
-                assertEquals("10", pad.source["model"])
+                assertEquals("11", pad.source["model"])
 
                 val main = WavReader.read(File(directory, pad.sampleFile))
                 for (layer in pad.velocityLayers) {

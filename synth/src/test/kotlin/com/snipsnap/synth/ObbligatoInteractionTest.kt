@@ -185,10 +185,10 @@ class ObbligatoInteractionTest {
 
     @Test
     fun `historical experimental recipes remain explicit beside the accepted factory sound`() {
-        assertEquals(10, Obbligato.MODEL)
+        assertEquals(11, Obbligato.MODEL)
         assertEquals(6, Obbligato.EXPERIMENTAL_MODEL)
-        assertTrue(ObbligatoPresets.all().all { it.model == 10 })
-        assertTrue(ObbligatoKits.patches().all { it.model == 10 })
+        assertTrue(ObbligatoPresets.all().all { it.model == 11 })
+        assertTrue(ObbligatoKits.patches().all { it.model == 11 })
         val source = ObbligatoPatch("Responsive Fight", controls, midi = 67,
             velocity = .37f, seed = -931, model = Obbligato.EXPERIMENTAL_MODEL)
         assertEquals(source, ObbligatoPatch.fromJsonText(source.toJsonText()))

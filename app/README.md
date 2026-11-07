@@ -89,6 +89,15 @@ MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAM
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
 SCOUR, KEEL and CHITIN.
 
+OBBLIGATO offers PHRASE and HELD playback. New phrases render native C3–C6;
+older saved finite recipes keep their original register and sound. HELD keeps
+the opening, then repeats a measured exchange while a key stays down. RELEASE
+controls its sampler note-off envelope. MAKE INSTRUMENT captures thirteen native
+roots and preserves their loops in phone, MPC 2 and MPC 3 packages. SEND TO PAD
+and SPREAD remain finite deliveries with a saved terminal fade. Mode, root,
+velocity, seed and controls survive saving and navigation; HOLD remains a phrase
+length control in PHRASE and is hidden while HELD.
+
 CHITIN provides SHELL bass and WING lead voices, with six candidate presets each.
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.

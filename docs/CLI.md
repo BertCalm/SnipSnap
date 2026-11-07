@@ -1486,3 +1486,31 @@ number in that table is the classifier being auditable in public.
 ### LORENTZ finite collisions
 
 `snipsnap synth LORENTZ FUSE --preset 1 --out <dir>` renders the rounded voice; use `LORENTZ LORENTZ` for the tearing voice. `--all` renders all six anchors for that voice. `--macros` accepts TUNE, CAPACITOR, GAP, IMPACT, WELD and HOLD. `--midi` sets TUNE over MIDI 24..48; it cannot be combined with a TUNE macro override. `--velocity` changes contact and level, and `.patch` sidecars retain every setting for `--patch` replay. HOLD extends a finite decay and does not export a held instrument. Only engine model 3 is currently supported by saved LORENTZ patches.
+
+### OBBLIGATO: extended notes and held instruments
+
+OBBLIGATO's expanded renderer accepts native C3–C6 notes (MIDI 48–84), explicit
+velocity and seed, and the same four duet controls. Saved renderer versions 1–10
+retain their C4–C5 bounds and finite HOLD meaning. Select an expanded finite
+recipe explicitly when overriding an older saved patch's note range:
+
+```sh
+snipsnap synth OBBLIGATO AIR_REED --model 11 --midi 48 --velocity .7 --seed 17 --out duet
+```
+
+HELD is a saved playback choice, independent of a finite recipe's HOLD length.
+After selecting HELD in SYNTH and saving its complete patch, export the thirteen
+native minor-third zones with sampler release:
+
+```sh
+snipsnap synth OBBLIGATO AIR_REED --patch duet-held.patch --instrument --release .6 --out duet-keys
+```
+
+The instrument includes MPC 3 and MPC 2 programs, a phone sidecar, all native
+samples, and the complete `.patch.json` recipe. Keyboard coverage stays within
+MIDI 48–84. `--midi`, `--velocity` and `--seed` preserve the saved articulation;
+`--attack` is refused because each sample retains the duet's opening. The release
+value is the phone sampler's seconds field; MPC hardware timing is unmeasured.
+Without `--instrument`, a HELD patch writes a loop-enabled WAV and a complete
+`.patch` receipt. Unsupported held versions, altered HOLD, invalid release and
+out-of-range notes are refused before an output folder is created.

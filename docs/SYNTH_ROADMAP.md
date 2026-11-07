@@ -3206,6 +3206,16 @@ TERRA's FORCE is not monotone in onset brightness on its rim pads; THUMP's
 and ONSET's kicks still take `soften()`; no app screen calls the OBBLIGATO
 pad maker yet.
 
+**2026-11-07 OBBLIGATO follow-up:** the phone and CLI now offer explicit HELD
+playback with note-off release and thirteen native roots from C3 to C6. PHRASE
+keeps the accepted finite gesture; older recipes retain their register and audio.
+The new captured-phrase path keeps complete exchanges and both actual sources,
+with one bounded longer-source retry when needed. The 52 main-strike instrument
+sources and 52 soft-strike native captures pass their numerical checks. The
+[published performance audition](https://obbligato-sustain-range.bertcalm.chatgpt.site)
+contains four complete instruments. Listening acceptance and broader build status
+are tracked in [OBBLIGATO_PERFORMANCE.md](OBBLIGATO_PERFORMANCE.md).
+
 Why it is built this way: a pad is the unit of use, so the round fixes what
 reaches every drum kit before adding a mechanism; velocity enters through
 the engines' own physics (contact, tension, grit) rather than a filter over

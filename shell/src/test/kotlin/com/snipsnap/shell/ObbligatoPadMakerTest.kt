@@ -4,6 +4,8 @@ import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Obbligato
+import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoPlayback
 import java.io.File
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.AfterTest
@@ -12,7 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** OBBLIGATO as a keys instrument: five held zones through both MPC generations and the phone's sidecar. */
+/** Thirteen real native held zones through both MPC generations and the phone's sidecar. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ObbligatoPadMakerTest {
 
@@ -28,20 +30,27 @@ class ObbligatoPadMakerTest {
         dest.deleteRecursively()
     }
 
-    private val spec = ObbligatoPadMaker.Spec(Obbligato.defaults(), releaseSeconds = 0.6f)
+    private val spec = ObbligatoPadMaker.Spec(ObbligatoPatch("Native duet",
+        Obbligato.defaults() + ("HOLD" to 1f), model = Obbligato.PERFORMANCE_MODEL,
+        playback = ObbligatoPlayback.HELD, releaseSeconds = 0.6f))
 
     private val notes: List<KeyNote> by lazy { ObbligatoPadMaker.zoneMidis(spec).map { ObbligatoPadMaker.renderZone(spec, it) } }
 
     @Test
-    fun `five zones tile around C4 to C5 and root at the minor thirds`() {
+    fun `thirteen native zones tile exactly C3 to C6 and root at the minor thirds`() {
         val (program, samples) = ObbligatoPadMaker.assemble("OBBLIGATO DUET", spec, notes)
         val zones = program.keygroups
-        assertEquals(listOf(60, 63, 66, 69, 72), zones.map { it.rootNote })
+        assertEquals((48..84 step 3).toList(), zones.map { it.rootNote })
         for (i in 1 until zones.size) assertEquals(zones[i - 1].highNote + 1, zones[i].lowNote, "zones tile without gaps")
-        assertEquals(51, zones.first().lowNote)
-        assertEquals(81, zones.last().highNote)
+        assertEquals(48, zones.first().lowNote)
+        assertEquals(84, zones.last().highNote)
         assertEquals(0.6f, program.volumeRelease)
-        assertEquals(5, samples.size)
+        assertEquals(13, samples.size)
+        for (midi in 48..84) {
+            val zone = zones.single { midi in it.lowNote..it.highNote }
+            assertTrue(kotlin.math.abs(midi - zone.rootNote) <= 1,
+                "a native held zone requires more than one semitone of resampling")
+        }
         zones.forEachIndexed { i, kg ->
             val layer = kg.layers.single()
             assertEquals(notes[i].loopStartFrame, layer.loopStartFrame)
@@ -60,7 +69,9 @@ class ObbligatoPadMakerTest {
         val xty = Mpc3TrackWriter().keygroupPayloadText(program)
         assertTrue("\"LoopMode\": 1" in xty, "MPC 3 idiom: LoopMode=1")
         val (_, instrument) = InstrumentStore.list(dest).single()
-        assertEquals(5, instrument.zones.size)
+        assertEquals(13, instrument.zones.size)
+        assertEquals(48, instrument.zones.first().lowNote)
+        assertEquals(84, instrument.zones.last().highNote)
         assertTrue(instrument.zones.all { it.loopStartFrame > 0 }, "every zone holds")
     }
 }
