@@ -232,6 +232,9 @@ fun PropertiesScreen(
         // PAD VELOCITY: how a tap becomes a velocity. Its own composable.
         PadVelocityGroup(scheme)
 
+        // RECORD OFFSET: how far a take is moved back for the route. Its own composable.
+        RecordOffsetGroup(scheme)
+
         // MIDI OUT: HAPTICS' two-up toggle again, then where the notes go. A
         // phone with no MIDI gets the one sentence and no switch - a bevel
         // that could not do anything would be a lie.

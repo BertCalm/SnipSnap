@@ -500,8 +500,8 @@ class BeatPlayer(
                     if (clip != null && clip.notes.isNotEmpty()) {
                         // `BeatClock.crossed` is the old inline test, wrap clause
                         // and all (`BeatClockTest` pins it).
-                        BeatClock.forEachNoteCrossed(clip, lastPos, np, totalSteps) { n ->
-                            // Mpc3Note.slotFor, not `note - 35`: the map wraps, so
+                        BeatClock.forEachHitCrossed(clip, lastPos, np, totalSteps) { slot, velocity ->
+                            // `BeatClock.forEachHitCrossed` maps through Mpc3Note.slotFor, not `note - 35`: the map wraps, so
                             // notes 0..35 are pads 93..128 and subtracting alone
                             // gives them a slot no kit has. A clip that plays on
                             // the MPC would be silent in this roll.
@@ -513,8 +513,9 @@ class BeatPlayer(
                             // is what the position is about to become, so it's
                             // the same "which bar is this" the screen itself
                             // will show a moment later.
-                            val slot = Mpc3Note.slotFor(n.note)
-                            hit(slot, auditionPos = np, auditionBarSteps = barSteps)
+                            // `velocity` is the note's own, stored value: the roll
+                            // used to leave it out and play every step at full.
+                            hit(slot, velocity, auditionPos = np, auditionBarSteps = barSteps)
                             _triggered.tryEmit(slot)
                         }
                     }
