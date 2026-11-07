@@ -1,0 +1,7 @@
+{
+  "command": "python3 /workspace/scratch/alloy-material-body/render/verify.py",
+  "actualExit": 0,
+  "hardChecks": 3027,
+  "hardFailures": 0,
+  "observedAt": "2026-11-03T01:57:21.646639+00:00"
+}

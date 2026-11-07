@@ -1,0 +1,73 @@
+{
+  "actualExit": 0,
+  "comparisons": [
+    {
+      "id": "rounded_plug_finite_body_ab",
+      "postFadeRms": [
+        0.06947763416598934,
+        0.06946588568056879,
+        0.06947763416598934,
+        0.06946588568056879
+      ],
+      "newVsOriginalDb": 0.0014688853158935315,
+      "fileSha256": "39ec7fe4a09866b832d74d4cbc5096450e7e4d65b54e27921c2a58309e1bffbf"
+    },
+    {
+      "id": "rounded_plug_held_body_ab",
+      "postFadeRms": [
+        0.06967401185728073,
+        0.06973172111828284,
+        0.06967401185728073,
+        0.06973172111828284
+      ],
+      "newVsOriginalDb": -0.00719132979817438,
+      "fileSha256": "8e3ee43634cfe23cbf39dc0b2a0406ab56d57d96e60806887b4fd0e6561f786b"
+    },
+    {
+      "id": "long_prism_finite_body_ab",
+      "postFadeRms": [
+        0.06981930721063273,
+        0.0698016037230766,
+        0.06981930721063273,
+        0.0698016037230766
+      ],
+      "newVsOriginalDb": 0.002202686387262236,
+      "fileSha256": "b986b3397dc5937c94ecc18ce7be6bbbcdf4c5a6daea90d0600083b59bbf0f37"
+    },
+    {
+      "id": "long_prism_held_body_ab",
+      "postFadeRms": [
+        0.06970207144027331,
+        0.06970381925547005,
+        0.06970207144027331,
+        0.06970381925547005
+      ],
+      "newVsOriginalDb": -0.00021780040759609688,
+      "fileSha256": "866d733837d130ef64addec8947cd24c666377ecf7a038e36da7ea5a2527f588"
+    },
+    {
+      "id": "velvet_rise_finite_body_ab",
+      "postFadeRms": [
+        0.06982286071503181,
+        0.06978575928105835,
+        0.06982286071503181,
+        0.06978575928105835
+      ],
+      "newVsOriginalDb": 0.004616605600757282,
+      "fileSha256": "8e8307fe3417e41b14ea87335275700a0743e4ca8078079e2b27e2b70714cdf8"
+    },
+    {
+      "id": "velvet_rise_held_body_ab",
+      "postFadeRms": [
+        0.06982254315422663,
+        0.06980877612773188,
+        0.06982254315422663,
+        0.06980877612773188
+      ],
+      "newVsOriginalDb": 0.0017127801095065632,
+      "fileSha256": "b8a66c8e1f6ed411ce3fc1b657b453ce4c3b3a2195025b4683e00dc551a5cf30"
+    }
+  ],
+  "maxAbsPostFadeLevelDifferenceDb": 0.00719132979817438,
+  "limitation": "RMS balance is a signal-level measurement, not an assertion of perceptual loudness equality or sonic approval."
+}

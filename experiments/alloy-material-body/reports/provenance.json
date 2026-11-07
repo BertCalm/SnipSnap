@@ -1,0 +1,396 @@
+{
+  "engine": "Actual unchanged Kotlin ALLOY model 1; external candidate config authoring law",
+  "sourceCommit": "b04496ece7770903549c23ea913bad90bb57f45e",
+  "publishedBankSourceCommit": "a274e056daead945fd1a73048110e59207215499",
+  "sourceFiles": [
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/Alloy.kt",
+      "sha256": "d7ea6d92d38beb97f96201ceb750fe52021b16ba7f2f3cc98ec643531f32575f",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/AlloyConfig.kt",
+      "sha256": "e891e1ae15d508595322ce59b41fc9e5938556b2d254e9ebb923e6423dcfac24",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/AlloyPatch.kt",
+      "sha256": "80605e3bef427f90a421e19d07280cd90f8317665a0573efaed12778c466dd93",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/AlloyPresets.kt",
+      "sha256": "9aa44f0b1d55ac3ae87c0b9e1d87edf17993d0e15473d2741cc05e4f1437a458",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/AlloyFactoryRoles.kt",
+      "sha256": "76fbcc30eb3ad40818c0988855a8c48d9ebe1d8f340f9b4e7ad43dda79fb7fbc",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/AlloyContrastPresets.kt",
+      "sha256": "273ea1144de4d35e9b7a59bbb8b808bc030c5adf756a369500aa7b1dba62f7fe",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/AlloyAuditionGenerator.kt",
+      "sha256": "7a8278384bac44cc628f70065e5806bf887bbd02e2129f1dad2c53e5e33a7207",
+      "matchingPublishedBuild": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt",
+      "sha256": "1ba3749c72b59025da38e6b14f163a439d44ee96a9f6d2b1bc535854e1493f18",
+      "matchingPublishedBuild": true
+    }
+  ],
+  "dependencyClasses": [
+    {
+      "className": "com.snipsnap.audio.Classifier",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/Classifier.class",
+      "sha256": "608763b0a0ca03058cbb7d54522d13fbb6572dbe2fab4c8f16193ed61aa737ba",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.FeatureExtractor",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/FeatureExtractor.class",
+      "sha256": "71c237969512a2535434a24b22c2dc9efb83566c843aa05c603f22552bcb932a",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.Loudness",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/Loudness.class",
+      "sha256": "59b1eef1a53c252e96f0d4251a22a2b8e2c7f7f937f6941d92d7631a49c6c550",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.Resampler",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/Resampler.class",
+      "sha256": "0f9eae0c1d68024378c941b1d629e44f2ad0b2ef0eb10e7a669df20ccc8cf5f1",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.Snip",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/Snip.class",
+      "sha256": "f4fa5da26e18cccb1bc4b6d7b93b5e374706212887f80eb0a91749c2aebf7719",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.WavWriter",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/WavWriter.class",
+      "sha256": "896f17a5951d102d81d81be49a7cd537202f115ca226356cc3f656f56c6ecafb",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.WavWriter$BitDepth",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/WavWriter$BitDepth.class",
+      "sha256": "29304c44e42267fce8ea2a407dbf979178847e5221fc202346b8ebb3b0d3f29d",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.audio.WavWriter$WhenMappings",
+      "path": "/workspace/SnipSnap/audio/build/classes/kotlin/main/com/snipsnap/audio/WavWriter$WhenMappings.class",
+      "sha256": "a75e43a30d30a45f70370dde7dac52f9aebab17389f975c8e2965216d2c42cb0",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.kit.KitAssembler",
+      "path": "/workspace/SnipSnap/kit/build/classes/kotlin/main/com/snipsnap/kit/KitAssembler.class",
+      "sha256": "ea00119fefc23b6eb8dfc682d57a1c5b176d57153c1ecd2b482d11752a7d0acd",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.kit.KitExporter",
+      "path": "/workspace/SnipSnap/kit/build/classes/kotlin/main/com/snipsnap/kit/KitExporter.class",
+      "sha256": "dda76a7eb02a9cb1660289ad1a16bc2f567bf5a27ce4b9654b8bc6b43a794f5c",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.kit.KitStore",
+      "path": "/workspace/SnipSnap/kit/build/classes/kotlin/main/com/snipsnap/kit/KitStore.class",
+      "sha256": "c58a21a1fbffad6db4439da6056da415ff15ec4e79f65c74dec7b19a557a7475",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy.class",
+      "sha256": "19e9ada9c8a25cb5b66096948a0c13c436a603abd0d993a16e8d5e6a3fc38192",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy$Diagnostics",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy$Diagnostics.class",
+      "sha256": "b03263669a4644d66d62cbfb6f703edb9f79d4287f128a88312c74b3db52cbff",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy$Engine",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy$Engine.class",
+      "sha256": "279d3d712691801b1f95140b1a26d3df27d65ce2d9d4042d513588d4dfad9e6d",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy$Probe",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy$Probe.class",
+      "sha256": "d249cec5adc0bb548af4f357d0c9dcf6d243eba6b48e533bb4fef0d2f6e77acb",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy$Source",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy$Source.class",
+      "sha256": "a7431fee089a940b0238966b5f3fe8ed9d193f50ed88a587590c8020915a6ed4",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Alloy$WhenMappings",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Alloy$WhenMappings.class",
+      "sha256": "9b77e876259787c12ede8d6f17b0c0c18b9a20df50e098e8dc048e566e04a2c0",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyAuditionGenerator",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/test/com/snipsnap/synth/AlloyAuditionGenerator.class",
+      "sha256": "ce88a2bb49ee52612b0972ed635cd3ef5a43ba9835d8382e0665ac8234c0e862",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyAuditionGenerator$Case",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/test/com/snipsnap/synth/AlloyAuditionGenerator$Case.class",
+      "sha256": "bbd0ef3b50010db86658f9c19e77558e8c665127525ecb461c64361f78dd5ee5",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyAuditionGenerator$PairReference",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/test/com/snipsnap/synth/AlloyAuditionGenerator$PairReference.class",
+      "sha256": "7fd365e5515122bb1a25cac2c4fe5c637ee4ec8ea4d983e7fbadc771c89ef1f3",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig.class",
+      "sha256": "2074627a5b046cce53c2c9ad9c286f68dda319866713e5523fa51f035bf4f114",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Companion",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Companion.class",
+      "sha256": "fe681a27f1f635475a42aee7bfadcb23552deb8ecf0bf2fee2f1c977c604004d",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Envelope",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Envelope.class",
+      "sha256": "b77d5a5ed3806ab2650702e3e016a74ee4c2d97bd52be05d5ab138ddf92b49c5",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Held",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Held.class",
+      "sha256": "1f8d973295ec0e7b007ee2ddcad6ec1319d16b82651fdd81c4f36ef4d53f8947",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Operator",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Operator.class",
+      "sha256": "d387ba700e87c1cf59a21681e1694292ef2b7c1748d07a40eca2505fef8357ca",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Projection",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Projection.class",
+      "sha256": "8552f619e1c86c69f4db482fbc44291d070a3d09ae0e545ed18b07f59f96f9c6",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyConfig$Route",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyConfig$Route.class",
+      "sha256": "75437b05f6abb3f3f17b9b04ccfb93d727d25f7918243594608f3f4a12e8275a",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyContrastPresets",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyContrastPresets.class",
+      "sha256": "ffbe65dccc7e0f6a130231f1873e4f5d7497e0deb3f1cf781db6300cd5c44f3e",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyContrastPresets$WhenMappings",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyContrastPresets$WhenMappings.class",
+      "sha256": "f592854399684706d56120d2cd659ca49c500f7073501a42d2b95dc112c7d5e9",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyFactoryRoles",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyFactoryRoles.class",
+      "sha256": "58dd159a6c29d36ed29a7e977cdf282dae345f1fe7b57851a3382ee3c90660af",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyPatch",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyPatch.class",
+      "sha256": "954eab79b9a2a55961f135e20b3a5979dcd09b80a47a797a49bd6482328cd4c2",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyPatch$Companion",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyPatch$Companion.class",
+      "sha256": "440f50c66af785d72ea560eac4c1e6fa6cc23c19f580931a280fce728c209eec",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyPresets",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyPresets.class",
+      "sha256": "d472b758012124b04da336edcbc6d30ba4982248883ffb03b61d623f3d07f6d2",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AlloyPresets$WhenMappings",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/AlloyPresets$WhenMappings.class",
+      "sha256": "562a60ffb3177dcde0e36ab83f6ea7677605135a82ee7f607bbf80d38fdd754b",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.AuditionLevel",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/test/com/snipsnap/synth/AuditionLevel.class",
+      "sha256": "ef7556eefc72c26f697661ec9b7cdf1acda1c1920c0b20428c81e4e1862d22a0",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp.class",
+      "sha256": "d71c35c45b974d3da029d089489cddc4cbe81a61f5c9bca848fa72659be9205e",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Biquad",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Biquad.class",
+      "sha256": "81933930bb62c29e9f5cfd2f272cf6987588c8e9d290de94456258801f23e02f",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Env",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Env.class",
+      "sha256": "f159c8ab7a18ceb7dcab2b71620b6970ec42e9f90577c447a4483591854d48ec",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$FixedOnePole",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$FixedOnePole.class",
+      "sha256": "822d7b0a5b177c241586a98e42f85934fe9e177e89835593a2332c795ea7b032",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Ladder",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Ladder.class",
+      "sha256": "9b52a3abff499527488ff2208900ed88a2b5b0a4adf68e8bea13805835ae73a1",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Ladder$Companion",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Ladder$Companion.class",
+      "sha256": "b8f4b32f3d3a90f8afe6f242ce7638995cdf0c347abb1ca1ec1321c7f74d03e0",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Noise",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Noise.class",
+      "sha256": "4594a65ce39c86e83ebb779688c3ccefd82e03109caf66978f52c517de16cb66",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$OnePole",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$OnePole.class",
+      "sha256": "aeb444289dd3aaef3e431352d7bd50dd849bfdbca41dbb02ef2c3c00178f40ae",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$Svf",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$Svf.class",
+      "sha256": "39b568a7d77b67ce0913acb1eda8584b76557637bf3685791e2879ed03c084ee",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Dsp$TptSvf",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Dsp$TptSvf.class",
+      "sha256": "69326e275acf4a43eb1b1b23a5ecb5038eee9da0e3d24976ac771702c867e720",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.SynthKits",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/SynthKits.class",
+      "sha256": "537256dc9fa5f457c31174029125fca61cd63b57601d799599c9859f8a4b45aa",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.SynthKits$EmbouchureFactoryBank",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/SynthKits$EmbouchureFactoryBank.class",
+      "sha256": "8ad845d999b14e50e47eb1c7a02cd17bb5068a35b1ae81224fbc5568f9992f3e",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Tide",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Tide.class",
+      "sha256": "49fd54ac1b64c3e89b322f45d97fe53b96e1aeb7f20d2a73692d1807178f1ac5",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Tide$Gate",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Tide$Gate.class",
+      "sha256": "e82aa2c7cf27c48f23e07d51129a4be861ec3d0173399012bc1b1926fde9394d",
+      "matchingPublishedBuild": true
+    },
+    {
+      "className": "com.snipsnap.synth.Tide$WhenMappings",
+      "path": "/workspace/SnipSnap/synth/build/classes/kotlin/main/com/snipsnap/synth/Tide$WhenMappings.class",
+      "sha256": "e968758b1aeabb8fbf03a6a2b587dfbf9d3c3bc35e7df0c59129bfbd2b767b47",
+      "matchingPublishedBuild": true
+    }
+  ],
+  "rendererSourceSha256": "5f6cc745e7be00f774154aa746353e438efe2b492b100813316f81ea79c64b79",
+  "mappingSourceSha256": "5521747c25322285f04a7b6f6938d6b9372f78e0c23cf7aeb9bed9aefdd98d9c",
+  "designSourceSha256": "b26565b19e0d0c24a258c47fd893b173b50fb8c5f80c78a4e40455552cb4c801",
+  "dspArithmeticChanged": false,
+  "schemaChanged": false,
+  "productionFactoryChanged": false,
+  "oldSavedPatchFallbackChanged": false,
+  "liveMappingInstalled": false,
+  "responseLaw": {
+    "domain": [
+      0,
+      0.5
+    ],
+    "originalConfigBypassAtOrAbove": 0.5,
+    "originalWeight": "(2 * MATERIAL) ** originalWeightPower",
+    "numericFields": "leftEndpoint + (original - leftEndpoint) * originalWeight",
+    "routeLaw": "Union of left/original route edges, absent depth=0; original exact route list bypasses interpolation at .5+",
+    "fixedFields": [
+      "operators.ratio",
+      "wood.ratios",
+      "tine",
+      "breath",
+      "envelope",
+      "held",
+      "fuseRadians"
+    ],
+    "endpoints": [
+      {
+        "roleId": "rounded_plug",
+        "power": 2,
+        "leftSnapshot": "patches/rounded_plug_finite_m000.json",
+        "originalSnapshot": "patches/rounded_plug_finite_reference.json"
+      },
+      {
+        "roleId": "long_prism",
+        "power": 1,
+        "leftSnapshot": "patches/long_prism_finite_m000.json",
+        "originalSnapshot": "patches/long_prism_finite_reference.json"
+      },
+      {
+        "roleId": "velvet_rise",
+        "power": 1,
+        "leftSnapshot": "patches/velvet_rise_finite_m000.json",
+        "originalSnapshot": "patches/velvet_rise_finite_reference.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,916 @@
+{
+  "status": "Stronger body-linked prototype; numerical screening is not listening approval",
+  "actualProcessExits": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "uniqueFinalJobs": 264,
+  "initialRenderWallSeconds": 91.88226282100004,
+  "replacementJobs": 14,
+  "listeningClips": 36,
+  "editedComparisons": 6,
+  "hardChecks": 3027,
+  "hardChecksPassed": 3027,
+  "hardFailures": [],
+  "contrastTargetsAreScreeningOnly": true,
+  "activity": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "windowSeconds": [
+        0.25,
+        0.75
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.06476271236863915,
+          "bodySpectralTV": 0.05128974626678803
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.18672836468360207,
+          "bodySpectralTV": 0.11989522377605857
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.27573642265314574,
+          "bodySpectralTV": 0.08238172156939842
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.15168684928099402,
+          "bodySpectralTV": 0.009832523301957989
+        }
+      ],
+      "coarseBodyWave": [
+        0.25071002139639265,
+        0.41844267629512216
+      ],
+      "coarseBodySpectralTV": [
+        0.1711849700428449,
+        0.09221424487135157
+      ],
+      "fullEndpointWave": 0.6410121304648819,
+      "fullEndpointSpectralTV": 0.27011515679105524,
+      "bodyEndpointWave": 0.6352187614959053,
+      "bodyEndpointSpectralTV": 0.26339921491419377,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.0645932213503906,
+          "bodySpectralTV": 0.05111328165885538
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.18649366160259823,
+          "bodySpectralTV": 0.11979802641485898
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.27649650210624016,
+          "bodySpectralTV": 0.08278886426519065
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.15289373172476764,
+          "bodySpectralTV": 0.01001908866391482
+        }
+      ],
+      "coarseBodyWave": [
+        0.2503090692923008,
+        0.4203810534204804
+      ],
+      "coarseBodySpectralTV": [
+        0.1709113080737141,
+        0.09280795292770805
+      ],
+      "fullEndpointWave": 0.637041598981377,
+      "fullEndpointSpectralTV": 0.27001055978579935,
+      "bodyEndpointWave": 0.6368474724881303,
+      "bodyEndpointSpectralTV": 0.2637192609995298,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "windowSeconds": [
+        0.3,
+        1.3
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.11928140420568409,
+          "bodySpectralTV": 0.05081603735333724
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.10565775278331765,
+          "bodySpectralTV": 0.0735320129993679
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.11090501325759261,
+          "bodySpectralTV": 0.09170363003254149
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.12213357984348171,
+          "bodySpectralTV": 0.1071953857706609
+        }
+      ],
+      "coarseBodyWave": [
+        0.2212818512715724,
+        0.2320293441305036
+      ],
+      "coarseBodySpectralTV": [
+        0.12434805035270423,
+        0.19870207062805914
+      ],
+      "fullEndpointWave": 0.44296519732508616,
+      "fullEndpointSpectralTV": 0.32146772104420285,
+      "bodyEndpointWave": 0.4362980590390279,
+      "bodyEndpointSpectralTV": 0.3216020794266296,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.08872245068294353,
+          "bodySpectralTV": 0.020811822419471618
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.08098610473178486,
+          "bodySpectralTV": 0.056165282870845844
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.13425133129595987,
+          "bodySpectralTV": 0.10154570384958427
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.24713501660651563,
+          "bodySpectralTV": 0.1193077420156416
+        }
+      ],
+      "coarseBodyWave": [
+        0.15752748362374716,
+        0.3777405791501568
+      ],
+      "coarseBodySpectralTV": [
+        0.0764216605986277,
+        0.2208534458107482
+      ],
+      "fullEndpointWave": 0.4566479674707903,
+      "fullEndpointSpectralTV": 0.29654616396958017,
+      "bodyEndpointWave": 0.4741071940301898,
+      "bodyEndpointSpectralTV": 0.29513731281663447,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "windowSeconds": [
+        1.0,
+        2.0
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.18593630092864058,
+          "bodySpectralTV": 0.1291507081123424
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.2546851209703301,
+          "bodySpectralTV": 0.16490474607405092
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.308531065409932,
+          "bodySpectralTV": 0.1644272594722135
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.3919135285940564,
+          "bodySpectralTV": 0.10248589209825859
+        }
+      ],
+      "coarseBodyWave": [
+        0.4340840841337824,
+        0.6525369641385439
+      ],
+      "coarseBodySpectralTV": [
+        0.29405537740592785,
+        0.2669131515704719
+      ],
+      "fullEndpointWave": 0.969157371266813,
+      "fullEndpointSpectralTV": 0.5707536734676122,
+      "bodyEndpointWave": 0.9701168371922066,
+      "bodyEndpointSpectralTV": 0.5609477296580612,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "denseSteps": [
+        {
+          "fromMaterial": 0.0,
+          "toMaterial": 0.125,
+          "bodyMatchedWave": 0.18106803803578955,
+          "bodySpectralTV": 0.1366912092644788
+        },
+        {
+          "fromMaterial": 0.125,
+          "toMaterial": 0.25,
+          "bodyMatchedWave": 0.24188404901911836,
+          "bodySpectralTV": 0.16534322289260808
+        },
+        {
+          "fromMaterial": 0.25,
+          "toMaterial": 0.375,
+          "bodyMatchedWave": 0.30859245464513857,
+          "bodySpectralTV": 0.16226712663024376
+        },
+        {
+          "fromMaterial": 0.375,
+          "toMaterial": 0.5,
+          "bodyMatchedWave": 0.3950866403973573,
+          "bodySpectralTV": 0.10863685956043902
+        }
+      ],
+      "coarseBodyWave": [
+        0.4160269171095611,
+        0.6581945712388825
+      ],
+      "coarseBodySpectralTV": [
+        0.3020341804625774,
+        0.2612119061988535
+      ],
+      "fullEndpointWave": 0.9644276582030522,
+      "fullEndpointSpectralTV": 0.5770557145103141,
+      "bodyEndpointWave": 0.9634915105183574,
+      "bodyEndpointSpectralTV": 0.5632416384581528,
+      "originalBodyActivityFloor": 0.005,
+      "originalColourFloor": 0.003,
+      "strongerScreeningTargets": {
+        "bodyMatchedWave": 0.15,
+        "bodySpectralTV": 0.08
+      },
+      "audibilityProven": false
+    }
+  ],
+  "referenceComparisons": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 0,
+      "candidatePreroll": 0,
+      "frozenFactoryPcm24Exact": true,
+      "frozenFactoryFile": "/workspace/scratch/alloy-factory-release/review/registry-replay-jdk17/factory_02.wav",
+      "frozenFactorySha256": "d00683230fa6145787bbbb176ae9c6a13600339eb0ab405f17a1ab6e42192552"
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 3,
+      "candidatePreroll": 3
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 0,
+      "candidatePreroll": 0,
+      "frozenFactoryPcm24Exact": true,
+      "frozenFactoryFile": "/workspace/scratch/alloy-factory-release/review/registry-replay-jdk17/factory_07.wav",
+      "frozenFactorySha256": "b0a5be569a59bedd7093f543245e247449369888c3a55ad9e20d37247093fddb"
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 3,
+      "candidatePreroll": 3
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 0,
+      "candidatePreroll": 0,
+      "frozenFactoryPcm24Exact": true,
+      "frozenFactoryFile": "/workspace/scratch/alloy-factory-release/review/registry-replay-jdk17/factory_23.wav",
+      "frozenFactorySha256": "59487c465cfbfa97eb31110e9a68493fb1744990fd6154376c08801769ce2eb6"
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "approvedDefaultPcm24Exact": true,
+      "matchedPcm16Exact": true,
+      "referencePreroll": 3,
+      "candidatePreroll": 3
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 0.5,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 0.75,
+      "upperHalfPcm24Exact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 1.0,
+      "upperHalfPcm24Exact": true
+    }
+  ],
+  "materialFuseInteractions": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "bodyMaterialDifferenceAtFuseZero": 0.6389477006337205,
+      "bodyFuseDifferences": [
+        7.804970476957549e-05,
+        0.000889963122585953
+      ]
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "bodyMaterialDifferenceAtFuseZero": 0.6374801044782115,
+      "bodyFuseDifferences": [
+        0.0037101458603660594,
+        0.0013313330850113698
+      ]
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "bodyMaterialDifferenceAtFuseZero": 0.4911838718836881,
+      "bodyFuseDifferences": [
+        0.1841041634223789,
+        0.21558100074782238
+      ]
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "bodyMaterialDifferenceAtFuseZero": 0.47235063022913254,
+      "bodyFuseDifferences": [
+        0.22331014586803954,
+        0.07218836949841323
+      ]
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "bodyMaterialDifferenceAtFuseZero": 0.9652420149870162,
+      "bodyFuseDifferences": [
+        0.0016493122824444387,
+        0.12998877915290066
+      ]
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "bodyMaterialDifferenceAtFuseZero": 0.9657630317666271,
+      "bodyFuseDifferences": [
+        0.02016647466477199,
+        0.033750423121949105
+      ]
+    }
+  ],
+  "highRegister4x8x": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.03813146971890684,
+      "spectralTV": 0.0001506233642993117,
+      "powerAbove16k": 2.046869712487486e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.031048975076542803,
+      "spectralTV": 6.232359686580597e-05,
+      "powerAbove16k": 1.84214470233114e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.026570499703383533,
+      "spectralTV": 5.2966809137333784e-11,
+      "powerAbove16k": 2.1420067060984778e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.026646797681365835,
+      "spectralTV": 9.89509487940064e-08,
+      "powerAbove16k": 4.248938808083812e-06,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.03821855487828127,
+      "spectralTV": 0.00015126531036872942,
+      "powerAbove16k": 1.705286559946444e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.03094095511348623,
+      "spectralTV": 6.367886944162808e-05,
+      "powerAbove16k": 2.2683747804353324e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.02657050680158298,
+      "spectralTV": 7.416534348462557e-12,
+      "powerAbove16k": 1.5583020718481153e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.026571106582311373,
+      "spectralTV": 2.121719864013274e-11,
+      "powerAbove16k": 1.6154542576045105e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.04864910139782201,
+      "spectralTV": 0.0003321215540185438,
+      "powerAbove16k": 1.532376950853229e-12,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.05885745608802381,
+      "spectralTV": 0.0004227718769377282,
+      "powerAbove16k": 8.611126529011887e-09,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.07171007496810393,
+      "spectralTV": 0.00041456991941012263,
+      "powerAbove16k": 5.590562367427495e-09,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.07186531033129988,
+      "spectralTV": 0.000389549589761356,
+      "powerAbove16k": 2.760175559316206e-06,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.04762987918851016,
+      "spectralTV": 0.0003144871852465617,
+      "powerAbove16k": 2.400598691638217e-10,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.04263636613985364,
+      "spectralTV": 0.0002575293446050836,
+      "powerAbove16k": 1.6698440459122792e-10,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.026933533708788145,
+      "spectralTV": 2.1566739584791006e-05,
+      "powerAbove16k": 2.884808746627042e-11,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.02694392282953665,
+      "spectralTV": 2.5380967173292495e-05,
+      "powerAbove16k": 5.881226450857502e-12,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.06482132983744297,
+      "spectralTV": 0.00040843391597026826,
+      "powerAbove16k": 2.0040966460370814e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.0521378069966026,
+      "spectralTV": 0.00036215966677298863,
+      "powerAbove16k": 7.103594358458946e-13,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.0388439356954945,
+      "spectralTV": 0.00017686537713542793,
+      "powerAbove16k": 1.222653539091548e-13,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.03836558926020301,
+      "spectralTV": 0.00012813823384106503,
+      "powerAbove16k": 3.214313969313994e-06,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 0,
+      "midi": 84,
+      "matchedBodyResidual": 0.06465607649081737,
+      "spectralTV": 0.00041006615353353,
+      "powerAbove16k": 2.6336348606054526e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 0.25,
+      "midi": 84,
+      "matchedBodyResidual": 0.04933117589285232,
+      "spectralTV": 0.00032663535540958927,
+      "powerAbove16k": 2.1435155660879996e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 0.5,
+      "midi": 84,
+      "matchedBodyResidual": 0.036819231608833054,
+      "spectralTV": 0.00012570404420479998,
+      "powerAbove16k": 1.7010394485801034e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "material": 1,
+      "midi": 84,
+      "matchedBodyResidual": 0.03676270421525465,
+      "spectralTV": 0.0001204674699184216,
+      "powerAbove16k": 1.8123464583342644e-14,
+      "limits": {
+        "matchedBodyResidual": 0.12,
+        "spectralTV": 0.035,
+        "powerAbove16k": 0.02
+      }
+    }
+  ],
+  "extrema": {
+    "rawStatePeak": 1.023776733362814,
+    "absoluteMean": 1.7828870621820665e-05,
+    "rootErrorCents": 4.5133734659009095,
+    "heldStateError": 4.746425474877469e-11,
+    "heldSeam": 1.2017797431936315e-14,
+    "aliasMatchedBodyResidual": 0.07186531033129988,
+    "aliasSpectralTV": 0.0004227718769377282,
+    "powerAbove16k": 4.248938808083812e-06
+  },
+  "measured": "Actual Kotlin rendering through a scratch Java harness; Python measures saved arrays and WAVs. No new sound has been heard or approved by the owner.",
+  "rejectedPriorStudy": "Owner reported no audible difference on Long Prism/Velvet Rise and barely any on Rounded Plug. Its low numerical thresholds were not perceptual proof.",
+  "remaining": [
+    "Owner listening judgement",
+    "Live opt-in MATERIAL-to-config mapping implementation",
+    "Physical phone performance and MPC playback"
+  ]
+}

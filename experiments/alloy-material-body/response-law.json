@@ -1,0 +1,100 @@
+{
+  "stage": "material-body-prototype",
+  "installedInEngine": false,
+  "snapshotsOnly": true,
+  "responseLaw": {
+    "domain": [
+      0,
+      0.5
+    ],
+    "originalConfigBypassAtOrAbove": 0.5,
+    "originalWeight": "(2 * MATERIAL) ** originalWeightPower",
+    "numericFields": "leftEndpoint + (original - leftEndpoint) * originalWeight",
+    "routeLaw": "Union of left/original route edges, absent depth=0; original exact route list bypasses interpolation at .5+",
+    "fixedFields": [
+      "operators.ratio",
+      "wood.ratios",
+      "tine",
+      "breath",
+      "envelope",
+      "held",
+      "fuseRadians"
+    ],
+    "endpoints": [
+      {
+        "roleId": "rounded_plug",
+        "power": 2,
+        "leftSnapshot": "patches/rounded_plug_finite_m000.json",
+        "originalSnapshot": "patches/rounded_plug_finite_reference.json"
+      },
+      {
+        "roleId": "long_prism",
+        "power": 1,
+        "leftSnapshot": "patches/long_prism_finite_m000.json",
+        "originalSnapshot": "patches/long_prism_finite_reference.json"
+      },
+      {
+        "roleId": "velvet_rise",
+        "power": 1,
+        "leftSnapshot": "patches/velvet_rise_finite_m000.json",
+        "originalSnapshot": "patches/velvet_rise_finite_reference.json"
+      }
+    ]
+  },
+  "roles": [
+    {
+      "id": "rounded_plug",
+      "name": "Rounded Plug",
+      "voice": "BASS",
+      "description": "A woody harmonic bass body below the original nearly pure rounded tone.",
+      "originalMaterial": 0.05000000074505806,
+      "proposedMaterial": 0.5,
+      "originalWeightPower": 2,
+      "bodyLinkFields": [
+        "operators.gain",
+        "operators.decay",
+        "operators.sustain",
+        "routing.radians",
+        "cutoffRatio",
+        "wood.losses",
+        "wood.gains"
+      ]
+    },
+    {
+      "id": "long_prism",
+      "name": "Long Prism",
+      "voice": "KEY",
+      "description": "A more fundamental-led wooden key with a sustained hollow third, below the original glassy tine.",
+      "originalMaterial": 0.5,
+      "proposedMaterial": 0.5,
+      "originalWeightPower": 1,
+      "bodyLinkFields": [
+        "operators.gain",
+        "operators.decay",
+        "operators.sustain",
+        "routing.radians",
+        "cutoffRatio",
+        "wood.losses",
+        "wood.gains"
+      ]
+    },
+    {
+      "id": "velvet_rise",
+      "name": "Velvet Rise",
+      "voice": "SOFT",
+      "description": "A hollow, reedier sustained body below the original warm soft tone, with its slow swell retained.",
+      "originalMaterial": 0.20000000298023224,
+      "proposedMaterial": 0.5,
+      "originalWeightPower": 1,
+      "bodyLinkFields": [
+        "operators.gain",
+        "operators.decay",
+        "operators.sustain",
+        "routing.radians",
+        "cutoffRatio",
+        "wood.losses",
+        "wood.gains"
+      ]
+    }
+  ]
+}

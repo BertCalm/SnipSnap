@@ -1,0 +1,17 @@
+{
+  "actualExit": 0,
+  "checks": 6196,
+  "failures": [],
+  "sourceHead": "b04496ece7770903549c23ea913bad90bb57f45e",
+  "sourceStatus": "",
+  "sourceFiles": 8,
+  "compiledClasses": 50,
+  "priorCompanionFiles": 1185,
+  "changedPriorHtml": [
+    "factory/index.html",
+    "material/index.html"
+  ],
+  "newStudyFiles": 143,
+  "historicalFiles": 1811,
+  "expandedSiteBytes": 174462217
+}

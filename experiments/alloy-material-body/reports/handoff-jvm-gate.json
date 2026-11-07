@@ -1,0 +1,8 @@
+{
+  "actualExit": 0,
+  "elapsedSeconds": 20.205871184999523,
+  "jdk": "Temurin17",
+  "graph": "unfiltered test, nine JVM modules; no SDK",
+  "log": "/workspace/scratch/alloy-material-handoff/jvm.log",
+  "taskOutcome": "42 tasks UP-TO-DATE; unchanged production source; cached gate, no fresh test executions claimed"
+}

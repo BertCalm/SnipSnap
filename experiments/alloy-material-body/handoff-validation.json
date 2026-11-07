@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-07",
+  "scope": "Validation of the committed handoff package; no production MATERIAL implementation.",
+  "engineSourceCommit": "b04496ece7770903549c23ea913bad90bb57f45e",
+  "portableFixtureCommand": "python3 experiments/alloy-material-body/validate_fixtures.py",
+  "portableFixtureActualExit": 0,
+  "snapshotsRegeneratedByteExactly": 36,
+  "nativeGoldenFilesAndPCMHashesVerified": 12,
+  "javaReplayHelper": "ReplayReferences.java",
+  "javaCompileActualExit": 0,
+  "javaReplayActualExit": 0,
+  "publicNativeWavsReplayedByteExactly": 12,
+  "javaVersionMajor": 17,
+  "portableModelSha256": "295ed845d638e6637e0d124abce65e02a3f9505f7c2ddc67cb423aa0f72ebf3b",
+  "capturedModelSha256": "5521747c25322285f04a7b6f6938d6b9372f78e0c23cf7aeb9bed9aefdd98d9c",
+  "liveMappingInstalled": false
+}

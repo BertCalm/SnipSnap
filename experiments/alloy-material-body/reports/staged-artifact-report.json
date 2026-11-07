@@ -1,0 +1,542 @@
+{
+  "actualExit": 0,
+  "checks": 5290,
+  "failures": [],
+  "clips": 36,
+  "comparisons": 6,
+  "midpointIdentities": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "listeningExact": true,
+      "nativeExact": true
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "listeningExact": true,
+      "nativeExact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "listeningExact": true,
+      "nativeExact": true
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "listeningExact": true,
+      "nativeExact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "listeningExact": true,
+      "nativeExact": true
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "listeningExact": true,
+      "nativeExact": true
+    }
+  ],
+  "encodedHeldCutSeams": [
+    {
+      "id": "rounded_plug_held_reference",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 15
+    },
+    {
+      "id": "rounded_plug_held_m000",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "rounded_plug_held_m025",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "rounded_plug_held_m050",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 15
+    },
+    {
+      "id": "rounded_plug_held_m075",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "rounded_plug_held_m100",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 14
+    },
+    {
+      "id": "long_prism_held_reference",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 12
+    },
+    {
+      "id": "long_prism_held_m000",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "long_prism_held_m025",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "long_prism_held_m050",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 12
+    },
+    {
+      "id": "long_prism_held_m075",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 11
+    },
+    {
+      "id": "long_prism_held_m100",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 12
+    },
+    {
+      "id": "velvet_rise_held_reference",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 16
+    },
+    {
+      "id": "velvet_rise_held_m000",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 15
+    },
+    {
+      "id": "velvet_rise_held_m025",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 14
+    },
+    {
+      "id": "velvet_rise_held_m050",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 16
+    },
+    {
+      "id": "velvet_rise_held_m075",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 13
+    },
+    {
+      "id": "velvet_rise_held_m100",
+      "encodedCutError": 0.0,
+      "differentCutSamples": 0,
+      "differentWholeCycleSamples": 17
+    }
+  ],
+  "independentFullSignalBodyContrasts": [
+    {
+      "roleId": "rounded_plug",
+      "mode": "finite",
+      "windowSeconds": [
+        0.25,
+        0.7
+      ],
+      "normalizedWaveformDistance": 0.6411933024996808,
+      "linearPowerSpectralTV": 0.2700931179470706,
+      "stepWave": [
+        0.25336965128997946,
+        0.42206982746142596
+      ],
+      "stepTV": [
+        0.17501131956691385,
+        0.09508189560966196
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.635395921028232,
+      "isolatedBodyLinearPowerSpectralTV": 0.26336557877537725,
+      "isolatedBodySourceHashes": {
+        "0": "15cfcae9c573ac14e1e1156d3ea1e6a0c3154306807f8c36bbb5ef4700c6dc79",
+        "0.5": "34f4744e1d6d458203eda43eb32563342ad6fcb317a74ac9f4a2d9dbc08db7a4"
+      }
+    },
+    {
+      "roleId": "rounded_plug",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "normalizedWaveformDistance": 0.6370431260227395,
+      "linearPowerSpectralTV": 0.2700103416846459,
+      "stepWave": [
+        0.2533947394505347,
+        0.41762772568445816
+      ],
+      "stepTV": [
+        0.1753430565883226,
+        0.09466731208445091
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.6368474724881303,
+      "isolatedBodyLinearPowerSpectralTV": 0.2637192610361405,
+      "isolatedBodySourceHashes": {
+        "0": "81a20147b300f5d8f2c903d14030340e251b60f8ac9536ff54be0e5ab968670e",
+        "0.5": "e420fff12bf0b54167cf76b740759cd30ecaa265aaf8ef2f50ec27103220de42"
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "finite",
+      "windowSeconds": [
+        0.3,
+        0.65
+      ],
+      "normalizedWaveformDistance": 0.4740879070907591,
+      "linearPowerSpectralTV": 0.3703399128523963,
+      "stepWave": [
+        0.24778262197027565,
+        0.24409228417681064
+      ],
+      "stepTV": [
+        0.1601082563633997,
+        0.21326673519784903
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.4659141362448521,
+      "isolatedBodyLinearPowerSpectralTV": 0.3662502361309178,
+      "isolatedBodySourceHashes": {
+        "0": "eca59775e06ad5d2bfc6d7bd67602be622b462544fa317d631b9bf21c3717273",
+        "0.5": "c660d9670c5fd4e4bb42033baf871b6299620832bda9f8b95fc8e4d8b7b008e7"
+      }
+    },
+    {
+      "roleId": "long_prism",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "normalizedWaveformDistance": 0.4566461784207708,
+      "linearPowerSpectralTV": 0.29654824486292847,
+      "stepWave": [
+        0.15421686353698585,
+        0.36492346072493703
+      ],
+      "stepTV": [
+        0.07203274043653025,
+        0.22836565124607927
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.4741071940301898,
+      "isolatedBodyLinearPowerSpectralTV": 0.2951373295408875,
+      "isolatedBodySourceHashes": {
+        "0": "a72c938c2509f96abf2384dfcbc309b7f7b55820b0a9e95f7991d03548564b89",
+        "0.5": "53f2b62f585a61233e5ed6043b9fadb0541d2e38632ffd3321369aae38710863"
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "finite",
+      "windowSeconds": [
+        1.0,
+        2.0
+      ],
+      "normalizedWaveformDistance": 0.9691558187643706,
+      "linearPowerSpectralTV": 0.5707532324892172,
+      "stepWave": [
+        0.43947186057450105,
+        0.64590790613873
+      ],
+      "stepTV": [
+        0.30186157596783153,
+        0.2689121894978451
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.9701168371922066,
+      "isolatedBodyLinearPowerSpectralTV": 0.5609477297235133,
+      "isolatedBodySourceHashes": {
+        "0": "2b5bc387f08b42d109940c36311c13f49b034198955b62bb0187c1913fa416f6",
+        "0.5": "3de86e677dcdc44cea6e1c5b3402e413a32b17fdd24af7fdd988be7793960754"
+      }
+    },
+    {
+      "roleId": "velvet_rise",
+      "mode": "held",
+      "windowSeconds": [
+        0.05,
+        0.6
+      ],
+      "normalizedWaveformDistance": 0.9644262441259438,
+      "linearPowerSpectralTV": 0.5770555266326889,
+      "stepWave": [
+        0.42121578961031747,
+        0.6539818202760997
+      ],
+      "stepTV": [
+        0.3119582079749951,
+        0.2651019459635535
+      ],
+      "isolatedBodyNormalizedWaveformDistance": 0.9634915105183574,
+      "isolatedBodyLinearPowerSpectralTV": 0.5632416564251308,
+      "isolatedBodySourceHashes": {
+        "0": "c761c51db28b6ccbd55ea79aa56536f275f4adb49639cec91c846a3b18abc39b",
+        "0.5": "27aa43ff66ebc829d60d8f54176135c62dcba350b95d4595d8c8f05e48926512"
+      }
+    }
+  ],
+  "archives": [
+    {
+      "file": "downloads/alloy-material-body-comparison.zip",
+      "bytes": 4308152,
+      "members": 82
+    },
+    {
+      "file": "downloads/alloy-material-body-patches.zip",
+      "bytes": 38532,
+      "members": 37
+    },
+    {
+      "file": "downloads/alloy-material-body-native-pcm24.zip",
+      "bytes": 8549906,
+      "members": 37
+    },
+    {
+      "file": "downloads/alloy-material-body-source.zip",
+      "bytes": 36824,
+      "members": 16
+    }
+  ],
+  "files": [
+    {
+      "id": "rounded_plug_finite_reference",
+      "frames": 49392,
+      "audioSha256": "5282e5eb8a164bfa54f2e173821e11044057709dd8e0303c8ea61ceede5e86d4",
+      "nativeSha256": "980957a2ec03a7f6c8f8385c0784690c2379053d633402d60d9a94c79fb4ba9c"
+    },
+    {
+      "id": "rounded_plug_finite_m000",
+      "frames": 49392,
+      "audioSha256": "b253d7e77543cca534e2c6cd10e64fe07a6515aa83e0de777f6a5ddb566897f4",
+      "nativeSha256": "ff308d6253d5847ec4101671827200bda031b1492e42e79810d6cb228c6dd48c"
+    },
+    {
+      "id": "rounded_plug_finite_m025",
+      "frames": 49392,
+      "audioSha256": "014ba2e441163b423c4c2e80ed944875e9d2cf31246beb058fd3eb36c321fe9d",
+      "nativeSha256": "9f9395740a6eb290e8f2b7cdb65f767527c990e5d7fb473c2a1633fccf9f821c"
+    },
+    {
+      "id": "rounded_plug_finite_m050",
+      "frames": 49392,
+      "audioSha256": "5282e5eb8a164bfa54f2e173821e11044057709dd8e0303c8ea61ceede5e86d4",
+      "nativeSha256": "980957a2ec03a7f6c8f8385c0784690c2379053d633402d60d9a94c79fb4ba9c"
+    },
+    {
+      "id": "rounded_plug_finite_m075",
+      "frames": 49392,
+      "audioSha256": "d532c56da7420e8195094cbd16ec64b6a5d50cfa8f20ef6c4085eab01af43295",
+      "nativeSha256": "ce2ea06213fb9689ae1a1a322ed29042b70122d84ce3b7af90a09554f2eea46c"
+    },
+    {
+      "id": "rounded_plug_finite_m100",
+      "frames": 49392,
+      "audioSha256": "5c9f605779bd918767823a37de31a2c5ff9aec2dad625566ab8ef8e2e03e6a9b",
+      "nativeSha256": "4a909a48419cad23149debba075ad54ca766dcb03a5af3ef71e7dbef09008263"
+    },
+    {
+      "id": "rounded_plug_held_reference",
+      "frames": 31690,
+      "audioSha256": "a9b92d002dc6ca9ddc45d5f752565cc805a69a5b07ff43ea334402c15e415996",
+      "nativeSha256": "52c840b3f423aa653f0574319471b9009a64104c1142873b514620dfcb3df7a3"
+    },
+    {
+      "id": "rounded_plug_held_m000",
+      "frames": 31690,
+      "audioSha256": "9d682a0f5804fa3f94789d3dee2124d8e9d76cdeffdd58986e9f7b138eda38bf",
+      "nativeSha256": "44356e5fb32f0d4d16a5d2308d29eb85e5d72d713afe27d494f0dbc291d857e4"
+    },
+    {
+      "id": "rounded_plug_held_m025",
+      "frames": 31690,
+      "audioSha256": "27a1ca05d8097c60a8f38403e3264684cb3db9479783d6df024e56ec5ee998de",
+      "nativeSha256": "479603541508def398bd93db5343f333f3db0f66538b4b912622f5170828d04e"
+    },
+    {
+      "id": "rounded_plug_held_m050",
+      "frames": 31690,
+      "audioSha256": "a9b92d002dc6ca9ddc45d5f752565cc805a69a5b07ff43ea334402c15e415996",
+      "nativeSha256": "52c840b3f423aa653f0574319471b9009a64104c1142873b514620dfcb3df7a3"
+    },
+    {
+      "id": "rounded_plug_held_m075",
+      "frames": 31690,
+      "audioSha256": "01c619b036447e269036276187feb9ce44e84b0b24c47dda43e50ddc84f8d3f4",
+      "nativeSha256": "192b3f13d1762a92c85e13f69279b30699f5fb0e737fc65bd8b8495aaadc4131"
+    },
+    {
+      "id": "rounded_plug_held_m100",
+      "frames": 31690,
+      "audioSha256": "036fd05f009d35aabddfa09e8befa2e003e7da4c62bb81f636985e1faa61b804",
+      "nativeSha256": "b08e95398e340a1b5611fab6f9c7de2539975775a777b5a819a6741c004f26de"
+    },
+    {
+      "id": "long_prism_finite_reference",
+      "frames": 160722,
+      "audioSha256": "26dbc600ca004b26ea41050354ed94642467fe6b2e119fd6770e481e00b47489",
+      "nativeSha256": "f4bad4257e319230f167b8f3591ee57f643a7b7d08a40b10b78e0245ebc0e623"
+    },
+    {
+      "id": "long_prism_finite_m000",
+      "frames": 160722,
+      "audioSha256": "61b640bd48a471efbff9c2111d8ec334a1248192db49460769b98f810cdb9fc8",
+      "nativeSha256": "7e00e1facd87d79380ea596644260879b42097e8f01e02c7536109c416eaadcb"
+    },
+    {
+      "id": "long_prism_finite_m025",
+      "frames": 160722,
+      "audioSha256": "fecb7480ed297b321a14b23fe230901deddcc96c304ea7e00005764a6121f4fa",
+      "nativeSha256": "97e960f9eb85564edab76091bcf1890dfefc8f70dbebb1b103de13c536ee7498"
+    },
+    {
+      "id": "long_prism_finite_m050",
+      "frames": 160722,
+      "audioSha256": "26dbc600ca004b26ea41050354ed94642467fe6b2e119fd6770e481e00b47489",
+      "nativeSha256": "f4bad4257e319230f167b8f3591ee57f643a7b7d08a40b10b78e0245ebc0e623"
+    },
+    {
+      "id": "long_prism_finite_m075",
+      "frames": 160722,
+      "audioSha256": "292c3473cf4edbce24acacc13a524231277fc6d40bba99ef095840dc4bd65caa",
+      "nativeSha256": "c841fa69e7956ba0dd139a202b8c98214394b322e17d448c7887f8856f753c62"
+    },
+    {
+      "id": "long_prism_finite_m100",
+      "frames": 160722,
+      "audioSha256": "fc0c0ed59ddd9af1556deeeab57cb11a0e483736c174d0985ca97d34e551ad46",
+      "nativeSha256": "47300cece90010b8bbd16ef35d71845a7a7797540c228275f9a62244b75d8d15"
+    },
+    {
+      "id": "long_prism_held_reference",
+      "frames": 29667,
+      "audioSha256": "ae835c32663369e3d2f8dbf950ee5d12eb0cadf727b5363c28e3cf857b15234a",
+      "nativeSha256": "4bc3474923ca38bedc9d58261a985f45f4a1300d535516dd3eadbb2f0a3b4582"
+    },
+    {
+      "id": "long_prism_held_m000",
+      "frames": 29667,
+      "audioSha256": "03dc99b11581385ea98714f2d1546e2db8474843faaa61fc85f11a0479d8a2c2",
+      "nativeSha256": "380789dc22aefd6a9350dfd45690c683f72d2b13439c1d8e49bf722d1fd0b178"
+    },
+    {
+      "id": "long_prism_held_m025",
+      "frames": 29667,
+      "audioSha256": "d2108c9c2e186f9ae64c98b9c7c72b681e408ea00499c9f1fabdbb270987fe3c",
+      "nativeSha256": "6c0bc25cec3d54eb12205f94fdc895208b9714f33dd63dc7ba88e90ff52f95ce"
+    },
+    {
+      "id": "long_prism_held_m050",
+      "frames": 29667,
+      "audioSha256": "ae835c32663369e3d2f8dbf950ee5d12eb0cadf727b5363c28e3cf857b15234a",
+      "nativeSha256": "4bc3474923ca38bedc9d58261a985f45f4a1300d535516dd3eadbb2f0a3b4582"
+    },
+    {
+      "id": "long_prism_held_m075",
+      "frames": 29667,
+      "audioSha256": "c0282f6ea725787b194e41870ab33143abacfea552ca890bb73ef6b68d1a7d4b",
+      "nativeSha256": "91a7c17727b4b0141174455c9b53bfddda8c4b5727ad2e179405827f9a09013d"
+    },
+    {
+      "id": "long_prism_held_m100",
+      "frames": 29667,
+      "audioSha256": "288b3f9c7341c951fe3d915355e60b7decf446d456874f841b907f81e329cdaf",
+      "nativeSha256": "1cc165bd4b4b741efaca48b8acb638800664776e8137f4873796be9a832b6b1d"
+    },
+    {
+      "id": "velvet_rise_finite_reference",
+      "frames": 187116,
+      "audioSha256": "2d9360f0e7c04197d818d8c21f3f78b17ebbc1031576b8dd0f7a865dc23d1d24",
+      "nativeSha256": "a8590cda90ca660213e57db86545a6633664f05cff0bc35d0f312ccfac95f1c1"
+    },
+    {
+      "id": "velvet_rise_finite_m000",
+      "frames": 187116,
+      "audioSha256": "e9ba9b40a1594cbfe2e00a068c2e3987548eb450307f12a42399ce386dc6b38e",
+      "nativeSha256": "0f15e0dbcb9d597a20dd8dd2bec2b3bc7751f1594008d788553281c488d143f7"
+    },
+    {
+      "id": "velvet_rise_finite_m025",
+      "frames": 187116,
+      "audioSha256": "6a158accaf493ada90f4d7cbef71b52a8820af18c896774fdfe912fb624ca763",
+      "nativeSha256": "2ca517461be05a399ce91e1db97ac3c5882d39f3c067899e522514eb415d74be"
+    },
+    {
+      "id": "velvet_rise_finite_m050",
+      "frames": 187116,
+      "audioSha256": "2d9360f0e7c04197d818d8c21f3f78b17ebbc1031576b8dd0f7a865dc23d1d24",
+      "nativeSha256": "a8590cda90ca660213e57db86545a6633664f05cff0bc35d0f312ccfac95f1c1"
+    },
+    {
+      "id": "velvet_rise_finite_m075",
+      "frames": 187116,
+      "audioSha256": "e40b5b05e0f2a3e41b6669e2a560169493223e7aefcdc4dfd8ac2507b38bfadc",
+      "nativeSha256": "ca2c5d3a8e422f496eb373d99269b246da5909ae57c8609f483ee810169b6110"
+    },
+    {
+      "id": "velvet_rise_finite_m100",
+      "frames": 187116,
+      "audioSha256": "be2057b31eb7d3adbdf81f9178fc66a530587775e1a8ff161a3bbe5a469be8fd",
+      "nativeSha256": "deab9ff99c703d1ac782db220821e514cb9c97bfa937f49109b7643ee2181d6f"
+    },
+    {
+      "id": "velvet_rise_held_reference",
+      "frames": 52928,
+      "audioSha256": "cf7bb5764dfae9dddaf2dc2899a91cba3807e5b1c1671eceaaf5ca3fbb5358d2",
+      "nativeSha256": "904732fa9a93b2339c0abb99970e1b2afb2fe50bc5a81e1545f60f45e97f7447"
+    },
+    {
+      "id": "velvet_rise_held_m000",
+      "frames": 52928,
+      "audioSha256": "8b90f040590900b42e790ddc616508b98b98cd78b9ca4512e9e37b9bbd1a408a",
+      "nativeSha256": "35225a97a94704bcdb9791d37b06250a5bb4c6c9e8dcb2bcafab7e1b4894b96c"
+    },
+    {
+      "id": "velvet_rise_held_m025",
+      "frames": 52928,
+      "audioSha256": "4f45805e5a0d8c1a2b9fbc2ea74e698ce9c35463b235b7a1cdb65235c96966ff",
+      "nativeSha256": "0f248c752cedf21e70ea26bd960201fdfc6bb760199bc2e94ad10e2d644f39b0"
+    },
+    {
+      "id": "velvet_rise_held_m050",
+      "frames": 52928,
+      "audioSha256": "cf7bb5764dfae9dddaf2dc2899a91cba3807e5b1c1671eceaaf5ca3fbb5358d2",
+      "nativeSha256": "904732fa9a93b2339c0abb99970e1b2afb2fe50bc5a81e1545f60f45e97f7447"
+    },
+    {
+      "id": "velvet_rise_held_m075",
+      "frames": 52928,
+      "audioSha256": "24f1546309521524fcc44f76188d4edbd5f2b86cb64c44a3f90e5a8fc43d7629",
+      "nativeSha256": "cc1817218f88daefaf91dcc569ad1a3d16583ba990f69888acd795807d1ef4ea"
+    },
+    {
+      "id": "velvet_rise_held_m100",
+      "frames": 52928,
+      "audioSha256": "6dcc7db177d73513430a45adba75f04ec6b0d076ef912260cd3b04cf8e9924ff",
+      "nativeSha256": "bf775dbc629e3615bc3022c479fae74ef97bdc8dd37a5a477c3ce4ccb4da4e72"
+    }
+  ],
+  "measured": "Actual saved PCM files and current source/class hashes; not listening approval."
+}

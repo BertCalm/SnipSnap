@@ -1,0 +1,21 @@
+{
+  "actualExit": 0,
+  "elapsedSeconds": 5.192870497000058,
+  "reason": "Bass lower-half originalWeight=(2*MATERIAL)^2; endpoints and other roles unchanged",
+  "jobs": [
+    "rounded_plug_finite_m025",
+    "rounded_plug_finite_dense_m0125",
+    "rounded_plug_finite_dense_m0375",
+    "rounded_plug_finite_fuse000_m0250",
+    "rounded_plug_finite_fuse085_m0250",
+    "rounded_plug_finite_alias_m025_os4",
+    "rounded_plug_finite_alias_m025_os8",
+    "rounded_plug_held_m025",
+    "rounded_plug_held_dense_m0125",
+    "rounded_plug_held_dense_m0375",
+    "rounded_plug_held_fuse000_m0250",
+    "rounded_plug_held_fuse085_m0250",
+    "rounded_plug_held_alias_m025_os4",
+    "rounded_plug_held_alias_m025_os8"
+  ]
+}

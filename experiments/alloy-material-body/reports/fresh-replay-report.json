@@ -1,0 +1,371 @@
+{
+  "actualExit": 0,
+  "compileExit": 0,
+  "jobs": 18,
+  "exactFileComparisons": 45,
+  "rows": [
+    {
+      "id": "rounded_plug_finite_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "d00683230fa6145787bbbb176ae9c6a13600339eb0ab405f17a1ab6e42192552"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "6acd2837ab2c7a84923697e7bbc6cdb34acaf089179c35ebae90b9438e23d2c0"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.12641313672065735,
+        "nativePeak": 0.4839782118797302
+      }
+    },
+    {
+      "id": "rounded_plug_finite_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "a0d3144fc233e080dc91c2e2b9af23412cfe5f3fb93467eb45c17c4a53f6f542"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "15ee4a0b9db8569c8b3d2ca7a9f4bb909a069997bfe7bb72f53d40bd5769ff0f"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.09557773917913437,
+        "nativePeak": 0.48993170261383057
+      }
+    },
+    {
+      "id": "rounded_plug_finite_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "d00683230fa6145787bbbb176ae9c6a13600339eb0ab405f17a1ab6e42192552"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "6acd2837ab2c7a84923697e7bbc6cdb34acaf089179c35ebae90b9438e23d2c0"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.12641313672065735,
+        "nativePeak": 0.4839782118797302
+      }
+    },
+    {
+      "id": "rounded_plug_held_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "b4f55a31c620fd81141bf68c48ff03bb6a9d8bc437d0b9f6d3e34a5f102c70b2"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "a1e2a2f932073b7c474348d65bbf025c7612063decae13930744dd06ff313a5f"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "924d0d88d4fd10c8e4c2357fc57b1e56f89837522871f409cb3d291819581daa"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.6651569012537948e-11,
+        "prerollCycles": 3,
+        "gain": 0.13009394705295563,
+        "nativePeak": 0.34276992082595825
+      }
+    },
+    {
+      "id": "rounded_plug_held_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "15b107e0f1f55a88b7d9af2200fc47c6d30980713b35f54eda7ddcb3f5868c3f"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "90875bb971405b29329049bd4cf93d1c94d51dd4843d7f0444cf3efabcf64c10"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "a05a131c8f63de68bb15853bf577b0b7024292a81d1246b5520621c391374783"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.6651569012537948e-11,
+        "prerollCycles": 3,
+        "gain": 0.07979179918766022,
+        "nativePeak": 0.42295336723327637
+      }
+    },
+    {
+      "id": "rounded_plug_held_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "b4f55a31c620fd81141bf68c48ff03bb6a9d8bc437d0b9f6d3e34a5f102c70b2"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "a1e2a2f932073b7c474348d65bbf025c7612063decae13930744dd06ff313a5f"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "924d0d88d4fd10c8e4c2357fc57b1e56f89837522871f409cb3d291819581daa"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.6651569012537948e-11,
+        "prerollCycles": 3,
+        "gain": 0.13009394705295563,
+        "nativePeak": 0.34276992082595825
+      }
+    },
+    {
+      "id": "long_prism_finite_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "b0a5be569a59bedd7093f543245e247449369888c3a55ad9e20d37247093fddb"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "95b8f3a32c0c9dc268294d196541468ad2d6223fa2d1ff6472571fdaaa446ed8"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.08088274300098419,
+        "nativePeak": 0.4642212688922882
+      }
+    },
+    {
+      "id": "long_prism_finite_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "39534c7622cb552fc57c2ca95218f5f850ffbafdc3ee28e17b7dc22ce214e923"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "7dbadb0d7dc6cb8541afc9ded264493ba3af4c7a5ca590da050fac31b21807cc"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.07760477811098099,
+        "nativePeak": 0.4389588236808777
+      }
+    },
+    {
+      "id": "long_prism_finite_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "b0a5be569a59bedd7093f543245e247449369888c3a55ad9e20d37247093fddb"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "95b8f3a32c0c9dc268294d196541468ad2d6223fa2d1ff6472571fdaaa446ed8"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.08088274300098419,
+        "nativePeak": 0.4642212688922882
+      }
+    },
+    {
+      "id": "long_prism_held_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "deca467b3206ee2b3c5ce67c33017bf3fb12fea6d2c754eb1a71b100b6b3a51b"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "fd10817267b299551331c479720d8707ef6a7f5ea40702d74e347098a88276de"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "cdf09fbe6a2e79fe944e80782afee3bba714717c5ae76ab05fb9dc4938bf8a46"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.5631940186722204e-11,
+        "prerollCycles": 3,
+        "gain": 0.20162980258464813,
+        "nativePeak": 0.3106057047843933
+      }
+    },
+    {
+      "id": "long_prism_held_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "bbecf00c404fdcf2fd25a7ae44014ef82b2759c7eabaeccd1830e7e93e8137f8"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "f3f6a46d0d363a1c9c2f7af595b591f7772b0f65a941e56e6c5be762275b6fc9"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "fdae3e7087bc2c212ae436f6540aaa5521d04cbf57a6e2b1acfbd184812f53cb"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.5631940186722204e-11,
+        "prerollCycles": 3,
+        "gain": 0.08158430457115173,
+        "nativePeak": 0.38546639680862427
+      }
+    },
+    {
+      "id": "long_prism_held_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "deca467b3206ee2b3c5ce67c33017bf3fb12fea6d2c754eb1a71b100b6b3a51b"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "fd10817267b299551331c479720d8707ef6a7f5ea40702d74e347098a88276de"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "cdf09fbe6a2e79fe944e80782afee3bba714717c5ae76ab05fb9dc4938bf8a46"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 1.5631940186722204e-11,
+        "prerollCycles": 3,
+        "gain": 0.20162980258464813,
+        "nativePeak": 0.3106057047843933
+      }
+    },
+    {
+      "id": "velvet_rise_finite_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "59487c465cfbfa97eb31110e9a68493fb1744990fd6154376c08801769ce2eb6"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "6e73cdca30959725f458530b05981484eb94c94f8dad999324f331b61d5e627b"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.13844573497772217,
+        "nativePeak": 0.3987700045108795
+      }
+    },
+    {
+      "id": "velvet_rise_finite_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "9701b5d337335f329f9a98b56ac09edcfde15f8b8330cdea0751927a50439cc4"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "586252c61f99aff83958c8194f0b9ab865c7a28d25a49590261d8976fc673fa6"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.08383098244667053,
+        "nativePeak": 0.4152640104293823
+      }
+    },
+    {
+      "id": "velvet_rise_finite_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "59487c465cfbfa97eb31110e9a68493fb1744990fd6154376c08801769ce2eb6"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "6e73cdca30959725f458530b05981484eb94c94f8dad999324f331b61d5e627b"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 0.0,
+        "prerollCycles": 0,
+        "gain": 0.13844573497772217,
+        "nativePeak": 0.3987700045108795
+      }
+    },
+    {
+      "id": "velvet_rise_held_reference",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "e651e67aa612d49eb99af3b553915bc1177240bdd5b41ef96444f9d62f1fb591"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "10a9bd16302188def314f03dc1588cfc6bcbafbd6419982c865f6249071e6e8c"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "26d9c3725fce814b3a4c8290fda561907ad58ca8f9558eaaf913e10708816e3a"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 2.8251179173821583e-11,
+        "prerollCycles": 3,
+        "gain": 0.13127706944942474,
+        "nativePeak": 0.393858402967453
+      }
+    },
+    {
+      "id": "velvet_rise_held_m000",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "32ef7ea0c78b07c446b899de7e5168ba4cc797efb5ed2c8de389a7a4eadae94f"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "691e5d15c5765b32dbfeef9f0365e54160a4679eaa47977084cccc07fff1172d"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "e051d3f2a97da20123f724cc8a0ee5f8081a9042a65698d96f43b36996d3445f"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 2.8251179173821583e-11,
+        "prerollCycles": 3,
+        "gain": 0.07667937129735947,
+        "nativePeak": 0.4192122220993042
+      }
+    },
+    {
+      "id": "velvet_rise_held_m050",
+      "nativeUrl": {
+        "exact": true,
+        "sha256": "e651e67aa612d49eb99af3b553915bc1177240bdd5b41ef96444f9d62f1fb591"
+      },
+      "audioUrl": {
+        "exact": true,
+        "sha256": "10a9bd16302188def314f03dc1588cfc6bcbafbd6419982c865f6249071e6e8c"
+      },
+      "previousUrl": {
+        "exact": true,
+        "sha256": "26d9c3725fce814b3a4c8290fda561907ad58ca8f9558eaaf913e10708816e3a"
+      },
+      "engine": {
+        "rawSeam": 0.0,
+        "stateError": 2.8251179173821583e-11,
+        "prerollCycles": 3,
+        "gain": 0.13127706944942474,
+        "nativePeak": 0.393858402967453
+      }
+    }
+  ],
+  "maxHeldStateError": 2.8251179173821583e-11,
+  "maxRawSeam": 0.0,
+  "elapsedSeconds": 9.735659150999709
+}
