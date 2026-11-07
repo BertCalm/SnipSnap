@@ -34,7 +34,11 @@ object TrefoilHeld {
     private val weights = doubleArrayOf(.10,1.0,1.35,1.7,2.0,2.3,2.6,2.9)
 
     fun defaults(voice: TrefoilVoice) = Trefoil.defaults(voice) + mapOf("WEAVE" to .42f,"NUDGE" to 0f,"HOLD" to 1f)
-    fun macrosFor(voice: TrefoilVoice) = Trefoil.macrosFor(voice).filter { it.name !in setOf("NUDGE","HOLD") }
+    fun macrosFor(voice: TrefoilVoice): List<MacroSpec> {
+        val held = defaults(voice)
+        return Trefoil.macrosFor(voice).filter { it.name !in setOf("NUDGE","HOLD") }
+            .map { it.copy(default = held.getValue(it.name), neutral = held.getValue(it.name)) }
+    }
     fun supports(p: TrefoilPatch) = p.playback == TrefoilPlayback.HELD && p.model == 2 && p.heldVersion == VERSION
     internal fun validate(voice: TrefoilVoice, macros: Map<String,Float>) {
         val m = defaults(voice) + macros

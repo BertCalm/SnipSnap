@@ -52,7 +52,7 @@ object TrefoilPadMaker {
         listOf(first, first + 12, first + 24)
     }
 
-    /** The saved topology, KNOT, RING and velocity reach every native reference note. */
+    /** Saved WEAVE, EXCHANGE, THREAD, MEMORY and velocity reach every native reference note. */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
         require(midi in zoneMidis(spec)) { "TREFOIL zone $midi is outside this instrument's roots" }
         stopIfUnwanted(cancelled)

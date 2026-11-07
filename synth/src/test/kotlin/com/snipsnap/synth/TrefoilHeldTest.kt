@@ -12,6 +12,18 @@ class TrefoilHeldTest {
         "Held",TrefoilVoice.WEAVE,TrefoilHeld.defaults(TrefoilVoice.WEAVE)+m,midi,velocity,43012026L,
         playback=TrefoilPlayback.HELD)
 
+    @Test fun `declared held defaults construct valid recipes for every voice`() {
+        for (voice in TrefoilVoice.entries) {
+            val specs = TrefoilHeld.macrosFor(voice)
+            val declared = specs.associate { it.name to it.default }
+            val p = TrefoilPatch("Defaults", voice, TrefoilHeld.defaults(voice) + declared,
+                playback = TrefoilPlayback.HELD)
+            assertEquals(.42f, p.macros.getValue("WEAVE"))
+            assertEquals(specs, Velocity.macroSpecsFor(p))
+            assertEquals(p, TrefoilPatch.fromJsonText(p.toJsonText()))
+            for (spec in specs) assertEquals(TrefoilHeld.defaults(voice).getValue(spec.name), spec.neutral)
+        }
+    }
     @Test fun `ordered held state and genuine adjacent cycles close`() {
         val loop=TrefoilHeld.loop(patch())
         println("TREFOIL Kotlin held ${loop.diagnostics}")

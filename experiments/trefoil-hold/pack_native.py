@@ -61,7 +61,8 @@ def main(site):
               'reference':reference,'phoneMeasured':False,'finiteParity':json.loads(Path('/workspace/scratch/trefoil-native-finite-parity.json').read_text())}
     focused=Path('/workspace/scratch/trefoil-native-focused-summary.json')
     evidence['focusedJvm']=json.loads(focused.read_text()) if focused.exists() else {'tests':39,'exitCode':0,'codeRevision':'c3e7c2469a5fa51a46c9ee69ed70600d49602b2c'}
-    evidence['android']={'tasks':[':app:assembleDebug',':app:compileDebugAndroidTestKotlin'],'exitCode':0,'deviceTestsExecuted':False,'codeRevision':'c3e7c2469a5fa51a46c9ee69ed70600d49602b2c'}
+    android=Path('/workspace/scratch/trefoil-native-android-summary.json')
+    evidence['android']=json.loads(android.read_text()) if android.exists() else {'tasks':[':app:assembleDebug',':app:compileDebugAndroidTestKotlin'],'exitCode':0,'deviceTestsExecuted':False,'codeRevision':'c3e7c2469a5fa51a46c9ee69ed70600d49602b2c'}
     evidence['samplerProof']=json.loads(Path('/workspace/scratch/trefoil-native-sampler-proof.json').read_text())
     replay_check=Path('/workspace/scratch/trefoil-native-source-replay.json')
     if replay_check.exists():evidence['sourceReplay']=json.loads(replay_check.read_text())

@@ -1,6 +1,12 @@
 # Trefoil: held-state proof
 
-Status: rendered experimental **Python harness, not Kotlin**. Owner listening
+Native port, 2026-11-07: the owner accepted the revised Python playback and
+authorized the Kotlin implementation. See [the as-built HOLD design](../../docs/TREFOIL_HELD.md)
+for the native mode, phone controls, measurements and three-root MPC trial.
+The [native audition](https://trefoil-snipsnap-audition.bertcalm.chatgpt.site/held/native/)
+has separate comparisons for the port, natural note-off and actual sampler release.
+
+This document records the experimental **Python harness**. Owner listening
 feedback: Section 2 note-off recordings sound good; other sections had clipping
 or repeat clicks. A separate [playback revision](PLAYBACK-FIX.md) adds scheduled
 loops and transport ramps, with every WAV preserved. Finite Trefoil hardware listening was accepted by Josh on 2026-11-01
@@ -112,8 +118,8 @@ Numbers are from the Python harness, not Kotlin or a physical phone.
 | No unforced core growth | Measured 0; diagnostic catches an intentionally growing matrix |
 | High-note rate comparison | Noiseless C6 at THREAD=1: aligned 4x/8x relative error energy 2.07e-7; includes step/filter differences, not an isolated alias bound |
 | Source/renderer determinism | Recreated source and internal samples byte-identical; PCM hashes recorded |
-| Useful sustained character | Proposed; owner listening pending |
-| Android HOLD / MPC held export | Deferred until listening acceptance and Kotlin port |
+| Useful sustained character | Revised Python playback accepted by the owner, 2026-11-07; native listening is a separate gate |
+| Android HOLD / MPC held export | Implemented in the [Kotlin port](../../docs/TREFOIL_HELD.md); physical phone timings and the new held MPC listen remain pending |
 
 ## Cost, cache and risks
 
@@ -150,8 +156,9 @@ The standalone source download includes this directory and the repository's
 `snipkit.py`/`probes.py` under their original paths. The browser derives fixed-gain
 PCM24 copies and listening ZIPs on demand from the same conditioned audio. This
 keeps duplicate audio out of the host's 256 MiB expanded archive limit. Existing finite WAVs and
-both MPC programs are preserved byte-for-byte. This round is a listening proof,
-with no changes to the production synth or app and no new Kotlin test claims.
+both MPC programs are preserved byte-for-byte. These replay commands reproduce
+the Python listening proof. Native rendering and its checks have separate
+commands in the [as-built HOLD design](../../docs/TREFOIL_HELD.md).
 
 ## Why it is built this way
 
