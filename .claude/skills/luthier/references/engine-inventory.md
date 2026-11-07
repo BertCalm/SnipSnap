@@ -177,9 +177,9 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04) and DIVE (2026-11-07). The rack has 26 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07) and HUSH (built 2026-11-07, chip-less until its gate). The rack has 27 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
 swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
-vinyl, tape, vibrato, ensemble, phase, echo, spring, room, motion. The pedal library (`Pedals.kt`) has
+vinyl, tape, vibrato, ensemble, phase, echo, spring, room, hush, motion. The pedal library (`Pedals.kt`) has
 eleven pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
