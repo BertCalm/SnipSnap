@@ -3243,3 +3243,13 @@ tasks.register<JavaExec>("generateTrefoilHeldAudition") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("trefoilHeldOutput").orNull ?: "${rootDir}/testkit/trefoil-held-native")
 }
+
+/** Render DIVE's listening gate (the real section on a snare, a tom, a rim and the CHUG guitar, beside PITCH) under testkit/dive-audition/. See DiveAuditionGenerator. */
+tasks.register<JavaExec>("generateDiveAudition") {
+    group = "distribution"
+    description = "Render DIVE's listening gate clips under testkit/dive-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DiveAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/dive-audition")
+}

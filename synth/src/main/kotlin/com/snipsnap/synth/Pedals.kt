@@ -38,7 +38,8 @@ enum class PedalSide(val id: String) {
  * first board, authored as a hypothesis for its own gate; FORGE, the
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
  * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
- * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04.
+ * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
+ * whammy dive, gated on 2026-11-07.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -154,6 +155,11 @@ object Pedals {
         // and a snare are too short for it. Gated on 2026-11-04 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3).
         // Behind MORE.
         Entry("VIBRATO", "vibratoed", character("vibratoed"), PedalSide.POST, movable = false, gated = true),
+        // A whammy dive: the `dived` character, the DIVE section, whose tap (AMT 0.7) drops the pitch 12 semitones over about
+        // 170 ms and holds it there. In front of the amp, where the rack puts it and a whammy bar lives; not movable, since the
+        // owner heard it only there. For held sounds: a snare, a tom and a rim are too short for a dive. Gated on 2026-11-07
+        // (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3). Behind MORE.
+        Entry("DIVE", "dived", character("dived"), PedalSide.PRE, movable = false, gated = true),
     )
 
     init {
