@@ -4,6 +4,8 @@ package com.snipsnap.app
 internal object NativeAquariumBus {
     init { System.loadLibrary("snipsnap_surface") }
     external fun create(rate: Int): Long
+    external fun createConfigured(rate: Int, parameters: FloatArray, seed: Long, model: Int,
+                                  bpm: Double, gain: Float, enabled: Boolean): Long
     external fun destroy(handle: Long)
     external fun configure(handle: Long, parameters: FloatArray, seed: Long, model: Int,
                           bpm: Double, gain: Float, enabled: Boolean, reset: Boolean): Boolean

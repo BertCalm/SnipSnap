@@ -4529,6 +4529,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            appScope = scope,
                             backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
