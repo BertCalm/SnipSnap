@@ -260,8 +260,17 @@ Run `./gradlew :synth:generateRegistersOctaveBalanceAudition` with optional
 sequences, raw/matched PCM24 WAVs, replayable recipes, source fingerprints and
 independent recurrence checks. All six reference WAVs must match the published
 calmer ensemble. The earlier direction and refinement tasks retain their audio.
-The new setting remains a listening candidate; factory settings and synthesis
-arithmetic are unchanged.
+The owner selected More octave: “Much better, let's proceed with that.” It is now
+the `Octave Keys` factory preset, appended after the original four TRANSISTOR
+registrations. It retains the exact COLOR .65 / SPREAD .40 / MOTION .08 setting;
+the other ten presets and the renderer arithmetic are unchanged. The page opens
+on Octave Keys at C4 without autoplay and offers its nine-zone MPC instrument.
+
+Export the selected preset with
+`./gradlew :cli:run --args='synth REGISTERS TRANSISTOR --preset 5 --instrument --release .6 --out /path/to/output'`.
+The package keeps the authored attack, final held-loop region and .6-second
+key-up release. C3/C4/C5 sample PCM must match the selected audition prefix and
+first held loop exactly. Physical phone/MPC listening remains pending.
 
 Why it is built this way:
 
@@ -269,6 +278,8 @@ Why it is built this way:
 - Matched levels reduce loudness as a reason to choose the new setting.
 - One existing control tests whether a richer registration helps before adding
   new rank controls or another sound layer.
+- A named preset carries the selected setting into normal rendering and exports;
+  complete saved macros preserve the sound of earlier patches.
 
 ## Playing and saving
 
@@ -281,7 +292,7 @@ note is supplied. An explicit MIDI note overrides TUNE.
 `RegistersPatch` implements the shared patch contract and also reads the original
 audition recipes. It stores the voice, complete macro values, note, velocity and
 renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE,
-MUSETTE and TRANSISTOR, ten presets, saved patches and the shared SEND TO PAD workflow.
+MUSETTE and TRANSISTOR, eleven presets, saved patches and the shared SEND TO PAD workflow.
 TUNE edits change the explicit note; other edits preserve its note, velocity and
 model. Imported audition notes align the slider without changing the sound.
 

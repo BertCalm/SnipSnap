@@ -58,7 +58,7 @@ object TrioMusicalBankGenerator {
         val root = File(args.firstOrNull() ?: "../testkit/trio-musical-bank").absoluteFile
         root.mkdirs()
         val repository = listOf(File("."), File("..")).first { File(it, "synth/src/main/kotlin/com/snipsnap/synth/Trio.kt").isFile }.canonicalFile
-        val sourcePaths = listOf("Trio.kt", "TrioScore.kt", "TrioV1.kt", "TrioV2.kt", "TrioV3.kt", "TrioV4.kt", "TrioPatch.kt", "TrioPresets.kt", "TrioKits.kt", "Patches.kt", "PadRecipe.kt", "Dsp.kt", "Strings.kt", "Modes.kt", "Keys.kt", "Thump.kt")
+        val sourcePaths = listOf("Trio.kt", "TrioContact.kt", "TrioScore.kt", "TrioV1.kt", "TrioV2.kt", "TrioV3.kt", "TrioV4.kt", "TrioPatch.kt", "TrioPresets.kt", "TrioKits.kt", "Patches.kt", "PadRecipe.kt", "Dsp.kt", "Strings.kt", "Modes.kt", "Keys.kt", "Thump.kt")
             .map { "synth/src/main/kotlin/com/snipsnap/synth/$it" } + listOf(
                 "synth/src/test/kotlin/com/snipsnap/synth/TrioMusicalBankGenerator.kt", "synth/src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt",
                 "synth/src/test/resources/trio-musical/index.html", "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt", "audio/src/main/kotlin/com/snipsnap/audio/WavReader.kt",

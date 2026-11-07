@@ -58,12 +58,12 @@ class ObbligatoMoreOverlapTest {
     }
 
     @Test
-    fun `longer overlap is an opt in deterministic saved recipe and production matches the audition`() {
-        assertEquals(5, Obbligato.MODEL)
+    fun `accepted longer overlap is a deterministic saved recipe and production matches the audition`() {
+        assertEquals(10, Obbligato.MODEL)
         assertEquals(9, Obbligato.OVERLAP_MODEL)
         assertEquals(10, Obbligato.MORE_OVERLAP_MODEL)
-        assertTrue(ObbligatoPresets.all().all { it.model == 5 })
-        assertTrue(ObbligatoKits.patches().all { it.model == 5 })
+        assertTrue(ObbligatoPresets.all().all { it.model == 10 })
+        assertTrue(ObbligatoKits.patches().all { it.model == 10 })
         val patch = ObbligatoPatch("Longer overlap Play", controls(ObbligatoRelationship.PLAY),
             midi = 67, velocity = .51f, seed = -819, model = Obbligato.MORE_OVERLAP_MODEL)
         assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))

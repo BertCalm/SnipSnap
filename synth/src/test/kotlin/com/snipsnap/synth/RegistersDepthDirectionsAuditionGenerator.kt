@@ -23,7 +23,8 @@ object RegistersDepthDirectionsAuditionGenerator {
         val changes: Map<String, Float>)
     private data class Study(val flag: String?, val resourceDirectory: String, val revision: String,
         val title: String, val status: String, val directions: List<Direction>, val initialDirection: String,
-        val factoryChanged: Boolean = false, val metricNotes: String, val instructions: String)
+        val factoryChanged: Boolean = false, val preferredPreset: String? = null,
+        val preferredDirection: String? = null, val metricNotes: String, val instructions: String)
     private val originalDirections = listOf(
         Direction("baseline", "Current Compact Keys", "The current model-6 Compact Keys recipe.", emptyMap()),
         Direction("body", "Warmer body", "Fewer upper ranks and less saturation, retaining the same root note, SPREAD and MOTION.",
@@ -42,12 +43,13 @@ object RegistersDepthDirectionsAuditionGenerator {
     private val octaveDirections = listOf(
         Direction("calm", "Calmer ensemble", "The published calmer setting, retained exactly as the comparison reference.",
             mapOf("SPREAD" to .40f, "MOTION" to .08f, "COLOR" to .42f)),
-        Direction("octave", "More octave", "Stronger octave registration at the same calm SPREAD and MOTION settings.",
+        Direction("octave", "Octave Keys", "The selected octave registration at the same calm SPREAD and MOTION settings.",
             mapOf("SPREAD" to .40f, "MOTION" to .08f, "COLOR" to .65f)),
     )
     private val studies = listOf(
         Study(null, "registers-depth-directions", "depth-directions-2", "TRANSISTOR Rich Ensemble",
             "Owner selected the richer ensemble direction", originalDirections, "ensemble", factoryChanged = true,
+            preferredPreset = "Rich Ensemble", preferredDirection = "ensemble",
             metricNotes = "All recipes use model 6, MIDI 48/60/72 and velocity 1. The owner preferred the richer ensemble direction, now also the Rich Ensemble factory preset. This adds a preset without changing engine arithmetic or existing settings. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop. Only the final 4 ms fade is audition-specific. Independent adjacent synthesis cycles prove recurrence before the playback repeats are copied. Matched files target the loudest 200 ms RMS of 0.03; loudness matching does not establish a listening verdict. Body removes upper ranks and drive; it adds no lower octave. Ensemble increases periodic side-bank motion and common vibrato. The accepted R5/R6 page remains available. Physical instrument listening is still pending.",
             instructions = """
                 TRANSISTOR depth directions: three current-model recipes at C3, C4 and C5.
@@ -69,15 +71,18 @@ object RegistersDepthDirectionsAuditionGenerator {
                 candidates; no factory preset or engine arithmetic changes.
                 Regenerate: ./gradlew :synth:generateRegistersEnsembleRefinementAudition -PregistersOutput=<directory>
             """.trimIndent()),
-        Study("--octave-balance", "registers-octave-balance", "octave-balance-1",
-            "TRANSISTOR octave balance comparison", "More-octave candidate awaiting listening", octaveDirections, "octave",
-            metricNotes = "All recipes use model 6, MIDI 48/60/72 and velocity 1. Calmer ensemble is the published reference at COLOR .42, SPREAD .40 and MOTION .08. More octave changes only COLOR to .65; all remaining controls, pitch and velocity stay fixed. COLOR raises the 4-foot and 2-foot rank weights, opens their tone filter and slightly reduces the round foundation mix. This is a comparison of the existing COLOR control, not an isolated harmonic-gain experiment. No factory preset or engine arithmetic changes. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop, with only a final 4 ms audition fade. Independent adjacent synthesis cycles prove recurrence before repeats are copied. Matched files target loudest 200 ms RMS .03; harmonic measurements do not establish a listening verdict.",
+        Study("--octave-balance", "registers-octave-balance", "octave-balance-2",
+            "TRANSISTOR Octave Keys", "Owner selected More octave; saved as Octave Keys", octaveDirections, "octave",
+            factoryChanged = true, preferredPreset = "Octave Keys", preferredDirection = "octave",
+            metricNotes = "All recipes use model 6, MIDI 48/60/72 and velocity 1. The owner selected More octave, now the Octave Keys factory preset. Calmer ensemble is the published reference at COLOR .42, SPREAD .40 and MOTION .08. Octave Keys changes only COLOR to .65; all remaining controls, pitch and velocity stay fixed. COLOR raises the 4-foot and 2-foot rank weights, opens their tone filter and slightly reduces the round foundation mix. This is a comparison of the existing COLOR control, not an isolated harmonic-gain experiment. One named preset is added; existing settings and engine arithmetic stay unchanged. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop, with only a final 4 ms audition fade. Independent adjacent synthesis cycles prove recurrence before repeats are copied. Matched files target loudest 200 ms RMS .03. The owner's audition supplies the preference; physical phone and MPC listening remain pending.",
             instructions = """
                 TRANSISTOR octave balance: two current-model recipes at C3, C4 and C5.
-                Calmer ensemble: COLOR .42. More octave: COLOR .65.
+                Calmer ensemble: COLOR .42. Octave Keys: COLOR .65.
                 Both retain SPREAD .40 / MOTION .08 and all other controls, pitch and velocity.
                 COLOR changes octave-rank weights, tone-filter cutoff and foundation mix together.
-                These are audition-only candidates; no factory preset or engine arithmetic changes.
+                The owner selected More octave, now named Octave Keys in the factory roster.
+                The exact selected controls are checked against the named preset.
+                Existing presets and engine arithmetic are unchanged.
                 Regenerate: ./gradlew :synth:generateRegistersOctaveBalanceAudition -PregistersOutput=<directory>
             """.trimIndent()),
     )
@@ -99,6 +104,13 @@ object RegistersDepthDirectionsAuditionGenerator {
         check(preferred.model == MODEL && preferred.midi == base.midi && preferred.velocity == base.velocity &&
             preferred.macros == base.macros + originalDirections.single { it.id == "ensemble" }.changes) {
             "The named preset must retain the exact ensemble setting selected in the first direction study."
+        }
+        if (study.flag == "--octave-balance") {
+            val selected = RegistersPresets.forVoice(voice).single { it.name == "Octave Keys" }
+            check(selected.model == MODEL && selected.midi == base.midi && selected.velocity == base.velocity &&
+                selected.macros == base.macros + octaveDirections.single { it.id == "octave" }.changes) {
+                "Octave Keys must retain the exact More octave setting selected by the owner."
+            }
         }
         val clips = listOf(48, 60, 72).flatMap { midi -> directions.map { render(root, base, it, midi) } }
         val groups = listOf(48, 60, 72).map { midi -> mapOf("id" to "note_$midi", "midi" to midi,
@@ -135,8 +147,8 @@ object RegistersDepthDirectionsAuditionGenerator {
             "title" to study.title, "status" to study.status,
             "voice" to voice.name, "clipCount" to clips.size, "wavCount" to clips.size * 2,
             "audioHash" to audioHash, "factoryChanged" to study.factoryChanged, "engineChanged" to false,
-            "preferredDirection" to if (study.factoryChanged) "ensemble" else null,
-            "preferredPreset" to if (study.factoryChanged) preferred.name else null,
+            "preferredDirection" to study.preferredDirection,
+            "preferredPreset" to study.preferredPreset,
             "initialDirection" to study.initialDirection,
             "sourceRevision" to git(repository, "rev-parse", "HEAD"),
             "workingTreeDirty" to (git(repository, "status", "--porcelain")?.isNotBlank() ?: true),

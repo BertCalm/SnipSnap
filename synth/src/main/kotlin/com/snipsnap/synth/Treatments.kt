@@ -114,6 +114,35 @@ object Treatments {
         // toward their neutrals, YIELD's being 1 (nothing flows), so a lower AMT is a softer die over less shock
         // and less fold. docs/superpowers/specs/2026-10-25-forge-section-design-brief.md, "Heard".
         "forged" to FxChain(forge = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1.0f)),
+        // A drum room (the ROOM chip). The tap lands on ROOM at its defaults (SIZE 0.3, WALLS 0.5, DISTANCE 0.6: a live
+        // room, the mic about 1.35 m back), the room the owner heard as a good starting point at the Kotlin gate
+        // (2026-11-01). A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT, which
+        // synth cannot see; PadSheetTest pins that they still land here), and DISTANCE fades linearly toward 0, so the
+        // character sets DISTANCE at 0.6 / 0.7 (about 0.857). The owner chose this on 2026-11-01 over the first chip,
+        // whose tap fell short at 0.42. AMT 1 is further back than anything heard so far: the mic about 2.28 m away, in the
+        // same room.
+        // Only DISTANCE is set: SIZE and WALLS are left out so they stay at ROOM's defaults and AMT moves the mic alone,
+        // closer in the same room as AMT falls and dry at 0 (DISTANCE 0 is ROOM's bypass). Fading all three shrank,
+        // softened and closed the room at once: at the sheet's AMT 0.7 the snare's room fell 160-fold, a tap next to dry.
+        // docs/superpowers/specs/2026-10-31-room-section-design-brief.md, "Heard at the Kotlin gate".
+        "roomed" to FxChain(room = mapOf("DISTANCE" to 0.6f / 0.7f)),
+        // A fade-in (the FADE IN chip): the VOLUME section, the pad rising from silence over RISE x 800 ms on a raised
+        // cosine. The owner heard three rises on a guitar, a choir and a snare (2026-11-02) and chose 448 ms for a tap.
+        // A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT, which synth cannot
+        // see; PadSheetTest pins that they still land here) and RISE fades linearly toward 0, so the character sets
+        // RISE 0.8 and a tap is 0.8 x 0.7 = 0.56, 448 ms exactly (float32 checked). AMT 1 is the 640 ms the owner also heard.
+        // A held sound's pedal: the owner found a faded-in snare worth having only on held sounds (the snare keeps about
+        // 16 percent of its peak under it), so nothing here tries to rescue a drum.
+        // docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 4.
+        "eased" to FxChain(volume = mapOf("RISE" to 0.8f)),
+        // A vibrato (the VIBRATO chip): the VIBRATO section's pitch swing at DEPTH 1.0 (60 cents), RATE left at its own neutral
+        // (5.5 Hz, a singing rate) and LATE at 0. The owner heard the section on JANGLE, the choir and the snare beside TAPE's wobble
+        // (2026-11-04), chose a tap of 42 cents, and found it different from TAPE WOBBLE on JANGLE. A tap puts a pedal on at AMT 0.7
+        // (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT, which synth cannot see; PadSheetTest pins that they still land here)
+        // and DEPTH fades linearly toward 0, so DEPTH 1.0 makes a tap 0.7, 42 cents; AMT 1 is the 60 cents also heard.
+        // A held sound's pedal: the choir (loud for 0.48 s, 2.6 cycles at 5.5 Hz) and the snare (0.09 s, half a cycle) are too short
+        // for a vibrato to read, so nothing here tries to rescue them. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
+        "vibratoed" to FxChain(vibrato = mapOf("DEPTH" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

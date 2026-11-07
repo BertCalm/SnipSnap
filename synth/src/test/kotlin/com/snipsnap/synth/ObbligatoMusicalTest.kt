@@ -77,10 +77,10 @@ class ObbligatoMusicalTest {
 
     @Test
     fun `the gentler version is explicit and renders its saved recipe reproducibly`() {
-        assertEquals(5, Obbligato.MODEL)
+        assertEquals(10, Obbligato.MODEL)
         assertEquals(6, Obbligato.EXPERIMENTAL_MODEL)
-        assertTrue(ObbligatoPresets.all().all { it.model == 5 })
-        assertTrue(ObbligatoKits.patches().all { it.model == 5 })
+        assertTrue(ObbligatoPresets.all().all { it.model == 10 })
+        assertTrue(ObbligatoKits.patches().all { it.model == 10 })
         val patch = ObbligatoPatch("Gentler Fight", controls, midi = 67, velocity = .47f, seed = -719,
             model = Obbligato.MUSICAL_MODEL)
         assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))

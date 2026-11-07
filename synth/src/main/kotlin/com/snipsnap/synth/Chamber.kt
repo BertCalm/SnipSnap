@@ -33,7 +33,13 @@ object Chamber {
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_SEED = 0L
-    const val MODEL_VERSION = 3
+    /** Earlier complete recipes keep their saved renderer; new sounds use the heard register response. */
+    const val MODEL_VERSION = 5
+    /** Retained wider-endpoint renderer for exact replay of its saved recipes. */
+    const val WIDE_RANGE_MODEL = 4
+    /** Wider controls with pitch-aware excitation and sympathetic boundary responses. */
+    const val REGISTER_MODEL = 5
+    const val MAX_MODEL_VERSION = REGISTER_MODEL
     const val MAX_SECONDS = 6f
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
@@ -218,10 +224,13 @@ object Chamber {
     }
 
     /** Five parallel contractive one-poles: material interpolation is a convex output mix. */
-    private class Reflection(weights: List<Float>, private val rate: Int) {
+    private class Reflection(weights: List<Float>, private val rate: Int, cutoffScale: Double = 1.0) {
         val w=DoubleArray(5) { weights[it].toDouble() }
         private val state=DoubleArray(5)
-        private val coeff=DoubleArray(5) { 1-exp(-TAU*doubleArrayOf(2400.0,4100.0,10500.0,15500.0,4800.0)[it]/rate) }
+        private val coeff=DoubleArray(5) {
+            val cutoff=(doubleArrayOf(2400.0,4100.0,10500.0,15500.0,4800.0)[it]*cutoffScale).coerceAtMost(19000.0)
+            1-exp(-TAU*cutoff/rate)
+        }
         fun tick(input: Double): Double {
             var out=0.0
             for(i in 0..4) if(w[i]>0.0) {
@@ -237,7 +246,7 @@ object Chamber {
         doubleArrayOf(1.0,1.48,2.17,2.91,4.16),
         doubleArrayOf(1.0,1.527,2.137,2.894,4.103,5.27))
     private fun instrument(index: Int, hz: Double, ratio: Double, hardness: Double,
-        rate: Int, seed: Long, model: Int): Bank {
+        rate: Int, seed: Long, model: Int, spectralTilt: Double = 0.0, rootWeight: Double = 1.0): Bank {
         // Keep every source's established random realization across revisions.
         // Model 2 revises only the membrane; the other three banks are unchanged.
         val random=Random(Dsp.seedFor("CHAMBER", 1,seed,index))
@@ -261,6 +270,8 @@ object Chamber {
                 else -> doubleArrayOf(.48,.9,1.0,.7,.5,.3)[j]*(.5+.5*hardness).pow(j*.2)
             }
         }
+        if(spectralTilt!=0.0) for(j in weights.indices) weights[j] *= exp(j*spectralTilt)
+        if(rootWeight!=1.0) weights[0] *= rootWeight
         return Bank(frequencies,decay,weights,rate)
     }
 
@@ -272,14 +283,26 @@ object Chamber {
         doubleArrayOf(.38,.26,.17), doubleArrayOf(.63,.43,.28),
         doubleArrayOf(1.75,1.30,.95), doubleArrayOf(1.42,1.14,.78),
         doubleArrayOf(1.38,1.05,.75))
-    private fun boundary(region: Int, weights: List<Float>, rate: Int): Bank {
+    private fun boundary(region: Int, weights: List<Float>, rate: Int, profile: ChamberWideRange.Profile?,
+        frequencyScale: Double = 1.0, requestedHz: Double = 0.0, sympatheticWeight: Double = 0.0): Bank {
         val f=ArrayList<Double>(); val t=ArrayList<Double>(); val p=ArrayList<Double>()
         // Fixed family modes with convex parallel participation. Inactive families
         // allocate no states; a nonzero family keeps the same modes across a sweep.
         for(material in 0..4) if(weights[material]>0f) for(mode in 0..2) {
-            f += surfaceHz[material][mode]*(1+.013*region)
-            t += surfaceT60[material][mode]
+            val legacyHz=surfaceHz[material][mode]*(1+.013*region)
+            f += if(frequencyScale==1.0) legacyHz else legacyHz*frequencyScale
+            t += profile?.boundaryT60(surfaceT60[material][mode]) ?: surfaceT60[material][mode]
             p += sqrt(weights[material].toDouble())*doubleArrayOf(.82,.50,.28)[mode]
+        }
+        if(sympatheticWeight>0.0) {
+            // This note-aligned material response is a musical adaptation, not
+            // an additional excitation. Bank normalizes the enlarged port, so
+            // it exchanges only energy already in the same passive network.
+            val weightSum=weights.sumOf { it.toDouble() }
+            val materialT60=weights.indices.sumOf { weights[it]*surfaceT60[it][0] }/weightSum
+            f += requestedHz
+            t += profile?.boundaryT60(materialT60) ?: materialT60
+            p += sympatheticWeight
         }
         return Bank(f.toDoubleArray(),t.toDoubleArray(),p.toDoubleArray(),rate)
     }
@@ -296,11 +319,15 @@ object Chamber {
             geometry.regionMaterialWeights[r][k]*geometry.regionAreas[r].toDouble()
         }.div(area).toFloat() }
     }
-    private fun sourceWeights(edges: Array<Array<ChamberSurfaceCoupling>>) = Array(4) { s ->
-        DoubleArray(10) { r -> edges[s][r].weight.toDouble() }.also(::normalize)
+    private fun sourceWeights(edges: Array<Array<ChamberSurfaceCoupling>>, localityPower: Double) = Array(4) { s ->
+        DoubleArray(10) { r -> edges[s][r].weight.toDouble() }.also { localize(it,localityPower) }
     }
-    private fun regionWeights(edges: Array<Array<ChamberSurfaceCoupling>>) = Array(10) { r ->
-        DoubleArray(5) { s -> if(s==4) .65 else edges[s][r].weight.toDouble() }.also(::normalize)
+    private fun regionWeights(edges: Array<Array<ChamberSurfaceCoupling>>, localityPower: Double) = Array(10) { r ->
+        DoubleArray(5) { s -> if(s==4) .65 else edges[s][r].weight.toDouble() }.also { localize(it,localityPower) }
+    }
+    private fun localize(weights: DoubleArray, power: Double) {
+        if(power!=1.0) for(i in weights.indices) weights[i]=weights[i].pow(power)
+        normalize(weights)
     }
     private fun normalize(weights: DoubleArray) {
         val norm=sqrt(weights.sumOf { it*it })
@@ -319,6 +346,35 @@ object Chamber {
     private fun delayEnergy(delays: List<Delay>) = delays.sumOf { it.energy }.coerceAtLeast(0.0)
     private fun modalCount(banks: Array<Bank>) = banks.sumOf { it.x.size }
     private fun travelingSamples(delays: List<Delay>) = delays.sumOf { it.data.size }
+    private data class PreparedStrike(val lengths: IntArray, val strengths: DoubleArray, val workBudget: Double)
+    /** Keep parameter preparation out of the near-limit HotSpot render method. */
+    private fun prepareStrike(m: Map<String,Float>, midi: Int, velocity: Float, hardness: Double,
+        configuration: ChamberConfig, rate: Int, isolated: Int?, profile: ChamberWideRange.Profile?, model: Int): PreparedStrike {
+        val legacyMinimum=(.0005*rate).toInt()
+        val minimum=if(model==REGISTER_MODEL) ChamberRegister.minimumContactFrames(legacyMinimum,midi) else legacyMinimum
+        val lengths=IntArray(4) { i ->
+            val cycles=doubleArrayOf(.47,.20,.13,.085)[i]*(1-.50*hardness)
+            val legacy=(rate*cycles/Keys.midiHz(midi)).roundToInt().coerceIn(minimum,(.012*rate).toInt())
+            val sourceHz=Keys.midiHz(midi).toDouble()*configuration.tuningRatios[i]
+            val wide=profile?.contactFrames(legacy,sourceHz,rate) ?: legacy
+            if(model==REGISTER_MODEL) ChamberRegister.contactFrames(wide,sourceHz,rate,profile?.contactScale ?: 1.0) else wide
+        }
+        val balance=m.getValue("BALANCE").toDouble()*3
+        val floor=profile?.balanceFloor ?: .17
+        val width=profile?.balanceWidth ?: .69
+        val strengths=DoubleArray(4) { i -> floor+(1.0-floor)*exp(-.5*((balance-i)/width).pow(2)) }
+        val norm=sqrt(strengths.sumOf { it*it })
+        val strength=velocity.toDouble().pow(.72)*(.32+.95*m.getValue("STRIKE"))
+        for(i in 0..3) strengths[i] = strengths[i]/norm*strength*
+            doubleArrayOf(1.08,1.23,.92,.88)[i]*
+            (if(isolated==null || isolated==i) 1.0 else 0.0)*
+            (if(configuration.instrumentEnabled[i]) 1.0 else 0.0)
+        // The force sum is the same independent upper bound used by models 1–3.
+        val integratedForce=strengths.indices.sumOf { s ->
+            strengths[s]*PI/(2*lengths[s])/sin(PI/(2*lengths[s]))
+        }
+        return PreparedStrike(lengths,strengths,.5*integratedForce*integratedForce)
+    }
     private fun arrivals(geometry: ChamberGeometry) =
         geometry.directPaths.map { Arrival(it.sourceIndex,"direct",it.delaySeconds.toDouble()) }+
             geometry.reflections.map { Arrival(it.sourceIndex,"first-reflection",it.delaySeconds.toDouble(),it.face.toString(),it.materialWeights) }
@@ -350,7 +406,7 @@ object Chamber {
         model: Int = MODEL_VERSION, options: ProbeOptions = ProbeOptions(),
         cancelled: () -> Boolean = { false }): Probe {
         stopIfUnwanted(cancelled)
-        require(model in 1..MODEL_VERSION) { "Unsupported CHAMBER model $model" }
+        require(model in 1..MAX_MODEL_VERSION) { "Unsupported CHAMBER model $model" }
         require(midi in MIDI_MIN..MIDI_MAX) { "CHAMBER MIDI must be $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "CHAMBER velocity must be 0..1" }
         require(options.seconds.isFinite() && options.seconds in .1f..MAX_SECONDS)
@@ -358,25 +414,32 @@ object Chamber {
         require(options.oversample==4 || options.oversample==8)
         val m=settled(voice,macros)
         require(m.getValue("HOLD")==0f) { "CHAMBER model $model supports finite strikes only; HOLD must be 0" }
+        val profile=if(model==WIDE_RANGE_MODEL || model==REGISTER_MODEL) ChamberWideRange.resolve(voice,m) else null
         val preparationStart=System.nanoTime()
         val rate=RATE*options.oversample
         // Traveling samples use energy-normalized coordinates: their amplitude
         // falls as sqrt(dt). Convert observer pressure back to the same units for
         // the 8x reference. Production4x retains exactly its calibrated gain.
-        val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)
-        val geometry=ChamberRoom.prepare(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"))
+        val registerPressure=if(model==REGISTER_MODEL) ChamberRegister.pressureScale(midi) else 1.0
+        val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)*registerPressure
+        val geometry=ChamberWideRange.geometry(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"),profile)
         val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity).coerceIn(0.0,1.0)
-        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model) }
+        val triangleRootWeight=if(model==REGISTER_MODEL) ChamberRegister.triangleRootWeight(midi) else 1.0
+        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,
+            profile?.spectralTilt ?: 0.0,if(i==3) triangleRootWeight else 1.0) }
         val average=averageMaterials(geometry)
         val materials=if(options.averageSurfaces) List(10) { average } else geometry.regionMaterialWeights
-        val boundaries=Array(10) { boundary(it,materials[it],rate) }
+        val boundaryScale=if(model==REGISTER_MODEL) ChamberRegister.boundaryFrequencyScale(midi) else 1.0
+        val sympatheticWeight=if(model==REGISTER_MODEL) ChamberRegister.sympatheticWeight(midi) else 0.0
+        val boundaries=Array(10) { boundary(it,materials[it],rate,profile,boundaryScale,
+            Keys.midiHz(midi).toDouble(),sympatheticWeight) }
         val edges=Array(4) { source -> Array(10) { region ->
             geometry.surfaceCouplings.first { it.sourceIndex==source && it.region.ordinal==region }
         } }
         val outgoing=Array(4) { s -> Array(10) { r -> Delay(edges[s][r].delaySeconds.toDouble(),rate,.991,options.recordDiagnostics) } }
         val returning=Array(4) { s -> Array(10) { r -> Delay(edges[s][r].delaySeconds.toDouble(),rate,.991,options.recordDiagnostics) } }
-        val sourceWeights=sourceWeights(edges)
-        val regionWeights=regionWeights(edges)
+        val sourceWeights=sourceWeights(edges,profile?.localityPower ?: 1.0)
+        val regionWeights=regionWeights(edges,profile?.localityPower ?: 1.0)
         val regionToField=Array(10) { r -> Delay(.009+.0011*r,rate,.985,options.recordDiagnostics) }
         val fieldToRegion=Array(10) { r -> Delay(.009+.0011*r,rate,.985,options.recordDiagnostics) }
         val field=Array(8) { i -> Delay(doubleArrayOf(.0233,.0297,.0371,.0419,.0473,.0539,.0611,.0677)[i],rate,.973,options.recordDiagnostics) }
@@ -389,8 +452,14 @@ object Chamber {
         val directGains=DoubleArray(4) { geometry.directPaths[it].gain.toDouble() }
         val reflectionSources=IntArray(geometry.reflections.size) { geometry.reflections[it].sourceIndex }
         val reflectionTaps=Array(geometry.reflections.size) { Tap(geometry.reflections[it].delaySeconds.toDouble(),rate) }
-        val reflections=Array(geometry.reflections.size) { Reflection(if(options.averageSurfaces) average else geometry.reflections[it].materialWeights,rate) }
+        val reflections=Array(geometry.reflections.size) { Reflection(if(options.averageSurfaces) average else geometry.reflections[it].materialWeights,rate,profile?.reflectionCutoffScale ?: 1.0) }
         val reflectionGains=reflectionGains(geometry)
+        val earlyGain=EARLY_GAIN*(profile?.roomPresence ?: 1.0)
+        // Register voicing exposes the restored passive answer. This observer
+        // calibration never enters the network or raises the direct/early hit.
+        val roomPickup=if(model==REGISTER_MODEL) ChamberRegister.roomPickupScale(midi) else 1.0
+        val surfaceGain=SURFACE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
+        val lateGain=LATE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
         // Each region has one fixed radiation centre; moving the membrane cannot
         // accidentally move the pickup of the other three instruments' boundaries.
         val surfaceDistances=DoubleArray(10) { r ->
@@ -406,25 +475,10 @@ object Chamber {
         val fluidStepSinA=DoubleArray(10) { sin(TAU*(.31+.017*it)/rate) }
         val fluidStepCosA=DoubleArray(10) { cos(TAU*(.31+.017*it)/rate) }
         val fluidStepSinB=sin(TAU*.47/rate); val fluidStepCosB=cos(TAU*.47/rate)
-        val strikeLengths=IntArray(4) { i ->
-            val cycles=doubleArrayOf(.47,.20,.13,.085)[i]*(1-.50*hardness)
-            (rate*cycles/Keys.midiHz(midi)).roundToInt().coerceIn((.0005*rate).toInt(),(.012*rate).toInt())
-        }
-        val balance=m.getValue("BALANCE").toDouble()*3
-        val sourceStrength=DoubleArray(4) { i -> .17+.83*exp(-.5*((balance-i)/.69).pow(2)) }
-        val strengthNorm=sqrt(sourceStrength.sumOf { it*it })
-        val strength=velocity.toDouble().pow(.72)*(.32+.95*m.getValue("STRIKE"))
-        for(i in 0..3) sourceStrength[i] = sourceStrength[i]/strengthNorm*strength*
-            doubleArrayOf(1.08,1.23,.92,.88)[i]*
-            (if(options.isolatedInstrument==null || options.isolatedInstrument==i) 1.0 else 0.0)*
-            (if(configuration.instrumentEnabled[i]) 1.0 else 0.0)
-        // For unit-vector force increments delta_j in an otherwise passive system,
-        // sqrt(2E) <= sum |delta_j|. The exact discrete half-sine sums provide a
-        // finite conservative source-work budget independent of room tuning/returns.
-        val integratedForce=sourceStrength.indices.sumOf { s ->
-            sourceStrength[s]*PI/(2*strikeLengths[s])/sin(PI/(2*strikeLengths[s]))
-        }
-        val sourceWorkBudget=.5*integratedForce*integratedForce
+        val strike=prepareStrike(m,midi,velocity,hardness,configuration,rate,options.isolatedInstrument,profile,model)
+        val strikeLengths=strike.lengths
+        val sourceStrength=strike.strengths
+        val sourceWorkBudget=strike.workBudget
         val strikeStarts=IntArray(4) { -1 }
         val strikeEnd=strikeLengths.max()-1
         val frames=(options.seconds*RATE).roundToInt()*options.oversample
@@ -516,7 +570,7 @@ object Chamber {
                 for(i in reflectionTaps.indices) {
                     early += reflections[i].tick(reflectionTaps[i].tick(sourceWave[reflectionSources[i]]))*reflectionGains[i]
                 }
-                early *= EARLY_GAIN
+                early *= earlyGain
                 for(r in 0..9) {
                     val stationary=surfaceTaps[r].tick(regionWave[r])
                     val aquatic=aquaticWeights[r]
@@ -532,12 +586,12 @@ object Chamber {
                         fluidCosB[r]=cb*fluidStepCosB-sb*fluidStepSinB
                     }
                     val output=(stationary*(1-.32*aquatic)+secondary*.58*aquatic)*
-                        SURFACE_GAIN*SURFACE_PICKUP_CALIBRATION*surfaceGains[r]/sqrt(10.0)
+                        surfaceGain*SURFACE_PICKUP_CALIBRATION*surfaceGains[r]/sqrt(10.0)
                     if(options.recordStems) surfaceStems[r][frame]=output.toFloat()
                     surface+=output
                 }
                 for(i in 0..7) late += fieldInputs[10+i]*(if(i%2==0) 1 else -1)
-                late *= observerGain*LATE_GAIN*LATE_PICKUP_CALIBRATION/sqrt(8.0)
+                late *= observerGain*lateGain*LATE_PICKUP_CALIBRATION/sqrt(8.0)
             }
             if(options.recordStems) {
                 rawDirect[frame]=direct.toFloat();rawEarly[frame]=early.toFloat()

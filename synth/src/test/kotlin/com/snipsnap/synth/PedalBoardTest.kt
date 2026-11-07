@@ -158,7 +158,7 @@ class PedalBoardTest {
         val parsed = PadRecipe.fromJsonValue(chip.recipe)
         assertNull(parsed.pedals)
         assertContentEquals(chip.snip.samples, parsed.process(snare).samples)
-        assertEquals(PadRecipe.VERSION, 2, "the field is optional: no version bump")
+        assertEquals(2, chip.recipe.entries["recipe"]!!.int(), "the field is optional: an unbanked recipe is still written as version 2")
     }
 
     @Test

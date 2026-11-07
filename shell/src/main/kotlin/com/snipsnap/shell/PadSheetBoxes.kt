@@ -25,13 +25,24 @@ object PadSheetBoxes {
     enum class Box(val legend: String) {
         TREATMENT("TREATMENT"),
         SHAPE("SHAPE"),
-        MUTATE("MUTATE"),
         OUTSIDE("OUTSIDE"),
+        MUTATE("MUTATE"),
         MAKE("MAKE"),
     }
 
-    /** Box order, top to bottom, as the sheet draws them. */
+    /**
+     * Box order, top to bottom, as the pad editor draws them: TREATMENT, SHAPE and OUTSIDE on the EFFECTS
+     * screen (OUTSIDE plays the pad out through a speaker or pedal and records it back over the pad's sound,
+     * so it is an effect), MUTATE on the VARIATIONS screen, then MAKE on the editor itself.
+     */
     val ORDER: List<Box> = Box.values().toList()
+
+    /** Which box sits on which of the editor's pages. */
+    fun page(box: Box): PadSheetPage = when (box) {
+        Box.TREATMENT, Box.SHAPE, Box.OUTSIDE -> PadSheetPage.EFFECTS
+        Box.MUTATE -> PadSheetPage.VARIATIONS
+        Box.MAKE -> PadSheetPage.EDITOR
+    }
 
     /** What a strip reads when the pad carries nothing from that bench. */
     const val UNTOUCHED = "UNTOUCHED"
@@ -128,6 +139,43 @@ object PadSheetBoxes {
 
     /** Whether anything has been done to [pad] at all — the grid's marker. */
     fun isTouched(pad: KitPad, outsideStage: String? = null): Boolean = touched(pad, outsideStage).isNotEmpty()
+
+    /**
+     * The closed line of the editor's `EFFECTS ▸` door: what the pad has applied, from the three
+     * benches that sit on that screen (what the TREATMENT strip says, then SHAPE, then OUTSIDE), as
+     * "CRUSH 35% · ATK 12 MS". [NOTHING_APPLIED] when none has anything; the count when the words would
+     * not fit the line ([SUMMARY_CHARS]).
+     */
+    fun effectsLine(pad: KitPad, outsideStage: String? = null): String {
+        val strips = summaries(pad, outsideStage)
+        val parts = ORDER.filter { page(it) == PadSheetPage.EFFECTS }
+            .map { strips.getValue(it) }
+            .filter { it != UNTOUCHED }
+            .map { AMOUNT_JOINT.replace(it, "$1 $2") }
+        if (parts.isEmpty()) return NOTHING_APPLIED
+        val full = parts.joinToString(" · ")
+        return if (full.length <= SUMMARY_CHARS) full else "${parts.size} APPLIED"
+    }
+
+    /**
+     * The closed line of the editor's `VARIATIONS ▸` door: what is inside. MUTATE is what the screen holds,
+     * so it reads what MUTATE has done to the pad ("MUTATE · ROOM × FUNK ROOM"), or what it can do.
+     */
+    fun variationsLine(pad: KitPad): String {
+        val applied = mutate(MutateSheet.read(pad.recipe))
+        if (applied == UNTOUCHED) return MUTATE_OFFERS
+        val full = "MUTATE · $applied"
+        return if (full.length <= SUMMARY_CHARS) full else "MUTATE · APPLIED"
+    }
+
+    /** What the EFFECTS door reads when the pad carries no treatment, shape or trip. */
+    const val NOTHING_APPLIED = "NOTHING APPLIED"
+
+    /** What the VARIATIONS door reads when the pad carries no mutate: what the screen holds. */
+    const val MUTATE_OFFERS = "MIX WITH ANOTHER SOUND"
+
+    /** "CRUSH · 35%" read as the door says it, "CRUSH 35%": a name, the joint, a percentage that ends the strip. */
+    private val AMOUNT_JOINT = Regex("""^(.*) · (\d+%)$""")
 
     /** Every strip at once, in [ORDER]. */
     fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> = linkedMapOf(

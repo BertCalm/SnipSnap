@@ -68,11 +68,11 @@ let corruptRejected = false;
 const corrupt = Buffer.from(packed); corrupt[corrupt.length >> 1] ^= 1;
 try { await decodeCache(m, corrupt); } catch { corruptRejected = true; }
 assert(corruptRejected, 'corrupt cache accepted');
-const report = { result: 'passed', cases: fixture.cuts.length, maxJsPythonSampleError: maxPortError,
+const report = { result: 'passed', cacheIdentity: m.cacheIdentity, cases: fixture.cuts.length, maxJsPythonSampleError: maxPortError,
   cacheIntegerIdentity: true, interpolationInvariants: true, corruptRejected,
   zeroLiveGainSilent: true, rapidRetriggersEnd: true, output48kClockAndEnd: true,
   eightVoicePeak: peak, desktopEightVoiceMillisecondsPerAudioSecond: millisecondsPerAudioSecond,
   desktopDecodeMilliseconds: decodeMilliseconds,
   scope: 'Node PCM decoder and actual streaming JS reader. Not hardware or speaker latency.' };
 fs.writeFileSync(path.join(out, 'reader-verification.json'), JSON.stringify(report, null, 2) + '\n');
-console.log(JSON.stringify(report));
+console.log(JSON.stringify({...report, cacheIdentity: "bound in receipt"}));

@@ -18,23 +18,25 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * Three bodies under the same blast: a round metal plate that keeps its hardening, a square glass pane
- * that gives it back, and a long thin steel sheet an octave lower, a thunder sheet. Each has its own
- * body: its own sourced overtone pattern.
+ * Six bodies under the same blast: a round metal plate that keeps its hardening, a square glass pane
+ * that gives it back, a long thin steel sheet an octave lower (a thunder sheet), a steel beam that
+ * clangs, a steel ring (a brake disc: a plate with a hole in it) and a steel rod struck on its end, which
+ * rings as a harmonic ping. Each has its own body: its own sourced overtone pattern.
  */
-enum class ScourVoice { PLATE, PANE, SHEET }
+enum class ScourVoice { PLATE, PANE, SHEET, BEAM, DISC, ROD }
 
 /**
  * SCOUR: an impact that builds. A roller spins up against a free plate while shot rains on it faster and
  * harder; each shot dents the surface, the dented fraction (coverage) climbs, and the plate's upper
  * partials climb with it, so the build rises. Then one heavy slam lands and the hardened plate rings
  * out. The characteristic gesture is the roller spins up, the shot rain accelerates, the plate stiffens
- * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE, and
- * SHEET an octave down) or giving it back as it rings (PANE).
+ * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE, BEAM,
+ * DISC and ROD, and SHEET an octave down) or giving it back as it rings (PANE).
  *
  * Computed: the roller's spin-up, read against a fixed surface at its contact phase; a seeded Poisson
  * shot schedule whose rate rises twentyfold over the build; coverage by the random-dent recursion
- * `S += κ·e·(1 − S)`; the plate, a [Modes.Bank]. Analogy: coverage moving the modal frequencies and damping (real cold work raises
+ * `S += κ·e·(1 − S)`; the plate, a [Modes.Bank]. Analogy: coverage moving the modal frequencies (R1's law also shortened their damping; since R2 the ring is
+ * left alone, the owner's pick at RING .5) (real cold work raises
  * yield strength and barely the stiffness). Not simulated: plastic flow, residual stress, curvature,
  * rebound, stick-slip, air. The design is
  * docs/superpowers/specs/2026-10-26-scour-engine-engineering-spec.md; every constant marked shape
@@ -56,9 +58,12 @@ enum class ScourVoice { PLATE, PANE, SHEET }
  * third listen dropped the held loop, so HOLD's whole range, top step included, is how long it rings.
  */
 object Scour {
-    /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
+    /**
+     * Seeds the draws. Every saved SCOUR sound regenerates through it: the presets, the starter kit's pads, and
+     * anything saved from the phone's synth picker. Changing it changes them all.
+     */
     const val MODEL_VERSION = 1
-    /** PLATE's and PANE's lowest note, C3. */
+    /** PLATE's, PANE's and BEAM's lowest note, C3. */
     const val ROOT_MIDI = 48
     /** SHEET's lowest note, C2: an octave down for weight, and still above the house `Pitch.detect`'s 40 Hz floor. */
     const val SHEET_ROOT_MIDI = 36
@@ -109,7 +114,8 @@ object Scour {
      * RPM 1, the slam landing on a roller at full speed), and their defaults sit at 0.53 (PLATE) and 0.43
      * (PANE). SHEET, an octave lower and ringing longer, would peak at 1.26 (C2 after the longest build at
      * full roller and blast), so it takes [Shape.trim] .55 of the trim: 0.69 at that corner and 0.25 at its
-     * default, inside PCM range for the audition's unlevelled copies.
+     * default, inside PCM range for the audition's unlevelled copies. BEAM keeps the whole trim: 0.65 at the
+     * same corner at C3, 0.43 at its default. DISC (0.97 untrimmed) and ROD (1.16) take [Shape.trim] .75 and .6.
      */
     private const val OUTPUT_TRIM = 36.0
     /** The roller runs on the rim. */
@@ -239,11 +245,105 @@ object Scour {
      */
     private val SHEET = Shape(RECT, .5, .7, SHEET_HEARD, 4.0, .88, .75, .02, .1, .3, .1, trim = .55)
 
+    /**
+     * BEAM's body: a free-free steel beam (a girder hung by its ends), heard in bending. Its modes are the
+     * roots of `cos βL · cosh βL = 1`, and `(βL)² = ωL²√(ρA/EI)` is listed root first; the first five are
+     * Leissa Table 4.72's beam row (22.373, 61.673, 120.903, 199.860, 298.556). Ratios 1, 2.757, 5.404,
+     * 8.933, 13.344, 18.638, 24.814, 31.872: few, wide apart and nearly evenly stretched, which is a
+     * struck bar's clang rather than a plate's crowd.
+     *
+     * The beam is heard .0509 of its length from one end, on the first node of its sixth mode, 18.638.
+     * That mode sits near 37/2, so heard it would split the house `Pitch.detect`'s autocorrelation peak
+     * at the root's period, as SHEET's 5.468 did. Its neighbour 13.344 (near 27/2) moves only .186 as much
+     * as the root there. The mode shapes are the closed form `cosh βx + cos βx − σ(sinh βx + sin βx)`,
+     * `σ = (cosh βL − cos βL)/(sinh βL − sin βL)`; the seven modes left are kept.
+     */
+    private val BAR = doubleArrayOf(22.373, 61.673, 120.903, 199.859, 298.556, 555.165, 713.079)
+
+    /** Each BAR mode's motion at BEAM's listening point, from the closed form, as a fraction of the root's. */
+    private val BEAM_HEARD = doubleArrayOf(1.0, .787, .582, .380, .186, .174, .333)
+
+    /**
+     * BEAM's pair (2.757 and 5.404) at .5 of the gain law and .7 of its ring, under a .85 gain law with each
+     * mode above .85 as long. At full level the pair pulls the period long: 28 of the 37 corners `ScourTest`
+     * asserts read at the onset, all flat. At .5 and .7 all 37 read at both windows for gain laws from .8 to
+     * .88. The roller is the quietest of the four (.04): at PLATE's .07, the ring a full-speed roller left
+     * partly cancelled the root at the slam, and a 243-corner grid at C3, E♭3 and F3 read 230 to 232 at the
+     * onset. At .04 it reads 243 and 243; a .9 gain law reads 242. The rest is shape: a 3 s root ring, steel
+     * that keeps its hardening (κ .015, ρ .12), and PLATE's stretch.
+     */
+    private val BEAM = Shape(BAR, .5, .7, BEAM_HEARD, 3.0, .85, .85, .015, .12, .3, .04)
+
+    /**
+     * DISC's body: the completely free annular plate, a plate with a hole (a brake disc), hole radius .5 of the
+     * outer, ν = 0.3, steel's. `λ² = ωa²√(ρh/D)` with a the outer radius, root first: the lowest elastic mode
+     * (2,0), then (0,1) (the disc's breathing mode), (3,0), (1,1), (4,0), (2,1), (5,0), (6,0) and (3,1); the
+     * nine below 11.2 times the root are kept. The values are the roots of the exact free-free frequency
+     * determinant (Bessel J, Y, I and K of order n, with M_r and the Kirchhoff shear V_r zero at both edges),
+     * solved in the Python harness. It reproduces 24 entries of Leissa, *Vibration of Plates* (NASA SP-160,
+     * 1969), Table 2.35 (free, free annular plate; b/a .1, .3, .5 and .7; (2,0) and (3,0), and (0,1) to (3,1))
+     * to within .46 % (the table prints three figures), and as the hole closes (b/a .01) it gives 5.2506 and
+     * 12.2216 at ν = 1/3 against PLATE's 5.253 and 12.23 at ν = .33. The hole is what tells it from PLATE: it
+     * lifts the breathing mode from 1.729 to 2.181 times the root, and puts (4,0) and (1,1) near 5 and 4.
+     *
+     * The disc is heard at one point, .93 of the outer radius out and 69 degrees round from the reference
+     * radius every cos(nθ) is largest on. It was chosen by scoring 294 points on a grid with a mirror of the
+     * house `Pitch.detect` (the first autocorrelation peak above .85 of the maximum): 31 read the root in all
+     * 16 detections under five voicings, and this one, near the strongest root among them, reads all 54 at the
+     * test's two windows (.2 and .6 s after the slam) across C3 to C5, with the pair at full level. Each
+     * entry below is the mode's mass-normalised motion there as a fraction of the root's.
+     */
+    private val ANNULUS = doubleArrayOf(4.271, 9.313, 11.425, 17.198, 21.067, 31.115, 32.982, 47.063, 47.462)
+
+    private val ANNULUS_HEARD = doubleArrayOf(1.0, .810, 1.254, .340, .153, .642, 1.455, .906, .714)
+
+    /**
+     * DISC needs no pair reduction: its two lowest overtones (2.181 and 2.675) did not split the detector's peak
+     * (54 of 54 with the pair at full level; PLATE's, PANE's, SHEET's and BEAM's did). Everything else is shape: a
+     * 2.8 s root ring (a root ring between PLATE's and SHEET's), steel that keeps its hardening (κ .015,
+     * ρ .12), a stretch of .3 and PLATE's roller. Measured in Kotlin: all 37 corners `ScourTest` asserts read
+     * at both windows, and the loudest raw corner (C3, the longest build, everything at full) peaks at 0.97, so
+     * it takes [Shape.trim] .75: 0.73 there and 0.46 at its default.
+     */
+    private val DISC = Shape(ANNULUS, 1.0, 1.0, ANNULUS_HEARD, 2.8, .82, .78, .015, .12, .3, .06, trim = .75)
+
+    /**
+     * ROD's body: a uniform free-free rod in longitudinal vibration, struck on its end. Its modes are the whole
+     * multiples of the lowest, `f_n = n·c/2L` with `c = √(E/ρ)`, and their shapes are `cos(nπx/L)`; the twelve
+     * lowest are kept (a bar's bending modes, BEAM's, are not harmonic, so a struck bar rings both, and ROD is
+     * the longitudinal half). Sources, found by search and not read in a book: a BYU acoustics paper
+     * (physics.byu.edu/docs/publication/1553) and the free-free rod verification page of an open solver
+     * (solver-docs.pages.dev/verification/free_free_rod_nf). The rod is heard at the struck end, where every
+     * mode moves alike (`cos 0 = 1`), so [ROD_HEARD] is 1 throughout and the gain law alone sets the balance.
+     *
+     * A harmonic series reads easily, but HARDEN stretches the upper modes, and a stretched series with strong
+     * upper partials drags the detector's common period short: in the mirror of `Pitch.detect`, at a stretch of
+     * .3 and a gain law of .78, 18 of 54 reads came out 40 to 100 cents sharp. At a stretch of .15 and a gain law
+     * of .70 to .78, all 54 read. So ROD's stretch is about half the other voices' (.25 to .35), and it stays a near-harmonic ping.
+     */
+    private val HARMONICS = DoubleArray(12) { it + 1.0 }
+
+    private val ROD_HEARD = DoubleArray(12) { 1.0 }
+
+    /**
+     * No pair reduction (the harmonics help the detector); a 3.2 s root ring with the upper modes ringing long
+     * (.88), the quietest roller, a stretch of .15. Measured in Kotlin: all 37 corners read at both windows. The
+     * loudest raw corner (C3, BUILD 0, roller and shot at full, HARDEN 0) peaks at 1.16, since every harmonic is
+     * struck alike, so it takes [Shape.trim] .6: 0.70 there and 0.44 at its default.
+     */
+    private val ROD = Shape(HARMONICS, 1.0, 1.0, ROD_HEARD, 3.2, .88, .74, .012, .10, .15, .04, trim = .6)
+
     private fun shape(voice: ScourVoice) = when (voice) {
         ScourVoice.PLATE -> PLATE
         ScourVoice.PANE -> PANE
         ScourVoice.SHEET -> SHEET
+        ScourVoice.BEAM -> BEAM
+        ScourVoice.DISC -> DISC
+        ScourVoice.ROD -> ROD
     }
+
+    /** The voice's body as ratios to its root, every mode it can sound: what a probe of the body compares against. */
+    internal fun bodyRatios(voice: ScourVoice): List<Double> = shape(voice).body.let { b -> b.map { it / b[0] } }
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: ScourVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", .5f, neutral = .5f),

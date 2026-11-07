@@ -67,6 +67,22 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         .fetchSemanticsNodes().isNotEmpty()
 
     @Test
+    fun chitinLoadsCandidateBassAndKeepsMaximumHoldFinite() {
+        show("CHITIN", "SHELL")
+        button("SHELL").assertIsSelected()
+        button("PRESET FOUNDATION").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.18f, progress("BITE"), .0001f)
+        adjust("HOLD", 1f)
+        assertTrue(compose.onAllNodesWithText("LONG NOTE", useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty())
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("CHITIN", settings["engine"])
+        assertEquals(1f, progress("HOLD"), .0001f)
+    }
+
+    @Test
     fun aerostatOpensItsApprovedPresetAndItsActualControls() {
         show("AEROSTAT", "FLOAT")
         button("FLOAT").assertIsSelected()

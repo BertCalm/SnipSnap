@@ -31,13 +31,19 @@ internal object FerryNetwork {
         val size get() = gamma.size
     }
 
-    /** Fixed bank above 1.57 f0: the lowest four eigenvalues are the root cluster. */
-    fun build(midi: Int, pace: Double, support: Boolean = true, mistuneCents: Double = 0.0): Model {
+    /** MATCH separates upper B modes while the four fundamentals retain a shared root. */
+    fun build(midi: Int, pace: Double, support: Boolean = true, mistuneCents: Double = 0.0, lossScale: Double = 1.0): Model {
+        require(lossScale.isFinite() && lossScale in .5..4.0) { "FERRY loss scale must be finite and in 0.5..4" }
+        require(mistuneCents.isFinite() && mistuneCents in 0.0..Ferry.MAX_MISTUNE_CENTS) {
+            "FERRY mistuning must be finite and in 0..${Ferry.MAX_MISTUNE_CENTS} cents"
+        }
         val hz = 440.0 * 2.0.pow((midi - 69) / 12.0)
         val frequency = DoubleArray(SIZE)
         for (k in 0..3) {
             frequency[k] = hz * (k + 1)
-            frequency[k + 4] = hz * (k + 1) * 2.0.pow(mistuneCents / 1200.0)
+            // Keep the played note anchored. Detuning the receiving fundamental
+            // made it pull the low-note tail sharp after the struck wood faded.
+            frequency[k + 4] = hz * (k + 1) * 2.0.pow(if (k == 0) 0.0 else mistuneCents / 1200.0)
             frequency[k + 8] = hz * (k + 1)
         }
         for (j in 0..8) frequency[12 + j] = 2 * hz * 2.0.pow(.35 * (j / 4.0 - 1.0))
@@ -59,7 +65,7 @@ internal object FerryNetwork {
         // The full H includes support-to-bank loading. Scaling a direct A/B edge
         // alone would miss this path and could fail the low-note splitting bound.
         var alpha = 1.0
-        if (mistuneCents == 0.0 && !withinCap(original)) {
+        if (!withinCap(original)) {
             var lo = 0.0
             var hi = 1.0
             repeat(40) {
@@ -71,7 +77,7 @@ internal object FerryNetwork {
         return Model(scaled(alpha), doubleArrayOf(
             .5, .8, 1.2, 1.7, .18, .25, .32, .4, .5, .6, .7, .8,
             .12, .14, .16, .18, .20, .22, .24, .26, .28, .35,
-        ), doubleArrayOf(
+        ).map { it * lossScale }.toDoubleArray(), doubleArrayOf(
             1.0, .42, .2, .1, .28, .65, .95, 1.2, .07, .07, .07, .07,
             .22, .22, .22, .22, .22, .22, .22, .22, .22, .8,
         ), alpha, hz)

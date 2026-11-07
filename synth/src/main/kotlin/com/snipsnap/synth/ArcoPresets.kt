@@ -25,6 +25,9 @@ package com.snipsnap.synth
  *    at 0.5 and BODY adds a low lift on the note at the plain's own gain, so a comment below that says "most of the box" or "a half-box"
  *    at a BODY over 0.5 means that much lift on the plain's box.
  *
+ *  - BUZZ (R2) came after the roster: every preset names it at 0, which is exactly the sound each had before BUZZ existed (ArcoBuzzTest
+ *    holds every preset's render to its hash from before the change). No preset buzzes; one that should is for the owner's ear.
+ *
  * ArcoPresetsTest holds all of this to the real classifier, with the room each reading has to its line printed.
  *
  * Names are plain words: no maker, no model, no engine's or rack section's name.
@@ -42,43 +45,43 @@ object ArcoPresets {
 
     private val celloPresets = listOf(
         // D3 (14 of 24), the open D string: the slowest stroke (400 ms to full speed) into a 0.9 s bow, a long lyrical note.
-        p(ArcoVoice.CELLO, "SLOW BOW", "TUNE" to 0.583f, "BOW" to 0.0f, "GRIP" to 0.7f, "BODY" to 0.5f, "HOLD" to 0.43f),
+        p(ArcoVoice.CELLO, "SLOW BOW", "TUNE" to 0.583f, "BOW" to 0.0f, "GRIP" to 0.7f, "BODY" to 0.5f, "HOLD" to 0.43f, "BUZZ" to 0.0f),
         // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.22 s.
-        p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.9f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f),
+        p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.9f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f, "BUZZ" to 0.0f),
         // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.92 s of bow.
-        p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f),
+        p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f, "BUZZ" to 0.0f),
         // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6. BOW 0.65, not the
         // 0.85 it was written at: R1c's bite is bigger, and at BOW 0.85 this note no longer locks inside its bow at all (at 0.65 it locks at 0.45 s).
-        p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.65f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
+        p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.65f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f, "BUZZ" to 0.0f),
         // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock before the last 10 ms of its 0.34 s, so a scrape in all but a moment (R1b's bite never let it lock at all); for the percussion pads.
-        p(ArcoVoice.CELLO, "DRY SCRAPE", "TUNE" to 0.167f, "BOW" to 1.0f, "GRIP" to 0.5f, "BODY" to 0.0f, "HOLD" to 0.05f),
+        p(ArcoVoice.CELLO, "DRY SCRAPE", "TUNE" to 0.167f, "BOW" to 1.0f, "GRIP" to 0.5f, "BODY" to 0.0f, "HOLD" to 0.05f, "BUZZ" to 0.0f),
         // A#2 (10 of 24): BODY 1, the top of the lift (since R1g a low lift at the plain's own gain on a box frozen at the knee, no longer R1c's whole box) under a 0.13 s bow-in that settles by 0.4 s, as long as a one-shot may be.
-        p(ArcoVoice.CELLO, "CINEMA LOW", "TUNE" to 0.417f, "BOW" to 0.3f, "GRIP" to 0.5f, "BODY" to 1.0f, "HOLD" to 0.43f),
+        p(ArcoVoice.CELLO, "CINEMA LOW", "TUNE" to 0.417f, "BOW" to 0.3f, "GRIP" to 0.5f, "BODY" to 1.0f, "HOLD" to 0.43f, "BUZZ" to 0.0f),
         // C4 (24 of 24), the top of the span: a bright, light-boxed bow where the hair is heard (GRIP 0.85, BODY 0.2).
-        p(ArcoVoice.CELLO, "HORSEHAIR", "TUNE" to 1.0f, "BOW" to 0.7f, "GRIP" to 0.85f, "BODY" to 0.2f, "HOLD" to 0.28f),
+        p(ArcoVoice.CELLO, "HORSEHAIR", "TUNE" to 1.0f, "BOW" to 0.7f, "GRIP" to 0.85f, "BODY" to 0.2f, "HOLD" to 0.28f, "BUZZ" to 0.0f),
         // G2 (7 of 24), the open G string, HOLD 1: the endless bow, a steady drone that closes on itself.
-        p(ArcoVoice.CELLO, "ENDLESS DRAW", "TUNE" to 0.292f, "BOW" to 0.4f, "GRIP" to 0.5f, "BODY" to 0.6f, "HOLD" to 1.0f),
+        p(ArcoVoice.CELLO, "ENDLESS DRAW", "TUNE" to 0.292f, "BOW" to 0.4f, "GRIP" to 0.5f, "BODY" to 0.6f, "HOLD" to 1.0f, "BUZZ" to 0.0f),
     )
 
     private val erhuPresets = listOf(
         // C#5 (11 of 19): the middle-high voice of the line, a nasal edge from a firm grip and a box that is mostly there.
-        p(ArcoVoice.ERHU, "NASAL LINE", "TUNE" to 0.579f, "BOW" to 0.5f, "GRIP" to 0.8f, "BODY" to 0.7f, "HOLD" to 0.38f),
+        p(ArcoVoice.ERHU, "NASAL LINE", "TUNE" to 0.579f, "BOW" to 0.5f, "GRIP" to 0.8f, "BODY" to 0.7f, "HOLD" to 0.38f, "BUZZ" to 0.0f),
         // G4 (5 of 19): a soft round note, a dark light grip with a low lift on it, bowed in over 0.19 s. BODY 0.8, kept from R1c, which moved it down
         // from the 0.85 it was written at: R1c's louder box (1.375 times the string at BODY 0.85) took the render's ring from its peak from 813 ms to 522 ms,
         // within 22 ms of the classifier's 500 ms line. R1g retired that box (above BODY 0.5 the box stays at the knee's size and BODY adds a low lift at the
         // plain's own gain), so that reason is gone and was not re-measured at 0.85; the value stays because R1g saw the ring at about 807 ms at 0.8.
-        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.8f, "HOLD" to 0.42f),
+        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.8f, "HOLD" to 0.42f, "BUZZ" to 0.0f),
         // A#4 (8 of 19): the hardest bow on a light grip with hardly any box, 0.34 s of it: a thin, bright flick.
-        p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f),
+        p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f, "BUZZ" to 0.0f),
         // G5 (17 of 19): near the top of the span, swelling in over 0.16 s under a firm grip and a held bow: the cry.
-        p(ArcoVoice.ERHU, "HIGH CRY", "TUNE" to 0.895f, "BOW" to 0.25f, "GRIP" to 0.9f, "BODY" to 0.6f, "HOLD" to 0.44f),
+        p(ArcoVoice.ERHU, "HIGH CRY", "TUNE" to 0.895f, "BOW" to 0.25f, "GRIP" to 0.9f, "BODY" to 0.6f, "HOLD" to 0.44f, "BUZZ" to 0.0f),
         // B4 (9 of 19): the same cry eight semitones lower, a 0.19 s swell into the longest note a one-shot may be.
-        p(ArcoVoice.ERHU, "SLOW CRY", "TUNE" to 0.474f, "BOW" to 0.2f, "GRIP" to 0.7f, "BODY" to 0.55f, "HOLD" to 0.44f),
+        p(ArcoVoice.ERHU, "SLOW CRY", "TUNE" to 0.474f, "BOW" to 0.2f, "GRIP" to 0.7f, "BODY" to 0.55f, "HOLD" to 0.44f, "BUZZ" to 0.0f),
         // E4 (2 of 19): the warm low end, most of the box and a medium grip: a plain friendly note, a medium bow in.
-        p(ArcoVoice.ERHU, "TEA HOUSE", "TUNE" to 0.105f, "BOW" to 0.45f, "GRIP" to 0.4f, "BODY" to 0.9f, "HOLD" to 0.3f),
+        p(ArcoVoice.ERHU, "TEA HOUSE", "TUNE" to 0.105f, "BOW" to 0.45f, "GRIP" to 0.4f, "BODY" to 0.9f, "HOLD" to 0.3f, "BUZZ" to 0.0f),
         // A4 (7 of 19), the outer open string: a firm bite with a half-box, 0.5 s of bow, a bright short note.
-        p(ArcoVoice.ERHU, "TWO STRING", "TUNE" to 0.368f, "BOW" to 0.85f, "GRIP" to 0.45f, "BODY" to 0.55f, "HOLD" to 0.2f),
+        p(ArcoVoice.ERHU, "TWO STRING", "TUNE" to 0.368f, "BOW" to 0.85f, "GRIP" to 0.45f, "BODY" to 0.55f, "HOLD" to 0.2f, "BUZZ" to 0.0f),
         // E5 (14 of 19), HOLD 1: the endless cry, a bright steady line that closes on itself.
-        p(ArcoVoice.ERHU, "ENDLESS CRY", "TUNE" to 0.737f, "BOW" to 0.5f, "GRIP" to 0.75f, "BODY" to 0.5f, "HOLD" to 1.0f),
+        p(ArcoVoice.ERHU, "ENDLESS CRY", "TUNE" to 0.737f, "BOW" to 0.5f, "GRIP" to 0.75f, "BODY" to 0.5f, "HOLD" to 1.0f, "BUZZ" to 0.0f),
     )
 }

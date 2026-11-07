@@ -147,7 +147,7 @@ object Velocity {
             // An authored quiet ORIGAMI reference is the hardest sample of its own set.
             // Its softer layers must stay below that ceiling instead of replacing it
             // with an absolute .3/.6 strike that could be harder than the saved note.
-            val strike = if (patch is OrigamiPatch && patch.expression == OrigamiExpression.FOLD)
+            val strike = if (patch is OrigamiPatch && OrigamiExpressions.colorsWithVelocity(patch.expression))
                 OrigamiExpressions.relativeVelocity(patch, velocity) else velocity
             peakMatch(reference, atVelocity(patch!!, strike, spec))
         } else {
@@ -193,9 +193,16 @@ object Velocity {
      * whether a voice *has* a brightness macro is a question about the
      * voice, never about which keys happen to be present on one instance.
      */
-    private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+    internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is ChitinPatch -> Chitin.macrosFor(patch.voice)
+        is AccordPatch -> Accord.macrosFor(patch.voice)
+        is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
+        is OtisPatch -> Otis.macrosFor(patch.voice)
+        is LorentzPatch -> Lorentz.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
-        is FerryPatch -> Ferry.macrosFor(patch.voice)
+        is HydroformPatch -> Hydroform.macrosFor(patch.voice)
+        is FerryPatch -> Ferry.macrosFor(patch.voice, patch.model)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
@@ -233,6 +240,7 @@ object Velocity {
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
+        is MeridianPatch -> Meridian.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is BallastPatch -> Ballast.macrosFor(patch.voice)
@@ -244,6 +252,7 @@ object Velocity {
         is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
         is ScourPatch -> Scour.macrosFor(patch.voice)
+        is FillPatch -> Fill.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
@@ -264,7 +273,8 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
-        is OverlapPatch -> Overlap.macrosFor(patch.topology)
+        is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
+            else Overlap.macrosFor(patch.topology, patch.model)
         is FlockPatch -> Flock.macrosFor(patch.voice)
         is ShoalPatch -> Shoal.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
@@ -281,6 +291,7 @@ object Velocity {
         is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
         is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
+        is KeelPatch -> Keel.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
         is OhmPatch -> Ohm.macrosFor(patch.model)
@@ -383,6 +394,13 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
+        // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
+        is AccordPatch -> patch.copy(velocity = v).render()
+        is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
+        is RimePatch -> patch.copy(velocity = v).render()
+        is OtisPatch -> patch.copy(velocity = patch.velocity * v).render()
+        is LorentzPatch -> patch.copy(velocity = v).render()
         is LibrationPatch -> patch.copy(velocity = v).render()
         is ApsisPatch -> patch.copy(velocity = v).render()
         // UPRIGHT changes its released-string excitation. The existing five
@@ -408,6 +426,8 @@ object Velocity {
         is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
         // SCOUR's velocity is shot speed: each shot lands harder and leaves more coverage.
         is ScourPatch -> Scour.render(patch.voice, patch.macros, velocity = v)
+        // FILL scales the whole run: every drum softer and darker, the crescendo's shape kept.
+        is FillPatch -> Fill.render(patch.voice, patch.macros, velocity = v)
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
@@ -420,6 +440,7 @@ object Velocity {
         // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
         is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
+        is MeridianPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.
         is StoopPatch -> patch.copy(velocity = v).render()
@@ -442,19 +463,27 @@ object Velocity {
         is TrefoilPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
+        is HydroformPatch -> patch.copy(velocity = v).render()
         is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
+        is KeelPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
         is OhmPatch -> patch.copy(velocity = v).render()
         is CausticPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
+        // A harder stick or beater: more upper modes, a deeper bend, a
+        // brighter click (StrikeVelocity). SKIN's snare, hats, ride and
+        // shaker are noise through filters or wires, which that contact law
+        // does not describe, so they keep their brightness macro or soften().
+        is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
+        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
-        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
-        is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
+        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch,
+        is SnapPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null
     }

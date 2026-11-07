@@ -15,7 +15,7 @@ import kotlin.math.log10
 import kotlin.math.sqrt
 
 /**
- * An explicitly unapproved Fight experiment beside the accepted model-five gesture.
+ * A historical Fight experiment beside the then-accepted model-five gesture.
  * One gain serves every recording, including stems and causal controls. The control-off
  * condition disables activity-driven entries as well as pressure response; it does not
  * promise the same phrase with a different timbre. Each phrase note starts fresh.
@@ -54,13 +54,13 @@ object ObbligatoResponsiveAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Usage: ObbligatoResponsiveAuditionGenerator [output-directory]" }
-        require(Obbligato.MODEL == 5 && Obbligato.EXPERIMENTAL_MODEL == 6) {
+        require(Obbligato.LEGACY_MODEL == 5 && Obbligato.EXPERIMENTAL_MODEL == 6) {
             "This audition compares accepted model five with experimental model six"
         }
         val root = File(args.firstOrNull() ?: "../testkit/obbligato-responsive-audition").absoluteFile
         check(root.isDirectory || root.mkdirs()) { "Could not create $root" }
         val base = ObbligatoPresets.all().single { it.name == "Fight" }
-            .copy(name = "Fight accepted model five", midi = MIDI, velocity = VELOCITY, seed = SEED, model = 5)
+            .copy(name = "Fight accepted model five", midi = MIDI, velocity = VELOCITY, seed = SEED, model = Obbligato.LEGACY_MODEL)
         val responsive = base.copy(name = "Fight responsive experiment", model = Obbligato.EXPERIMENTAL_MODEL)
         val airWeakening = Obbligato.SourceWeakening(air = true, startSeconds = .45, endSeconds = .85, strength = .1f)
         val reedWeakening = Obbligato.SourceWeakening(air = false, startSeconds = 1.3, endSeconds = 1.7, strength = .1f)
@@ -166,8 +166,8 @@ object ObbligatoResponsiveAuditionGenerator {
         writeJson("measurements.json", measurements)
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "OBBLIGATO", "audition" to "Responsive Fight experiment",
-            "status" to "Model 6 is experimental and has not received a listening verdict. Model 5 remains accepted and default.",
-            "referenceModel" to 5, "experimentalModel" to Obbligato.EXPERIMENTAL_MODEL,
+            "status" to "Historical comparison: model 5 was the accepted default when the model 6 experiment was first reviewed.",
+            "referenceModel" to Obbligato.LEGACY_MODEL, "experimentalModel" to Obbligato.EXPERIMENTAL_MODEL,
             "sampleRate" to Dsp.RATE, "channels" to 1, "pcmBits" to 24,
             "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED, "hold" to base.macros.getValue("HOLD"),
             "effects" to emptyList<String>(), "looping" to false, "gain" to gain,
@@ -351,9 +351,9 @@ object ObbligatoResponsiveAuditionGenerator {
 <title>OBBLIGATO · responsive Fight experiment</title><style>
 :root{color-scheme:dark;--bg:#101511;--panel:#19221b;--ink:#eaf2e9;--muted:#acbbaa;--accent:#ff8a7a;--line:#354738}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:40px 22px 64px}.eyebrow,.take-label,label,summary{font:12px/1.5 ui-monospace,monospace;letter-spacing:.06em}.eyebrow,.take-label{color:var(--accent)}h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.04em;margin:8px 0}h2{margin:0;font-size:25px}h3{margin:0;font-size:21px}p{color:var(--muted);margin:10px 0 18px}.intro{max-width:760px}a{color:var(--accent);text-underline-offset:3px}.tools{display:flex;gap:14px 22px;flex-wrap:wrap;margin:24px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:22px 0 34px}.card,.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px}.listen{margin:18px 0}.take-label{display:flex;gap:12px;justify-content:space-between;align-items:center}audio{display:block;width:100%;margin-top:8px}details{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}summary{cursor:pointer;min-height:36px}button,select,textarea{font:inherit;border:1px solid var(--line);border-radius:5px;padding:10px;background:#0f1711;color:var(--ink)}button{cursor:pointer;min-height:44px}select,textarea{width:100%;margin-top:8px}textarea{resize:vertical}label{display:block;color:var(--accent);margin-top:16px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.small{font-size:14px}.status{min-height:1.5em;margin:8px 0}footer{margin-top:32px}code{overflow-wrap:anywhere} @media(max-width:680px){main{padding:25px 16px 45px}.grid{grid-template-columns:1fr}.card,.note{padding:18px}.take-label{font-size:11px}}
 </style></head><body><main>
-<div class="eyebrow">SNIPSNAP / OBBLIGATO / UNHEARD EXPERIMENT</div>
+<div class="eyebrow">SNIPSNAP / OBBLIGATO / HISTORICAL EXPERIMENT</div>
 <h1>Fight, with a response</h1>
-<p class="intro">Compare the accepted model 5 with a separate model 6 experiment. In model 6, a player readies its next entry from what the other pipe is actually doing. The current accepted instrument and kit remain model 5.</p>
+<p class="intro">Compare the accepted model 5 with a separate model 6 experiment. In model 6, a player readies its next entry from what the other pipe is actually doing. This snapshot keeps the original model-5 reference.</p>
 <div class="tools"><a href="$ARCHIVE" id="pack-link" download>Download all 19 WAVs and recipes ↓</a><a href="standalone.html" id="standalone-link" download>Single-file listening page ↓</a><a href="manifest.json" id="manifest-download" download="manifest.json">Settings and measurements ↓</a></div>
 <p class="small" id="embedded-note" hidden>This single file embeds the audio and main patches. The full ZIP is a separate download from the published page.</p>
 <p class="small">All recordings use one shared gain. The one-note comparisons use C4, velocity 0.8, seed 0 and the same BREATH, BOND, MISCHIEF and HOLD. Stem controls retain their complete duet's gain. There are no rack effects or sustain loops.</p>
@@ -367,7 +367,7 @@ object ObbligatoResponsiveAuditionGenerator {
 <div class="grid">${causal("air_weakened", "Weaken the air", "The air source", "0.45–0.85 seconds")}${causal("reed_weakened", "Weaken the reed", "The reed source", "1.30–1.70 seconds")}</div>
 <div class="note"><h2>Across four notes</h2><p>C4, E-flat4, F4 and G4, with a 120 ms gap after each complete gesture. Each note begins fresh; the relationship does not carry between notes.</p>${player("accepted5_phrase", "MODEL 5 · FOUR NOTES")}${player("responsive6_phrase", "MODEL 6 · FOUR NOTES")}</div>
 <section class="note" style="margin-top:24px"><h2>Your listening verdict</h2><p>Does the new duet react more clearly while keeping the continuous exchange you accepted?</p><label for="verdict">EXPERIMENTAL MODEL 6</label><select id="verdict"><option value="">Choose a verdict</option><option>Keep exploring</option><option>Prefer model 5</option><option>Revise the interaction</option></select><label for="notes">WHAT DID YOU HEAR?</label><textarea id="notes" rows="4" placeholder="Which player leads, how does the other answer, and where does it feel too regular or disconnected?"></textarea><p><button type="button" id="export-notes">Export listening notes ↓</button></p><p class="status small" id="status" aria-live="polite"></p></section>
-<footer><p class="small">Model 6 is an unapproved behavioral analogy, not a claim about human performance or acoustic realism. Readiness thresholds, crossover and pitch shapes await listening. Patch downloads store the normal full-response instrument; diagnostic disabling and weakening flags live in <code>diagnostics/</code> and are replayed by the generator. The ZIP contains the relative-file page and every recording; the separate single-file page embeds its audio.</p></footer>
+<footer><p class="small">Model 6 was proposed as a behavioral analogy, not a claim about human performance or acoustic realism. Readiness thresholds, crossover and pitch shapes await listening. Patch downloads store the normal full-response instrument; diagnostic disabling and weakening flags live in <code>diagnostics/</code> and are replayed by the generator. The ZIP contains the relative-file page and every recording; the separate single-file page embeds its audio.</p></footer>
 <script id="manifest" type="application/json">${manifest.replace("<", "\\u003c")}</script>
 <script>
 const AUDIO = {};
@@ -387,8 +387,8 @@ document.getElementById('export-notes').addEventListener('click', () => { const 
     private fun readme() = """
         OBBLIGATO responsive Fight audition
 
-        Model 5 is the accepted reference and remains the default. Model 6 is a separate,
-        unapproved experiment. No new listening approval is claimed.
+        This historical snapshot keeps model 5 as its original accepted reference and
+        model 6 as the separate experiment. It does not follow the current factory default.
 
         Open index.html with audio/, patches/ and diagnostics/ beside it. The separately
         generated standalone.html embeds all audio; it is omitted from this ZIP to avoid

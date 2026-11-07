@@ -106,3 +106,7 @@ Preserve those model-1 facts in the port. If a later improvement changes the acc
 ### SURFACE route milestone, 2026-10-31
 
 The [SURFACE stereo contract](../specs/2026-10-31-aquarium-surface-stereo-design.md) extends the accepted bus to SURFACE after its existing mono chain. FX → USE KIT FX is an explicit per-kit opt-in to the saved PERFORMANCE controls; SURFACE owns independent history. PRINT now keeps the actual stereo output through native/JNI/Kotlin and the existing TAPE/PAD landing paths. Ordinary release keeps tails; priority panic handles focus/background release. Sidecar writes retain each directory's latest snapshot. Remaining transport mixers, phone timing/power/recovery and physical MPC acceptance are still open.
+
+### ORBIT route milestone, 2026-11-01
+
+The [ORBIT contract](../specs/2026-11-01-aquarium-orbit-design.md) connects its final stereo mix and fresh finite bounce to the same accepted continuous processor. OPEN THE SET holds its opt-in and 0..30-second bounce tail. ORBIT tempo reaches the mix and its separate tapped-pad audition; taps stay out of BOUNCE. The exact source endpoint precedes zero-input tail processing. Stereo shelf storage now explicitly preserves ORBIT bounces and SURFACE prints, while ordinary imports and TAPE's editor remain mono. The frozen-clock SURFACE test waits for both disk and UI completion. SPLIT, held instruments, other players and physical phone/MPC checks remain open.

@@ -25,6 +25,8 @@ internal object PresetTestSupport {
      * hole and still catch the hyphenated and spaced forms for free.
      */
     val trademarkBlocklist = Regex(
+        // CHITIN research references; engine and preset names stay descriptive.
+        """(?i)beetronics|\blarva\b|\bodyssey\b|""" +
         """(?i)(808|909|606|707|727|626|636|637|303)""" +
             """|roland|akai|yamaha|korg|native\s*instruments|elektron""" +
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +

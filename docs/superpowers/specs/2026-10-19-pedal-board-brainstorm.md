@@ -110,6 +110,8 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 **Gate:** does the choir sing rather than sound like a tape machine? JANGLE at the defaults: a Magnatone, or "is it on"? Play TAPE WOBBLE 0.8 beside it. A snare at the recipe.
 
+**Gate result (2026-11-04):** the owner listened to the real section on JANGLE, the choir and the snare, each beside TAPE WOBBLE 0.8, at depths of 21, 42 and 60 cents at 5.5 Hz and at 42 cents slow (3 Hz) and fast (8 Hz). The choir and the snare: it does not work on short sounds. On JANGLE it is different from TAPE WOBBLE, keep it. A tap: 42 cents. Built as the VIBRATO section, `Vibrato.kt`: one delay swept by a sine, d(t) = A (1 - cos 2 pi f t), with no base delay and no front trim; DEPTH is the peak pitch swing in cents (0 to 60), solved for the RATE in use so it stays the same from 2 to 9 Hz (measured on a steady 220 Hz tone: DEPTH 1 swings +59.9 / -62.0 cents at 2, 5.5 and 9 Hz); LATE brings it in over 0 to 600 ms. `vibratoed` is DEPTH 1.0, so a tap (AMT 0.7) is 42 cents and AMT 100 is the 60 also heard. Why short sounds fail, measured by how long each is within 20 dB of its peak: the snare 0.09 s (half a cycle at 5.5 Hz), the choir 0.48 s (2.6 cycles), JANGLE 2.92 s (16 cycles); at the top rate of 9 Hz the choir still gets only 4. A vibrato needs several cycles, so nothing tries to rescue a short sound. TAPE WOBBLE at 0.8 is not the shallower effect: measured on the same tone it swings +68 / -71 cents, two rates mixed (1.3 and 7.4 Hz), against one steady rate here.
+
 **Verifiers:** buildable with fixes (0.8): drop the base delay and front trim; hold cents constant across RATE; remove the "FIT floor" clause. New (0.8), but if the gate cannot tell it from TAPE WOBBLE, decline it. Worth 4.
 
 ### 4. FADE IN (section, saved key `volume`), worth 4
@@ -129,6 +131,8 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 **Effort:** S.
 
 **Gate:** JANGLE: a pedal-steel swell with no pick? With DRIVE after it, a bloom? Different from SWELL side by side? Hiss? First the free listen: the BLOOM board exists today.
+
+**Gate result (2026-11-02):** the owner listened to the real section on JANGLE, the choir and the snare, each beside SWELL, at rises of 240, 448 and 640 ms (levelled to one loudness). JANGLE: yes, a pedal-steel swell with no pick. Different from SWELL: yes, keep both. The quiet start: clean. A faded-in snare: useful on held sounds only. A tap: 448 ms, which sets `eased` to RISE 0.8 (a tap is AMT 0.7, so 0.8 x 0.7 = 0.56, 448 ms; AMT 100 is the 640 ms also heard). Built as the VOLUME section, `Volume.kt`; FALL was left out (nobody asked for it, and the rack's end-fade already shapes a pad's tail). Measured, peak kept relative to the dry pad: the snare 16 percent at every rise heard, the choir 100, 94 and 53 percent at 240, 448 and 640 ms, JANGLE through its amp 100, 97 and 73 percent. Nothing tries to rescue a drum: the lift is capped at 12 dB and the section is excused from the rack's peak-match test.
 
 **Verifiers:** buildable with fixes (0.85): slot is spike, volume, eq; cap the lift. New (0.85). Worth 4: both audiences at effort S; the chip word and the drum case hold it off 5.
 

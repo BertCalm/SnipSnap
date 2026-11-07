@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Accepted model-4 voice references and gentle variations, all dry finite notes. */
+/** Accepted model-4 references alongside opt-in fold gestures, all dry finite notes. */
 object OrigamiPresets {
     private val reference = mapOf(
         "TUNE" to .5f, "CREASE" to .5f, "FOLD" to .75f,
@@ -22,6 +22,33 @@ object OrigamiPresets {
         p(OrigamiVoice.STILL, "Quiet Paper", "FOLD" to .46f, "MOTION" to .12f),
     )
 
-    fun forVoice(voice: OrigamiVoice): List<OrigamiPatch> = presets.filter { it.voice == voice }
-    fun all(): List<OrigamiPatch> = presets
+    private fun expressive(voice: OrigamiVoice, name: String, gesture: OrigamiGesture,
+                           fold: Float, motion: Float) =
+        p(voice, name, "FOLD" to fold, "MOTION" to motion).copy(
+            gesture = gesture, expression = OrigamiExpression.FOLD,
+        )
+
+    // Each pair shares geometry and timing so its direction is the only authored difference.
+    // These travel times leave a stable plateau before each voice's finite release begins.
+    private val performancePresets = listOf(
+        expressive(OrigamiVoice.CRANE, "Paper Bloom", OrigamiGesture.BLOOM, .65f, .35f),
+        expressive(OrigamiVoice.CRANE, "Paper Unfold", OrigamiGesture.UNFOLD, .65f, .35f),
+        expressive(OrigamiVoice.FAN, "Fifth Bloom", OrigamiGesture.BLOOM, .65f, .55f),
+        expressive(OrigamiVoice.FAN, "Fifth Unfold", OrigamiGesture.UNFOLD, .65f, .55f),
+        expressive(OrigamiVoice.STILL, "Soft Bloom", OrigamiGesture.BLOOM, .62f, .70f),
+        expressive(OrigamiVoice.STILL, "Soft Unfold", OrigamiGesture.UNFOLD, .62f, .70f),
+    )
+    private val touchPresets = performancePresets.map { it.copy(expression = OrigamiExpression.TOUCH) }
+
+    /** The original six accepted STEADY/LEVEL references and gentle variations, in saved order. */
+    fun references(): List<OrigamiPatch> = presets
+
+    /** The published FOLD family, retained for explicit legacy audition and recipe comparisons. */
+    fun foldPerformance(): List<OrigamiPatch> = performancePresets
+
+    /** Current factories: soft hits darken the upper bank while firm hits retain the accepted tone. */
+    fun performance(): List<OrigamiPatch> = touchPresets
+
+    fun forVoice(voice: OrigamiVoice): List<OrigamiPatch> = all().filter { it.voice == voice }
+    fun all(): List<OrigamiPatch> = references() + performance()
 }

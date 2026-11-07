@@ -1,0 +1,399 @@
+{
+  "title": "Ferry LOSS listening",
+  "model": 3,
+  "base_commit": "e4e7b29320da3af052715268319aeff1c2b1514d",
+  "entries": [
+    {
+      "id": "low-reference",
+      "register": "low",
+      "midi": 36,
+      "loss": 0.5,
+      "loss_scale": 1,
+      "seconds": 4,
+      "frames": 176400,
+      "model": 3,
+      "audio": "loss-audio/low-reference.wav",
+      "recipe": "loss-recipes/low-reference.json",
+      "audio_sha256": "851f6be412adb140d4300eebaebedf989246597da46a01c448fed5638b5a62cb",
+      "approved_default_unchanged": true,
+      "cold_ms": 129.697259,
+      "warm_ms": 45.179604,
+      "peak": 0.7034687399864197,
+      "dc": 9.860120473402847e-06,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 2.8443263414468145,
+          "confidence": 0.9390662908554077
+        },
+        {
+          "from_seconds": 1.2999999523162842,
+          "cents": 5.109948069671893,
+          "confidence": 0.9353297352790833
+        },
+        {
+          "from_seconds": 3.200000047683716,
+          "cents": 4.847573872966643,
+          "confidence": 0.9382242560386658
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.3858391061981589
+    },
+    {
+      "id": "low-dry",
+      "register": "low",
+      "midi": 36,
+      "loss": 1,
+      "loss_scale": 4,
+      "seconds": 1,
+      "frames": 44100,
+      "model": 3,
+      "audio": "loss-audio/low-dry.wav",
+      "recipe": "loss-recipes/low-dry.json",
+      "audio_sha256": "1fcb60a6c1b713608875ffcdb8bb8ac5db1683b3c0d14455f38df26333ef724b",
+      "approved_default_unchanged": null,
+      "cold_ms": 26.680904,
+      "warm_ms": 11.056106,
+      "peak": 0.8249334096908569,
+      "dc": 3.5483125959239084e-05,
+      "loudness": 0.1834000051021576,
+      "classifier": "TONAL",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 3.423052014586107,
+          "confidence": 0.9353732466697693
+        },
+        {
+          "from_seconds": 0.32499998807907104,
+          "cents": 2.3960892092758477,
+          "confidence": 0.933565616607666
+        },
+        {
+          "from_seconds": 0.800000011920929,
+          "cents": 7.272064098664662,
+          "confidence": 0.9150786995887756
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.03793035953983789
+    },
+    {
+      "id": "low-bloom",
+      "register": "low",
+      "midi": 36,
+      "loss": 0,
+      "loss_scale": 0.5,
+      "seconds": 8,
+      "frames": 352800,
+      "model": 3,
+      "audio": "loss-audio/low-bloom.wav",
+      "recipe": "loss-recipes/low-bloom.json",
+      "audio_sha256": "b2f2d70e063cd18ede4c04e83f6d6d9fca19e8932ef62a75cc483032db3d6257",
+      "approved_default_unchanged": null,
+      "cold_ms": 89.835556,
+      "warm_ms": 80.915629,
+      "peak": 0.6989187002182007,
+      "dc": -1.4837505709396487e-05,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 2.733235647379925,
+          "confidence": 0.9390957355499268
+        },
+        {
+          "from_seconds": 2.5999999046325684,
+          "cents": 4.945440272237521,
+          "confidence": 0.9406149983406067
+        },
+        {
+          "from_seconds": 6.400000095367432,
+          "cents": 2.8400925255117278,
+          "confidence": 0.9392022490501404
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.6119438105202828
+    },
+    {
+      "id": "middle-reference",
+      "register": "middle",
+      "midi": 48,
+      "loss": 0.5,
+      "loss_scale": 1,
+      "seconds": 4,
+      "frames": 176400,
+      "model": 3,
+      "audio": "loss-audio/middle-reference.wav",
+      "recipe": "loss-recipes/middle-reference.json",
+      "audio_sha256": "b205b2332f914852a976969e4ed3f94fe58aabed51ab30a0e315c4ffd73ab8ea",
+      "approved_default_unchanged": true,
+      "cold_ms": 43.106931,
+      "warm_ms": 40.967178,
+      "peak": 0.5208353400230408,
+      "dc": -4.778006051781058e-06,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 1.8628121161926332,
+          "confidence": 0.9699707627296448
+        },
+        {
+          "from_seconds": 1.2999999523162842,
+          "cents": 2.2105500046449853,
+          "confidence": 0.9703445434570312
+        },
+        {
+          "from_seconds": 3.200000047683716,
+          "cents": 2.04637156155704,
+          "confidence": 0.9674391746520996
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.4257290333439305
+    },
+    {
+      "id": "middle-dry",
+      "register": "middle",
+      "midi": 48,
+      "loss": 1,
+      "loss_scale": 4,
+      "seconds": 1,
+      "frames": 44100,
+      "model": 3,
+      "audio": "loss-audio/middle-dry.wav",
+      "recipe": "loss-recipes/middle-dry.json",
+      "audio_sha256": "b9d3e005c581746e3c2c660d7aa3f7adb5a77bc41ed7e54b04ef8497dc8df12f",
+      "approved_default_unchanged": null,
+      "cold_ms": 10.883266,
+      "warm_ms": 10.117091,
+      "peak": 0.6022272706031799,
+      "dc": 4.5248225683512925e-06,
+      "loudness": 0.1833999902009964,
+      "classifier": "TONAL",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 2.513452655938787,
+          "confidence": 0.9672935605049133
+        },
+        {
+          "from_seconds": 0.32499998807907104,
+          "cents": 2.374712879644223,
+          "confidence": 0.9634756445884705
+        },
+        {
+          "from_seconds": 0.800000011920929,
+          "cents": 5.076121549592632,
+          "confidence": 0.9639228582382202
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.05390144686763548
+    },
+    {
+      "id": "middle-bloom",
+      "register": "middle",
+      "midi": 48,
+      "loss": 0,
+      "loss_scale": 0.5,
+      "seconds": 8,
+      "frames": 352800,
+      "model": 3,
+      "audio": "loss-audio/middle-bloom.wav",
+      "recipe": "loss-recipes/middle-bloom.json",
+      "audio_sha256": "9f6f6f2bd4dd923b03fc8a23e767632994251d76cf9abf370cf81b84d7edf147",
+      "approved_default_unchanged": null,
+      "cold_ms": 82.917775,
+      "warm_ms": 80.198659,
+      "peak": 0.5252895355224609,
+      "dc": 2.2008194324439477e-06,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 1.7554914248316356,
+          "confidence": 0.9701046347618103
+        },
+        {
+          "from_seconds": 2.5999999046325684,
+          "cents": 1.9777911890169204,
+          "confidence": 0.9705655574798584
+        },
+        {
+          "from_seconds": 6.400000095367432,
+          "cents": 2.05827199664913,
+          "confidence": 0.9549862742424011
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.6416823550893161
+    },
+    {
+      "id": "high-reference",
+      "register": "high",
+      "midi": 72,
+      "loss": 0.5,
+      "loss_scale": 1,
+      "seconds": 4,
+      "frames": 176400,
+      "model": 3,
+      "audio": "loss-audio/high-reference.wav",
+      "recipe": "loss-recipes/high-reference.json",
+      "audio_sha256": "8fd9c66b61abed775c9887e3e2e365ae668aebec182bd810860df8f568351bdc",
+      "approved_default_unchanged": true,
+      "cold_ms": 40.740596,
+      "warm_ms": 40.393012,
+      "peak": 0.4106661379337311,
+      "dc": -2.933884232294716e-08,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 0.7360166176743508,
+          "confidence": 0.9921614527702332
+        },
+        {
+          "from_seconds": 1.2999999523162842,
+          "cents": 0.5315247088956727,
+          "confidence": 0.9923788905143738
+        },
+        {
+          "from_seconds": 3.200000047683716,
+          "cents": 0.9582454882614,
+          "confidence": 0.9917300939559937
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.42572660788798433
+    },
+    {
+      "id": "high-dry",
+      "register": "high",
+      "midi": 72,
+      "loss": 1,
+      "loss_scale": 4,
+      "seconds": 1,
+      "frames": 44100,
+      "model": 3,
+      "audio": "loss-audio/high-dry.wav",
+      "recipe": "loss-recipes/high-dry.json",
+      "audio_sha256": "52c012c082b875fa6fadedff8d514fe19d172c103bd60c99cd0dfcc4034e0b0f",
+      "approved_default_unchanged": null,
+      "cold_ms": 10.733019,
+      "warm_ms": 10.125023,
+      "peak": 0.4723936915397644,
+      "dc": -3.0635097101375387e-07,
+      "loudness": 0.1834000051021576,
+      "classifier": "PERC",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 0.7243089470320743,
+          "confidence": 0.9915295243263245
+        },
+        {
+          "from_seconds": 0.32499998807907104,
+          "cents": 0.5908762798853742,
+          "confidence": 0.9903422594070435
+        },
+        {
+          "from_seconds": 0.800000011920929,
+          "cents": 1.2363446128684095,
+          "confidence": 0.9932887554168701
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.053900678141699604
+    },
+    {
+      "id": "high-bloom",
+      "register": "high",
+      "midi": 72,
+      "loss": 0,
+      "loss_scale": 0.5,
+      "seconds": 8,
+      "frames": 352800,
+      "model": 3,
+      "audio": "loss-audio/high-bloom.wav",
+      "recipe": "loss-recipes/high-bloom.json",
+      "audio_sha256": "106ca7392a43a48203be607df24a98d318b4caa13a70194e975b6994860e89e6",
+      "approved_default_unchanged": null,
+      "cold_ms": 84.463114,
+      "warm_ms": 80.297858,
+      "peak": 0.41660812497138977,
+      "dc": -9.165285634615424e-09,
+      "loudness": 0.1834000051021576,
+      "classifier": "LOOP",
+      "pitch_windows": [
+        {
+          "from_seconds": 0.05000000074505806,
+          "cents": 0.7382370290369276,
+          "confidence": 0.9921811819076538
+        },
+        {
+          "from_seconds": 2.5999999046325684,
+          "cents": 0.3855596394131984,
+          "confidence": 0.9923741817474365
+        },
+        {
+          "from_seconds": 6.400000095367432,
+          "cents": 11.035887953256262,
+          "confidence": 0.9882243871688843
+        }
+      ],
+      "raw_energy_fraction_after_one_second": 0.64168041587321
+    }
+  ],
+  "heard": [
+    "Ferry first listen: Yes, clearly.",
+    "Ferry second listen: Clear throughout.",
+    "Ferry Kotlin listen: Same character. (2026-10-30)",
+    "Ferry MATCH listen: Clear change, note stays clear. (2026-11-01)"
+  ],
+  "pending": [
+    "LOSS listening approval",
+    "Natural tail termination",
+    "SPAN/BODY",
+    "HOLD",
+    "Phone/MPC acceptance"
+  ],
+  "tail_scope": "Bounded 1\u20138 second observation windows with the existing 4 ms house fade; not a claim of physical silence.",
+  "timing_scope": "Complete server-JVM render including output conditioning; phone timings unmeasured.",
+  "native_probe_grid": {
+    "cases": 225,
+    "registers": [
+      36,
+      48,
+      72
+    ],
+    "handoff": [
+      0.25,
+      0.5,
+      1
+    ],
+    "match": [
+      0,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ],
+    "loss": [
+      0,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ],
+    "max_pitch_cents": 19.821056713382887,
+    "min_pitch_confidence": 0.9107099
+  },
+  "source_sha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Ferry.kt": "8ca961f9da62191f62eca35dcd5b79d56491037c087ef47c5c90d4bb2f8e7e54",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryNetwork.kt": "9688e6c34be63b5aeca17a4b3bc007b61b69b583a0eb108607e75d23989b397f",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryPatch.kt": "58962621158b78e5a61acad7de851078b777437e895c29d6f6a1c4b796e98591"
+  },
+  "measured_on": "2026-11-02"
+}

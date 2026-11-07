@@ -9,6 +9,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
@@ -48,6 +49,19 @@ internal class PrintedPadStore(private val format: Format) {
 
     /** Preview always starts from the immutable pre-treatment main sample. */
     fun preview(model: KitBuilderModel, slot: Int, render: (Snip) -> Snip): Snip = synchronized(model) {
+        // A round-robin pad previews like any other, from take one's pre-print sound: the saved source
+        // when a print is on it, else the lifted original (take one of the chain).
+        val robin = model.pad(slot)?.takeIf { it.isRobinChain }
+        if (robin != null) {
+            val applied = wrapper(robin.recipe)
+            val original = if (applied == null) {
+                Robin.original(model, slot)
+            } else {
+                val source = loadSnapshot(model, applied.source)
+                checkedAudio(backupFile(model, source.inventory.files.single { it.name == source.inventory.main }.hash))
+            }
+            return@synchronized render(original).also(format.validateAudio)
+        }
         val pad = pad(model, slot)
         val applied = wrapper(pad.recipe)
         val original = if (applied == null) {
@@ -59,6 +73,18 @@ internal class PrintedPadStore(private val format: Format) {
             checkedAudio(backupFile(model, source.inventory.files.single { it.name == source.inventory.main }.hash))
         }
         render(original).also(format.validateAudio)
+    }
+
+    /** Read-only effect-specific preflight before even an immutable source capture is written. */
+    fun requireSources(model: KitBuilderModel, slot: Int, validate: (Snip) -> Unit) = synchronized(model) {
+        val pad = pad(model, slot)
+        val applied = wrapper(pad.recipe)
+        if (applied == null) {
+            liveInventory(model, pad).files.forEach { validate(checkedAudio(liveFile(model, it.name))) }
+        } else {
+            requireCurrent(model, pad, applied.inventory)
+            loadSnapshot(model, applied.source).inventory.files.forEach { validate(checkedAudio(backupFile(model, it.hash))) }
+        }
     }
 
     /** Every KEEP re-renders every velocity zone from the immutable baseline. */

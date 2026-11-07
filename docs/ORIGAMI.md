@@ -82,6 +82,8 @@ establish the perceived pitch or musical quality of an inharmonic sound.
 | MOTION | Axis movement in STEADY; fast-to-slow gesture duration in BLOOM/UNFOLD |
 
 FOLD zero bypasses the geometry exactly, including TURN, WARP and MOTION.
+TOUCH expression can still reduce the upper-bank balance at zero FOLD; the
+source frequencies and phases stay the same.
 At intermediate FOLD values, the original upper spectrum and the transformed
 upper spectrum share a linear amplitude budget; partial frequencies do not
 slide toward one another as a side effect of the depth control.
@@ -122,7 +124,7 @@ The new gesture has its own version 1, stored only when BLOOM or UNFOLD is
 selected. An omitted gesture means STEADY, preserving existing JSON and audio.
 Models 1–3 keep their original motion and do not accept the new modes. Loading
 a current factory preset makes gestures available without changing an old saved
-recipe. All six factory presets remain STEADY until deliberately edited.
+recipe. The six original reference presets remain STEADY until deliberately edited.
 
 FAN/STILL MAKE INSTRUMENT keeps the complete gesture before the sustain loop.
 The settled body then repeats without restarting the gesture. RELEASE still
@@ -141,47 +143,73 @@ listening decision. The design and its verification ledger are in the
 
 ## Velocity expression
 
-Model-4 sounds offer **VELOCITY: LEVEL / FOLD** beside GESTURE. LEVEL keeps
-the accepted response. FOLD makes softer hits use less of the selected folded
-color, with the pitch, source and movement timing unchanged. Full velocity
-reaches the original FOLD value exactly; it never exceeds that value.
+Model-4 sounds offer **VELOCITY: LEVEL / FOLD / TOUCH** beside GESTURE.
+LEVEL keeps the original volume response. FOLD retains the published law:
+softer hits use less of the selected folded color, with pitch, source-bank
+balance and movement timing unchanged. TOUCH keeps that depth law and also
+reduces the complete upper bank on softer hits, including its strong octave.
+Here, upper bank means every non-anchor source/reflected component, even a
+reflection below the root; this is not a low-pass sweep. The separate raw
+fundamental is unchanged. This balance remains different
+when UNFOLD has returned to zero FOLD, so touch can affect the settled source
+as well as the moving fold. No partial frequency, start phase, gesture time
+or sustain-loop position changes, and hard hits add no brighter material.
 
-The SOFT/MID/FULL preview hits audition relative strengths below the saved
-note's own velocity. They are temporary: they do not change the saved ceiling,
-presets, navigation recipe or SEND reference. In BLOOM the selected depth is
-the arrival color; in UNFOLD it is the starting color before returning open.
-STEADY retains its axis movement. No extra macro is added.
+For actual performed velocity `v`, TOUCH uses:
+
+```text
+depthScale = .25 + .75 * v^1.25       (the existing FOLD law)
+upperScale = .1 + .9 * clamp(v / .85, 0, 1)^2
+raw note = root + upperScale * upper bank, then one normal output level stage
+```
+
+At `v >= .85`, upperScale is exactly one and TOUCH delegates to the unchanged
+FOLD rendering. This preserves the factory hard sound at .85 and the old FOLD
+sound at 1. The curve uses absolute velocity: a saved ceiling below .85 may
+never reach unity at its own FULL setting. It is not rescaled to make every
+saved ceiling equally bright. The six factory ceilings remain .85, making
+SOFT/MID/FULL actual velocities .255/.510/.850 and upper scales .181/.424/1.
+
+In SYNTH, SOFT/MID/FULL select temporary relative strengths .3/.6/1 beneath
+the saved note's velocity. **They render quietly. Tap AUDITION to hear the
+selection.** If rendering is still busy, AUDITION queues the latest result.
+Changing touch or controls does not itself start playback. Preview strength
+does not change the saved ceiling, preset, navigation recipe or SEND reference.
+In BLOOM the selected fold depth is the arrival color; in UNFOLD it is the
+starting color. STEADY retains its established axis movement. No macro is added.
 
 For ordinary pads, SEND writes the reference note and complete recipe. Apply
-**SOFT HITS** to that pad for per-hit folded color. Its softer samples stay
-below the saved main velocity and are peak-matched before playback, so a quiet
-reference cannot accidentally acquire harder "soft" samples. Existing processed
-pad fallback behavior is unchanged.
+**SOFT HITS** to that pad for per-hit color; SEND does not create those layers
+automatically. Softer renders remain below the saved main velocity and are
+peak-matched before player gain, keeping a quiet reference from acquiring
+harder soft samples. Existing processed-pad fallback behavior is unchanged.
 
-FAN/STILL MAKE INSTRUMENT writes three touch layers for each of the nine pitch
-zones when FOLD expression is selected. Soft/mid/full occupy MIDI velocities
-1–42, 43–84 and 85–127. Each layer keeps its own attack and loop; the player
-supplies velocity gain and key-up release. PREVIEW plays all three touches.
-LEVEL retains the original nine-sample instrument. FOLD writes 27 samples and
-therefore uses more preparation time, storage and sample memory.
+FAN/STILL MAKE INSTRUMENT writes three touch layers per sampled root for
+FOLD or TOUCH. Soft/mid/full occupy MIDI velocities 1–42, 43–84 and 85–127.
+Each sample keeps its own attack and loop; the player supplies velocity gain
+once and the chosen key-up release. The instrument sheet's PREVIEW plays all
+three touches. LEVEL keeps nine samples; FOLD/TOUCH use 27, with additional
+preparation time, storage and decoded sample memory.
 
-Expression is saved as an optional, independent version-1 object. Missing or
-null expression means LEVEL; models 1–3 retain their original sound and reject
-FOLD. The six factories remain LEVEL. The source geometry, gesture and held
-versions stay unchanged.
+Expression remains an optional independent model-1 object, with a new explicit
+`TOUCH` mode alongside unchanged `LEVEL` and `FOLD`. Missing or null expression
+means LEVEL. Existing LEVEL/FOLD JSON and audio retain their original behavior;
+TOUCH does not redefine FOLD. Models 1–3 reject the expressive modes. Source,
+geometry, gesture and held model versions are unchanged, as are the six original
+LEVEL references and the sixteen-pad starter.
 
 ```sh
-snipsnap synth ORIGAMI FAN --gesture BLOOM --expression FOLD --velocity .35 --out /path/to/notes
-snipsnap synth ORIGAMI STILL --gesture UNFOLD --expression FOLD --instrument --release .6 --out /path/to/instruments
+snipsnap synth ORIGAMI FAN --gesture BLOOM --expression TOUCH --velocity .35 --out /path/to/notes
+snipsnap synth ORIGAMI STILL --gesture UNFOLD --expression TOUCH --instrument --release .6 --out /path/to/instruments
 ./gradlew --no-daemon :shell:generateOrigamiExpressionAudition
 ```
 
-The audition writes nine embedded comparisons and the full study under
-`testkit/origami-expression`; complete exported instruments are kept in a
-sibling directory. The [expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
-records the curve, sampler contract and listening gate. A geometric fold can
-move partials downward, so expression is described as more folded color rather
-than a promise of greater brightness.
+The expression audition task retains the earlier FOLD study under
+`testkit/origami-expression`; the performance-bank task below produces the
+current TOUCH recipes. The [original expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records FOLD's contract. The [TOUCH brief](superpowers/specs/2026-11-05-origami-touch-response.md)
+records the Nov 5 feedback, new response and evidence limits. A geometric fold
+can move partials downward; neither expression mode promises more brightness.
 
 ## Fourth listening round: folded color (model 4)
 
@@ -263,11 +291,15 @@ In SYNTH, select ORIGAMI and choose CRANE, FAN or STILL. The six controls are
 TUNE, CREASE, FOLD, TURN, WARP and MOTION. TUNE spans C3–C5; an explicit note
 in a recalled recipe takes precedence until TUNE is deliberately edited.
 
-The factory roster has two presets per voice: Paper Key, Light Crease,
+The factory roster starts with two reference presets per voice: Paper Key, Light Crease,
 Warm Fan, Soft Fifth, Tenth Bloom and Quiet Paper. Each uses model 4 and an
 explicit seed, velocity and complete control map. The reference preset for
-each voice uses the accepted audition settings; native output uses the normal
-SnipSnap render gain rather than the web player's matched comparison gain.
+each voice uses the accepted audition settings. Six additional performance presets
+pair BLOOM/UNFOLD with velocity TOUCH, bringing the total to four per voice.
+Their names, macros, seed and .85 velocity are unchanged from the Nov 1 FOLD
+family; the new expression mode is explicit in each current recipe. Native
+output uses the normal SnipSnap render gain. The performance player now opens
+in Native mode; Matched is an optional comparison of tone at equal level.
 
 SEND adds the sound to a pad or replaces its audio and saves the complete
 ORIGAMI recipe. Authored pitch supplies root metadata and keyed placement,
@@ -280,7 +312,7 @@ reopening SYNTH retains the full edited ORIGAMI recipe in its navigation state,
 even after the preset highlight clears.
 
 The ORIGAMI starter kit contains sixteen dry tonal one-shots: eight CRANE
-notes, the six factory presets and unfolded FAN/STILL references. The kit's
+notes, the six original factory references and unfolded FAN/STILL references. The kit's
 notes use C minor pentatonic. It carries replayable recipes and source roots.
 
 ## Held keys
@@ -292,8 +324,10 @@ PREVIEW plays middle C for three seconds followed by the chosen release.
 The six sound controls stay the same; the instrument sheet adds no attack
 control because the sample retains the voice's authored onset.
 
-Each instrument has nine sampled roots, three semitones apart, covering
-C3–C5 only. The played zone overrides the source recipe's TUNE and explicit
+Each instrument has nine sampled roots, three semitones apart, from C3–C5.
+The shared exporter extends the first and last zones to MIDI 0 and 127, so
+keys beyond the sampled register transpose its nearest edge sample. The audition
+and root checks cover the sampled C3–C5 register. The played zone overrides the source recipe's TUNE and explicit
 MIDI; its seed, velocity and spectral settings remain intact. Keyboard velocity
 adds the normal player gain. The mono 44.1 kHz samples carry an attack followed
 by a periodic sustain region. Phone metadata, WAV sampler markers and both
@@ -319,6 +353,68 @@ snipsnap synth ORIGAMI STILL --patch /path/to/finite-patch.json --instrument --o
 
 CRANE and models 1–3 keep their finite renderer. SEND TO PAD remains a finite
 sound for every voice; MAKE INSTRUMENT supplies held playing through KEYS.
+
+## Performance bank
+
+The six performance presets expose BLOOM/UNFOLD with TOUCH as complete factory
+choices. Choices one and two per voice retain the original reference names,
+controls and audio; choices three and four are the current performance pair.
+There are still twelve factory presets and sixteen starter pads.
+
+| Voice | BLOOM | UNFOLD | Playing use |
+| --- | --- | --- | --- |
+| CRANE | Paper Bloom | Paper Unfold | Struck finite keys. |
+| FAN | Fifth Bloom | Fifth Unfold | Finite notes or held fifth-colored keys. |
+| STILL | Soft Bloom | Soft Unfold | Finite swells or slow held pads. |
+
+Select SOFT, MID or FULL, then tap AUDITION for each comparison. FAN/STILL
+complete their once-only gesture before the sustain region. On Android, select
+a factory and use MAKE INSTRUMENT to put its layered instrument in MAKE's
+INSTRUMENTS list. The saved factory hard sound is unchanged; the softer source
+and folded balance is the intentional TOUCH revision and awaits owner listening.
+
+```sh
+./gradlew --no-daemon :shell:generateOrigamiPerformanceBank \
+  -PorigamiPerformanceOutput=/path/to/origami-performance-bank
+snipsnap synth ORIGAMI FAN --preset 3 --instrument --release .6 --out /path/to/instruments
+snipsnap synth ORIGAMI STILL --preset 4 --instrument --release .6 --out /path/to/instruments
+```
+
+The default output is `testkit/origami-performance-bank`. The generator writes
+six exact recipes and 28 native/matched takes: 18 singles, six phrases/chords
+and four sequential soft/mid/hard held performances. The self-contained starter
+embeds all 18 Native singles; the full page opens in Native and offers Matched
+for equal-level tone comparisons. Matching the whole take retains the relative
+note levels within phrases and held sequences. Browser audio starts from an
+explicit play action through native HTML audio.
+
+Four MPC programs each contain nine sampled roots, MIDI 48–72 in three-semitone
+steps, and three velocity layers: 27 mono 44.1 kHz PCM24 WAVs per program.
+Playback zones extend to MIDI 0–127 by transposing the edge samples. Every layer
+has its own loop markers and the default .6-second key-up release. The long held
+takes play each of the three layers through at least three actual wraps; their
+manifest records selected samples, timings and wrap counts.
+
+Keep each `.xty` beside its `_[TrackData]` directory containing the `.xpm` and
+WAVs. Preserve `.instrument.json` for playback and `.origami-keys.json` for the
+complete authoring recipe. These downloads target MPC; Android does not import
+the keygroup ZIPs. Physical MPC playback remains unverified.
+
+To reproduce the earlier FOLD family separately:
+
+```sh
+./gradlew --no-daemon :shell:generateOrigamiPerformanceBank \
+  -PorigamiPerformanceOutput=/path/to/legacy-fold-bank \
+  -PorigamiPerformanceLegacyFold=true
+```
+
+The generator's direct main also accepts `--legacy-fold`.
+`OrigamiPresets.performance()` supplies the current TOUCH family;
+`foldPerformance()` retains the Nov 1 FOLD recipes. The original
+[performance-bank brief](superpowers/specs/2026-11-01-origami-performance-bank.md)
+is historical; the [Nov 5 TOUCH brief](superpowers/specs/2026-11-05-origami-touch-response.md)
+records why the response changed. Numerical separation and healthy files do
+not establish that the revised feel is musically preferable.
 
 ## Current limits
 

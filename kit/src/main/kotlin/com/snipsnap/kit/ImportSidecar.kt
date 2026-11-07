@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.json.Json
 import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
@@ -32,6 +33,28 @@ internal object ImportSidecar {
                 require(expected.matches(Regex("[0-9a-fA-F]{64}")) &&
                     expected.equals(sha256(SafePath.child(samplesDir, pad.sampleFile)), ignoreCase = true)) {
                     "'$label' sample checksum disagrees at pad ${pad.slot} - edit history was not imported"
+                }
+            }
+            history.source[RAW_VELOCITY_SHA256]?.let { encoded ->
+                val entries = try {
+                    Json.parse(encoded).obj()
+                } catch (e: Exception) {
+                    throw IllegalArgumentException(
+                        "'$label' velocity layer checksums are not readable at pad ${pad.slot} - edit history was not imported", e,
+                    )
+                }
+                val names = entries.keys.map(::fileKey)
+                require(history.velocityLayers.isNotEmpty() && names.distinct().size == names.size &&
+                    names.toSet() == history.velocityLayers.map { fileKey(it.sampleFile) }.toSet()) {
+                    "'$label' velocity layer checksum bindings disagree at pad ${pad.slot} - edit history was not imported"
+                }
+                val expectedByFile = entries.mapKeys { fileKey(it.key) }
+                for (layer in pad.velocityLayers) {
+                    val expected = runCatching { expectedByFile.getValue(fileKey(layer.sampleFile)).str() }.getOrNull()
+                    require(expected != null && expected.matches(Regex("[0-9a-fA-F]{64}")) &&
+                        expected.equals(sha256(SafePath.child(samplesDir, layer.sampleFile)), ignoreCase = true)) {
+                        "'$label' velocity layer checksum disagrees at pad ${pad.slot} (${layer.sampleFile}) - edit history was not imported"
+                    }
                 }
             }
         }
@@ -68,6 +91,6 @@ internal object ImportSidecar {
                 digest.update(buffer, 0, n)
             }
         }
-        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        return digest.digest().joinToString("") { "%02x".format(Locale.ROOT, it.toInt() and 255) }
     }
 }

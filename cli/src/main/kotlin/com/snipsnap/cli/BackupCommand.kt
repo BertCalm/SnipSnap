@@ -39,7 +39,7 @@ object BackupCommand {
         if (!file.isFile) throw CliError("no such file: $fileArg")
 
         val dest = File(opts["--out"] ?: "snipsnap-out")
-        val result = KitBackup.restore(file, dest, opts.has("--overwrite"))
+        val result = KitBackup.restore(file, dest, opts.has("--overwrite"), robin = com.snipsnap.shell.Robin.dealer)
         out.println("restored ${result.kits.size} kit(s):")
         result.kits.forEach { out.println("  + ${it.kit.name} -> ${it.directory.path}") }
         result.skipped.forEach { (name, why) -> out.println("  ! skipped $name - $why") }

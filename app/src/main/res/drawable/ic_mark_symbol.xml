@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The symbol for the quick-settings tile: Mark.symbol(2, 2, 20) on a 24 dp
+     viewport, white because the system tints tile icons itself. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 7.0,2.0 L 12.0,7.0 L 7.0,12.0 L 2.0,7.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 17.0,2.0 L 22.0,7.0 L 17.0,12.0 L 12.0,7.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 7.0,12.0 L 12.0,17.0 L 7.0,22.0 L 2.0,17.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 17.0,12.0 L 22.0,17.0 L 17.0,22.0 L 12.0,17.0 Z" />
+</vector>

@@ -127,6 +127,18 @@ object Keys {
 
     const val HARP_LOW_MIDI = 52
 
+    /** Nine absolute roots centred on the saved note, within Rime's supported range. */
+    fun rimePadMidis(patch: RimePatch): List<Int> {
+        var low = patch.midi - 12
+        while (low < Rime.MIN_MIDI) low += 3
+        while (low + 24 > Rime.MAX_MIDI) low -= 3
+        return (low..low + 24 step 3).toList()
+    }
+
+    /** Retain the contour opening before the independently validated periodic sustain. */
+    fun rimePad(patch: RimePatch, midi: Int = patch.midi): KeyNote =
+        RimeHeld.render(patch.copy(midi = midi, macros = patch.macros + ("HOLD" to 1f))).note
+
     // ---------- RESIN, held ----------
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md
 
@@ -568,6 +580,37 @@ object Keys {
         return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
     }
 
+    // ---------- BALLAST, held ----------
+    // docs/superpowers/specs/2026-10-04-ballast-bass-engine-design.md (the held loop)
+
+    /**
+     * The thirteen BALLAST pad zones: every minor third across TUNE's three
+     * octaves from [Ballast.ROOT_MIDI] (C1 to C4). Every voice shares the
+     * root and the range, so one layout serves all six, as [sirenPadMidis] does.
+     */
+    fun ballastPadMidis(): List<Int> = (0..Ballast.TUNE_SEMITONES step 3).map { Ballast.ROOT_MIDI + it }
+
+    /**
+     * BALLAST held - one keygroup zone at exact MIDI pitch: the note's own
+     * onset and the structure settling, then the held loop
+     * ([Ballast.renderHeldNote]), with the loop marker where the settling
+     * ends. TUNE is set by [midi]; HOLD plays no part (a held key sustains),
+     * and the other knobs play as they do in the one-shot. Rendered at full
+     * touch, the velocity a kit pad renders at. A zone whose loop does not
+     * close throws, naming the zone, rather than shipping a click.
+     */
+    fun ballastPad(voice: BallastVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        require(midi - Ballast.ROOT_MIDI in 0..Ballast.TUNE_SEMITONES) {
+            "BALLAST pads are MIDI ${Ballast.ROOT_MIDI}..${Ballast.ROOT_MIDI + Ballast.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Ballast.defaults(voice)
+        val tune = (midi - Ballast.ROOT_MIDI) / Ballast.TUNE_SEMITONES.toFloat()
+        val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to tune)
+        val held = Ballast.renderHeldNote(voice, m, cancelled = cancelled)
+        requireSeam("BALLAST $voice at MIDI $midi", held.audio, held.loopStart)
+        return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
+    }
+
     // ---------- ORPHICA ----------
 
     /**
@@ -617,4 +660,81 @@ object Keys {
     /** FORK's own keyboard range: two octaves plus a fourth around C3, wide enough for a genuinely playable instrument without reaching past [Fork.TUNE_SEMITONES]'s own snapped range. */
     const val FORK_LOW_MIDI = Fork.ROOT_MIDI
     const val FORK_HIGH_MIDI = Fork.ROOT_MIDI + Fork.TUNE_SEMITONES
+
+    // ---------- KEEL, held ----------
+    // docs/superpowers/specs/2026-10-23-keel-bass-engine-design.md (section 10, the keygroup)
+
+    /**
+     * The nine KEEL pad zones: every minor third from C1 to C3 (MIDI 24 to
+     * 48), the register a bass line lives in. Both voices share the layout,
+     * as [sirenPadMidis] does.
+     */
+    fun keelPadMidis(): List<Int> = (0..24 step 3).map { Keel.MIDI_MIN + it }
+
+    /**
+     * KEEL held - one keygroup zone at exact MIDI pitch: the note's attack
+     * and its settle, then the settled state as a loop ([Keel.renderKey]),
+     * with the loop marker a quarter second after the settle stops. TUNE is
+     * centred, so [midi] is the note; SLIDE, LENGTH and HOLD play no part (a
+     * held key sustains), and the other knobs play as they do in the one-shot.
+     * Rendered at full touch, the velocity a kit pad renders at. A zone whose
+     * loop does not close throws, naming the zone, rather than shipping a click.
+     */
+    fun keelPad(voice: KeelVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        require(midi in Keel.MIDI_MIN..Keel.MIDI_MAX) { "KEEL pads are MIDI ${Keel.MIDI_MIN}..${Keel.MIDI_MAX}, got $midi" }
+        val held = Keel.renderKey(voice, macros + ("TUNE" to .5f), midi, cancelled)
+        requireSeam("KEEL $voice at MIDI $midi", held.audio, held.loopStart)
+        return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
+    }
+
+    // ---------- OBBLIGATO, held ----------
+
+    /** Where an OBBLIGATO key's loop may start: after the entry, 1.2 s in. */
+    const val OBBLIGATO_LOOP_FROM_SECONDS = 1.2f
+
+    /** Where it must end: before the players stop, 5 s in at HOLD 1 ([Obbligato]'s held span, 2 + 3 HOLD seconds), with 50 ms to spare. */
+    const val OBBLIGATO_LOOP_UNTIL_SECONDS = 4.95f
+
+    /**
+     * The loop lengths searched, longest first ([HeldLoop.search]); each
+     * ±50 ms. Measured on the factory relationships: HARMONY at MIDI 69
+     * and 72 holds only at the shortest length, every other zone at a
+     * second or more.
+     */
+    val OBBLIGATO_LOOP_SECONDS = listOf(2.0f, 1.5f, 1.0f, 0.75f)
+
+    /** How many of the steadiest starts are closed per length: 24 found a holding loop on every factory zone where 12 missed two. */
+    const val OBBLIGATO_LOOP_TRIES = 24
+
+    /** The five OBBLIGATO zones: every minor third across the engine's own C4 to C5. */
+    fun obbligatoPadMidis(): List<Int> = (Obbligato.MIDI_MIN..Obbligato.MIDI_MAX step 3).toList()
+
+    /**
+     * OBBLIGATO held - one keygroup zone at exact MIDI pitch: the duet's
+     * entry at HOLD 1, then a stretch of its held exchange as the loop
+     * ([HeldLoop]). The duet is not periodic (the players trade, swell and
+     * wander by design), so the loop is searched per zone for a stretch
+     * whose level holds and whose join correlates, and a zone with none
+     * throws, naming the zone and its nearest miss, rather than shipping a
+     * loop that breathes or clicks. Rendered at [velocity], the engine's
+     * default touch unless asked; [cancelled] is asked before the search.
+     */
+    fun obbligatoPad(
+        macros: Map<String, Float>, midi: Int, velocity: Float = Obbligato.DEFAULT_VELOCITY, seed: Int = 0,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        require(midi in Obbligato.MIDI_MIN..Obbligato.MIDI_MAX) { "OBBLIGATO pads are MIDI ${Obbligato.MIDI_MIN}..${Obbligato.MIDI_MAX}, got $midi" }
+        val held = Obbligato.render(macros + ("HOLD" to 1f), midi, velocity, seed).samples
+        if (cancelled()) throw java.util.concurrent.CancellationException("OBBLIGATO pad render cancelled")
+        val from = (OBBLIGATO_LOOP_FROM_SECONDS * RATE).toInt()
+        val until = (OBBLIGATO_LOOP_UNTIL_SECONDS * RATE).toInt()
+        val lengths = OBBLIGATO_LOOP_SECONDS.map { (it * RATE).toInt() }
+        val slack = (0.05f * RATE).toInt()
+        val blend = (0.15f * RATE).toInt()
+        val cut = HeldLoop.search(held, from, until, lengths, slack, blend, tries = OBBLIGATO_LOOP_TRIES)
+            ?: error("OBBLIGATO at MIDI $midi: no stretch of the held duet loops (" +
+                (HeldLoop.closest(held, from, until, lengths, slack, blend, tries = OBBLIGATO_LOOP_TRIES)?.fault() ?: "no candidate fits") + ")")
+        requireSeam("OBBLIGATO at MIDI $midi", cut.audio, cut.loopStart)
+        return KeyNote(Snip(cut.audio, channels = 1, sampleRate = RATE), loopStartFrame = cut.loopStart.toLong())
+    }
 }

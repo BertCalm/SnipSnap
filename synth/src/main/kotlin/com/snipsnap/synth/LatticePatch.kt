@@ -6,8 +6,8 @@ import com.snipsnap.json.JsonValue
 
 /**
  * A native directional-gate note. The explicit root, excitation velocity and render model
- * survive edits, kit storage and velocity-zone generation. The voice selects one of the
- * three accepted source profiles; HOLD and the gate geometry remain ordinary saved macros.
+ * survive edits, kit storage and velocity-zone generation. Source voices save their static
+ * gate controls; TRACE saves the accepted PLUCK motion through SPEED and finite HOLD.
  */
 data class LatticePatch(
     override val name: String,

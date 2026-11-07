@@ -87,6 +87,7 @@ class ReversalTest {
      */
     private val notADestructiveLanding = mapOf(
         "SHELF_LEGEND" to "a legend under the shelf naming the gesture; nothing has happened yet",
+        "SONG_DELETE" to "SONG's button label; nothing has happened yet, and the UNDO beside it then reads UNDO DELETE and puts the section back",
         // Refusals: the delete did NOT happen, so there is nothing to take back.
         // TWINS_KEEP_OWN arrived from PR #136 while #137 was open, and broke
         // the default branch: `App.kt`'s `evilTwins` checks `ownPadsOnBankB`
@@ -134,6 +135,8 @@ class ReversalTest {
         "STACK_LOCKS" to "a standing caveat; the landing is Copy.stacked()",
         // A legend on the export card row, naming the gesture. Nothing has happened yet.
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
+        // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
+        "CARD_FORGET" to "a button label, not a landing",
     )
 
     /**
@@ -177,6 +180,12 @@ class ReversalTest {
         // says so: it describes the CURRENT state of the file, before anything
         // is written. A post-write rewrite loses it, and the guard fires.
         "dubWouldOverwrite" to NotALanding(
+            why = "a warning before the act, not a landing",
+            stillTrue = "IS ALREADY THERE",
+        ),
+        // The expansion side's twin of `dubWouldOverwrite`: the same moment before an expansion
+        // write replaces its folder, naming that side's own button. Nothing has been written.
+        "expansionWouldOverwrite" to NotALanding(
             why = "a warning before the act, not a landing",
             stillTrue = "IS ALREADY THERE",
         ),
@@ -251,6 +260,7 @@ class ReversalTest {
         "snipBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "roomBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "GESTURE_CLEARED" to "SURFACE's CLEAR writes the kit's recorded gesture out of surface.json; no control there steps it back",
+        "EXPANSION_DELETE_CONFIRM" to "an expansion has no bin; its kits stay on the shelf, and a new expansion can gather them again",
     )
 
     private fun soundsDestructive(line: String) = destructive.any { it in line }
@@ -507,12 +517,14 @@ class ReversalTest {
     @Test
     fun `the count of you-cannot sites is the stack evidence`() {
         assertEquals(
-            6, noWayBack.size,
+            7, noWayBack.size,
             "the number of destructive sites with no way back changed. That is the recorded test for " +
                 "the deferred undo stack, so update docs/SPECS_2026_09.md §3 in the same change.",
         )
         val reallyHurts = noWayBack.keys - setOf(
             "kitBinEmptied", "snipBinEmptied", "roomBinEmptied",
+            // An expansion is a grouping and a tile choice; deleting it loses no sound, its kits stay on the shelf.
+            "EXPANSION_DELETE_CONFIRM",
         )
         assertEquals(
             setOf("BAR_WIPED", "FORKED_TO_E_REPLACED", "GESTURE_CLEARED"), reallyHurts,

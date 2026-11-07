@@ -3,13 +3,18 @@ package com.snipsnap.shell
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.ClipRef
+import com.snipsnap.kit.PlanSection
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
+import com.snipsnap.kit.SongPlan
+import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.mpc3.Acvs
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -115,5 +120,27 @@ class ProjectSessionModelTest {
         assertEquals("0 KITS", model.subtitle)
         assertTrue(model.blocked)
         assertIs<ProjectSessionModel.WriteResult.Blocked>(model.write(out))
+    }
+
+    @Test
+    fun `the demo WAV is the kept song when the active kit has one, and the one-loop demo when it has not`() {
+        kitOnShelf("Kitchen", 1, groove = "Kitchen Groove")
+        val project = Project("Late Set", listOf("Kitchen"), tempoBpm = 120f)
+        ProjectStore.save(shelf, project)
+        val projectDir = ProjectStore.dir(shelf, "Late Set")
+
+        fun demoFrames(): Int {
+            val done = assertIs<ProjectSessionModel.WriteResult.Done>(ProjectSessionModel(project, shelf).write(out, withMixdown = true))
+            return WavReader.read(done.mixdown!!).frameCount
+        }
+
+        val loop = demoFrames()
+        SongPlanStore.save(
+            projectDir, "Kitchen",
+            SongPlan(0, listOf(PlanSection("theme", ClipRef.CAPTURED, 2), PlanSection("reprise", ClipRef.CAPTURED, 2))),
+        )
+        val song = demoFrames()
+        assertTrue(song > 3 * loop, "four bars of song, not one loop: $song frames against $loop")
+
     }
 }

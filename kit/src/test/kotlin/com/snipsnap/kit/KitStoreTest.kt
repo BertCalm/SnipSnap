@@ -1,12 +1,15 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import java.io.File
 import java.io.IOException
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -177,5 +180,68 @@ class KitStoreTest {
         assertEquals("Kick_1", Names.sanitizeStem("Kick?:1"))
         assertEquals("Sample", Names.sanitizeStem("???"))
         assertEquals("naive kit", Names.sanitizeStem("naive kit"))
+    }
+
+    private fun chainPad(slot: Int) = KitPad(
+        slot = slot, sampleFile = "A%02d_Chain_01.wav".format(slot),
+        chain = ChainInfo(boundaries = listOf(0L, 100L, 200L), cycle = 3),
+    )
+
+    private fun roundTrip(kit: Kit): Kit {
+        val dir = File(temp, "rt")
+        KitStore.save(kit, dir)
+        return KitStore.load(dir)
+    }
+
+    private val legacyPadHead =
+        """"slot": 1, "sample": "A01_Chain_01.wav", "name": "Chain", "class": "UNKNOWN", """
+
+    private val legacyChain = """"chain": {"cycle": 3, "boundaries": [0, 100, 200]}"""
+
+    private val LEGACY_ROBIN_PAD_JSON =
+        "{ $legacyPadHead $legacyChain, \"recipe\": {\"robin\": {\"takes\": 3, \"seed\": 7}} }"
+
+    private val LEGACY_ZONED_ROBIN_PAD_JSON =
+        "{ $legacyPadHead \"chain\": {\"cycle\": 2, \"boundaries\": [0, 100, 200, 300], " +
+            "\"zones\": [{\"velStart\": 0, \"velEnd\": 63, \"baseSlice\": 0, \"cycle\": 2}, " +
+            "{\"velStart\": 64, \"velEnd\": 127, \"baseSlice\": 2, \"cycle\": 2}]}, " +
+            "\"recipe\": {\"robin\": {\"takes\": 2, \"seed\": 1, \"zones\": 2}} }"
+
+    private val FOREIGN_CHAIN_PAD_JSON = "{ $legacyPadHead $legacyChain }"
+
+    @Test fun `robin settings round-trip on pad and kit`() {
+        val kit = Kit("K", listOf(chainPad(slot = 1).copy(robin = RobinSettings(0.6f, 6, seed = 0, followsKit = false))),
+            robin = KitRobin(0.8f, 5))
+        val back = roundTrip(kit)
+        assertEquals(RobinSettings(0.6f, 6, 0, false), back.pads.single().robin)
+        assertEquals(KitRobin(0.8f, 5), back.robin)
+    }
+
+    @Test fun `a legacy-variation robin round-trips with no amount`() {
+        val kit = Kit("K", listOf(chainPad(slot = 1).copy(robin = RobinSettings(null, 3, seed = 7, followsKit = false))))
+        assertEquals(kit, roundTrip(kit))
+    }
+
+    @Test fun `a kit without robin writes no robin keys`() {
+        val json = Json.write(KitStore.toJson(Kit("K", listOf(KitPad(1, "A01_Kick_01.wav")))))
+        assertFalse("\"robin\"" in json)
+    }
+
+    @Test fun `a legacy robin pad reads as a robin chain on the legacy variation`() {
+        val pad = KitStore.padFromJson(Json.parse(LEGACY_ROBIN_PAD_JSON))
+        assertEquals(RobinSettings(amount = null, takes = 3, seed = 7, followsKit = false), pad.robin)
+        assertTrue(pad.isRobinChain)
+    }
+
+    @Test fun `a legacy grid and a foreign chain stay foreign`() {
+        assertNull(KitStore.padFromJson(Json.parse(LEGACY_ZONED_ROBIN_PAD_JSON)).robin)
+        assertFalse(KitStore.padFromJson(Json.parse(FOREIGN_CHAIN_PAD_JSON)).isRobinChain)
+    }
+
+    @Test fun `robin settings reject out-of-range values`() {
+        assertFailsWith<IllegalArgumentException> { RobinSettings(0.5f, 1) }
+        assertFailsWith<IllegalArgumentException> { RobinSettings(0.5f, 9) }
+        assertFailsWith<IllegalArgumentException> { RobinSettings(1.5f, 4) }
+        assertFailsWith<IllegalArgumentException> { RobinSettings(-0.1f, 4) }
     }
 }

@@ -1,19 +1,62 @@
 # OBBLIGATO: accepted duet and listening revisions
 
-The next Play, Fight and Protect audition adds remembered articulations and
-relationship-specific endings. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
-for its design, measurements and replayable listening pack.
+## Accepted sound
+
+On 2026-11-01 the owner approved the longer-overlap revision with “It's better,
+let's proceed.” Model 10 is the factory default for new patches, presets and the
+sixteen-pad kit. It combines gentler voicing, remembered articulations and
+290 ms player handoffs. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
+for the design, measured limits and earlier listening comparisons.
+
+Legacy JSON recipes with no `model` field continue to decode as model 5.
+Explicit renderer versions retain their saved sound. This separates the sound
+chosen for a new instrument from the interpretation of an older saved recipe.
+
+The kit covers Harmony, Play, Fight and Protect at C4, E-flat4, F4 and G4. Its
+three native velocity zones at .3, .6 and .8 produce 48 samples; the softer
+zones retain peak matching to the main strike. MPC 3 and MPC 2 exports, editable
+SnipSnap recipes, the pad map and the row-walk demo share those settings.
+
+In SnipSnap, choose **NEW KIT ▸ STARTERS → OBBLIGATO**. Selection renders the
+approved sixteen-pad kit and opens PADS. The four relationship rows retain all
+three native velocity layers and saved recipes, so each main strike remains
+editable after reopening the kit.
+
+The starter integration check renders through the menu's saved ID, reopens all
+sixteen recipes and 48 velocity samples, and regenerates a main strike from each
+relationship within PCM24 quantization. The stable menu IDs and documented
+rosters also pass their focused checks.
+
+The approved candidate's JVM, Android and native CI checks passed in
+[run 41213483185](https://github.com/BertCalm/SnipSnap/actions/runs/41213483185).
+Acceptance and regenerated-kit checks are reported separately from that result.
+
+Acceptance validation passed 67 focused checks across synthesis, kit export, CLI,
+saved-preset promotion and determinism. Fifty-three immutable recipes across
+models 1–10 retain their raw audio and PCM24 exports; omitted-model loading also
+retains legacy audio through patch and nested pad-recipe decoding. An independent
+audit of all 48 kit samples measured root errors below 3.4 cents and complete
+finite endings. MPC sample references, browser playback, downloads and mobile
+layout pass. The new kit ZIP is 24,582,424 bytes.
+
+The acceptance change merged in [PR #789](https://github.com/BertCalm/SnipSnap/pull/789),
+and its complete JVM, Android and native CI checks passed in
+[run 41268192337](https://github.com/BertCalm/SnipSnap/actions/runs/41268192337).
+
+## Earlier listening history
 
 Repository baseline: `91384fa189a68c4993c8e359af6b748412bf95c3`.
 
-Model 5 is the accepted sound and remains the default for presets, missing-model
-recipes and the sixteen-pad kit. Model 6 is an explicit listening experiment. Its
+At this baseline, model 5 was the accepted sound and the default for presets,
+missing-model recipes and the sixteen-pad kit. Model 6 was an explicit listening
+experiment. Its
 characteristic gesture is **air asserts → reed hears and readies → reed interrupts
 smoothly → air counters → both release**. Each note starts fresh.
 
 Model 7 is a separate gentler voicing in response to the owner's report of
 harshness and wish for more musicality. It retains the responsive controller.
-It remains opt-in and awaits a listening verdict.
+It remained opt-in during that comparison; its gentler voicing is carried into
+the accepted model 10.
 
 The air jet and reed are the existing independently seeded `Bore.Player` sources.
 The relationship is an invented behavioural analogy. It does not simulate two
@@ -242,11 +285,14 @@ does not mean the original timed phrase with only a pressure effect removed.
 
 ## Verified, measured, proposed and heard
 
+This evidence records the earlier responsive and gentler-voicing comparisons.
+The current acceptance is recorded above.
+
 The source APIs and bounds above are verified against the repository. Compatibility,
 causal and performance results are produced by Kotlin/JVM tests and probes.
 Controller thresholds and voicing choices remain proposed. Model 5 was previously
 heard and accepted. The owner reported harshness in the subsequent comparison;
-model 7 has no listening verdict yet.
+at that stage model 7 had no listening verdict.
 
 As built, the focused audio and OBBLIGATO run passed 475 tests in 64 suites,
 including the 30 original audio recipes, all six interaction tests and kit
@@ -261,3 +307,41 @@ current default branch. They cover immutable model-6
 receipts, root pitch, actual alternating source dominance, continuity and causal
 answers. The generator produced ten mono PCM24 recordings with matching levels.
 Broader checks for this revision are reported separately from those results.
+
+## As built: OBBLIGATO held as a keys instrument (2026-11-04)
+
+A Luthier gap scan asked for a keygroup for one of the held wind
+instruments that had none; OBBLIGATO was chosen because BORE is being
+worked on elsewhere. `Keys.obbligatoPad` and `ObbligatoPadMaker` (KEEL's
+shape: RELEASE alone) build five zones, every minor third from C4 to C5
+(MIDI 60, 63, 66, 69, 72), edge zones reaching nine semitones past the ends.
+
+Each zone is an attack-plus-loop key: the duet rendered at HOLD 1 (five
+held seconds), its own entry untouched, then a stretch of its held
+exchange as the loop. The duet is not periodic by design (the players
+trade, swell and wander), so the stretch is searched per zone
+(`HeldLoop.search`): lengths of 2, 1.5, 1 and 0.75 s (±50 ms) are tried
+longest first, starting from 1.2 s and ending by 4.95 s, the 24 starts
+whose level moves least are closed, and the best-correlated one that holds
+wins. A join holds when its blended waves correlate at least 0.9 (BORE's
+bar), its blend dips no more than 1 dB, and the loop's level moves no more
+than 1.5 dB from start to end. The join sits at the loop's end and crosses
+into the material from just before the loop start, so the wrap is the
+render's own continuation (`Keys.seamError` reads it as zero); the attack
+is the render's own up to the blend. A zone with no holding stretch throws,
+naming the zone and its nearest miss.
+
+Measured on the five factory relationships at every zone (Kotlin): every
+zone holds. Most loops run about 2 s; HARMONY (the default) holds only at
+0.70 to 0.80 s at MIDI 69 and 72, where its exchange swells within any
+longer stretch. A zone renders in about 0.5 s and searches in 0.6 to 3.3 s.
+
+What a held key plays is a repeating stretch of the exchange, not a
+settled sustain: on PLAY and FIGHT the trade is audible inside the loop,
+and HARMONY's two top zones repeat about every three quarters of a second.
+Heard (2026-11-06, the owner, the strike gate's question 6: HARMONY C4 and
+C5, PLAY C4 and FIGHT F#4, each held ten seconds): "Carrying on." That
+covers HARMONY's 0.8 s top zone; the other three heard zones loop about two
+seconds. No app screen calls the pad maker yet (an
+Android SDK session wires keys screens). Tests: `ObbligatoKeysTest`,
+`ObbligatoPadMakerTest`.

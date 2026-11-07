@@ -16,6 +16,14 @@ import kotlin.test.assertTrue
 private const val ABOVE_KNEE_DIFFERS = true
 
 /**
+ * R2's one edit to the comparisons (2026-11-04): a LOOP now carries a vibrato fitted to its length ([Arco.loopVibrato]), on purpose, after the owner heard
+ * ENDLESS DRAW and ENDLESS CRY as "a bit cheap" and "mechanical sounding". The frozen copy is R1c's loop, which has none, so every engine-side LOOP call in this file
+ * asks for the loop with the vibrato off, which is R1's loop exactly ([Arco.LoopVibrato.OFF] hands the stretch on untouched). The frozen pipeline itself, and every
+ * one-shot comparison, are untouched. The control at the end of the class shows the loop as shipped does differ from the frozen copy, so this re-pointing is needed.
+ */
+private val R1_LOOP = Arco.LoopVibrato.OFF
+
+/**
  * A frozen, never-edited, self-contained copy of how ARCO renders TODAY (R1c's box, the tree at 316bfe9 plus PR 437), compared sample for sample, bit for bit,
  * with the engine ([Arco.render] for one-shots, [Arco.renderLoopMeasured] for loops). Nothing here may be "fixed" or re-pointed: the frozen pipeline (the `Frozen` object), its comparison helpers and the four tests that first stood on it are never edited; the only
  * edits they were given are [ABOVE_KNEE_DIFFERS], and, since R1g's review, new test methods at the end of the class that call the frozen copy for every macro and not only TUNE and BODY.
@@ -194,7 +202,7 @@ class ArcoFrozenR1cTest {
 
     private fun loopRow(c: Cell): Row {
         val macros = macrosFor(c, loop = true)
-        val engine = Arco.renderLoopMeasured(c.voice, macros)
+        val engine = Arco.renderLoopMeasured(c.voice, macros, loopVibrato = R1_LOOP)
         val frozen = Frozen.renderLoopMeasured(c.voice, macros)
         val (samples, differing, maxAbs) = diff(engine.loop, frozen.loop)
         return Row(c, samples, differing, maxAbs, seamSame = engine.seam.toRawBits() == frozen.seam.toRawBits())
@@ -261,7 +269,7 @@ class ArcoFrozenR1cTest {
         for (voice in ArcoVoice.entries) for (body in listOf(0f, 0.25f, 0.5f)) {
             val c = Cell(voice, loopSteps(voice).first(), body)
             val macros = macrosFor(c, loop = true)
-            val (samples, differing, _) = diff(Arco.render(voice, macros).samples, Frozen.renderLoopMeasured(voice, macros).loop)
+            val (samples, differing, _) = diff(Arco.render(voice, macros, Arco.BUZZ_LAW, R1_LOOP).samples, Frozen.renderLoopMeasured(voice, macros).loop)
             println("ARCO frozen R1c loop through Arco.render $voice BODY ${"%.2f".format(Locale.ROOT, body)} step ${c.step}: $samples samples compared, $differing differ")
             assertEquals(0, differing, "Arco.render of a loop, $voice BODY $body: $differing samples differ from the frozen loop")
         }
@@ -353,9 +361,9 @@ class ArcoFrozenR1cTest {
             return MacroRow(c, samples, differing, maxAbs, seamSame = true)
         }
         val frozen = Frozen.renderLoopMeasured(c.voice, c.macros)
-        val engine = Arco.renderLoopMeasured(c.voice, c.macros)
+        val engine = Arco.renderLoopMeasured(c.voice, c.macros, loopVibrato = R1_LOOP)
         val (samples, differing, maxAbs) = diff(engine.loop, frozen.loop)
-        val viaRender = if (publicRoute) diff(Arco.render(c.voice, c.macros).samples, frozen.loop).second else 0
+        val viaRender = if (publicRoute) diff(Arco.render(c.voice, c.macros, Arco.BUZZ_LAW, R1_LOOP).samples, frozen.loop).second else 0
         return MacroRow(c, samples, differing + viaRender, maxAbs, seamSame = engine.seam.toRawBits() == frozen.seam.toRawBits())
     }
 
@@ -444,10 +452,30 @@ class ArcoFrozenR1cTest {
             val held = macroCase(voice, "loop", "TUNE" to tune, "BOW" to 0f, "GRIP" to 0f, "HOLD" to 1f, "BODY" to 0.5f)
             val frozenLoop = Frozen.renderLoopMeasured(voice, held.macros).loop
             for ((name, moved, asserted) in listOf(Triple("TUNE", 1f, true), Triple("GRIP", 1f, true), Triple("BOW", 1f, false))) {
-                val (samples, differing, maxAbs) = diff(Arco.renderLoopMeasured(voice, held.macros + (name to moved)).loop, frozenLoop)
+                val (samples, differing, maxAbs) = diff(Arco.renderLoopMeasured(voice, held.macros + (name to moved), loopVibrato = R1_LOOP).loop, frozenLoop)
                 println("ARCO frozen R1c macro control $voice loop $name moved to $moved: $differing of $samples samples differ from the unmoved frozen loop, largest ${f(maxAbs)}${if (asserted) "" else " (printed, not asserted)"}")
                 if (asserted) assertTrue(differing > 0, "$voice loop: $name moved to $moved still equals the frozen loop of the unmoved macros, so the comparison cannot see $name")
             }
+        }
+    }
+
+    /**
+     * R2's control for [R1_LOOP]: the LOOP as it ships (with its vibrato, [Arco.LOOP_VIBRATO]) differs from the frozen loop in every voice, at the default note,
+     * by the public route and by [Arco.renderLoopMeasured], while the same loop with the vibrato off is the frozen loop to the sample. So the loop comparisons above
+     * compare R1's loop on purpose, and the shipped loop is the one that moved. One-shots are not touched by the change: the first test above compares them through
+     * the public route with nothing re-pointed.
+     */
+    @Test
+    fun `R2 - the loop as shipped carries its vibrato and differs from the frozen loop, and with it off it is the frozen loop`() {
+        for (voice in ArcoVoice.entries) {
+            val macros = Arco.defaults(voice) + mapOf("HOLD" to 1f, "BODY" to 0.5f)
+            val frozen = Frozen.renderLoopMeasured(voice, macros).loop
+            val shipped = diff(Arco.render(voice, macros).samples, frozen)
+            val measured = diff(Arco.renderLoopMeasured(voice, macros).loop, frozen)
+            val off = diff(Arco.render(voice, macros, Arco.BUZZ_LAW, R1_LOOP).samples, frozen)
+            println("ARCO frozen R1c R2 control $voice: the shipped loop differs from the frozen loop in ${shipped.second} of ${shipped.first} samples; with the vibrato off, ${off.second}")
+            assertTrue(shipped.second > 0 && measured.second > 0, "$voice: the shipped loop equals the frozen loop, so it carries no vibrato")
+            assertEquals(0, off.second, "$voice: with the vibrato off the loop is not R1's")
         }
     }
 }

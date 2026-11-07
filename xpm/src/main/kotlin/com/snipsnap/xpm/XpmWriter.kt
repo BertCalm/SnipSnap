@@ -162,7 +162,7 @@ class XpmWriter(
         sb.append("        <LowNote>0</LowNote>\n")
         sb.append("        <HighNote>127</HighNote>\n")
         sb.append("        <IgnoreBaseNote>False</IgnoreBaseNote>\n")
-        sb.append("        <ZonePlay>1</ZonePlay>\n")
+        sb.append("        <ZonePlay>").append(if (pad?.cycleLayers != null) 0 else 1).append("</ZonePlay>\n")
         sb.append("        <MuteGroup>").append(pad?.muteGroup ?: 0).append("</MuteGroup>\n")
         for (n in 1..4) sb.append("        <MuteTarget").append(n).append(">0</MuteTarget").append(n).append(">\n")
         for (n in 1..4) sb.append("        <SimultTarget").append(n).append(">0</SimultTarget").append(n).append(">\n")
@@ -226,6 +226,7 @@ class XpmWriter(
         val zones: List<VelocityLayer?> = when {
             gridZones != null && pad != null ->
                 gridZones.map { z -> VelocityLayer(pad.sampleName, pad.frameCount, z.velStart, z.velEnd) }
+            pad?.cycleLayers != null -> pad.cycleLayers
             else -> pad?.velocityLayers
                 ?: listOf(pad?.let { VelocityLayer(it.sampleName, it.frameCount, 0, 127) })
         }

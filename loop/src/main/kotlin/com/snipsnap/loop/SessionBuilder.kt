@@ -54,8 +54,12 @@ object SessionBuilder {
      * lockstep, no drift. A one-bar interval is what lets an ordinary catch
      * become a chain of two or three.
      *
-     * Neither is adjustable from the grid yet: there is no tempo control on
-     * the screen, so these are what a session gets.
+     * The grid has no tempo control: the project's tempo, set from BEAT (the
+     * 2026-11-06 ruling), replaces [DEFAULT_BPM] when LOOP opens a session and
+     * follows it while LOOP is open. [DEFAULT_BPM] is what a session is *sent*
+     * at, before any screen has put the project's tempo on it. The bar count is
+     * not adjustable from the grid either, so [DEFAULT_BARS] is what a session
+     * gets.
      */
     const val DEFAULT_BPM = 90f
     const val DEFAULT_BARS = 1
@@ -247,6 +251,24 @@ object SessionBuilder {
         }
         val tracks = session.tracks.toMutableList()
         tracks[trackIndex] = emptyTrack()
+        return session.copy(tracks = tracks.toList())
+    }
+
+    /**
+     * Put [track] back at [trackIndex] of [session], touching nothing else.
+     *
+     * The undo of [clear], and deliberately a one-track write into whatever
+     * session is current rather than a swap back to an old whole session: a
+     * tempo change, a mute on another track or a refit made since the clear
+     * stays as it is. The caller refits drones if the tempo moved, since a
+     * drone's slices were cut for the tempo it was cleared at.
+     */
+    fun restoreTrack(session: Session, trackIndex: Int, track: Track): Session {
+        require(trackIndex in session.tracks.indices) {
+            "track $trackIndex is outside a ${session.tracks.size}-track session"
+        }
+        val tracks = session.tracks.toMutableList()
+        tracks[trackIndex] = track
         return session.copy(tracks = tracks.toList())
     }
 

@@ -259,7 +259,10 @@ object Pitchwheel {
             var loss = 0.0
             for (j in x.indices) {
                 val work = pending[j] * transferRate
-                pending[j] -= work; pump(j, work, pendingDirection[j])
+                // An exhausted reservoir otherwise sticks at a subnormal (its per-tick share rounds
+                // to zero), and every later tick ran on the processor's slow path: up to about half
+                // of each 5 to 8 s render (docs/ENGINE_STANDARD_SCAN_2026_11.md, render speed).
+                pending[j] = Dsp.floored(pending[j] - work); pump(j, work, pendingDirection[j])
                 val old = .5 * (x[j] * x[j] + v[j] * v[j])
                 val xx = (c[j] * x[j] + s[j] * v[j]) * d[j]
                 v[j] = (c[j] * v[j] - s[j] * x[j]) * d[j]; x[j] = xx

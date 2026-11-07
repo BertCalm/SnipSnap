@@ -246,6 +246,14 @@ enum class Stage(val place: Place, val label: String) {
 enum class Bench(val home: Place, val label: String, val backName: String = label) {
     // Under PROJECT ▸ PADS.
     PAD_SHEET(Place.PROJECT, "PAD SHEET", backName = "PAD"),
+    /**
+     * The pad editor's EFFECTS screen (TREATMENT, SHAPE and OUTSIDE), opened by the editor's `EFFECTS ▸` door.
+     * Drawn by the pad editor's own composable, not a screen of its own: the editor keeps its state (a trip
+     * out in flight, the Aquarium's draft, the pedal slate) only while the same call site stays composed.
+     */
+    PAD_EFFECTS(Place.PROJECT, "EFFECTS"),
+    /** The pad editor's VARIATIONS screen (MUTATE), opened by the editor's `VARIATIONS ▸` door; drawn like [PAD_EFFECTS]. */
+    PAD_VARIATIONS(Place.PROJECT, "VARIATIONS"),
     GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
     SPLICE(Place.PROJECT, "SPLICE"),
     STACK(Place.PROJECT, "STACK THE TAKES", backName = "STACK"),
@@ -271,6 +279,10 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     LIVE_SNAP(Place.MAKE, "LIVE"),
     DRAW(Place.MAKE, "DRAW"),
     FIELD(Place.MAKE, "PHOTO FIELD"),
+    /** Record a short vowel into a personal voice; works with or without an open kit. */
+    MY_VOICE(Place.MAKE, "MY VOICE"),
+    /** Audition selected recorded passages and keep a source-backed finite texture. */
+    CONFLUENCE_VOICES(Place.MAKE, "CONFLUENCE VOICES", backName = "VOICES"),
     // Behind the gear, from anywhere: opened over whatever is showing.
     SETUP(Place.SHELF, "SETUP"),
     HELP(Place.SHELF, "HELP"),

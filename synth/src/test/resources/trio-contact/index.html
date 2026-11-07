@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <title>TRIO · Approved contact</title>
+  <style>
+    :root{color-scheme:light;--paper:#f3f1e9;--card:#fffef8;--ink:#213c36;--muted:#61746c;--line:#c9cec3;--copper:#ad4f2f;--green:#e0e5d8;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{width:min(1000px,100%);margin:auto;padding:24px 24px 230px}a{color:inherit;text-underline-offset:4px}button,select{font:inherit;max-width:100%;min-height:44px}button{border:1px solid var(--ink);border-radius:4px;background:var(--card);color:var(--ink);padding:10px 14px;cursor:pointer;overflow-wrap:anywhere}button:hover{background:var(--green)}button[aria-pressed=true]{background:var(--ink);color:var(--paper)}button:disabled{opacity:.45;cursor:default}button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,audio:focus-visible{outline:3px solid var(--copper);outline-offset:4px}button.primary{background:var(--ink);color:var(--paper)}button.primary:hover{background:#34594a}nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 22px;padding-bottom:18px;border-bottom:1px solid var(--line);font-size:13px}.eyebrow{font:11px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}header{padding:28px 0 32px}header .eyebrow{color:var(--copper)}h1{font:normal clamp(42px,7vw,70px)/1.05 Georgia,serif;letter-spacing:-.035em;margin:14px 0 20px;max-width:800px}h1 em{font-weight:normal;color:var(--copper)}.intro{font-size:19px;max-width:740px;margin:0 0 16px}.context{font-size:14px;max-width:720px;color:var(--muted);margin:0 0 22px}.hero-actions{display:flex;flex-wrap:wrap;gap:10px}.protocol{font:11px/1.7 var(--mono);color:var(--muted);margin:18px 0 0}.group{border-top:1px solid var(--line);padding:28px 0 32px;scroll-margin-top:20px}h2{font:normal 29px/1.2 Georgia,serif;margin:0 0 10px;overflow-wrap:anywhere}.group-description{color:var(--muted);font-size:14px;max-width:760px;margin:0 0 20px}.sequence{border:1px solid var(--line);background:var(--card);padding:16px;margin-bottom:18px}.sequence-title{font:11px/1.5 var(--mono);color:var(--copper);text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px}.sequence-copy{font-size:13px;color:var(--muted);margin:0 0 12px}.sequence-buttons{display:grid;grid-template-columns:repeat(var(--variants,2),minmax(0,1fr));gap:10px}.sequence button{min-width:0;text-align:left}.notes{display:flex;flex-direction:column;gap:8px}.note-row{display:grid;grid-template-columns:minmax(88px,.45fr) repeat(var(--variants,2),minmax(0,1fr));gap:10px;align-items:stretch}.note-value{display:flex;align-items:center;font:13px/1.5 var(--mono);color:var(--ink);padding:6px 0}.note-row button{min-width:0;text-align:left;font-size:14px}.note-header{color:var(--muted);font-size:12px;margin-bottom:4px}.note-header span{padding:0 2px}.variant-tag{font:10px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--copper);display:block;margin-bottom:2px}.source-details{border-top:1px solid var(--line);padding-top:24px;margin-top:4px}.source-details>summary{cursor:pointer;font:normal 25px/1.25 Georgia,serif;min-height:44px;padding:4px 0 12px;overflow-wrap:anywhere}.source-details .group{border-top:0;padding-top:12px}.source-note{font-size:13px;color:var(--muted);max-width:750px;margin:8px 0 4px}footer{border-top:1px solid var(--line);padding-top:24px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}footer p{max-width:780px}footer details{margin-top:16px}footer summary{cursor:pointer;min-height:40px;padding:8px 0}code{font:11px var(--mono)}.player{position:fixed;z-index:5;bottom:0;left:0;right:0;background:#f3f1e9f7;border-top:1px solid var(--ink);box-shadow:0 -8px 28px #213c360b}.player-inner{width:min(1000px,100%);margin:auto;padding:12px 24px}.selection-row{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-bottom:8px}.selection{flex:1 1 260px;min-width:0}.selection strong{display:block;font-size:14px;line-height:1.4;overflow-wrap:anywhere}.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}.level-control{display:flex;align-items:center;gap:7px;font-size:12px}.level-control select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:13px}.tools button{font-size:13px;padding:7px 11px}.wav-link{font-size:13px;min-height:44px;display:inline-flex;align-items:center;padding:6px}audio{display:block;width:100%;min-width:0;height:40px}#status{font-size:12px;line-height:1.5;color:var(--muted);min-height:18px;margin:6px 0 0}.cue-panel{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:0 0 8px}.cue-values{display:flex;flex-wrap:wrap;gap:6px}.cue-value{padding:3px 9px;border:1px solid var(--line);border-radius:3px;font:11px/1.5 var(--mono);color:var(--muted)}.cue-value[aria-current=true]{border-color:var(--copper);background:#f1e0d3;color:var(--copper)}.cue-state{font-size:11px;color:var(--muted);min-height:17px}.error{color:var(--copper);border:1px solid var(--line);padding:16px}[hidden]{display:none!important}
+    @media(max-width:600px){main{padding:18px 16px 290px}header{padding:24px 0 28px}nav{font-size:12px}.intro{font-size:17px}.context{font-size:13px}.sequence{padding:13px}.sequence-buttons{gap:8px}.sequence button{font-size:13px;padding:10px 11px}.note-row{grid-template-columns:repeat(var(--variants,2),minmax(0,1fr));gap:8px}.note-value{grid-column:1/-1;padding-bottom:0}.note-header{display:none}.note-row button{padding:11px;font-size:13px}.group{padding:24px 0}h2{font-size:26px}.player-inner{padding:10px 16px}.selection{flex-basis:100%}.selection-row{gap:7px}.tools{width:100%}.level-control{margin-right:auto}.selection strong{font-size:13px}.source-details>summary{font-size:23px}}@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="TRIO listening pages"><a href="../">← Conversations bank and MPC kit</a><a href="../touch-v6/">Previous TOUCH comparison ↗</a></nav>
+    <header>
+      <div class="eyebrow">SnipSnap / TRIO approved contact</div>
+      <h1>TOUCH, <em>in contact.</em></h1>
+      <p class="intro">The contact color is approved. Compare 0.8, 0.9 and 1.0 within Previous and Approved contact, using the same audio as the accepted experiment.</p>
+      <p class="context">Approved contact changes low/mid color; the strums and one companion strike stay the same. Accepted on November 1, 2026; app integration is pending.</p>
+      <div class="hero-actions"><button type="button" id="start" class="primary">Play the full range</button><a class="wav-link" id="data-download" href="manifest.json" download="manifest.json">Comparison data ↓</a></div>
+      <p class="protocol">Individual notes retain their full 3.5-second ring. “Play three” uses short excerpts with gaps.</p>
+    </header>
+    <div id="groups"></div>
+    <noscript><p class="error">Enable JavaScript to use the comparison buttons. The audio files and comparison data are also included in the complete listening pack.</p></noscript>
+    <footer>
+      <p>Previous preserves model 6. Approved contact uses the production model 7 renderer and ordinary saved TRIO recipes. Its samples are checked against the accepted experiment before level matching.</p>
+      <details><summary>Listening notes and data</summary><p id="level-note">Matched playback uses SnipSnap’s loudest 200 ms level estimate, rather than integrated LUFS. Raw preserves the supplied monitor balance. Every comparison uses the settings recorded in its manifest.</p><p>The TRES details isolate the source from the same ensemble performance. They are available below the main scene comparisons.</p><p>Listening round: <code id="round"></code></p></details>
+    </footer>
+  </main>
+  <div class="player" aria-label="Selected comparison player">
+    <div class="player-inner">
+      <div class="selection-row">
+        <div class="selection"><span class="eyebrow">Now selected</span><strong id="now-title">Choose a comparison.</strong></div>
+        <div class="tools"><label class="level-control" for="level">Level <select id="level"><option value="matched">Matched</option><option value="raw">Raw</option></select></label><button type="button" id="stop">Stop</button><a id="wav" class="wav-link" download hidden aria-label="Download selected WAV">WAV ↓</a></div>
+      </div>
+      <div id="cue-panel" class="cue-panel" hidden><div id="cue-values" class="cue-values" aria-label="Sequence TOUCH values"></div><span id="cue-state" class="cue-state" aria-live="polite"></span></div>
+      <audio id="audio" controls preload="metadata" aria-label="Selected TRIO comparison"></audio>
+      <p id="status" role="status" aria-live="polite">Choose a comparison.</p>
+    </div>
+  </div>
+  <script id="manifest" type="application/json">__MANIFEST__</script>
+  <script>
+  (() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    let M;
+    try { M = JSON.parse($('manifest').textContent); } catch (_) {
+      $('groups').textContent = 'The comparison data could not load. Reopen the complete listening page.';
+      $('start').disabled = true;
+      return;
+    }
+    const clips = Array.isArray(M.clips) ? M.clips : [];
+    const groups = Array.isArray(M.groups) ? M.groups : [];
+    const byId = new Map(clips.map(clip => [clip.id, clip]));
+    const audio = $('audio'), level = $('level'), wav = $('wav'), status = $('status');
+    const labels = {current:'Previous', contact:'Approved contact', ...(M.variantLabels || {})};
+    const cache = new Map();
+    let selected = null, ticket = 0, controller = null, activeUrl = '', cueFrame = 0;
+    const value = number => Number.isFinite(Number(number)) ? Number(number).toFixed(1) : String(number ?? '');
+    const variantLabel = variant => labels[variant] || String(variant || 'Comparison');
+    function assetUrl(path) {
+      if (typeof path !== 'string' || !path) throw new Error('Missing asset');
+      const embedded = M.embeddedFiles?.[path];
+      if (typeof embedded === 'string' && /^data:audio\/wav;base64,/.test(embedded)) return embedded;
+      const url = new URL(path, location.href);
+      if (!['https:','http:','file:'].includes(url.protocol) || url.origin !== location.origin) throw new Error('Unsupported asset');
+      url.searchParams.set('v', String(M.listeningRound || 'unversioned'));
+      return url.href;
+    }
+    function clipButton(id, text, context, action, variant) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = text;
+      button.dataset.clip = id || ''; button.dataset.action = action; button.dataset.variant = variant;
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', context + ': ' + text);
+      button.disabled = !byId.has(id);
+      return button;
+    }
+    function variantsFor(group) {
+      if (Array.isArray(group.variants) && group.variants.length) return group.variants;
+      return [...new Set((group.rows || []).flatMap(row => Object.keys(row.clips || {})))];
+    }
+    function sourceGroup(group) {
+      return group.id === 'tres-detail' || group.collapsed === true || group.view === 'tres' || (group.rows || []).some(row =>
+        Object.values(row.clips || {}).some(id => byId.get(id)?.view === 'tres'));
+    }
+    function renderGroup(group) {
+      const variants = variantsFor(group), section = document.createElement('section');
+      section.className = 'group'; section.id = 'group-' + group.id;
+      section.style.setProperty('--variants', Math.max(1, variants.length));
+      const heading = document.createElement('h2'); heading.textContent = group.title || 'Comparison';
+      const description = document.createElement('p'); description.className = 'group-description';
+      description.textContent = group.description || '';
+      section.append(heading, description);
+      const sweeps = variants.filter(variant => byId.has(group.sweeps?.[variant]));
+      if (sweeps.length) {
+        const sequence = document.createElement('div'); sequence.className = 'sequence';
+        const title = document.createElement('p'); title.className = 'sequence-title'; title.textContent = 'Listen through three settings';
+        const copy = document.createElement('p'); copy.className = 'sequence-copy';
+        const values = group.values || byId.get(group.sweeps[sweeps[0]])?.cueValues || [];
+        copy.textContent = values.map(value).join(' → ') + ' · short excerpts with gaps. Use the individual notes below for their full ring.';
+        const buttons = document.createElement('div'); buttons.className = 'sequence-buttons';
+        buttons.style.setProperty('--variants', sweeps.length);
+        for (const variant of sweeps) buttons.append(clipButton(group.sweeps[variant], 'Play three · ' + variantLabel(variant), group.title, 'sweep', variant));
+        sequence.append(title, copy, buttons); section.append(sequence);
+      }
+      const notes = document.createElement('div'); notes.className = 'notes';
+      const tableHeading = document.createElement('div'); tableHeading.className = 'note-row note-header'; tableHeading.setAttribute('aria-hidden','true');
+      const touchHeading = document.createElement('span'); touchHeading.textContent = 'Full notes'; tableHeading.append(touchHeading);
+      for (const variant of variants) { const name = document.createElement('span'); name.textContent = variantLabel(variant); tableHeading.append(name); }
+      notes.append(tableHeading);
+      for (const row of group.rows || []) {
+        const note = document.createElement('div'); note.className = 'note-row';
+        const name = document.createElement('strong'); name.className = 'note-value'; name.textContent = 'TOUCH ' + value(row.touch); note.append(name);
+        for (const variant of variants) note.append(clipButton(row.clips?.[variant], variantLabel(variant), (group.title || '') + ', TOUCH ' + value(row.touch), 'note', variant));
+        notes.append(note);
+      }
+      section.append(notes);
+      if (!sourceGroup(group)) return section;
+      const details = document.createElement('details'); details.className = 'source-details'; details.id = 'details-' + group.id;
+      const summary = document.createElement('summary'); summary.textContent = group.title || 'TRES source details';
+      const note = document.createElement('p'); note.className = 'source-note';
+      note.textContent = 'Optional detail: TRES isolated from the same ensemble performance.';
+      details.append(summary, note, section); return details;
+    }
+    for (const group of groups) $('groups').append(renderGroup(group));
+    $('round').textContent = M.listeningRound || 'Unversioned';
+    if (M.levelMethod) $('level-note').textContent = M.levelMethod;
+    const dataUrl = new URL('manifest.json', location.href); dataUrl.searchParams.set('v', M.listeningRound || 'unversioned'); $('data-download').href = dataUrl.href;
+    function updatePressed() {
+      for (const button of document.querySelectorAll('[data-clip]')) button.setAttribute('aria-pressed', String(button.dataset.clip === selected?.id));
+    }
+    function prepareCues() {
+      const values = selected?.cueValues;
+      $('cue-values').replaceChildren();
+      $('cue-panel').hidden = selected?.kind !== 'sweep' || !Array.isArray(values) || !values.length;
+      if ($('cue-panel').hidden) { $('cue-state').textContent = ''; return; }
+      for (const touch of values) { const chip = document.createElement('span'); chip.className = 'cue-value'; chip.textContent = 'TOUCH ' + value(touch); $('cue-values').append(chip); }
+      updateCues();
+    }
+    function updateCues() {
+      if ($('cue-panel').hidden || !selected) return;
+      const values = selected.cueValues || [], step = Number(selected.cueStepSeconds) || 1.7;
+      const noteSeconds = Number(selected.cueSoundSeconds) || Math.max(.01, step - .2);
+      const position = Math.max(0, audio.currentTime || 0), index = Math.floor(position / step);
+      const sounding = !audio.ended && index < values.length && position - index * step < noteSeconds;
+      [...$('cue-values').children].forEach((chip, i) => { if (sounding && i === index) chip.setAttribute('aria-current','true'); else chip.removeAttribute('aria-current'); });
+      const text = audio.ended || index >= values.length ? 'Sequence finished.' : sounding ? 'TOUCH ' + value(values[index]) : 'Short gap';
+      if ($('cue-state').textContent !== text) $('cue-state').textContent = text;
+    }
+    function animateCues() {
+      cancelAnimationFrame(cueFrame); updateCues();
+      if (selected?.kind === 'sweep' && !audio.paused && !audio.ended) cueFrame = requestAnimationFrame(animateCues);
+    }
+    function statusText(prefix) {
+      return prefix + ': ' + (selected?.title || 'Comparison') + ' · ' + (level.value === 'matched' ? 'matched' : 'raw');
+    }
+    function trimCache() {
+      while (cache.size > 6) {
+        const oldest = cache.keys().next().value;
+        URL.revokeObjectURL(cache.get(oldest)); cache.delete(oldest);
+      }
+    }
+    async function selectClip(id, play = true, seekSeconds = 0) {
+      const clip = byId.get(id); if (!clip) return;
+      const active = ++ticket;
+      controller?.abort(); controller = null;
+      audio.pause(); audio.onloadedmetadata = null; audio.removeAttribute('src'); audio.load();
+      selected = clip; activeUrl = ''; wav.hidden = true; wav.removeAttribute('href');
+      $('now-title').textContent = clip.title || variantLabel(clip.variant);
+      updatePressed(); prepareCues(); status.textContent = statusText('Loading');
+      const path = clip.assets?.[level.value];
+      try {
+        let source = cache.get(path);
+        if (source) { cache.delete(path); cache.set(path, source); }
+        else {
+          const abort = new AbortController(); controller = abort;
+          const response = await fetch(assetUrl(path), {credentials:'same-origin', signal:abort.signal});
+          if (!response.ok) throw new Error('Audio unavailable');
+          const bytes = await response.blob();
+          if (active !== ticket) return;
+          source = URL.createObjectURL(new Blob([bytes], {type:'audio/wav'}));
+          cache.set(path, source); trimCache();
+        }
+        if (active !== ticket) return;
+        activeUrl = source;
+        audio.volume = level.value === 'raw' ? Math.max(0, Math.min(1, clip.rawPlaybackGain ?? 1)) : 1;
+        audio.loop = false;
+        audio.onloadedmetadata = () => {
+          if (active !== ticket) return;
+          if (seekSeconds > 0 && Number.isFinite(audio.duration)) audio.currentTime = Math.min(seekSeconds, Math.max(0, audio.duration - .01));
+          updateCues(); status.textContent = statusText('Ready');
+          if (play) audio.play().catch(() => { if (active === ticket) status.textContent = 'Use the audio play control to begin this comparison.'; });
+        };
+        audio.src = source; audio.load();
+        wav.href = source; wav.download = String(path).split('/').pop(); wav.hidden = false;
+      } catch (error) {
+        if (active === ticket && error.name !== 'AbortError') status.textContent = 'This audio could not load. Select the clip again to retry.';
+      } finally { if (active === ticket) controller = null; }
+    }
+    function stop() {
+      ++ticket; controller?.abort(); controller = null; audio.onloadedmetadata = null;
+      audio.pause(); try { audio.currentTime = 0; } catch (_) {}
+      updateCues(); status.textContent = 'Stopped. Choose a comparison or use the audio play control.';
+    }
+    $('groups').addEventListener('click', event => { const button = event.target.closest('[data-clip]'); if (button && !button.disabled) selectClip(button.dataset.clip); });
+    const first = groups.find(group => group.sweeps?.current)?.sweeps.current || groups[0]?.rows?.[0]?.clips?.current || clips[0]?.id;
+    $('start').disabled = !byId.has(first);
+    $('start').addEventListener('click', () => selectClip(first));
+    level.addEventListener('change', () => { if (selected) selectClip(selected.id, !audio.paused && !audio.ended, audio.currentTime || 0); });
+    $('stop').addEventListener('click', stop);
+    audio.addEventListener('timeupdate', updateCues); audio.addEventListener('seeked', updateCues);
+    audio.addEventListener('play', () => { animateCues(); if (activeUrl) status.textContent = statusText('Playing'); });
+    audio.addEventListener('pause', () => { cancelAnimationFrame(cueFrame); updateCues(); });
+    audio.addEventListener('ended', () => { cancelAnimationFrame(cueFrame); updateCues(); status.textContent = statusText('Finished'); });
+    audio.addEventListener('error', () => { if (audio.getAttribute('src')) status.textContent = 'This audio could not load. Select the clip again to retry.'; });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') stop(); });
+    function release() {
+      ++ticket; controller?.abort(); controller = null;
+      cancelAnimationFrame(cueFrame);
+      audio.pause(); audio.onloadedmetadata = null; audio.removeAttribute('src'); audio.load(); activeUrl = '';
+      cache.forEach(url => URL.revokeObjectURL(url)); cache.clear();
+      wav.hidden = true; wav.removeAttribute('href');
+    }
+    window.addEventListener('pagehide', release);
+    window.addEventListener('pageshow', event => { if (event.persisted && selected) selectClip(selected.id, false); });
+    window.TRIO_CONTACT = {manifest:M, play:(id, autoplay = true) => selectClip(id, autoplay), stop,
+      get current(){return selected?.id ?? null}, get mode(){return level.value}, get cacheSize(){return cache.size}};
+    if (first) selectClip(first, false);
+  })();
+  </script>
+</body>
+</html>

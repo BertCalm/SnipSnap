@@ -4,9 +4,13 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,24 +19,27 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MixVoice
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -40,10 +47,16 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.Names
+import com.snipsnap.kit.SongPlan
 import com.snipsnap.shell.Arranger
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.SongExport
+import kotlinx.coroutines.CancellationException
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -62,9 +75,11 @@ import kotlinx.coroutines.withContext
  * The plan (`Arranger.arrange`) is cheap — pure note-list arithmetic over
  * an already-loaded groove — and loads on entry. The mixdown
  * (`Arranger.mixdown`, full synthesis through every pad) is not: it only
- * ever runs once PLAY is first pressed, cached per plan so REROLL (a new
- * seed) is what invalidates it, matching the CLI's own `--mixdown` being
- * an opt-in flag rather than something `arrange` does unasked.
+ * ever runs once PLAY is first pressed, cached per plan so any edit (a new
+ * plan) is what invalidates it, matching the CLI's own `--mixdown` being
+ * an opt-in flag rather than something `arrange` does unasked. EXPORT hands
+ * that cached mix to `SongExport` when there is one (and keeps the one it
+ * had to render, for PLAY).
  *
  * Every section states the rule that picked its clip
  * ([Arranger.Section.reason]) — tap a row to read it in the LCD readout
@@ -72,6 +87,14 @@ import kotlinx.coroutines.withContext
  * is actually sounding, tracked by a wall-clock estimate against the
  * mixdown's own section-start frames (cosmetic only — [MixVoice] is the
  * transport of record, this is just what draws the needle).
+ *
+ * The song is the person's to keep and change ([SongKeeper]): reorder,
+ * repeats, swap a section's clip for any other the kit can play (BEAT's
+ * own programs included), duplicate, delete, add, lock, and REROLL, which
+ * redraws only what is unlocked. A song is kept per kit in the project
+ * ([projectDir]; null when no project is open, and then it is edited
+ * on screen only, which the caption says). With nothing kept the first
+ * plan is the arranger's own, seed 0, and it is kept from then on.
  */
 @Composable
 fun ArrangeScreen(
@@ -83,43 +106,32 @@ fun ArrangeScreen(
     swingPercent: Int? = null,
     feel: Float = 0f,
     feelTemplate: GrooveFeel.Template? = null,
+    /** The project's folder, where `song.json` lives; null when no project is open. */
+    projectDir: File? = null,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val haptics = LocalHaptics.current
     val kitDir = entry.dir
     val kit = entry.kit
 
-    var seed by remember(kitDir) { mutableIntStateOf(0) }
-    var plan by remember(kitDir) { mutableStateOf<Arranger.Arrangement?>(null) }
-    var refusal by remember(kitDir) { mutableStateOf<String?>(null) }
-    var loading by remember(kitDir) { mutableStateOf(true) }
-    var firstLoad by remember(kitDir) { mutableStateOf(true) }
-    LaunchedEffect(kitDir, seed) {
-        loading = true
-        val result = withContext(Dispatchers.IO) {
-            runCatching { Arranger.arrange(kit, kitDir, seed, swingPercent, feel, feelTemplate) }
-        }
-        result.onSuccess {
-            plan = it
-            refusal = null
-            if (!firstLoad) onToast(Copy.ARRANGE_REROLLED)
-        }.onFailure { e ->
-            plan = null
-            refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
-        }
-        loading = false
-        firstLoad = false
+    val keeper = remember(kitDir) {
+        SongKeeper(kit, kitDir, projectDir, scope, swingPercent, feel, feelTemplate, onToast)
     }
+    LaunchedEffect(keeper) { keeper.open() }
+    val plan = keeper.plan
 
     // The mixdown, built lazily on first PLAY and cached per plan — a
-    // reroll (a new `plan` value) is what throws this cache out.
+    // edit (a new `plan` value) is what throws this cache out.
     var mix by remember(plan) { mutableStateOf<Arranger.Mix?>(null) }
     var mixing by remember(plan) { mutableStateOf(false) }
+    // EXPORT is writing; PLAY and REROLL wait, so no second render starts beside it.
+    var exporting by remember(kitDir) { mutableStateOf(false) }
 
     var voice by remember(kitDir) { mutableStateOf<MixVoice?>(null) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSeconds by remember(kitDir) { mutableFloatStateOf(0f) }
-    var selectedIndex by remember(plan) { mutableIntStateOf(0) }
 
     fun stopPlayback() {
         voice?.stop()
@@ -128,6 +140,8 @@ fun ArrangeScreen(
         posSeconds = 0f
     }
     DisposableEffect(kitDir) { onDispose { voice?.release() } }
+    // An edit makes a different song: what was playing is the old one.
+    LaunchedEffect(plan) { stopPlayback() }
 
     fun playMix(m: Arranger.Mix) {
         val v = MixVoice(m.snip.samples, m.snip.sampleRate)
@@ -148,7 +162,7 @@ fun ArrangeScreen(
             playMix(cached)
             return
         }
-        if (mixing) return
+        if (mixing || exporting) return
         mixing = true
         scope.launch {
             val built = withContext(Dispatchers.IO) { runCatching { Arranger.mixdown(kit, kitDir, currentPlan) } }
@@ -156,7 +170,7 @@ fun ArrangeScreen(
             built.onSuccess { m ->
                 // A REROLL landed while this was mixing — the plan this
                 // mix was built for isn't the one on screen any more.
-                if (plan !== currentPlan) return@onSuccess
+                if (keeper.plan !== currentPlan) return@onSuccess
                 mix = m
                 playMix(m)
             }.onFailure { e ->
@@ -166,10 +180,48 @@ fun ArrangeScreen(
         }
     }
 
+    // EXPORT: the song as an MPC project and a WAV under
+    // exports/<kit>/song/, then the WAV to the share sheet - GROOVE's
+    // SHARE shape (`shareBeat`). The folder is the app's own, so a second
+    // export of the same song writes over the first. The mix PLAY already
+    // rendered is handed through so the song is not rendered twice; when
+    // there is none yet, the write renders it and it is kept for PLAY.
+    fun exportSong() {
+        val currentPlan = plan ?: return
+        if (exporting || mixing) return
+        exporting = true
+        onToast(Copy.ARRANGE_EXPORT_BUSY)
+        val held = mix
+        scope.launch {
+            try {
+                val stem = Names.sanitizeStem(kit.name)
+                val written = offMain {
+                    val root = Exports.dir(context) ?: throw IOException("external storage unavailable")
+                    SongExport.write(kit, kitDir, currentPlan, File(File(root, stem), "song"), overwrite = true, mixdown = true, mix = held)
+                }
+                val wav = written.mixdown!!
+                // Kept for PLAY unless an edit has since put another plan on screen.
+                if (keeper.plan === currentPlan && mix == null) mix = wav.mix
+                haptics.land()
+                val where = "exports/$stem/song"
+                if (ShareOut.send(context, wav.file, ShareOut.WAV_MIME, kit.name)) {
+                    onToast(Copy.songShared(wav.file.name, where))
+                } else {
+                    onToast(Copy.songKept(where))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("ArrangeScreen", "exportSong: failed", e)
+                onToast(Copy.ARRANGE_EXPORT_FAILED)
+            } finally {
+                exporting = false
+            }
+        }
+    }
+
     fun reroll() {
-        if (loading || mixing) return
-        stopPlayback()
-        seed++
+        if (keeper.loading || mixing || exporting) return
+        keeper.reroll()
     }
 
     // The needle: a wall-clock estimate of playback position, matched
@@ -192,6 +244,7 @@ fun ArrangeScreen(
         val frame = (posSeconds * m.snip.sampleRate).toInt()
         m.sectionStarts.indexOfLast { it <= frame }.takeIf { it >= 0 }
     }
+    val selectedIndex = keeper.selected.coerceIn(0, ((plan?.sections?.size ?: 1) - 1).coerceAtLeast(0))
     val readoutIndex = if (playing) (activeIndex ?: selectedIndex) else selectedIndex
 
     // System Back stops the mix first, as the header chip does.
@@ -215,75 +268,191 @@ fun ArrangeScreen(
 
         val currentPlan = plan
         when {
-            loading -> Box(Modifier.fillMaxSize().lcdPanel(scheme), contentAlignment = Alignment.Center) {
+            keeper.loading -> Box(Modifier.fillMaxSize().lcdPanel(scheme), contentAlignment = Alignment.Center) {
                 TapeText("PLANNING…", TapeType.lcdSmall, scheme.lcdInk.tape)
             }
-            refusal != null || currentPlan == null -> Box(
+            keeper.refusal != null || currentPlan == null -> Box(
                 Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(refusal ?: Copy.ARRANGE_NEEDS_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                TapeText(keeper.refusal ?: Copy.ARRANGE_NEEDS_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
             else -> {
-                val sections = currentPlan.sections
-                LazyColumn(
-                    Modifier.fillMaxWidth().weight(1f).sunkenField(scheme).padding(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    items(sections, key = { it.name }) { section ->
-                        val i = sections.indexOf(section)
-                        SectionRow(
-                            index = i,
-                            section = section,
-                            selected = i == readoutIndex,
-                            active = playing && i == activeIndex,
-                            onTap = { selectedIndex = i },
-                        )
-                    }
-                }
-
-                Column(
-                    Modifier.fillMaxWidth().lcdPanel(scheme).padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    val shown = sections.getOrNull(readoutIndex)
-                    TapeText(
-                        shown?.name?.uppercase() ?: "",
-                        TapeType.pixel,
-                        scheme.amber.tape,
-                    )
-                    TapeText(
-                        shown?.reason?.uppercase() ?: "",
-                        TapeType.pixelSmall,
-                        scheme.lcdInk2,
-                        maxLines = 2,
-                    )
-                }
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionButton(
-                        if (playing) "■ STOP" else if (mixing) Copy.ARRANGE_MIXING else "► PLAY",
-                        scheme,
-                        enabled = !mixing,
-                        modifier = Modifier.weight(1f),
-                        onClick = ::togglePlay,
-                    )
-                    ActionButton(
-                        "REROLL ⚄",
-                        scheme,
-                        enabled = !loading && !mixing,
-                        modifier = Modifier.weight(1f),
-                        onClick = ::reroll,
-                    )
-                }
+                SectionList(
+                    sections = currentPlan.sections,
+                    readoutIndex = readoutIndex,
+                    activeIndex = if (playing) activeIndex else null,
+                    onTap = { keeper.selected = it },
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutPanel(currentPlan.sections.getOrNull(readoutIndex))
+                SongEditor(keeper, currentPlan.sections.getOrNull(selectedIndex), selectedIndex, currentPlan.sections.size, busy = mixing || exporting)
+                TransportRow(
+                    playing = playing,
+                    mixing = mixing,
+                    exporting = exporting,
+                    onPlay = ::togglePlay,
+                    onReroll = ::reroll,
+                    onExport = ::exportSong,
+                )
                 TapeText(
-                    "SAME KIT, LAID OUT AS A SONG — TAP A SECTION TO READ WHY IT'S THERE.",
+                    if (keeper.keeps) Copy.SONG_CAPTION_KEPT else Copy.SONG_CAPTION_NOT_KEPT,
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     Modifier.fillMaxWidth(),
                     maxLines = 2,
                 )
             }
+        }
+    }
+}
+
+/** The song's rows. Each is its own composable so this screen's main method stays under the dex register ceiling. */
+@Composable
+private fun SectionList(
+    sections: List<Arranger.Section>,
+    readoutIndex: Int,
+    activeIndex: Int?,
+    onTap: (Int) -> Unit,
+    modifier: Modifier,
+) {
+    val scheme = LocalScheme.current
+    LazyColumn(
+        modifier.fillMaxWidth().sunkenField(scheme).padding(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // Keyed by place: a section's name is not unique once a song can
+        // hold the same section twice.
+        itemsIndexed(sections, key = { i, _ -> i }) { i, section ->
+            SectionRow(
+                index = i,
+                section = section,
+                selected = i == readoutIndex,
+                active = i == activeIndex,
+                onTap = { onTap(i) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadoutPanel(shown: Arranger.Section?) {
+    val scheme = LocalScheme.current
+    Column(
+        Modifier.fillMaxWidth().lcdPanel(scheme).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        TapeText(shown?.name?.uppercase() ?: "", TapeType.pixel, scheme.amber.tape)
+        TapeText(shown?.reason?.uppercase() ?: "", TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
+    }
+}
+
+@Composable
+private fun TransportRow(
+    playing: Boolean,
+    mixing: Boolean,
+    exporting: Boolean,
+    onPlay: () -> Unit,
+    onReroll: () -> Unit,
+    onExport: () -> Unit,
+) {
+    val scheme = LocalScheme.current
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        ActionButton(
+            if (playing) "■ STOP" else if (mixing) Copy.ARRANGE_MIXING else "► PLAY",
+            scheme,
+            enabled = !mixing && (playing || !exporting),
+            modifier = Modifier.weight(1f),
+            onClick = onPlay,
+        )
+        ActionButton(
+            Copy.SONG_REROLL,
+            scheme,
+            enabled = !mixing && !exporting,
+            accessibilityLabel = Copy.SONG_A11Y_REROLL,
+            modifier = Modifier.weight(1f),
+            onClick = onReroll,
+        )
+        ActionButton(
+            "EXPORT",
+            scheme,
+            enabled = !mixing && !exporting,
+            working = exporting,
+            accessibilityLabel = "EXPORT SONG",
+            modifier = Modifier.weight(1f),
+            onClick = onExport,
+        )
+    }
+}
+
+/**
+ * What can be done to the selected section, in two rows of four, then the
+ * clip picker when SWAP CLIP is open, then + SECTION and UNDO. A disabled
+ * button is how the screen says "not here": MOVE UP on the first row, DELETE
+ * on the only section.
+ */
+@Composable
+private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: Int, count: Int, busy: Boolean) {
+    val scheme = LocalScheme.current
+    var picking by remember(keeper) { mutableStateOf(false) }
+    val repeatMax = section?.let { Arranger.maxRepeats(it.clip) } ?: 1
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton(Copy.SONG_UP, scheme, enabled = !busy && index > 0, accessibilityLabel = Copy.SONG_A11Y_UP, modifier = Modifier.weight(1f)) { keeper.move(-1) }
+            ActionButton(Copy.SONG_DOWN, scheme, enabled = !busy && index < count - 1, accessibilityLabel = Copy.SONG_A11Y_DOWN, modifier = Modifier.weight(1f)) { keeper.move(1) }
+            ActionButton(Copy.SONG_REPEAT_LESS, scheme, enabled = !busy && (section?.repeats ?: 1) > 1, accessibilityLabel = Copy.SONG_A11Y_REPEAT_LESS, modifier = Modifier.weight(1f)) { keeper.repeat(-1) }
+            ActionButton(Copy.SONG_REPEAT_MORE, scheme, enabled = !busy && (section?.repeats ?: 1) < repeatMax, accessibilityLabel = Copy.SONG_A11Y_REPEAT_MORE, modifier = Modifier.weight(1f)) { keeper.repeat(1) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton(Copy.SONG_SWAP, scheme, enabled = !busy && section != null, lit = picking, modifier = Modifier.weight(1f)) { picking = !picking }
+            ActionButton(Copy.SONG_DUPLICATE, scheme, enabled = !busy && count < SongPlan.MAX_SECTIONS, modifier = Modifier.weight(1f)) { keeper.duplicate() }
+            ActionButton(Copy.SONG_DELETE, scheme, enabled = !busy && count > 1, modifier = Modifier.weight(1f)) { keeper.delete() }
+            ActionButton(
+                if (section?.locked == true) Copy.SONG_UNLOCK else Copy.SONG_LOCK,
+                scheme,
+                enabled = !busy && section != null,
+                lit = section?.locked == true,
+                modifier = Modifier.weight(1f),
+            ) { keeper.toggleLock() }
+        }
+        if (picking && section != null && !busy) {
+            ClipPicker(keeper.picks, current = section.ref) { ref ->
+                picking = false
+                keeper.swap(ref)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton(Copy.SONG_ADD, scheme, enabled = !busy && count < SongPlan.MAX_SECTIONS, modifier = Modifier.weight(1f)) { keeper.add() }
+            val last = keeper.undoStack.lastOrNull()
+            ActionButton(
+                if (last != null) Copy.songUndo(last.verb) else Copy.SONG_UNDO,
+                scheme,
+                enabled = !busy && last != null,
+                modifier = Modifier.weight(1.5f),
+            ) { keeper.undo() }
+        }
+    }
+}
+
+/** Every clip the kit can play, as chips in a row that scrolls. The one in use is lit and says NOW. */
+@Composable
+private fun ClipPicker(picks: List<Arranger.Pick>, current: String, onPick: (String) -> Unit) {
+    val scheme = LocalScheme.current
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (pick in picks) {
+            val now = pick.ref == current
+            val name = Copy.songClipLabel(pick.ref)
+            ActionButton(
+                if (now) "$name · ${Copy.SONG_PICK_NOW}" else name,
+                scheme,
+                enabled = true,
+                lit = now,
+                accessibilityLabel = if (now) Copy.songPickNow(name) else Copy.songPickSwap(name),
+                modifier = Modifier.widthIn(min = 96.dp),
+            ) { onPick(pick.ref) }
         }
     }
 }
@@ -302,17 +471,44 @@ private fun SectionRow(
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(if (selected) scheme.field.tape else scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (active) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.countOf(section.bars, "BAR", "BARS")}") { onTap() }
+            // Selected is the app's border-plus-word (pressedBevel's 2 dp
+            // accent line and the SELECTED line below), not the fill alone:
+            // the field fill is a hair from the lcd fill, and a state shown
+            // by a fill that close is colour-only. The playing row keeps its
+            // amber, at the same 2 dp, with the play glyph.
+            .border(
+                if (selected) 2.dp else 1.dp,
+                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.grayEdge.tape,
+                RoundedCornerShape(4.dp),
+            )
+            .semantics { this.selected = selected }
+            .tapeClick(
+                label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.songClipLabel(section.ref)}, " +
+                    "${Copy.countOf(section.repeats, "TIME", "TIMES")}, ${Copy.countOf(section.bars, "BAR", "BARS")}" +
+                    if (section.locked) ", ${Copy.SONG_LOCKED}" else "",
+            ) { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TapeText(if (active) "▶" else "%02d".format(java.util.Locale.ROOT, index + 1), TapeType.pixel, scheme.amber.tape)
-            TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
+            Column {
+                TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
+                // Reserved on every row, blank on the others, so no row
+                // grows only when it is the chosen one. A lock is a word
+                // too, never a colour alone.
+                TapeText(
+                    listOfNotNull("SELECTED".takeIf { selected }, Copy.SONG_LOCKED.takeIf { section.locked }).joinToString(" · "),
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                )
+            }
         }
-        TapeText(Copy.countOf(section.bars, "BAR", "BARS"), TapeType.pixelSmall, scheme.ink2.tape)
+        Column(horizontalAlignment = Alignment.End) {
+            TapeText("${Copy.songClipLabel(section.ref)} ×${section.repeats}", TapeType.pixelSmall, scheme.ink.tape)
+            TapeText(Copy.countOf(section.bars, "BAR", "BARS"), TapeType.pixelSmall, scheme.ink2.tape)
+        }
     }
 }
 

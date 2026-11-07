@@ -54,6 +54,8 @@ add_executable(engine_tests
     # enough to run it, and android-build against the NDK's own header is
     # what keeps the two honest.
     "${ENGINE_DIR}/jni.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyEngine.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyJni.cpp"
 )
 target_include_directories(engine_tests PRIVATE
     "${ENGINE_DIR}"
@@ -118,3 +120,14 @@ target_include_directories(surface_aquarium_tests PRIVATE "${ENGINE_DIR}" "${CMA
 target_compile_options(surface_aquarium_tests PRIVATE -Wall -Wextra -include cstring)
 target_link_libraries(surface_aquarium_tests PRIVATE Threads::Threads)
 add_test(NAME surface_aquarium_tests COMMAND surface_aquarium_tests)
+
+add_executable(crease_study_tests
+    crease_study_tests.cpp
+    oboe_stubs.cpp
+    "${ENGINE_DIR}/crease/CreaseStudyEngine.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyJni.cpp"
+)
+target_include_directories(crease_study_tests PRIVATE "${ENGINE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/stub" "${OBOE_INCLUDE_DIR}")
+target_compile_options(crease_study_tests PRIVATE -Wall -Wextra -include cstring)
+target_link_libraries(crease_study_tests PRIVATE Threads::Threads)
+add_test(NAME crease_study_tests COMMAND crease_study_tests)

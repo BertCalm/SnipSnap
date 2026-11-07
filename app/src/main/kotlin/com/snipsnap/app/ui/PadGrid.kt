@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -28,12 +28,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.LocalHaptics
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
@@ -224,7 +224,8 @@ internal fun PlayBank(
     emptyHits: Boolean = false,
 ) {
     Column(
-        modifier,
+        // Pads at the screen's side edge would otherwise lose their first touch to the back gesture.
+        modifier.systemGestureExclusion(),
         verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
     ) {
         for (row in rows) {
@@ -276,23 +277,11 @@ private fun Modifier.padGesture(
             true
         }
     }
-    .pointerInput(slot) {
-        while (true) {
-            val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-            val height = size.height.toFloat().coerceAtLeast(1f)
-            onHit(slot, velocityFromY(down.position.y, height), down.uptimeMillis)
-            var up = down.uptimeMillis
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent()
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                    up = change.uptimeMillis
-                    if (!change.pressed) break
-                }
-            }
-            onRelease(slot, up)
-        }
-    }
+    .pressTracking(
+        slot,
+        onPress = { y, height, pressure, uptime -> onHit(slot, PadFeelStore.shape(velocityFromY(y, height), pressure), uptime) },
+        onRelease = { uptime -> onRelease(slot, uptime) },
+    )
 
 /**
  * PLAY's own pad cell — mirrors KitScreen's `PadCell` (same tag/name
@@ -380,12 +369,17 @@ internal fun PlayPad(
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText(
-            pad.displayName,
-            TapeType.marker,
-            padNameInk(scheme, cls),
-            Modifier.align(Alignment.BottomStart),
-            maxLines = 2,
-        )
+        PadNameLabel(pad.displayName, padNameInk(scheme, cls), Modifier.align(Alignment.BottomStart))
     }
+}
+
+/**
+ * A pad cell's name, on ONE line: a long name steps its font down through [FitTapeText]'s steps,
+ * then ellipsizes, instead of wrapping to a second line that crowds the cell (E1). Shared by the
+ * PLAY grid here and the KIT grid in `KitScreen`, and its own composable because `KitScreen`
+ * sits near the dex register ceiling and an inline text call there is not free.
+ */
+@Composable
+internal fun PadNameLabel(name: String, color: Color, modifier: Modifier = Modifier) {
+    FitTapeText(name, TapeType.marker, color, modifier)
 }

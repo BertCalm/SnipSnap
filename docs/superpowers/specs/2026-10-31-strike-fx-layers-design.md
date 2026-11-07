@@ -180,10 +180,11 @@ LayerRecipe(name: String, fx: FxChain?, terminalFadeMs: Float?)
 Rules:
 
 - `VERSION` becomes 3. `fromJsonValue` accepts 2 and 3; a version 2 object
-  reads with `layers = null` and round-trips unchanged except for the version
-  number, which is written as 3 only when the recipe is re-saved. `toJsonValue`
-  omits `layers` when null, so an unbanked pad's JSON differs from today only
-  in the version number.
+  reads with `layers = null` and round-trips unchanged: a recipe without
+  a bank is written as version 2, byte for byte, and only a banked recipe
+  is written as 3 (`MIN_READABLE_VERSION = 2` is the readable floor). `toJsonValue`
+  omits `layers` when null, so an unbanked pad's JSON is
+  exactly today's.
 - A banked recipe lists the layers bottom to top, and its list length equals
   the pad's `velocityLayers.size`. The last entry describes the main file.
   `fx == null` means "the source, unprocessed" (DRY).
@@ -245,7 +246,7 @@ shows DRY, ROOM or ECHO after a hit. No change to `app/.../StrikeStrip.kt`.
 ## 7. Tests the milestone owes
 
 - `:synth` `PadRecipeTest` (or the existing recipe test class): version 2
-  reads with `layers = null` and re-saves as version 3 with identical fields;
+  reads with `layers = null` and re-saves as version 2 with identical fields (a banked recipe writes 3);
   version 3 round-trips `layers`; a bank's rebuild equals KEEP's files
   byte-for-byte for a fixed source (determinism is already a house law for
   renders).

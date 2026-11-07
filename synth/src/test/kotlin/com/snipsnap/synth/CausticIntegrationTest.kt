@@ -71,9 +71,9 @@ class CausticIntegrationTest {
     }
 
     @Test fun `invalid notes native models controls and reserved HOLD fail before rendering`() {
-        val patch = CausticPatch("Valid", CausticVoice.ALLOY, emptyMap())
+        val patch = CausticPatch("Valid", CausticVoice.ALLOY, emptyMap(), model = 1)
         for (midi in listOf(35, 85)) assertFailsWith<IllegalArgumentException> { patch.copy(midi = midi) }
-        for (model in listOf(0, 2, 4)) assertFailsWith<IllegalArgumentException> { patch.copy(model = model) }
+        for (model in listOf(0, 3, 4)) assertFailsWith<IllegalArgumentException> { patch.copy(model = model) }
         for (value in listOf(-.01f, 1.01f, Float.NaN, Float.POSITIVE_INFINITY)) {
             assertFailsWith<IllegalArgumentException> { patch.copy(velocity = value) }
             assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("BODY" to value)) }

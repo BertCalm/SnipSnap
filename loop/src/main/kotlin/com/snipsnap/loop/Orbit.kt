@@ -402,6 +402,12 @@ data class OrbitSection(
  * Change the bar and every spanned ring re-periods together, which is the
  * "4/4 × 2 = 8/4" observation: a change to the reference, not to a ring.
  * Free rings do not care.
+ *
+ * [bpm] is the tempo the rings are fitted and heard at. Since the 2026-11-06
+ * ruling that is the project's one tempo (`Project.tempoBpm`, set from BEAT),
+ * which `OrbitScreen` puts on the set when it opens and whenever it changes;
+ * the value `orbits.json` holds is only what the set was last fitted at, and a
+ * set is not tied to it.
  */
 data class OrbitSet(
     val orbits: List<Orbit>,
@@ -436,8 +442,13 @@ data class OrbitSet(
      * and the clip written from it is the clip that was written before.
      */
     val sections: List<OrbitSection> = emptyList(),
+    /** Explicit ORBIT-only routing to the containing kit's saved Aquarium sound. */
+    val aquariumFromKit: Boolean = false,
+    /** Zero-input time after one finite bounce turn; does not make a seamless loop. */
+    val aquariumTailSeconds: Float = 3f,
 ) {
     init {
+        require(aquariumTailSeconds.isFinite() && aquariumTailSeconds in 0f..30f) { "Aquarium tail must be in 0..30 seconds" }
         require(orbits.size <= MAX_ORBITS) { "at most $MAX_ORBITS rings, got ${orbits.size}" }
         require(sections.size <= OrbitSection.MAX_SECTIONS) {
             "at most ${OrbitSection.MAX_SECTIONS} sections, got ${sections.size}"

@@ -6,6 +6,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -13,16 +14,19 @@ import kotlin.test.assertTrue
 /** The accepted R4 voices enter the same factory, editing, note and velocity doors as other synths. */
 class OrigamiPresetsTest {
     @Test
-    fun `six dry factory presets expose two complete R4 recipes per voice`() {
+    fun `factory registry exposes twelve complete recipes with accepted references first`() {
         val all = OrigamiPresets.all()
-        assertEquals(6, all.size)
-        assertEquals(6, all.map { it.name }.toSet().size)
+        assertEquals(12, all.size)
+        assertEquals(12, all.map { it.name }.toSet().size)
+        assertEquals(OrigamiPresets.references() + OrigamiPresets.performance(), all)
         assertEquals(all, Presets.all().filter { it.engine == OrigamiPatch.ENGINE })
         val reference = mapOf("TUNE" to .5f, "CREASE" to .5f, "FOLD" to .75f,
             "TURN" to .5f, "WARP" to .5f, "MOTION" to 0f)
         for (voice in OrigamiVoice.entries) {
             val presets = OrigamiPresets.forVoice(voice)
-            assertEquals(2, presets.size, voice.name)
+            assertEquals(4, presets.size, voice.name)
+            assertEquals(OrigamiPresets.references().filter { it.voice == voice }, presets.take(2))
+            assertEquals(OrigamiPresets.performance().filter { it.voice == voice }, presets.drop(2))
             assertEquals(presets, Presets.forVoice(OrigamiPatch.ENGINE, voice.name))
             assertEquals(reference, presets.first().macros, "$voice starts with the accepted audition recipe")
             assertTrue(presets[0].macros != presets[1].macros, "$voice second preset repeats the same sound")
@@ -39,6 +43,34 @@ class OrigamiPresetsTest {
             }
         }
         assertTrue(Presets.forVoice(OrigamiPatch.ENGINE, "UNKNOWN").isEmpty())
+    }
+
+    @Test
+    fun `original six saved factory recipes retain names controls and legacy articulation`() {
+        val expected = listOf(
+            Triple(OrigamiVoice.CRANE, "Paper Key", .75f to 0f),
+            Triple(OrigamiVoice.CRANE, "Light Crease", .48f to .08f),
+            Triple(OrigamiVoice.FAN, "Warm Fan", .75f to 0f),
+            Triple(OrigamiVoice.FAN, "Soft Fifth", .42f to .12f),
+            Triple(OrigamiVoice.STILL, "Tenth Bloom", .75f to 0f),
+            Triple(OrigamiVoice.STILL, "Quiet Paper", .46f to .12f),
+        )
+        val references = OrigamiPresets.references()
+        assertEquals(expected.size, references.size)
+        for ((patch, saved) in references.zip(expected)) {
+            assertEquals(saved.first, patch.voice)
+            assertEquals(saved.second, patch.name)
+            assertEquals(mapOf("TUNE" to .5f, "CREASE" to .5f, "FOLD" to saved.third.first,
+                "TURN" to .5f, "WARP" to .5f, "MOTION" to saved.third.second), patch.macros)
+            assertEquals(4, patch.model)
+            assertEquals(20261012L, patch.seed)
+            assertEquals(.85f, patch.velocity)
+            assertNull(patch.midi)
+            assertEquals(OrigamiGesture.STEADY, patch.gesture)
+            assertEquals(OrigamiExpression.LEVEL, patch.expression)
+            assertFalse("gesture" in patch.toJsonValue().entries, "${patch.name} changed its old recipe")
+            assertFalse("expression" in patch.toJsonValue().entries, "${patch.name} changed its old recipe")
+        }
     }
 
     @Test

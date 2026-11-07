@@ -1,0 +1,524 @@
+{
+  "status": "Python one-axis TINE options; no Kotlin or listening claim",
+  "root_midi": 48,
+  "root_hz": 130.8127826502993,
+  "velocity": 0.75,
+  "output_rate": 44100,
+  "internal_rate": 176400,
+  "mechanics_preroll_seconds": 4.0,
+  "acoustic_preroll_seconds": 0.0,
+  "excitation_seconds": 8.0,
+  "option_release_seconds": 2.2,
+  "reference_release_seconds": 0.9,
+  "reference_total_seconds": 8.9,
+  "reference_cycles_per_second": 2.0,
+  "model_seed": 20261022,
+  "upper_ratio_policy": "Approved original5.96 retained in every option",
+  "matching": "One constant gain per option, matching RMS over active0..8s to approved PCM; no tail-inclusive matching, no limiter",
+  "target_active_rms": 0.11070362093232501,
+  "event_history_sha256": "7619f5803cb89a4837a07e0b7dfb764e67ade86e314e281786ee221c601e2770",
+  "event_count": 528,
+  "reference_pcm_sha256": "ba53279ebef12b44608998a18eb0a62337495e64e886c5b7c1bc291d95498623",
+  "reference_file_sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951",
+  "reference_copy_file_sha256": "b4ee77fef2d948def9a35d26700f98967a9016f6c659a8821a5ee1f67fd8b951",
+  "changes": {
+    "soft_attack": "Contact width .72\u21923.2ms only; opposite-direction width remains1.12x",
+    "bright_edge": "Tongue upper gains .38/.20/.60\u2192.85/.50/1.50 only; root gain unchanged",
+    "long_ring": "All tongue/body t60s multiplied3; all frequencies/gains/contact widths unchanged"
+  },
+  "limitations": [
+    "Approximate Python house filters and RMS proxy, not perceived-loudness or Kotlin validation",
+    "Reference is an untouched8.9s PCM copy; new options include2.2s release and total10.2s",
+    "Root centers remain exact C3 but active short-window pitch excursions remain reported",
+    "Longer ring can obscure individual timing; no fast AGC compensates this",
+    "One curated trajectory and register; no HOLD or broad note/velocity grid"
+  ],
+  "renders": {
+    "reference": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "event_count": 528,
+      "event_history_sha256": "7619f5803cb89a4837a07e0b7dfb764e67ade86e314e281786ee221c601e2770",
+      "file": "reference.wav",
+      "seconds": 8.9,
+      "finite": true,
+      "peak": 0.527099609375,
+      "dc": -5.457381776446533e-06,
+      "active_rms": 0.11070362093232501,
+      "whole_file_rms": 0.10498562900561252,
+      "active_spectral_centroid_hz": 178.22599437484766,
+      "active_root_band_energy_share": 0.7757266424917826,
+      "active_upper_energy_share": 0.12843182773861248,
+      "active_upper_to_root_db": -7.8103604450585244,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.79874665843312,
+          "cents": -13.472485275672959,
+          "confidence": 0.8810640792192841
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.07574590996614,
+          "cents": 3.476678450102467,
+          "confidence": 0.9070235981156172
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.24664804348353,
+          "cents": -7.508735014946646,
+          "confidence": 0.948511653934343
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.1201855144263,
+          "cents": -9.190487260114459,
+          "confidence": 0.9004484258709117
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.64380912705553,
+          "cents": -15.54025061104551,
+          "confidence": 0.9527661660156199
+        },
+        {
+          "start_s": 5.5,
+          "hz": 129.89777064459707,
+          "cents": -12.152223405315809,
+          "confidence": 0.8793406104560619
+        },
+        {
+          "start_s": 6.75,
+          "hz": 129.8927579862623,
+          "cents": -12.219031728408321,
+          "confidence": 0.8602014259936869
+        },
+        {
+          "start_s": 7.25,
+          "hz": 130.23742238274437,
+          "cents": -7.631366529244733,
+          "confidence": 0.6853087402674453
+        }
+      ],
+      "tail_first_500ms_rms": 0.010324669323913746,
+      "tail_500_to_900ms_rms": 0.00015452361647863726,
+      "tail_last_100ms_rms": 1.4297774688719358e-05,
+      "release_above_minus40db_s": 0.25,
+      "release_minus40db_reference": "maximum10ms RMS over active8s; finite captured tail only"
+    },
+    "soft_attack": {
+      "config": {
+        "width_ms": 3.2,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.38,
+            0.4
+          ],
+          [
+            3.0,
+            0.2,
+            0.24
+          ],
+          [
+            5.96,
+            0.6,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "file": "soft_attack.wav",
+      "raw_peak": 0.34092089455963287,
+      "normalization_gain": 1.5748622227331905,
+      "event_count": 528,
+      "event_history_sha256": "7619f5803cb89a4837a07e0b7dfb764e67ade86e314e281786ee221c601e2770",
+      "max_pole_radius": 0.9999528205540145,
+      "seconds": 10.2,
+      "finite": true,
+      "peak": 0.530517578125,
+      "dc": -4.992841863307823e-06,
+      "active_rms": 0.11068838283053818,
+      "whole_file_rms": 0.09804829561433158,
+      "active_spectral_centroid_hz": 132.0520676728548,
+      "active_root_band_energy_share": 0.858121848501613,
+      "active_upper_energy_share": 0.030609664245281307,
+      "active_upper_to_root_db": -14.476903937286124,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.1014836538526,
+          "cents": -22.79753200691671,
+          "confidence": 0.8774217521784999
+        },
+        {
+          "start_s": 1.5,
+          "hz": 131.25188340433115,
+          "cents": 5.801521427443853,
+          "confidence": 0.9164378947521832
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.57960896509425,
+          "cents": -3.0886769714566222,
+          "confidence": 0.955558162475373
+        },
+        {
+          "start_s": 3.5,
+          "hz": 129.6221241236476,
+          "cents": -15.829851453476067,
+          "confidence": 0.895366335886213
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.31170653089498,
+          "cents": -19.98076338411261,
+          "confidence": 0.9542279085736074
+        },
+        {
+          "start_s": 5.5,
+          "hz": 127.79245024489609,
+          "cents": -40.441100225469704,
+          "confidence": 0.8736418721740941
+        },
+        {
+          "start_s": 6.75,
+          "hz": 131.79026071610048,
+          "cents": 12.8882826610842,
+          "confidence": 0.8523379381173102
+        },
+        {
+          "start_s": 7.25,
+          "hz": 131.84385827389818,
+          "cents": 13.592212172484771,
+          "confidence": 0.5942761433793613
+        }
+      ],
+      "tail_first_500ms_rms": 0.009167724357063043,
+      "tail_500_to_900ms_rms": 0.00014185614938991688,
+      "tail_last_100ms_rms": 0.0,
+      "release_above_minus40db_s": 0.24,
+      "release_minus40db_reference": "maximum10ms RMS over active8s; finite captured tail only"
+    },
+    "bright_edge": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            0.83
+          ],
+          [
+            2.0,
+            0.85,
+            0.4
+          ],
+          [
+            3.0,
+            0.5,
+            0.24
+          ],
+          [
+            5.96,
+            1.5,
+            0.26
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            0.62
+          ],
+          [
+            1.5,
+            0.035,
+            0.28
+          ],
+          [
+            2.42,
+            0.025,
+            0.17
+          ],
+          [
+            3.24,
+            0.012,
+            0.11
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "file": "bright_edge.wav",
+      "raw_peak": 0.6207655928966229,
+      "normalization_gain": 1.0350618622512273,
+      "event_count": 528,
+      "event_history_sha256": "7619f5803cb89a4837a07e0b7dfb764e67ade86e314e281786ee221c601e2770",
+      "max_pole_radius": 0.9999528205540145,
+      "seconds": 10.2,
+      "finite": true,
+      "peak": 0.668701171875,
+      "dc": -4.2384846733832425e-06,
+      "active_rms": 0.11068896895141919,
+      "whole_file_rms": 0.09805199669804253,
+      "active_spectral_centroid_hz": 313.1274251079618,
+      "active_root_band_energy_share": 0.479514117908393,
+      "active_upper_energy_share": 0.44926497339074206,
+      "active_upper_to_root_db": -0.2829883777488184,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 129.963532101192,
+          "cents": -11.275998480706283,
+          "confidence": 0.8559498874234784
+        },
+        {
+          "start_s": 1.5,
+          "hz": 130.76560887908175,
+          "cents": -0.624431088230351,
+          "confidence": 0.8529161755069293
+        },
+        {
+          "start_s": 2.75,
+          "hz": 129.936829985288,
+          "cents": -11.631731824258688,
+          "confidence": 0.9131080562189311
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.13068064054042,
+          "cents": -9.050856449609938,
+          "confidence": 0.8782568120704852
+        },
+        {
+          "start_s": 4.75,
+          "hz": 129.7396524829432,
+          "cents": -14.260853014828665,
+          "confidence": 0.9263638078992257
+        },
+        {
+          "start_s": 5.5,
+          "hz": 130.07714672437714,
+          "cents": -9.76320811625974,
+          "confidence": 0.8638013352448355
+        },
+        {
+          "start_s": 6.75,
+          "hz": 129.42543123700267,
+          "cents": -18.458878294008162,
+          "confidence": 0.8502256376386453
+        },
+        {
+          "start_s": 7.25,
+          "hz": 129.75387837713586,
+          "cents": -14.07103439123691,
+          "confidence": 0.743033739810706
+        }
+      ],
+      "tail_first_500ms_rms": 0.00983778454233688,
+      "tail_500_to_900ms_rms": 0.00011825235047143823,
+      "tail_last_100ms_rms": 0.0,
+      "release_above_minus40db_s": 0.23,
+      "release_minus40db_reference": "maximum10ms RMS over active8s; finite captured tail only"
+    },
+    "long_ring": {
+      "config": {
+        "width_ms": 0.72,
+        "tongue": [
+          [
+            1.0,
+            1.0,
+            2.4899999999999998
+          ],
+          [
+            2.0,
+            0.38,
+            1.2000000000000002
+          ],
+          [
+            3.0,
+            0.2,
+            0.72
+          ],
+          [
+            5.96,
+            0.6,
+            0.78
+          ]
+        ],
+        "body": [
+          [
+            1.0,
+            0.14,
+            1.8599999999999999
+          ],
+          [
+            1.5,
+            0.035,
+            0.8400000000000001
+          ],
+          [
+            2.42,
+            0.025,
+            0.51
+          ],
+          [
+            3.24,
+            0.012,
+            0.33
+          ]
+        ],
+        "body_gain": 0.32,
+        "brush": 0.0
+      },
+      "file": "long_ring.wav",
+      "raw_peak": 0.6516763823398993,
+      "normalization_gain": 0.77255005021339,
+      "event_count": 528,
+      "event_history_sha256": "7619f5803cb89a4837a07e0b7dfb764e67ade86e314e281786ee221c601e2770",
+      "max_pole_radius": 0.9999842732706761,
+      "seconds": 10.2,
+      "finite": true,
+      "peak": 0.473724365234375,
+      "dc": -2.539942843456827e-06,
+      "active_rms": 0.11068823007870315,
+      "whole_file_rms": 0.09854915446707807,
+      "active_spectral_centroid_hz": 181.2111168828734,
+      "active_root_band_energy_share": 0.8336832289885611,
+      "active_upper_energy_share": 0.1330296014565744,
+      "active_upper_to_root_db": -7.970527750031204,
+      "pitch_windows": [
+        {
+          "start_s": 0.75,
+          "hz": 130.2661419040281,
+          "cents": -7.249642667178972,
+          "confidence": 0.9762043513684285
+        },
+        {
+          "start_s": 1.5,
+          "hz": 130.52378834697672,
+          "cents": -3.8289090572293114,
+          "confidence": 0.9684264351549206
+        },
+        {
+          "start_s": 2.75,
+          "hz": 130.31996624040866,
+          "cents": -6.534466207473212,
+          "confidence": 0.9854237227133908
+        },
+        {
+          "start_s": 3.5,
+          "hz": 130.24714274206613,
+          "cents": -7.50215951057373,
+          "confidence": 0.9385209000244334
+        },
+        {
+          "start_s": 4.75,
+          "hz": 130.11813741697276,
+          "cents": -9.217737174789058,
+          "confidence": 0.9887907241618019
+        },
+        {
+          "start_s": 5.5,
+          "hz": 129.96857650655767,
+          "cents": -11.208803655301898,
+          "confidence": 0.9187600198838616
+        },
+        {
+          "start_s": 6.75,
+          "hz": 129.8793417312324,
+          "cents": -12.397855224577857,
+          "confidence": 0.9207410665980335
+        },
+        {
+          "start_s": 7.25,
+          "hz": 130.19225478125145,
+          "cents": -8.231879429731274,
+          "confidence": 0.8637734858379768
+        }
+      ],
+      "tail_first_500ms_rms": 0.044425113950375766,
+      "tail_500_to_900ms_rms": 0.01156819508248282,
+      "tail_last_100ms_rms": 0.00016998364999504565,
+      "release_above_minus40db_s": 1.16,
+      "release_minus40db_reference": "maximum10ms RMS over active8s; finite captured tail only"
+    }
+  },
+  "wall_seconds_python": 4.417621384
+}

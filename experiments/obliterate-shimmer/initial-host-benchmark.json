@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "sourceCommit": "a5caac7fd6c8a2e6d09ec740c60fb995c6bef368",
+  "workingTreeDirty": true,
+  "sourceHashes": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Obliterate.kt": "b8192d5344871a147dc9d68f27461e9d5e79bf22ffbb42e47acc31fc5f777885",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateShimmer.kt": "014136150a9e4874ceb6ce0239aee85d87149c7328270519c4e4b6fc41ac75f5",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliterateCore.kt": "e9c5baceb4433677d2ae62e9c9a2a7610b318fd9a4348af8d9ba5d918f2cb3a3",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObliteratePcg64.kt": "c98c3c7123354508d6810fd3879ccf0e2ee90a458ef5b1ecfa404ef4887949a9",
+    "experiments/obliterate-shimmer/ShimmerPortRenderer.kt": "77ee6c7ab662e9d576fc5bbfb14d1ec19c650fc3713339bf5b9abe993b99e23a",
+    "experiments/obliterate-shimmer/shimmer-port.init.gradle": "802a693bd51cd541c6ad21ce61c3c374e6cd52d86849f8077fa19b01d458146f"
+  },
+  "referenceSha256": "4fc0787bfee09518b6c5457ca8890e6045e72d51be1371d727e0323971a29543",
+  "benchmark": {
+    "meaning": "Warm host JVM public calls, not Android or phone performance; GC and host load uncontrolled",
+    "javaVersion": "17.0.20.1",
+    "availableProcessors": 4,
+    "cases": [
+      {
+        "sourceId": "snare",
+        "shimmerMix": 0.15,
+        "coreAmount": 0.7,
+        "inputFrames": 14709,
+        "trials": 7,
+        "warmups": 3,
+        "shimmerMs": [
+          40.560619,
+          41.605482,
+          37.049861,
+          40.803007,
+          47.420122,
+          40.256348,
+          42.586441
+        ],
+        "shimmerMedianMs": 40.803007,
+        "wholeChainMs": [
+          268.834348,
+          261.830528,
+          280.112149,
+          257.947237,
+          264.919724,
+          260.500656,
+          258.062481
+        ],
+        "wholeChainMedianMs": 261.830528
+      },
+      {
+        "sourceId": "percussion",
+        "shimmerMix": 0.15,
+        "coreAmount": 0.35,
+        "inputFrames": 88200,
+        "trials": 7,
+        "warmups": 3,
+        "shimmerMs": [
+          64.087629,
+          53.650806,
+          65.553035,
+          62.417453,
+          65.542051,
+          58.627142,
+          62.089109
+        ],
+        "shimmerMedianMs": 62.417453,
+        "wholeChainMs": [
+          443.671701,
+          440.952923,
+          441.19113,
+          438.207198,
+          436.378561,
+          435.241569,
+          425.579371
+        ],
+        "wholeChainMedianMs": 438.207198
+      },
+      {
+        "sourceId": "pluck",
+        "shimmerMix": 0.15,
+        "coreAmount": 0.35,
+        "inputFrames": 88200,
+        "trials": 7,
+        "warmups": 3,
+        "shimmerMs": [
+          108.047951,
+          51.12733,
+          51.029673,
+          48.645014,
+          49.133896,
+          49.428589,
+          55.384559
+        ],
+        "shimmerMedianMs": 51.029673,
+        "wholeChainMs": [
+          425.724539,
+          426.431551,
+          432.412086,
+          421.502201,
+          420.897047,
+          426.930819,
+          417.914935
+        ],
+        "wholeChainMedianMs": 425.724539
+      },
+      {
+        "sourceId": "bass",
+        "shimmerMix": 0.15,
+        "coreAmount": 0.35,
+        "inputFrames": 46450,
+        "trials": 7,
+        "warmups": 3,
+        "shimmerMs": [
+          43.531131,
+          45.275172,
+          43.736803,
+          40.440532,
+          44.44406,
+          43.492755,
+          42.058688
+        ],
+        "shimmerMedianMs": 43.531131,
+        "wholeChainMs": [
+          336.886033,
+          332.361112,
+          328.493823,
+          324.964294,
+          324.781367,
+          327.602046,
+          332.105921
+        ],
+        "wholeChainMedianMs": 328.493823
+      }
+    ]
+  },
+  "scope": "Initial focused verification run, before the full JVM regression. The port was uncommitted; source hashes identify the measured code. Final clean-checkout results are generated separately."
+}

@@ -2,8 +2,10 @@ package com.snipsnap.synth
 
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -603,6 +605,41 @@ internal object Modes {
                 kick[j] += k[e] * q[i]
             }
             for (i in 0 until size) im[i] -= kick[i] * dt
+        }
+
+        /** Exact free rotation over a gap, for sparse offline excitation of an uncoupled bank. */
+        internal fun advanceUncoupled(frames: Int) {
+            require(frames >= 0 && edges == 0) { "free advance needs a nonnegative gap and no springs" }
+            check(untuned == 0)
+            for (i in 0 until size) {
+                val angle = atan2(sr[i], cr[i]) * frames
+                val radius = hypot(cr[i], sr[i]).pow(frames)
+                val c = radius * cos(angle); val s = radius * sin(angle)
+                val old = re[i]
+                re[i] = c * old - s * im[i]
+                im[i] = s * old + c * im[i]
+            }
+        }
+
+        /**
+         * After accumulating one forced cycle from rest, solve z0 = A^L z0 + g.
+         * This sets the steady starting state without rendering many silent preroll
+         * cycles. Callers still verify a separately advanced preceding cycle.
+         * Springs are refused because their split propagator is not diagonal.
+         */
+        internal fun closeUncoupledCycle(frames: Int) {
+            require(frames > 0 && edges == 0) { "periodic closure needs a positive cycle and no springs" }
+            check(untuned == 0)
+            for (i in 0 until size) {
+                val angle = atan2(sr[i], cr[i]) * frames
+                val radius = hypot(cr[i], sr[i]).pow(frames)
+                val a = 1.0 - radius * cos(angle)
+                val b = -radius * sin(angle)
+                val denominator = a * a + b * b
+                val old = re[i]
+                re[i] = (old * a + im[i] * b) / denominator
+                im[i] = (im[i] * a - old * b) / denominator
+            }
         }
 
         /** Applies [force] through the participation vector [b] for one sample: `v_i += b_i·force·T`. */

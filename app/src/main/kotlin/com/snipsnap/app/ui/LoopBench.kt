@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -42,6 +43,8 @@ import com.snipsnap.app.LoopWrites
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.KitSampleSource
@@ -51,6 +54,7 @@ import com.snipsnap.loop.SampleSource
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
+import com.snipsnap.loop.Track
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneSource
 import com.snipsnap.shell.Layout
@@ -64,16 +68,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/**
- * How long a run of tempo taps has to stop before the change is baked and
- * applied.
- *
- * `OrbitScreen.BPM_SETTLE_MS` is the same idea for the same reason; this one
- * is its own because the two screens' costs differ — a grid re-fits every
- * snip on the change, which is why it is worth waiting for the taps to end.
- */
-private const val TEMPO_SETTLE_MS = 350L
 
 /**
  * How long BOUNCE will wait for `LoopEngine` to actually adopt a tempo it
@@ -90,6 +84,26 @@ private const val TEMPO_SETTLE_MS = 350L
 private const val BOUNCE_SYNC_TIMEOUT_MS = 8_000L
 
 /**
+ * LOOP taking a new project tempo: bake the next two intervals on the baker
+ * pool before the engine is handed it (a new BPM resizes the interval, and
+ * without this `buffersFor` would bake six blocks on the audio thread — see
+ * `Residency.warm`), then apply. [current] is read live both times, never a
+ * snapshot taken before the wait: a mute or a clear made while `warm` runs
+ * (it can take up to `Residency.WARM_TIMEOUT_MS`) is already in `session`,
+ * and applying an older copy would silently undo it. Only the tempo is carried
+ * forward, refit so a drone re-slices to the span it needs to keep its tuning
+ * promise there.
+ */
+private suspend fun followProjectTempo(rig: LoopRig, tempo: Float, current: () -> Session?, onApplied: (Session) -> Unit) {
+    val toWarm = DroneFit.refit((current() ?: return).copy(bpm = tempo))
+    val at = rig.engine?.position() ?: 0
+    withContext(Dispatchers.IO) { rig.residency?.warm(toWarm, at + 1, at + 2) }
+    val toApply = DroneFit.refit((current() ?: return).copy(bpm = tempo))
+    rig.engine?.apply(toApply)
+    onApplied(toApply)
+}
+
+/**
  * What the grid was loaded from, read once when the bench is entered.
  *
  * [loaded] is null for two different reasons that must not read the same on
@@ -98,14 +112,17 @@ private const val BOUNCE_SYNC_TIMEOUT_MS = 8_000L
  */
 private class LoopBoot(val dir: File, val loaded: Session?, val emptyLine: String)
 
-private fun loadBoot(context: Context): LoopBoot {
+private fun loadBoot(context: Context, tempo: Float): LoopBoot {
     val dir = LoopWrites.dir(context)
     val rate = deviceSampleRate(context)
 
     // Bake at the device's rate, not the MPC's: nothing converts in the
     // callback because nothing needs to.
     val loaded = runCatching { SessionStore.load(dir) }.getOrNull()
-        ?.copy(sampleRate = rate)
+        // The project's tempo, before the player starts: the file's own bpm
+        // is only what it was last written at, and a first interval baked
+        // at that would play at the wrong tempo until the next one.
+        ?.copy(sampleRate = rate, bpm = tempo)
         // A drone's span depends on the interval in frames, and the rate
         // just changed under it: re-slice so the tuning promise holds
         // here too (see DroneFit.refit).
@@ -268,6 +285,14 @@ fun LoopBench(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onGoToSnips: () -> Unit,
+    /**
+     * The project's tempo (set from BEAT, the 2026-11-06 ruling), already held
+     * to [Session.MIN_BPM]..[Session.MAX_BPM]. The session on disk keeps the
+     * bpm it was last written with, but it is not the authority: this is
+     * copied in before the player starts, and a change while the bench is
+     * open re-bakes the grid to it.
+     */
+    tempo: Float,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -276,7 +301,7 @@ fun LoopBench(
 
     BackHandler(onBack = onBack)
 
-    val boot = remember { loadBoot(context) }
+    val boot = remember { loadBoot(context, tempo) }
     val rig = remember { LoopRig(boot.dir) }
 
     DisposableEffect(rig) {
@@ -322,10 +347,9 @@ fun LoopBench(
      * The toast reports the write, not the intent — a clear that could not be
      * saved is a clear that comes back on the next launch, and the player has
      * to be told that rather than shown a grid that disagrees with the disk.
-     * [failed] is the caller's own edit, worded for its own noun: a tempo
-     * that did not save is not a track coming back, and a toast that
-     * describes the wrong action sends the player looking for the wrong
-     * thing.
+     * [failed] is the caller's own edit, worded for its own noun: a toast
+     * that describes the wrong action sends the player looking for the
+     * wrong thing.
      */
     fun persist(
         session: Session,
@@ -343,15 +367,10 @@ fun LoopBench(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
-        }
-
         // remember, or every recomposition resets the session to what was
         // loaded from disk and throws away the mutes the user just tapped.
+        // Declared above the header row because the UNDO chip in it acts on
+        // them.
         var session by remember { mutableStateOf(boot.loaded) }
         // What the sidecar says, as opposed to what this screen is
         // currently doing — they differ by exactly the mutes below, which
@@ -359,18 +378,100 @@ fun LoopBench(
         // one, so clearing a track does not also quietly save the mutes
         // tapped beside it.
         var onDisk by remember { mutableStateOf(boot.loaded) }
-        var interval by remember { mutableIntStateOf(0) }
+        // The last clear, held in memory for as long as UNDO is offered.
+        // One level and per visit, by design: `remember` (not a saveable)
+        // so it dies with the bench; a second clear replaces it; using it
+        // clears it. A clear is written to disk at once, so this is the only
+        // place the track still exists as an arrangement.
+        var undo by remember { mutableStateOf<ClearUndo?>(null) }
         val scope = rememberCoroutineScope()
-        // A run of taps on − or + is one tempo change, not eight: each tap
-        // moves the number on screen at once and restarts this, so the
-        // bake-and-apply happens once, when the player stops. ORBIT's own
-        // BPM control settles the same way and for the same reason.
+
+        // Drawn as ORBIT's and SONG's headers are: the LCD panel, the back chip,
+        // the bench's name in the LCD's 21-point type. LOOP was the one BEAT
+        // bench with no title. The title sits straight after BACK and the
+        // UNDO chip at the far end, because UNDO CLEAR <NAME> can run to
+        // twenty-odd characters and would not leave room to centre it.
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
+            TapeText(Copy.LOOP_TITLE, TapeType.lcd(21), scheme.lcdInk.tape, Modifier.padding(start = 2.dp))
+            Spacer(Modifier.weight(1f))
+            undo?.let { u ->
+                HeaderChip(
+                    label = u.label,
+                    scheme = scheme,
+                    onClick = {
+                        // Taken first so a double tap cannot restore twice.
+                        undo = null
+                        scope.launch {
+                            // Only the track's blocks go back, into whatever
+                            // the grid and the file are NOW: a tempo change
+                            // made since the clear (or still settling) is
+                            // kept, which a swap back to the old whole
+                            // session would lose. The refit re-slices a
+                            // restored drone for that tempo.
+                            val live = session ?: return@launch
+                            val restored = DroneFit.refit(SessionBuilder.restoreTrack(live, u.index, u.onScreen))
+                            // Warm before apply: the clear left the engine
+                            // holding no bake of these blocks (Residency.update
+                            // drops what the session no longer names), so
+                            // applying cold would decode and resample them
+                            // on the audio thread at the next boundary.
+                            val at = rig.engine?.position() ?: 0
+                            withContext(Dispatchers.IO) { rig.residency?.warm(restored, at + 1, at + 2) }
+                            // Live AGAIN after the wait: a mute or tempo tap
+                            // landing during the warm must not be undone by
+                            // applying `restored`.
+                            val toApply = DroneFit.refit(
+                                SessionBuilder.restoreTrack(session ?: restored, u.index, u.onScreen),
+                            )
+                            rig.engine?.apply(toApply)
+                            session = toApply
+                            val written = DroneFit.refit(
+                                SessionBuilder.restoreTrack(onDisk ?: toApply, u.index, u.onDisk),
+                            )
+                            onDisk = written
+                            persist(written, Copy.LOOP_CLEAR_UNDONE, Copy.LOOP_UNDO_NOT_SAVED)
+                        }
+                    },
+                )
+            }
+        }
+
+        var interval by remember { mutableIntStateOf(0) }
+        // The re-bake that follows a change of the project's tempo, so BOUNCE
+        // can wait for it (see its join below). A newer change replaces it.
         var tempoSettle by remember { mutableStateOf<Job?>(null) }
         // Read from the app, not held here: a render outlives this bench,
         // so opening LOOP again while one is still going has to show
         // BOUNCING… too. `LoopBounce.start` flips this before it returns,
         // so the button changes on the tap rather than a frame later.
         val bouncing by LoopBounce.busy.collectAsState()
+
+        // The project's tempo moved while LOOP is open (BEAT's BPM control,
+        // reached through the bench stack): the readout moves now and the
+        // grid re-bakes to it, the way LOOP's own tempo taps used to. On entry
+        // `loadBoot` has already copied it in, so this finds nothing to do.
+        LaunchedEffect(tempo) {
+            val now = session ?: return@LaunchedEffect
+            if (now.bpm == tempo) return@LaunchedEffect
+            session = now.copy(bpm = tempo)
+            tempoSettle?.cancel()
+            tempoSettle = scope.launch {
+                followProjectTempo(rig, tempo, { session }) { applied ->
+                    // The screen holds the refit too, or the next mute (built
+                    // from `session`) would hand the engine the drone's old
+                    // span back. The disk-backed copy carries the tempo as
+                    // well, so the next edit writes it, but a follow is not an
+                    // edit and writes nothing itself.
+                    session = applied
+                    onDisk = onDisk?.let { DroneFit.refit(it.copy(bpm = tempo)) }
+                }
+            }
+        }
 
         val s = session
         if (s == null) {
@@ -404,68 +505,32 @@ fun LoopBench(
                     // one is written.
                 },
                 onClearTrack = { t ->
-                    val next = SessionBuilder.clear(s, t)
+                    // Read live, not the `s` this lambda closed over, so a
+                    // tempo settling in between is not lost by the clear.
+                    val before = session ?: s
+                    val beforeDisk = onDisk ?: before
+                    // Keep what is about to go, for both copies: the
+                    // on-screen track carries this run's mute, the disk one
+                    // does not, and UNDO has to put each back where it was.
+                    before.tracks.getOrNull(t)?.takeUnless(SessionBuilder::isEmpty)?.let { gone ->
+                        undo = ClearUndo(t, gone, beforeDisk.tracks.getOrNull(t) ?: gone)
+                    }
+                    val next = SessionBuilder.clear(before, t)
                     session = next
                     rig.engine?.apply(next)
                     // Written from the disk-backed copy, not from `next`:
                     // `next` carries this run's mutes, and the whole point
                     // of not saving a mute is not saving it here either.
-                    val written = SessionBuilder.clear(onDisk ?: next, t)
+                    val written = SessionBuilder.clear(beforeDisk, t)
                     onDisk = written
                     persist(written)
-                },
-                onBpm = { step ->
-                    val targetBpm = (s.bpm + step).coerceIn(Session.MIN_BPM, Session.MAX_BPM)
-                    // The readout moves now; the audio moves when the
-                    // taps stop.
-                    session = s.copy(bpm = targetBpm)
-                    tempoSettle?.cancel()
-                    tempoSettle = scope.launch {
-                        delay(TEMPO_SETTLE_MS)
-                        // Read live, not the snapshot the tap closed
-                        // over: a mute or a clear tapped during the
-                        // settle window has already updated `session`
-                        // (and, for a clear, the engine and the disk),
-                        // and applying the stale snapshot here would
-                        // silently undo it. Only the tempo is ours to
-                        // carry forward — everything else comes from
-                        // whatever the grid is showing right now.
-                        // Refit, so a drone re-slices to the span this
-                        // tempo needs to stay within its tuning promise.
-                        val toWarm = DroneFit.refit((session ?: s).copy(bpm = targetBpm))
-                        // Baked BEFORE it is applied, on the baker pool:
-                        // a new BPM resizes the interval, and without this
-                        // the engine's next buffersFor would bake six
-                        // blocks on the audio thread. See Residency.warm.
-                        val at = rig.engine?.position() ?: 0
-                        withContext(Dispatchers.IO) { rig.residency?.warm(toWarm, at + 1, at + 2) }
-                        // Read live AGAIN, not `toWarm`: warm itself can
-                        // now take up to Residency.WARM_TIMEOUT_MS, and a
-                        // mute or clear landing during THAT wait would be
-                        // the same silent-undo bug one re-read up already
-                        // fixed for the shorter settle delay — applying
-                        // `toWarm` here would just move the race, not
-                        // close it.
-                        val toApply = DroneFit.refit((session ?: s).copy(bpm = targetBpm))
-                        rig.engine?.apply(toApply)
-                        // The screen holds the refit too, or the next
-                        // mute (built from `session`) would hand the
-                        // engine the drone's old span back.
-                        session = toApply
-                        // A tempo is an edit, so it is written — from the
-                        // disk-backed copy, so this does not also save the
-                        // mutes tapped beside it.
-                        val written = DroneFit.refit((onDisk ?: toApply).copy(bpm = targetBpm))
-                        onDisk = written
-                        persist(written, Copy.LOOP_TEMPO_SET, Copy.LOOP_TEMPO_NOT_SAVED)
-                    }
                 },
                 bouncing = bouncing,
                 onBounce = {
                     scope.launch {
-                        // If a tempo tap is still settling, its bpm is on
+                        // If the project's tempo has just changed, its bpm is on
                         // screen already but the engine has not caught up
-                        // yet (see TEMPO_SETTLE_MS) — bouncing `s` as-is
+                        // yet (see the re-bake above) — bouncing `s` as-is
                         // here would render a tempo the speaker is not
                         // actually playing, breaking the promise below.
                         // Joining forces that change to land first; a
@@ -488,7 +553,7 @@ fun LoopBench(
                         // than the `s` this lambda closed over: a mute
                         // tapped mid-render must not change what is being
                         // rendered half way through, but the join above
-                        // can itself take up to TEMPO_SETTLE_MS, and `s`
+                        // can itself take as long as the re-bake, and `s`
                         // would not see an edit made during that wait.
                         // What is heard is what is bounced, as of now.
                         val target = session ?: s
@@ -515,6 +580,22 @@ fun LoopBench(
     }
 }
 
+/**
+ * The track the last clear took, as both copies held it. [onScreen] has this
+ * run's mute state; [onDisk] is what the sidecar said. Per visit: see the
+ * `undo` state in [LoopBench].
+ */
+private class ClearUndo(val index: Int, val onScreen: Track, val onDisk: Track) {
+    /** UNDO CLEAR <NAME>, the name as the grid's header prints it, cut short so the chip cannot crowd BACK off the row. */
+    val label: String = run {
+        val name = onScreen.name.uppercase()
+        val shown = if (name.length > MAX_NAME) name.take(MAX_NAME - 1) + "\u2026" else name
+        "${Copy.LOOP_UNDO_CLEAR} $shown"
+    }
+
+    private companion object { const val MAX_NAME = 12 }
+}
+
 /** Duplicated from `BinScreen.kt`'s own private `HeaderChip` rather than exported — every screen-local button in this codebase stays private to its own file, per that file's own stated convention. */
 @Composable
 private fun HeaderChip(
@@ -527,7 +608,7 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
@@ -535,6 +616,6 @@ private fun HeaderChip(
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }

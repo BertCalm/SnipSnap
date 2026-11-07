@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#efece3">
+  <meta name="description" content="Compare CHAMBER's current control ranges with wider extremes. The accepted default sound stays unchanged.">
+  <title>CHAMBER / Wider extremes</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#listen">Skip to listening</a>
+  <header class="top wrap"><a class="brand" href="../index.html">SNIPSNAP <span>/ CHAMBER</span></a><a href="../index.html">Full audition <span aria-hidden="true">↗</span></a></header>
+  <main>
+    <section class="intro wrap">
+      <p class="eyebrow">THE NEXT LISTEN / WIDER EXTREMES</p>
+      <h1>Take the controls<br><em>further.</em></h1>
+      <div class="intro-row"><p class="lead">The same quartet, with more contrast at the ends of each control. Compare the current range with the wider candidate, one change at a time.</p><p class="small">The accepted defaults stay identical. The current factory sounds and MPC kit remain available in the <a href="../index.html">full audition</a>.</p></div>
+      <div class="facts"><span>2 room voices</span><span>5 controls</span><span>20 wider endpoints</span><span>Same note, velocity and seed</span></div>
+    </section>
+    <div id="error" class="error wrap" role="alert" hidden></div>
+    <section class="bench wrap" id="listen" aria-labelledby="listen-title">
+      <div class="section-title"><p class="eyebrow">01 / CHOOSE A CONTROL</p><h2 id="listen-title">How far is useful?</h2></div>
+      <div class="selectors"><div><span class="label" id="voice-label">ROOM</span><div id="voices" class="button-row" role="group" aria-labelledby="voice-label"><button type="button" data-voice="HYBRID" aria-pressed="true">HYBRID</button><button type="button" data-voice="AQUARIUM" aria-pressed="false">AQUARIUM</button></div></div><div><span class="label" id="level-label">LISTENING LEVEL</span><div class="button-row" role="group" aria-labelledby="level-label"><button type="button" data-mode="matched" aria-pressed="true">Matched</button><button type="button" data-mode="raw" aria-pressed="false">Raw</button></div></div></div>
+      <div id="controls" class="control-tabs" role="group" aria-label="Control to compare"><button type="button" data-control="STRIKE" aria-pressed="false">STRIKE</button><button type="button" data-control="BALANCE" aria-pressed="false">BALANCE</button><button type="button" data-control="MATERIAL" aria-pressed="true">MATERIAL</button><button type="button" data-control="DIVIDE" aria-pressed="false">DIVIDE</button><button type="button" data-control="PLACEMENT" aria-pressed="false">PLACEMENT</button></div>
+      <div class="control-story"><h3 id="control-title">Loading the comparison…</h3><p id="control-story">Preparing the listening study.</p></div>
+      <div id="anchor" class="anchor"></div>
+      <p class="level-note">Matched makes the attacks comparable. Raw keeps the render level. Listen through the decay: the room can change after the hit. Only one clip plays at a time.</p>
+      <div id="endpoints" aria-live="polite"></div>
+    </section>
+    <section class="notes-section"><div class="wrap notes-grid"><div><p class="eyebrow">02 / KEEP WHAT MATTERS</p><h2>Your ears.<br>Your choices.</h2><p>Mark which range you would keep, and add a note to any recording. Your notes stay in this browser.</p><button id="export-notes" class="primary" type="button">Export listening notes ↓</button><p id="note-count" class="small">No notes saved yet.</p><p id="storage-notice" class="small" hidden>Browser storage is unavailable. Export your notes before closing this page.</p></div><div class="evidence"><p class="eyebrow">ON THE BENCH</p><p id="checks">Opening the render checks…</p><p>This is a finite strike and decay. Repeat plays the whole recording again; it does not demonstrate HOLD.</p><p>The wider endpoints are listening candidates. Numerical checks establish bounded behavior and exact replay, not a listening verdict.</p><a href="manifest.json" download>Render manifest ↓</a><a href="checks.json" download>Checks and comparison measurements ↓</a><a href="../index.html">Current audition and MPC kit ↗</a></div></div></section>
+  </main>
+  <footer class="wrap footer"><span>SNIPSNAP / CHAMBER</span><span>Keep the center. Explore the edges.</span></footer>
+  <aside id="transport" class="transport" aria-label="Playback" hidden><div class="wrap transport-inner"><div><span class="eyebrow">NOW PLAYING</span><p id="track-title"></p></div><audio id="audio" controls preload="none" aria-label="Current recording"></audio><div class="transport-actions"><button id="repeat" type="button" aria-pressed="false">Repeat</button><button id="stop" type="button">Stop <span aria-hidden="true">×</span></button></div></div></aside>
+  <p id="audio-status" class="sr-only" role="status" aria-live="polite"></p>
+</body>
+</html>

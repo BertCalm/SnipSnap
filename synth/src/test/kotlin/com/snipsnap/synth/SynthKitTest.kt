@@ -301,6 +301,43 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the keel kit is eight reduce notes up the pentatonic, then six one-shot presets and the two held loops (one UPRIGHT, one BELLY), all dry`() {
+        val kit = SynthKits.keel()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a KEEL render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? KeelPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a KEEL patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: KEEL has no landing chain")
+            patch!!
+        }
+        // Written out, not read back from Keel.drumClassFor: fourteen one-shots under 1.5 s, then the two 3 s loops.
+        for (k in 0 until 14) assertEquals(DrumClass.TONAL, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        for (k in 14 until 16) assertEquals(DrumClass.LOOP, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        // The walk moves the saved root, not TUNE: TUNE spans only plus or minus 12 semitones and the walk reaches 17.
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Keel.defaults(KeelVoice.REDUCE)
+        for (k in 0 until 8) {
+            assertEquals(KeelVoice.REDUCE, patches[k].voice, "pad ${k + 1} is REDUCE")
+            assertEquals("Walk ${k + 1}", patches[k].name, "pad ${k + 1}'s patch name")
+            assertEquals(36 + walk[k], patches[k].midi, "pad ${k + 1} is the ${walk[k]}th semitone above C2")
+            assertEquals(defaults, patches[k].macros, "pad ${k + 1} is at the defaults")
+            assertEquals(.5f, patches[k].macros.getValue("TUNE"), "pad ${k + 1} leaves TUNE at the middle")
+            assertEquals(36 + walk[k], Keel.midiFor(patches[k].voice, patches[k].macros.getValue("TUNE"), patches[k].midi), "pad ${k + 1} sounds the walk's note")
+        }
+        assertEquals(
+            listOf(
+                "UPRIGHT WARM GUT", "UPRIGHT BRIGHT PICK", "BELLY SOFT PILLOW", "BELLY TOOTH MARK",
+                "REDUCE QUICK SINK", "REDUCE LOW HULL",
+                "UPRIGHT BOWED NOTE", "BELLY WARM HUSH",
+            ),
+            patches.drop(8).map { "${it.voice} ${it.name}" },
+        )
+        for (k in 8 until 16) assertEquals(KeelPresets.forVoice(patches[k].voice).first { it.name == patches[k].name }, patches[k], "pad ${k + 1} is the preset itself")
+    }
+
+    @Test
     fun `the flotilla kit is eight ripples up the pentatonic and eight presets, all dry, and exports at 44100`() {
         val kit = SynthKits.flotilla()
         assertEquals(16, kit.size)

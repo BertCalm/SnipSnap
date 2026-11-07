@@ -68,6 +68,7 @@ import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
 import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.PadFeelStore
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
@@ -77,6 +78,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitRobin
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
@@ -86,6 +88,8 @@ import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.KeysMidi
+import com.snipsnap.shell.KitMidi
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiGate
@@ -167,6 +171,11 @@ fun KitScreen(
     onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
+    /** Kit-wide ROUND ROBIN: switch on with the kit's (or default) settings. */
+    onRobinOn: () -> Unit = {},
+    /** Re-deal the kit's followers on new dial settings (also UNDO). */
+    onRobinSet: (KitRobin) -> Unit = {},
+    onRobinOff: () -> Unit = {},
     onTwins: () -> Unit,
     /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
     onBankEmpty: (Int) -> Unit = {},
@@ -262,7 +271,9 @@ fun KitScreen(
     val haptics = LocalHaptics.current
     val host = rememberPadHost(hosts, entry.dir)
     val player = host.engine
-    DisposableEffect(host) { onDispose { host.revertPerformance() } }
+    // Leaving puts the kit's volume back where it was made, so the beat
+    // that may keep playing through this engine is not left turned down.
+    DisposableEffect(host) { onDispose { host.revertPerformance(); player.setMasterGain(1f) } }
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
@@ -438,15 +449,57 @@ fun KitScreen(
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
     var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
-    val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
-        MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
+
+    // MIDI MAP's step, from the footer's button or a control learned to it.
+    fun stepMidiMap() {
+        // Panic before the switch: a held note must release under the map it struck under.
+        panic()
+        midiMap = midiMap.next()
+        // Remembered for every connected hardware controller, not the virtual port.
+        val chosen = midiMap.name
+        val keys = MidiPadMaps.keysToSave(midiDevices)
+        if (keys.isNotEmpty()) {
+            val editor = padMapPrefs.edit()
+            for (k in keys) editor.putString(k, chosen)
+            editor.apply()
+        }
+    }
+
+    // MIDI learn (the footer's LEARN): a knob on the kit's volume, a key,
+    // pad or button on MIDI MAP or PANIC, through `:shell`'s KitMidi.
+    // Learned controls are consumed before MidiPads sees them, so a pad on
+    // PANIC no longer plays a pad too.
+    val learnState = rememberMidiLearn(KitMidi.SCREEN, kinds = KitMidi::kinds) { KitMidi.prefer(it) }
+    var showLearn by remember { mutableStateOf(false) }
+    // The panel shows only while a keyboard is plugged in; when the last one
+    // goes, a learn still waiting is stopped with it, so whatever the next
+    // keyboard sends on connecting cannot be learned unasked.
+    val learnShown = showLearn && midiDevices.isNotEmpty()
+    LaunchedEffect(learnShown) { learnState.showing = learnShown }
+    // A knob learned to VOL: the whole kit, on KEYS' volume law. Not
+    // saved: each visit starts with the kit as it was made.
+    var volume by remember(host) { mutableStateOf(1f) }
+    LaunchedEffect(host, volume) { player.setMasterGain(KeysMidi.gain(volume)) }
+
+    val onMidi by rememberUpdatedState<(MidiWire.Event, String?) -> Unit>({ event, device ->
+        learnState.heard(event)
+        val result = learnState.learn.handle(event, device) { if (it == KitMidi.VOLUME) volume else null }
+        learnState.learned(result.learned, KitMidi::settle)
+        val change = KitMidi.changes(result.actions)
+        change.volume?.let { volume = it }
+        if (change.panic) panic()
+        repeat(change.mapSteps) { stepMidiMap() }
+        if (!result.consumed) {
+            MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
+        }
     })
+
     // The listener outlives a composition; compare against the live map, not a captured one.
     val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event, device?.fingerprint?.key)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) {
                 midiDevices = devices
                 // A controller seen before brings its pad map back. Panic FIRST:
@@ -462,7 +515,11 @@ fun KitScreen(
                 }
             }
             // The cable is out: a gated pad it held would ring until PANIC.
-            override fun onDeviceRemoved() = onPanic()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learnState.learn.releaseAll()
+                onPanic()
+            }
         }
     }
 
@@ -487,6 +544,8 @@ fun KitScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learnState.learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)
@@ -902,23 +961,13 @@ fun KitScreen(
             GroupBox(
                 legend = "THIS KIT",
                 summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),
+                also = Places.THIS_KIT_ALSO,
                 open = thisKitOpen,
                 onToggle = { thisKitOpen = !thisKitOpen },
                 scheme = scheme,
             ) {
+                KitGroupHeading(Places.KIT_BANK_B)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
-                    // followups) - matches TakesBinScreen.kt's own renamed
-                    // header; the destination screen and its Kotlin symbol are
-                    // unchanged, only this entry-point label.
-                    // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
-                    // (name-and-find followups, truncation pass): three equal
-                    // weights on labels of 37/21/5 characters rendered as
-                    // "VERSIONS + BIN …" on a device - the worst truncation in
-                    // the app. "ROLL BACK OR RESTORE" also dropped to
-                    // "RESTORE": RESTORE alone says the same thing the longer
-                    // phrase did.
-                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
                     // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
                     // second press rerolls. REROLL means twins are there — not
                     // merely something on B, which since bank B round 2 can be
@@ -937,6 +986,9 @@ fun KitScreen(
                         modifier = Modifier.weight(2f),
                         onClick = onTwins,
                     )
+                }
+                KitGroupHeading(Places.KIT_WHOLE_SOUND)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
                     // Still the fourth door's shape - a bevel that lights amber
                     // while its panel is open - not an ActionButton.
@@ -959,19 +1011,6 @@ fun KitScreen(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // SPLIT is a screen rather than a panel: three faders, three
-                    // REVERSE buttons and a print want more room than a drawer
-                    // under the grid, and the loop wants to keep playing while
-                    // you work it.
-                    ActionButton(
-                        "SPLIT ▸ SINES · TRANSIENT · AIR",
-                        scheme,
-                        enabled = !busy && kit.pads.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onSplit,
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // DUST ALL: the per-pad DUST chip on every pad at one amount,
                     // from the tape each pad came off (else the kit's), so the
                     // kit shares one room and one floor (docs/DUST.md). Only
@@ -982,32 +1021,6 @@ fun KitScreen(
                         enabled = !busy && DustPrints.kitTape(kit) != null,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onDustAll,
-                    )
-                }
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    // BREED: this kit's own recipes crossed with a second kit's
-                    // into a new child, kept beside this one — the shelf-level
-                    // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
-                    // next, the same shape SNIPS → PAD already uses to pick a
-                    // kit for a snip. The button always opens that picker, so
-                    // its label is constant; the line under it counts the pads
-                    // with a recipe to cross (`Breed.recipePads`), so "0 PADS
-                    // CROSSED" is never the first word of the explanation.
-                    // Still enabled at zero: the other kit's racks can cross
-                    // over this one's audio.
-                    ActionButton(
-                        Copy.BREED_BUTTON,
-                        scheme,
-                        enabled = !busy && kit.pads.isNotEmpty() && canBreed,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onBreed,
-                    )
-                    TapeText(
-                        Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
-                        TapeType.pixelSmall,
-                        scheme.ink2.tape,
-                        Modifier.fillMaxWidth(),
-                        maxLines = 1,
                     )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1053,6 +1066,24 @@ fun KitScreen(
                 // SHARE is OUT's now (plan §3.5): one file out the share sheet
                 // is an output, so it sits with the other outputs.
 
+                KitRobinRow(
+                    robin = kit.robin, kitKey = entry.dir, busy = busy, scheme = scheme,
+                    onOn = onRobinOn, onSet = onRobinSet, onOff = onRobinOff,
+                )
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // SPLIT is a screen rather than a panel: three faders, three
+                    // REVERSE buttons and a print want more room than a drawer
+                    // under the grid, and the loop wants to keep playing while
+                    // you work it.
+                    ActionButton(
+                        "SPLIT ▸ SINES · TRANSIENT · AIR",
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onSplit,
+                    )
+                }
                 if (panelKind == KEY_PANEL) {
                     KeyPanel(
                         key = kit.key,
@@ -1085,6 +1116,47 @@ fun KitScreen(
                             val seed = Random.nextLong(0L, 1_000_000L)
                             onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
                         },
+                    )
+                }
+                KitGroupHeading(Places.KIT_VERSIONS_AND_KITS)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
+                    // followups) - matches TakesBinScreen.kt's own renamed
+                    // header; the destination screen and its Kotlin symbol are
+                    // unchanged, only this entry-point label.
+                    // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
+                    // (name-and-find followups, truncation pass): three equal
+                    // weights on labels of 37/21/5 characters rendered as
+                    // "VERSIONS + BIN …" on a device - the worst truncation in
+                    // the app. "ROLL BACK OR RESTORE" also dropped to
+                    // "RESTORE": RESTORE alone says the same thing the longer
+                    // phrase did.
+                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // BREED: this kit's own recipes crossed with a second kit's
+                    // into a new child, kept beside this one — the shelf-level
+                    // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
+                    // next, the same shape SNIPS → PAD already uses to pick a
+                    // kit for a snip. The button always opens that picker, so
+                    // its label is constant; the line under it counts the pads
+                    // with a recipe to cross (`Breed.recipePads`), so "0 PADS
+                    // CROSSED" is never the first word of the explanation.
+                    // Still enabled at zero: the other kit's racks can cross
+                    // over this one's audio.
+                    ActionButton(
+                        Copy.BREED_BUTTON,
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty() && canBreed,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onBreed,
+                    )
+                    TapeText(
+                        Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
+                        TapeType.pixelSmall,
+                        scheme.ink2.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 1,
                     )
                 }
             }
@@ -1143,25 +1215,23 @@ fun KitScreen(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "MIDI MAP ${midiMap.label}") {
-                                // Panic before the switch: a held note must release under the map it struck under.
-                                panic()
-                                midiMap = midiMap.next()
-                                // Remembered for every connected hardware controller, not the virtual port.
-                                val chosen = midiMap.name
-                                val keys = MidiPadMaps.keysToSave(midiDevices)
-                                if (keys.isNotEmpty()) {
-                                    val editor = padMapPrefs.edit()
-                                    for (k in keys) editor.putString(k, chosen)
-                                    editor.apply()
-                                }
-                            }
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}", onClick = ::stepMidiMap)
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
                     }
+                    KitLearnChip(showLearn) { showLearn = !showLearn }
                 }
+            }
+            if (learnShown) {
+                MidiLearnPanel(
+                    learnState,
+                    KitMidi.TARGETS,
+                    supported = true,
+                    connected = true,
+                    hint = "A LEARNED PAD PLAYS NO SOUND",
+                )
             }
         }
     }
@@ -1193,6 +1263,34 @@ fun KitScreen(
     }
 }
 
+
+/** A heading inside THIS KIT, over the tools it names: a quiet label, its own composable so KitScreen grows by a call. */
+@Composable
+private fun KitGroupHeading(text: String) {
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+}
+
+/**
+ * The footer's LEARN, beside MIDI MAP while a keyboard is plugged in: opens
+ * MIDI learn's panel under the footer. Its own composable, so KitScreen's
+ * body (already near the size at which ART refused SurfaceScreen's) grows by
+ * one call rather than by a button's worth of modifiers and semantics.
+ */
+@Composable
+private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .raisedBevel(scheme, fill = if (showing) scheme.amber.tape.copy(alpha = 0.85f) else null)
+            .tapeClick(label = "LEARN", onClick = onToggle)
+            .semantics { selected = showing }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText("LEARN", TapeType.pixel, if (showing) scheme.titleInk.tape else scheme.ink2.tape)
+    }
+}
 
 /**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
@@ -1599,7 +1697,7 @@ private fun PadCell(
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
                     held = true
-                    currentOnTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
+                    currentOnTap(slot, PadFeelStore.shape(PadHit.velocityAt(down.position.y, size.height.toFloat()), down.pressure))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
@@ -1659,13 +1757,9 @@ private fun PadCell(
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
         // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
-        TapeText(
-            pad.displayName,
-            TapeType.marker,
-            padNameInk(scheme, cls),
-            Modifier.align(Alignment.BottomStart),
-            maxLines = 2,
-        )
+        // One line: a long name steps its font down, then ellipsizes,
+        // rather than wrapping to a second line that crowds the cell.
+        PadNameLabel(pad.displayName, padNameInk(scheme, cls), Modifier.align(Alignment.BottomStart))
         // The treated marker (J36): a dog-eared corner in the pad's own
         // class colour. A corner rather than a rim, because the rim is
         // already spoken for - its width is the held state (J15) and its

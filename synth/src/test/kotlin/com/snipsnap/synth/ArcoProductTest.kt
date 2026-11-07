@@ -942,26 +942,36 @@ class ArcoProductTest {
     }
 
     /**
-     * A LOOP carries no vibrato: its pitch over time is flat to the measure's own floor. Read as the vibrato test reads a note
-     * (70 ms windows, 20 ms apart) on three copies of the loop played end to end, away from the first and last 0.3 s. A
-     * vibrato would show as +-8 cents; R1b saw the loop's spread, the largest distance of any window from the mean, at 0.99 c
-     * (CELLO C3) and 0.59 (ERHU C5), and the bar is 2 cents. The 3 s note's own spread (R1c saw 8.52 and 7.90) is the control: it is
-     * far over 2.5 times the bar, so a loop that carried the vibrato would fail.
+     * A LOOP carries a vibrato (R2) and R1's loop carried none. Read as the vibrato test reads a note (70 ms windows, 20 ms apart) on three copies
+     * of the loop played end to end, away from the first and last 0.3 s. R1's loop ([Arco.LoopVibrato.OFF]) is flat to the measure's own floor:
+     * R1b saw its spread, the largest distance of any window from the mean, at 0.99 c (CELLO C3) and 0.59 (ERHU C5), and the bar is 2 cents. The
+     * loop as it ships swings like the held 3 s note (R1c saw that note's spread at 8.52 and 7.90): its spread must be over 2.5 times the flat
+     * loop's bar and under 15 cents, the design's ceiling for a pad's vibrato, and its mean within a cent of the flat loop's (the vibrato moves
+     * the pitch around the note, not off it). Before R2 this test was "a LOOP carries no vibrato"; the owner asked for the vibrato on 2026-11-04.
      */
     @Test
-    fun `a LOOP carries no vibrato - its pitch is flat to the measure's floor`() {
+    fun `a LOOP carries the loop vibrato, R1's loop is flat to the measure's floor`() {
         for (voice in ArcoVoice.entries) {
             val hz = Arco.frequencyFor(voice, 0.5f)
-            val loop = Arco.renderLoopMeasured(voice, macros(voice, hold = 1f)).loop
-            val three = loop + loop + loop
-            val cents = centsOver(three, hz, 0.3f, three.size.toFloat() / rate - 0.3f)
-            val mean = cents.average()
-            val spread = cents.maxOf { abs(it - mean) }
+            fun spreadAndMean(loop: FloatArray): Pair<Double, Double> {
+                val three = loop + loop + loop
+                val cents = centsOver(three, hz, 0.3f, three.size.toFloat() / rate - 0.3f)
+                val mean = cents.average()
+                return cents.maxOf { abs(it - mean) } to mean
+            }
+            val (flat, flatMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f), loopVibrato = Arco.LoopVibrato.OFF).loop)
+            val (sung, sungMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f)).loop)
             val held = finishedCore(voice, macros(voice, hold = Arco.holdFor(3f)))
             val heldCents = centsOver(held, hz, 0.6f, 3f)
             val heldSpread = heldCents.maxOf { abs(it - heldCents.average()) }
-            println("ARCO loop vibrato $voice: loop spread ${f(spread, 2)} c over ${cents.size} windows, the held 3 s note's ${f(heldSpread, 2)} c")
-            assertTrue(spread <= 2.0, "$voice: the loop's pitch wanders $spread cents")
+            println(
+                "ARCO loop vibrato $voice: R1's loop spread ${f(flat, 2)} c (mean ${f(flatMean, 2)}), the shipped loop's ${f(sung, 2)} c (mean ${f(sungMean, 2)}), " +
+                    "the held 3 s note's ${f(heldSpread, 2)} c",
+            )
+            assertTrue(flat <= 2.0, "$voice: R1's loop's pitch wanders $flat cents")
+            assertTrue(sung > 2.5 * 2.0, "$voice: the shipped loop's vibrato ($sung c) is not far over the flat loop's bar")
+            assertTrue(sung < 15.0, "$voice: the shipped loop's vibrato swings $sung cents, over the 15 cent ceiling")
+            assertTrue(abs(sungMean - flatMean) < 1.0, "$voice: the vibrato moved the loop's mean pitch by ${sungMean - flatMean} cents")
             assertTrue(heldSpread > 2.5 * 2.0, "$voice: the 3 s note's vibrato ($heldSpread c) is not far over the loop's bar: the check cannot fail")
         }
     }
@@ -1322,6 +1332,14 @@ class ArcoProductTest {
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
      */
+    /**
+     * BUZZ's own bar in the test below (R2). The owner heard the first build's BUZZ and set its top at that build's 0.4 ("For Buzz we need to
+     * recalibrate. 40 is probably the top of the range.", 2026-11-04), which moves a note by 0.066 to 0.100 at the four notes ArcoBuzzTest reads, so the
+     * house's 0.1 at the 0.9 setting is over what the owner wants the knob to do at all. The bar is 0.04, about half of what BUZZ 0.9 does at the default
+     * notes (0.078 at CELLO and 0.081 at ERHU, measured), so a knob that went dead still fails.
+     */
+    private val BUZZ_MOVES_AT_LEAST = 0.04
+
     @Test
     fun `every macro changes the sound, BODY too, and an unknown key does not`() {
         for (voice in ArcoVoice.entries) {
@@ -1337,7 +1355,10 @@ class ArcoProductTest {
                 Arco.render(voice, Arco.defaults(voice) + ("BODY" to 1f)).samples,
             )
             println("ARCO macros $voice: " + diffs.entries.joinToString(" ") { "${it.key} ${f(it.value, 3)}" } + ", BODY 0 against 1 ${f(bodyEnds, 3)}")
-            for ((name, diff) in diffs) assertTrue(diff > 0.1, "$voice $name did nothing (${f(diff, 4)})")
+            for ((name, diff) in diffs) {
+                val bar = if (name == "BUZZ") BUZZ_MOVES_AT_LEAST else 0.1
+                assertTrue(diff > bar, "$voice $name did nothing (${f(diff, 4)}, bar $bar)")
+            }
             assertTrue(bodyEnds > 0.3, "$voice: BODY from 0 to 1 moves the note by only ${f(bodyEnds, 4)}: a dead knob")
         }
     }

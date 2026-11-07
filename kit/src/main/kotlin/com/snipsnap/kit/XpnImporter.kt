@@ -102,18 +102,39 @@ object XpnImporter {
         val skipped: List<Pair<String, String>>,
     )
 
+    /** [robin] deals SnipSnap robin pads' takes again; without one they land as their plain originals. */
     fun import(
         xpnFile: File,
         destRoot: File,
         overwrite: Boolean = false,
         budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+        robin: RobinDealer? = null,
+    ): ImportResult = importPrepared(xpnFile, destRoot, overwrite, budget, null, robin)
+
+    /** KitBackup's native closure is checked in the same transaction as rendered samples. */
+    internal fun importWithNativeSources(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+        budget: WriteBudget,
+        robin: RobinDealer?,
+        beforePublish: (Kit, File) -> Kit,
+    ): ImportResult = importPrepared(xpnFile, destRoot, overwrite, budget, beforePublish, robin)
+
+    private fun importPrepared(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+        budget: WriteBudget,
+        beforePublish: ((Kit, File) -> Kit)?,
+        robin: RobinDealer?,
     ): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = entriesOf(zip)
             val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
-            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget)
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget, beforePublish, robin)
         }
     }
 
@@ -130,6 +151,7 @@ object XpnImporter {
         destRoot: File,
         overwrite: Boolean = false,
         budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+        robin: RobinDealer? = null,
     ): AllResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
@@ -140,7 +162,7 @@ object XpnImporter {
             val skipped = mutableListOf<Pair<String, String>>()
             for (program in programs) {
                 try {
-                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite, budget)
+                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite, budget, robin = robin)
                 } catch (e: IllegalArgumentException) {
                     skipped += program.name to (e.message ?: "refused")
                 }
@@ -161,6 +183,8 @@ object XpnImporter {
         destRoot: File,
         overwrite: Boolean,
         budget: WriteBudget,
+        beforePublish: ((Kit, File) -> Kit)? = null,
+        robin: RobinDealer? = null,
     ): ImportResult {
         run {
             val programBytes = zip.getInputStream(programEntry).use {
@@ -200,6 +224,37 @@ object XpnImporter {
                 XpnSourceMetadata.legacyNotice(zip, entries, programEntry.name, kitName, instruments.size, budget)
             } else null
             val sourceBySlot = sourceMetadata?.pads?.associate { it.slot to it.source }
+            // A SnipSnap robin pad travels as take files plus its settings: take one lands as the
+            // pad's original and the rest are dealt again (dealRobins), so every take comes back.
+            val instrumentBySlot = instruments.associateBy { if (zeroBased) it.number + 1 else it.number }
+            val robinMetadata = XpnRobin.read(zip, entries, programEntry.name, programBytes, budget)
+
+            // Only the selected program's own adjacent sidecar may restore
+            // history; a different kit.json elsewhere in a pack has no claim.
+            val sidecarName = programEntry.name.substringBeforeLast('/', "")
+                .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
+            val sidecars = entries.filter { it.name == sidecarName }
+            require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
+            val sidecarText = sidecars.singleOrNull()?.let { entry ->
+                zip.getInputStream(entry).use {
+                    com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
+                }.toString(Charsets.UTF_8)
+            }
+            // A program folder's kit.json describes a split robin pad as its original with settings
+            // (KitExporter.writeSidecar); ImportSidecar binds it by checksum once it has landed. A
+            // sidecar that will not parse is refused by ImportSidecar below, in its own words.
+            val sidecarRobins = sidecarText?.let { text ->
+                runCatching { KitStore.fromJsonText(text) }.getOrNull()?.pads.orEmpty()
+                    .filter { it.chain == null && it.robin != null && instrumentBySlot[it.slot]?.let(::isCycle) == true }
+                    .map { XpnRobin.Pad(it.slot, instrumentBySlot.getValue(it.slot).layers.first().sampleName, sha256 = "", it.robin!!) }
+            }.orEmpty()
+            val robinBySlot = (sidecarRobins + robinMetadata?.pads.orEmpty()).associateBy { it.slot }
+            for (rp in robinBySlot.values) {
+                val inst = requireNotNull(instrumentBySlot[rp.slot]) { "round-robin metadata names pad ${rp.slot}, which the program does not have" }
+                require(isCycle(inst) && inst.layers.first().sampleName.equals(rp.take, ignoreCase = true)) {
+                    "round-robin metadata does not match pad ${rp.slot}"
+                }
+            }
             val boundSamples = sourceMetadata?.pads?.flatMap { it.samples }?.associateBy { it.name.lowercase() }.orEmpty()
 
             // Samples resolve by bare stem, case-insensitive, anywhere.
@@ -279,15 +334,70 @@ object XpnImporter {
                     }
                 }
 
+                for (rp in robinBySlot.values) {
+                    if (rp.sha256.isEmpty()) continue // a sidecar's: bound by its own rawSha256
+                    val take = SafePath.child(staging, "${instrumentBySlot.getValue(rp.slot).layers.first().sampleName}.wav")
+                    require(XpnSourceMetadata.sha256(take) == rp.sha256) { "round-robin metadata hash differs for pad ${rp.slot}'s take one" }
+                }
+
+                // A Cycle pad (ZonePlay 0, every layer full-range) is round robin:
+                // fold its take files into one chain so SnipSnap plays them the
+                // same way. Take files only the chain used are folded away.
+                val cycleChains = HashMap<Int, CycleChain>()
+                for (inst in instruments) {
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    if (slot !in 1..128 || !isCycle(inst) || slot in robinBySlot) continue
+                    val taken = cycleChains.values.map { it.stem } + referenced
+                    foldCycle(staging, inst.layers.map { it.sampleName }, taken, budget)?.let { cycleChains[slot] = it }
+                }
+                // Take files nothing lands on any more (folded into a chain, or
+                // layers 2..n of a cycle pad that could not fold) leave staging.
+                val keep = HashSet<String>()
+                for (inst in instruments) {
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    when {
+                        slot in cycleChains -> {}
+                        isCycle(inst) -> keep += inst.layers.first().sampleName.lowercase() // a robin pad's take one, too
+                        else -> inst.layers.forEach { keep += it.sampleName.lowercase() }
+                    }
+                }
+                for (stem in referenced) if (stem.lowercase() !in keep) File(staging, "$stem.wav").delete()
+
+                // A robin pad's take one goes back under the name the pad had (the stem before
+                // `_RR1`), unless another file holds it or another pad plays the take itself.
+                val robinStems = HashMap<Int, String>()
+                val taken = (keep + cycleChains.values.map { it.stem.lowercase() }).toMutableSet()
+                for (rp in robinBySlot.values.sortedBy { it.slot }) {
+                    val take = instrumentBySlot.getValue(rp.slot).layers.first().sampleName
+                    val shared = instruments.count { inst -> inst.layers.any { it.sampleName.equals(take, ignoreCase = true) } } > 1
+                    val base = take.removeSuffix("_RR1")
+                    val stem = if (!shared && base != take && base.isNotBlank() && base.lowercase() !in taken) base else take
+                    if (stem != take) {
+                        if (!File(staging, "$take.wav").renameTo(SafePath.child(staging, "$stem.wav"))) {
+                            throw IOException("could not land pad ${rp.slot}'s original as $stem.wav")
+                        }
+                        taken -= take.lowercase()
+                        taken += stem.lowercase()
+                    }
+                    robinStems[rp.slot] = stem
+                }
+
                 val pads = instruments.mapNotNull { inst ->
                     val slot = if (zeroBased) inst.number + 1 else inst.number
                     if (slot !in 1..128) return@mapNotNull null
                     val ordered = inst.layers.sortedBy { it.velStart }
-                    val main = ordered.last()
+                    val cycle = cycleChains[slot]
+                    val robinPad = robinBySlot[slot]
+                    // A cycle pad that could not fold lands take one, a plain pad.
+                    val plainLayers = if (isCycle(inst) && cycle == null) listOf(ordered.first()) else ordered
+                    val main = robinStems[slot]?.let { ParsedLayer(it, 0, 127) }
+                        ?: cycle?.let { ParsedLayer(it.stem, 0, 127) } ?: plainLayers.last()
                     KitPad(
                         slot = slot,
                         sampleFile = "${main.sampleName}.wav",
                         displayName = main.sampleName,
+                        chain = cycle?.chain,
+                        robin = robinPad?.settings,
                         drumClass = DrumClass.UNKNOWN,
                         level = inst.volume.coerceIn(0f, 1f),
                         pan = inst.pan.coerceIn(0f, 1f),
@@ -306,25 +416,17 @@ object XpnImporter {
                             // single pad cannot discard the source credits.
                             legacyNotice?.let { put("attribution", it) }
                         },
-                        velocityLayers = if (ordered.size < 2) emptyList() else {
-                            ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
+                        velocityLayers = if (robinPad != null || cycle != null || plainLayers.size < 2) emptyList() else {
+                            plainLayers.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
                         },
                     )
                 }
                 require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-                // Only the selected program's own adjacent sidecar may restore
-                // history; a different kit.json elsewhere in a pack has no claim.
-                val sidecarName = programEntry.name.substringBeforeLast('/', "")
-                    .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
-                val sidecars = entries.filter { it.name == sidecarName }
-                require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
-                val sidecarText = sidecars.singleOrNull()?.let { entry ->
-                    zip.getInputStream(entry).use {
-                        com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
-                    }.toString(Charsets.UTF_8)
-                }
-                val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
+                val restored = ImportSidecar.restore(Kit(kitName, pads, robin = robinMetadata?.kit), sidecarText, staging, sidecarName)
+                val published = beforePublish?.invoke(restored, staging) ?: renderedBankSources(renderedPersonalSources(restored))
+                // After the backup's own checks, which bind each robin pad to the original it landed.
+                val kit = dealRobins(published, staging, robin, budget)
                 KitStore.save(kit, staging)
                 // Only now, with everything down safely, does destDir
                 // change: the pre-existing-kit check above already
@@ -383,6 +485,100 @@ object XpnImporter {
         }
     }
 
+    /**
+     * The robin pads landed as their originals (settings, no chain) dealt by [robin], the bytes it
+     * writes spent from [budget] like any sample; with no dealer they stay plain originals, the
+     * settings dropped, so nothing lands half-dealt.
+     */
+    private fun dealRobins(kit: Kit, staging: File, robin: RobinDealer?, budget: WriteBudget): Kit {
+        if (kit.pads.none { it.robin != null && it.chain == null }) return kit
+        if (robin == null) {
+            val plain = kit.pads.map { if (it.robin != null && it.chain == null) it.copy(robin = null) else it }
+            return kit.copy(pads = plain, robin = kit.robin.takeIf { plain.any { it.isRobinChain } })
+        }
+        fun bytes() = staging.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        val before = bytes()
+        val dealt = robin.deal(kit, staging)
+        val grew = (bytes() - before).coerceAtLeast(0L)
+        if (grew > budget.remaining) {
+            budget.spend(budget.remaining)
+            throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                "dealing the round-robin takes writes past the ${budget.max / (1024 * 1024)} MB sample budget - refused",
+            )
+        }
+        budget.spend(grew)
+        require(dealt.pads.none { it.robin != null && it.chain == null }) { "a round-robin pad was left undealt" }
+        return dealt
+    }
+
+    private fun isCycle(inst: ParsedInstrument): Boolean =
+        inst.zonePlay == 0 && inst.layers.size >= 2 && inst.layers.all { it.velStart == 0 && it.velEnd == 127 }
+
+    private class CycleChain(val stem: String, val chain: ChainInfo)
+
+    /**
+     * Concatenates the staged take WAVs [takes] (in layer order) into one chain
+     * WAV in [staging]; null when they cannot join (rate or channel mismatch,
+     * unreadable, more than a chain can cycle), leaving the takes as found.
+     */
+    private fun foldCycle(staging: File, takes: List<String>, taken: List<String>, budget: WriteBudget): CycleChain? {
+        // Unreadable or mismatched takes are an expected input, not an error: the pad lands as take one.
+        val snips = try {
+            takes.map { com.snipsnap.audio.WavReader.read(File(staging, "$it.wav")) }
+        } catch (e: java.io.IOException) {
+            return null
+        } catch (e: IllegalArgumentException) {
+            return null
+        }
+        val first = snips.first()
+        if (snips.size > 128 || snips.any { it.sampleRate != first.sampleRate || it.channels != first.channels }) return null
+        val depth = if (com.snipsnap.xpm.WavInfo.read(File(staging, "${takes.first()}.wav")).bitsPerSample == 16) {
+            com.snipsnap.audio.WavWriter.BitDepth.PCM_16
+        } else com.snipsnap.audio.WavWriter.BitDepth.PCM_24
+        val base = takes.first().replace(Regex("_RR1$"), "").let { if (it == takes.first()) "${it}_chain" else it }
+        val used = taken.map { it.lowercase() }.toSet()
+        var stem = base
+        var n = 2
+        while (stem.lowercase() in used) stem = "$base ${n++}"
+        val boundaries = snips.runningFold(0L) { acc, s -> acc + s.frameCount }.dropLast(1)
+        val all = com.snipsnap.audio.Snip(snips.flatMap { it.samples.asList() }.toFloatArray(), first.channels, first.sampleRate)
+        val out = File(staging, "$stem.wav")
+        try {
+            com.snipsnap.audio.WavWriter.write(out, all, depth, allowNonMpcRate = true)
+            // The chain is new bytes on disk: it spends the same budget the takes did.
+            val size = out.length()
+            if (size > budget.remaining) {
+                throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                    "folding '${takes.first()}' into a chain writes past the ${budget.max / (1024 * 1024)} MB sample budget - refused",
+                )
+            }
+            budget.spend(size)
+        } catch (e: Throwable) {
+            out.delete()
+            throw e
+        }
+        return CycleChain(stem, ChainInfo(boundaries, cycle = snips.size))
+    }
+
+    /** Ordinary XPNs carry rendered audio and provenance, never the private editing source bundle. */
+    private fun renderedBankSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
+        if (pad.source["engine"] != ConfluenceBankFiles.ENGINE && pad.source["engine"] != ConfluenceBankFiles.RENDERED_ENGINE) pad
+        else pad.copy(source = (pad.source - setOf("bankManifestSha256", "bankRecipe", "bankSettings", "sourceHashes", "usedVoiceIds")) + mapOf(
+            "engine" to ConfluenceBankFiles.RENDERED_ENGINE,
+            "sourceDependency" to "rendered audio only; source bank is not included in ordinary XPN",
+        ))
+    })
+
+    private fun renderedPersonalSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
+        if (pad.source["engine"] != "CONFLUENCE_PERSONAL" &&
+            pad.source["engine"] != "CONFLUENCE_PERSONAL_RENDERED" &&
+            !pad.source.containsKey(ConfluencePersonalFiles.SOURCE_ID_KEY)) pad
+        else pad.copy(source = (pad.source - setOf(
+            ConfluencePersonalFiles.SOURCE_ID_KEY, "personalRecipe", "personalVoiceManifestSha256",
+            "personalSourceSha256", "personalSourceFileSha256", "sourceHashes", "referenceMidi", "rootMidi",
+        )) + ("engine" to "CONFLUENCE_PERSONAL_RENDERED"))
+    })
+
     // ---------- program parsing ----------
 
     private data class ParsedLayer(val sampleName: String, val velStart: Int, val velEnd: Int)
@@ -396,6 +592,8 @@ object XpnImporter {
         val tuneFine: Int,
         val muteGroup: Int,
         val oneShot: Boolean,
+        /** `ZonePlay`: 0 = Cycle (round-robin layers), 1 = velocity zones; null when absent. */
+        val zonePlay: Int?,
         /** Shape fields, already default-collapsed to null (see [shapeOrNull]). */
         val attack: Float?,
         val decay: Float?,
@@ -458,6 +656,7 @@ object XpnImporter {
                 tuneFine = directText(inst, "TuneFine")?.toIntOrNull() ?: 0,
                 muteGroup = directText(inst, "MuteGroup")?.toIntOrNull() ?: 0,
                 oneShot = directText(inst, "OneShot")?.equals("False", ignoreCase = true) != true,
+                zonePlay = directText(inst, "ZonePlay")?.trim()?.toIntOrNull(),
                 attack = shapeOrNull(directText(inst, "VolumeAttack"), default = 0f),
                 decay = shapeOrNull(directText(inst, "VolumeDecay"), default = 0.047244f),
                 cutoff = shapeOrNull(directText(inst, "Cutoff"), default = 1f),

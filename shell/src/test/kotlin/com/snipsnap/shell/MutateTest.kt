@@ -185,7 +185,7 @@ class MutateTest {
     @Test
     fun `guards hold - chained pads refused, splice takes one parent`() {
         val m = model("Guards")
-        Robin.apply(m, 2, takes = 2)
+        Robin.apply(m, 2, takes = 2, seed = 0, zones = 2)
         val parent = Mutate.Source("x", tone(500.0, 0.2f))
         assertFailsWith<IllegalArgumentException>("chained pad refused") {
             Mutate.apply(m, 2, listOf(parent))

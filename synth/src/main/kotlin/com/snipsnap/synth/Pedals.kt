@@ -37,8 +37,9 @@ enum class PedalSide(val id: String) {
  * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
  * first board, authored as a hypothesis for its own gate; FORGE, the
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
- * spec and gated on 2026-10-28. Seven pedals do not fit row seven's six
- * chips, so the sheet draws a slate: five of the gated pedals on the row,
+ * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
+ * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04.
+ * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
  */
@@ -140,6 +141,19 @@ object Pedals {
         // not movable. Its sound passed its gate on 2026-10-28 (docs/superpowers/specs/2026-10-22-delay-head-design.md),
         // and it is on the slate's default row (docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
         Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = true),
+        // A drum room: the `roomed` character, whose tap (AMT 0.7) is ROOM at its defaults. After the amp and last, where the rack puts the room
+        // everything is heard in; not movable, since a room in front of an amp is not a place. Gated on 2026-11-01
+        // (docs/superpowers/specs/2026-10-31-room-section-design-brief.md). Behind MORE: the default row is the owner's five.
+        Entry("ROOM", "roomed", character("roomed"), PedalSide.POST, movable = false, gated = true),
+        // A fade-in: the `eased` character, the VOLUME section, whose tap (AMT 0.7) rises over 448 ms. In front of the amp,
+        // where the rack puts it, so a swell into DRIVE blooms; not movable, since the owner heard it only there. Gated on
+        // 2026-11-02 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 4). Behind MORE.
+        Entry("FADE IN", "eased", character("eased"), PedalSide.PRE, movable = false, gated = true),
+        // A vibrato: the `vibratoed` character, the VIBRATO section, whose tap (AMT 0.7) swings the pitch 42 cents at 5.5 Hz. After the
+        // amp, where a guitar amp's own vibrato lives; not movable, since the owner heard it only there. For held sounds: a choir
+        // and a snare are too short for it. Gated on 2026-11-04 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3).
+        // Behind MORE.
+        Entry("VIBRATO", "vibratoed", character("vibratoed"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

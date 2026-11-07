@@ -19,6 +19,7 @@ public final class CreaseReleaseBank {
     public static void main(String[] args) throws Throwable {
         Locale.setDefault(Locale.ROOT);
         Path out = Path.of(args[0]); Files.createDirectories(out);
+        boolean adaptive = args.length > 1 && args[1].equals("adaptive");
         long started = System.nanoTime();
         CreasePatch patch = CreasePresets.INSTANCE.all().stream()
             .filter(p -> p.getId().equals("reed-mark")).findFirst().orElseThrow().toPatch();
@@ -33,10 +34,14 @@ public final class CreaseReleaseBank {
 
         Map<Integer, TreeSet<Integer>> grids = new LinkedHashMap<>();
         TreeSet<Integer> captures = new TreeSet<>();
-        for (int n : new int[]{16,32,64}) {
+        for (int n : adaptive ? new int[]{32} : new int[]{16,32,64}) {
             TreeSet<Integer> cuts = new TreeSet<>();
             for (double seconds : EARLY) cuts.add((int)Math.round(seconds * RATE));
             for (int j=0; j<(warm.cycles+1)*n; j++) cuts.add((int)Math.round(j*loopFrames/(double)n));
+            if (adaptive) {
+                for (int j=0; j<=32; j++) cuts.add((int)Math.round(j*.002*RATE));
+                for (int j=0; j<=112; j++) cuts.add((int)Math.round((.064+j*.004)*RATE));
+            }
             grids.put(n,cuts); captures.addAll(cuts);
         }
         TreeSet<Integer> tests = new TreeSet<>();
@@ -48,6 +53,22 @@ public final class CreaseReleaseBank {
         for(int i=0;i<80;i++) tests.add(loopStart+random.nextInt(loopFrames));
         for(int p : new int[]{0,1,loopFrames/2,loopFrames-1})
             for(int d : new int[]{-2,-1,0,1,2}) if(loopStart+p+d>=0) tests.add(loopStart+p+d);
+        TreeSet<Integer> originalTests = new TreeSet<>(tests);
+        if (adaptive) {
+            Random unseen = new Random(0x4e4f5631L);
+            for (int j=0;j<100;j++) tests.add(1+unseen.nextInt(loopStart-1));
+            for (int j=0;j<100;j++) tests.add(loopStart+unseen.nextInt(loopFrames));
+            for (int j=0;j<320;j++) tests.add((int)Math.round((j+.37)*.001*RATE));
+        }
+        TreeSet<Integer> roundOneTests = new TreeSet<>(tests);
+        if (adaptive) {
+            Random fresh = new Random(0x50484f4eL);
+            for (int j=0;j<200;j++) tests.add(1+fresh.nextInt(loopStart-1));
+            for (int j=0;j<200;j++) tests.add(loopStart+fresh.nextInt(loopFrames));
+            for (int j=0;j<512;j++) tests.add((int)Math.round((j+.73)*.001*RATE));
+        }
+        TreeSet<Integer> freshHoldouts = new TreeSet<>(tests); freshHoldouts.removeAll(roundOneTests);
+        TreeSet<Integer> holdouts = new TreeSet<>(tests); holdouts.removeAll(originalTests);
         captures.addAll(tests);
         Map<Integer,Integer> bankIds = new TreeMap<>();
         int serial = 0; TreeSet<Integer> allBankCuts = new TreeSet<>();
@@ -106,7 +127,10 @@ public final class CreaseReleaseBank {
                 (System.nanoTime()-started)/1e9,ints(allBankCuts),ints(tests));
             int index=0;
             for(var entry:grids.entrySet()) w.printf("%s\"%d\":%s",index++==0?"":",",entry.getKey(),ints(entry.getValue()));
-            w.print("},\"macros\":{"); index=0;
+            w.printf("},\"capturePolicy\":\"%s\",\"originalTestCuts\":%s,\"holdoutTestCuts\":%s,",
+                adaptive?"early-2ms-64ms-4ms-512ms":"uniform-with-early",ints(originalTests),ints(holdouts));
+            w.printf("\"freshHoldoutTestCuts\":%s,",ints(freshHoldouts));
+            w.print("\"macros\":{"); index=0;
             for(var entry:patch.getMacros().entrySet()) w.printf("%s\"%s\":%.12g",index++==0?"":",",entry.getKey(),(double)entry.getValue());
             w.println("}}");
         }

@@ -50,6 +50,34 @@ top of a pad is soft, bottom hard. The strip is a separate vertical fader,
 whose direction follows its visible HARD / SOFT labels. Accessibility
 adjustments and arrow keys also change its value.
 
+How the controls read at a glance, on PADS and in FULL alike:
+
+- A setting that is on wears the accent border, the selected form most of
+  the app's pickers use. It used to be a "sunken" button, which paints the
+  same fill as a raised one in every scheme, so the state rested on the word
+  alone. The last-hit layer chip that sounded wears the same border.
+- LEFT/RIGHT, STAY/RETURN and VOL change nothing about a hit while STRIKE is
+  off: the touch velocity passes through untouched and the fader is not
+  drawn. They read in the quieter ink until it is on. They stay tappable and
+  keep their value (dimmed, not disabled), so a side chosen first is still
+  there when STRIKE comes on. Each carries the state description "takes
+  effect when STRIKE is on" for TalkBack. Turning STRIKE ON before choosing
+  LEFT or RIGHT is the order step 2 of "Use your own sounds" gives.
+- The fader's tick marks are drawn in the LCD's own second ink, so they stay
+  visible on the paper schemes' dark LCD.
+
+Not changed, and worth a decision: turning STRIKE on still adds a layer row
+above the pads and a fader beside them, so the pads shrink a little. EXIT FULL
+still sits close above the top-right pad. Both are layout questions for a
+phone audition, not a restyle. The BANK chips just above this strip on PADS
+have the same fault the strip had: the bank you are on is a raised chip and
+the others are sunken, which paint one fill, so the difference is the label's
+colour. That is a separate follow-up.
+
+In FULL the controls sit on the dark LCD header. On the paper schemes the
+accent ring reads against the button's own face and not against that dark
+panel, which is the contrast the pressed look is checked at.
+
 ## What this pass changes
 
 - The strip maps 0–100% to MIDI 1–127 for layer selection, giving each
@@ -90,8 +118,52 @@ SnipSnap sidecars; the names are not new MPC parameters. The generated main
 recipe reproduces the ECHO sample. Rebuilding that recipe alone does not
 recreate all three layers; recreate the starter for the full demo.
 
-General FX-layer authoring for arbitrary pads and continuous modulation of
-a ringing note remain separate work.
+STRIKE FX on an ordinary pad is described in the next section. Continuous
+modulation of a ringing note remains separate work.
+
+## STRIKE FX on your own pad
+
+The pad sheet has a STRIKE FX section that turns one sample into the same
+three-layer bank the starter uses, so STRIKE has something to select
+on a pad you made yourself. Design:
+[the spec](superpowers/specs/2026-10-31-strike-fx-layers-design.md); build
+order: [the plan](superpowers/plans/2026-10-31-strike-fx-layers.md).
+
+- **Two knobs.** ROOM is the spring's SIZE (default 0.42) and SLAP is the
+  echo's TIME (default 0.9). The spring's TONE (0.7) and MIX (1) and the
+  echo's REPEAT (0.55), TONE (0.8) and MIX (0.9) are fixed.
+- **AUDITION** plays DRY, ROOM and ECHO one second apart and writes nothing.
+  Move the knobs and audition again as often as you like.
+- **KEEP** writes three files: the source bytes copied as DRY, ROOM as the
+  second, and ECHO over the pad's main file. The two soft-layer file names
+  come from the kit's free `_vN` names, so they are `_v1` and `_v2` only on a
+  clean pad. The layers are named
+  DRY, ROOM and ECHO and take the three windows 1 to 41, 42 to 84 and 85 to
+  127 (the split a stacked pad with two soft zones gets). Each rendered layer
+  ends with a 4 ms fade. The pad's recipe keeps every field it had and adds
+  `layers`, which makes it a version 3 recipe (a recipe without a bank is
+  still written as version 2). A printed board is refused,
+  and a pad with a treatment keeps its treatment. A pad whose recipe is an
+  era, mutate, splice or similar history is refused too, by KEEP and by
+  AUDITION. Soft-layer files a KEEP replaces go to the bin.
+- **CLEAR** restores the single sample from the DRY bytes and removes
+  `layers` from the recipe. After an export and import the DRY bytes are
+  still the original take, so CLEAR returns the pad's first bytes.
+- **Confirm dialogs.** KEEP on a pad that already has SOFT HITS asks first,
+  and SOFT HITS on a pad that holds a STRIKE FX bank asks first; each
+  replaces the other.
+- **PASTE** carries the bank: pasting a banked recipe applies the bank to the
+  target pad's own sample, not to the source pad's.
+- **Export and import** keep the layer names, the windows and the version 3
+  recipe.
+- **Not done: bank-B twins.** Twins (`remixBankB`) do not copy the recipe:
+  each twin is ECHO through a fresh fx-only recipe from Shuffle, so it has no
+  bank and no three files of its own. It is BREED's kept children that copied
+  the recipe; they now arrive as one sample with `layers` removed. Giving a
+  twin its own bank is a follow-up.
+
+Heard: no one has heard a user-pad bank yet. The owner's snare is the
+audition gate.
 
 ## Why it is built this way
 

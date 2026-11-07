@@ -31,7 +31,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OhmPadMakerTest {
@@ -101,8 +100,11 @@ class OhmPadMakerTest {
                 assertTrue(hit.loops)
                 sample.samples
             }
-            assertNull(instrument.zoneFor(47))
-            assertNull(instrument.zoneFor(73))
+            // The outer zones stretch to the keyboard's ends, so keys past the authored span land in them.
+            assertEquals(0, instrument.zones.first().lowNote)
+            assertEquals(127, instrument.zones.last().highNote)
+            assertEquals(instrument.zones.first(), instrument.zoneFor(47))
+            assertEquals(instrument.zones.last(), instrument.zoneFor(73))
             val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, 44_100, audio), 44_100)
             assertTrue(player.noteOn(patch.midi))
             val sourceSeconds = notes[OhmPadMaker.zoneMidis(spec).indexOf(patch.midi)].snip.durationSeconds

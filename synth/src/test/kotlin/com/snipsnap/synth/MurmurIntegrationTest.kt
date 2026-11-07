@@ -262,15 +262,15 @@ class MurmurIntegrationTest {
     }
 
     @Test
-    fun `the complete thirty six preset bank is discoverable through shared rosters and preserves pitched routing`() {
+    fun `the original bank and six selected recipes are discoverable through shared rosters and preserve pitched routing`() {
         val presets = MurmurPresets.all()
         val registered = Presets.all().filter { it.engine == MurmurPatch.ENGINE }
-        assertEquals(36, registered.size, "the global roster must expose the complete Murmur bank")
+        assertEquals(42, registered.size, "the global roster must expose the original bank and selected settings")
         assertEquals(presets, registered, "the shared roster must retain every authored recipe and its order")
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
         val expectedSizes = linkedMapOf(
-            MurmurVoice.BASS to 8, MurmurVoice.KEY to 4, MurmurVoice.PLUCK to 4,
-            MurmurVoice.LEAD to 8, MurmurVoice.CHOIR to 6, MurmurVoice.METAL to 6,
+            MurmurVoice.BASS to 8, MurmurVoice.KEY to 8, MurmurVoice.PLUCK to 4,
+            MurmurVoice.LEAD to 8, MurmurVoice.CHOIR to 8, MurmurVoice.METAL to 6,
         )
         assertEquals(MurmurVoice.entries.toSet(), expectedSizes.keys)
         for ((voice, expectedSize) in expectedSizes) {

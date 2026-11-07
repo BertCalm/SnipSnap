@@ -5,12 +5,13 @@ import com.snipsnap.kit.KitExporter
 import java.io.File
 
 /**
- * Exports SCOUR's thirty-two dry pads, two banks, as an MPC program folder.
- * Run `./gradlew :synth:generateScourKit`. In bank A the first eight pads are builds cut for 120 BPM
- * (PLATE) and 90 BPM (PANE), one beat to two bars long: hit one that far before a downbeat and its slam
- * lands on it. The last eight are their presets. Bank B is SHEET: the same builds an octave lower, its
- * four presets and four short hits on C2, E-flat 2, F2 and G2. A drum program plays each complete
- * sample once. Use generateScourAudition for raw/matched clips and the drops over a beat.
+ * Exports SCOUR's sixty-four dry pads, four banks, as an MPC program folder.
+ * Run `./gradlew :synth:generateScourKit`. Each bank's first eight pads are builds cut for 120 BPM and
+ * 90 BPM, one beat to two bars long: hit one that far before a downbeat and its slam lands on it. Bank A
+ * is PLATE and PANE at C3 with their eight presets; bank B is SHEET and bank C BEAM, each build on its own
+ * note and character, then four presets and four short hits on a low line; bank D is laid out as bank A,
+ * DISC's builds at 120 BPM and ROD's at 90 BPM, each on its own note and character, then DISC's and ROD's
+ * presets. A drum program plays each complete sample once. Use generateScourAudition for raw/matched clips and the drops over a beat.
  */
 object ScourKitGenerator {
     @JvmStatic

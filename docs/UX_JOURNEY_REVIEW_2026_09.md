@@ -260,6 +260,10 @@ take**. Four places where it does not hold:
    box has none, and there is no `unDesamplePad` call site. The only route
    back is a whole-kit rollback. (`PadSheetScreen.kt:2411-2417`,
    `:1775-1814`)
+   *2026-11-01: answered. The MAKE box's DE-SAMPLE header now has an
+   UNDO (`KitBuilderModel.undesamplePad`), and TAPE SPLICE got UNDO SPLICE
+   beside SPLICE ▸ in the same change
+   (`docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).*
 3. **`SOFT HITS` off deletes real layer WAVs and is the only action here
    with no feedback at all** — turning it *on* toasts; turning it off, the
    destructive direction, does not. (`PadSheetScreen.kt:1080-1088`)

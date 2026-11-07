@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -920,6 +921,34 @@ fun SnapScreen(
             ) {
                 PhotoStrip(thumb, reading, looking, scheme)
 
+                SnapGroupHeading(Copy.SNAP_SOURCE, scheme)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (looking) "…" else "TAKE PHOTO",
+                        scheme,
+                        // Not while a field builds either: a photo landing
+                        // mid-build would open the old picture's field over
+                        // the new picture (the build checks, but the camera
+                        // app in front while a field opens behind it is no
+                        // better).
+                        enabled = !looking && !buildingField,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "TAKE PHOTO",
+                    ) { takePhoto() }
+                    LabButton(
+                        "LIVE ▸",
+                        scheme,
+                        enabled = !looking,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "LIVE CAMERA",
+                    ) {
+                        // LIVE is its own voice; SNAP's own must not sound
+                        // under it, the same reasoning FIELD's own tap stops it.
+                        voicePlayer?.stop()
+                        showLive = true
+                    }
+                }
+
                 ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
 
                 LinePicker(
@@ -943,18 +972,6 @@ fun SnapScreen(
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
-                        if (looking) "…" else "TAKE PHOTO",
-                        scheme,
-                        // Not while a field builds either: a photo landing
-                        // mid-build would open the old picture's field over
-                        // the new picture (the build checks, but the camera
-                        // app in front while a field opens behind it is no
-                        // better).
-                        enabled = !looking && !buildingField,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "TAKE PHOTO",
-                    ) { takePhoto() }
-                    LabButton(
                         "AS SHOT",
                         scheme,
                         enabled = reading != null,
@@ -962,28 +979,10 @@ fun SnapScreen(
                     ) {
                         reading?.let { touched = true; macros = Snap.macrosFrom(it) }
                     }
-                    LabButton(
-                        if (sendBusy) "…" else "SEND TO PAD ▸",
-                        scheme,
-                        enabled = kit != null && current != null && !current.flat && !sendBusy,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "SEND TO PAD",
-                    ) {
-                        showChooser = true
-                    }
                 }
 
-                // The whole picture: FIELD to play it under a finger, CLOUD
-                // to land it on a pad as a texture, KIT to cut it 4x4 and
-                // land all sixteen pads at once.
+                SnapGroupHeading(Copy.SNAP_ONE_PAD, scheme)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LabButton(
-                        if (buildingField) "…" else "FIELD ▸",
-                        scheme,
-                        enabled = photo != null && !buildingField,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "PHOTO FIELD",
-                    ) { openField() }
                     LabButton(
                         if (cloudBusy) "…" else "CLOUD ▸",
                         scheme,
@@ -994,23 +993,6 @@ fun SnapScreen(
                         showCloudChooser = true
                     }
                     LabButton(
-                        if (busy) "…" else "KIT ▸",
-                        scheme,
-                        enabled = photo != null && !busy,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "PHOTO KIT",
-                    ) {
-                        photo?.let(onBuildKit)
-                    }
-                }
-
-                // The literal reading: the photo as a spectrogram, columns
-                // time and rows frequency, inverted to audio and landed
-                // like CLOUD's own texture — needs only the photo, not
-                // FIELD's own grid. LIVE needs no photo at all yet — it
-                // is where one comes from, through the camera preview.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LabButton(
                         if (spectrumBusy) "…" else "SPECTRUM ▸",
                         scheme,
                         enabled = kit != null && photo != null && !spectrumBusy,
@@ -1018,37 +1000,6 @@ fun SnapScreen(
                         accessibilityLabel = "SPECTRUM TO PAD",
                     ) {
                         showSpectrumChooser = true
-                    }
-                    LabButton(
-                        "LIVE ▸",
-                        scheme,
-                        enabled = !looking,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "LIVE CAMERA",
-                    ) {
-                        // LIVE is its own voice; SNAP's own must not sound
-                        // under it, the same reasoning FIELD's own tap stops it.
-                        voicePlayer?.stop()
-                        showLive = true
-                    }
-                }
-
-                // CHORD reads the whole photo as a chord and lands a
-                // brand-new kit plus an arpeggio already circling it on
-                // ORBIT — App.kt owns both writes, the same hand-off as
-                // KIT ▸ above. TELEPHONE reads the photo the way SPECTRUM
-                // ▸ does, then passes what comes back down eight more
-                // generations, each a picture of what the last one
-                // sounded like — a strip to pick from, staying here.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LabButton(
-                        if (busy) "…" else "CHORD ▸",
-                        scheme,
-                        enabled = photo != null && !busy,
-                        modifier = Modifier.weight(1f),
-                        accessibilityLabel = "PHOTO CHORD",
-                    ) {
-                        photo?.let(onBuildChord)
                     }
                     LabButton(
                         if (telephoneBusy) "…" else "TELEPHONE ▸",
@@ -1060,19 +1011,51 @@ fun SnapScreen(
                         runTelephone()
                     }
                 }
+
+                SnapGroupHeading(Copy.SNAP_ALL_SIXTEEN, scheme)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (busy) "…" else "KIT ▸",
+                        scheme,
+                        enabled = photo != null && !busy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO KIT",
+                    ) {
+                        photo?.let(onBuildKit)
+                    }
+                    LabButton(
+                        if (busy) "…" else "CHORD ▸",
+                        scheme,
+                        enabled = photo != null && !busy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO CHORD",
+                    ) {
+                        photo?.let(onBuildChord)
+                    }
+                }
+
+                SnapGroupHeading(Copy.SNAP_PLAY_IT, scheme)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (buildingField) "…" else "FIELD ▸",
+                        scheme,
+                        enabled = photo != null && !buildingField,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO FIELD",
+                    ) { openField() }
+                }
+
+                SnapNeedsKitLine(kitOpen = kit != null, scheme = scheme)
             }
 
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
-                    .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                    .tapeClick(label = "AUDITION") { snip?.let { audition(it) } }
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
-            }
+            SnapBottomBar(
+                classColor = classColor,
+                scheme = scheme,
+                sendLabel = if (sendBusy) "…" else "SEND TO PAD ▸",
+                sendEnabled = kit != null && current != null && !current.flat && !sendBusy,
+                onAudition = { snip?.let { audition(it) } },
+                onSend = { showChooser = true },
+            )
         }
 
         if (drawing) {
@@ -1399,6 +1382,60 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
 }
 
 // ---------- the photo and its numbers ----------
+
+/** A heading over a group of SNAP's buttons: a quiet label, its own composable so [SnapScreen] grows by a call. */
+@Composable
+private fun SnapGroupHeading(text: String, scheme: Scheme) {
+    TapeText(text, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+}
+
+/**
+ * The fixed foot of SNAP: AUDITION and SEND TO PAD ▸ side by side, outside the
+ * scroll, so hearing it and placing it are one reach. Its own composable, as
+ * [SnapNeedsKitLine] is, to keep [SnapScreen] under the dex register limit.
+ */
+@Composable
+private fun SnapBottomBar(
+    classColor: Color,
+    scheme: Scheme,
+    sendLabel: String,
+    sendEnabled: Boolean,
+    onAudition: () -> Unit,
+    onSend: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
+                .tapeClick(label = "AUDITION", onClick = onAudition)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+        }
+        LabButton(
+            sendLabel,
+            scheme,
+            enabled = sendEnabled,
+            modifier = Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
+            accessibilityLabel = "SEND TO PAD",
+            onClick = onSend,
+        )
+    }
+}
+
+/**
+ * One line above AUDITION and SEND TO PAD when no kit is open: SEND TO PAD, CLOUD
+ * and SPECTRUM are greyed for want of a kit, and the grey said nothing.
+ * Its own composable, as SURFACE's line is, so [SnapScreen] (near the
+ * 256-register dex limit) gains one call and no inline logic.
+ */
+@Composable
+private fun SnapNeedsKitLine(kitOpen: Boolean, scheme: Scheme) {
+    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.amber.tape)
+}
 
 /**
  * The thumbnail beside the reading it produced — LUM, SAT, HUE, DETAIL as

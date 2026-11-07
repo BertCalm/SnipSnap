@@ -10,6 +10,27 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CausticUserPresetsTest {
+    @Test
+    fun `expanded held sounds keep motion root and touch through shelf backup and restore`() {
+        val shelf = createTempDirectory("caustic-held-shelf").toFile()
+        val destination = createTempDirectory("caustic-held-backup").toFile()
+        try {
+            val patches = CausticVoice.entries.map { voice -> CausticPatch("MY HELD", voice,
+                linkedMapOf("SOURCE" to .63f, "FOCUS" to .27f, "MOTION" to .65f, "HOLD" to 1f),
+                midi = 55, velocity = .43f, model = 2) }
+            for (patch in patches) UserPresets.save(shelf, patch, nowMillis = 10L)
+            assertEquals(patches.toSet(), UserPresets.read(shelf).map { it.patch }.toSet())
+            val incoming = UserPresets.file(shelf).readText()
+            val merged = UserPresets.merge(destination, incoming, nowMillis = 11L)
+            assertEquals(patches.toSet(), merged.landed.map { it.patch }.toSet())
+            val patch = patches.first()
+            val binned = requireNotNull(UserPresets.forget(destination, patch.engine, patch.voiceName,
+                patch.name, nowMillis = 12L))
+            assertEquals(patch, requireNotNull(UserPresets.unforget(destination, binned)).patch)
+            assertTrue(UserPresets.rosterLine(patch).endsWith(".copy(midi = 55, velocity = 0.43f, model = 2),"))
+        } finally { shelf.deleteRecursively(); destination.deleteRecursively() }
+    }
+
     private fun sound(name: String = "MY ALLOY") = CausticPatch(name, CausticVoice.ALLOY,
         linkedMapOf("BODY" to .33333334f, "LENGTH" to .27f), midi = 57, velocity = .43f, model = 1)
 

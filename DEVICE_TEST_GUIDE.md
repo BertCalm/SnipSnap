@@ -64,7 +64,7 @@ UI tests live in `app/src/androidTest` and run on a device under
 19. EDIT STEPS: toggle cells (each auditions), CLEAR BAR, DONE, re-enter —
     your edits must persist. Kill the app, reopen: still there.
 20. MIDI ▸ → check Files app: Android/data/com.snipsnap.app/files/exports/.
-21. GROOVE's own BOUNCE (TRANSPORT, not LOOP's): tap it on a stopped
+21. GROOVE's own BOUNCE (under SEND IT OUT, not LOOP's): tap it on a stopped
     loop — it should stay tappable, toasting BOUNCE PRINTS THE LOOP AS
     IT PLAYS. PRESS ► PLAY FIRST. rather than just dim. PLAY, then
     BOUNCE: the label reads WAITING… then BOUNCING…, and the toast on

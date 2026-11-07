@@ -69,12 +69,19 @@ class SurfaceScreenTest : ComposeScreenTest() {
             }
             val toggle = compose.onNodeWithTag("surface-aquarium-route")
             toggle.assertIsNotSelected()
-            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
-            waitFor("the routed choice saved") { SurfaceStore.load(entry.dir).aquariumFromKit }
-            toggle.assertIsSelected()
-            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
-            waitFor("the disconnected choice saved") { !SurfaceStore.load(entry.dir).aquariumFromKit }
-            toggle.assertIsNotSelected()
+            repeat(3) {
+                for (routed in listOf(true, false)) {
+                    toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+                    // Disk IO can finish before the frozen clock delivers the
+                    // recomposition. Neither completion proves the other: wait
+                    // for both, pumping frames even when the save wins the race.
+                    waitFor("SURFACE route $routed saved and drawn") {
+                        SurfaceStore.load(entry.dir).aquariumFromKit == routed &&
+                            toggle.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected) == routed
+                    }
+                    if (routed) toggle.assertIsSelected() else toggle.assertIsNotSelected()
+                }
+            }
             assertEquals(sound.toJsonValue(), entry.kit.aquariumPerformance)
             assertArrayEquals(originalMetadata, metadata.readBytes())
             assertArrayEquals(originalWave, File(entry.dir, "one.wav").readBytes())
@@ -136,12 +143,12 @@ class SurfaceScreenTest : ComposeScreenTest() {
     fun the_print_row_reads_in_full_while_a_print_could_run() {
         show(entry = tempoKit())
         // With a tempo the bars button is live and its longest word is on it
-        // after two taps; → TAPE flipped is → PAD.
+        // after two taps; → PAD is on screen beside → TAPE.
         waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         tap("FREE")
         tap(PrintLength.label(PrintLength.BARS[1]))
         assertReadsInFull(PrintLength.label(PrintLength.BARS[2]))
-        tap("→ TAPE")
+        assertReadsInFull("→ TAPE")
         assertReadsInFull("→ PAD")
     }
 
@@ -159,13 +166,14 @@ class SurfaceScreenTest : ComposeScreenTest() {
     @Test
     fun the_print_destination_flips_between_tape_and_pad() {
         show(entry = null)
-        button("→ TAPE").assertExists()
-        button("→ PAD").assertDoesNotExist()
-        tap("→ TAPE")
-        button("→ PAD").assertExists()
-        button("→ TAPE").assertDoesNotExist()
+        // Both destinations are always on screen; the one in force is selected.
+        button("→ TAPE").assertIsSelected()
+        button("→ PAD").assertIsNotSelected()
         tap("→ PAD")
-        button("→ TAPE").assertExists()
+        button("→ PAD").assertIsSelected()
+        button("→ TAPE").assertIsNotSelected()
+        tap("→ TAPE")
+        button("→ TAPE").assertIsSelected()
     }
 
     @Test

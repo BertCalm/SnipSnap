@@ -6,7 +6,11 @@ Compose over `:shell`, `:kit`, and the native engines (`SurfaceEngine`,
 without one never sees `:app`: `settings.gradle.kts` leaves it out, which
 is why a cloud session's `./gradlew test` is the nine JVM modules only.
 
-There is no `app/src/test`. The on-device Compose suites live in
+The separately installable Crease C4 study adds five host cache tests under
+`src/testCreaseStudy` (`:app:testCreaseStudyUnitTest -PcreaseStudyBuild=true`), plus four device tests
+under `src/androidTestCreaseStudy`. Its verified-cache build and physical-device
+limits are documented in [the phone study](../docs/superpowers/specs/2026-11-01-crease-phone-release.md).
+The normal on-device Compose suites live in
 `app/src/androidTest` and run under `emulator-tests` when a PR touches
 `app/`. The native engines and the JNI bridge have host tests in
 `src/main/cpp/test`, which need no SDK. `versionName` is `0.1`.
@@ -69,22 +73,70 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (56 starters including STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER and LIBRATION,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (67 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO and CHORD STABS,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 66 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
-TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
+The SYNTH source picker has 75 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
-MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and LIBRATION.
+MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
+SCOUR, KEEL and CHITIN.
 
-APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
+CHITIN provides SHELL bass and WING lead voices, with six candidate presets each.
+HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
+seamless instrument sustain.
+
+MERIDIAN adds SWEEP, eight saved factory presets and seven macros. ROOT
+(MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
+context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
+finite even at HOLD 1. Model 2 selects fixed-alignment sustain at HOLD ≥ .975.
+Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
+and SPREAD always deliver finite TONAL one-shots with the authored root. Held
+captures save a terminal fade of at least 20 ms; reopened recipes retain the
+complete rack, board and pedal placement. MAKE INSTRUMENT accepts only actual
+model-2 held patches and samples thirteen native roots, MIDI 36–72 in minor
+thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
+the real second-cycle loops and note-off release, including explicit NoteOn
+playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
+which also changes the sampled swing cadence. FRESH TAPE → MERIDIAN retains the
+existing sixteen-pad bank and its authored roots without assigning a global
+kit key. Physical phone timing, listening and MPC loading remain separate checks.
+See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
+
+CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware
+response. Saved sounds, including its six original factory recipes, retain
+their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
+response without changing the authored room, controls, ROOT, VELOCITY or seed.
+See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
+ACCORD exposes BRUSH by default, WOOD and TINE, five finite controls, ROOT
+(C2–C5), native TOUCH and LENGTH. TINE offers Reference, Soft Attack,
+Bright Edge and Long Ring without changing the saved mechanical initializer,
+seed or passage start. Preset recall, YOURS, navigation and pad reopening keep
+the complete typed recipe. HOLD is hidden and every delivered pad plays once;
+long-file LOOP classification is not sustained playback. Three unchanged
+functional tests at `fac839f0` passed on a software emulator with the documented
+ART setup. The full nine-module JVM gate at `00a1f9ff` passed 8,010 tests with
+zero failures/errors/skips. Final standard debug/test compilation and the
+optional non-debuggable development build also passed at that source. The
+rebuilt APK has not been device-executed; native listening and physical-device
+acceptance remain separate gates.
+See [ACCORD](../docs/ACCORD.md).
+
+OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
+performances. Complete scores survive preset saves, navigation and SEND TO PAD.
+LENGTH changes finite timing; all Otis kit pads play once. Shared pressure applies
+within a score. Render costs and device-validation limits are in [OTIS.md](../docs/OTIS.md).
+
+APSIS exposes PASSAGE, GRAIN and ANCHOR, with six PASSAGE presets and three
+presets per new voice, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
 retain the saved renderer and seed. HOLD's top step auditions a repeating settled
 cycle until STOP; on a pad it repeats while gated. Finite notes remain one-shots.
@@ -100,6 +152,9 @@ the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and g
 model, with the glass voice displayed as TILES; GLINT remains its saved identity
 and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
 and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
+BALLAST also offers MAKE INSTRUMENT: thirteen minor-third zones from C1 to C4,
+one velocity layer, each zone its onset and settling before the HOLD loop, rendered
+one zone at a time.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
@@ -138,10 +193,23 @@ recipes survive drafts, saved presets and pad reopening. The sixteen-pad starter
 stays finite. Hardware latency and listening remain acceptance checks.
 See [TIDAL](../docs/TIDAL.md) and [HOLD](../docs/TIDAL_HOLD.md).
 
-ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
-six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
-model, seed, note and velocity; authored root metadata keeps keyed placement
-accurate. HOLD and instrument sustain are deferred. See [ORIGAMI](../docs/ORIGAMI.md).
+ORIGAMI adds CRANE, FAN and STILL, twelve factory presets, six controls and a
+dry sixteen-pad starter. SEND TO PAD preserves the complete recipe and authored
+root. FAN/STILL MAKE INSTRUMENT supplies C3–C5 held keys. The six BLOOM/UNFOLD
+performance factories now select VELOCITY TOUCH: soft hits reduce the upper
+body, including after UNFOLD settles; the .85 factory hard sound is unchanged.
+The original six LEVEL references, saved LEVEL/FOLD recipes and starter audio
+remain intact. TOUCH uses absolute velocity, so lowering the saved ceiling can
+keep even its FULL preview below the unchanged hard endpoint.
+
+SOFT/MID/FULL select temporary strengths and render quietly. Tap AUDITION to
+hear the latest selection; a tap during rendering queues that result. These
+preview choices do not alter the recipe sent to a pad. Use SOFT HITS after
+SEND for finite pad layers, or select a performance factory and MAKE INSTRUMENT
+for three-layer held playing. Downloaded MPC bank ZIPs are not phone imports.
+See [ORIGAMI](../docs/ORIGAMI.md#performance-bank) for the Native-default listening
+pack and optional Matched comparisons; the new softer response awaits owner
+listening on a phone and MPC.
 
 OVEN adds GRAND, FELT, FORGED and BLOOM with six macros and the ten approved
 factory recipes. ROOT and VELOCITY set a native rendered strike; the complete
@@ -154,10 +222,13 @@ chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
 FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
 VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
-THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
+THREAD, PULSE and CURL also offer MAKE INSTRUMENT: native C2/C3/C4/C5/C6 roots,
 one or three velocity layers, each capture's real onset before its own settled
-loop and note-off release. TOUCH LAYERS opens ON; OFF keeps the single-layer
-instrument. Soft/mid/hard captures scale the saved velocity and INJECT, with
+loop and note-off release. SAMPLED RANGE opens at C2–C6; tap it for the original
+C3–C5 sampled range. All programs retain MIDI 0–127 playback by transposing
+the outer samples. TOUCH LAYERS opens ON; OFF keeps one layer. The range button
+shows the total sample count (15/5 wide or 9/3 compact). Both choices persist
+for the SYNTH visit without changing the saved patch. PREVIEW stays at C4. Soft/mid/hard captures scale the saved velocity and INJECT, with
 the saved recipe as the unchanged hard anchor. Older saved models retain their existing pad workflow. Physical phone/MPC
 acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
@@ -215,6 +286,9 @@ body openings, and a dry pitched starter. The
 earlier bank, body-opening studies and original/revised GLASS comparisons.
 Its MOTION detail panel edits amount/time, chooses a source, and switches from
 the saved finite opening to repeating movement with genuine held loops.
+With REPEAT and looping HOLD, MAKE INSTRUMENT preserves the opening once and
+loops the sustain region while a key is held; its sheet previews the complete
+performance and exports nine sample roots with note-off release.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.
@@ -226,16 +300,30 @@ can be changed by semitone or octave without resetting that recipe. Its 48
 provisional presets and dry starter kit await listening.
 TANGLE's six voices, 36 recipes and dry starter kit likewise await the
 owner's listening verdict; saved recipes preserve explicit note and velocity.
-OVERLAP adds four topologies and twelve approved factory recipes through
-`OverlapFactoryPresets`, with six macros plus saved ROOT and VELOCITY. Loading,
-editing, saving under YOURS and sending to a pad preserve the recipe's render
-model. Its fixed FRESH TAPE starter places the approved twelve first, followed
-by four octave-lower plucks. Every pad is a dry TONAL one-shot with a finite
-tail; HOLD extends excitation, and breathing has no tempo synchronization.
-ROOT is the geometry reference, so a resonant chord can suggest another pitch.
-Android compile/device CI and a real phone pass for this integration remain
-pending; the [OVERLAP checklist](../docs/OVERLAP.md#manual-real-phone-pass)
-covers the remaining flow. Held-note support is a separate future step.
+OVERLAP adds four topologies and twelve approved finite factory recipes through
+`OverlapFactoryPresets`. FINITE retains its six macros, renderer model and dry
+FRESH TAPE starter: the approved twelve followed by four octave-lower plucks.
+Explicit HELD playback exposes RING for SELF and KNOT/RING for the other three,
+with saved ROOT, VELOCITY and RELEASE. PULSE, GLOW and LOCK are off and HOLD is
+one; the complete macro map is retained. Its dry press-and-hold preview plays
+a prepared onset and steady loop, then releases on lift.
+Completed bodies use a bounded cache; no DSP runs on the press. SAVE PRESET
+under YOURS preserves the complete playback, reference, velocity and release.
+MAKE INSTRUMENT saves three sampled reference zones to the instrument library
+and normal MPC export path. SEND TO PAD and SPREAD make finite deliveries
+with saved terminal fades; they do not create held pads. Native instrument
+loops remain untouched. ROOT remains a geometry
+reference, and sampler release differs from the prototype's physical resonator
+decay. The owner accepted the
+MPC held trial on 2026-10-31 without supplying model/OS details. Implementation
+revision `2b07c5ef` has passing Android/native CI and an emulator run of 355
+tests with no failures and one unrelated benchmark skip. The separate clean
+local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies;
+106 focused tests and all twelve complete accepted-WAV comparisons also pass
+at that local checkpoint. The cache-copy guard is proven; physical
+phone listening and timing remain unmeasured. The
+[OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
+separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
@@ -266,7 +354,7 @@ GRAINS, SNAP and DRAW work on source material beside the engine picker.
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers |
 | Window | `ui/Chrome.kt` — SNIPSNAP titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | The menu's screens under `ui/` — SHELF, KIT (4×4, MPC geometry: A13 top-left, A01 bottom-left), TAPE, CHOP, PLAY, KEYS, SURFACE, GROOVE, SYNTH, SNAP, EXPORT, SETUP, HELP, and the rest |
-| Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
+| Data | `KitShelf` over `KitStore` (kits under app files/Kits; expansions under app files/expansions, one `expansion.json` each, naming member kits by the `id` in their `kit.json`). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 
 ## Things to verify on first run (beyond "does it compile")
@@ -327,7 +415,9 @@ logcat tag to grab when something is wrong.
 - **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
   covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
   optional volume link in PADS and FULL. Check the interaction on a phone;
-  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers;
+  an ordinary pad's PAD SHEET has a STRIKE FX section (ROOM, SLAP, AUDITION,
+  KEEP, CLEAR) that builds DRY, ROOM and ECHO layers from its own sample.
   The LAST row highlights the layer actually triggered; moving the strip
   changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
@@ -705,6 +795,17 @@ logcat tag to grab when something is wrong.
   box is open on the next pad. Open OUTSIDE and SEND a ROOM trip: the
   box's strip turns cyan and two reels turn on an LCD strip beside
   LISTENING…, then SENDING…; SEND reads the stage dimmed.
+- **Expansions on the shelf**: hold a kit and tap EXPANSION ▸, then NEW,
+  name it, pick its art and close the picker: THE SHELF grows an
+  EXPANSIONS group with that expansion at 1 KIT. Hold a second kit and tap
+  the expansion's row in the sheet: 2 KITS. Delete one of the kits: the
+  count drops; restore it from DELETED KITS: it comes back. Tap the
+  expansion row: EXPORT opens on its EXPANSION side with the tile; CHANGE
+  ART, then WRITE EXPANSION, and the folder (or the `.xpn`) lands under the
+  expansion's title, on the card when one is picked. BACKUP carries the
+  expansions too: restore the backup on a phone without them and the toast
+  counts them BACK ON THE SHELF, each around its kits; restore it on the
+  phone it came from and each is named as already there.
 - **ROOMS on the shelf**: after KEEP ROOM, THE SHELF grows a ROOMS
   section under INSTRUMENTS, one row per room with its measurement and
   length. Hold a row: it presses and shows FORGET → BIN; tap it and the
@@ -820,14 +921,27 @@ logcat tag to grab when something is wrong.
   builds sixteen finite one-shot pads with native soft/hard velocity zones.
   Repeated hits should keep their tails and soft strikes should remain soft.
   [The integration notes](../docs/LIBRATION.md#measuring-on-a-phone) include
-  the opt-in device benchmark and MPC acceptance pass. HOLD remains unavailable.
+  the opt-in device benchmark and finite MPC acceptance pass. The owner accepted
+  finite phone/MPC behavior. For the new held path, choose HOLD, save and return,
+  then SEND: the pad should repeat while held and stop on release. NOTE restores
+  finite playback and its saved LENGTH. MAKE INSTRUMENT keeps the real attack,
+  renders keyboard zones serially, and exposes RELEASE. Cancel a render, make a
+  replacement, hold a key through a loop, then release it. The
+  [held design](../docs/LIBRATION_HOLD.md) records the new version and software evidence;
+  this new transport still needs an owner phone/MPC pass.
 - **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,
-  Warm Fan and Tenth Bloom. Verify TUNE shows the actual note; CREASE,
+  Warm Fan and Tenth Bloom. Tap AUDITION to hear each selection. Verify TUNE
+  shows the actual note; CREASE,
   FOLD, TURN, WARP and MOTION change the sound. Save a preset, reload it
   after relaunch, then SEND to an empty pad and replace an existing pad.
   The resulting pad should retain the recipe and authored root, with no
   stale fine detuning from the old sample. FRESH TAPE → ORIGAMI supplies
-  sixteen tonal one-shots. Physical phone audio remains a listening check.
+  sixteen tonal one-shots. Select Fifth Bloom or Soft Unfold, choose SOFT,
+  MID and FULL, and tap AUDITION after each. Changes render quietly; AUDITION
+  during rendering queues the latest result. Check that the temporary hit
+  strength does not change a saved preset or SEND recipe. Compare TOUCH
+  against FOLD and LEVEL, then use SOFT HITS on a sent pad or MAKE INSTRUMENT
+  for held layers. Physical phone audio remains a listening check.
 - **FORGET a preset** (`docs/WORKSHOP.md`, WS5's follow-up): on SYNTH,
   THUMP · KICK with MY KICK under YOURS, hold the chip: a slip asks
   FORGET MY KICK? and names DELETED PRESETS and 30 days, with CANCEL and

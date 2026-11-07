@@ -35,6 +35,7 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.CaptureSource
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
@@ -90,6 +91,9 @@ fun PropertiesScreen(
     /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
     hapticsOn: Boolean,
     onHaptics: (Boolean) -> Unit,
+    /** LISTEN FROM: the source the dock's LISTEN is set to, or null before one is chosen. */
+    listenSource: CaptureSource?,
+    onListenSource: (CaptureSource) -> Unit,
     /** MIDI OUT: whether pads and keys also go to plugged-in hardware. ON by default (`MIDI_OUT_DEFAULT`); the app's own SNIPSNAP OUT port is published either way. */
     midiOutOn: Boolean,
     onMidiOut: (Boolean) -> Unit,
@@ -221,6 +225,12 @@ fun PropertiesScreen(
             }
             TapeText(Copy.SETUP_HAPTICS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
+
+        // LISTEN FROM: the source the dock's LISTEN remembers. Its own composable.
+        ListenSourceGroup(scheme, listenSource, onListenSource)
+
+        // PAD VELOCITY: how a tap becomes a velocity. Its own composable.
+        PadVelocityGroup(scheme)
 
         // MIDI OUT: HAPTICS' two-up toggle again, then where the notes go. A
         // phone with no MIDI gets the one sentence and no switch - a bevel

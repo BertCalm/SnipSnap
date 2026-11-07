@@ -1,15 +1,17 @@
 # SCOUR Engine: Engineering Specification
-Version 1.6 · 2026-10-31 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+Version 1.8 · 2026-11-05 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
 1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
 listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, the SHEET voice and the
-kit's bank B)
-Status: R1 to R4 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+kit's bank B; 1.7 records the fifth listen and R5, a varied bank B and the BEAM voice with its bank C;
+1.8 records the owner's request for six voices and R6, the DISC and ROD voices with their bank D)
+Status: R1 to R6 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1, R1.1, R2 and R3 auditions; the R4 page is published and not yet heard.
+renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
+on the R5 page). The owner said R6 sounds good (As built: R6, Heard).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. BEAM is next, after the R4 listen. The phone's synth picker
-and a docs page remain.
+voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1), and its docs
+page is `docs/SCOUR.md`.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -429,7 +431,8 @@ Nothing below exists yet. Names grep at `f931efc6`.
   (the brief names no gear, so the blocklist needs no new terms); leave `PROTOTYPES`.
 - [ ] R4: `SynthKits.scour()`, `ScourKitGenerator.kt` and `generateScourKit`, docs
   (`docs/SCOUR.md`, a `docs/SYNTH_ROADMAP.md` row, the README engine count, "As built" here).
-- [ ] Deferred: the app picker (`app/.../SynthScreen.kt`), for a session with an Android SDK.
+- [x] The app picker (`app/.../SynthScreen.kt`) was deferred for a session with an Android SDK. It landed on the
+  default branch with #840 (As built: R5.1).
 
 ## 15. Probes and auditions
 
@@ -591,7 +594,15 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | the kit's presets and build lengths are the right ones | heard: the kit yes, the lengths yes | the R3 kit page (As built: R4) |
 | the free 3:1 rectangle values (SHEET) | verified (solve) | the same solve reproduces the square at 1:1 and approaches the free-free beam at 8:1 (As built: R4) |
 | SHEET's note reads down to C2 | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a low-register grid (As built: R4) |
-| SHEET sounds like a thunder sheet and earns bank B | heard? | the R4 page |
+| SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
+| the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
+| BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
+| bank B now varies enough, and BEAM sounds like a struck girder | heard: bank B varied enough, yes; bank C as it is, yes; BEAM into a drop, yes; "a struck girder" | the R5 page (As built: R5) |
+| the free annulus values (DISC) | verified (solve) | the exact Bessel solution reproduces 24 entries of Leissa Table 2.35 within 0.46 % and PLATE's solid-plate limit (As built: R6) |
+| DISC's and ROD's notes read | measured | 37 of 37 asserted corners at both windows for each (As built: R6) |
+| ROD's harmonic series | verified (sources) | a BYU acoustics paper and an open solver's free-free rod page, found by search, not read in a book (As built: R6) |
+| DISC and ROD sound like a brake disc and a harmonic ping, and earn bank D | heard: "they sound good" | the owner in chat, 2026-11-06; the page's questions not answered one by one (As built: R6) |
+| SCOUR sounds fine on the phone | heard: "Sounds fine on phone." (2026-11-05) | the owner, after the picker landed |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -1043,3 +1054,218 @@ its listen.
    pitch is hardest.
 4. **Bank B, not a reshuffle.** The owner said yes to bank A as it is, so SHEET's pads go beside it in
    the same order: builds at two tempos, then presets, plus a low line of hits.
+
+## As built: R5, the beam and a varied bank B (2026-11-01)
+
+R5 varies bank B and adds a fourth voice, BEAM, with its own bank C. It changes `Scour.kt`, `ScourPresets.kt`
+and `SynthKits.kt`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; and the
+audition and kit generators and the page.
+
+### Heard (the owner, R4 page, 2026-11-01)
+
+| Question | Answer | Note |
+|---|---|---|
+| Would you load bank B as it is? | with changes | "Probably some parameter variation" |
+| Would you reach for SHEET into a drop? | yes | |
+| Does SHEET sound like a thunder sheet? | yes, it rumbles | |
+| SHEET sits an octave below the other two. Is that the right place for it? | right | "With a bit of variation in the bank" |
+| Which pads would you keep, change or drop? | | "They sound pretty similar" |
+| Each control swept; edges | | "Pretty good"; "Pretty good" |
+
+Asked how to vary bank B, the owner chose character and pitch together. Asked whether to build BEAM in the
+same round, the owner said yes, with its own bank C.
+
+### What changed
+
+- **Bank B varies pad by pad.** The first bank B gave twelve of its sixteen pads one setting apart from BUILD
+  or TUNE. Now:
+  - each build keeps its beat-cut length but has its own note between C2 and C3 and its own roller, shot,
+    hardening and ring;
+  - the short hits moved up to E♭2, F2, G2 and B♭2, because STEEL BOOM beside them is already the bare slam
+    on C2 (the C2 hit and STEEL BOOM rendered as near-copies, below);
+  - SHEET RISE moved to F2.
+
+  The builds' and hits' settings came from a search over steps of .1. It kept every build's SHOT at .2 or
+  more and used no note more than twice, and it maximised the closest pair.
+- **BEAM's body.** A free-free steel beam (a girder hung by its ends), heard in bending.
+  - Its modes are the roots of `cos βL · cosh βL = 1`, listed as `(βL)² = ωL²√(ρA/EI)`. The first five are
+    Leissa Table 4.72's beam row (22.373, 61.673, 120.903, 199.860, 298.556), which the closed form
+    reproduces.
+  - Ratios 1, 2.757, 5.404, 8.933, 13.344, 18.638, 24.814, 31.872: few and wide apart, a struck bar's clang.
+- **BEAM is heard on a node.** The listening point is .0509 of the length from one end, the first node of the
+  18.638 mode. That mode sits near 37/2 and would split the pitch read, as SHEET's 5.468 did; 13.344 (near
+  27/2) moves only .186 as much as the root there.
+  - The mode shapes are the closed form `cosh βx + cos βx − σ(sinh βx + sin βx)`.
+  - The listening point was chosen by the curvature budget of R4's diagnosis: a partial at ratio r flattens
+    the root's autocorrelation peak by its power times r², times −cos 2πr.
+  - The seven modes heard at that point are kept.
+- **BEAM's voicing.**
+  - The pair (2.757 and 5.404) sits at .5 of the gain law and .7 of its ring, under a .85 gain law with
+    each mode above .85 as long.
+  - The root rings 3 s. Steel keeps its hardening (κ .015, ρ .12/s), with PLATE's stretch (.3).
+  - The roller is the quietest of the four (.04), and BEAM takes the whole output trim.
+  - BEAM plays from C3, like PLATE and PANE.
+- **Four BEAM presets**, on C minor pentatonic from C3:
+  - GIRDER CLANG, the bare slam on C3;
+  - RIVET RISE, at G3;
+  - GANTRY RUN, at E♭3;
+  - FOUNDRY BELL, a hardened ring at C4.
+- **Bank C.** `SynthKits.scour()` now returns forty-eight pads. Bank C is laid out like bank B and varied the
+  same way: builds from C3 to C4, the four presets, and hits on E♭3, F3, G3 and B♭3. The SCOUR starter fills
+  all three banks, `StarterKitsTest` expects forty-eight slots, and the starter's blurb names the girder.
+- **The body test holds four bodies apart.**
+  - BEAM's probe ratios are 5.404, 24.814 and 31.872; its others sit within 2 % of SHEET's.
+  - In each voice's render, another voice's probe ratio within 2 % of one of its own modes is left out,
+    since there the two bodies share a partial: SHEET's 2.778 against BEAM's 2.757. The modes come from a
+    new internal `Scour.bodyRatios`.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| BEAM, pair at full level | 28 of 37 asserted corners at the onset and 27 in the tail, all misses flat (2.757 pulls the period long) |
+| BEAM, pair at .5 and .7 | 37 of 37 at both windows for gain laws .8 to .88 |
+| BEAM on 243 corners at C3, E♭3 and F3 | at a roller level of .07, 230 to 232 at the onset and 239 in the tail, the misses flat at full roller speed: the roller's ring partly cancels the root at the slam, as in R4. At .04: 243 and 243 (a .9 gain law reads 242) |
+| BEAM's raw peak | 0.65 at C3 after the longest build at full roller and blast, 0.43 at the default |
+| BEAM's hit over build (default) | 12.1 dB |
+| BEAM's render cost | the default (5 s) in about 80 ms, the longest (17 s) in about 265 ms |
+| Body separation | BEAM's margins over every other body's ratios are 24.7 dB or more; the narrowest margin overall is still SHEET's at C3, 15.6 dB |
+| Bank spread, controls (asserted) | every pair in banks B and C except hit against hit at least .26 apart, RMS over the six controls; the test's bar is .2 |
+| Bank spread, rendered (measured, not asserted) | Third-octave band energy over each pad's whole render, RMS difference in dB. Old bank B: mean 14.3 dB, closest pair 1.3 dB (the C2 hit and STEEL BOOM). New bank B: mean 18.5 dB, closest pair 6.3 dB. Bank C: mean 22.1 dB, closest pair 7.9 dB. Before the hits moved up, the closest pair was still the root hit beside its bare-slam preset (2.2 dB in bank B, 5.1 dB in bank C) |
+| Tests | `ScourTest` 13, `ScourPresetsTest` 7 (the bank spread among them), the SCOUR determinism canary, `PresetsTest` 8, `PadRecipeTest` 20, `PatchesTest` 3, `StarterKitsTest` 7 and `ConventionTest` 64, all passing |
+| Audition | 12 phrases and 78 gestures, 168 24-bit WAVs; the published page carries 90 16-bit clips at one shared gain of 11 dB, including all four voices on C3 |
+
+### Disclosed, not fixed
+
+- BEAM is one plane of Euler-Bernoulli bending: no torsion, no second bending plane, no shear. A real I-beam
+  girder has all three, and shear would lower its upper modes.
+- Bank spread is asserted on the controls, not on the sound. The rendered distances above were measured once.
+- The hits within a bank are held apart from every other pad but not from each other: they are one line on
+  four notes.
+- SHEET's lowest octave on a phone speaker or an MPC is still unheard.
+
+### Heard on the R5 page (the owner, 2026-11-01)
+
+| Question | Answer |
+|---|---|
+| Is bank B varied enough now? | yes |
+| Would you load bank C as it is? | yes |
+| Would you reach for BEAM into a drop? | yes |
+| What does BEAM sound like to you? | a struck girder |
+
+### Why R5 is built this way
+
+1. **Variation where the owner heard sameness.** The note named the pads, not the sound of SHEET, so the
+   voice stays and the bank changes. Build lengths are kept because the owner approved them twice.
+2. **Measured on the sound, not just the knobs.** Two pads can sit far apart on the controls and still sound
+   alike when they share a note and a short build. That is why the hits moved up the scale.
+3. **A beam is the sparse end of the family.** PLATE crowds, PANE is glassy, SHEET rumbles. BEAM's few,
+   widely spaced modes are a clang, and it gets the same listening-point treatment for its note.
+
+## As built: R5.1, on the phone (2026-11-01)
+
+After the R5 listen the owner chose to put SCOUR on the phone's synth picker. The default branch already had it:
+#840 (`779f40a5`) put BORE, ARCO, SCOUR and KEEL on the picker together, so this spec records that change and does
+not repeat it.
+
+- **Where it sits.** After RIME, between ARCO and KEEL, so the picker's arrows reach it last. The catalogue files
+  it under PADS & FX and BELLS & MALLETS, described as "Shot-blasted plates that build to a slam, then ring".
+- **Its root.** `SynthRoot` (#837) gives every SCOUR voice a ROOT and OCT stepper through TUNE, using
+  `Scour.midiFor`.
+- **What it gives.** Factory presets browse by voice through `Presets`, which rosters SCOUR's sixteen. "Reopen in
+  the synth" can open the SCOUR starter's 48 pads, since it lists any pad whose engine and voice the picker knows.
+- **`MODEL_VERSION` stays 1.** Its comment no longer says that no saved SCOUR sound exists: a sound saved from the
+  phone regenerates through it, as the presets and the starter's pads do.
+
+### Disclosed, not fixed
+
+- SCOUR has not been opened on a phone yet. The app compiles and its emulator tests run in CI, not in the
+  sessions that built the engine.
+
+## As built: R6, the disc and the rod (2026-11-05)
+
+R6 adds two voices, DISC and ROD, and a bank D for them. It changes `Scour.kt`, `ScourPresets.kt` and
+`SynthKits.scour()`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; the audition
+and kit generators; and the docs page, which now describes six voices, twenty-four presets and sixty-four pads.
+
+### What the owner said
+
+- **The phone (2026-11-05):** "Sounds fine on phone."
+- **Voices:** asked "Shouldn't we have 6 voices?", the owner chose a free ring (a brake disc) and a rod out of four
+  proposals (a bowl or bell and a struck pipe were the others), both in one round, with a new bank D.
+
+### What changed
+
+- **DISC's body.** A completely free annular plate, hole radius .5 of the outer, ν = 0.3, nine modes at ratios
+  1, 2.181, 2.675, 4.027, 4.932, 7.285, 7.722, 11.019 and 11.112.
+  - The values are the roots of the exact free-free frequency determinant (Bessel J, Y, I and K of order n, with
+    M_r and the Kirchhoff shear V_r zero at both edges), solved in the Python harness.
+  - It reproduces 24 entries of Leissa Table 2.35 (b/a .1, .3, .5 and .7) to within 0.46 %; the table prints
+    three figures. The table's header reads ν = 1/3 but its numbers match ν = 0.3 (5.3034 against 5.30 at b/a .1),
+    which is the value used. As the hole closes (b/a .01) it gives 5.2506 and 12.2216 at ν = 1/3 against PLATE's
+    5.253 and 12.23 at ν = .33.
+  - b/a .5 was chosen over .4, .6 and .7 as the family farthest from the four other voices' partials. The hole
+    lifts the breathing mode from PLATE's 1.729 to 2.181 times the root, and puts (1,1), (4,0) and (6,0) near 4, 5
+    and 11.
+- **DISC's listening point.** .93 of the outer radius out and 69 degrees round, chosen by scoring 294 points on
+  a grid with a mirror of `Pitch.detect` (the first autocorrelation peak above .85 of the maximum). 31 read the root
+  in all 16 detections under five voicings; this one reads all 54 at the test's two windows across C3 to C5 under
+  three, including no pair reduction and slow-decaying upper modes. Its neighbours at .89 also pass, so it is not a
+  lucky spike. DISC takes no pair reduction (`pairLevel` and `pairRing` 1).
+- **ROD's body.** A uniform free-free rod in longitudinal vibration, struck on its end: the whole multiples of the
+  lowest mode, twelve kept, heard at the struck end where every mode moves alike. Sources are a BYU acoustics paper
+  and an open solver's verification page, found by search; no book text was read.
+  - The failure to design against is sharp reads, not octave errors. HARDEN stretches the upper modes, and a stretched
+    series with strong upper partials drags the detector's common period short: in the mirror, at a stretch of .3
+    and a gain law of .78, 18 of 54 reads came out 40 to 100 cents sharp. At a stretch of .15 and gain .70 to .78
+    all 54 read. ROD takes a stretch of .15 (about half the others' .25 to .35) and a .74 gain law, and its presets keep HARDEN at .6 or
+    under.
+- **Loudness.** The loudest raw corner peaks at 0.97 on DISC and 1.16 on ROD (every harmonic is struck alike), so
+  DISC takes a [Shape.trim] of .75 and ROD .6: 0.73 and 0.70 at the loudest corner, 0.46 and 0.44 at the defaults.
+- **Eight presets, four a voice.** DISC: ROTOR SLAM, CALIPER RISE, DRAG RUN and DISC BELL. ROD: NEEDLE PING, SPIKE
+  RISE, RAIL RUN and STRUT BELL. All are on C minor pentatonic and at least .2 apart within a voice.
+- **Bank D.** Laid out as bank A (DISC's four builds at 120 BPM, ROD's four at 90 BPM, then both voices' presets)
+  and varied as banks B and C are. The builds' notes, roller, shot, hardening and ring came from the same search,
+  now within a voice (a closest pair of .29 for DISC and .28 for ROD, among its four builds and four presets), with
+  ROD's hardening held to .5 or under. The kit is 64 pads, and the SCOUR starter's blurb names the disc and rod.
+- **The body test's probes.** DISC's 2.181, 4.932 and 7.285 and ROD's 3rd, 5th and 6th harmonics. The first choice
+  (DISC's 2.181, 2.675 and 7.722; ROD's 2nd, 3rd and 6th) failed: PANE's build sat 13.0 dB under its own partials
+  at DISC's 2.675 (the test needs 15), since PANE's 2.549 mode, 4.9 % away, spreads under the shot rain. Every
+  candidate partial was then measured in all six renders and the triples chosen from the numbers. ROD's 2nd and
+  4th harmonics are out, because SHEET's build already rings near 2 and 4. The narrowest new-voice margin is
+  PANE's against DISC's 2.181, 3.0 dB over the floor. The narrowest of all is the old SHEET against PLATE, 0.7 dB,
+  unchanged by R6 and recorded in the test.
+
+### Measured and checked
+
+| Check | Result |
+|---|---|
+| The free annulus solver against Leissa Table 2.35 | 24 of 24 entries within 0.46 % (ν = 0.3) |
+| DISC's and ROD's note, 37 corners at the hit and the tail | 37 of 37 and 37 of 37 for each |
+| Default render time | DISC 75 ms, ROD 84 ms (hot, in the scratch test) |
+| `ScourTest`, `ScourPresetsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DeterminismTest` | passing |
+
+### Heard (the owner, 2026-11-06)
+
+Asked whether they had heard DISC, ROD and bank D, the owner answered "Yes, they sound good".
+
+### Disclosed, not fixed
+
+- The R6 verdict is one overall "they sound good", given in chat. The page's six questions (bank D, each voice into a drop,
+  each voice's character, six voices) were not answered one by one, so no single pad or voice has its own verdict.
+- DISC is thin-plate theory on a flat annulus. A real brake disc has a hat and often vanes, and no thickness or shear
+  correction is applied. The hole's radius (.5) is a shape choice made for distinctness, not a measured rotor.
+- ROD is longitudinal only and exactly harmonic. A real rod's lateral inertia detunes its upper harmonics, and a struck
+  bar also rings bending modes (BEAM's). Its HARDEN reach is small by design.
+- DISC and ROD are on the picker with no code change there: `SCOUR -> ScourVoice.entries` lists them. That has not been
+  played on a phone.
+
+### Why R6 is built this way
+
+1. **A hole changes the sound in one place.** The solid plate's breathing mode sits near 1.7 times the root. Cutting the
+   hole lifts it to 2.2 and pulls others toward whole multiples, which is how a ring differs from a disc by ear.
+2. **A harmonic rod is the opposite of the rest.** Every other body is a crowd or a clang of unrelated partials; the rod
+   is a ping on a series. The design risk is that HARDEN detunes the series and the note reads sharp, so its stretch is
+   small.
+3. **Probes are chosen from numbers, not guesses.** The first pair failed a 15 dB floor by 2 dB. Measuring every
+   candidate in every voice's render found the safe triples and showed which old pairing already sits at 0.7 dB.

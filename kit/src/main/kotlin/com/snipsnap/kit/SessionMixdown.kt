@@ -11,6 +11,11 @@ import java.io.File
  * `.xpj`, and the "share the beat, not just the kit" story. Deterministic
  * like everything else in the render path. The sum shares [SongBus.PEAK]
  * with [KitPreview], so a mix must never clip harshly.
+ *
+ * This is the one-loop demo. When the project's active kit keeps a song
+ * ([SongPlanStore]), the WAV beside the project is that song instead; the
+ * song needs `Arranger`, which lives above `:kit`, so `ProjectSessionModel`
+ * (in `:shell`) makes that choice and calls this only when there is none.
  */
 object SessionMixdown {
 

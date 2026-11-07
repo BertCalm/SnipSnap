@@ -13,7 +13,7 @@ class PadSheetBoxesTest {
 
     @Test
     fun `five boxes in order, one open at a time, a tap on the open one closes it`() {
-        assertEquals(listOf("TREATMENT", "SHAPE", "MUTATE", "OUTSIDE", "MAKE"), PadSheetBoxes.ORDER.map { it.legend })
+        assertEquals(listOf("TREATMENT", "SHAPE", "OUTSIDE", "MUTATE", "MAKE"), PadSheetBoxes.ORDER.map { it.legend })
         assertEquals(PadSheetBoxes.Box.MUTATE, PadSheetBoxes.boxFor("MUTATE"))
         assertNull(PadSheetBoxes.boxFor("BENCH"))
         assertEquals(PadSheetBoxes.Box.SHAPE, PadSheetBoxes.toggle(null, PadSheetBoxes.Box.SHAPE))
@@ -124,4 +124,48 @@ class PadSheetBoxesTest {
         )
     }
 
+
+    @Test
+    fun `the EFFECTS door says what is applied from the three benches on that screen, and the VARIATIONS door what is inside`() {
+        assertEquals(PadSheetBoxes.NOTHING_APPLIED, PadSheetBoxes.effectsLine(bare))
+        assertEquals(PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.variationsLine(bare))
+
+        // A pedal reads as the card does, with the joint dropped: "DELAY 70%", the way a treatment reads "CRUSH 35%".
+        val pedal = com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("delayed", 0.7f)))
+        val delayed = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = pedal).toJsonValue())
+        assertEquals("DELAY 70%", PadSheetBoxes.effectsLine(delayed))
+
+        // SHAPE and a trip out count too; MUTATE's and MAKE's strips do not.
+        assertEquals("ATK 200 MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
+        assertEquals("DELAY 70% · ATK 200 MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
+        assertEquals(Copy.OUTSIDE_LISTENING, PadSheetBoxes.effectsLine(bare, outsideStage = Copy.OUTSIDE_LISTENING))
+        assertEquals(
+            PadSheetBoxes.NOTHING_APPLIED,
+            PadSheetBoxes.effectsLine(bare.copy(source = bare.source + ("desampled" to "2 steps"))),
+            "MAKE's DE-SAMPLE is not on the EFFECTS screen",
+        )
+
+        // Words that would not fit the line become a count, as the pedal strip's own do.
+        val full = delayed.copy(attack = 1f, decay = 0.5f, cutoff = 1f, resonance = 1f)
+        assertEquals("2 APPLIED", PadSheetBoxes.effectsLine(full))
+        for (line in listOf(PadSheetBoxes.NOTHING_APPLIED, PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.effectsLine(delayed))) {
+            assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "a door line must fit the strip: '$line'")
+        }
+    }
+
+    @Test
+    fun `every box sits on one of the editor's pages, OUTSIDE with the effects, and the pages are benches`() {
+        assertEquals(PadSheetPage.EFFECTS, PadSheetBoxes.page(PadSheetBoxes.Box.OUTSIDE))
+        assertEquals(PadSheetPage.VARIATIONS, PadSheetBoxes.page(PadSheetBoxes.Box.MUTATE))
+        assertEquals(PadSheetPage.EDITOR, PadSheetBoxes.page(PadSheetBoxes.Box.MAKE))
+        // The order is the order the pages draw them in: a page's boxes are a run of ORDER.
+        assertEquals(
+            listOf(PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.VARIATIONS, PadSheetPage.EDITOR),
+            PadSheetBoxes.ORDER.map { PadSheetBoxes.page(it) },
+        )
+        for (page in PadSheetPage.entries) assertEquals(page, PadSheetPage.of(page.bench))
+        assertNull(PadSheetPage.of(Bench.SPLICE))
+        assertNull(PadSheetPage.of(null))
+        for (page in PadSheetPage.entries) assertTrue(page.bench in KitBench.PAD_BENCHES, "${page.name} works on one pad of one kit")
+    }
 }

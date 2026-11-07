@@ -16,12 +16,13 @@ import kotlin.test.assertTrue
 
 /** Native persistence and host routing, separate from the accepted projection fixtures. */
 class LatticePatchTest {
+    private val originalVoices = listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW)
     private val controls = listOf("TUNE", "TURN", "STAGES", "TWIST", "COLOR", "REJECT", "HOLD")
 
     @Test
-    fun `three source voices expose the mechanism pitch and deliberate loop controls`() {
-        assertEquals(listOf("WARM", "PLUCK", "HOLLOW"), LatticeVoice.entries.map { it.name })
-        for (voice in LatticeVoice.entries) {
+    fun `original source voices keep their mechanism pitch and deliberate loop controls`() {
+        assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE"), LatticeVoice.entries.map { it.name })
+        for (voice in originalVoices) {
             assertEquals(controls, Lattice.macrosFor(voice).map { it.name }, "$voice controls")
             assertEquals(controls.toSet(), Lattice.defaults(voice).keys)
             assertEquals(.5f, Lattice.defaults(voice).getValue("TUNE"))
@@ -38,7 +39,7 @@ class LatticePatchTest {
 
     @Test
     fun `native patch JSON preserves model note excitation and partial controls`() {
-        for (voice in LatticeVoice.entries) {
+        for (voice in originalVoices) {
             val patch = LatticePatch("Saved $voice", voice, mapOf("COLOR" to .37f), midi = 55, velocity = .63f)
             val fields = patch.toJsonValue().entries
             assertEquals("LATTICE", fields.getValue("engine").str())
@@ -150,11 +151,12 @@ class LatticePatchTest {
 
     @Test
     fun `the twelve factory candidates are discoverable complete dry and non silent`() {
-        val bank = LatticePresets.all()
+        val all = LatticePresets.all()
+        val bank = all.filter { it.voice in originalVoices }
         assertEquals(12, bank.size)
         assertEquals(bank.size, bank.map { it.name }.toSet().size)
-        assertEquals(bank, Presets.all().filter { it.engine == LatticePatch.ENGINE })
-        for (voice in LatticeVoice.entries) {
+        assertEquals(all, Presets.all().filter { it.engine == LatticePatch.ENGINE })
+        for (voice in originalVoices) {
             val presets = LatticePresets.patchesForVoice(voice)
             assertEquals(4, presets.size)
             assertEquals(bank.filter { it.voice == voice }, presets)
@@ -177,4 +179,38 @@ class LatticePatchTest {
         }
         assertTrue(Presets.forVoice(LatticePatch.ENGINE, "UNKNOWN").isEmpty())
     }
+
+    @Test
+    fun `TRACE factory patches save their speed and finite hold without legacy geometry controls`() {
+        val all = LatticePresets.all()
+        val trace = LatticePresets.forVoice(LatticeVoice.TRACE)
+        assertEquals(15, all.size)
+        assertEquals(all.size, all.map { it.name }.toSet().size)
+        assertEquals(listOf("Ringing Trace", "Slow Trace", "Quick Trace"), trace.map { it.name })
+        assertEquals(listOf(.5f, .25f, .75f), trace.map { it.macros.getValue("SPEED") })
+        assertEquals(listOf("TUNE", "SPEED", "HOLD"), Lattice.macrosFor(LatticeVoice.TRACE).map { it.name })
+        assertEquals(Lattice.defaults(LatticeVoice.TRACE), trace.first().macros)
+        assertEquals(trace, Presets.forVoice(LatticePatch.ENGINE, "TRACE"))
+        for (patch in trace) {
+            assertEquals(setOf("TUNE", "SPEED", "HOLD"), patch.macros.keys)
+            assertFalse(Lattice.isLoop(patch.voice, patch.macros.getValue("HOLD")))
+            assertEquals(DrumClass.TONAL, Lattice.drumClassFor(patch.voice, patch.macros))
+            assertEquals(patch, Presets.byName(patch.engine, patch.voiceName, patch.name))
+            assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
+            assertNull(Presets.landingFor(patch.engine, patch.voiceName, patch.macros))
+            assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name), patch.name)
+        }
+        val saved = trace.first().copy(name = "Saved moving trace", midi = 55, velocity = .43f,
+            macros = mapOf("TUNE" to .625f, "SPEED" to .73f, "HOLD" to .2f))
+        val edited = assertIs<LatticePatch>(Patches.edited(saved, "Moved trace", saved.macros + ("SPEED" to .31f)))
+        assertEquals(saved.midi, edited.midi)
+        assertEquals(saved.velocity, edited.velocity)
+        assertEquals(saved.model, edited.model)
+        val reopened = PadRecipe.fromJsonText(PadRecipe(edited).toJsonText())
+        assertEquals(edited, reopened.patch)
+        assertContentEquals(edited.render().samples, reopened.render().samples)
+        assertContentEquals(edited.copy(velocity = .35f).render().samples, Velocity.atVelocity(edited, .35f).samples)
+        assertFailsWith<IllegalArgumentException> { saved.copy(macros = saved.macros + ("COLOR" to .4f)) }
+    }
+
 }

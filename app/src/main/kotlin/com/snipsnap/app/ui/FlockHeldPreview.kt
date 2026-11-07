@@ -39,13 +39,11 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Snip
-import com.snipsnap.audio.Scales
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.synth.FlockHeld
-import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.FlockVoice
@@ -56,7 +54,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
-import kotlin.math.roundToInt
 
 /** The held choice is separate from HOLD so every saved finite duration retains its meaning. */
 @Composable
@@ -66,17 +63,6 @@ internal fun FlockPerformanceControls(
     scheme: Scheme,
     onEdit: (FlockPatch) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Flock.MIN_MIDI).toFloat() / (Flock.MAX_MIDI - Flock.MIN_MIDI),
-        fillColor = fill,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onEdit(patch.copy(midi = (Flock.MIN_MIDI + value * (Flock.MAX_MIDI - Flock.MIN_MIDI))
-                .roundToInt().coerceIn(Flock.MIN_MIDI, Flock.MAX_MIDI)))
-        },
-    )
     MacroSlider("VELOCITY", patch.velocity, fill, scheme,
         onValueChange = { onEdit(patch.copy(velocity = it.coerceIn(0f, 1f))) })
     if (patch.voice == FlockVoice.RIBBON) {

@@ -207,14 +207,14 @@ class FilamentScreenTest : ComposeScreenTest() {
         for (voice in FilamentVoice.entries) {
             activate(voice.name)
             for (macro in Filament.macrosFor(voice)) slider(macro.name).assertExists()
-            slider("ROOT").assertExists()
+            assertTrue("ROOT stepper row", currentRootOrNull() != null)
             slider("VELOCITY").assertExists()
             for (preset in FilamentPresets.forVoice(voice)) {
                 activate("PRESET ${preset.name}")
                 waitFor("${preset.name} complete recipe") { currentPatch(voice) == preset }
                 assertEquals(Filament.MODEL_VERSION, preset.model)
                 assertEquals(preset.velocity, progress("VELOCITY"), 0f)
-                assertEquals((preset.midi - Filament.MIN_MIDI) / 48f, progress("ROOT"), 0f)
+                assertRoot(preset.midi)
             }
         }
         button("MAKE INSTRUMENT").assertExists()
@@ -255,7 +255,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         activateYours(mine.name)
         waitFor("YOURS replacing the factory draft") { currentPatch(mine.voice) == mine }
         for ((macro, value) in mine.macros) assertEquals(value, progress(macro), 0f)
-        assertEquals(31f / 48f, progress("ROOT"), 0f)
+        assertRoot(67)
         assertEquals(mine.velocity, progress("VELOCITY"), 0f)
         leaveAndReturn()
         assertEquals(mine, currentPatch(mine.voice))
@@ -300,8 +300,8 @@ class FilamentScreenTest : ComposeScreenTest() {
     fun current_curl_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.CURL)
 
     @Test
-    fun curl_makes_three_real_touch_layers_at_each_root_without_rewriting_its_source() =
-        makeInstrument(FilamentVoice.CURL, touchLayers = true)
+    fun curl_makes_three_real_touch_layers_at_five_native_roots_without_rewriting_its_source() =
+        makeInstrument(FilamentVoice.CURL, touchLayers = true, wideKeys = true)
 
     @Test
     fun touch_choice_opens_enabled_for_each_voice_and_reopens_without_changing_the_recipe() {
@@ -316,17 +316,28 @@ class FilamentScreenTest : ComposeScreenTest() {
             activate(voice.name)
             val before = currentPatch(voice)
             activate("MAKE INSTRUMENT")
+            button("SAMPLED RANGE").assertIsSelected()
+            assertReadsInFull("SAMPLED RANGE C2–C6 · 15 SAMPLES")
             button("TOUCH LAYERS").assertIsSelected()
             assertReadsInFull("TOUCH LAYERS ON")
             compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.").assertExists()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsNotSelected()
             assertReadsInFull("TOUCH LAYERS OFF")
+            assertReadsInFull("SAMPLED RANGE C2–C6 · 5 SAMPLES")
+            activate("SAMPLED RANGE")
+            button("SAMPLED RANGE").assertIsNotSelected()
+            assertReadsInFull("SAMPLED RANGE C3–C5 · 3 SAMPLES")
             closeInstrumentSheet()
             activate("MAKE INSTRUMENT")
+            button("SAMPLED RANGE").assertIsNotSelected()
             button("TOUCH LAYERS").assertIsNotSelected()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsSelected()
+            assertReadsInFull("SAMPLED RANGE C3–C5 · 9 SAMPLES")
+            activate("SAMPLED RANGE")
+            button("SAMPLED RANGE").assertIsSelected()
+            assertReadsInFull("SAMPLED RANGE C2–C6 · 15 SAMPLES")
             closeInstrumentSheet()
             assertEquals(before, currentPatch(voice))
         }
@@ -340,7 +351,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
-    private fun makeInstrument(voice: FilamentVoice, touchLayers: Boolean = false) {
+    private fun makeInstrument(voice: FilamentVoice, touchLayers: Boolean = false, wideKeys: Boolean = false) {
         val root = shelfRoot()
         val source = FilamentPresets.forVoice(voice).first().copy(
             midi = 57, velocity = .7f,
@@ -350,28 +361,33 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["recipe.FILAMENT.${source.voiceName}"] = source.toJsonText()
         show(root)
         activate("MAKE INSTRUMENT")
+        button("SAMPLED RANGE").assertIsSelected()
+        if (!wideKeys) activate("SAMPLED RANGE")
         button("TOUCH LAYERS").assertIsSelected()
         if (!touchLayers) activate("TOUCH LAYERS")
         slider("RELEASE").assertExists()
         slider("ATTACK").assertDoesNotExist()
+        val range = if (wideKeys) "C2–C6" else "C3–C5"
         compose.onNodeWithText(if (touchLayers)
-            "C3–C5 · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE; LET GO TO FADE."
-        else "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
+            "NATIVE $range · SOFT, MID AND HARD TOUCH KEEP THEIR ATTACK AND SUSTAIN. PREVIEW: C4, ALL THREE TOUCHES. LET GO TO FADE."
+        else "NATIVE $range · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
         dial("RELEASE", 1f)
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         activate("MAKE")
         val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
-        waitForInstrument("$voice ${if (touchLayers) "nine touch captures" else "three roots"}",
-            timeoutMillis = if (touchLayers) 420_000 else 180_000) {
+        waitForInstrument("$voice $range ${if (touchLayers) "touch captures" else "single layers"}",
+            timeoutMillis = if (touchLayers && wideKeys) 720_000 else if (touchLayers) 420_000 else 180_000) {
             instruments.isDirectory && instruments.walkTopDown().any {
-                it.name == if (touchLayers) FilamentPadMaker.TOUCH_FILE else FilamentPadMaker.PATCH_FILE
+                it.name == if (touchLayers || wideKeys) FilamentPadMaker.TOUCH_FILE else FilamentPadMaker.PATCH_FILE
             }
         }
         val (_, instrument) = InstrumentStore.list(instruments).single()
-        assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+        assertEquals(if (wideKeys) listOf(36, 48, 60, 72, 84) else listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+        assertEquals((0..127).toList(),
+            instrument.zones.flatMap { (it.lowNote..it.highNote).toList() })
         assertEquals(1.5f, instrument.release, 0f)
         assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
-        assertEquals(if (touchLayers) 9 else 3, instrument.sampleFiles.size)
+        assertEquals((if (wideKeys) 5 else 3) * (if (touchLayers) 3 else 1), instrument.sampleFiles.size)
         for (zone in instrument.zones) {
             assertEquals(if (touchLayers) listOf(1..42, 43..84, 85..127) else listOf(1..127),
                 zone.playableLayers.map { it.velStart..it.velEnd })
@@ -428,24 +444,24 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["voice"] = source.voiceName
         settings["recipe.FILAMENT.${source.voiceName}"] = source.toJsonText()
         show(shelfRoot())
-        val root = slider("ROOT").fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+        val root = compose.onNodeWithContentDescription("ROOT OCTAVE DOWN", useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         val velocity = slider("VELOCITY").fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
         val bend = slider("BEND").fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
         // No intervening recomposition or state effect: these are one burst of
         // edits followed immediately by navigation away from the bench.
         compose.runOnIdle {
-            assertTrue(root.invoke(0f))
+            assertTrue(root.invoke())
             assertTrue(velocity.invoke(.27f))
             assertTrue(bend.invoke(.92f))
             screenVisible = false
         }
         pump()
-        val expected = source.copy(midi = 36, velocity = .27f, macros = source.macros + ("BEND" to .92f))
+        val expected = source.copy(midi = 57, velocity = .27f, macros = source.macros + ("BEND" to .92f))
         assertEquals(expected, currentPatch(source.voice))
         compose.runOnIdle { screenVisible = true }
         pump()
         assertEquals(expected, currentPatch(source.voice))
-        assertEquals(0f, progress("ROOT"), 0f)
+        assertRoot(57)
         assertEquals(.27f, progress("VELOCITY"), 0f)
         assertEquals(.92f, progress("BEND"), 0f)
     }
@@ -470,7 +486,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         pump()
         assertEquals(expected, currentPatch(FilamentVoice.THREAD))
         for ((macro, value) in expected.macros) assertEquals(value, progress(macro), 0f)
-        assertEquals(.25f, progress("ROOT"), 0f)
+        assertRoot(48)
         assertEquals(1f, progress("VELOCITY"), 0f)
     }
 
@@ -513,7 +529,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["preset.FILAMENT.${source.voiceName}"] = source.name
         show(root, KitShelf.Entry(dir, kit))
         waitFor("the complete YOURS strand") { currentPatch(source.voice) == source }
-        assertEquals(31f / 48f, progress("ROOT"), 0f)
+        assertRoot(67)
         assertEquals(source.velocity, progress("VELOCITY"), 0f)
 
         activate("SCRAMBLE")
@@ -521,7 +537,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         assertGeometry(source, checkNotNull(currentPatch(source.voice)))
         dial("INJECT", .83f)
         dial("LENGTH", .16f)
-        dial("ROOT", 0f)
+        rootTo(Filament.MIN_MIDI)
         // These assertions read the external navigation bag, which is written
         // by a LaunchedEffect after the live edit and its recomposition. One
         // fixed frame pump does not establish that this publication completed.
@@ -529,12 +545,12 @@ class FilamentScreenTest : ComposeScreenTest() {
             currentPatch(source.voice)?.midi == Filament.MIN_MIDI
         }
         assertEquals(Filament.MIN_MIDI, checkNotNull(currentPatch(source.voice)).midi)
-        dial("ROOT", 1f)
+        rootTo(Filament.MAX_MIDI)
         waitFor("the high ROOT edit in the complete FILAMENT draft") {
             currentPatch(source.voice)?.midi == Filament.MAX_MIDI
         }
         assertEquals(Filament.MAX_MIDI, checkNotNull(currentPatch(source.voice)).midi)
-        dial("ROOT", .75f) // MIDI 72; changing the note cannot replace the saved strand roster.
+        rootTo(72) // changing the note cannot replace the saved strand roster.
         waitFor("the middle ROOT edit in the complete FILAMENT draft") {
             currentPatch(source.voice)?.midi == 72
         }
@@ -559,7 +575,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         leaveAndReturn()
         button("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
         assertEquals(edited, currentPatch(source.voice))
-        assertEquals(.75f, progress("ROOT"), 0f)
+        assertRoot(72)
         assertEquals(.37f, progress("VELOCITY"), 0f)
         for ((macro, value) in edited.macros) assertEquals(value, progress(macro), 0f)
 
@@ -632,7 +648,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         assertEquals(patch, currentPatch(patch.voice))
         for ((macro, value) in patch.macros) assertEquals(value, progress(macro), 0f)
         dial("INJECT", .79f)
-        dial("ROOT", .5f)
+        rootTo(60)
         dial("VELOCITY", .61f)
         val expectedPatch = patch.copy(
             macros = patch.macros + ("INJECT" to .79f), midi = 60, velocity = .61f,
@@ -642,7 +658,7 @@ class FilamentScreenTest : ComposeScreenTest() {
 
         leaveAndReturn()
         button(updateLabel).assertExists()
-        assertEquals(.5f, progress("ROOT"), 0f)
+        assertRoot(60)
         assertEquals(.61f, progress("VELOCITY"), 0f)
         activate(updateLabel)
         awaitUpdatedKit("the updated FILAMENT source pad")

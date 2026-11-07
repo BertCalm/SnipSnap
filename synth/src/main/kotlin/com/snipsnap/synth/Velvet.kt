@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.pow
@@ -53,6 +54,13 @@ object Velvet {
             MacroSpec("CUTOFF", 0.9f), MacroSpec("SQUEEZE", 0.1f), MacroSpec("DECAY", 0.35f),
         )
     }
+
+    /**
+     * Every VELVET pad files as TONAL: pitched notes through a filter, never judged
+     * from a render. The phone's picker and the starter kit both read this rule.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun drumClassFor(voice: VelvetVoice, macros: Map<String, Float> = emptyMap()): DrumClass = DrumClass.TONAL
 
     fun defaults(voice: VelvetVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }

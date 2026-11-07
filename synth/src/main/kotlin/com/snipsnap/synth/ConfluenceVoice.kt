@@ -12,6 +12,15 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/** The exact canonical asset, selection, root and analysis version define reusable analysis. */
+internal data class ConfluenceAnalysisKey(
+    val sourceHash: String,
+    val startFrame: Int,
+    val endFrame: Int,
+    val referenceMidi: Float?,
+    val version: Int = Confluence.ANALYSIS_VERSION,
+)
+
 /**
  * Conservative time-domain pitch-synchronous overlap/add candidate, not a general vocal model.
  * Source epochs retain their local waveform (and therefore its spectral envelope); a different

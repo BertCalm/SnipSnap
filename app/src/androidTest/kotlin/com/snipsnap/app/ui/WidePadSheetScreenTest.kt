@@ -27,9 +27,13 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
+import com.snipsnap.synth.ObliterateBoard
+import com.snipsnap.synth.BoardRecipe
 import com.snipsnap.synth.BoardType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +53,7 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * The Android half of editable WIDE: the staged slider must not commit,
+ * The Android half of editable WIDE, RUSH and OBLITERATE: staged controls must not commit,
  * KEEP must use its displayed amount, and REMOVE/UNDO must refresh the
  * screen after saving. BoardSheetTest covers DSP and snapshot integrity;
  * these tests drive the real PadSheetScreen callbacks and reopen kit.json.
@@ -68,6 +72,8 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
     private val kitDirs = mutableListOf<File>()
     private var currentSlot by mutableStateOf(1)
     private var openBoxState by mutableStateOf<String?>(PadSheetBoxes.Box.TREATMENT.name)
+    /** The page the sheet draws, hoisted the way App's `Navigation` holds it: a door opens EFFECTS and Back returns to the editor. */
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
 
     @Volatile
     private var lastUpdatedKit: Kit? = null
@@ -101,13 +107,17 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
 
     private fun show(entry: KitShelf.Entry) {
         currentSlot = entry.kit.pads.first().slot
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
                 backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
-                onBack = {},
+                page = pageState,
+                onOpenEffects = { pageState = PadSheetPage.EFFECTS },
+                onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = {},
                 onNavigateTape = {},
                 onGrainField = {},
@@ -124,6 +134,8 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
             )
         }
         waitForText("PAD ${PadBanks.tag(currentSlot)}")
+        // The board card is on EFFECTS, one door from the editor.
+        activate(Copy.PAD_EFFECTS_DOOR)
         waitForText("WIDE · STEREO CHARACTER")
     }
 
@@ -203,10 +215,10 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertEquals("the neighbouring pad must stay untouched", otherPad, savedPad(entry, 2))
 
         activate("${PadBanks.tag(2)} ►")
-        waitForText("PAD ${PadBanks.tag(2)}")
+        waitForText("◄ PADS ${PadBanks.tag(2)}")
         assertEquals("70%", amountText())
         activate("◄ ${PadBanks.tag(1)}")
-        waitForText("PAD ${PadBanks.tag(1)}")
+        waitForText("◄ PADS ${PadBanks.tag(1)}")
 
         assertEquals("35%", amountText())
         compose.onNodeWithText("WIDE kept at 35%", useUnmergedTree = true).assertExists()
@@ -235,7 +247,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertEquals("70%", amountText())
 
         waitForUndo()
-        activate("UNDO")
+        activate(Copy.UNDO_BOARD)
         waitForKept(.35f)
 
         assertEquals("UNDO must restore the exact saved board recipe", kept, savedPad(entry))
@@ -272,15 +284,15 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertEquals(BoardType.RUSH, BoardSheet.read(rush.recipe)!!.type)
         assertNotEquals(wide.sampleFile, rush.sampleFile)
         activate("${PadBanks.tag(2)} ►")
-        waitForText("PAD ${PadBanks.tag(2)}")
+        waitForText("◄ PADS ${PadBanks.tag(2)}")
         assertEquals("70%", amountText())
         activate("◄ ${PadBanks.tag(1)}")
-        waitForText("PAD ${PadBanks.tag(1)}")
+        waitForText("◄ PADS ${PadBanks.tag(1)}")
         waitForText("RUSH · SWELL & MOTION")
         assertEquals("55%", amountText(BoardType.RUSH))
         assertEquals(rush, savedPad(entry))
         waitForUndo(BoardType.RUSH)
-        activate("UNDO")
+        activate(Copy.UNDO_BOARD)
         waitForKept(.35f)
         assertEquals(wide, savedPad(entry))
         assertArrayEquals(wideAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
@@ -296,11 +308,61 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         }
         assertEquals(original, savedPad(entry))
         assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        waitForText("Hear a wider sound before keeping it")
         waitForUndo()
-        activate("UNDO")
+        activate(Copy.UNDO_BOARD)
         waitForKept(.55f, BoardType.RUSH)
         assertEquals(rush, savedPad(entry))
         assertEquals("55%", amountText(BoardType.RUSH))
+    }
+
+    @Test
+    fun obliterate_stages_and_saves_every_control_then_remove_and_undo_restore_exact_state() {
+        val entry = kit(listOf(1, 2)); val original = entry.kit.pad(1)!!
+        val originalAudio = File(entry.dir, original.sampleFile).readBytes()
+        show(entry)
+        val before = files(entry.dir)
+        activate("Choose OBLITERATE")
+        waitForText("OBLITERATE · HALO & DESTRUCTION")
+        assertEquals("35%", amountText(BoardType.OBLITERATE))
+        activate("CLOCK & PATTERN")
+        fun dial(label: String) = requireNotNull(compose.onNode(
+            hasContentDescription(label) and hasAnyAncestor(hasContentDescription("OBLITERATE")), useUnmergedTree = true,
+        ).fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val shimmer = dial("SHIMMER")
+        val bpm = dial("BPM")
+        // Invoke both mounted callbacks before recomposition. Neither may erase the other's edit.
+        compose.runOnIdle { assertTrue(shimmer(.6f)); assertTrue(bpm(.29f)) }
+        pump()
+        activate("OBLITERATE division 1/8")
+        activate("OBLITERATE ROOM")
+        val newPattern = requireNotNull(compose.onNodeWithContentDescription("NEW PATTERN", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        compose.runOnIdle { repeat(2) { assertTrue(newPattern()) } }
+        pump()
+        val expected = BoardRecipe(BoardType.OBLITERATE, .35f, ObliterateBoard.Settings(.3, false, 98.0, 8, 20261025L))
+        assertEquals("all OBLITERATE controls remain staged", before, files(entry.dir))
+        assertEquals(original, savedPad(entry))
+        activate("KEEP")
+        waitFor("complete OBLITERATE settings to be saved", timeoutMillis = 60_000) {
+            BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe)?.recipe == expected
+        }
+        waitForText("OBLITERATE kept at 35%")
+        val kept = savedPad(entry)
+        assertEquals(expected, BoardSheet.read(kept.recipe)!!.recipe)
+        activate("${PadBanks.tag(2)} ►")
+        waitForText("◄ PADS ${PadBanks.tag(2)}")
+        activate("◄ ${PadBanks.tag(1)}")
+        waitForText("OBLITERATE kept at 35%")
+        waitForText("98 BPM · 1/8 · ROOM")
+        activate("REMOVE")
+        waitFor("OBLITERATE removal", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == original }
+        assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        waitForText("Hear a wider sound before keeping it")
+        waitForUndo()
+        activate(Copy.UNDO_BOARD)
+        waitFor("complete OBLITERATE undo", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == kept }
+        assertEquals(expected, BoardSheet.read(savedPad(entry).recipe)!!.recipe)
     }
 
 }

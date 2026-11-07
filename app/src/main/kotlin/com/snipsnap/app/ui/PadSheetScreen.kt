@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -53,6 +54,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -91,16 +93,24 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitRobin
+import com.snipsnap.kit.RobinSettings
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
+import com.snipsnap.shell.Robin
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.BoardRecipe
+import com.snipsnap.synth.ObliterateBoard
+import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.synth.Pedals
 import com.snipsnap.synth.AquariumEditor
 import com.snipsnap.synth.AquariumOfflineRenderer
@@ -117,10 +127,12 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Spread
+import com.snipsnap.shell.KitMaker
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Provenance
@@ -189,6 +201,16 @@ fun PadSheetScreen(
      */
     backLabel: String,
     onSlotChange: (Int) -> Unit,
+    /**
+     * Which of the editor's three pages to draw (`Bench.PAD_SHEET`, `PAD_EFFECTS`, `PAD_VARIATIONS`): one
+     * composable, so the state EFFECTS and VARIATIONS work on survives the trip from the editor and back.
+     * [onBack] is Back from whichever page is up, and [backLabel] names where it lands.
+     */
+    page: PadSheetPage = PadSheetPage.EDITOR,
+    /** `EFFECTS ▸`: opens the EFFECTS page over the editor. */
+    onOpenEffects: () -> Unit = {},
+    /** `VARIATIONS ▸`: opens the VARIATIONS page over the editor. */
+    onOpenVariations: () -> Unit = {},
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
@@ -250,6 +272,17 @@ fun PadSheetScreen(
     /** The production native renderer; injectable so delayed/error previews can be exercised on a device. */
     aquariumRenderer: AquariumOfflineRenderer = AquariumPadRenderer,
     onOpenBox: (String?) -> Unit = {},
+    /** Told how many STRIKE FX layers an AUDITION rendered, before it plays them: a test's proof the button ran. */
+    onStrikeHeard: (Int) -> Unit = {},
+    /** Told the sound a ▶ HIT is about to play: a test's proof which take a robin pad dealt. */
+    onHeard: (Snip) -> Unit = {},
+    /**
+     * KIT FROM ANYTHING's door: the base name for the new kit, the pad's own audio, the key and
+     * the genre. The app writes the kit on its own busy line and shows the result sheet over
+     * everything; nothing is written here, which is why the six on-device suites that draw this
+     * sheet without an app around it need not pass one.
+     */
+    onKitFrom: (String, Snip, com.snipsnap.audio.KeySpec, com.snipsnap.synth.KitFromAnything.Genre) -> Unit = { _, _, _, _ -> },
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -328,7 +361,10 @@ fun PadSheetScreen(
         mutableStateOf(boardApplied?.type ?: BoardType.WIDE)
     }
     var pendingBoardAmount by remember(entry.dir, slot, pad.sampleFile, boardApplied?.amount, selectedBoardType) {
-        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.DEFAULT_AMOUNT)
+        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.defaultAmount(selectedBoardType))
+    }
+    var pendingObliterate by remember(entry.dir, slot, pad.sampleFile, boardApplied?.obliterate, selectedBoardType) {
+        mutableStateOf(boardApplied?.obliterate ?: ObliterateBoard.Settings())
     }
     var boardUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var boardAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
@@ -337,9 +373,30 @@ fun PadSheetScreen(
     val aquariumMarker = pad.recipe?.entries?.containsKey("aquariumPad") == true
     val aquariumRefusal = when {
         aquariumMarker && aquariumApplied == null -> "This Aquarium recipe needs repair before editing"
-        pad.chain != null -> "Undo round-robin before using Aquarium"
+        pad.chain != null && !pad.isRobinChain -> Copy.ROBIN_FOREIGN
         else -> null
     }
+    // ROUND ROBIN: the chip, and the two sliders that put the pad on its own setting. A pad nobody
+    // moved shows the kit's numbers; a legacy pad (no dial) reads CUSTOM until AMOUNT is moved.
+    val kitRobin = builtModel.kit.robin
+    val robinOn = pad.isRobinChain
+    // A chain round robin did not make, or a layered pad: the switch is off the table.
+    val robinBlocked = (pad.chain != null && !robinOn) || pad.velocityLayers.isNotEmpty()
+    var pendingRobinAmount by remember(entry.dir, slot, pad.robin) {
+        mutableFloatStateOf(pad.robin?.amount ?: kitRobin?.amount ?: KitRobin.DEFAULT_AMOUNT)
+    }
+    var pendingRobinTakes by remember(entry.dir, slot, pad.robin) {
+        mutableIntStateOf(pad.robin?.takes ?: kitRobin?.takes ?: KitRobin.DEFAULT_TAKES)
+    }
+    // What a release commits. A plain holder, not the states above: those are re-made when the pad's
+    // setting changes, and a commit callback from before that would read the old ones.
+    val robinDraft = remember { RobinDraft() }
+    remember(entry.dir, slot, pad.robin) {
+        robinDraft.amount = pad.robin?.amount ?: kitRobin?.amount ?: KitRobin.DEFAULT_AMOUNT
+        robinDraft.takes = pad.robin?.takes ?: kitRobin?.takes ?: KitRobin.DEFAULT_TAKES
+        robinDraft.amountMoved = false
+    }
+    var robinAmountMoved by remember(entry.dir, slot, pad.robin) { mutableStateOf(false) }
     var aquariumOpen by remember(entry.dir, slot) { mutableStateOf(false) }
     var aquariumEditor by remember(entry.dir, slot, pad.sampleFile, pad.recipe, pad.velocityLayers) {
         mutableStateOf(AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0)))
@@ -396,11 +453,16 @@ fun PadSheetScreen(
     // cleared with it.
     var padJob by remember(model) { mutableStateOf<String?>(null) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
+    // A robin pad's whole chain, for ▶ HIT to deal a take per hit the way the MPC does (PadHit.resolve);
+    // `snip` stays take one, the sound every edit and preview works from. Null for any other pad.
+    var chainSnip by remember(model) { mutableStateOf<Snip?>(null) }
+    var hitCount by remember(model, slot, pad.robin, pad.chain) { mutableIntStateOf(0) }
     // The pad's newest bin entry, the one its undo restores (`refreshPadAudio`).
     // `binDaysLeft` is non-null exactly when the bin holds one, which is all the
-    // six "is it in the bin?" checks below read. `binKept`: a pad still needs that
-    // entry, so no sweep takes it and the provenance line says so instead of a
-    // count; `binDaysLeft` is then 0 and never drawn.
+    // eight "is it in the bin?" checks below read (the UNDO doors' handlers ask
+    // it too). `binKept`: a pad still needs that entry, so no sweep takes it
+    // and the provenance line says so instead of a count; `binDaysLeft` is
+    // then 0 and never drawn.
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
     var binKept by remember(model) { mutableStateOf(false) }
 
@@ -416,6 +478,16 @@ fun PadSheetScreen(
     // always releases the previous one. Mono is duplicated to LR; a board's
     // stereo reaches the same output without a mono fold.
     var voice by remember(model, slot) { mutableStateOf<MixVoice?>(null) }
+    // STRIKE FX: the two knobs start from the pad's kept bank, else the defaults;
+    // nothing renders on knob movement, only AUDITION and KEEP read them. The
+    // audition job plays DRY, ROOM, ECHO a second apart and is cancelled with the
+    // voice it feeds. `confirmStrikeReplace` is the dialog that asks before a
+    // bank and soft hits replace one another.
+    val strikeRecipe = Breed.recipeOf(pad)
+    var strikeRoom by remember(model, slot) { mutableStateOf(strikeRecipe?.let(StrikeFxBank::roomOf) ?: StrikeFxBank.DEFAULT_ROOM) }
+    var strikeSlap by remember(model, slot) { mutableStateOf(strikeRecipe?.let(StrikeFxBank::slapOf) ?: StrikeFxBank.DEFAULT_SLAP) }
+    var strikeAuditionJob by remember(model, slot) { mutableStateOf<Job?>(null) }
+    var confirmStrikeReplace by remember(model, slot) { mutableStateOf<StrikeReplace?>(null) }
     var aquariumAuditionActive by remember(model, slot) { mutableStateOf(false) }
     // This request survives a successful model swap, but explicit edits,
     // closing the panel and backgrounding revoke it before a late decode.
@@ -454,8 +526,9 @@ fun PadSheetScreen(
     }
     // The caller also owns the accordion selection. External box changes must
     // revoke a hidden panel's request even when they bypass one of its buttons.
-    LaunchedEffect(openBox, aquariumOpen) {
-        if (aquariumOpen && openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT) {
+    // Leaving EFFECTS is the same: the panel is drawn only there.
+    LaunchedEffect(openBox, aquariumOpen, page) {
+        if (aquariumOpen && (openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT || page != PadSheetPage.EFFECTS)) {
             stopAquariumPreview()
             aquariumOpen = false
             discardAquariumDraft()
@@ -463,7 +536,7 @@ fun PadSheetScreen(
     }
     // A backgrounded gathering preview must not begin later merely because the app returned.
     var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
-    DisposableEffect(model, slot) { onDispose { voice?.release() } }
+    DisposableEffect(model, slot) { onDispose { strikeAuditionJob?.cancel(); voice?.release() } }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
@@ -474,6 +547,7 @@ fun PadSheetScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 gatheringPreviewGeneration++
+                strikeAuditionJob?.cancel()
                 stopAquariumPreview()
                 aquariumStatus = null
                 voice?.release()
@@ -489,19 +563,31 @@ fun PadSheetScreen(
         val p = m.kit.pad(slot)
         if (p == null) {
             snip = null
+            chainSnip = null
             binDaysLeft = null
             binKept = false
             auditionOnRefresh = false
             return
         }
+        var loadedChain: Snip? = null
         val (loadedSnip, daysLeft, kept) = offMain {
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
             val s = runCatching {
-                val decoded = WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
+                // A robin pad's file is every take end to end; the sheet works on take one, the original.
+                val decoded = if (p.isRobinChain) Robin.original(m, slot)
+                else WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
                 if (PrintedPads.has(p.recipe)) decoded else Cleanup.toMono(decoded)
             }.getOrNull()
+            loadedChain = if (p.isRobinChain) {
+                runCatching {
+                    val whole = WavReader.readCapped(File(m.kitDir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
+                    if (PrintedPads.has(p.recipe)) whole else Cleanup.toMono(whole)
+                }.getOrNull()
+            } else {
+                null
+            }
             // Newest first, so the first under the pad's file is the entry
             // `restoreFromBin(name)` restores. Its hold is the one the bin
             // screen and the launch sweep read: kept for a pad, or the
@@ -510,6 +596,7 @@ fun PadSheetScreen(
             Triple(s, hold?.let { it.daysLeft(System.currentTimeMillis()) ?: 0 }, hold?.keptFor != null)
         }
         snip = loadedSnip
+        chainSnip = loadedChain
         binDaysLeft = daysLeft
         binKept = kept
         // A refresh that couldn't decode the file consumes the play
@@ -593,10 +680,8 @@ fun PadSheetScreen(
             try {
                 val before = offMain {
                     val take = KitWrites.mutex.withLock {
-                        builtModel.binContents()
-                            .filter { it.originalName == p.sampleFile }
-                            .maxByOrNull { it.binnedAtMillis }
-                            ?.file
+                        // A robin pad's newest row is its own original; Robin.beforeTake picks the one under it.
+                        Robin.beforeTake(builtModel, p.slot)?.file
                     }
                     take?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
                 }
@@ -718,7 +803,8 @@ fun PadSheetScreen(
      * Bug fix (tab-switch data loss): launched into [appScope], not this
      * composable's own `scope` — same fix, same reason, as [applySmear]'s
      * own KDoc: this is a real audio-rewriting op (GHOSTS/EJECT/UNDO/
-     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/PASTE), so a cancelled `scope`
+     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/UNDO SPLICE/DE-SAMPLE's UNDO/PASTE),
+     * so a cancelled `scope`
      * could abandon the write before it starts, or let it land on disk
      * while losing `onKitUpdated`/the toast — this function's own opening
      * line. [onSuccess] is a generic callback most callers only use to
@@ -1289,9 +1375,8 @@ fun PadSheetScreen(
      * than a chip that is quietly grey.
      *
      * Same fresh-model shape, sample-identity guard and [model] swap as
-     * [applyTreatment] — see its KDoc. A round-robin pad refuses from
-     * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
-     * does today; that is the card's existing gap, not this action's.
+     * [applyTreatment] — see its KDoc. A round-robin pad is lifted by
+     * [KitBuilderModel.unEraPad] itself ([Robin.around]), so it un-treats like any pad.
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. [KitBuilderModel.unEraPad]
@@ -1318,10 +1403,10 @@ fun PadSheetScreen(
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
                         if (freshPad.recipe?.entries?.containsKey("aquariumPad") == true) {
-                            AquariumPadSheet.remove(f, slot)
+                            Robin.around(f, slot) { AquariumPadSheet.remove(f, slot) }
                             state = PadSheet.UnTreat.READY
                         } else if (BoardSheet.read(freshPad.recipe) != null) {
-                            BoardSheet.remove(f, slot)
+                            Robin.around(f, slot) { BoardSheet.remove(f, slot) }
                             state = PadSheet.UnTreat.READY
                         } else {
                             val binned = f.binContents().map { it.originalName }.toSet()
@@ -1372,6 +1457,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToHear = if (original) 0f else pendingBoardAmount
         val typeToHear = selectedBoardType
+        val recipeToHear = BoardRecipe(typeToHear, amountToHear, pendingObliterate.takeIf { typeToHear == BoardType.OBLITERATE })
         applyingSegment = null
         busy = true
         boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${typeToHear.name}"
@@ -1388,7 +1474,8 @@ fun PadSheetScreen(
                             current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
                             "This pad changed. Open it again before hearing ${typeToHear.name}"
                         }
-                        BoardSheet.preview(fresh, targetSlot, amountToHear, typeToHear)
+                        // A robin pad previews from take one's pre-print sound (PrintedPadStore.preview).
+                        BoardSheet.preview(fresh, targetSlot, recipeToHear)
                     }
                 }
                 // The DSP may finish after pad navigation, a model reload or
@@ -1417,6 +1504,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToKeep = pendingBoardAmount
         val typeToKeep = selectedBoardType
+        val recipeToKeep = BoardRecipe(typeToKeep, amountToKeep, pendingObliterate.takeIf { typeToKeep == BoardType.OBLITERATE })
         val activeName = BoardSheet.read(p.recipe)?.type?.name ?: typeToKeep.name
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         applyingSegment = null
@@ -1436,9 +1524,12 @@ fun PadSheetScreen(
                     if (current != null && current.sampleFile == p.sampleFile &&
                         current.recipe == p.recipe && current.velocityLayers == p.velocityLayers
                     ) {
+                        // A robin pad's board lands on the original and the takes re-render from it.
+                        // UNDO never reaches a robin pad (its button explains, see onUndo); only KEEP and
+                        // REMOVE run around the takes.
                         when (action) {
-                            "KEEP" -> BoardSheet.apply(f, targetSlot, amountToKeep, typeToKeep)
-                            "REMOVE" -> BoardSheet.remove(f, targetSlot)
+                            "KEEP" -> Robin.around(f, targetSlot) { BoardSheet.apply(f, targetSlot, recipeToKeep) }
+                            "REMOVE" -> Robin.around(f, targetSlot) { BoardSheet.remove(f, targetSlot) }
                             "UNDO" -> BoardSheet.undo(f, targetSlot)
                             else -> error("Unknown board action")
                         }
@@ -1556,9 +1647,10 @@ fun PadSheetScreen(
                         "This pad changed. Open it again before changing Aquarium"
                     }
                     reapplyPendingMetadataFields(currentModel, stalePads)
+                    // UNDO never reaches a robin pad (its button explains); only KEEP and REMOVE run around the takes.
                     when (action) {
-                        "KEEP" -> AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer)
-                        "REMOVE" -> AquariumPadSheet.remove(currentModel, targetSlot)
+                        "KEEP" -> Robin.around(currentModel, targetSlot) { AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer) }
+                        "REMOVE" -> Robin.around(currentModel, targetSlot) { AquariumPadSheet.remove(currentModel, targetSlot) }
                         "UNDO" -> AquariumPadSheet.undo(currentModel, targetSlot)
                         else -> error("Unknown Aquarium action")
                     }
@@ -1669,6 +1761,50 @@ fun PadSheetScreen(
         }
     }
 
+    /** The ROUND ROBIN chip: on deals the kit's takes (the defaults when it has none); off gives the original back. */
+    fun onRobinToggle() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        when {
+            p.isRobinChain -> commitPadEditNow("ROUND ROBIN", onSuccess = { onToast(Copy.ROBIN_OFF) }) { mm ->
+                Robin.undo(mm, slot)
+            }
+            p.chain != null -> onToast(Copy.ROBIN_FOREIGN)
+            p.velocityLayers.isNotEmpty() -> onToast(Copy.ROBIN_LAYERED)
+            else -> commitPadEditNow("ROUND ROBIN", onSuccess = { onToast(Copy.ROBIN_ON) }) { mm ->
+                val settings = mm.kit.robin ?: KitRobin()
+                Robin.apply(mm, slot, RobinSettings(settings.amount, settings.takes, 0, followsKit = true))
+            }
+        }
+    }
+
+    /** AMOUNT or TAKES released: the pad leaves the kit's setting and keeps its own. */
+    fun onRobinOwn() {
+        val amount = robinDraft.amount
+        val takes = robinDraft.takes.coerceIn(2, KitRobin.MAX_TAKES)
+        val now = model?.kit?.pad(slot)?.robin ?: return
+        // A release that moved nothing changes nothing: no re-render, no unhooking from the kit.
+        if (takes == now.takes && (amount == now.amount || (now.amount == null && !robinDraft.amountMoved))) return
+        var did = false
+        commitPadEditNow("ROUND ROBIN", onSuccess = { if (did) onToast(Copy.ROBIN_OWN) }) { mm ->
+            val current = mm.kit.pad(slot)?.robin ?: return@commitPadEditNow
+            Robin.rerender(mm, slot, RobinSettings(amount, takes, current.seed, followsKit = false))
+            did = true
+        }
+    }
+
+    /** FOLLOW KIT: the pad takes the kit's amount and take count again. */
+    fun onRobinFollowKit() {
+        var did = false
+        commitPadEditNow("ROUND ROBIN", onSuccess = { if (did) onToast(Copy.ROBIN_FOLLOWS) }) { mm ->
+            val current = mm.kit.pad(slot)?.robin ?: return@commitPadEditNow
+            val settings = mm.kit.robin ?: KitRobin()
+            Robin.rerender(mm, slot, RobinSettings(settings.amount, settings.takes, current.seed, followsKit = true))
+            did = true
+        }
+    }
+
     fun onGhostsToggle() {
         if (busy) return
         val m = model ?: return
@@ -1677,9 +1813,105 @@ fun PadSheetScreen(
             onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
+        if (hasKeptStrikeFx(p)) {
+            confirmStrikeReplace = StrikeReplace.SOFT_HITS
+            return
+        }
         val enabling = p.velocityLayers.isEmpty()
+        // Soft hits are velocity layers; a robin pad's takes and layers cannot share a pad.
+        if (enabling && p.isRobinChain) {
+            onToast(Copy.ROBIN_NO_LAYERS)
+            return
+        }
         commitPadEditNow("SOFT HITS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
             if (enabling) mm.addGhostLayers(slot) else mm.clearGhostLayers(slot)
+        }
+    }
+
+    /**
+     * STRIKE FX, AUDITION: the three layers KEEP would write, heard one a
+     * second apart and written nowhere. The render is off the main thread,
+     * under the kit lock like every other read of the folder.
+     */
+    fun onStrikeAudition() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
+            return
+        }
+        if (p.isRobinChain) {
+            onToast(Copy.ROBIN_NO_LAYERS)
+            return
+        }
+        val targetSlot = slot
+        val room = strikeRoom
+        val slap = strikeSlap
+        val level = p.level
+        strikeAuditionJob?.cancel()
+        strikeAuditionJob = appScope.launch {
+            try {
+                val layers = offMain { KitWrites.mutex.withLock { m.strikeFxAudition(targetSlot, room, slap) } }
+                onStrikeHeard(layers.size)
+                for (layer in layers) {
+                    audition(layer, level)
+                    delay(1000)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException && e.message != null) onToast(e.message!!) else failure("STRIKE FX", e)
+            }
+        }
+    }
+
+    fun keepStrikeFx() {
+        val room = strikeRoom
+        val slap = strikeSlap
+        strikeAuditionJob?.cancel()
+        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_ON) }) { mm ->
+            mm.strikeFxLayers(slot, room, slap)
+        }
+    }
+
+    fun onStrikeKeep() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
+            return
+        }
+        if (p.isRobinChain) {
+            onToast(Copy.ROBIN_NO_LAYERS)
+            return
+        }
+        if (p.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(p)) {
+            confirmStrikeReplace = StrikeReplace.STRIKE_FX
+            return
+        }
+        keepStrikeFx()
+    }
+
+    fun onStrikeClear() {
+        strikeAuditionJob?.cancel()
+        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_OFF) }) { mm ->
+            mm.clearStrikeFxLayers(slot)
+        }
+    }
+
+    /** The dialog's KEEP: the bank replaces the soft hits, or the soft hits replace the bank. */
+    fun confirmStrikeReplacement(kind: StrikeReplace) {
+        confirmStrikeReplace = null
+        when (kind) {
+            StrikeReplace.STRIKE_FX -> keepStrikeFx()
+            StrikeReplace.SOFT_HITS -> {
+                strikeAuditionJob?.cancel()
+                commitPadEditNow("SOFT HITS", onSuccess = { onToast(Copy.GHOSTS_ON) }) { mm ->
+                    mm.clearStrikeFxLayers(slot)
+                    mm.addGhostLayers(slot)
+                }
+            }
         }
     }
 
@@ -1986,7 +2218,64 @@ fun PadSheetScreen(
             onToast(nothing)
             return
         }
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+        commitPadEditNow(Copy.UNDO_MUTATE, onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+    }
+
+    /**
+     * UNDO SPLICE, MUTATE's UNDO for TAPE SPLICE: the take the splice binned
+     * comes back and the splice's recipe comes off
+     * ([KitBuilderModel.unsplicePad]). With nothing to undo (no TAPE SPLICE on
+     * the live pad, a print over it, no earlier take in the bin, or soft hits
+     * on) the button is dimmed, not disabled, and a tap says which
+     * ([PadSheet.spliceUndoRefusal]), asked of the live pad, never the one
+     * under a print.
+     */
+    fun onUnsplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.spliceUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow(Copy.UNDO_SPLICE, onSuccess = { onToast(Copy.UNSPLICED) }) { mm -> mm.unsplicePad(slot) }
+    }
+
+    /**
+     * SPLICE ▸: a printed pad is refused on the tap, before TAPE SPLICE
+     * opens, the way SPREAD ▸ refuses one before its panel (2026-11-02).
+     * A splice writes its own recipe where the print's sits, so REMOVE could
+     * not bring the print's source back. `KitBuilderModel.splicePad` refuses
+     * it too, but only at COMMIT, after the takes are picked and the needle set.
+     */
+    fun openSplice() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSplice(PrintedPads.label(p.recipe)))
+            return
+        }
+        onSplice(slot)
+    }
+
+    /**
+     * DE-SAMPLE's UNDO, in the MAKE box's DE-SAMPLE row: the take the
+     * de-sample binned comes back, and the patch and the `desampled` stamp
+     * come off ([KitBuilderModel.undesamplePad]). Dimmed, not disabled, when
+     * the de-sample is not what sits on top of the live pad (pedals riding it
+     * - NONE comes first - a later replacement, a print), when the bin holds
+     * no earlier take, or with soft hits on; a tap says which
+     * ([PadSheet.desampleUndoRefusal]).
+     */
+    fun onUndesample() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.desampleUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow(Copy.UNDO_DESAMPLE, onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
@@ -2253,8 +2542,9 @@ fun PadSheetScreen(
             return
         }
         // A chain's file is every take end to end; spreading it would tune
-        // the whole run of takes as one note.
-        if (p.chain != null) {
+        // the whole run of takes as one note. A robin pad's [snip] is take
+        // one (refreshPadAudio), the original, so it spreads like any pad.
+        if (p.chain != null && !p.isRobinChain) {
             onToast(Copy.SPREAD_CHAIN_REFUSED)
             return
         }
@@ -2290,7 +2580,8 @@ fun PadSheetScreen(
                     name = Spread.baseName(like),
                     drumClass = like.drumClass,
                     colorHex = like.colorHex ?: AutoPlace.colorFor(like.drumClass),
-                    recipe = like.recipe,
+                    // The robin's own bookkeeping recipe describes this pad's takes, not the new notes.
+                    recipe = like.recipe?.takeUnless { it.entries.keys == setOf("robin") },
                     like = like,
                     source = like.source - Spread.NOTE_KEY - Spread.FROM_KEY + (Spread.FROM_KEY to fromTag),
                 ),
@@ -2481,7 +2772,7 @@ fun PadSheetScreen(
     }
 
     fun onOutsideUndo() {
-        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
+        commitPadEditNow(Copy.UNDO_OUTSIDE, onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
     }
 
     /**
@@ -2763,6 +3054,19 @@ fun PadSheetScreen(
     }
 
     /**
+     * MAKE KIT: the pad's own audio, the card's key and genre, handed to the app. The two
+     * refusals a thumb can cause are told here, before any work; the app owns the busy line
+     * and says the rest.
+     */
+    fun onMakeKit(key: com.snipsnap.audio.KeySpec, genre: com.snipsnap.synth.KitFromAnything.Genre) {
+        if (busy) return
+        val source = snip ?: return
+        val p = model?.kit?.pad(slot) ?: return
+        KitMaker.refusal(source.durationSeconds)?.let { onToast(it); return }
+        onKitFrom(KitMaker.kitName(p.displayName), source, key, genre)
+    }
+
+    /**
      * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
      * patch riding it as a recipe. A far match is named, not taken.
      *
@@ -2782,6 +3086,12 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        // A print first, as SOFT HITS and SPREAD ask it (2026-11-02): the patch would
+        // take the print's place in the recipe, and REMOVE could not bring its source back.
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeDesample(PrintedPads.label(p.recipe)))
+            return
+        }
         if (p.velocityLayers.isNotEmpty()) {
             onToast(Copy.MUTATE_NEEDS_ONE)
             return
@@ -2877,6 +3187,15 @@ fun PadSheetScreen(
     // (a second press while the save is in flight no-ops), so no extra
     // `enabled` condition is needed here, same as the chip's own `enabled`.
     BackHandler(onBack = ::requestBack)
+    // A page change is a change of screen: a preview still sounding (an Aquarium audition, a HEAR) stops,
+    // as it does when the sheet closes. Not on the first composition, which has nothing to stop.
+    var pageSeen by remember { mutableStateOf(page) }
+    LaunchedEffect(page) {
+        if (page != pageSeen) {
+            pageSeen = page
+            stopAquariumPreview()
+        }
+    }
 
     /**
      * The safety net every exit shares, present and future: whatever's
@@ -3150,16 +3469,51 @@ fun PadSheetScreen(
         return
     }
 
+    confirmStrikeReplace?.let { kind ->
+        // Drawn instead of the sheet, as SpreadOverlay above is; Back and the
+        // scrim cancel, only KEEP writes.
+        val cancelReplace = { confirmStrikeReplace = null }
+        ReplaceLayersConfirmDialog(
+            text = if (kind == StrikeReplace.SOFT_HITS) Copy.SOFT_HITS_REPLACE_STRIKE_FX else Copy.STRIKE_FX_REPLACES_LAYERS,
+            confirmLabel = if (kind == StrikeReplace.SOFT_HITS) "CONTINUE" else "KEEP",
+            busy = busy,
+            onCancel = cancelReplace,
+            onConfirm = { confirmStrikeReplacement(kind) },
+        )
+        BackHandler(onBack = cancelReplace)
+        return
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // One scroll position per page: a short page would otherwise clamp the editor's, and Back would land at the top.
+        val pageScrolls = remember { PadSheetPage.entries.associateWith { ScrollState(0) } }
         PadSheetHeader(
             slot = slot,
             pad = pad,
             classColor = classColor,
             scheme = scheme,
             busy = busy,
-            backLabel = backLabel,
+            // A page names the pad it goes back to ("◄ PAD A01") and itself in the middle.
+            backLabel = if (page == PadSheetPage.EDITOR) backLabel else "$backLabel ${padTag(slot)}",
+            title = when (page) {
+                PadSheetPage.EDITOR -> "PAD ${padTag(slot)}"
+                PadSheetPage.EFFECTS -> Copy.PAD_EFFECTS_TITLE
+                PadSheetPage.VARIATIONS -> Copy.PAD_VARIATIONS_TITLE
+            },
             onBack = ::requestBack,
-            onHit = { stopAquariumPreview(); snip?.let { audition(it, pad.level, pad) } },
+            onHit = {
+                stopAquariumPreview()
+                val whole = chainSnip
+                val chain = pad.chain
+                // Robin.take clamps the window to the audio: a kit.json that names more takes than
+                // the WAV holds plays what is there, never reads past the end.
+                val heard = if (whole != null && chain != null && pad.isRobinChain) {
+                    Robin.take(whole, chain, hitCount++ % chain.cycle) ?: snip
+                } else {
+                    snip
+                }
+                heard?.let { onHeard(it); audition(it, pad.level, pad) }
+            },
             // Aquarium/boards compare their preserved input. Older treatments
             // compare the bin take while it remains available.
             onBefore = when {
@@ -3172,9 +3526,10 @@ fun PadSheetScreen(
         )
 
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(pageScrolls.getValue(page)),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (page == PadSheetPage.EDITOR) PadPageBody {
             WaveformLcd(snip, pad.drumClass, classColor, scheme, Modifier.padding(top = 4.dp))
 
             TapeText(
@@ -3244,17 +3599,139 @@ fun PadSheetScreen(
                         }
                     }
                 }
+            }
+
+            SectionHeading("LAYERS", scheme)
+            TapeText(Copy.LAYERS_RULE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            // ROUND ROBIN: the pad plays a different take each hit. Edits above and below still work on
+            // the original; the takes re-render from it.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleChip(
                     "SOFT HITS",
-                    pad.velocityLayers.isNotEmpty(),
+                    pad.velocityLayers.isNotEmpty() && !hasKeptStrikeFx(pad),
                     classColor,
                     scheme,
                     enabled = !busy,
                     modifier = Modifier.weight(1f),
                     onToggle = ::onGhostsToggle,
                 )
+                ToggleChip(
+                    "ROUND ROBIN", robinOn, classColor, scheme,
+                    enabled = !busy && !robinBlocked, modifier = Modifier.weight(1f), onToggle = ::onRobinToggle,
+                )
+                ToggleChip(
+                    "FOLLOW KIT", robinOn && pad.robin?.followsKit == true, classColor, scheme,
+                    enabled = !busy && robinOn && pad.robin?.followsKit == false, modifier = Modifier.weight(1f),
+                    onToggle = ::onRobinFollowKit,
+                )
+            }
+            if (robinBlocked) {
+                TapeText(
+                    if (pad.chain != null) Copy.ROBIN_FOREIGN else Copy.ROBIN_LAYERED,
+                    TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                )
+            }
+            StepperSlider(
+                label = "AMOUNT",
+                fraction = pendingRobinAmount,
+                valueText = if (pad.robin?.amount == null && robinOn && !robinAmountMoved) "CUSTOM"
+                else "%d".format(java.util.Locale.ROOT, (pendingRobinAmount * 100).roundToInt()),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy && robinOn,
+                accessibilityLabel = "ROUND ROBIN AMOUNT",
+                onFractionChange = { f ->
+                    pendingRobinAmount = f
+                    robinDraft.amount = f
+                    robinDraft.amountMoved = true
+                    robinAmountMoved = true
+                },
+                onFractionCommit = ::onRobinOwn,
+            )
+            StepperSlider(
+                label = "TAKES",
+                fraction = ((pendingRobinTakes - KitRobin.MIN_TAKES).toFloat() / (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).coerceIn(0f, 1f),
+                valueText = "%d".format(java.util.Locale.ROOT, pendingRobinTakes),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy && robinOn,
+                accessibilityLabel = "ROUND ROBIN TAKES",
+                onFractionChange = { f ->
+                    pendingRobinTakes = KitRobin.MIN_TAKES + (f * (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).roundToInt()
+                    robinDraft.takes = pendingRobinTakes
+                },
+                onFractionCommit = ::onRobinOwn,
+            )
+
+            StrikeFxSection(
+                pad = pad,
+                room = strikeRoom,
+                slap = strikeSlap,
+                busy = busy,
+                kept = hasKeptStrikeFx(pad),
+                onRoom = { strikeRoom = it },
+                onSlap = { strikeSlap = it },
+                onAudition = ::onStrikeAudition,
+                onKeep = ::onStrikeKeep,
+                onClear = ::onStrikeClear,
+                scheme = scheme,
+                classColor = classColor,
+            )
+
+            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
+            // when the pad already has layers, since STACK wants a
+            // single-sample pad to build on. Still tappable: the screen
+            // says which of the two it is.
+            ActionButton(
+                "STACK ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { if (pad.isRobinChain) onToast(Copy.ROBIN_NO_LAYERS) else onStack(slot) },
+            )
+
+            SectionHeading("EDIT", scheme)
+            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
+            // Dimmed, not disabled, when there's no prior take yet - same
+            // "still tappable, the destination explains why" convention as
+            // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
+            // pad's file has at least one recoverable prior take," the
+            // same signal `refreshPadAudio` computes for the undo buttons.
+            //
+            // UNDO SPLICE shares the row, half each (a weight inside a Row,
+            // not the Column trap GRAIN ▸'s comment describes). Always drawn
+            // and dimmed when it cannot act, so the sheet does not rearrange
+            // itself pad to pad; a tap says why (onUnsplice). No ▸: it opens
+            // nothing. Named in full like every per-tool UNDO on the sheet
+            // (Copy.UNDO_*), since the pages draw several.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A printed pad is refused on the tap, before TAPE SPLICE opens (openSplice).
+                ActionButton(
+                    "SPLICE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = binDaysLeft == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::openSplice,
+                )
+                ActionButton(
+                    Copy.UNDO_SPLICE,
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onUnsplice,
+                )
             }
 
+            // EFFECTS and VARIATIONS are screens of their own (`PadSheetPage`), one door row each:
+            // the name with a ▸, and a closed line saying what is applied or what is inside.
+            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onOpenEffects)
+            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onOpenVariations)
+            }
+
+            if (page == PadSheetPage.EFFECTS) PadPageBody {
             GroupBox(
                 legend = PadSheetBoxes.Box.TREATMENT.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.TREATMENT),
@@ -3270,7 +3747,7 @@ fun PadSheetScreen(
                     canPreview = aquariumRefusal == null && snip != null,
                     canKeep = aquariumRefusal == null && (!aquariumEditor.render.isBypass || aquariumApplied != null),
                     canRemove = aquariumRefusal == null && aquariumApplied != null,
-                    canUndo = aquariumRefusal == null && aquariumUndoAvailable,
+                    canUndo = aquariumRefusal == null && (aquariumUndoAvailable || (robinOn && aquariumApplied != null)),
                     busy = busy,
                     previewing = aquariumPreviewing,
                     sourceStatus = when {
@@ -3294,7 +3771,7 @@ fun PadSheetScreen(
                     onHear = { hearAquarium(original = false) },
                     onKeep = { commitAquarium("KEEP") },
                     onRemove = { commitAquarium("REMOVE") },
-                    onUndo = { commitAquarium("UNDO") },
+                    onUndo = { if (robinOn) onToast(Copy.ROBIN_NO_UNDO) else commitAquarium("UNDO") },
                     onCancel = ::closeAquarium,
                 )
             } else {
@@ -3313,9 +3790,12 @@ fun PadSheetScreen(
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
+                obliterate = pendingObliterate,
+                onObliterateChange = { update -> pendingObliterate = update(pendingObliterate) },
                 applied = boardApplied,
-                canUndo = boardUndoAvailable,
-                chainPad = pad.chain != null,
+                // A robin pad's UNDO stays tappable so it can say why it waits for round robin to be off.
+                canUndo = boardUndoAvailable || (robinOn && boardApplied != null),
+                chainPad = pad.chain != null && !pad.isRobinChain,
                 busy = busy,
                 action = boardAction.takeIf { busy },
                 color = classColor,
@@ -3337,7 +3817,8 @@ fun PadSheetScreen(
                     }
                 },
                 onUndo = {
-                    if (!boardUndoAvailable) onToast("No board change to undo") else commitBoard("UNDO")
+                    if (robinOn) onToast(Copy.ROBIN_NO_UNDO)
+                    else if (!boardUndoAvailable) onToast("No board change to undo") else commitBoard("UNDO")
                 },
             )
             // Which segment the user just tapped, so the card can say what it
@@ -3402,6 +3883,27 @@ fun PadSheetScreen(
                     }
                 },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
+                afterRowOne = {
+                // The tape this pad's dust comes from — or would come from — and
+                // the door to borrow another's.
+                DustFromRow(
+                    tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
+                    open = dustFromOpen,
+                    tapes = dustFromTapes,
+                    scheme = scheme,
+                    busy = busy,
+                    onOpen = {
+                        pedalPlacing = null
+                        openDustFrom()
+                    },
+                    onClose = { dustFromOpen = false },
+                    onPick = { file ->
+                        pedalPlacing = null
+                        dustFromOpen = false
+                        applyDustFrom(file.name)
+                    },
+                )
+                },
                 // AMT re-runs the treatment at the new amount, which is the
                 // same second-and-a-bit of work a chip tap starts - so it
                 // records the segment too. Finding 14 is about the treatment
@@ -3444,25 +3946,6 @@ fun PadSheetScreen(
                     onPutOnRow = { key -> pedalPlacing = if (pedalPlacing == key) null else key },
                 )
             }
-            // The tape this pad's dust comes from — or would come from — and
-            // the door to borrow another's.
-            DustFromRow(
-                tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
-                open = dustFromOpen,
-                tapes = dustFromTapes,
-                scheme = scheme,
-                busy = busy,
-                onOpen = {
-                    pedalPlacing = null
-                    openDustFrom()
-                },
-                onClose = { dustFromOpen = false },
-                onPick = { file ->
-                    pedalPlacing = null
-                    dustFromOpen = false
-                    applyDustFrom(file.name)
-                },
-            )
             // DO IT AGAIN: the recipe as a thing you can carry to another
             // pad. Dimmed, not disabled, when there's nothing to copy or
             // nothing copied yet - the toast explains, same convention as
@@ -3564,6 +4047,39 @@ fun PadSheetScreen(
             }
 
             GroupBox(
+                legend = PadSheetBoxes.Box.OUTSIDE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
+                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
+                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
+                scheme = scheme,
+                enabled = !busy,
+                // The trip out: the strip goes lcd-alt while the reels turn.
+                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+            ) {
+        OutsideCard(
+            moves = OutsideSheet.MOVES,
+            move = outsideMove,
+            onMove = { outsideMove = it },
+            knobLabel = outsideKnob.label,
+            knobFraction = pendingOutsideKnob,
+            knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
+            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
+            applied = OutsideSheet.read(pad.recipe),
+            stage = outsideStage,
+            canUndo = binDaysLeft != null,
+            canKeep = measuredRoom != null,
+            onSend = ::onOutside,
+            onKeep = ::onKeepRoom,
+            onUndo = ::onOutsideUndo,
+            padColor = classColor,
+            scheme = scheme,
+            busy = busy,
+        )
+            }
+            }
+
+            if (page == PadSheetPage.VARIATIONS) PadPageBody {
+            GroupBox(
                 legend = PadSheetBoxes.Box.MUTATE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MUTATE),
                 open = openBoxKind == PadSheetBoxes.Box.MUTATE,
@@ -3610,38 +4126,10 @@ fun PadSheetScreen(
                 busy = busy,
             )
             }
-
-            GroupBox(
-                legend = PadSheetBoxes.Box.OUTSIDE.legend,
-                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
-                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
-                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
-                scheme = scheme,
-                enabled = !busy,
-                // The trip out: the strip goes lcd-alt while the reels turn.
-                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
-            ) {
-        OutsideCard(
-            moves = OutsideSheet.MOVES,
-            move = outsideMove,
-            onMove = { outsideMove = it },
-            knobLabel = outsideKnob.label,
-            knobFraction = pendingOutsideKnob,
-            knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
-            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
-            applied = OutsideSheet.read(pad.recipe),
-            stage = outsideStage,
-            canUndo = binDaysLeft != null,
-            canKeep = measuredRoom != null,
-            onSend = ::onOutside,
-            onKeep = ::onKeepRoom,
-            onUndo = ::onOutsideUndo,
-            padColor = classColor,
-            scheme = scheme,
-            busy = busy,
-        )
             }
 
+            if (page == PadSheetPage.EDITOR) PadPageBody {
+            SectionHeading("MAKE FROM THIS PAD", scheme)
             GroupBox(
                 legend = PadSheetBoxes.Box.MAKE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
@@ -3709,9 +4197,24 @@ fun PadSheetScreen(
             )
         }
 
+        KitFromCard(scheme, entry.kit.key, busy, working = false, onMake = ::onMakeKit)
+
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            // The header row MUTATE's and OUTSIDE's cards draw, with DE-SAMPLE's own
+            // UNDO. Dimmed, not disabled, when it cannot act: a tap says why
+            // (onUndesample). Named in full for TalkBack: MAKE holds five doors, so a
+            // bare UNDO would not say whose it is.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                ActionButton(
+                    Copy.UNDO_DESAMPLE,
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null,
+                    onClick = ::onUndesample,
+                )
+            }
             val away = pad.source["desampled"]
             TapeText(
                 if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
@@ -3794,32 +4297,7 @@ fun PadSheetScreen(
                     )
                 }
             }
-            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
-            // Dimmed, not disabled, when there's no prior take yet - same
-            // "still tappable, the destination explains why" convention as
-            // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
-            // pad's file has at least one recoverable prior take," the
-            // same signal `refreshPadAudio` computes for the undo buttons.
-            ActionButton(
-                "SPLICE ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = binDaysLeft == null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onSplice(slot) },
-            )
-            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
-            // when the pad already has layers, since STACK wants a
-            // single-sample pad to build on. Still tappable: the screen
-            // says which of the two it is.
-            ActionButton(
-                "STACK ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onStack(slot) },
-            )
+            SectionHeading("TRY IN THE BEAT", scheme)
             // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
             // sibling exists to compare against - dimmed rather than hidden,
             // same "still tappable, the destination explains why" convention
@@ -3834,10 +4312,13 @@ fun PadSheetScreen(
                 onClick = { onAudition(slot) },
             )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
+            }
         }
 
         // Pinned under the scroll: a 2dp rule, then the pad nav, so the
-        // next pad is always one tap away whatever box is open.
+        // next pad is always one tap away whatever box is open, and on the
+        // EFFECTS and VARIATIONS pages too: treating a kit pad by pad is what
+        // they are for, and the page stays up as the pad changes.
         Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
         // J4 + J23: gated on `busy` as well as on there being somewhere to
         // go. These two were the only controls on this sheet that stayed
@@ -4112,6 +4593,7 @@ private fun PadSheetHeader(
     scheme: Scheme,
     busy: Boolean,
     backLabel: String,
+    title: String,
     onBack: () -> Unit,
     onHit: () -> Unit,
     onBefore: (() -> Unit)?,
@@ -4132,7 +4614,7 @@ private fun PadSheetHeader(
         HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
+            TapeText(title, TapeType.lcdHeader, scheme.lcdInk.tape)
             Box(
                 Modifier.background(classColor.copy(alpha = 0.85f), RoundedCornerShape(3.dp))
                     .padding(horizontal = 6.dp, vertical = 1.dp),
@@ -4207,6 +4689,114 @@ private fun WaveformLcd(snip: Snip?, drumClass: DrumClass, color: Color, scheme:
     }
 }
 
+
+// ---------- strike fx ----------
+
+/** The AMOUNT and TAKES a slider release commits (see `robinDraft`). */
+private class RobinDraft {
+    var amount: Float = KitRobin.DEFAULT_AMOUNT
+    var takes: Int = KitRobin.DEFAULT_TAKES
+    var amountMoved: Boolean = false
+}
+
+/** Which way the confirm dialog is asked: STRIKE FX over soft hits, or soft hits over a STRIKE FX bank. */
+private enum class StrikeReplace { STRIKE_FX, SOFT_HITS }
+
+/**
+ * STRIKE FX: ROOM and SLAP are the macro values themselves, shown to two
+ * decimals. Nothing renders on a knob move; AUDITION plays the three layers
+ * without writing, KEEP writes them, and CLEAR (only on a kept bank) puts the
+ * one sample back.
+ */
+@Composable
+private fun StrikeFxSection(
+    pad: KitPad,
+    room: Float,
+    slap: Float,
+    busy: Boolean,
+    kept: Boolean,
+    onRoom: (Float) -> Unit,
+    onSlap: (Float) -> Unit,
+    onAudition: () -> Unit,
+    onKeep: () -> Unit,
+    onClear: () -> Unit,
+    scheme: Scheme,
+    classColor: Color,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("STRIKE FX", TapeType.pixelSmall, scheme.ink2.tape)
+            if (kept) {
+                TapeText(pad.velocityLayers.mapNotNull { it.displayName }.joinToString(" · "), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f))
+            }
+        }
+        StepperSlider(
+            label = "ROOM",
+            fraction = room,
+            valueText = "%.2f".format(java.util.Locale.ROOT, room),
+            fillColor = classColor,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onRoom,
+            onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX ROOM",
+        )
+        StepperSlider(
+            label = "SLAP",
+            fraction = slap,
+            valueText = "%.2f".format(java.util.Locale.ROOT, slap),
+            fillColor = classColor,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onSlap,
+            onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX SLAP",
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Named for the section: KEEP alone is also the board's button.
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            if (kept) {
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+            }
+        }
+    }
+}
+
+/** A kept STRIKE FX bank: the recipe names it and the pad carries its three layers, the same test the shell's verbs make. */
+private fun hasKeptStrikeFx(pad: KitPad): Boolean =
+    StrikeFxBank.isStrikeFx(Breed.recipeOf(pad)) && pad.velocityLayers.size == 3
+
+/** Asks before STRIKE FX and a pad's soft hits replace one another; modelled on `KitsScreen`'s KitDeleteConfirmDialog. */
+@Composable
+private fun ReplaceLayersConfirmDialog(text: String, confirmLabel: String, busy: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it does not fall through to the scrim's CANCEL.
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(text, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton(confirmLabel, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
+            }
+        }
+    }
+}
+
 // ---------- stepper-slider ----------
 
 @Composable
@@ -4220,6 +4810,10 @@ internal fun StepperSlider(
     onFractionChange: (Float) -> Unit,
     onFractionCommit: () -> Unit,
     labelWidth: Dp = 44.dp,
+    // What TalkBack says and what the tests look up. Defaults to the printed label; a
+    // section whose label repeats one already on the sheet qualifies it here, the way
+    // its buttons do, so a screen never carries two controls with the same spoken name.
+    accessibilityLabel: String = label,
 ) {
     // The gesture loop below runs once, keyed on Unit — rememberUpdatedState
     // is what keeps it calling this recomposition's callbacks instead of
@@ -4251,7 +4845,7 @@ internal fun StepperSlider(
                 // adjust gesture a real target, the "ideally adjustable"
                 // half of finding 4, not just its label+state floor.
                 .semantics {
-                    contentDescription = label
+                    contentDescription = accessibilityLabel
                     stateDescription = valueText
                     if (enabled) {
                         progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
@@ -4363,7 +4957,7 @@ private fun KnobRow(
 // ---------- toggles ----------
 
 @Composable
-private fun ToggleChip(
+internal fun ToggleChip(
     label: String,
     engaged: Boolean,
     color: Color,
@@ -4460,6 +5054,8 @@ private fun HitLabelCard(
 private fun BoardCard(
     type: BoardType,
     amount: Float,
+    obliterate: ObliterateBoard.Settings,
+    onObliterateChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
     applied: BoardSheet.Applied?,
     canUndo: Boolean,
     chainPad: Boolean,
@@ -4493,16 +5089,21 @@ private fun BoardCard(
             }
         }
         TapeText(
-            if (type == BoardType.WIDE) "WIDE · STEREO CHARACTER" else "RUSH · SWELL & MOTION",
+            when (type) {
+                BoardType.WIDE -> "WIDE · STEREO CHARACTER"
+                BoardType.RUSH -> "RUSH · SWELL & MOTION"
+                BoardType.OBLITERATE -> "OBLITERATE · HALO & DESTRUCTION"
+            },
             TapeType.pixel, scheme.ink.tape, maxLines = 2,
         )
         TapeText(
             when {
                 action != null -> "$action…"
-                chainPad -> "Undo round-robin before using ${type.name}"
+                chainPad -> Copy.ROBIN_FOREIGN
                 selectedIsActive -> "${type.name} kept at ${(applied!!.amount * 100).roundToInt()}%"
                 applied != null -> "${applied.type.name} is active. KEEP replaces it from the original."
                 type == BoardType.WIDE -> "Hear a wider sound before keeping it"
+                type == BoardType.OBLITERATE -> "Hear the octave halo, fuzz and chopped fragments before keeping them"
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,
@@ -4520,6 +5121,9 @@ private fun BoardCard(
             // This card is staged. KEEP is the only amount commit.
             onFractionCommit = {},
         )
+        if (type == BoardType.OBLITERATE) {
+            ObliterateBoardControls(obliterate, onObliterateChange, busy, color, scheme)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
                 "HEAR ORIGINAL", scheme, enabled = !busy, dimmed = chainPad,
@@ -4545,11 +5149,90 @@ private fun BoardCard(
                 modifier = Modifier.weight(1f), onClick = onRemove,
             )
             ActionButton(
-                "UNDO", scheme, enabled = !busy && canUndo,
+                Copy.UNDO_BOARD, scheme, enabled = !busy && canUndo,
                 modifier = Modifier.weight(1f), onClick = onUndo,
             )
         }
     }
+}
+
+@Composable
+private fun ObliterateBoardControls(
+    settings: ObliterateBoard.Settings,
+    onChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
+    busy: Boolean,
+    color: Color,
+    scheme: Scheme,
+) {
+    var clockOpen by remember { mutableStateOf(false) }
+    StepperSlider(
+        label = "SHIMMER", labelWidth = 76.dp,
+        fraction = (settings.shimmerMix * 2).toFloat(),
+        valueText = "${(settings.shimmerMix * 100).roundToInt()}%",
+        fillColor = color, scheme = scheme, enabled = !busy,
+        onFractionChange = { fraction -> onChange { current -> current.copy(shimmerMix = (fraction * 50).roundToInt() / 100.0) } },
+        onFractionCommit = {},
+    )
+    TapeText("${settings.bpm.roundToInt()} BPM · 1/${settings.division} · ${if (settings.pitched) "OCTAVE" else "ROOM"}",
+        TapeType.pixelSmall, scheme.ink2.tape)
+    ActionButton("CLOCK & PATTERN", scheme, enabled = !busy, lit = clockOpen,
+        onClick = { clockOpen = !clockOpen })
+    if (clockOpen) {
+        StepperSlider(label = "BPM", fraction = ((settings.bpm - 40) / 200).toFloat(),
+            valueText = settings.bpm.roundToInt().toString(), fillColor = color, scheme = scheme,
+            enabled = !busy, onFractionChange = { fraction -> onChange { current -> current.copy(bpm = (40 + fraction * 200).roundToInt().toDouble()) } },
+            onFractionCommit = {})
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (division in listOf(4, 8, 16, 32)) {
+                ActionButton("1/$division", scheme, enabled = !busy, lit = settings.division == division,
+                    accessibilityLabel = "OBLITERATE division 1/$division", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(division = division) } })
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (pitched in listOf(true, false)) {
+                val label = if (pitched) "OCTAVE" else "ROOM"
+                ActionButton(label, scheme, enabled = !busy, lit = settings.pitched == pitched,
+                    accessibilityLabel = "OBLITERATE $label", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(pitched = pitched) } })
+            }
+        }
+        ActionButton("NEW PATTERN", scheme, enabled = !busy,
+            onClick = { onChange { current -> current.copy(seed = (current.seed + 1) and 0xffff_ffffL) } })
+        TapeText("Pattern ${settings.seed}. Changes stay staged until KEEP.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+    }
+    TapeText("AMT zero is the original. Below 35%, the whole effect blends in. Inputs up to 9 seconds.",
+        TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+}
+
+/**
+ * A section heading on the pad editor's scrolling page (LAYERS, EDIT, MAKE FROM THIS PAD, TRY IN THE BEAT;
+ * EFFECTS and VARIATIONS are doors to screens of their own, [PageDoor]): a plain label above the controls
+ * it names, announced as a heading. A private composable on purpose: [PadSheetScreen] is one method already
+ * past the dex register limit's comfort, and an inline Column here would compile into it.
+ */
+@Composable
+private fun SectionHeading(text: String, scheme: Scheme) {
+    TapeText(
+        text,
+        TapeType.pixel,
+        scheme.ink.tape,
+        Modifier.fillMaxWidth().padding(top = 6.dp).semantics { heading() },
+        maxLines = 1,
+    )
+}
+
+/** The small heading over one row of TREATMENT's chips ([PadSheet.ROW_HEADINGS]); nothing for a row without one. */
+@Composable
+private fun RowHeading(text: String?, scheme: Scheme) {
+    if (text == null) return
+    TapeText(
+        text,
+        TapeType.pixelSmall,
+        scheme.ink3.tape,
+        Modifier.fillMaxWidth().semantics { heading() },
+        maxLines = 1,
+    )
 }
 
 @Composable
@@ -4581,6 +5264,8 @@ private fun TreatmentCard(
     onSegmentTap: (String) -> Unit,
     onAmountChange: (Float) -> Unit,
     onAmountCommit: () -> Unit,
+    /** Drawn directly under row one, where DUST lives: DUST's tape picker ([DustFromRow]). */
+    afterRowOne: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // The card says when it is working, and on what (September UAT,
@@ -4609,7 +5294,9 @@ private fun TreatmentCard(
         // not by which family implements it). One segment lights across
         // every row, since a pad carries one recipe.
         val widest = rows.maxOf { it.size }
-        for (row in rows) {
+        for ((rowIndex, row) in rows.withIndex()) {
+            // Each row names what its chips do ([PadSheet.ROW_HEADINGS], one per row of [PadSheet.ROWS]).
+            RowHeading(PadSheet.ROW_HEADINGS.getOrNull(rowIndex), scheme)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
                     val isPedal = seg in PadSheet.PEDAL_SEGMENTS
@@ -4670,6 +5357,7 @@ private fun TreatmentCard(
                 // A short row keeps the same chip width as a full one.
                 repeat(widest - row.size) { Spacer(Modifier.weight(1f)) }
             }
+            if (rowIndex == 0) afterRowOne()
         }
         StepperSlider(
             label = amountLabel,
@@ -4938,7 +5626,7 @@ private fun MutateCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
-            ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
+            ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
         // The pending pair, so the card names the partner before anything is
         // kept. TalkBack reads it uncut.
@@ -5220,7 +5908,7 @@ private fun OutsideCard(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
+            ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
             // The trip is out: the reels turn on an LCD strip beside the

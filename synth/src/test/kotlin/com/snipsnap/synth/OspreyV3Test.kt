@@ -110,6 +110,21 @@ class OspreyV3Test {
     }
 
     @Test
+    fun `HOLD at its top extends a finite excitation and never claims a loop`() {
+        // The current model's HOLD lengthens the swell's gesture; it does not loop. HOLD 1 still stops
+        // exciting before the render ends, fades to silence and is filed TONAL, never LOOP.
+        val seconds = 3f
+        val short = probe(3, .375f, .65f, mapOf("HOLD" to 0f), seconds = seconds)
+        val top = probe(3, .375f, .65f, mapOf("HOLD" to 1f), seconds = seconds)
+        assertTrue(top.metrics.excitationStopSeconds > short.metrics.excitationStopSeconds, "HOLD 1 did not extend the gesture")
+        assertTrue(top.metrics.excitationStopSeconds < seconds, "HOLD 1 excitation never stopped")
+        assertEquals(short.samples.size, top.samples.size, "HOLD changed the render length")
+        assertTrue(top.samples.all { it.isFinite() })
+        assertTrue(abs(top.samples[top.samples.size - 1]) < 1e-6f && abs(top.samples[top.samples.size - 2]) < 1e-6f, "HOLD 1 has no release")
+        assertEquals(com.snipsnap.audio.DrumClass.TONAL, Osprey.drumClassFor(OspreyVoice.SWELL, controls + ("HOLD" to 1f)))
+    }
+
+    @Test
     fun `saved model two partial recipes retain their published defaults and sample bits`() {
         // Captured from the already compiled 861dfbfd renderer before compiling model 3.
         val cases = listOf(

@@ -1,30 +1,40 @@
-# Ferry: first Kotlin PASSAGE port
+# Ferry: PASSAGE, MATCH and LOSS
 
 The characteristic gesture is **strike → handoff → sympathetic bloom → return**.
 
 This is one finite, dry, mono PASSAGE voice. It ports the owner-approved Python
 study to SnipSnap's Kotlin renderer. The owner answered “Yes, clearly” to the first
 handoff comparison and “Clear throughout” to nine low/middle/high, slow/normal/fast
-examples. Those answers approve the Python references. Kotlin listening remains
-a separate gate at <https://ferry-first-listen.bertcalm.chatgpt.site>.
+examples. Those answers approve the Python references. On 2026-10-30 the owner
+also answered “Ferry Kotlin listen: Same character.” The aligned Kotlin port is
+approved. On 2026-11-01 the owner answered “Ferry MATCH listen: Clear change,
+note stays clear.” On 2026-11-06 the owner rejected the first LOSS ending:
+“Something sounds wrong. Short stops abruptly rather than fade.” Model 4 below
+adds a proposed shaped release for the dry half of LOSS; the revision awaits hearing at
+<https://ferry-first-listen.bertcalm.chatgpt.site>.
 
 Repository base inspected: `bf17f4561bda7418cc4ebf7bae8e78d7c8c45329`.
 
-## Scope and controls
+## Model 1 scope and controls
 
 The patch saves `voice`, `midi`, `velocity`, signed 64-bit `seed`, `model`, name
 and macros. MIDI is explicit, from 36 to 72; a separate TUNE knob is unnecessary
 for this first listening API. Model 1 deliberately exposes only HANDOFF and a
 reserved HOLD, an exception to the eventual three-to-six timbral-control shape.
-There are no inert MATCH/SPAN/LOSS/BODY controls. They require subsequent design
-and listening. PASSAGE's three provisional recipes stay outside the factory roster.
+Model 1 has no MATCH/SPAN/LOSS/BODY controls. Model 2 adds MATCH and model 3 adds LOSS, both below;
+the others still require design and listening. PASSAGE's three provisional recipes
+stay outside the factory roster.
 
 | Control | Default | Meaning |
 | --- | ---: | --- |
 | HANDOFF | .5 | Reciprocal A/B and B/support links; .25/.5/1 reproduce the approved .35/1/3.5 rate factors. Zero isolates B. |
 | HOLD | 0 | Only zero is accepted; this version does not sustain or export a loop. |
 
-All notes last four seconds, matching the approved comparison. A four-millisecond
+Models 1 and 2 last four seconds, matching the approved comparison. Model 3
+retains that length at neutral LOSS and uses one-to-eight-second windows otherwise.
+Model 4 adds a cosine release after the window for LOSS above .5, reaching
+350 ms at the driest setting. Neutral and bloom audio remain unchanged.
+A four-millisecond
 house fade ends the file. This is a retained prototype cutoff, not a claim that
 the physical state has decayed to silence. Energy-based termination and production
 tail treatment remain open. Finite samples carry TONAL engine metadata, like
@@ -51,7 +61,7 @@ saved note, velocity, seed, HANDOFF
                          │
         independent quiet A root (1), added at readout
                          │
-       bandLimit → decimate → DC → levelTo → fadeTail
+       bandLimit → decimate → DC → optional short-note release → levelTo → fadeTail
 ```
 
 The state is an energy-normalized complex vector. `da/dt = (i H − Γ) a`, with
@@ -70,8 +80,10 @@ fundamental constraint. Every reciprocal link touching A/B/support fundamentals,
 including support-to-bank links, is scaled together when necessary. The independent
 root is never retuned. The approved C3 normal graph requires no cap adjustment.
 Identifying the four lowest frequencies is valid only for this fixed bank, above
-1.57 times the root. Future MATCH/SPAN requires participation tracking or an enlarged
-root subspace. A five-cent spectral constraint does not itself prove perceived pitch;
+1.57 times the root. Model 2 keeps all fundamentals aligned and only detunes B's
+upper modes, so this separation remains valid. Future SPAN or fundamental detuning
+requires participation tracking or an enlarged root subspace. A five-cent spectral
+constraint does not itself prove perceived pitch;
 the Python fast C2 pitch proxy was about 15.5 cents sharp in one middle window.
 
 ## Passive update and cost
@@ -87,9 +99,11 @@ network stepping, not scheduled envelopes or separately rendered layers.
 `FerryTest` compares the block output with direct single-sample stepping and with
 independent exact full-system observations.
 
-The render does no per-sample eigensolve, trigonometry or allocation. A 32-entry
-LRU retains immutable coefficients keyed by note and HANDOFF bits; model, rate,
-voice and the fixed tables are constants of this version. Velocity and seed
+The network readout does no per-sample eigensolve, trigonometry or allocation.
+The optional model-4 release uses the shared cosine pass after decimation. A 32-entry
+LRU retains immutable coefficients keyed by note, HANDOFF, MATCH and LOSS bits;
+rate, voice and the fixed tables are constants. Models 1 and 2 at aligned tuning
+share the same network coefficients. Velocity and seed
 affect only excitation and therefore do not invalidate that cache. Each render
 owns its state buffers. Thread interruption is checked at every block.
 
@@ -163,5 +177,306 @@ keygroups and MPC hardware acceptance are deferred to their appropriate gates.
 | Original handoff and nine Python register/speed examples | Heard and approved by the owner. |
 | Current repository APIs and base commit | Read and verified during this port. |
 | Kotlin numerical, serialization, output and CLI contracts | Focused suites and full JVM run passed on 2026-10-28 (exit 0). |
-| Kotlin sound character | Awaiting the owner's comparison. |
+| Kotlin aligned sound character | Heard and approved: “Same character” on 2026-10-30. |
+| MATCH upper-tuning range | Heard and approved: “Clear change, note stays clear” on 2026-11-01. |
+| LOSS decay range | A separate listening gate; not yet heard by the owner. |
 | Full macro set, held loops, production tail, phone/MPC behavior | Later work. |
+
+## As built: MATCH, 2026-10-31
+
+Repository base: `a5caac7fd6c8a2e6d09ec740c60fb995c6bef368`. This is a scoped
+CONCEIVE extension of PASSAGE, not another engine or voice. The gesture remains
+**strike → handoff → sympathetic bloom → return**. MIDI, velocity, duration,
+losses, pickups, receiver bank and finite HOLD refusal are retained. The
+prototype still has fewer than the final three-to-six timbral controls;
+this is a staged listening exception, not a factory promotion.
+
+| Control | Default | Model quantity | Interaction and evidence |
+| --- | ---: | --- | --- |
+| MATCH | 1 | B's second, third and fourth modes rise by `6 × (1 − MATCH)` cents. Every fundamental, A, support and the receiver tuning stay fixed. | HANDOFF changes reciprocal links, so stronger links tolerate a given upper-tuning gap better. Actual acquired B energy, conditioned audio and pitch are tested. |
+
+This is literal detuning within the reduced modal network, not a mix control or
+a physical retuning of an entire harmonic string. The six-cent upper-mode range
+is a proposed sound-design choice. Detuning B's fundamental as well pulled the
+detector's low-note tail 31.71 cents sharp at normal HANDOFF, beyond the retained
+20-cent output pitch test. Narrowing that whole-material range to 15 cents also
+failed at one intermediate step. A 30-cent upper-only range retained the shared
+fundamental but still biased the detector by up to 35.83 cents at low fast HANDOFF.
+The delivered control keeps that shared root and limits the upper-ring offset to
+six cents. The owner approved that range on 2026-11-01.
+
+All four fundamentals retain the played note. The complete H still has to pass
+its five-cent root-cluster cap at every MATCH setting; the cap is no longer
+skipped when upper modes are detuned. Root modes remain below the fixed receiver
+bank, above 1.57 times the root. Future SPAN or a detuned fundamental would need
+a different tracking rule. The internal builder refuses nonfinite detuning or
+a range above six cents rather than accepting a topology outside this contract.
+
+MATCH is part of the existing compiled-plan cache key, with the same 32-entry
+bound. There is no new per-sample solve or allocation. At MATCH=1, the cap,
+coefficients and output are identical to model 1. `ferry-model1-goldens.json`
+contains independent raw Float hashes captured from the accepted compiled
+renderer at `e2ee7b1bdbd423e9f70dd1a5d2d7cbbce936ac10`, including nondefault
+velocities and extreme signed seeds. The excitation hash retains its original
+version salt. The audition generator also checks all nine aligned native PCM16
+WAV hashes against the retained first-port measurements.
+
+Saved model-1 patches keep their original macro map and replay path. Model 2
+adds MATCH, with missing values filled from its pinned default of 1. A bare
+`FerryPatch` now saves a partial empty macro map; its model pins those defaults.
+JSON keeps the exact signed 64-bit seed. Model-1 saved patches refuse MATCH;
+the CLI requires an explicit `--model 2` upgrade before changing that control.
+A nonaligned recipe cannot silently downgrade to model 1.
+
+```
+snipsnap synth FERRY PASSAGE --preset 1 --model 2 \
+  --macros HANDOFF=.5,MATCH=.75 --out ferry-match
+./gradlew --no-daemon :synth:test --tests com.snipsnap.synth.FerryMatchTest
+./gradlew --no-daemon :synth:generateFerryMatchAudition
+```
+
+`generateFerryMatchAudition` writes `testkit/ferry-match-audition/`, or
+`-PferryMatchOutput=...`. It produces 45 actual-engine examples across three
+notes, three handoff speeds and five MATCH steps, complete saved recipes,
+pitch/output/transfer measurements and cold/warm complete-render timings.
+The page starts with three four-second middle-note examples: aligned,
+three cents apart and six cents apart in the upper modes. Other notes and
+intermediate steps are optional. The original model-1 generator stays pinned
+to model 1.
+
+The 2026-10-31 server-JVM audition measured a maximum 19.14-cent root deviation
+and minimum .927 confidence in attack/middle/tail windows across all 45 cases.
+The retained regression limits are 20 cents and .9 confidence. Warm complete
+four-second renders took 39.6–43.5 ms; cold cases took 40.1–118.4 ms. Output peaks
+were .411–.745 and absolute DC was at most 1.92e-5. These are server measurements,
+not phone timings. At C3, the widest MATCH setting retained about 27%/58%/95% of
+aligned upper-B peak energy at slow/normal/fast HANDOFF respectively. This is the
+physical interaction to hear: stronger links tolerate the tuning gap better.
+Those transfer peaks come from state observations every 100 ms, not a search
+for a continuous-time maximum.
+`reference/ferry/match-measurements.json` retains the full report and source hashes.
+
+Validation completed on 2026-10-31: all 16 focused Ferry/CLI checks passed,
+and the complete `./gradlew --no-daemon test` finished with exit code 0 in
+1 hour 2 minutes 50 seconds. Audition generation and browser checks also passed,
+including actual A–B–C playback, stop, optional controls, answer copying and
+persistence, mobile layout, and the archived listening pages. No Android SDK
+was present; the full command validates the JVM modules rather than the app or
+on-device audio.
+
+### Why it is built this way
+
+- Detuning B's upper modes changes how much energy they acquire through the
+  graph; no second strike or volume envelope substitutes for that interaction.
+- The aligned endpoint preserves the approved sound and old seeded recipes.
+- The common root protects the played note without an output pitch effect or
+  changed material pickups.
+- The owner confirmed that the handoff changes clearly while the note stays clear.
+
+## As built: LOSS, 2026-11-02
+
+Repository base: `e4e7b29320da3af052715268319aeff1c2b1514d`. This is the selected
+CONCEIVE extension of the existing PASSAGE voice. Its characteristic gesture
+remains **strike → handoff → sympathetic bloom → return**. Model 3 adds the
+third timbral control, LOSS, alongside HANDOFF and MATCH. Explicit MIDI still
+sets the played note. SPAN/BODY, held synthesis, factory promotion, phone/MPC
+acceptance and natural tail termination remain later work.
+
+| Control | Default | Model quantity | Interaction and evidence |
+| --- | ---: | --- | --- |
+| LOSS | .5 | Multiplies all 22 material-specific amplitude-loss rates by a positive scale, from .5× to 4×. The H matrix, pickups and A-only excitation stay fixed. | Loss competes with transfer through HANDOFF links and with detuned MATCH acquisition. Independent raw-state energy and analytic damped-pair tests accompany 225 native note/speed/MATCH/LOSS cases. |
+
+The selected MUTATE operation changes the loss law of an accepted coupled
+instrument. NACRE and GYRE remain neighboring sympathetic-string designs;
+neither replaces PASSAGE's approved wood-to-wire transfer. No new engine,
+voice, layer, output envelope or reverb is introduced for this control.
+
+```
+LOSS 0..0.5: scale = 2^(2 LOSS − 1)    → .5× .. 1×
+LOSS .5..1: scale = 4^(2 LOSS − 1)     → 1× .. 4×
+Gamma_new = scale * Gamma_accepted
+H_new = H_accepted
+output frames = round(4 * 44100 / scale)
+```
+
+These are proposed control shapes. The damping is literal within the reduced
+modal model: `d(a†a)/dt = −2 a† Gamma_new a <= 0`. Scaling positive losses keeps
+the material contrasts and passivity. The shorter hit spends its energy sooner;
+the bloom retains more actual network energy. Neither is made by fading an
+otherwise identical render. Equal-loss paired modes also match the independent
+analytic decay `exp(−2 gamma t)` while retaining the expected energy handoff.
+
+The observation horizon follows the same scale: eight seconds at LOSS=0,
+four at .5 and one at 1, rounded to complete output frames. This extends the
+audible bloom without resampling, changing the note, slowing the coupling, or
+spending unbounded render time. **These are finite observation windows, not
+energy-based natural endings.** The existing four-millisecond house fade still
+ends the file. Production tail termination remains open; this round does not
+claim that physical state has reached silence at a cut.
+
+The 32-entry compiled-plan cache now includes LOSS bits, because the physical
+damping factors depend on it. No additional solve or allocation runs per sample.
+Models 1 and 2 use neutral LOSS internally and retain their four-second files.
+Neutral model 3 shares the same coefficients and audio. The original excitation
+salt is retained for every exact 64-bit seed. `ferry-model2-goldens.json` captures
+independent raw Float hashes from the accepted renderer at
+`0abbf9c9959c6f9d114235832be73ce0b90f10a3`, including detuned, soft and seeded
+patches. Existing model-1 goldens remain enforced. The new audition also checks
+neutral PCM16 bytes against the original aligned exports.
+
+Saved model-1/2 recipes reject LOSS. An explicit `--model 3` upgrade enables it;
+changed decay cannot silently downgrade to an older model. The file length is
+derived from the versioned LOSS setting, so JSON and PadRecipe replay preserve
+both sound and duration. HOLD remains refused. The engine still files finite
+pitched gestures as TONAL; the general classifier can call longer observations
+LOOP, just as it did for the earlier four-second prototype. All 225 native cases,
+including the one-second low notes, stay outside drum/choke classifications.
+
+```
+snipsnap synth FERRY PASSAGE --preset 1 --model 3 \
+  --macros HANDOFF=.5,MATCH=1,LOSS=0 --out ferry-bloom
+snipsnap synth FERRY PASSAGE --patch accepted.patch --model 3 \
+  --macros LOSS=1 --out ferry-dry
+./gradlew --no-daemon :synth:test --tests com.snipsnap.synth.FerryLossTest
+./gradlew --no-daemon :synth:generateFerryLossAudition
+```
+
+The generator writes `testkit/ferry-loss-audition/`, or `-PferryLossOutput=...`:
+nine complete engine examples, recipes, native timing, physical decay and output
+measurements, and the portable page. It starts with the approved middle note,
+the dry hit and the longer bloom. Low and high notes are optional. The earlier
+Kotlin and MATCH generators stay pinned to their original models; the listening
+room preserves all earlier studies.
+
+The 225-case native grid spans three notes, three handoff speeds, five MATCH
+steps and five LOSS steps. Attack/middle/tail probes measured at most 19.82 cents
+of root deviation and confidence at least .9107, within the retained 20-cent/.9
+limits. The nine page renders peaked at .411–.825 with absolute DC at most
+3.55e-5. Warm complete renders took about 10–11 ms for dry notes, 40–45 ms for
+the reference and 80–81 ms for the bloom; cold cases ranged from 10.7 to 129.7 ms.
+These are server-JVM timings, not phone measurements. At C3, raw energy after
+one second was about 5.4%/42.6%/64.2% of initial energy for dry/reference/bloom.
+`reference/ferry/loss-measurements.json` retains the native report and source hashes.
+
+Validation completed on 2026-11-02: all 22 focused Ferry/CLI checks passed,
+and the complete `./gradlew --no-daemon test` finished with exit code 0 in
+1 hour 14 minutes 42 seconds, with 8,204 passing checks. Audition generation
+and browser checks passed, including actual A–B–C playback, correct durations,
+stop, note selection, answer copying and persistence, mobile layout, and
+archived MATCH playback. No Android SDK was present; this command validates
+the JVM modules rather than the app or on-device audio.
+
+### Why it is built this way
+
+- LOSS removes energy inside the same coupled instrument, so it changes how
+  much of the strike can reach the receiving material.
+- Keeping tuning and pickups fixed makes decay the question in this round.
+- Neutral LOSS preserves the approved sound and both older recipe versions.
+- A bounded observation window lets the slower bloom unfold at practical cost;
+  its final physical termination is still a separate design task.
+
+
+## As built: revised dry ending, 2026-11-06
+
+Reviewed repository base: `5c9ba711ff10559143df1fafdeebd9baedda9cd5`.
+This is a REVIEW repair of PASSAGE's ending, retaining its characteristic
+**strike → handoff → sympathetic bloom → return**. The owner heard the short
+model-3 example stop abruptly. The one-second observation still contained
+clearly measurable audio: the published middle dry WAV's final 50 ms measured
+about −30.30 dBFS RMS, despite its final four-millisecond hygiene fade. A finite
+file and zero final sample did not prove a musically complete ending.
+
+### Fix now: sound character
+
+Model 4 retains the physical LOSS law and extends the short observation with
+continued network audio. Above neutral LOSS, the output then follows the shared
+`Dsp.fadeTailCosine` release, before house loudness matching and the final 4 ms
+fade. The release grows continuously from zero at LOSS=.5 to 350 ms at LOSS=1.
+The driest file is now 1.35 seconds. The first second uses the same network
+trajectory; the model does not resample the note or alter the handoff links.
+
+```
+release seconds = 0                         for LOSS <= .5 or models 1..3
+release seconds = .35 * (2 LOSS - 1)        for model 4, LOSS > .5
+output frames = observation frames + floor(release seconds * 44100)
+```
+
+The 350 ms duration is a proposed listening choice. This is an explicit musical
+output release, not a claim that the physical state has reached silence.
+Energy-based natural stopping remains open. A longer simulation alone would
+preserve a quiet but lengthy wire tail; the requested repair is a short note
+that finishes gracefully. GYRE and NACRE are still the nearest sympathetic
+siblings, and no new voice or engine is needed to repair this gesture.
+
+### Architecture, compatibility and cost
+
+The compiled passive network and its existing 32-entry cache are unchanged.
+Only the final short-note readout and bounded render length change. The release
+uses the existing house cosine helper, so it adds a linear pass over at most
+15,435 output frames and no solver or new coefficient cache. Models 1–3 keep
+exactly their previous durations and samples, including the rejected model-3
+cut when replaying an old recipe. Model 4 retains exact neutral and bloom audio.
+No macro is added. MIDI, velocity, 64-bit seeds, HOLD refusal and the provisional
+roster status remain unchanged.
+
+`ferry-model3-goldens.json` contains four independent whole-Float hashes captured
+from the old compiled renderer at `86283ac23ee80e087a4d7b4de5db0c163d65bac5`
+before this repair, spanning loss, velocity, register and extreme signed seeds.
+The first LOSS generator and its regression sweep are now explicitly pinned to
+model 3, alongside the earlier model-1 and model-2 studies.
+
+```
+./gradlew --no-daemon :synth:generateFerryReleaseAudition
+snipsnap synth FERRY PASSAGE --patch old-dry.patch --model 4 --out released-dry
+```
+
+The new generator writes nine actual-engine files to
+`testkit/ferry-release-audition/`, or `-PferryReleaseOutput=...`, with complete
+patch recipes, ending RMS, pitch, output health and complete-render timing.
+The page keeps A as the approved four-second reference and C as the unchanged
+eight-second bloom. B is the revised dry note. The original one-second B is
+available for direct comparison, and the complete first LOSS page is archived.
+
+### What is measured and what remains open
+
+The focused checks compare independent legacy hashes, the actual continued raw
+trajectory, independent cosine points, a quiet final 50 ms, native pitch/output
+health and exact JSON/CLI replay. The release revision still awaits the owner’s
+ears. Production natural stopping, SPAN/BODY, HOLD and phone/MPC acceptance
+remain separate work. Completed measurements and validation follow; server timing is never
+reported as phone timing.
+
+The 27 focused Ferry/CLI checks completed with exit code 0. The 81-case
+revised short-setting grid measured at most 18.11 cents of deviation and at
+least .9251 confidence, retaining the existing 20-cent/.9 gates. The original
+225-case model-3 grid also passed. Revised dry files last 1.35 seconds; their
+final 50 ms measured about −69.51/−64.05/−65.61 dBFS RMS at low/middle/high.
+Warm complete server-JVM renders took 14.0–14.6 ms. The nine audition files
+preserved exact reference and bloom hashes and replayed their saved recipes.
+`reference/ferry/release-measurements.json` retains the captured report, test
+output and production source hashes. Browser checks passed for revised and
+original playback, duration, stop, notes, answer copying/persistence, mobile
+layout and archived studies. These numbers do not claim on-device performance
+or owner approval of the revised release.
+
+The complete `./gradlew --no-daemon test` completed on 2026-11-06 with
+exit code 0 in 1 hour 10 minutes 36 seconds, with 8,660 passing checks. No
+Android SDK was present; this validates the JVM modules rather than the app
+or on-device sound. A fresh portable generation also reproduced all nine
+published audio hashes and generated the three original dry comparisons and
+recipes without copying assets from the Site.
+
+One disclosed measurement: the low dry pitch probe beginning at 1.08 seconds
+crosses the falling release and reports .8725 confidence, with a detected root
+12.69 cents from the target. The retained 81-case .9-confidence gate measures
+the attack, middle and late body before the release; the old model-3 225-case
+probe windows and limits remain unchanged. The report includes the complete ending measurements and that release-window
+probe.
+
+### Why it is built this way
+
+- The dry note keeps its physical strike and handoff, then has time to let go.
+- A smooth release removes the audible cutoff; a zero final sample alone did not.
+- The existing cosine helper keeps one definition of the release shape.
+- Versioning preserves old recipes and the approved reference while the revised
+  ending is judged in the listening room.

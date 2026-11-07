@@ -42,6 +42,9 @@ class DockModel {
     var transport: Transport = Transport.Stopped
     var capture: Capture = Capture.Idle
 
+    /** The source LISTEN has been set to, or null before the player has chosen one: the idle chip names it. */
+    var captureSource: CaptureSource? = null
+
     var now: Now = RESTING
         private set
 
@@ -98,7 +101,7 @@ class DockModel {
     /** What the capture region reads. */
     val captureLabel: String
         get() = when (val c = capture) {
-            Capture.Idle -> Places.LISTEN
+            Capture.Idle -> Places.listen(captureSource)
             is Capture.Armed -> Places.armed(c.secondsOnTape)
             Capture.Snipped -> Places.SNIPPED
         }

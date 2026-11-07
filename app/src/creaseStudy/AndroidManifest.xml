@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove" />
+    <uses-permission android:name="android.permission.VIBRATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove" />
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
+    <application android:name=".CreaseStudyApplication" android:label="SnipSnap Crease Study" android:allowBackup="false" tools:replace="android:label,android:name,android:allowBackup">
+        <service android:name="androidx.camera.core.impl.MetadataHolderService" tools:node="remove" />
+        <service android:name=".MicSessionService" tools:node="remove" />
+        <service android:name=".SnipTileService" tools:node="remove" />
+        <service android:name=".SnipSnapMidiService" tools:node="remove" />
+        <provider android:name="androidx.core.content.FileProvider" tools:node="remove" />
+        <activity android:name=".MainActivity" tools:node="remove" />
+        <activity android:name=".CreaseStudyActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
