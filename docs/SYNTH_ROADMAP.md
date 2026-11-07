@@ -3218,3 +3218,20 @@ progression.
 ## CHITIN finite-note prototype
 
 SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.
+
+## ONSET native tom and percussion extension (2026-11-03)
+
+Study 009's seven setups now have native model-4 identities: TOM, PERC_PLUCK,
+PERC_WOOD and PERC_METAL, alongside the four original voices. The same six
+controls work in SYNTH, complete recipes survive pad reopening and editing,
+and a separate seven-pad standalone XTD/XPM kit retains editable sidecars.
+The original twelve presets and sixteen-pad acceptance kit remain model 3.
+All 21 studied raw renders match their frozen WAV hashes, with older-model
+and approved-bank compatibility covered by independent references.
+
+Android debug assembly and instrumentation-source compilation passed. The full
+JVM result and remaining device checks belong to the integration validation
+record. The pre-existing saved-pad device callback failure above is not claimed
+fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
+is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
+See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
