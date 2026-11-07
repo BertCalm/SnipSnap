@@ -62,7 +62,10 @@ coefficients, coefficient hash, storage order and resident byte account.
 Decoders validate dimensions and byte limits before allocation, validate
 finite bounded coefficients and their Float32 hash, and validate compressed
 and PCM hashes off the audio thread. JNI has a separate `createShared`
-entry point; the full-tail format and entry point remain supported.
+entry point; the full-tail format and entry point remain supported. Browser
+representation selection follows the declared format, ignoring unused shared
+metadata on legacy full-tail manifests; a streaming/decoder regression check
+covers this compatibility case.
 
 At each requested tail sample, the reader interpolates four basis samples
 and takes the stored weighted sum. It never reconstructs a whole tail at
@@ -77,7 +80,7 @@ ending modes. Actual parity processing and synthetic shared-reader gesture
 checks observe zero callback allocations/frees. Six native executables pass.
 Host native release processing averaged **13.24–23.52 ms per audio second**
 across two verification runs; Node's eight simultaneous unfolding test took
-**180.48 ms per audio second**
+**181.61 ms per audio second**
 with a finite non-clipping bus. The first native probe is preserved separately;
 the second overlapped host memory pressure. These are loaded-cloud host measurements,
 not phone callback deadlines, speaker latency or a physical stress result.
@@ -137,7 +140,7 @@ The freshly packaged arm64 APK is 9,683,532 bytes, SHA-256
 Its bundled manifest and compressed cache match the verified artifacts. The
 signature uses the same certificate as the accepted phone study, preserving
 its separate `com.snipsnap.app.creasestudy` identity. The application source
-snapshot is `3da84771f`; subsequent changes only package browser code and
+snapshot is `3da84771f`; subsequent changes harden browser format selection, package browser code and
 record validation. The loader keeps the full-tail format for comparison.
 
 The audition archives the accepted cache/manifest/measurements and five cached

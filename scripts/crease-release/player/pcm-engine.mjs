@@ -50,7 +50,7 @@ export class ReleaseReader {
     const frames = validateManifest(manifest);
     if (!(pcm instanceof Int16Array) || pcm.length !== frames) throw new Error('Release PCM dimensions differ.');
     this.meta = manifest; this.pcm = pcm; this.voices = []; this.lastPeak = 0;
-    this.coefficients = manifest.shared ? Float32Array.from(manifest.shared.coefficients) : null;
+    this.coefficients = manifest.format === 'crease-shared-pcm-v1' ? Float32Array.from(manifest.shared.coefficients) : null;
   }
   sample(offset, length, pos, loop = -1) {
     if (loop >= 0 && pos >= length) pos = loop + (pos - loop) % (length - loop);

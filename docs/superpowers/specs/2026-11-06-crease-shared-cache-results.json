@@ -41765,9 +41765,10 @@
       "rapidRetriggersEnd": true,
       "output48kClockAndEnd": true,
       "eightVoicePeak": 0.7934128046035767,
-      "desktopEightVoiceMillisecondsPerAudioSecond": 20.980724000008195,
-      "desktopDecodeMilliseconds": 110.47423099999999,
-      "desktopEightUnfoldVoicesMillisecondsPerAudioSecond": 180.48247699999774,
+      "desktopEightVoiceMillisecondsPerAudioSecond": 39.2186589999983,
+      "desktopDecodeMilliseconds": 53.89006499999999,
+      "desktopEightUnfoldVoicesMillisecondsPerAudioSecond": 181.6067969999931,
+      "legacyMetadataCannotSelectSharedReader": true,
       "scope": "Node PCM decoder and actual streaming JS reader. Not hardware or speaker latency."
     },
     "firstNativeProbe": {

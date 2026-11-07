@@ -3,6 +3,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { webcrypto, createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import { gzipSync } from 'node:zlib';
 import { decodeCache, digest } from './player/cache.mjs';
 import { ReleaseReader } from './player/pcm-engine.mjs';
 globalThis.crypto ??= webcrypto;
@@ -80,6 +81,17 @@ let corruptRejected = false;
 const corrupt = Buffer.from(packed); corrupt[corrupt.length >> 1] ^= 1;
 try { await decodeCache(m, corrupt); } catch { corruptRejected = true; }
 assert(corruptRejected, 'corrupt cache accepted');
+// The declared format selects the reader. Unknown extra metadata in a legacy
+// manifest must not turn its full-tail PCM into an unvalidated shared basis.
+const legacyFrames = m.heldFrames + 2 * m.tailFrames;
+const legacyBytes = Buffer.alloc(legacyFrames * 2), legacyPacked = gzipSync(legacyBytes);
+const legacyMeta = { ...m, format: 'crease-playable-pcm-v1', tailCuts: [0, m.loopStart],
+  shared: { components: 32, pad: 89, offsets: [0, 0], coefficients: [1], coefficientsSha256: '0'.repeat(64) },
+  container: { ...m.container, pcmBytes: legacyBytes.length, compressedBytes: legacyPacked.length,
+    deltaOrder: 0, pcmSha256: await digest(legacyBytes), compressedSha256: await digest(legacyPacked) } };
+const legacyPcm = await decodeCache(legacyMeta, legacyPacked), legacyReader = new ReleaseReader(legacyMeta, legacyPcm);
+assert.equal(legacyReader.coefficients, null, 'legacy metadata selected the shared reader');
+assert.equal(legacyReader.tail(0, 10000), 0, 'legacy full-tail PCM was read as a basis');
 assert.deepEqual(fs.readFileSync(path.join(out, 'manifest.json')), manifestBytes, 'manifest changed during verification');
 const report = { result: 'passed', cacheIdentity: m.cacheIdentity, manifestSha256: await digest(manifestBytes), cases: fixture.cuts.length, maxJsPythonSampleError: maxPortError,
   cacheIntegerIdentity: true, interpolationInvariants: true, corruptRejected,
@@ -87,6 +99,7 @@ const report = { result: 'passed', cacheIdentity: m.cacheIdentity, manifestSha25
   eightVoicePeak: peak, desktopEightVoiceMillisecondsPerAudioSecond: millisecondsPerAudioSecond,
   desktopDecodeMilliseconds: decodeMilliseconds,
   desktopEightUnfoldVoicesMillisecondsPerAudioSecond: releaseMilliseconds,
+  legacyMetadataCannotSelectSharedReader: true,
   scope: 'Node PCM decoder and actual streaming JS reader. Not hardware or speaker latency.' };
 fs.writeFileSync(path.join(out, 'reader-verification.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify({...report, cacheIdentity: "bound in receipt"}));
