@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**EROSION accepted contrast bank and handoff (2026-11-07).** Josh accepted the
+native eight-role audition. The implementation is merged in PR #891. Factory
+promotion of the exact recipes, SDK-verified picker/starter integration,
+render-cost/velocity checks and physical MPC loading are recommended next.
+HOLD is a later round. The incomplete full-suite run reported an ARCO render-cost
+failure; no full regression pass is claimed. See the
+[handoff](handoffs/2026-11-07-erosion.md).
+
 **Backroom boom bap study (2026-11-07).** SKIN SNARE gains a velocity-dependent
 body/wire excitation while preserving full-strength renders. Synth velocity
 layers replay their saved FxChain after the strike, with input drive following
