@@ -576,9 +576,9 @@ private class EmbouchureRestore(
     val pending = mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
         for (pair in seededPresets.keys) {
             if (pair.first == Engine.EMBOUCHURE && pair !in patches && pair !in reopenedPads) put(pair, true)
-            // A named-only TIDAL or TREMOR YOURS restore has no typed performance yet.
+            // A named-only TIDAL, TREMOR or RELAY YOURS restore has no typed performance yet.
             // Default sliders must not materialize model 2 before its shelf read.
-            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) && pair !in reopenedPads &&
+            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) && pair !in reopenedPads &&
                 SynthDrafts.read(settings).none { it.engine == pair.first.name && it.voiceName == pair.second.name } &&
                 Presets.byName(pair.first.name, pair.second.name, seededPresets.getValue(pair)) == null) {
                 put(pair, true)
@@ -588,7 +588,7 @@ private class EmbouchureRestore(
 
     /** A named recipe's saved model must arrive before default controls can replace it. */
     fun waitsForRecipe(engine: Engine, voice: Enum<*>): Boolean =
-        (engine == Engine.TIDAL || engine == Engine.TREMOR) && pending.containsKey(engine to voice)
+        (engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY) && pending.containsKey(engine to voice)
 }
 
 @Composable
@@ -611,6 +611,19 @@ private fun retainTremorDraft(
     val pair = Engine.TREMOR to voice
     if (pair !in loaded) loaded[pair] = TremorPatch(
         Engine.TREMOR.patchDisplayName(voice), voice, macros, model = model,
+    )
+}
+
+/** A macro-only RELAY restore keeps its old pulse until the player explicitly changes it. */
+private fun retainRelayDraft(
+    loaded: MutableMap<Pair<Engine, Enum<*>>, Patch>,
+    voice: RelayVoice,
+    macros: Map<String, Float>,
+    model: Int,
+) {
+    val pair = Engine.RELAY to voice
+    if (pair !in loaded) loaded[pair] = RelayPatch(
+        Engine.RELAY.patchDisplayName(voice), voice, macros, model = model,
     )
 }
 
@@ -870,7 +883,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
+                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -891,6 +904,7 @@ fun SynthScreen(
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.LIBRATION) seed.seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seed.seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
+                        else if (e == Engine.RELAY) seed.seededDrafts.firstOrNull { it is RelayPatch && it.voice == v }
                         else if (e == Engine.CAUSTIC) (seed.seededDrafts.filterIsInstance<CausticPatch>()
                             .firstOrNull { it.voice == v } ?: nativeFactory as? CausticPatch)
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
@@ -948,7 +962,7 @@ fun SynthScreen(
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
-    // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
+    // velocity, SKITTER its noise seed, RELAY its pulse behavior, generated sources and phrase
     // schedules, EMBOUCHURE and BELLOWS their player gestures, ONSET its renderer version, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
     // and model version. VENT keeps its note, velocity, trajectory seed and saved model.
@@ -1054,6 +1068,10 @@ fun SynthScreen(
             loadedPatchesByVoice, voice as TremorVoice, macros,
             seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
         )
+        if (engine == Engine.RELAY) retainRelayDraft(
+            loadedPatchesByVoice, voice as RelayVoice, macros,
+            seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
+        )
         if (engine == Engine.EMBOUCHURE) {
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
@@ -1065,7 +1083,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch ||
+            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1238,6 +1256,14 @@ fun SynthScreen(
                 ?: TremorPatch(name, voice as TremorVoice, controls,
                     model = seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice))
         }
+        if (engine == Engine.RELAY) {
+            // Model choice and the last macro edit can share a save or navigation frame.
+            val current = loadedPatchesByVoice[engine to voice] as? RelayPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: RelayPatch(name, voice as RelayVoice, controls,
+                    model = seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice))
+        }
         return loadedPatch?.let {
             if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
             else Patches.edited(it, name, macros)
@@ -1390,6 +1416,10 @@ fun SynthScreen(
                     loadedPatchesByVoice, voice as TremorVoice, macrosByVoice.getValue(pair),
                     seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
                 )
+                Engine.RELAY -> retainRelayDraft(
+                    loadedPatchesByVoice, voice as RelayVoice, macrosByVoice.getValue(pair),
+                    seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
+                )
                 Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
                     engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
                 )
@@ -1493,6 +1523,16 @@ fun SynthScreen(
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrioPatch ?: return
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
+    }
+    fun updateRelayPatch(change: (RelayPatch) -> RelayPatch) {
+        if (engine != Engine.RELAY || embouchureRestore.waitsForRecipe(engine, voice)) return
+        val pair = engine to voice
+        val patch = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)) as RelayPatch
+        currentPresetByVoice.remove(pair)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[pair] = change(patch)
+        // A trip to KIT can dispose this screen before the draft effect gets a frame.
+        SynthDrafts.write(settings, currentDrafts())
     }
     fun updateLibrationPatch(patch: LibrationPatch) {
         if (engine != Engine.LIBRATION || voice != patch.voice) return
@@ -1689,6 +1729,7 @@ fun SynthScreen(
                         if (editable is RimePatch) macrosByVoice[pair] = Rime.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
+                        if (editable is RelayPatch) macrosByVoice[pair] = Relay.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
                         if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
                         // The saved model and controls are one recipe. Adopting only
@@ -1708,7 +1749,7 @@ fun SynthScreen(
         } catch (e: Exception) {
             Log.e("SynthScreen", "presets: unreadable", e)
             for (pair in embouchureRestore.pending.keys.toList()) {
-                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) embouchureRestore.pending[pair] = false
+                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) embouchureRestore.pending[pair] = false
             }
         }
     }
@@ -1896,7 +1937,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -3282,22 +3323,23 @@ fun SynthScreen(
                     )
                 }
 
-                // Relay's touch changes excitation and brightness without replacing its
-                // saved sources, handoff schedules or phrase clock.
+                // Pulse behavior is an explicit recipe edit; untouched old work keeps its sound.
                 if (engine == Engine.RELAY) {
-                    val relayPatch = loadedPatch as? RelayPatch
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = relayPatch?.velocity ?: 1f,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as RelayPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
+                    if (embouchureRestore.waitsForRecipe(engine, voice)) {
+                        TapeText(
+                            if (embouchureRestore.pending[engine to voice] == false)
+                                "SAVED RELAY COULD NOT OPEN. CHOOSE A PRESET."
+                            else "RESTORING SAVED RELAY…",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    } else {
+                        RelayPerformanceControls(
+                            patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as RelayPatch,
+                            fill = classColor,
+                            scheme = scheme,
+                            onEdit = ::updateRelayPatch,
+                        )
+                    }
                 }
 
                 // VENT's root and excitation strength live beside its six macros.
@@ -4207,6 +4249,12 @@ private class SynthSeed(settings: Map<String, String>) {
         if (settings.containsKey(presetSettingsKey(Engine.TREMOR, v)) ||
             Tremor.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.TREMOR, v, it.name)) })
             Tremor.LEGACY_MODEL else Tremor.MODEL
+    }
+    // Snapshot before the first macro write: an earlier visit carried model-1 pulse behavior.
+    val relayModelsWithoutRecipe = RelayVoice.entries.associateWith { v ->
+        if (settings.containsKey(presetSettingsKey(Engine.RELAY, v)) ||
+            Relay.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.RELAY, v, it.name)) })
+            RelayPatch.LEGACY_MODEL_VERSION else RelayPatch.MODEL_VERSION
     }
     val restoredOhm = restoredOhmPatch(settings)
     val restoredScannedRecipes = run {
@@ -5341,6 +5389,33 @@ internal fun AccordPerformanceControls(
     TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
 }
 
+/** Keep the saved phrase and velocity intact while the player chooses the pulse gesture. */
+@Composable
+private fun RelayPerformanceControls(
+    patch: RelayPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: ((RelayPatch) -> RelayPatch) -> Unit,
+) {
+    MacroSlider("VELOCITY", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    TapeText("PULSE BEHAVIOR", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((model, title) in listOf(
+            RelayPatch.LEGACY_MODEL_VERSION to "ORIGINAL ACCENTS",
+            RelayPatch.MODEL_VERSION to "REPEATING PULSE",
+        )) {
+            ActionButton(
+                title, scheme, enabled = true, lit = patch.model == model,
+                modifier = Modifier.weight(1f).semantics { selected = patch.model == model },
+                accessibilityLabel = "RELAY $title",
+            ) {
+                if (patch.model != model) onEdit { it.copy(model = model) }
+            }
+        }
+    }
+}
+
 /** Performance and playback controls live outside the already large bench composable. */
 @Composable
 private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
@@ -5857,7 +5932,7 @@ private enum class Engine {
         CREASE -> Crease.render(voice as CreaseVoice, macros)
         CAUSTIC -> CausticInstrument.render(voice as CausticVoice, macros)
         LATTICE -> Lattice.render(voice as LatticeVoice, macros)
-        RELAY -> Relay.render(voice as RelayVoice, macros)
+        RELAY -> RelayPatch("Preview", voice as RelayVoice, macros).render()
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         APSIS -> Apsis.render(voice as ApsisVoice, macros)

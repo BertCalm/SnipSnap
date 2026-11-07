@@ -324,17 +324,21 @@ at that local checkpoint. The cache-copy guard is proven; physical
 phone listening and timing remain unmeasured. The
 [OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
 separate those checks and host cache timings from listening acceptance.
-RELAY exposes native VELOCITY and note names while preserving loaded phrase
-recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
-KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
-seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds an 88-clip page covering the
-bank, musical performances, velocity response, starter pads and six PULSE
-0-versus-1 pairs. The full-range diagnostic changes only PULSE in copies of the
-same six finite recipes; the production control and saved model stay unchanged.
-The earlier eased mapping was not adopted after the owner reported no audible
-difference on 2026-10-26. The owner approved the 36-preset bank's sound on
-2026-10-21; hands-on device verification remains open.
+RELAY exposes native VELOCITY and note names while preserving complete loaded
+recipes through preview, save and SEND TO PAD. New patches use a smooth repeating
+pulse with a 7 dB maximum depth; the explicit pulse behavior choice keeps original
+accents available. Existing saved patches, older navigation settings, the 36 dry
+factory presets and sixteen distinct starter pads retain model 1 until the user
+chooses the repeating pulse. Changing behavior copies the complete recipe while
+keeping its sources, phrase, other controls and native velocity.
+`:synth:generateRelayPulseMusicalAudition` renders a bassline, chords and a held
+texture at PULSE 0, 0.5 and 1 through the model-2 production path, with raw/matched
+WAVs and complete note recipes. The earlier 88-case model-1 performance pack
+remains reproducible with `:synth:generateRelayPerformanceAudition`. The owner
+approved the retained 36-preset bank on 2026-10-21, called the periodic candidate
+better on 2026-11-04 and authorized integration on 2026-11-07. Those verdicts do
+not establish listening approval for the new musical recordings or hands-on
+device behavior.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds

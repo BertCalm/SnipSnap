@@ -1347,25 +1347,30 @@ device and release-name validation remain outstanding.
 RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
 KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:
 rounded pluck, harmonic body, bell detail and soft tone. Source-order schedules
-morph continuously at a fixed phrase clock; independent accents place rhythmic
-emphasis without changing the requested root. TUNE, ORDER, PULSE, BLEND, COLOR,
-LENGTH and HOLD use the pitched host conventions. The port includes complete
-phrase serialization, native velocity, `SynthKits.relay()`, the phone picker and
-a FRESH TAPE starter. The performance bank now contains 36 dry recipes: eight
-KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW. The six earlier seeds
-remain unchanged. The SYNTH panel adds a VELOCITY control and note names; explicit
-kit selections supply sixteen distinct pads without growing with the bank.
-`generateRelayPerformanceAudition` builds an 88-clip raw/matched listening page
-with all presets, six musical performances, three velocities per voice and the
-sixteen starter pads, plus six PULSE 0-versus-1 pairs. The page opens on this
-full-range diagnostic, which changes only PULSE in the same six finite recipes
-used by the previous comparison. The eased mapping was not adopted after the
-owner reported no audible difference on 2026-10-26. The production engine response,
-factory macros and saved model stay unchanged. The earlier `generateRelayAudition`
-engineering matrix remains available. HOLD exports repeating material without a
-separate attack region. [RELAY.md](RELAY.md) records the integration and listening packs.
-**The owner approved the 36-preset bank's sound on 2026-10-21.** Hands-on device
-verification remains open; the PULSE endpoint diagnostic has no new listening verdict.
+morph continuously at a fixed phrase clock. New model-2 patches give PULSE the
+smooth repeating amplitude gesture identified in listening: finite notes use
+3 Hz, with a 3.5 dB middle and 7 dB maximum peak-to-trough range. Sources continue
+through the dips. HOLD fits whole pulse cycles to the actual root-fitted phrase
+and reports its resulting rate; it exports repeating material without a separate
+attack region. TUNE, ORDER, BLEND, COLOR, LENGTH, native velocity and full source
+recipes retain their existing roles.
+
+Saved model-1 files keep their original accent renderer, including files without
+a model field. The 36 approved dry factory recipes and sixteen distinct starter
+pads stay model 1. New patches use model 2; the phone's explicit pulse behavior
+choice preserves the complete recipe when changing between the two. Older
+navigation settings retain their original sound as well.
+`generateRelayPulseMusicalAudition` renders nine model-2 comparisons: a bassline,
+chords and a held texture at PULSE 0, 0.5 and 1, with complete tails, native touch,
+shared headroom gains, full recipes and actual loop-seam evidence.
+`generateRelayPerformanceAudition` still reproduces the 88-case model-1 bank and
+endpoint pack; the earlier `generateRelayAudition` engineering matrix remains
+available. [RELAY.md](RELAY.md) records compatibility, listening history and limits.
+**The owner approved the retained 36-preset bank on 2026-10-21.** The eased mapping
+and broader sparse-accent experiments were not adopted. The owner identified a
+toned-down periodic reference on 2026-11-01, called its shallower candidate better
+on 2026-11-04 and authorized integration on 2026-11-07. The new musical recordings
+have no listening verdict yet; hands-on device verification remains open.
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.

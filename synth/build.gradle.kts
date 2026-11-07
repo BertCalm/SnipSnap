@@ -2723,6 +2723,17 @@ tasks.register<JavaExec>("generateRelayPerformanceAudition") {
     if (project.hasProperty("relayPerformanceQuick")) args("--quick")
 }
 
+/** The periodic Relay pulse in a bassline, chord voicings and a real held texture. */
+tasks.register<JavaExec>("generateRelayPulseMusicalAudition") {
+    group = "distribution"
+    description = "Render RELAY model 2 in three musical performances at PULSE 0, 0.5 and 1, with exact note recipes and loop evidence."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RelayPulseMusicalAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("relayPulseMusicalOutput").orNull ?: "${rootDir}/testkit/relay-pulse-musical-audition")
+}
+
 /** OVEN's reproducible first dry listening gate, including actual velocity layers. */
 tasks.register<JavaExec>("generateOvenAudition") {
     group = "distribution"
