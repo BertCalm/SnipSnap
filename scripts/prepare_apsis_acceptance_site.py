@@ -30,7 +30,14 @@ def main():
     performances = json.loads((args.renders / 'performances.json').read_text())['clips']
     archive = args.renders / kit['archive']
     shutil.copyfile(Path(__file__).resolve().parents[1] / 'docs/APSIS-ACCEPTANCE.md', dist / 'downloads/APSIS-ACCEPTANCE.md')
-    shutil.copyfile(archive, dist / 'downloads' / archive.name)
+    # Sites has a 25 MiB per-file cap. Restore this standard ZIP at download time.
+    payload = archive.read_bytes()
+    parts = []
+    for index, offset in enumerate(range(0, len(payload), 16*1024*1024), 1):
+        part = Path('downloads') / (archive.name + f'.part-{index:02d}')
+        (dist / part).write_bytes(payload[offset:offset + 16*1024*1024])
+        parts.append(part.as_posix())
+    (dist / 'downloads' / archive.name).unlink(missing_ok=True)
     shutil.copyfile(archive.with_suffix('.zip.sha256'), dist / 'downloads' / (archive.name + '.sha256'))
     out = dist / 'acceptance'
     out.mkdir(exist_ok=True)
@@ -58,7 +65,8 @@ def main():
                          held=pad['loop'], durationSeconds=layer['frames']/44100, previewClipId=pad['id'],
                          velocityZones=[dict(low=l['velStart'], high=l['velEnd'], renderVelocity=l['renderVelocity']) for l in pad['layers']]))
     bank = dict(title=kit['name'], modelVersion=3, pads=pads,
-                download=dict(href='downloads/'+archive.name, bytes=archive.stat().st_size),
+                download=dict(href='#native-bank', filename=archive.name, parts=parts,
+                              sha256=sha(payload), bytes=archive.stat().st_size),
                 verificationText='16 pads, 48 native mono 44.1 kHz PCM24 samples. Both MPC program readbacks, SMPL metadata, exact PCM and preflight checks passed. Physical MPC acceptance is pending.')
     (out / 'bank.json').write_text(json.dumps(bank, indent=2) + '\n')
     for clip in performances:
@@ -78,7 +86,7 @@ def main():
                           metrics=dict(rawPeak=clip['rawPeak'], listeningGain=clip['matchedGain']), **paths, **hashes))
     manifest['clips'] = clips[16:] + clips[:16] + old
     manifest['clipCount'] = len(manifest['clips'])
-    manifest['acceptanceKit'] = dict(name=kit['name'], archive='downloads/'+archive.name,
+    manifest['acceptanceKit'] = dict(name=kit['name'], archiveParts=parts,
                                    sha256=sha(archive.read_bytes()), sourceRevision=kit['sourceRevision'])
     protected = set()
     for p in (dist / 'music/scores').glob('*.json'):
@@ -115,6 +123,45 @@ def main():
 
     js = dist / 'app.js'
     text = js.read_text()
+    if 'async function downloadBankParts(' not in text:
+        text = text.replace('// One decoded source at a time.', '''let bankDownload = null;
+async function downloadBankParts(download) {
+  const pieces = await Promise.all(download.parts.map(async path => {
+    const source = safePath(path);
+    if (!source) throw new Error('Invalid bank source');
+    const response = await fetch(source);
+    if (!response.ok) throw new Error('Bank download failed');
+    return new Uint8Array(await response.arrayBuffer());
+  }));
+  const bytes = new Uint8Array(pieces.reduce((sum, part) => sum + part.length, 0));
+  let offset = 0;
+  for (const part of pieces) { bytes.set(part, offset); offset += part.length; }
+  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
+  if (bytes.length !== download.bytes || digest !== download.sha256) throw new Error('Bank checksum differs');
+  const url = URL.createObjectURL(new Blob([bytes], {type: 'application/zip'}));
+  const link = document.createElement('a');
+  link.href = url; link.download = download.filename;
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+document.querySelectorAll('[data-bank-download]').forEach(link => {
+  link.addEventListener('click', async event => {
+    if (!bankDownload?.parts) return;
+    event.preventDefault();
+    if (link.getAttribute('aria-busy') === 'true') return;
+    const download = bankDownload;
+    link.setAttribute('aria-busy', 'true');
+    const size = link.querySelector('[data-bank-size]');
+    const label = size?.textContent;
+    if (size) size.textContent = 'Preparing download…';
+    try { await downloadBankParts(download); }
+    catch (_) { message.textContent = 'The bank download failed. Please try again.'; }
+    finally { link.removeAttribute('aria-busy'); if (size && bankDownload === download) size.textContent = label; }
+  });
+});
+
+// One decoded source at a time.''')
+        text = text.replace("const download = safePath(bank.download?.href);", "bankDownload = bank.download;\n  const download = safePath(bank.download?.href);")
     if 'async function fetchWavBytes(' not in text:
         text = text.replace('// One decoded source at a time.', '''// Lossless storage keeps the original WAV bytes available to playback and download.
 async function fetchWavBytes(path) {
@@ -168,6 +215,7 @@ loadBank();''')
     text = text.replace('One orbit, six responses. Compare plucked tethers, ringing vessels, airy coronas, granular contacts and pressure-driven bass with a PASSAGE study reference.', 'GRAIN and ANCHOR, ready for pads. Compare touch, overlapping tails and held notes in a native MPC kit. Earlier voice studies remain below.')
     text = text.replace('Compare GRAIN and ANCHOR in SnipSnap’s Kotlin engine against the preferred Python studies. Earlier voices and attack revisions remain available.', 'Play the GRAIN and ANCHOR MPC acceptance kit: six presets, three native touch layers, held pads and exported-sample performances.')
     text = text.replace('href="downloads/SnipSnap-Apsis-Kit.zip"', 'href="downloads/SnipSnap-Apsis-Grain-Anchor-Kit.zip"')
+    text = text.replace('href="downloads/SnipSnap-Apsis-Grain-Anchor-Kit.zip"', 'href="#native-bank"')
     text = text.replace('The existing musical examples and native bank still use Kotlin PASSAGE.', 'Earlier musical examples and the original bank use Kotlin PASSAGE; the new acceptance bank includes all six GRAIN and ANCHOR presets.')
     text = text.replace('Compare the Kotlin voices', 'Hear the MPC acceptance kit')
     text = text.replace('Existing PASSAGE MPC bank', 'Download the selected MPC bank')
@@ -187,6 +235,7 @@ loadBank();''')
     html.write_text(text)
     total = sum(p.stat().st_size for p in dist.rglob('*') if p.is_file())
     assert total < 254*1024*1024, total
+    assert all(p.stat().st_size <= 25*1024*1024 for p in dist.rglob('*') if p.is_file())
     print(json.dumps(dict(clips=len(manifest['clips']), pads=len(pads), archiveBytes=archive.stat().st_size,
                           expandedBytes=total, losslesslyPacked=len(storage))))
 

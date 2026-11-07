@@ -75,7 +75,9 @@ A checksum-mismatch assertion verifies that altered sample sources are rejected.
 - Whole-score matching preserves relative attacks and overlaps. Layer
   inspections explicitly exclude the unmeasured hardware amplitude curve.
 - The audition page stores playback WAVs with lossless gzip compression to fit
-  its hosting budget. Playback and WAV downloads unpack the original bytes;
-  original command-line score sources retain their paths. Earlier takes and the
+  its hosting budget. Playback and WAV downloads unpack the original bytes.
+  The bank download joins stored parts and checks the original ZIP checksum to
+  respect the host's 25 MiB file limit without changing the MPC archive.
+  Original command-line score sources retain their paths. Earlier takes and the
   original PASSAGE ZIP remain available. The staging script does not publish;
   publication uses the existing Site's source and version workflow.
