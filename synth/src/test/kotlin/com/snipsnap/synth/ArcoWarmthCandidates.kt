@@ -92,12 +92,14 @@ internal object ArcoWarmthCandidates {
     fun weight(voice: ArcoVoice, db: Float): Stage = when (voice) {
         ArcoVoice.CELLO -> Stage(Part.LOW_SHELF, CELLO_WEIGHT_HZ, db)
         ArcoVoice.ERHU -> Stage(Part.LOW_SHELF, ERHU_WEIGHT_HZ, db)
+        ArcoVoice.SARANGI -> error("SARANGI has no BODY knob: the R1e warmth candidates are CELLO's and ERHU's")
     }
 
     /** WARMTH: the broad bell, [db] dB. */
     fun warmth(voice: ArcoVoice, db: Float): Stage = when (voice) {
         ArcoVoice.CELLO -> Stage(Part.PEAKING, CELLO_WARMTH_HZ, db, CELLO_WARMTH_Q)
         ArcoVoice.ERHU -> Stage(Part.PEAKING, ERHU_WARMTH_HZ, db, ERHU_WARMTH_Q)
+        ArcoVoice.SARANGI -> error("SARANGI has no BODY knob: the R1e warmth candidates are CELLO's and ERHU's")
     }
 
     /** BLOOM's high shelf. */

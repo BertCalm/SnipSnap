@@ -268,7 +268,7 @@ object ArcoWarmthGenerator {
         val found = Findings()
         val problems = found.problems
         val m = ArcoWarmthMeasure
-        for (voice in ArcoVoice.entries) for (kind in ArcoWarmthCandidates.SHAPED) {
+        for (voice in ArcoMeasure.BODY_VOICES) for (kind in ArcoWarmthCandidates.SHAPED) {
             val rs = readings.filter { it.voice == voice && it.kind == kind }
             val tag = "${voice.name.take(1)} ${kind.key}"
             // 1. the top is not ducked (on the clip with the ceiling's cut put back, where the ceiling acted)
@@ -321,7 +321,7 @@ object ArcoWarmthGenerator {
             if (onlyReported.isNotEmpty()) found.reported += "$tag: the ${m.BAND_LABELS[band]} band lifts only ${onlyReported.joinToString(", ") { "${m.s1(it.second)} at ${it.first.name}" }} (corridor ${m.f1(lo)} to ${m.f1(hi)}); the corner is fixed, the pitch is not"
         }
         // 3b. BLOOM is a real test of sparkle: 3k-8k at least BLOOM_OVER_SMALL_MIN_DB over BOTH-SMALL on every note
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val top = m.BANDS_HZ.size - 1
             val rows = ArcoBodyMeasure.GRID.getValue(voice).map { step ->
                 val bloom = readings.first { it.voice == voice && it.step == step && it.kind == Kind.BLOOM }
@@ -346,7 +346,7 @@ object ArcoWarmthGenerator {
         }
         // 4. the flat-gain control is BOTH-SMALL's A-weighted rise; the engine meter's rises then are this far apart; the peaks
         var worstMatch = 0.0
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val loudGaps = ArrayList<Double>()
             val rmsGaps = ArrayList<Double>()
             val oldWayGaps = ArrayList<Double>()
@@ -379,7 +379,7 @@ object ArcoWarmthGenerator {
         println("ARCO warmth TARGET louder-only: the largest A-weighted gap between the flat clip and BOTH-SMALL over the ten grid notes is ${"%.6f".format(Locale.ROOT, worstMatch)} dB (bar ${m.f2(LOUD_MATCH_BAR)})")
         for (r in readings) if (!r.numbers.finite()) problems += "${r.voice.name.take(1)} ${r.kind.key} ${r.name}: a ruler number is not finite"
         // 5. the headroom: what lift the plain's peak allows, and every clip that passes the bar with the string at the plain's level (reported, not thrown: the engine step has to give the headroom or back the rung off)
-        for (voice in ArcoVoice.entries) for (step in ArcoBodyMeasure.GRID.getValue(voice)) {
+        for (voice in ArcoMeasure.BODY_VOICES) for (step in ArcoBodyMeasure.GRID.getValue(voice)) {
             val rs = readings.filter { it.voice == voice && it.step == step }
             val plainPeak = rs.first().plainPeak.toDouble()
             fun rise(kind: Kind) = rs.first { it.kind == kind }.let { 20.0 * log10(it.peakBefore / plainPeak) }

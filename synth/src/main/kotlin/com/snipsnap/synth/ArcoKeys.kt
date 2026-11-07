@@ -39,12 +39,13 @@ object ArcoKeys {
     /** A zone's two velocity layers, soft first: the order a keygroup's layers run in. */
     enum class Layer { SOFT, HARD }
 
-    /** The keys a held [voice] plays: its TUNE travel from its root (CELLO C2 to C4, ERHU D4 to A5). */
+    /** The keys a held [voice] plays: its TUNE travel from its root (CELLO C2 to C4, ERHU D4 to A5, SARANGI D3 to D5). */
     fun midiRange(voice: ArcoVoice): IntRange = Arco.rootMidi(voice)..Arco.rootMidi(voice) + Arco.tuneSemitones(voice)
 
     /**
      * The zone roots for [voice]: every [ZONE_STEP] semitones from the root, and the top of the voice's travel as a root of its own where
-     * the steps miss it (Crease's "exact roots at clipped range boundaries"). CELLO: nine zones, C2 to C4. ERHU: eight, D4 to G#5 and A5.
+     * the steps miss it (Crease's "exact roots at clipped range boundaries"). CELLO: nine zones, C2 to C4. ERHU: eight, D4 to G#5 and A5. SARANGI:
+     * nine, D3 to D5 (its 24 semitones land on its top, so no extra root is added).
      * ERHU's next steps up, B5 and D6, are past its top: R1b found no grip that holds one slip a period at D6, B5 was the last step that
      * did, and ERHU stops at A5 ([Arco.ERHU_TUNE_SEMITONES]), so those keys are refused by name ([macrosFor]) and the top zone repitches
      * up to them.
