@@ -1,7 +1,11 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -14,6 +18,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Arranger
@@ -135,5 +140,56 @@ class ArrangeScreenTest : ComposeScreenTest() {
         assertTrue("the .xpj is under exports/$stem/song", xpj.isFile && xpj.length() > 0)
         assertTrue("its _[ProjectData] folder beside it", data.isDirectory && !data.list().isNullOrEmpty())
         assertTrue("the WAV holds the song", WavReader.read(wav).frameCount > 0)
+    }
+
+    @Test
+    fun an_edit_is_kept_in_the_project_and_comes_back_when_the_song_is_opened_again() {
+        val entry = grooveKit("SONG KEEP TEST")
+        val projectDir = File(entry.dir.parentFile, "project").apply { mkdirs() }
+        var open by mutableStateOf(true)
+
+        setPhoneContent {
+            CompositionLocalProvider(LocalReduceMotion provides true) {
+                // Closing is leaving the bench; opening again is a new visit,
+                // with nothing in memory from the first.
+                if (open) {
+                    ArrangeScreen(entry = entry, backLabel = "◄ BEAT", onBack = {}, onToast = {}, projectDir = projectDir)
+                }
+            }
+        }
+        waitFor("the plan and its edit buttons", timeoutMillis = 30_000) {
+            runCatching { button("MORE REPEATS").assertIsEnabled() }.isSuccess
+        }
+        val drafted = Arranger.arrange(entry.kit, entry.dir, seed = 0)
+        val first = drafted.sections[0]
+        // The first open keeps the arranger's own draft (seed 0) ...
+        waitFor("the first plan to be kept", timeoutMillis = 30_000) { SongPlanStore.load(projectDir, entry.dir.name) != null }
+        // ... and an edit changes it: the selected (first) section plays once more.
+        button("MORE REPEATS").performClick()
+        waitFor("the edit to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.repeats == first.repeats + 1
+        }
+        button("MOVE SECTION DOWN").performClick()
+        waitFor("the reorder to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(1)?.name == first.name
+        }
+
+        open = false
+        pump()
+        open = true
+        waitFor("the kept song to come back", timeoutMillis = 30_000) {
+            runCatching { button("MORE REPEATS").assertIsEnabled() }.isSuccess
+        }
+        // The song on screen is the kept one, not a fresh draft: the section
+        // that moved down is second, and it still plays one time more.
+        val kept = SongPlanStore.load(projectDir, entry.dir.name)!!
+        assertEquals(drafted.sections[1].name, kept.sections[0].name)
+        assertEquals(first.name, kept.sections[1].name)
+        assertEquals(first.repeats + 1, kept.sections[1].repeats)
+        // And the screen shows it: the first row is the section that was second.
+        val row1 = "SECTION 1: ${drafted.sections[1].name.uppercase()}"
+        val row2 = "SECTION 2: ${first.name.uppercase()}"
+        compose.onNodeWithContentDescription(row1, substring = true).assertExists()
+        compose.onNodeWithContentDescription(row2, substring = true).assertExists()
     }
 }

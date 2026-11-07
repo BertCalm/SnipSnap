@@ -152,7 +152,9 @@ connects PadEngine playback and stereo PRINT. The [KIT PERFORMANCE panel](superp
 adds live controls and saved kit settings. [SURFACE → FX](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md)
 adds an explicit per-kit route and stereo PRINT. [ORBIT's route](superpowers/specs/2026-11-01-aquarium-orbit-design.md)
 adds the ring mix, independent tap audition, a fresh bounce with a chosen tail,
-and stereo shelf storage for ORBIT and SURFACE. Remaining routes and physical-device checks follow
+and stereo shelf storage for ORBIT and SURFACE. [SPLIT → FX](superpowers/specs/2026-11-07-aquarium-split-design.md)
+adds the combined stems, saved opt-in and a fresh stereo PRINT with a bounded tail.
+Remaining routes and physical-device checks follow
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)

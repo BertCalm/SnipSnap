@@ -93,6 +93,20 @@ Java_com_snipsnap_app_NativeAquariumBus_create(JNIEnv*, jobject, jint rate) {
     return reinterpret_cast<jlong>(state.release());
 }
 
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_createConfigured(
+    JNIEnv* env, jobject, jint rate, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled) {
+    snipsnap::aquarium::PerformanceSettings settings;
+    if (!decodeAquarium(env, values, seed, model, bpm, gain, enabled, JNI_FALSE, settings)) return 0;
+    std::unique_ptr<ArrayAquariumBus> state(new (std::nothrow) ArrayAquariumBus);
+    // A fresh finite wet print starts in its selected state. Publishing
+    // before preparation fades wet in from silence; enabling after a dry
+    // prepare would crossfade an untrimmed dry attack into a saved mute.
+    if (!state || !state->bus.publish(settings) || !state->bus.prepare(rate)) return 0;
+    return reinterpret_cast<jlong>(state.release());
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeAquariumBus_destroy(JNIEnv*, jobject, jlong handle) {
     delete arrayBus(handle);

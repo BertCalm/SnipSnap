@@ -1149,6 +1149,12 @@ object Copy {
     /** SETUP's PAD VELOCITY: the curve, under its chips. */
     const val SETUP_PAD_VELOCITY_CURVE_NOTE = "SOFT LIFTS LIGHT TAPS. HARD NEEDS A FIRM ONE. THE SOFTEST AND LOUDEST STAY WHERE THEY ARE."
 
+    /** The dock's line on KIT and BEAT while the sound is going out over Bluetooth. */
+    const val BLUETOOTH_ADDS_DELAY = "BLUETOOTH ADDS ABOUT 200 MS. USE WIRED OR THE SPEAKER TO PLAY AND RECORD."
+    /** SETUP's RECORD OFFSET, under its chips: what the number moves and what AUTO means. */
+    const val SETUP_RECORD_OFFSET_NOTE =
+        "HOW LATE YOUR EARS HEAR A BEAT. A TAKE IS MOVED BACK BY THIS MUCH. AUTO READS THE PHONE, AND ASSUMES 200 MS ON BLUETOOTH. PADS PLAY AS FAST AS EVER."
+
     // ---- Settings: LISTEN FROM, the source the dock's LISTEN remembers (UAT E2-CHOOSER) ----
     /** The heading of SETUP's source group: what the dock's LISTEN listens to. */
     const val SETUP_LISTEN_HEADING = "LISTEN FROM"
@@ -1485,7 +1491,48 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY — THE OTHER FOUR STAY UNTOUCHED"
+    /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
+    fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
+
+    /** A pad in the picker that holds no sound: it can still be chosen, and says so. */
+    const val STEP_PAD_EMPTY = "EMPTY"
+
+    /** The picker's close chip, and the strip's. Labels, not toasts. */
+    const val STEP_DETAIL_CLOSE = "CLOSE"
+
+    /** Under a pad in the picker, when it has hits in this pattern that no row draws. */
+    fun stepPadOffRows(n: Int): String = "${countOf(n, "HIT", "HITS")} ON PADS WITH NO ROW"
+
+    /** The step-detail strip's four velocity levels (kit.GrooveEdit.VelocityLevel), left to right. Labels, not toasts. */
+    const val VEL_SOFT = "SOFT"
+    const val VEL_MED = "MED"
+    const val VEL_HARD = "HARD"
+    const val VEL_ACCENT = "ACCENT"
+
+    /** Spoken names: a pad in the picker, a velocity level, a lane's name as the door to its picker. */
+    fun stepPadSpoken(slot: Int, name: String): String = "PAD $slot: $name"
+    fun stepVelocitySpoken(level: String): String = "VELOCITY $level"
+    fun stepLanePadSpoken(laneWord: String, padName: String): String = "PAD FOR $laneWord: $padName"
+
+    /** The strip's heading: which row, which bar, which step of it. */
+    fun stepDetailTitle(lane: String, bar: Int, step: Int): String = "$lane · BAR $bar · STEP $step"
+
+    /** The strip's exact reading of the stored velocity, 1..100, beside the four levels. */
+    fun stepDetailVelocity(percent: Int): String = "VELOCITY $percent"
+
+    /** A step cell's long-press, as a screen reader names it. A label, not a toast. */
+    const val STEP_DETAIL_LONG_LABEL = "SET VELOCITY"
+
+    /** The pad choice could not be written; it holds until the editor is left. */
+    const val STEP_PADS_NOT_SAVED = "COULDN'T SAVE THE PAD CHOICE. IT HOLDS UNTIL YOU LEAVE THIS SCREEN."
+
+    /** The row under the lanes that draws hits on pads no lane plays. A label, not a toast. */
+    const val STEP_OTHER_ROW = "OTHER"
+
+    /** The strip over a step with no hit: it names what to do rather than offering levels that would do nothing. */
+    const val STEP_DETAIL_EMPTY = "NO HIT HERE. TAP THE STEP ON FIRST."
+
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
@@ -1564,7 +1611,63 @@ object Copy {
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
-    const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+
+    // ---- SONG: the song you keep and edit (docs/plans/2026-10-30-song-making.md, Phase 5) ----
+    /** Buttons on the selected section. Labels, not toasts, so none ends in a full stop. */
+    const val SONG_UP = "▲ UP"
+    const val SONG_DOWN = "▼ DOWN"
+    const val SONG_REPEAT_LESS = "− REPEAT"
+    const val SONG_REPEAT_MORE = "+ REPEAT"
+    const val SONG_SWAP = "SWAP CLIP"
+    const val SONG_DUPLICATE = "DUPLICATE"
+    const val SONG_DELETE = "DELETE"
+    const val SONG_LOCK = "LOCK"
+    const val SONG_UNLOCK = "UNLOCK"
+    const val SONG_ADD = "+ SECTION"
+    const val SONG_REROLL = "REROLL ⚄"
+    /** What UNDO names for the edits that have no button label of their own ([songUndo]); the others are named by theirs. */
+    const val SONG_VERB_REORDER = "REORDER"
+    const val SONG_VERB_REPEATS = "REPEATS"
+    const val SONG_VERB_SWAP = "SWAP"
+    const val SONG_VERB_REROLL = "REROLL"
+    /** Spoken names for the glyph buttons, and the picker's chips ([songPickNow], [songPickSwap]). */
+    const val SONG_A11Y_UP = "MOVE SECTION UP"
+    const val SONG_A11Y_DOWN = "MOVE SECTION DOWN"
+    const val SONG_A11Y_REPEAT_LESS = "FEWER REPEATS"
+    const val SONG_A11Y_REPEAT_MORE = "MORE REPEATS"
+    const val SONG_A11Y_REROLL = "REROLL UNLOCKED SECTIONS"
+    fun songPickNow(name: String): String = "$name, IN USE"
+    fun songPickSwap(name: String): String = "SWAP TO $name"
+    /** The UNDO button with nothing to undo; with something, it names it ([songUndo]). */
+    const val SONG_UNDO = "UNDO"
+    /** On the clip picker's chip for the clip the section already plays, and on a locked row. */
+    const val SONG_PICK_NOW = "NOW"
+    const val SONG_LOCKED = "LOCKED"
+    /** The line under the song when it is kept in the project. A sentence, so it ends on a full stop. */
+    const val SONG_CAPTION_KEPT = "YOUR SONG IS KEPT IN THIS PROJECT. TAP A SECTION TO EDIT IT; REROLL REDRAWS ONLY THE UNLOCKED ONES."
+    /** The same line when no project is open: what is true, and what to do. */
+    const val SONG_CAPTION_NOT_KEPT = "NO PROJECT IS OPEN, SO THIS SONG IS NOT KEPT. OPEN A PROJECT TO KEEP IT."
+    /** REROLL with every section locked. */
+    const val SONG_ALL_LOCKED = "EVERY SECTION IS LOCKED. UNLOCK ONE TO REROLL IT."
+    /** REROLL where nothing unlocked uses a seeded clip: the seed moves only the ghosts and the fill, so say so. */
+    const val SONG_REROLL_NOTHING = "NO UNLOCKED SECTION USES GHOSTS OR A FILL, SO A REROLL CHANGES NOTHING."
+    /** The write behind an edit failed; the edit is on screen and not on disk. */
+    const val SONG_NOT_KEPT = "COULDN'T KEEP THE SONG. YOUR EDITS ARE ON SCREEN ONLY."
+    /** UNDO's button while something can be undone: `UNDO REORDER`, `UNDO DELETE`. */
+    fun songUndo(verb: String): String = "$SONG_UNDO $verb"
+    /** What UNDO did. */
+    fun songUndone(verb: String): String = "UNDID $verb."
+    /** REROLL's landing: how many sections were redrawn and how many locked ones were left alone. */
+    fun songRerolled(redrawn: Int, locked: Int): String =
+        "REROLLED ${countOf(redrawn, "SECTION", "SECTIONS")}." + if (locked > 0) " $locked LOCKED, LEFT AS THEY WERE." else ""
+    /** A clip name in words: `CAPTURED`, `YOURS 2` (program number, from 1). */
+    fun songClipLabel(ref: String): String {
+        val program = com.snipsnap.kit.ClipRef.yoursId(ref)
+        return if (program != null) "YOURS ${program + 1}" else ref.uppercase(java.util.Locale.ROOT)
+    }
+    /** Opening a kept song whose clips are not all there: [refs] are the names that are gone, said once, and those sections were planned again. */
+    fun songRefused(refs: List<String>): String =
+        "YOUR SONG NAMED ${refs.joinToString(", ") { songClipLabel(it) }}. ${if (refs.size == 1) "IT IS" else "THEY ARE"} NOT ON THE KIT ANY MORE, SO THOSE SECTIONS WERE PLANNED AGAIN."
     /** EXPORT, while the project and the WAV are written. Ends on a full stop like the toast it is. */
     const val ARRANGE_EXPORT_BUSY = "MIXING AND WRITING THE SONG."
     /** The write threw - no pad file that reads, no external storage to write to. */

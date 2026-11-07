@@ -71,7 +71,7 @@ object BorePadMaker {
     /** One zone's two layers at [midi], soft first. Refused, naming the zone, if a layer's join does not hold. */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> {
         require(midi in zoneMidis(spec)) { "BORE ${spec.patch.voice} zone root must be one of ${zoneMidis(spec)}" }
-        return BoreKeys.pad(spec.patch.voice, spec.patch.macros, midi, cancelled)
+        return BoreKeys.pad(spec.patch.voice, spec.patch.macros, midi, cancelled = cancelled)
     }
 
     /**
@@ -128,7 +128,7 @@ object BorePadMaker {
     internal fun preview(spec: Spec, midi: Int, layer: Int, holdSeconds: Float, velocity: Float, cancelled: () -> Boolean = { false }): Snip {
         require(midi in zoneMidis(spec)) { "BORE ${spec.patch.voice} zone root must be one of ${zoneMidis(spec)}" }
         val breath = BoreKeys.layerBreaths(spec.patch.voice, spec.patch.macros)[layer]
-        val note = BoreKeys.padLayer(spec.patch.voice, spec.patch.macros, midi, breath, cancelled)
+        val note = BoreKeys.padLayer(spec.patch.voice, spec.patch.macros, midi, breath, cancelled = cancelled)
         return play(note, midi, holdSeconds, velocity, spec.releaseSeconds, "BORE preview", cancelled)
     }
 

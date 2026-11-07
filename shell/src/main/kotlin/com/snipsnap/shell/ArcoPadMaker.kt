@@ -71,7 +71,7 @@ object ArcoPadMaker {
      */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> {
         require(midi in zoneMidis(spec)) { "ARCO ${spec.patch.voice} zone roots are ${zoneMidis(spec)}, got $midi" }
-        return ArcoKeys.layers(spec.patch.voice, spec.patch.macros, midi, cancelled)
+        return ArcoKeys.layers(spec.patch.voice, spec.patch.macros, midi, cancelled = cancelled)
     }
 
     /**
@@ -128,7 +128,7 @@ object ArcoPadMaker {
     ): Snip {
         require(midi in zoneMidis(spec)) { "ARCO ${spec.patch.voice} zone roots are ${zoneMidis(spec)}, got $midi" }
         require(layer in VELOCITY_WINDOWS.indices) { "ARCO has ${VELOCITY_WINDOWS.size} layers, got $layer" }
-        val note = ArcoKeys.pad(spec.patch.voice, spec.patch.macros, midi, ArcoKeys.Layer.entries[layer], cancelled)
+        val note = ArcoKeys.pad(spec.patch.voice, spec.patch.macros, midi, ArcoKeys.Layer.entries[layer], cancelled = cancelled)
         val hold = holdSeconds?.let { (it * note.snip.sampleRate).roundToInt() }
             ?: (note.snip.frameCount + (note.snip.frameCount - note.loopStartFrame.toInt()))
         return play(note, midi, VELOCITY_WINDOWS[layer], hold, spec.releaseSeconds, cancelled)

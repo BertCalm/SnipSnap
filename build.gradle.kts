@@ -90,6 +90,49 @@ subprojects {
     }
 }
 
+// Sharding by test class, for CI. With -PtestShards=N -PtestShard=i
+// (0 <= i < N) a test task runs only the classes whose top-level name
+// hashes to i. Every class lands in exactly one shard, and a nested class
+// goes with its outer class, so the N shards together run exactly what one
+// unsharded run does. Without the two properties nothing is filtered:
+// `./gradlew test` and `:synth:test` run every class, as before.
+//
+// CI's jvm-synth jobs pass them, with N and i taken from the job matrix
+// (strategy.job-total and strategy.job-index), so the count and the indices
+// cannot disagree. One property without the other, or an i outside 0..N-1,
+// stops the build here rather than quietly running part of the suite.
+// String.hashCode is fixed by the JDK, so a class lands in the same shard on
+// every machine, and the shard is a task input, so Gradle never reuses one
+// shard's result for another.
+//
+// Why :synth is split at all: CI's single jvm-tests job took 2 h, of which
+// :synth:test was 88.6 min, run after every other module's tests rather
+// than beside them (job 127923375150, 2026-11-06). Locally its 557 classes
+// add up to 237 minutes of test time; hashed three ways they come to about
+// 89, 57 and 91 minutes, 14 to 23 minutes each across four JVMs. The
+// longest single class, GyreTest (17 min), sets the floor, so a fourth
+// shard would save little.
+subprojects {
+    val shardsArg = providers.gradleProperty("testShards").orNull
+    val shardArg = providers.gradleProperty("testShard").orNull
+    if (shardsArg != null || shardArg != null) {
+        val count = shardsArg?.toIntOrNull()
+        val index = shardArg?.toIntOrNull()
+        require(count != null && count >= 1 && index != null && index in 0 until count) {
+            "testShards and testShard go together: testShards=N (N >= 1) and testShard=i " +
+                "with 0 <= i < N. Got testShards=$shardsArg testShard=$shardArg."
+        }
+        tasks.withType<Test>().configureEach {
+            inputs.property("testShards", count)
+            inputs.property("testShard", index)
+            exclude { element ->
+                !element.isDirectory && element.name.endsWith(".class") &&
+                    Math.floorMod(element.path.removeSuffix(".class").substringBefore('$').hashCode(), count) != index
+            }
+        }
+    }
+}
+
 dependencyCheck {
     // High and Critical (CVSS 7.0+) fail the build; Medium/Low land in the
     // report without blocking anything. A scan that fails on every Low

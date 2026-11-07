@@ -64,6 +64,7 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.KitFromMade
 import com.snipsnap.app.ui.OverlayAsk
+import com.snipsnap.app.ui.RouteDockLine
 import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
@@ -136,6 +137,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
+import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.loop.Arp
 import com.snipsnap.loop.DroneFit
@@ -2756,6 +2758,16 @@ fun App(shelf: KitShelf) {
             try {
                 val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
                 if (renamed != null) {
+                    // The songs kept for this kit are keyed by its folder name,
+                    // so each project that kept one moves it to the new name -
+                    // before anything below re-points a bench at the new folder,
+                    // or an open SONG would find nothing under it and plan afresh.
+                    withContext(Dispatchers.IO) {
+                        for (projectDir in ProjectStore.list(shelf.root)) {
+                            runCatching { SongPlanStore.rename(projectDir, entry.dir.name, renamed.dir.name) }
+                                .onFailure { Log.e(TAG, "renameKit: the kept song did not follow in ${projectDir.name}", it) }
+                        }
+                    }
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     dock.say(Copy.kitRenamed(renamed.kit.name))
                     if (open?.dir == entry.dir) open = renamed
@@ -4518,6 +4530,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            appScope = scope,
                             backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
@@ -4604,6 +4617,10 @@ fun App(shelf: KitShelf) {
                                     swingPercent = arrangeSwing,
                                     feel = arrangeFeel,
                                     feelTemplate = arrangeFeelTemplate,
+                                    // Where the song is kept: the open project, under this
+                                    // kit's folder name. Not gated on the project's `kits`
+                                    // list, which a kit rename does not update.
+                                    projectDir = project?.let { ProjectStore.dir(shelf.root, it.name) },
                                 )
                             }
                         }
@@ -4794,6 +4811,8 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 // The Bubble's permission, said before it is asked (UAT E2-OVERLAY).
                 OverlayAsk(onFailed = { dock.say(Copy.actionFailed("ALLOW")) })
+                // The audio route, watched; and the dock's line when KIT or BEAT is on Bluetooth.
+                RouteDockLine(dock, location)
                 Dock(
                     dock = dock,
                     busy = busy ?: jobs.current ?: screenBusy,

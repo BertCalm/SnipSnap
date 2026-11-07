@@ -87,6 +87,7 @@ class ReversalTest {
      */
     private val notADestructiveLanding = mapOf(
         "SHELF_LEGEND" to "a legend under the shelf naming the gesture; nothing has happened yet",
+        "SONG_DELETE" to "SONG's button label; nothing has happened yet, and the UNDO beside it then reads UNDO DELETE and puts the section back",
         // Refusals: the delete did NOT happen, so there is nothing to take back.
         // TWINS_KEEP_OWN arrived from PR #136 while #137 was open, and broke
         // the default branch: `App.kt`'s `evilTwins` checks `ownPadsOnBankB`

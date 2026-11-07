@@ -20,10 +20,14 @@ def native_sources():
 
 def main():
     out=Path(sys.argv[1]).resolve();raw=out/'raw'
+    manifest_hash=sha(out/'manifest.json')
     m=json.loads((out/'manifest.json').read_text());fixture=json.loads((raw/'reader-fixtures.json').read_text())
     require(sha(raw/'native-pcm.i16')==m['container']['pcmSha256'],'Native PCM fixture differs from delivered cache')
     require(sha(raw/'reader-fixtures.f32')==fixture['sha256'],'Python fixture changed')
     layout=[m[k] for k in ['heldFrames','loopStart','loopFrames','rootCycles','leadFrames','tailFrames','crossfadeFrames','releaseFrames']]+[len(m['tailCuts'])]+m['tailCuts']
+    if m['format']=='crease-shared-pcm-v1':
+        layout += [m['shared']['components'],m['shared']['pad']]+m['shared']['offsets']
+        require(sha(raw/'shared-coefficients.f32')==m['shared']['coefficientsSha256'],'Native coefficient fixture differs')
     require(list(map(int,(raw/'native-layout.txt').read_text().split()))==layout,'Native layout fixture differs')
     require(list(map(int,(raw/'native-cases.txt').read_text().split()))==[len(fixture['cuts']),fixture['frames']]+fixture['cuts'],'Native case fixture differs')
     # Build from this checkout before binding source hashes. An old executable
@@ -36,10 +40,13 @@ def main():
     require(before==native_sources(),'Native sources changed during build')
     subprocess.run([str(ROOT/'build/native-tests/crease_study_tests'),str(out)],check=True)
     require(before==native_sources(),'Native sources changed during validation')
+    require(manifest_hash==sha(out/'manifest.json'),'Manifest changed during native validation')
     r=json.loads((out/'native-verification.json').read_text())
     require(r['cases']==m['accuracy']['total'] and r['output48kCases']==24,'Native coverage differs from the study')
-    r.update(receiptVersion=2,builtFromCurrentCheckout=True,pcmSha256=m['container']['pcmSha256'],nativeSources=before,
+    r.update(receiptVersion=2,builtFromCurrentCheckout=True,manifestSha256=manifest_hash,pcmSha256=m['container']['pcmSha256'],nativeSources=before,
         executableSha256=sha(ROOT/'build/native-tests/crease_study_tests'),
         reference48kSha256=sha(raw/'native-48k-fixtures.bin'),pythonFixtureSha256=fixture['sha256'])
+    if m['format']=='crease-shared-pcm-v1':
+        r['sharedCoefficientsSha256']=m['shared']['coefficientsSha256']
     (out/'native-verification.json').write_text(json.dumps(r,indent=2)+'\n')
 if __name__=='__main__': main()
