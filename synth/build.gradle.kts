@@ -1986,6 +1986,15 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
+tasks.register<JavaExec>("generateChordStabsAudition") {
+    group = "distribution"
+    description = "Render CHORD STABS' modal (D dorian, G mixolydian) and borrowed (C major) kits pad by pad, with progressions, under testkit/chord-stabs-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChordStabsAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/chord-stabs-audition")
+}
+
 tasks.register<JavaExec>("generateFillAudition") {
     group = "distribution"
     description = "Render FILL's snare roll and tom run inside a beat at 120 and 90 BPM, each length alone and every control swept, with a listening page under testkit/fill-audition/."
