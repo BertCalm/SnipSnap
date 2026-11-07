@@ -1,0 +1,127 @@
+[
+  {
+    "path": "audio/bass_36.wav",
+    "frames": 176400,
+    "sha256": "42f48d540a7add3c661f69170822388e163f54c1b5a7660c89cc071cc4ea1843"
+  },
+  {
+    "path": "audio/bass_48.wav",
+    "frames": 176400,
+    "sha256": "fe33d9bb272d47c4953bb11c05b6da1c8234eb92ed5dce393245729b0214778a"
+  },
+  {
+    "path": "audio/bass_60.wav",
+    "frames": 176400,
+    "sha256": "444202cc658046ea3ae50bbdf0ff43cbfe958194451372096231efd7f399e16f"
+  },
+  {
+    "path": "audio/bass_isolated_0.0.wav",
+    "frames": 176400,
+    "sha256": "4a6f144e0141fa826f995dcec84d67e65c0455fd1e7f913bcd3d59550a4ae36c"
+  },
+  {
+    "path": "audio/bass_isolated_0.35.wav",
+    "frames": 176400,
+    "sha256": "1594491c338a7f02176efe01e8b15209a8156a3cf18441690ec8a3bbfe39741c"
+  },
+  {
+    "path": "audio/bass_isolated_0.75.wav",
+    "frames": 176400,
+    "sha256": "5695f1aa143d6f2134157acb1a170442e3856f4d01653c62e431141cb6693ef3"
+  },
+  {
+    "path": "audio/bass_motion_0.35.wav",
+    "frames": 176400,
+    "sha256": "6750601e21cf94c30947ab1be35fbbf28aa8dd7e52b270c8b8bf4d96fe8f4bbe"
+  },
+  {
+    "path": "audio/bass_motion_0.75.wav",
+    "frames": 176400,
+    "sha256": "9610dab95e4aa592fdadd93c361cf4a0462a745fbfe7adf0c6fb7272a6db1ae8"
+  },
+  {
+    "path": "audio/pad_36.wav",
+    "frames": 176400,
+    "sha256": "ea432b033df342e699d58b536a681a521f6d631be9b40da3f65024795c28ff47"
+  },
+  {
+    "path": "audio/pad_48.wav",
+    "frames": 176400,
+    "sha256": "aa0bb26be28e4033e0a89192fe7703c7d6741d043a60bd7c99703b8e41ca0952"
+  },
+  {
+    "path": "audio/pad_60.wav",
+    "frames": 176400,
+    "sha256": "519a0dce8fca49824073a5d096d32f6f84c2b5d4b412ec9fcb5d1f381262cfcf"
+  },
+  {
+    "path": "audio/pad_chord.wav",
+    "frames": 176400,
+    "sha256": "72d34502e6310aea9798087199e65d615efc160cad744ec84f39a718ebdcdfd9"
+  },
+  {
+    "path": "audio/pad_reverse_0.5.wav",
+    "frames": 176400,
+    "sha256": "1508dfb5d4aea42dacec21dda39bf4ccf7cf2c4679914e3641b7675b03a607ca"
+  },
+  {
+    "path": "audio/pad_tape_0.0.wav",
+    "frames": 176400,
+    "sha256": "ca053391c1a97cfe5aa89a880d7844a2f19dd037ffcace097cd705e538f86c91"
+  },
+  {
+    "path": "audio/pad_tape_1.0.wav",
+    "frames": 176400,
+    "sha256": "131aad94771abff74afe945d820aa9b1795b6de5d915f4402b98ae0e2fd8329d"
+  },
+  {
+    "path": "audio/pluck_36.wav",
+    "frames": 176400,
+    "sha256": "aae014c976b5ad6a4f39a0627eb112e443ec8065edf09a865136fcc53b248a5a"
+  },
+  {
+    "path": "audio/pluck_48.wav",
+    "frames": 176400,
+    "sha256": "58193869e4de7cf5b1e1a3ea69927027ce58027d346a817ea35b2049d40c3ec1"
+  },
+  {
+    "path": "audio/pluck_60.wav",
+    "frames": 176400,
+    "sha256": "95c4a81c2dc16336225f0211800bf159d3e47defe5aad0409a835fb27bbb271d"
+  },
+  {
+    "path": "audio/pluck_chord.wav",
+    "frames": 176400,
+    "sha256": "4f6b24d0bc3beda7f21e77e57153455a730bff62023ea7cf45faf418f14f47f9"
+  },
+  {
+    "path": "audio/pluck_isolated_0.0.wav",
+    "frames": 176400,
+    "sha256": "df68243d24e794f6d251f468cf882f5c986bd37c1a2182b10d52f2fb4db93f4c"
+  },
+  {
+    "path": "audio/pluck_isolated_0.35.wav",
+    "frames": 176400,
+    "sha256": "3d231476b6503fb6b2e1da8c2fadbbd16756895332889f830a55dcad142f6650"
+  },
+  {
+    "path": "audio/pluck_isolated_0.75.wav",
+    "frames": 176400,
+    "sha256": "0551c60d2ea73665a25eb890b4080f100d2cf57cfb792e424c64f8b42fb8b41c"
+  },
+  {
+    "path": "audio/pluck_motion_0.35.wav",
+    "frames": 176400,
+    "sha256": "aa851754337764addd0b9d36f97b1dbe23fb65f21ba0f615b4a3662797baf91a"
+  },
+  {
+    "path": "audio/pluck_motion_0.75.wav",
+    "frames": 176400,
+    "sha256": "0c3a131085a7da6dd75f989999822bd363f2a8821c983ef609528debfb4c36cb"
+  },
+  {
+    "path": "quick-tour.wav",
+    "frames": 1151010,
+    "sha256": "f47c80843330c6017ee35ddae9c5304736c22badcd37a11f4d7db04ff9bab9c0"
+  }
+]

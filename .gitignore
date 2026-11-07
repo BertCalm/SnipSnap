@@ -661,3 +661,7 @@ testkit/obbligato-performance-audition/
 /testkit/relay-pulse-musical-audition/
 
 testkit/dive-audition/
+
+# Afterimage Python auditions regenerate from experiments/afterimage/.
+/testkit/afterimage-audition/
+/.venv-afterimage/

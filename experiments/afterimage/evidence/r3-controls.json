@@ -1,0 +1,26 @@
+{
+  "bass": {
+    "TUNE": 0.5,
+    "COLOR": 0.5,
+    "CHORUS": 0.45,
+    "MEMORY": 0.65,
+    "CLOCK": 0.0,
+    "MOTION": 0.0
+  },
+  "pluck": {
+    "TUNE": 0.5,
+    "COLOR": 0.5,
+    "CHORUS": 0.45,
+    "MEMORY": 0.65,
+    "CLOCK": 0.0,
+    "MOTION": 0.0
+  },
+  "pad": {
+    "TUNE": 0.5,
+    "COLOR": 0.5,
+    "CHORUS": 0.45,
+    "MEMORY": 0.65,
+    "CLOCK": 0.5,
+    "SPACE": 0.25
+  }
+}
