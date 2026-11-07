@@ -58,9 +58,9 @@ class StepShapeTest {
     @Test
     fun `the positions of x2, x3 and x4 are the documented ones`() {
         val c = lit(4)
-        assertEquals(listOf(0L, 60L), times(StepShape.setRoll(c, lane, 4, 2), 4).map { it - 4 * step })
-        assertEquals(listOf(0L, 40L, 80L), times(StepShape.setRoll(c, lane, 4, 3), 4).map { it - 4 * step })
-        assertEquals(listOf(0L, 30L, 60L, 90L), times(StepShape.setRoll(c, lane, 4, 4), 4).map { it - 4 * step })
+        assertEquals(listOf(0L, 120L), times(StepShape.setRoll(c, lane, 4, 2), 4).map { it - 4 * step })
+        assertEquals(listOf(0L, 80L, 160L), times(StepShape.setRoll(c, lane, 4, 3), 4).map { it - 4 * step })
+        assertEquals(listOf(0L, 60L, 120L, 180L), times(StepShape.setRoll(c, lane, 4, 4), 4).map { it - 4 * step })
     }
 
     @Test
@@ -68,7 +68,7 @@ class StepShapeTest {
         val loud = GrooveEdit.setStepVelocity(lit(2), lane, 2, 1.0f)
         val r = StepShape.setRoll(loud, lane, 2, 4)
         assertEquals(setOf(1.0f), r.notes.map { it.velocity }.toSet())
-        assertEquals(setOf(30L), r.notes.map { it.lengthPulses }.toSet())
+        assertEquals(setOf(60L), r.notes.map { it.lengthPulses }.toSet())
     }
 
     @Test
@@ -135,11 +135,11 @@ class StepShapeTest {
     fun `a nudge stops at the cell edge and never leaves the step`() {
         var c = lit(5)
         repeat(20) { c = StepShape.nudge(c, lane, 5, StepShape.NUDGE_PULSES) }
-        assertEquals(120, StepShape.offsetOf(c, lane, 5), "the cell ends 120 pulses after the line")
+        assertEquals(180, StepShape.offsetOf(c, lane, 5), "the cell ends 180 pulses after the line")
         assertEquals(1, times(c, 5).size)
         var e = lit(5)
         repeat(20) { e = StepShape.nudge(e, lane, 5, -StepShape.NUDGE_PULSES) }
-        assertEquals(-119, StepShape.offsetOf(e, lane, 5))
+        assertEquals(-59, StepShape.offsetOf(e, lane, 5), "the cell starts 59 pulses before the line")
         assertSame(e, StepShape.nudge(e, lane, 5, -1), "already at the stop")
         // Step 0 cannot go before the loop.
         val z = StepShape.nudge(lit(0), lane, 0, -StepShape.NUDGE_PULSES)
@@ -149,22 +149,88 @@ class StepShapeTest {
     }
 
     @Test
+    fun `early goes 30 then 29 pulses and stops, two presses in all`() {
+        val one = StepShape.nudge(lit(5), lane, 5, -StepShape.NUDGE_PULSES)
+        assertEquals(-30, StepShape.offsetOf(one, lane, 5))
+        val two = StepShape.nudge(one, lane, 5, -StepShape.NUDGE_PULSES)
+        assertEquals(-59, StepShape.offsetOf(two, lane, 5))
+        assertSame(two, StepShape.nudge(two, lane, 5, -StepShape.NUDGE_PULSES), "a third press does nothing")
+        assertEquals(5, GrooveEdit.cellOf(two.notes.single().timePulses))
+    }
+
+    @Test
     fun `a nudged roll moves as one and keeps its shape, stopping when its last hit reaches the edge`() {
-        val r = StepShape.setRoll(lit(4), lane, 4, 4)
-        val moved = StepShape.nudge(r, lane, 4, 60)
-        assertEquals(listOf(30L, 60L, 90L, 120L), times(moved, 4).map { it - 4 * step }, "asked for 60, got what fits: the last hit stops on the edge")
-        assertEquals(4, StepShape.rollOf(moved, lane, 4))
+        val r = StepShape.setRoll(lit(4), lane, 4, 2)
+        val moved = StepShape.nudge(r, lane, 4, 90)
+        assertEquals(listOf(60L, 180L), times(moved, 4).map { it - 4 * step }, "asked for 90, got what fits: the last hit stops on the edge")
+        assertEquals(2, StepShape.rollOf(moved, lane, 4))
         assertTrue(times(moved, 4).all { GrooveEdit.cellOf(it) == 4 })
         val early = StepShape.nudge(r, lane, 4, -1000)
-        assertEquals(-119, StepShape.offsetOf(early, lane, 4))
-        assertEquals(listOf(30L, 30L, 30L), times(early, 4).zipWithNext { a, b -> b - a }, "the roll kept its spacing")
+        assertEquals(-59, StepShape.offsetOf(early, lane, 4))
+        assertEquals(listOf(120L), times(early, 4).zipWithNext { a, b -> b - a }, "the roll kept its spacing")
         assertEquals(r, StepShape.centre(early, lane, 4))
     }
 
     @Test
+    fun `a x4 fills the cell to its end, so it cannot go late and goes at most 59 early, without a crash`() {
+        val r = StepShape.setRoll(lit(4), lane, 4, 4)
+        assertSame(r, StepShape.nudge(r, lane, 4, StepShape.NUDGE_PULSES), "no room late")
+        val one = StepShape.nudge(r, lane, 4, -StepShape.NUDGE_PULSES)
+        assertEquals(listOf(-30L, 30L, 90L, 150L), times(one, 4).map { it - 4 * step })
+        val two = StepShape.nudge(one, lane, 4, -StepShape.NUDGE_PULSES)
+        assertEquals(-59, StepShape.offsetOf(two, lane, 4))
+        assertEquals(4, StepShape.rollOf(two, lane, 4))
+        assertSame(two, StepShape.nudge(two, lane, 4, -StepShape.NUDGE_PULSES))
+        assertEquals(r, StepShape.centre(two, lane, 4))
+        // Rolling a step that was nudged late pulls the start back so the last hit stays in the cell.
+        val late = StepShape.nudge(lit(4), lane, 4, 90)
+        val rolled = StepShape.setRoll(late, lane, 4, 4)
+        assertEquals(listOf(0L, 60L, 120L, 180L), times(rolled, 4).map { it - 4 * step })
+    }
+
+    @Test
+    fun `a x4 roll is removed whole by a tap and takes a velocity level on every hit`() {
+        val r = StepShape.setRoll(lit(6), lane, 6, 4)
+        assertEquals(4, r.notes.size)
+        assertTrue(GrooveEdit.toggleStep(r, lane, 6).notes.isEmpty())
+        val soft = GrooveEdit.setStepVelocity(r, lane, 6, GrooveEdit.VelocityLevel.SOFT.velocity)
+        assertEquals(setOf(GrooveEdit.VelocityLevel.SOFT.velocity), soft.notes.map { it.velocity }.toSet())
+        assertEquals(4, soft.notes.size)
+    }
+
+    @Test
+    fun `a hit 60 pulses before a step line belongs to the step before, 59 to this one`() {
+        assertEquals(4, GrooveEdit.cellOf(5 * step - 60))
+        assertEquals(5, GrooveEdit.cellOf(5 * step - 59))
+        assertEquals(5, GrooveEdit.cellOf(5 * step + 180))
+        assertEquals(6, GrooveEdit.cellOf(5 * step + 181))
+        val r = StepShape.cellRange(lit(5), 5)
+        assertEquals(5 * step - 59, r.first)
+        assertEquals(5 * step + 180, r.last)
+        assertEquals(5, GrooveEdit.cellOf(r.first))
+        assertEquals(5, GrooveEdit.cellOf(r.last))
+    }
+
+    @Test
+    fun `swing at 75 percent keeps an and step in its own cell, and a roll on it stays one unit`() {
+        val push = Mpc3Clip.swingPush(75)
+        assertEquals(120L, push)
+        val swung = GrooveEdit.bakeSwing(lit(1, 5), 75)
+        for (s in listOf(1, 5)) {
+            assertEquals(listOf(s * step + push), times(swung, s))
+            assertEquals(s, GrooveEdit.cellOf(s * step + push))
+        }
+        // A roll made on the swung step: the hits run from the swung position to the cell's end.
+        val rolled = StepShape.setRoll(swung, lane, 5, 2)
+        assertEquals(2, times(rolled, 5).size)
+        assertTrue(times(rolled, 5).all { GrooveEdit.cellOf(it) == 5 })
+        assertTrue(times(rolled, 4).isEmpty() && times(rolled, 6).isEmpty())
+    }
+
+    @Test
     fun `centre puts the earliest hit back on the step line`() {
-        val c = StepShape.nudge(lit(7), lane, 7, -90)
-        assertEquals(-90, StepShape.offsetOf(c, lane, 7))
+        val c = StepShape.nudge(lit(7), lane, 7, -50)
+        assertEquals(-50, StepShape.offsetOf(c, lane, 7))
         assertEquals(lit(7), StepShape.centre(c, lane, 7))
         val c7 = lit(7)
         assertSame(c7, StepShape.centre(c7, lane, 7), "already centred")
@@ -219,7 +285,7 @@ class StepShapeTest {
         val w = StepShape.setLength(lit(last), lane, last, NoteLength.TIE_4)
         assertEquals(step, w.notes.single().lengthPulses, "the last step has a step left")
         val r = StepShape.setLength(StepShape.setRoll(lit(4), lane, 4, 4), lane, 4, NoteLength.TIE_2)
-        assertEquals(setOf(30L), r.notes.map { it.lengthPulses }.toSet())
+        assertEquals(setOf(60L), r.notes.map { it.lengthPulses }.toSet())
         assertEquals(null, StepShape.lengthOf(r, lane, 4), "a roll has no length of its own to show")
     }
 
@@ -246,7 +312,7 @@ class StepShapeTest {
         val line4 = 4 * step
         assertEquals(
             listOf(
-                Triple(line4 - 30, 30L, note), Triple(line4, 30L, note), Triple(line4 + 30, 30L, note), Triple(line4 + 60, 30L, note),
+                Triple(line4 - 30, 60L, note), Triple(line4 + 30, 60L, note), Triple(line4 + 90, 60L, note), Triple(line4 + 150, 60L, note),
                 Triple(8 * step + 30, 2 * step, note),
             ),
             got,

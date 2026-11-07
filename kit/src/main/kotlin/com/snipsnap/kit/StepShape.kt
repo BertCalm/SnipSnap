@@ -17,16 +17,22 @@ import com.snipsnap.mpc3.Mpc3Note
  * stack carry all three without learning about them.
  *
  * **One unit.** Every hit a roll writes stays inside the step's own cell
- * ([GrooveEdit.cellOf]: pulses `step*240-119 .. step*240+120`), which is how
+ * ([GrooveEdit.cellOf]: pulses `step*240-59 .. step*240+180`), which is how
  * toggle, velocity and undo already treat "the step": a tap that turns the
  * step off removes the whole roll, a velocity level is set on every hit.
  *
- * **Where a roll lives.** A cell ends 120 pulses after its step's line, so a
- * roll cannot be spread over the whole 240 (the fourth hit of a ×4 would land
- * in the next cell). A roll of N is N hits [rollSpacing] apart over the step's
- * first half: ×2 at 0 and 60, ×3 at 0, 40, 80, ×4 at 0, 30, 60, 90. At 120 BPM
- * that is 31, 21 and 16 ms between hits. Hits are the step's velocity, all the
- * same (no decay), and each is cut at the next hit so they never overlap.
+ * **Where a roll lives.** A roll of N is N hits [rollSpacing] (a step over N)
+ * apart across the whole step, the way an MPC's note repeat spreads them: x2 at
+ * 0 and 120, x3 at 0, 80, 160, x4 at 0, 60, 120, 180. At 120 BPM that is 125,
+ * 83 and 63 ms between hits. The cell leans late (a quarter step early, three
+ * quarters late) so the last hit of a x4 at +180 is still this step's. Hits are
+ * the step's velocity, all the same (no decay), and each is cut at the next hit
+ * so they never overlap.
+ *
+ * **Nudge limits.** The cell reaches only 59 pulses before the line, so EARLY
+ * moves 30 pulses on the first press and 29 on the second, then stops; LATE
+ * goes up to 180 pulses. A x4 fills 0..180, the whole cell from its line to its
+ * end, so it cannot move late at all and can go only 59 pulses early.
  *
  * **Nudge and swing.** A nudge is just the hits' position, so [GrooveEdit.bakeSwing]
  * (which puts every note back on its straight step before it swings) takes a
@@ -39,13 +45,10 @@ object StepShape {
     /** The most hits a roll holds. */
     const val MAX_ROLL = 4
 
-    /** The part of a step a roll's hits spread over, in pulses: half, because a cell ends 120 pulses after its step. */
-    val ROLL_SPAN: Long = GrooveEdit.STEP_PULSES / 2
-
-    /** The gap between a roll of [n]'s hits, in pulses. */
+    /** The gap between a roll of [n]'s hits, in pulses: the whole step over [n], so x2 is 120, x3 is 80, x4 is 60. */
     fun rollSpacing(n: Int): Long {
         require(n in 1..MAX_ROLL) { "a roll is 1..$MAX_ROLL hits: $n" }
-        return ROLL_SPAN / n
+        return GrooveEdit.STEP_PULSES / n
     }
 
     /** One press of EARLY or LATE: an eighth of a step. */
@@ -76,7 +79,7 @@ object StepShape {
     /** The pulses a hit of [step] can sit on: its cell, kept inside the clip (a note cannot go before the loop or past its end). */
     fun cellRange(clip: Mpc3Clip, step: Int): LongRange {
         val line = step * GrooveEdit.STEP_PULSES
-        return maxOf(0L, line - GrooveEdit.STEP_PULSES / 2 + 1)..minOf(clip.lengthPulses - 1, line + GrooveEdit.STEP_PULSES / 2)
+        return maxOf(0L, line - GrooveEdit.CELL_EARLY + 1)..minOf(clip.lengthPulses - 1, line + GrooveEdit.CELL_LATE)
     }
 
     /** How many hits the step holds, at distinct pulses: 0 for an off step, 1 for a plain one, 2..[MAX_ROLL] for a roll. */

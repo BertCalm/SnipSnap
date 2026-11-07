@@ -187,11 +187,11 @@ class BeatScheduleTest {
             cursor.advance(to, if (wrapped) total else 0f)
             lastPos = BeatClock.wrap(np, total)
         }
-                assertEquals(listOf(4.0, 4.125, 4.25, 4.375), positions.take(4))
+        assertEquals(listOf(4.0, 4.25, 4.5, 4.75), positions.take(4))
         assertEquals(4, frames.take(4).toSet().size, "four hits, four frames")
         val gaps = frames.take(4).zipWithNext { a, b -> b - a }
-        // 30 pulses at 120 BPM is 15.625 ms: 750 frames at 48 kHz, to within the clock's rounding.
-        for (g in gaps) assertTrue(g in 749L..751L, "gap $g frames")
+        // 60 pulses at 120 BPM is 31.25 ms: 1500 frames at 48 kHz, to within the clock's rounding.
+        for (g in gaps) assertTrue(g in 1499L..1501L, "gap $g frames")
         assertEquals(frames.take(4).sorted(), frames.take(4), "in order")
         assertEquals(4, positions.size, "each hit was handed over exactly once, across window boundaries and the loop's wrap")
     }

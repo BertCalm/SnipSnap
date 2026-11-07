@@ -318,8 +318,8 @@ internal fun Modifier.velocityFill(velocity: Float?, color: Color): Modifier =
 
 /**
  * [velocityFill] for a cell that may be rolled or nudged: a tick for every hit,
- * where it sits in the cell (the step line is the cell's middle, a cell covers
- * a step either side of it by half). A plain step draws only its fill. Each tick
+ * where it sits in the cell (the step line is a quarter of the way in: a cell
+ * starts [GrooveEdit.CELL_EARLY] pulses before it and is one step wide). A plain step draws only its fill. Each tick
  * is a dark bar with a light one on it, so it reads on any lane colour.
  */
 internal fun Modifier.velocityFill(cell: StepCell?, color: Color): Modifier =
@@ -327,7 +327,7 @@ internal fun Modifier.velocityFill(cell: StepCell?, color: Color): Modifier =
         if (!cell.shaped) base else base.drawWithContent {
             drawContent()
             for (pulses in cell.hits) {
-                val x = size.width * (0.5f + pulses / GrooveEdit.STEP_PULSES.toFloat()).coerceIn(0.04f, 0.96f)
+                val x = size.width * ((GrooveEdit.CELL_EARLY + pulses) / GrooveEdit.STEP_PULSES.toFloat()).coerceIn(0.04f, 0.96f)
                 drawRect(Color.Black.copy(alpha = 0.75f), Offset(x - 1.5.dp.toPx(), 0f), Size(3.dp.toPx(), 7.dp.toPx()))
                 drawRect(Color.White, Offset(x - 0.5.dp.toPx(), 1.dp.toPx()), Size(1.dp.toPx(), 5.dp.toPx()))
             }
