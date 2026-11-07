@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cairn · A moving rim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <header><a class="brand" href="../">CAIRN<span>A continuing workshop</span></a><a href="../sing/">The four voices</a></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">SING / A MOVING RIM</p>
+      <h1>Let the bowl breathe.</h1>
+      <p class="lede">A little more movement in the held note. Slow beating gives the tone a gentle pulse, while its overtones brighten and soften around it.</p>
+      <p><button class="primary" data-kind="after" disabled>Hear SING’s new motion · 16 s</button></p>
+    </section>
+    <section class="comparison" aria-labelledby="compare-title">
+      <div class="section-top"><div><p class="eyebrow">01 / HOLD THE NOTE</p><h2 id="compare-title">Same note. Same touch.</h2></div>
+        <label class="register">Register<select id="register"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select></label>
+      </div>
+      <div class="cards">
+        <article class="card before"><p class="eyebrow">EARLIER SING</p><h3>The steady rim</h3><p>The original held rubbing, with its small pressure swell.</p><button data-kind="before" disabled>Hear before · 16 s</button></article>
+        <article class="card after"><p class="eyebrow">REVISED SING</p><h3>A moving rim</h3><p>A slow shimmer in the body, with the upper tone moving through it.</p><button class="primary" data-kind="after" disabled>Hear the motion · 16 s</button></article>
+      </div>
+      <div class="transport"><button id="stop" class="quiet">Stop</button><label>Volume<input id="volume" type="range" min="0" max="1" step="0.01" value="0.65"></label><p id="status" role="status" aria-live="polite">Loading the recordings…</p><button id="retry" class="quiet" hidden>Try again</button></div>
+      <p class="caption">Each button plays eight seamless cycles. Switch between them whenever you like. Both use the same note, touch and controls.</p>
+    </section>
+    <section class="shape" aria-labelledby="shape-title"><p class="eyebrow">02 / SHAPE THE MOVEMENT</p><h2 id="shape-title">GROOVE opens it up.</h2><p class="section-copy">Small, gentle movement at the low end; a wider swell as GROOVE rises. These three recordings stay in C4.</p>
+      <div class="steps"><button data-id="groove-0" disabled>Gentle · 0%</button><button data-id="groove-50" disabled>Middle · 50%</button><button data-id="groove-100" disabled>More · 100%</button></div>
+      <details><summary>More listening checks</summary><div class="checks"><button data-id="body-10" disabled>Shorter ring</button><button data-id="body-90" disabled>Longer ring</button><button data-id="soft" disabled>Soft touch</button><button data-id="edge-0" disabled>Low controls · C3</button><button data-id="edge-1" disabled>High controls · C3</button><button data-id="finite-after" disabled>Finite SING · unchanged</button></div></details>
+    </section>
+    <section class="workshop"><p class="eyebrow">03 / INSIDE THE WORKSHOP</p><h2>The colour follows the contact.</h2><p class="section-copy">The held contact travels around an imagined rim. Its slow cycle feeds the fundamental and overtones in different proportions, giving SING a bowl-like shimmer. GROOVE deepens that motion; BODY shapes the ring.</p>
+      <details><summary>Measurements and complete source</summary><div class="notes"><p id="measurements">The native render checks will appear here.</p><p id="verification"></p><p>This is a designed bowl analogy in Cairn’s rubbing model. The new motion applies to held SING. Saved earlier recipes retain their original rendering. The recordings are dry, mono, 44.1 kHz; preview uses gain only.</p><p><a href="source/cairn-sing-motion-source.zip">Download the complete source</a> <span>·</span> <a id="repo-link" href="https://github.com/BertCalm/SnipSnap">Code and verification</a></p></div></details>
+    </section>
+  </main>
+  <footer><span>CAIRN / Touch, reply, tumble, song.</span><a href="../sing/">Original SING audition</a><a href="../tumble/">Three contact voices</a></footer>
+</div>
+</body></html>

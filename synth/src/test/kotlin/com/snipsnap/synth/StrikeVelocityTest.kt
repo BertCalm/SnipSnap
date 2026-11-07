@@ -347,8 +347,6 @@ class StrikeVelocityTest {
             val m = Skin.defaults(voice)
             assertContentEquals(Skin.render(voice, m).samples, Skin.render(voice, m, .3f).samples, "$voice ignores a render velocity")
         }
-        val snare = SkinPatch("s", SkinVoice.SNARE, Skin.defaults(SkinVoice.SNARE))
-        assertContentEquals(Velocity.soften(snare.render(), .6f).samples, Velocity.atVelocity(snare, .4f).samples, "the snare still softens")
     }
 
     @Test

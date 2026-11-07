@@ -11,6 +11,8 @@ object SynthCaches {
         Tidal.clearCaches()
         FlockHeld.clearCache()
         OverlapHeld.clearCache()
+        TrefoilHeld.clearCache()
+        ObbligatoHeld.clearCache()
         Otis.clearCache()
         Ferry.clearCache()
         MeridianMotion.clearCache()

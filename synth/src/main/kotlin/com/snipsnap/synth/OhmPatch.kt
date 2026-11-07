@@ -18,21 +18,25 @@ data class OhmPatch(
     val model: Int = Ohm.DEFAULT_MODEL,
     val options: OhmOptions = OhmOptions(),
     val releaseSeconds: Float = .3f,
+    val reply: Float = .5f,
+    val ring: Float = .5f,
 ) : Patch {
     init {
         require(Ohm.supportsModel(model)) { "unsupported OHM model $model" }
         Patches.validateMacros(this, Ohm.macrosFor(model))
         require(midi in 48..72) { "OHM midi out of 48..72: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "OHM velocity out of 0..1: $velocity" }
-        require(model >= 3 || options == OhmOptions()) { "OHM source options require model 3 or later" }
+        Ohm.validatePerformance(macros, gesture, model, options, reply, ring)
         require(releaseSeconds.isFinite() && releaseSeconds in .02f..3f) { "OHM release must be in 0.02..3 seconds" }
-        require(model >= 3 || releaseSeconds == .3f) { "OHM saved release requires model 3 or later" }
+        require(Ohm.supportsHeld(model) || model == 5 || releaseSeconds == .3f) {
+            "OHM saved release requires model 3, 4 or 5"
+        }
     }
 
     override val engine get() = ENGINE
     val voice get() = OhmVoice.STRING
     override val voiceName get() = voice.name
-    override fun render() = Ohm.render(macros, midi, velocity, seed, gesture, model, options)
+    override fun render() = Ohm.render(macros, midi, velocity, seed, gesture, model, options, reply, ring)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(
@@ -45,6 +49,10 @@ data class OhmPatch(
             if (model >= 3) {
                 it["options"] = options.toJsonValue()
                 it["releaseSeconds"] = JsonValue.Num(releaseSeconds.toDouble())
+            }
+            if (model == 5) {
+                it["reply"] = JsonValue.Num(reply.toDouble())
+                it["ring"] = JsonValue.Num(ring.toDouble())
             }
         },
     )
@@ -64,7 +72,9 @@ data class OhmPatch(
                     ?: throw JsonException("unknown OHM gesture $gestureName")
                 val options = obj["options"]?.takeUnless { it is JsonValue.Null }?.let(OhmOptions::fromJsonValue) ?: OhmOptions()
                 val release = obj["releaseSeconds"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: .3f
-                try { OhmPatch(name, macros, midi, velocity, seed, gesture, model, options, release) }
+                val reply = obj["reply"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: .5f
+                val ring = obj["ring"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: .5f
+                try { OhmPatch(name, macros, midi, velocity, seed, gesture, model, options, release, reply, ring) }
                 catch (e: IllegalArgumentException) { throw JsonException(e.message ?: "invalid OHM patch") }
             }
         }

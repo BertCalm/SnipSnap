@@ -288,6 +288,9 @@ import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.Trefoil
 import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrefoilVoice
+import com.snipsnap.synth.TrefoilHeld
+import com.snipsnap.synth.TrefoilPlayback
+import com.snipsnap.shell.TrefoilPadMaker
 import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
@@ -394,6 +397,8 @@ import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
 import com.snipsnap.synth.Obbligato
 import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoPlayback
+import com.snipsnap.shell.ObbligatoPadMaker
 import com.snipsnap.synth.ObbligatoRelationship
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
@@ -581,9 +586,9 @@ private class EmbouchureRestore(
     val pending = mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
         for (pair in seededPresets.keys) {
             if (pair.first == Engine.EMBOUCHURE && pair !in patches && pair !in reopenedPads) put(pair, true)
-            // A named-only TIDAL or TREMOR YOURS restore has no typed performance yet.
+            // A named-only TIDAL, TREMOR or RELAY YOURS restore has no typed performance yet.
             // Default sliders must not materialize model 2 before its shelf read.
-            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) && pair !in reopenedPads &&
+            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) && pair !in reopenedPads &&
                 SynthDrafts.read(settings).none { it.engine == pair.first.name && it.voiceName == pair.second.name } &&
                 Presets.byName(pair.first.name, pair.second.name, seededPresets.getValue(pair)) == null) {
                 put(pair, true)
@@ -593,7 +598,7 @@ private class EmbouchureRestore(
 
     /** A named recipe's saved model must arrive before default controls can replace it. */
     fun waitsForRecipe(engine: Engine, voice: Enum<*>): Boolean =
-        (engine == Engine.TIDAL || engine == Engine.TREMOR) && pending.containsKey(engine to voice)
+        (engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY) && pending.containsKey(engine to voice)
 }
 
 @Composable
@@ -616,6 +621,19 @@ private fun retainTremorDraft(
     val pair = Engine.TREMOR to voice
     if (pair !in loaded) loaded[pair] = TremorPatch(
         Engine.TREMOR.patchDisplayName(voice), voice, macros, model = model,
+    )
+}
+
+/** A macro-only RELAY restore keeps its old pulse until the player explicitly changes it. */
+private fun retainRelayDraft(
+    loaded: MutableMap<Pair<Engine, Enum<*>>, Patch>,
+    voice: RelayVoice,
+    macros: Map<String, Float>,
+    model: Int,
+) {
+    val pair = Engine.RELAY to voice
+    if (pair !in loaded) loaded[pair] = RelayPatch(
+        Engine.RELAY.patchDisplayName(voice), voice, macros, model = model,
     )
 }
 
@@ -694,6 +712,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
     is OrphicaPatch -> Orphica.macrosFrom(editable.config)
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+    is TrefoilPatch -> if (editable.playback == TrefoilPlayback.HELD) TrefoilHeld.defaults(editable.voice) else Trefoil.defaults(editable.voice)
     is OverlapPatch -> if (editable.playback == OverlapPlayback.HELD) OverlapHeld.defaults(editable.topology)
         else Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
@@ -875,7 +894,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.WICK) {
+                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -884,6 +903,7 @@ fun SynthScreen(
                         origami != null -> origamiEditingMacros(origami)
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
                         nativeFactory is RimePatch -> Rime.defaults(nativeFactory.voice, nativeFactory.model) + nativeFactory.macros
+                        nativeFactory is OhmPatch -> Ohm.defaults(nativeFactory.model) + nativeFactory.macros
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
@@ -898,6 +918,7 @@ fun SynthScreen(
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.LIBRATION) seed.seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seed.seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
+                        else if (e == Engine.RELAY) seed.seededDrafts.firstOrNull { it is RelayPatch && it.voice == v }
                         else if (e == Engine.CAUSTIC) (seed.seededDrafts.filterIsInstance<CausticPatch>()
                             .firstOrNull { it.voice == v } ?: nativeFactory as? CausticPatch)
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
@@ -907,6 +928,7 @@ fun SynthScreen(
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
                             .firstOrNull { it.voice == v }
+                        else if (e == Engine.OBBLIGATO) seed.seededDrafts.filterIsInstance<ObbligatoPatch>().firstOrNull()
                         else if (e == Engine.OVERLAP) seed.seededDrafts.filterIsInstance<OverlapPatch>()
                             .firstOrNull { it.topology == v } else null
                     // The bag's value where it parses, the default where it
@@ -920,7 +942,7 @@ fun SynthScreen(
                     val restoredScanned = if (e == Engine.SCANNED_CHAIN) seed.restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
                     put(e to v, when {
                         workingPatch != null -> editableDefaults(e.defaults(v), workingPatch) + editableMacros(workingPatch)
-                        e == Engine.OHM && seed.restoredOhm != null -> Ohm.defaults(seed.restoredOhm.model) + seed.restoredOhm.macros
+                        e == Engine.OHM && seed.initialOhm != null -> Ohm.defaults(seed.initialOhm.model) + seed.initialOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
                         recipe is CausticPatch -> CausticEditing.controls(recipe,
                             CausticInstrument.defaults(recipe.voice, 2).mapValues { (name, fallback) ->
@@ -955,7 +977,7 @@ fun SynthScreen(
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
-    // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
+    // velocity, SKITTER its noise seed, RELAY its pulse behavior, generated sources and phrase
     // schedules, EMBOUCHURE and BELLOWS their player gestures, ONSET its renderer version, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
     // and model version. VENT keeps its note, velocity, trajectory seed and saved model.
@@ -1043,8 +1065,8 @@ fun SynthScreen(
                 if (pair !in seed.seededWork) put(pair, patch)
             }
             // Likewise OHM: the bag's complete recipe never replaces a reopened pad's.
-            if (seed.restoredOhm != null && (Engine.OHM to OhmVoice.STRING) !in seed.seededWork) {
-                put(Engine.OHM to OhmVoice.STRING, seed.restoredOhm)
+            if (seed.initialOhm != null && (Engine.OHM to OhmVoice.STRING) !in seed.seededWork) {
+                put(Engine.OHM to OhmVoice.STRING, seed.initialOhm)
             }
         }
     }
@@ -1069,6 +1091,10 @@ fun SynthScreen(
             loadedPatchesByVoice, voice as TremorVoice, macros,
             seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
         )
+        if (engine == Engine.RELAY) retainRelayDraft(
+            loadedPatchesByVoice, voice as RelayVoice, macros,
+            seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
+        )
         if (engine == Engine.EMBOUCHURE) {
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
@@ -1080,7 +1106,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch ||
+            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1142,6 +1168,13 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.OHM) {
+            // Reply, Ring and native performance edits can share a frame with SAVE or SEND.
+            val current = loadedPatchesByVoice[engine to voice] as? OhmPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OhmPatch(name, controls)
+        }
         if (engine == Engine.WICK) {
             // Body, note and velocity edits can share a frame with SAVE/SEND.
             // Read the live typed recipe rather than the previous composition.
@@ -1170,6 +1203,12 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: AccordPatch(name, voice as AccordVoice, controls)
+        }
+        if (engine == Engine.OBBLIGATO) {
+            val current = loadedPatchesByVoice[engine to voice] as? ObbligatoPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: ObbligatoPatch(name, controls)
         }
         if (engine == Engine.OVERLAP) {
             // Mode, note and release edits can share a frame with SAVE/SEND.
@@ -1260,6 +1299,14 @@ fun SynthScreen(
             return current?.let { Patches.edited(it, name, controls) }
                 ?: TremorPatch(name, voice as TremorVoice, controls,
                     model = seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice))
+        }
+        if (engine == Engine.RELAY) {
+            // Model choice and the last macro edit can share a save or navigation frame.
+            val current = loadedPatchesByVoice[engine to voice] as? RelayPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: RelayPatch(name, voice as RelayVoice, controls,
+                    model = seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice))
         }
         return loadedPatch?.let {
             if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
@@ -1398,6 +1445,9 @@ fun SynthScreen(
                 Engine.ACCORD -> loadedPatchesByVoice[pair] = AccordPatch(
                     engine.patchDisplayName(voice), voice as AccordVoice, macrosByVoice.getValue(pair),
                 )
+                Engine.OBBLIGATO -> loadedPatchesByVoice[pair] = ObbligatoPatch(
+                    engine.patchDisplayName(voice), macrosByVoice.getValue(pair),
+                )
                 Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
                 Engine.WICK -> loadedPatchesByVoice[pair] = WickPatch(
@@ -1414,6 +1464,10 @@ fun SynthScreen(
                 Engine.TREMOR -> retainTremorDraft(
                     loadedPatchesByVoice, voice as TremorVoice, macrosByVoice.getValue(pair),
                     seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+                )
+                Engine.RELAY -> retainRelayDraft(
+                    loadedPatchesByVoice, voice as RelayVoice, macrosByVoice.getValue(pair),
+                    seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
                 )
                 Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
                     engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
@@ -1475,6 +1529,7 @@ fun SynthScreen(
         }
         keepOhmMacros(values)
         keepMeridianMacros(values)
+        if (engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
     }
     fun updateOhmPerformance(edit: (OhmPatch) -> OhmPatch) {
         if (engine != Engine.OHM) return
@@ -1520,6 +1575,16 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
+    fun updateRelayPatch(change: (RelayPatch) -> RelayPatch) {
+        if (engine != Engine.RELAY || embouchureRestore.waitsForRecipe(engine, voice)) return
+        val pair = engine to voice
+        val patch = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)) as RelayPatch
+        currentPresetByVoice.remove(pair)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[pair] = change(patch)
+        // A trip to KIT can dispose this screen before the draft effect gets a frame.
+        SynthDrafts.write(settings, currentDrafts())
+    }
     fun updateLibrationPatch(patch: LibrationPatch) {
         if (engine != Engine.LIBRATION || voice != patch.voice) return
         currentPresetByVoice.remove(engine to voice)
@@ -1539,6 +1604,18 @@ fun SynthScreen(
         // Navigation can dispose the screen before its composition effects.
         SynthDrafts.write(settings, currentDrafts())
     }
+    fun updateObbligatoPatch(change: (ObbligatoPatch) -> ObbligatoPatch) {
+        val name = loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)
+        val patch = buildCurrentPatch(name) as? ObbligatoPatch ?: return
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        val controls = Obbligato.defaults() + updated.macros
+        macrosByVoice[engine to voice] = controls
+        for ((key, value) in controls) settings[macroSettingsKey(engine, voice, key)] = value.toString()
+        SynthDrafts.write(settings, currentDrafts())
+    }
     fun updateOverlapPatch(change: (OverlapPatch) -> OverlapPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OverlapPatch ?: return
         currentPresetByVoice.remove(engine to voice)
@@ -1546,6 +1623,15 @@ fun SynthScreen(
         val updated = change(patch)
         loadedPatchesByVoice[engine to voice] = updated
         macrosByVoice[engine to voice] = editableDefaults(Overlap.defaults(updated.topology, updated.model), updated) + updated.macros
+    }
+    fun updateTrefoilPatch(change: (TrefoilPatch) -> TrefoilPatch) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrefoilPatch ?: return
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        macrosByVoice[engine to voice] = editableDefaults(Trefoil.defaults(updated.voice), updated) + updated.macros
+        SynthDrafts.write(settings, currentDrafts())
     }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
@@ -1726,6 +1812,7 @@ fun SynthScreen(
                         if (editable is RimePatch) macrosByVoice[pair] = Rime.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
+                        if (editable is RelayPatch) macrosByVoice[pair] = Relay.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
                         if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
                         // The saved model and controls are one recipe. Adopting only
@@ -1745,7 +1832,7 @@ fun SynthScreen(
         } catch (e: Exception) {
             Log.e("SynthScreen", "presets: unreadable", e)
             for (pair in embouchureRestore.pending.keys.toList()) {
-                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) embouchureRestore.pending[pair] = false
+                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) embouchureRestore.pending[pair] = false
             }
         }
     }
@@ -1840,7 +1927,11 @@ fun SynthScreen(
 
     var snip by remember { mutableStateOf<Snip?>(null) }
     var rendering by remember { mutableStateOf(false) }
-    val sampleHeldPreview = if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
+    val sampleHeldPreview = if (engine == Engine.TREFOIL) rememberTrefoilHeldPreview(
+        buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch,
+    ) { onToast(Copy.RENDER_FAILED) } else if (engine == Engine.OBBLIGATO) rememberObbligatoHeldPreview(
+        buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch,
+    ) { onToast(Copy.RENDER_FAILED) } else if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
         buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
     ) { onToast(Copy.RENDER_FAILED) } else rememberFlockHeldPreview(
         if (engine == Engine.FLOCK) buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch else null,
@@ -1933,7 +2024,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2082,6 +2173,7 @@ fun SynthScreen(
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is ObbligatoPatch -> patch.midi
                     is AccordPatch -> patch.midi
                     is OtisPatch -> Otis.midiFor(patch)
                     is WickPatch -> patch.midi
@@ -2114,7 +2206,9 @@ fun SynthScreen(
                         // gated pads and SURFACE keep the unfaded loop source.
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
+                                patch is ObbligatoPatch && patch.playback == ObbligatoPlayback.HELD -> ObbligatoPadMaker.ONE_SHOT_FADE_MS
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
+                                patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD -> TrefoilPadMaker.ONE_SHOT_FADE_MS
                                 patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> OverlapPadMaker.ONE_SHOT_FADE_MS
                                 patch is OhmPatch && Ohm.isHeld(patch) -> 20f
                                 patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
@@ -2279,6 +2373,8 @@ fun SynthScreen(
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
+        (engine == Engine.TREFOIL && TrefoilPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch)) ||
+        (engine == Engine.OBBLIGATO && ObbligatoPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
@@ -2369,9 +2465,17 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
+        Engine.OBBLIGATO -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch
+            if (ObbligatoPadMaker.supports(patch)) ObbligatoHeldSpec(ObbligatoPadMaker.Spec(patch)) else null
+        }
         Engine.OVERLAP -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
             if (OverlapPadMaker.supports(patch)) HeldSpec.Overlap(OverlapPadMaker.Spec(patch)) else null
+        }
+        Engine.TREFOIL -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
+            if (TrefoilPadMaker.supports(patch)) HeldSpec.Trefoil(TrefoilPadMaker.Spec(patch)) else null
         }
         Engine.FLOCK -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
@@ -2419,7 +2523,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2458,7 +2562,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2475,7 +2579,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2708,6 +2812,10 @@ fun SynthScreen(
                         is TidalPatch -> Tidal.render(patch.voice, patch.macros, patch.midi, patch.velocity,
                             patch.seed, patch.model, cancelled)
                         is OpenSkyPatch -> patch.render(cancelled)
+                        is TrefoilPatch -> if (patch.playback == TrefoilPlayback.HELD)
+                            TrefoilPadMaker.deliveryRecipe(patch).render() else patch.render()
+                        is ObbligatoPatch -> if (patch.playback == ObbligatoPlayback.HELD)
+                            ObbligatoPadMaker.deliveryRecipe(patch).render() else patch.render()
                         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD)
                             OverlapPadMaker.deliveryRecipe(patch).render() else patch.render()
                         else -> patch.render()
@@ -2747,8 +2855,12 @@ fun SynthScreen(
             drumClass = spreadState.drumClass,
             colorHex = AutoPlace.colorFor(spreadState.drumClass),
             recipe = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).recipe
+                else if (patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD)
+                TrefoilPadMaker.deliveryRecipe(patch)
+                else if (patch is ObbligatoPatch && patch.playback == ObbligatoPlayback.HELD)
+                    ObbligatoPadMaker.deliveryRecipe(patch)
                 else if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
-                OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
+                    OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
             source = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).source else emptyMap()) + (Spread.FROM_KEY to "SYNTH"),
         )
         appScope.launch {
@@ -2863,6 +2975,14 @@ fun SynthScreen(
                     ) {
                         presets.binOpen = true
                     }
+                }
+
+                if (engine == Engine.OBBLIGATO) {
+                    ObbligatoPerformanceControls(
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as ObbligatoPatch,
+                        settings = settings, fill = classColor, scheme = scheme,
+                        onEdit = ::updateObbligatoPatch,
+                    )
                 }
 
                 if (engine == Engine.OVERLAP) {
@@ -3082,11 +3202,15 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
+                    else if (loadedPatch is TrefoilPatch && loadedPatch.playback == TrefoilPlayback.HELD)
+                        TrefoilHeld.macrosFor(loadedPatch.voice).filter { it.name != "WEAVE" }
+                    else if (loadedPatch is ObbligatoPatch && loadedPatch.playback == ObbligatoPlayback.HELD)
+                        Obbligato.macrosFor().filterNot { it.name == "HOLD" }
                     else if (loadedPatch is OverlapPatch && loadedPatch.playback == OverlapPlayback.HELD)
                         OverlapHeld.macrosFor(loadedPatch.topology)
                     else if (loadedPatch is OverlapPatch) Overlap.macrosFor(loadedPatch.topology, loadedPatch.model)
@@ -3123,6 +3247,15 @@ fun SynthScreen(
                                 Libration.scramble(voice as LibrationVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice))) +
                                     ("HOLD" to (macros["HOLD"] ?: 0f))
+                            engine == Engine.TREFOIL &&
+                                (loadedPatchesByVoice[engine to voice] as? TrefoilPatch)?.playback == TrefoilPlayback.HELD ->
+                                TrefoilHeld.defaults(voice as TrefoilVoice) +
+                                    TrefoilHeld.macrosFor(voice as TrefoilVoice).associate { spec -> spec.name to
+                                        if (spec.name == "WEAVE") TrefoilHeld.MIN_MOVING_WEAVE + random.nextFloat() * (1f - TrefoilHeld.MIN_MOVING_WEAVE) else random.nextFloat() }
+                            engine == Engine.OBBLIGATO &&
+                                (loadedPatchesByVoice[engine to voice] as? ObbligatoPatch)?.playback == ObbligatoPlayback.HELD ->
+                                Obbligato.defaults() + Obbligato.macrosFor().filterNot { it.name == "HOLD" }
+                                    .associate { it.name to random.nextFloat() } + ("HOLD" to 1f)
                             engine == Engine.OVERLAP &&
                                 (loadedPatchesByVoice[engine to voice] as? OverlapPatch)?.playback == OverlapPlayback.HELD ->
                                 OverlapHeld.defaults(voice as OverlapTopology) +
@@ -3177,7 +3310,7 @@ fun SynthScreen(
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
                         ensureNativeDraft()
-                        if (engine == Engine.WICK) SynthDrafts.write(settings, currentDrafts())
+                        if (engine == Engine.WICK || engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
                     }
                 }
 
@@ -3335,22 +3468,23 @@ fun SynthScreen(
                     )
                 }
 
-                // Relay's touch changes excitation and brightness without replacing its
-                // saved sources, handoff schedules or phrase clock.
+                // Pulse behavior is an explicit recipe edit; untouched old work keeps its sound.
                 if (engine == Engine.RELAY) {
-                    val relayPatch = loadedPatch as? RelayPatch
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = relayPatch?.velocity ?: 1f,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as RelayPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
+                    if (embouchureRestore.waitsForRecipe(engine, voice)) {
+                        TapeText(
+                            if (embouchureRestore.pending[engine to voice] == false)
+                                "SAVED RELAY COULD NOT OPEN. CHOOSE A PRESET."
+                            else "RESTORING SAVED RELAY…",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    } else {
+                        RelayPerformanceControls(
+                            patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as RelayPatch,
+                            fill = classColor,
+                            scheme = scheme,
+                            onEdit = ::updateRelayPatch,
+                        )
+                    }
                 }
 
                 // VENT's root and excitation strength live beside its six macros.
@@ -3504,42 +3638,12 @@ fun SynthScreen(
                 }
 
                 if (engine == Engine.TREFOIL) {
-                    val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
-                    MacroSlider(
-                        label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
-                    MacroSlider(
-                        label = "CONTACT", value = (patch.activeSeconds - .05f) / (patch.seconds - .15f),
-                        fillColor = classColor, scheme = scheme, readout = "%.2fs".format(Locale.ROOT, patch.activeSeconds),
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            val current = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
-                            loadedPatchesByVoice[engine to voice] = current.copy(activeSeconds = (.05f + value * (current.seconds - .15f)).coerceIn(.05f, current.seconds - .1f))
-                        },
-                    )
+                    TrefoilPerformanceControls(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch,
+                        settings, classColor, scheme, ::updateTrefoilPatch)
                 }
 
                 if (engine == Engine.OBBLIGATO) {
-                    val duet = loadedPatch as? ObbligatoPatch
-                    val velocity = duet?.velocity ?: Obbligato.DEFAULT_VELOCITY
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = velocity,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
                     TapeText("BOND ${obbligatoBondLabel(macros.getValue("BOND"))}", TapeType.pixelSmall, scheme.ink2.tape)
-                    TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
                 if (engine == Engine.MERIDIAN) {
@@ -3802,7 +3906,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -3810,6 +3914,12 @@ fun SynthScreen(
                         if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.TREFOIL) updateTrefoilPatch {
+                            it.copy(releaseSeconds = TrefoilPadMaker.RELEASE.value(fraction)
+                                .coerceIn(TrefoilPadMaker.RELEASE.lo, TrefoilPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.OBBLIGATO) updateObbligatoPatch {
+                            it.copy(releaseSeconds = ObbligatoPadMaker.RELEASE.value(fraction)
+                                .coerceIn(ObbligatoPadMaker.RELEASE.lo, ObbligatoPadMaker.RELEASE.hi))
                         } else if (engine == Engine.OVERLAP) updateOverlapPatch {
                             it.copy(releaseSeconds = OverlapPadMaker.RELEASE.value(fraction)
                                 .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi))
@@ -4263,7 +4373,20 @@ private class SynthSeed(settings: Map<String, String>) {
             Tremor.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.TREMOR, v, it.name)) })
             Tremor.LEGACY_MODEL else Tremor.MODEL
     }
+    // Snapshot before the first macro write: an earlier visit carried model-1 pulse behavior.
+    val relayModelsWithoutRecipe = RelayVoice.entries.associateWith { v ->
+        if (settings.containsKey(presetSettingsKey(Engine.RELAY, v)) ||
+            Relay.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.RELAY, v, it.name)) })
+            RelayPatch.LEGACY_MODEL_VERSION else RelayPatch.MODEL_VERSION
+    }
     val restoredOhm = restoredOhmPatch(settings)
+    // Existing recipes, named presets and macro-only benches retain their saved renderer.
+    // Only an untouched OHM bench starts at the approved Reply/Ring performance.
+    val initialOhm = restoredOhm ?: seededDrafts.filterIsInstance<OhmPatch>().firstOrNull()
+        ?: if ((Engine.OHM to OhmVoice.STRING) in seededWork ||
+            (Engine.OHM to OhmVoice.STRING) in seededPresets ||
+            Ohm.MACROS.any { settings.containsKey(macroSettingsKey(Engine.OHM, OhmVoice.STRING, it.name)) })
+            null else Ohm.replyRingPatch()
     val restoredScannedRecipes = run {
         ScannedChainVoice.entries.mapNotNull { v ->
             settings[scannedRecipeSettingsKey(v)]?.let { stored ->
@@ -5029,13 +5152,26 @@ internal sealed interface HeldSpec {
             OverlapPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Trefoil(private val spec: TrefoilPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = TrefoilPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val releaseFraction get() = TrefoilPadMaker.RELEASE.fraction(spec.releaseSeconds)
+        override val knobLabel get() = "RELEASE ${TrefoilPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "ORDERED ENERGY EXCHANGE WHILE HELD. LIFT A KEY TO RELEASE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TrefoilPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = TrefoilPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            TrefoilPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Ohm(private val spec: OhmPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OhmPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val releaseFraction get() = OhmPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() =
-            "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
+        override val instrumentNote get() = if (spec.patch.model == 5)
+            "FINITE NOTES; RELEASE STOPS RINGING."
+        else "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OhmPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OhmPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5449,6 +5585,33 @@ internal fun AccordPerformanceControls(
         }
     }
     TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
+}
+
+/** Keep the saved phrase and velocity intact while the player chooses the pulse gesture. */
+@Composable
+private fun RelayPerformanceControls(
+    patch: RelayPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: ((RelayPatch) -> RelayPatch) -> Unit,
+) {
+    MacroSlider("VELOCITY", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    TapeText("PULSE BEHAVIOR", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((model, title) in listOf(
+            RelayPatch.LEGACY_MODEL_VERSION to "ORIGINAL ACCENTS",
+            RelayPatch.MODEL_VERSION to "REPEATING PULSE",
+        )) {
+            ActionButton(
+                title, scheme, enabled = true, lit = patch.model == model,
+                modifier = Modifier.weight(1f).semantics { selected = patch.model == model },
+                accessibilityLabel = "RELAY $title",
+            ) {
+                if (patch.model != model) onEdit { it.copy(model = model) }
+            }
+        }
+    }
 }
 
 /** Performance and playback controls live outside the already large bench composable. */
@@ -5975,7 +6138,7 @@ private enum class Engine {
         CREASE -> Crease.render(voice as CreaseVoice, macros)
         CAUSTIC -> CausticInstrument.render(voice as CausticVoice, macros)
         LATTICE -> Lattice.render(voice as LatticeVoice, macros)
-        RELAY -> Relay.render(voice as RelayVoice, macros)
+        RELAY -> RelayPatch("Preview", voice as RelayVoice, macros).render()
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         APSIS -> Apsis.render(voice as ApsisVoice, macros)
@@ -6041,7 +6204,7 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         TRIO -> DrumClass.TONAL
-        TREFOIL -> DrumClass.TONAL
+        TREFOIL -> if ((macros["HOLD"] ?: 0f) == 1f) DrumClass.LOOP else DrumClass.TONAL
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)

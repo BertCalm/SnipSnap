@@ -9,6 +9,8 @@ import com.snipsnap.json.JsonValue
  * gesture; model 2 adds fixed-alignment sustain at HOLD's top step. Missing model
  * metadata means model 1, so old recipes retain their samples and finite ending.
  * A macro edit keeps the saved note, velocity, model and material-noise identity.
+ * CLACK, CHIME and RASP require explicit model 3 when decoded; an omitted model
+ * still means the historical SWEEP model 1, never an implicit migration.
  */
 data class MeridianPatch(
     override val name: String,
@@ -16,7 +18,7 @@ data class MeridianPatch(
     override val macros: Map<String, Float>,
     val midi: Int = Meridian.DEFAULT_MIDI,
     val velocity: Float = 1f,
-    val model: Int = Meridian.MODEL_VERSION,
+    val model: Int = Meridian.defaultModelFor(voice),
     val seedContext: Int = 0,
 ) : Patch {
     init {
@@ -27,7 +29,7 @@ data class MeridianPatch(
         require(velocity.isFinite() && velocity in 0f..1f) {
             "MERIDIAN velocity out of 0..1: $velocity"
         }
-        require(model in LEGACY_MODEL..Meridian.MODEL_VERSION) { "unsupported meridian model $model" }
+        require(Meridian.supportsVoice(voice, model)) { "unsupported meridian model $model for ${voice.name}" }
     }
 
     override val engine get() = ENGINE
@@ -53,7 +55,7 @@ data class MeridianPatch(
             Patches.decode(value, ENGINE, { n -> MeridianVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 val obj = value.obj()
                 val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: LEGACY_MODEL
-                if (model !in LEGACY_MODEL..Meridian.MODEL_VERSION) throw JsonException("unsupported meridian model $model")
+                if (!Meridian.supportsVoice(voice, model)) throw JsonException("unsupported meridian model $model for ${voice.name}")
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Meridian.DEFAULT_MIDI
                 if (midi !in Meridian.MIDI_MIN..Meridian.MIDI_MAX) {
                     throw JsonException("MERIDIAN midi out of ${Meridian.MIDI_MIN}..${Meridian.MIDI_MAX}: $midi")

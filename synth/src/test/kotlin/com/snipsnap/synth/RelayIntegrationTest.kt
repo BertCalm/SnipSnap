@@ -198,7 +198,7 @@ class RelayIntegrationTest {
         val macros = patch.macros.toMap()
         val phrase = patch.phrase.copy()
         val soft = Velocity.atVelocity(patch, 0.25f)
-        assertContentEquals(Relay.render(patch.voice, patch.macros, velocity = 0.25f, phrase = phrase).samples, soft.samples,
+        assertContentEquals(RelayModels.render(patch.voice, patch.macros, velocity = 0.25f, phrase = phrase, model = patch.model).samples, soft.samples,
             "native velocity must reach excitation without substituting the voice's default clock")
         assertEquals(macros, patch.macros)
         assertEquals(phrase, patch.phrase)

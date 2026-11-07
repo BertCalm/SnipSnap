@@ -20,7 +20,10 @@ class MeridianUserPresetsTest {
 
     @Test
     fun `factory and custom Meridian promotion lines reconstruct through the actual roster helper`() {
-        for (patch in listOf(factory, custom())) {
+        val materials = MeridianVoice.entries.filter { it != MeridianVoice.SWEEP }.map { voice ->
+            MeridianPresets.forVoice(voice).last().copy(midi = 66, velocity = .45f, seedContext = -73)
+        }
+        for (patch in listOf(factory, custom()) + materials) {
             assertEquals(patch, MeridianPatch.fromJsonText(patch.toJsonText()))
             assertEquals("MeridianPresets.kt", UserPresets.rosterFile(patch))
             val line = UserPresets.rosterLine(patch)
@@ -69,7 +72,11 @@ class MeridianUserPresetsTest {
         try {
             // Factory names are reserved; saving a player's named copy preserves
             // every performance field while giving it its own shelf identity.
-            val copies = listOf(factory.copy(name = "MY FILAMENT"), custom())
+            val materials = MeridianVoice.entries.filter { it != MeridianVoice.SWEEP }.map { voice ->
+                MeridianPresets.forVoice(voice).first().copy(name = "MY ${voice.name}", midi = 66,
+                    velocity = .45f, seedContext = -73)
+            }
+            val copies = listOf(factory.copy(name = "MY FILAMENT"), custom()) + materials
             for ((index, patch) in copies.withIndex()) UserPresets.save(root, patch, index.toLong())
             val back = UserPresets.read(root)
             assertEquals(copies.toSet(), back.map { it.patch }.toSet())

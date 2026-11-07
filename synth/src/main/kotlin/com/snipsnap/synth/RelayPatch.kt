@@ -30,12 +30,12 @@ class RelayPatch(
     init {
         Patches.validateMacros(this, Relay.macrosFor(voice))
         require(velocity.isFinite() && velocity in 0f..1f) { "RELAY velocity out of 0..1: $velocity" }
-        require(model == MODEL_VERSION) { "unsupported relay model $model" }
+        require(RelayModels.supports(model)) { "unsupported relay model $model" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Relay.render(voice, macros, velocity = velocity, phrase = phrase)
+    override fun render() = RelayModels.render(voice, macros, velocity = velocity, phrase = phrase, model = model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     fun copy(
@@ -100,14 +100,15 @@ class RelayPatch(
     companion object {
         const val ENGINE = "RELAY"
         const val VERSION = Patches.VERSION
-        const val MODEL_VERSION = 1
+        const val LEGACY_MODEL_VERSION = 1
+        const val MODEL_VERSION = 2
 
         private fun number(value: Number) = JsonValue.Num(value.toDouble())
 
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
-            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: MODEL_VERSION
-            if (model != MODEL_VERSION) throw JsonException("unsupported relay model $model")
+            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: LEGACY_MODEL_VERSION
+            if (!RelayModels.supports(model)) throw JsonException("unsupported relay model $model")
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
             val rawPhrase = obj["phrase"]?.takeUnless { it is JsonValue.Null }
             return Patches.decode(value, ENGINE, { n -> RelayVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->

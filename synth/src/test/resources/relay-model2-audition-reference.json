@@ -1,0 +1,77 @@
+{
+  "source": "Owner-reviewed revision 9 pulse-depth audition, Site source 7028cea85e968a26a66534fa2ba49e6a255bee2c; source engine d7bbe715bd55c01c64b5be7e2dec023cf48c62a0. Native mono PCM24 before audition matching. These hashes were recorded before production integration.",
+  "clips": [
+    {
+      "voice": "KEY",
+      "preset": "VELVET TURN",
+      "pulse": 0.5,
+      "rawSha256": "e10fd9b0760030d631cb7e5f5ad8dded608123104aa8a88c5bc048a6f66c6e29"
+    },
+    {
+      "voice": "KEY",
+      "preset": "VELVET TURN",
+      "pulse": 1,
+      "rawSha256": "50ee58124059f5030123e2e826420a410a695f52e2fed6ba4d6b485ec16b6e83"
+    },
+    {
+      "voice": "BASS",
+      "preset": "ROUND TRIP",
+      "pulse": 0.5,
+      "rawSha256": "83ffdeb9c214ec4d2d2c8ac115d999e1442cef1a2e4ada27475aaaddeb20d60d"
+    },
+    {
+      "voice": "BASS",
+      "preset": "ROUND TRIP",
+      "pulse": 1,
+      "rawSha256": "db336d7674a081f4b4f6c263bf20fe7b6167bcff18be0ec0747d63cde28c485b"
+    },
+    {
+      "voice": "PLUCK",
+      "preset": "COPPER THREAD",
+      "pulse": 0.5,
+      "rawSha256": "f8f74651671777cc45f2f18abf88242e8f00f431276899d4f8e894490060dc43"
+    },
+    {
+      "voice": "PLUCK",
+      "preset": "COPPER THREAD",
+      "pulse": 1,
+      "rawSha256": "d15d2304e4a0c462bfc45f070d06050f90956726e2f22830038e6247cb7205b3"
+    },
+    {
+      "voice": "ORGAN",
+      "preset": "REED CROSSING",
+      "pulse": 0.5,
+      "rawSha256": "163428c9eeaea5c0e1c660d4190da59ab7538a4390d56920f18b3c3261c72082"
+    },
+    {
+      "voice": "ORGAN",
+      "preset": "REED CROSSING",
+      "pulse": 1,
+      "rawSha256": "db040ea05e5268fac9c37ad17b6b02d0c399c919a2a717ef78edf5eb08390a75"
+    },
+    {
+      "voice": "CHIME",
+      "preset": "DUSK METAL",
+      "pulse": 0.5,
+      "rawSha256": "961bc20a0add4d2af6ecee7a0257862a5ae0dcfae81696b5b8dec5337cef2bbf"
+    },
+    {
+      "voice": "CHIME",
+      "preset": "DUSK METAL",
+      "pulse": 1,
+      "rawSha256": "200de3c2978bac8758357d50b6a7fad1c8def89cbd263003afebcb004b84a0aa"
+    },
+    {
+      "voice": "FLOW",
+      "preset": "WARM DRIFT",
+      "pulse": 0.5,
+      "rawSha256": "949cc77b4a9dc3109811de4a0c13f850194e3fdd837b5a27cfa8eea138a01bca"
+    },
+    {
+      "voice": "FLOW",
+      "preset": "WARM DRIFT",
+      "pulse": 1,
+      "rawSha256": "7faabbe5bb5915636b4ef330e962ea154d571c471ab3013f53654bdb5f9f36d8"
+    }
+  ]
+}

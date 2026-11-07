@@ -8,6 +8,7 @@ import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.MeridianPresets
+import com.snipsnap.synth.MeridianVoice
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patches
 import java.io.ByteArrayOutputStream
@@ -27,7 +28,7 @@ import kotlin.test.assertTrue
 class MeridianSynthTest {
     @Test
     fun `factory defaults and performance edits keep the accepted recipe and legacy transport`() {
-        val accepted = MeridianPresets.all().first()
+        val accepted = MeridianPresets.forVoice(MeridianVoice.SWEEP).first()
         assertEquals(8, MeridianSynth.factory().size)
         assertEquals(accepted, MeridianSynth.defaultPatch())
         assertEquals(4810, MeridianSynth.defaultPatch().seedContext)
@@ -56,10 +57,54 @@ class MeridianSynthTest {
     }
 
     @Test
+    fun `new voices retain model three native performance and held transport through shell persistence`() {
+        for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+            val factory = MeridianSynth.factory(voice)
+            assertEquals(2, factory.size, voice.name)
+            assertTrue(factory.all { it.voice == voice && it.model == 3 }, voice.name)
+            assertEquals(factory.first(), MeridianSynth.defaultPatch(voice))
+            assertEquals(factory.first().macros, MeridianSynth.defaults(voice))
+            assertFalse(MeridianSynth.isHeld(factory.first()), voice.name)
+            assertTrue(MeridianSynth.isHeld(factory.last()), voice.name)
+
+            val held = factory.last().copy(midi = 69, velocity = .35f, seedContext = -37,
+                macros = factory.last().macros + ("TUNE" to .75f))
+            val landing = MeridianSynth.padLanding(held)
+            assertEquals(held, landing.recipe.patch)
+            assertEquals(20f, landing.recipe.terminalFadeMs)
+            assertEquals(75, landing.knownRootMidi, voice.name)
+            assertEquals("3", landing.source["model"])
+            assertEquals("69", landing.source["nativeMidi"])
+            assertEquals("75", landing.source["rootMidi"])
+            assertEquals("0.35", landing.source["velocity"])
+            assertEquals("-37", landing.source["seedContext"])
+            assertEquals("FINITE_HELD_CAPTURE", landing.source["playback"])
+            assertEquals("FIXED LOOP", MeridianSynth.holdLabel(held))
+            assertTrue(MeridianPadMaker.supports(held), voice.name)
+            assertFalse(MeridianPadMaker.supports(factory.first()), voice.name)
+
+            val settings = mutableMapOf("engine" to held.engine, "voice" to voice.name)
+            SynthDrafts.write(settings, listOf(held))
+            SynthWork.replace(settings, listOf(SynthWork.Working(landing.recipe, source = null)))
+            val draft = assertIs<MeridianPatch>(SynthDrafts.read(settings).single())
+            assertEquals(held, draft, voice.name)
+            assertEquals(landing.recipe, SynthWork.read(settings).single().recipe)
+            val edited = assertIs<MeridianPatch>(Patches.edited(draft, "EDITED ${voice.name}",
+                draft.macros + ("MEMORY" to .25f)))
+            assertEquals(held.copy(name = edited.name, macros = edited.macros), edited)
+            val scrambled = MeridianSynth.scramble(edited, Random(17))
+            assertEquals(scrambled, MeridianSynth.scramble(edited, Random(17)))
+            assertEquals(edited.copy(macros = scrambled.macros), scrambled)
+            assertEquals(landing.recipe.copy(patch = edited), MeridianSynth.padLanding(edited, landing.recipe).recipe)
+        }
+    }
+
+    @Test
     fun `reopened held work keeps its complete source rack metadata and finite ending through edits`() {
-        val patch = MeridianPresets.all().last().copy(name = "MY FILAMENT", midi = 69,
+        val factory = MeridianPresets.forVoice(MeridianVoice.SWEEP).last()
+        val patch = factory.copy(name = "MY FILAMENT", midi = 69,
             velocity = .35f, seedContext = -37,
-            macros = MeridianPresets.all().last().macros + ("TUNE" to .75f))
+            macros = factory.macros + ("TUNE" to .75f))
         val original = PadRecipe(patch, FxChain(reverse = true), treatment = "KEPT REVERSE",
             amount = .42f, alias = true, terminalFadeMs = 10f)
         val landing = MeridianSynth.padLanding(patch, original)
@@ -101,8 +146,9 @@ class MeridianSynthTest {
     fun `sending a held source lands a finite tonal pad with the authored root and replayable ending`() {
         val directory = createTempDirectory("meridian-send").toFile()
         try {
-            val patch = MeridianPresets.all().last().copy(midi = 69, velocity = .65f,
-                macros = MeridianPresets.all().last().macros + ("TUNE" to .75f), seedContext = -21)
+            val factory = MeridianPresets.forVoice(MeridianVoice.SWEEP).last()
+            val patch = factory.copy(midi = 69, velocity = .65f,
+                macros = factory.macros + ("TUNE" to .75f), seedContext = -21)
             val landing = MeridianSynth.padLanding(patch)
             val model = KitBuilderModel.create("MY MERIDIAN", directory)
             val audio = landing.render()

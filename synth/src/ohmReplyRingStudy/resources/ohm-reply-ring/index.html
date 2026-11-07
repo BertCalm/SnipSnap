@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Try three reply timings and three ringing lengths for OHM's companions, with the same plucked string and shared body.">
+  <title>OHM — Reply and ring</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2387ae73'/%3E%3Cpath d='M8 16h16M16 8v16' stroke='%23252e25' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#player">Skip to the player</a>
+  <header class="site-header wrap">
+    <a class="brand" href="../">SnipSnap <span>/ OHM</span></a>
+    <button id="stop-all" class="quiet-button" type="button" disabled>Stop <kbd>Esc</kbd></button>
+  </header>
+  <main class="wrap">
+    <section class="introduction" aria-labelledby="page-title">
+      <p class="eyebrow">A SMALL LISTENING STUDY</p>
+      <h1 id="page-title">Reply and ring.</h1>
+      <p class="premise">Keep the plucked string and shared body. Change when the companions answer, then how long they ring.</p>
+      <p>Choose a version to play it. Let each example reach its ending, especially when comparing Ring.</p>
+      <a class="back-link" href="../">← Back to the original sounds</a>
+    </section>
+
+    <p id="library-status" class="library-status" role="status">Opening the recordings…</p>
+    <div id="library-error" class="audio-error" role="alert" hidden><p id="library-error-message">The recordings could not load.</p><button id="retry-library" type="button" class="secondary-button">Try again</button></div>
+
+    <section class="listening-panel" id="player" aria-labelledby="sound-title" hidden>
+      <div class="steps" id="comparisons" role="tablist" aria-label="Choose what to change"></div>
+      <div class="player-body" id="player-body" role="tabpanel" tabindex="0">
+        <p id="current-kind" class="eyebrow"></p>
+        <h2 id="sound-title"></h2>
+        <p id="sound-description"></p>
+        <div id="variants" class="variant-buttons" role="group" aria-label="Choose a version to play"></div>
+        <p id="selected-sound" class="selected-sound"></p>
+        <div class="transport" aria-label="Playback controls">
+          <button id="play-pause" type="button" class="play-button"><span id="play-icon" aria-hidden="true">▶︎</span> <span id="play-label">Play</span></button>
+          <button id="replay" type="button" class="secondary-button">Replay from start</button>
+        </div>
+        <div class="progress-row">
+          <span id="elapsed" aria-hidden="true">0:00</span>
+          <label class="sr-only" for="progress">Playback position</label>
+          <input id="progress" type="range" min="0" max="1" value="0" step="0.01" disabled aria-valuetext="0 seconds">
+          <span id="duration" aria-hidden="true">0:00</span>
+        </div>
+        <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
+        <div id="audio-error" class="audio-error" role="alert" hidden><p id="error-message">This recording could not load.</p><button id="retry" type="button" class="secondary-button">Try again</button></div>
+        <div class="recording-links"><a id="audio-download" download>Download this WAV ↓</a><a id="recipe-download" download>Study recipe ↓</a></div>
+        <div id="step-navigation" class="step-navigation">
+          <button id="previous" type="button" class="quiet-button" disabled>← Previous</button>
+          <button id="next" type="button" class="quiet-button">Next: ring →</button>
+        </div>
+        <button id="return-comparison" type="button" class="quiet-button return-button" hidden>← Return to Reply and Ring</button>
+      </div>
+      <p class="comparison-note">The same note, pluck, playing strength, and shared-body settings stay fixed. Natural and Medium use the same recording. Changing tabs pauses playback.</p>
+      <audio id="audio" preload="metadata"></audio>
+    </section>
+
+    <div id="extra-content" hidden>
+      <details class="depth-references">
+        <summary>Hear the original depth references</summary>
+        <div class="details-body">
+          <p>These are the unchanged recordings from steps 2 and 3 of the original guide.</p>
+          <div id="references" class="reference-buttons" role="group" aria-label="Play the original depth references"></div>
+          <p class="small-copy">Use them to revisit the starting direction. Compare the choices within Reply or Ring when judging this study.</p>
+        </div>
+      </details>
+      <details class="source-details">
+        <summary>Recordings, study recipes, and downloads</summary>
+        <div class="details-body">
+          <p>This is a listening prototype. The new examples are seven-second C4 notes rendered by the actual Kotlin study, with the same pluck and shared-body settings. The original depth references keep their full, unchanged recordings.</p>
+          <p>Listening files use comparable levels. Raw recordings, exact settings, and measurements are included in the downloads.</p>
+          <p>The study recipes reproduce these examples. They cannot be imported into the app yet.</p>
+          <p class="download-links"><a id="bundle-download" download>Download the study ZIP ↓</a><a href="assets/manifest.json" download>Manifest ↓</a><a href="assets/diagnostics.json" download>Measurements ↓</a><a id="raw-download" download>Current raw WAV ↓</a></p>
+        </div>
+      </details>
+    </div>
+    <noscript><p>This player needs JavaScript. The recordings and study recipes are also available in the <a href="assets/ohm-reply-ring.zip" download>study ZIP</a>.</p></noscript>
+  </main>
+  <footer class="site-footer wrap"><span>OHM / SnipSnap</span><span>Recorded examples. Press Play when you are ready.</span></footer>
+</body>
+</html>

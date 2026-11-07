@@ -92,10 +92,16 @@ class CisternPatchTest {
         val reference = patch.render()
         val spec = Velocity.brightnessSpec(patch)
         assertTrue(Velocity.canUseAtVelocity(reference, patch, fx = null))
-        assertFalse(Velocity.canUseAtVelocity(reference, patch, FxChain(reverse = true)))
+        val rack = FxChain(reverse = true)
+        val wetReference = rack.process(reference)
+        assertTrue(Velocity.canUseAtVelocity(wetReference, patch, rack))
         val native = Cistern.render(patch.voice, patch.macros, patch.midi, velocity = 0.25f)
         val layer = Velocity.layerAt(reference, patch, null, 0.25f, spec)
         assertContentEquals(Velocity.peakMatch(reference, native).samples, layer.samples)
         assertFalse(Velocity.soften(reference, 0.75f).samples.contentEquals(layer.samples))
+        val wet = Velocity.layerAt(wetReference, patch, rack, .25f, spec)
+        assertContentEquals(Velocity.peakMatch(wetReference,
+            rack.process(native.copy(samples = FloatArray(native.samples.size) { native.samples[it] * .25f }))).samples,
+            wet.samples)
     }
 }

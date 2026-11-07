@@ -2,102 +2,167 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.AtomicFile
+import com.snipsnap.kit.DestinationExists
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.KeyNote
-import com.snipsnap.synth.Keys
 import com.snipsnap.synth.Obbligato
+import com.snipsnap.synth.ObbligatoHeld
+import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoPlayback
+import com.snipsnap.synth.PadRecipe
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
+import java.util.concurrent.CancellationException
+import kotlin.math.roundToInt
 
-/**
- * OBBLIGATO, held - the air-jet and reed duet as a keys instrument.
- * [KeelPadMaker]'s shape: RELEASE alone. Each zone is the duet's own entry
- * and the first stretch of its held exchange, then that exchange as a loop
- * ([Keys.obbligatoPad]), so a short press plays the entry and a held key
- * keeps the two players trading. One velocity layer, rendered at the
- * engine's default touch.
- *
- * Zones render one at a time through [renderZone], so a caller can show
- * progress; [assemble] and [export] never render. No picker entry calls
- * this yet: the app's keys screens need an Android SDK session to wire and
- * check.
- */
+/** Complete saved duet performances, held by the sampler and released when a key lifts. */
 object ObbligatoPadMaker {
+    const val ONE_SHOT_FADE_MS = 20f
+    const val RELEASE_MIN_SECONDS = ObbligatoPatch.MIN_RELEASE_SECONDS
+    const val RELEASE_MAX_SECONDS = ObbligatoPatch.MAX_RELEASE_SECONDS
+    val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS,
+        ObbligatoPatch.DEFAULT_RELEASE_SECONDS, exponential = true)
 
-    /** The same range every held pad settled on ([KeelPadMaker], [ResinPadMaker]). */
-    const val RELEASE_MIN_SECONDS = 0.1f
-    const val RELEASE_MAX_SECONDS = 1.5f
+    fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
+    fun supports(patch: ObbligatoPatch): Boolean = ObbligatoHeld.supports(patch)
 
-    val RELEASE: Knob = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, 0.6f, exponential = true)
-
-    data class Spec(
-        val macros: Map<String, Float>,
-        val releaseSeconds: Float = RELEASE.default,
-    ) {
-        init {
-            require(releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
-                "release wants $RELEASE_MIN_SECONDS..$RELEASE_MAX_SECONDS s, got $releaseSeconds"
-            }
-        }
+    /** A finite pad copy keeps its source articulation and saves its final delivery fade. */
+    fun deliveryRecipe(patch: ObbligatoPatch): PadRecipe {
+        require(supports(patch)) { "OBBLIGATO one-shot delivery requires an expanded held patch" }
+        return PadRecipe(patch = patch, terminalFadeMs = ONE_SHOT_FADE_MS)
     }
 
-    /** The sheet's one stepper as a spec, clamped as [KeelPadMaker.spec] is. */
+    data class Spec(val patch: ObbligatoPatch, val releaseSeconds: Float = patch.releaseSeconds) {
+        init {
+            require(supports(patch)) { "OBBLIGATO instruments require an expanded held patch" }
+            require(releaseSeconds.isFinite() && releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
+                "release wants $RELEASE_MIN_SECONDS..$RELEASE_MAX_SECONDS seconds"
+            }
+        }
+        constructor(macros: Map<String, Float>, releaseSeconds: Float = RELEASE.default) : this(
+            ObbligatoPatch("OBBLIGATO HELD", macros + ("HOLD" to 1f),
+                model = Obbligato.PERFORMANCE_MODEL, playback = ObbligatoPlayback.HELD,
+                releaseSeconds = releaseSeconds), releaseSeconds,
+        )
+        val macros: Map<String, Float> get() = patch.macros
+    }
+
+    fun spec(patch: ObbligatoPatch, releaseFraction: Float): Spec = Spec(patch.copy(
+        releaseSeconds = RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS),
+    ))
     fun spec(macros: Map<String, Float>, releaseFraction: Float): Spec =
-        Spec(macros, releaseSeconds = RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS))
+        Spec(macros, RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS))
 
-    /** Five zones, every minor third across OBBLIGATO's own C4 to C5 ([Keys.obbligatoPadMidis]). */
-    @Suppress("UNUSED_PARAMETER")
-    fun zoneMidis(spec: Spec): List<Int> = Keys.obbligatoPadMidis()
+    fun zoneMidis(spec: Spec): List<Int> = ObbligatoHeld.midis(spec.patch)
 
-    /** One zone ([Keys.obbligatoPad]); [cancelled] is asked between the render and the loop search. */
-    fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote =
-        Keys.obbligatoPad(spec.macros, midi, cancelled = cancelled)
+    fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        require(midi in zoneMidis(spec)) { "OBBLIGATO zone $midi is outside this instrument's roots" }
+        stopIfUnwanted(cancelled)
+        val held = ObbligatoHeld.render(spec.patch, midi, cancelled)
+        require(held.loopEndExclusive == held.snip.frameCount) { "OBBLIGATO sustain must loop to the sample's end" }
+        stopIfUnwanted(cancelled)
+        return KeyNote(held.snip, held.loopStartFrame.toLong())
+    }
 
-    /**
-     * The zones as a keygroup program and the samples it names:
-     * [KeelPadMaker.assemble]'s layout, edge zones reaching nine semitones
-     * past the ends and inner zones tiling at ±1.
-     */
+    /** Native minor-third roots tile the supported register without extending its outer bounds. */
     fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> {
-        require(Names.isMpcSafe(name)) { "instrument name isn't MPC-safe: '$name'" }
+        require(Names.isMpcSafe(name) && name.length <= OneNote.MAX_NAME_LENGTH) {
+            "instrument name must be MPC-safe and at most ${OneNote.MAX_NAME_LENGTH} characters: '$name'"
+        }
         val midis = zoneMidis(spec)
+        val range = Obbligato.midiRange(spec.patch.model)
         require(notes.size == midis.size) { "want ${midis.size} zones, got ${notes.size}" }
-        val prefix = name.filter { !it.isWhitespace() }
-        val samples = LinkedHashMap<String, Snip>()
-        val keygroups = midis.mapIndexed { i, midi ->
-            val note = notes[i]
+        val prefix = name.filterNot { it.isWhitespace() }
+        val samples = linkedMapOf<String, Snip>()
+        val keygroups = midis.mapIndexed { index, midi ->
+            val note = notes[index]
+            require(note.snip.channels == 1 && note.snip.sampleRate == WavWriter.MPC_SAMPLE_RATE) {
+                "OBBLIGATO zone $midi must be mono 44.1 kHz"
+            }
+            require(note.loopStartFrame > 0 && note.loopStartFrame < note.snip.frameCount) {
+                "OBBLIGATO zone $midi must retain its opening before a nonempty sustain loop"
+            }
+            require(note.snip.samples.all { it.isFinite() && it in -1f..1f }) {
+                "OBBLIGATO zone $midi has invalid audio"
+            }
             val stem = Names.sanitizeStem("${prefix}_${Scales.nameOf(midi)}")
             samples[stem] = note.snip
             Keygroup(
-                lowNote = (if (i == 0) midi - 9 else midi - 1).coerceIn(0, 127),
-                highNote = (if (i == midis.lastIndex) midi + 9 else midi + 1).coerceIn(0, 127),
+                lowNote = if (index == 0) range.first else (midis[index - 1] + midi) / 2 + 1,
+                highNote = if (index == midis.lastIndex) range.last else (midi + midis[index + 1]) / 2,
                 rootNote = midi,
-                layers = listOf(
-                    VelocityLayer(
-                        stem, note.snip.frameCount.toLong(), velStart = 0, velEnd = 127,
-                        loopStartFrame = note.loopStartFrame,
-                    ),
-                ),
+                layers = listOf(VelocityLayer(stem, note.snip.frameCount.toLong(), 0, 127, note.loopStartFrame)),
             )
         }
-        return KeygroupProgram(name, keygroups, volumeRelease = spec.releaseSeconds) to samples
+        return KeygroupProgram(name, keygroups, volumeRelease = spec.releaseSeconds, explicitNoteOn = true) to samples
     }
 
-    fun export(name: String, spec: Spec, notes: List<KeyNote>, destRoot: File, overwrite: Boolean = false): KeygroupProgram {
+    fun export(name: String, spec: Spec, notes: List<KeyNote>, destRoot: File,
+        overwrite: Boolean = false): KeygroupProgram {
         val (program, samples) = assemble(name, spec, notes)
-        OneNote.writePackage(name, program, samples, destRoot, overwrite)
+        val recipe = recipeFile(destRoot, name)
+        val sidecar = InstrumentStore.sidecar(destRoot, name)
+        if (!overwrite && (recipe.exists() || sidecar.exists())) throw DestinationExists.firstOf(recipe, sidecar)
+        OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
+        AtomicFile.writeText(recipe, spec.patch.copy(releaseSeconds = spec.releaseSeconds).toJsonText())
         return program
     }
 
-    /** The middle zone's own render: the entry, then the exchange the key holds on. */
+    fun recipeFile(destRoot: File, name: String): File = File(destRoot, "$name.patch.json")
+
+    fun previewNoteOffFrame(held: ObbligatoHeld.Held): Int =
+        held.snip.frameCount + (held.loopEndExclusive - held.loopStartFrame)
+
+    fun previewReleaseFrames(spec: Spec, sampleRate: Int): Int =
+        (sampleRate * (spec.releaseSeconds + .05f)).roundToInt()
+
+    /** The actual sampler holds two complete loop passes, then renders note-off and its release. */
     fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
-        val midis = zoneMidis(spec)
-        return renderZone(spec, midis[midis.size / 2], cancelled).snip
+        val midi = spec.patch.midi
+        // Preview the exact saved reference even when it is between native export roots.
+        stopIfUnwanted(cancelled)
+        val held = ObbligatoHeld.render(spec.patch, midi, cancelled)
+        val sample = "obbligato-preview.wav"
+        val instrument = InstrumentStore.Instrument(spec.patch.name, spec.releaseSeconds,
+            listOf(InstrumentStore.Zone(midi, midi, midi, sample,
+                held.snip.frameCount.toLong(), held.loopStartFrame.toLong())), explicitNoteOn = true)
+        val rate = held.snip.sampleRate
+        val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, rate,
+            mapOf(sample to held.snip.samples)), rate)
+        val heldFrames = previewNoteOffFrame(held)
+        val releaseFrames = previewReleaseFrames(spec, rate)
+        val out = FloatArray((heldFrames + releaseFrames) * 2)
+        var frame = 0
+        fun append(count: Int) {
+            var remaining = count
+            while (remaining > 0) {
+                stopIfUnwanted(cancelled)
+                val frames = minOf(remaining, 512)
+                val block = FloatArray(frames * 2)
+                player.render(block, frames)
+                block.copyInto(out, frame * 2)
+                frame += frames
+                remaining -= frames
+            }
+        }
+        check(player.noteOn(midi)) { "OBBLIGATO preview has no zone for its saved reference" }
+        append(heldFrames)
+        player.noteOff(midi)
+        append(releaseFrames)
+        stopIfUnwanted(cancelled)
+        return Snip(out, channels = 2, sampleRate = rate)
     }
 
-    /** The engine's own note range, for a caller that labels the keys. */
-    val NOTE_RANGE: IntRange = Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
+    val NOTE_RANGE: IntRange get() = Obbligato.midiRange(Obbligato.PERFORMANCE_MODEL)
+
+    private fun stopIfUnwanted(cancelled: () -> Boolean) {
+        if (cancelled() || Thread.currentThread().isInterrupted)
+            throw CancellationException("OBBLIGATO instrument no longer wanted")
+    }
 }

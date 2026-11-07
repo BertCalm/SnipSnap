@@ -40,7 +40,8 @@ object MeridianPadMaker {
         }
     }
 
-    fun supports(patch: MeridianPatch): Boolean = patch.model == 2 && MeridianSynth.isHeld(patch)
+    fun supports(patch: MeridianPatch): Boolean =
+        Meridian.supportsVoice(patch.voice, patch.model) && patch.model >= 2 && MeridianSynth.isHeld(patch)
     fun spec(patch: MeridianPatch, releaseFraction: Float): Spec =
         Spec(patch, RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS))
     fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
@@ -62,7 +63,7 @@ object MeridianPadMaker {
 
     private fun renderNote(patch: MeridianPatch, midi: Int, velocity: Float, cancelled: () -> Boolean): KeyNote {
         checkCancelled(cancelled)
-        val held = Meridian.renderHeld(patch.voice, patch.macros, midi, velocity, patch.seedContext)
+        val held = Meridian.renderHeld(patch.voice, patch.macros, midi, velocity, patch.seedContext, patch.model)
         checkCancelled(cancelled)
         require(held.loopEndFrameExclusive == held.snip.frameCount && held.loopStartFrame >= 256)
         require(held.seamError.isFinite() && held.seamError < Keys.MAX_SEAM_ERROR)

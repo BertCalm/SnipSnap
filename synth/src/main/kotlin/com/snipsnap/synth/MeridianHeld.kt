@@ -63,7 +63,8 @@ internal object MeridianHeld {
     private data class Excitation(val input: DoubleArray, val noiseStateError: Double)
 
     fun render(voice: MeridianVoice, macros: Map<String, Float>, midi: Int,
-        velocity: Float, seedContext: Int): Result {
+        velocity: Float, seedContext: Int, model: Int): Result {
+        require(Meridian.supportsVoice(voice, model) && model >= 2)
         require(midi in Meridian.MIDI_MIN..Meridian.MIDI_MAX)
         require(velocity.isFinite() && velocity in 0f..1f)
         stopIfUnwanted()
@@ -95,7 +96,7 @@ internal object MeridianHeld {
         // Its weights and catches therefore retain the existing contact law.
         val motion = MeridianMotion.prepare(latitude, effectiveLength, reach, 3 * effectivePeriod + .10,
             initialOrientation = orientation, fixedAlignment = true).plan
-        val setups = Meridian.setups(hz, m.getValue("SURFACE").toDouble(),
+        val setups = Meridian.setupsForVoice(voice, hz, m.getValue("SURFACE").toDouble(),
             m.getValue("MEMORY"), reach, velocity.toDouble())
         val inputHashes = LongArray(Meridian.SURFACES) { HASH_START }
         val roughnessHashes = LongArray(Meridian.SURFACES) { HASH_START }
@@ -106,7 +107,7 @@ internal object MeridianHeld {
             val last = ceil(2 * effectivePeriod * MeridianMotion.CONTROL_RATE).toInt()
             if ((first..last).none { motion.weight(it, j) > 0.0 }) continue
             val setup = setups[j]
-            val seed = Dsp.seedFor("MERIDIAN", Meridian.LEGACY_MODEL_VERSION, voice.name, seedContext, j)
+            val seed = Dsp.seedFor("MERIDIAN", Meridian.LEGACY_MODEL_VERSION, Meridian.noiseIdentity(voice), seedContext, j)
             val excitation = periodicInput(motion, setup, j, seed, count, swings,
                 effectivePeriod, reach, velocity.toDouble(), roughnessHashes)
             val input = excitation.input

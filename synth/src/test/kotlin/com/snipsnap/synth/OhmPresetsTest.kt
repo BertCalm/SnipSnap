@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 class OhmPresetsTest {
     @Test
     fun `factory bank keeps the five complete published encounters in order`() {
-        val all = OhmPresets.all()
+        val all = OhmPresets.all().take(5)
         assertEquals(listOf("Solo", "Argument", "Communion", "Quiet Company", "Gather"), all.map { it.name })
         val relationships = listOf(0f to 0f, .9f to 0f, .9f to 1f, .25f to 1f, .9f to 1f)
         for ((index, patch) in all.withIndex()) {
@@ -39,13 +39,33 @@ class OhmPresetsTest {
             "f504a85ade4587362ed8db6dd0e372b677e72fedf8d9f064d6e09e7462b3ad28",
             "37c5e1aeaf61ae19f22d82680c37ef7c9a8294612fb59b8692814a5bff6583e3",
         )
-        for ((index, patch) in OhmPresets.all().withIndex()) {
+        for ((index, patch) in OhmPresets.all().take(5).withIndex()) {
             val raw = Ohm.renderRaw(patch.macros, patch.midi, patch.velocity, patch.seed, patch.gesture, patch.model)
             assertTrue(raw.samples.all { it.isFinite() })
             assertTrue(raw.samples.any { it != 0f }, "${patch.name} is silent")
             val bytes = ByteArrayOutputStream().also { WavWriter.write(it, raw, WavWriter.BitDepth.PCM_16) }.toByteArray()
             val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
             assertEquals(expected[index], hash, "${patch.name} differs from its published raw audio")
+        }
+    }
+
+    @Test
+    fun `reply ring choices append the complete approved recipes without replacing old encounters`() {
+        val approved = OhmPresets.all().drop(5)
+        assertEquals(listOf("Natural Replies", "Tight Replies", "Spaced Replies", "Short Ring", "Long Ring"),
+            approved.map { it.name })
+        assertEquals(listOf(.5f to .5f, 0f to .5f, 1f to .5f, .5f to 0f, .5f to 1f),
+            approved.map { it.reply to it.ring })
+        for (patch in approved) {
+            assertEquals(Ohm.replyRingPatch(patch.name).copy(reply = patch.reply, ring = patch.ring), patch)
+            assertEquals(5, patch.model)
+            assertEquals(mapOf("TOUCH" to .5f, "BODY" to .5f, "LENGTH" to .65f,
+                "MEDDLING" to .9f, "COMMUNE" to 1f), patch.macros)
+            assertEquals(60, patch.midi)
+            assertEquals(.8f, patch.velocity)
+            assertEquals(731, patch.seed)
+            assertEquals(OhmGesture.STEADY, patch.gesture)
+            assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
         }
     }
 

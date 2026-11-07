@@ -266,6 +266,12 @@ object Filament {
                                  cancelled: () -> Boolean = { false }): HeldNoteEvidence =
         heldNote(patch, midi, cancelled, continuationEvidence = true)
 
+    internal fun keyComponents(patch: FilamentPatch, midi: Int,
+                               cancelled: () -> Boolean): FilamentHaloKeys.Components =
+        requireNotNull(synthesize(patch.voice, patch.macros + ("HOLD" to 1f), midi, patch.velocity,
+            patch.config, Options(), patch.model, captureDiagnostics = false, cancelled = cancelled,
+            retainOnset = true, retainComponents = true).components)
+
     private fun heldNote(patch: FilamentPatch, midi: Int, cancelled: () -> Boolean,
                          continuationEvidence: Boolean): HeldNoteEvidence {
         require(FilamentKeys.supports(patch)) {
@@ -277,7 +283,8 @@ object Filament {
     }
 
     private data class RenderResult(val samples: FloatArray, val probe: Probe? = null,
-                                    val held: HeldNoteEvidence? = null)
+                                    val held: HeldNoteEvidence? = null,
+                                    val components: FilamentHaloKeys.Components? = null)
 
     internal data class TapSpec(
         val delay: Double,
@@ -588,6 +595,7 @@ object Filament {
         var escaped = 0.0; private set
         var spill = 0.0; private set
         var raw = 0.0; private set
+        val direct: Double get() = throughMix * through
 
         fun next(input: Double) {
             ring[position] = input
@@ -636,7 +644,8 @@ object Filament {
         }
     }
 
-    private class Cycle(size: Int, stems: Boolean) {
+    private class Cycle(size: Int, stems: Boolean, components: Boolean = false) {
+        val body = FloatArray(if (components) size else 0)
         val source = FloatArray(if (stems) size else 0)
         val through = FloatArray(if (stems) size else 0)
         val escaped = FloatArray(if (stems) size else 0)
@@ -648,6 +657,7 @@ object Filament {
                 escaped[i] = network.escaped.toFloat(); spill[i] = network.spill.toFloat()
             }
             raw[i] = network.raw.toFloat()
+            if (body.isNotEmpty()) body[i] = network.direct.toFloat()
         }
         fun arrays(): List<FloatArray> = listOf(source, through, escaped, spill, raw)
     }
@@ -878,6 +888,7 @@ object Filament {
         cancelled: () -> Boolean,
         retainOnset: Boolean = false,
         continuationEvidence: Boolean = false,
+        retainComponents: Boolean = false,
     ): RenderResult {
         requireActive(cancelled)
         require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported FILAMENT model $model" }
@@ -928,6 +939,7 @@ object Filament {
         var acceptedExchange: ExchangeDiagnostics? = null
         val output: List<FloatArray>
         var onsetSamples: FloatArray? = null
+        var bodySamples: FloatArray? = null
         var followingSamples = FloatArray(0)
         if (!loop) {
             val sourceSeconds = if (model == ORIGINAL_MODEL) when (voice) {
@@ -958,16 +970,18 @@ object Filament {
             val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config, highRate, cancelled)
             val recent = ArrayList<Cycle>()
             val onset = if (retainOnset) ArrayList<FloatArray>() else null
+            val bodyOnset = if (retainComponents) ArrayList<FloatArray>() else null
             var previousState: DoubleArray? = null
             val minAttempts = max(4, ceil(plan.maxDelay * highRate / highFrames).toInt() + 3)
             while (attempts < MAX_LOOP_ATTEMPTS) {
                 junction?.beginWindow("returned held cycle")
-                val capture = Cycle(highFrames, captureDiagnostics)
+                val capture = Cycle(highFrames, captureDiagnostics, retainComponents)
                 for (i in source.indices) {
                     if (i and 1023 == 0) requireActive(cancelled)
                     advance(source[i].toDouble()); capture.capture(i, network)
                 }
                 onset?.add(capture.raw)
+                bodyOnset?.add(capture.body)
                 recent += capture
                 if (recent.size > 3) recent.removeAt(0)
                 attempts++
@@ -989,7 +1003,7 @@ object Filament {
             }
             check(converged) { "FILAMENT $voice MIDI $midi HOLD did not settle after $attempts periods" }
             // A following, independently rendered cycle supplies the resampler's right guard.
-            val future = Cycle(highFrames, captureDiagnostics)
+            val future = Cycle(highFrames, captureDiagnostics, retainComponents)
             for (i in source.indices) {
                 if (i and 1023 == 0) requireActive(cancelled)
                 advance(source[i].toDouble()); future.capture(i, network)
@@ -1030,6 +1044,7 @@ object Filament {
                 // cycle supplies the FIR's right guard; the retained note ends at the accepted
                 // cycle, so its loop marker never glues different excitation gestures together.
                 onset += future.raw
+                bodyOnset?.add(future.body)
                 if (continuationEvidence) {
                     val guard = FloatArray(highFrames)
                     for (i in source.indices) {
@@ -1043,6 +1058,11 @@ object Filament {
                 requireActive(cancelled)
                 val resampledOnset = decimate(history, oversampling)
                 onsetSamples = resampledOnset.copyOf(attempts * periodFrames)
+                if (bodyOnset != null) {
+                    val historyBody = FloatArray(bodyOnset.size * highFrames)
+                    bodyOnset.forEachIndexed { index, values -> values.copyInto(historyBody, index * highFrames) }
+                    bodySamples = decimate(historyBody, oversampling).copyOf(attempts * periodFrames)
+                }
                 if (continuationEvidence) followingSamples = resampledOnset.copyOfRange(
                     attempts * periodFrames, (attempts + 1) * periodFrames)
             }
@@ -1063,7 +1083,17 @@ object Filament {
                 periodFrames, attempts, requireNotNull(stateError), requireNotNull(fullCycleError), hz)
         }
         check(samples.all { it.isFinite() }) { "FILAMENT produced a non-finite sample" }
-        if (!captureDiagnostics) return RenderResult(samples, held = held)
+        val components = bodySamples?.let { body ->
+            val mixed = requireNotNull(held).note
+            val bodyOutput = FloatArray(body.size) { (body[it] * OUTPUT_GAIN).toFloat() }
+            // One shared output gain, no stem normalization. The residual preserves the mixed
+            // capture through FIR/Float rounding; physically it is the weighted spill collector.
+            val haloOutput = FloatArray(body.size) { mixed.snip.samples[it] - bodyOutput[it] }
+            FilamentHaloKeys.Components(
+                KeyNote(Snip(bodyOutput, channels = 1, sampleRate = RATE), mixed.loopStartFrame),
+                KeyNote(Snip(haloOutput, channels = 1, sampleRate = RATE), mixed.loopStartFrame), mixed)
+        }
+        if (!captureDiagnostics) return RenderResult(samples, held = held, components = components)
         var peak = 0.0
         var square = 0.0
         var sum = 0.0

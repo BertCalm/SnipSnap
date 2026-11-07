@@ -152,6 +152,11 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
   overlap and were not de-duplicated. Held wind and bowed engines without a path (2026-11-04
   grep): ARCO, BORE, EMBOUCHURE, MURMUR, ALLOY, LACQUER, STOOP, TANGLE. A non-periodic held note
   can now loop with its attack in front through `HeldLoop` (OBBLIGATO is the first user).
+  OBBLIGATO follow-up (2026-11-07): `ObbligatoHeld` and the shared PadMaker now
+  supply thirteen native C3–C6 roots, explicit PHRASE/HELD recipes and sampler
+  note-off release through the phone and CLI. Both tested playing levels cover
+  every root; the new held articulation awaits the owner's listening verdict.
+  Design and build evidence: `docs/OBBLIGATO_PERFORMANCE.md` in SnipSnap.
 - **Velocity layers in kits**: `softVariants` is used by the kit assembler (`KitAssembler.kt`),
   by the THUMP classic starter kit (`StarterKits.kt`, two soft variants from `Velocity.variantsAt`),
   by `SkinKits.classic()`, `TerraKits.classic()` and `ChordStabs.kit()` (2026-11-04), and by

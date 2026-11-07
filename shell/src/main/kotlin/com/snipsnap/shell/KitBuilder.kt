@@ -428,18 +428,13 @@ class KitBuilderModel private constructor(
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
-        // Velocity.layerAt makes the same patch-vs-captured (and
-        // patch+fx-falls-back-too) call Robin's zone grid and StarterKits'
-        // VELOCITY starter make - resolved here, not per zone, per
-        // Velocity.atVelocity's own KDoc (the scan behind brightnessSpec
-        // is O(5×n), best paid once for the whole stack). Skipped
-        // entirely for a patch+fx pad: layerAt's fx gate discards
-        // whatever this resolves to anyway (Task 5b).
+        // Share Robin's source-then-rack velocity path. Resolve the brightness
+        // control and delivered-format probe once for this whole stack.
         val padRecipe = Breed.recipeOf(pad)
         if (padRecipe == null) Breed.warnIfCorruptRecipe(pad, slot, "ghost layers")
-        val patch = padRecipe?.patch
+        val patch = com.snipsnap.synth.Velocity.patchForLayers(padRecipe)
         val patchFx = padRecipe?.fx
-        val brightnessSpec = if (patch != null && patchFx == null) {
+        val brightnessSpec = if (patch != null) {
             com.snipsnap.synth.Velocity.brightnessSpec(patch)
         } else {
             null
