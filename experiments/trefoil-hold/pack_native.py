@@ -64,6 +64,8 @@ def main(site):
     android=Path('/workspace/scratch/trefoil-native-android-summary.json')
     evidence['android']=json.loads(android.read_text()) if android.exists() else {'tasks':[':app:assembleDebug',':app:compileDebugAndroidTestKotlin'],'exitCode':0,'deviceTestsExecuted':False,'codeRevision':'c3e7c2469a5fa51a46c9ee69ed70600d49602b2c'}
     evidence['samplerProof']=json.loads(Path('/workspace/scratch/trefoil-native-sampler-proof.json').read_text())
+    regenerated=Path('/workspace/scratch/trefoil-native-merged-audio-parity.json')
+    if regenerated.exists():evidence['regeneratedAudio']=json.loads(regenerated.read_text())
     replay_check=Path('/workspace/scratch/trefoil-native-source-replay.json')
     if replay_check.exists():evidence['sourceReplay']=json.loads(replay_check.read_text())
     for key,name in [('fullJvm','trefoil-native-full-summary.json'),('browser','trefoil-native-browser/browser-report.json')]:

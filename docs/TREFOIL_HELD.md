@@ -101,6 +101,22 @@ trial's one authored sample per root; this round does not add touch layers.
 Physical MPC validation of this held trial remains distinct from the accepted
 finite bank. Its source patch and the loop start/end frames remain in the export.
 
+## Verification scope
+
+The integration at `8e86303069570039f37a2ed546ce0b11640d274f` includes upstream
+`2f79ee6ef9587d30354c65cb51d77aac595c56cb`. Forty focused Trefoil JVM tests pass,
+including valid declared defaults for all five held voices. Android debug
+assembly and instrumentation-source compilation pass; device tests were not
+executed locally.
+
+Fresh generation from that integration reproduces 132 files byte-for-byte:
+the six native loop/note-off recordings, contact forces, raw modal output and
+recipes; the held MPC package and both sampler demonstrations; all 88 approved
+finite-bank WAVs and both finite program files. The web note-off is stored
+losslessly and restores the original WAV bytes for playback and download.
+Nine browser checks pass, including matched A/B, real repeat/key-lift markers,
+downloads, notes and a 390 px layout. All 364 earlier audition WAVs are preserved.
+
 ## Why it is built this way
 
 - Separate playback state protects saved finite sounds and their old model laws.
