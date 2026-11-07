@@ -40,6 +40,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `TREFOIL ordered held playback repeats across cache resets and JSON`() {
+        val patch=TrefoilPatch("Canary",TrefoilVoice.WEAVE,
+            TrefoilHeld.defaults(TrefoilVoice.WEAVE)+("WEAVE" to 1f),playback=TrefoilPlayback.HELD)
+        val first=patch.render().samples
+        TrefoilHeld.clearCache()
+        assertContentEquals(first,Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
     @Test fun `HYDROFORM replays both voices and the measured DOME loop`() {
         for (voice in HydroformVoice.entries) {
             val patch = HydroformPatch("Canary", voice, emptyMap(), velocity = .6f)

@@ -294,7 +294,7 @@ object Velocity {
         is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
-        is TrefoilPatch -> Trefoil.macrosFor(patch.voice)
+        is TrefoilPatch -> if(patch.playback==TrefoilPlayback.HELD)TrefoilHeld.macrosFor(patch.voice) else Trefoil.macrosFor(patch.voice)
         is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
         is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)

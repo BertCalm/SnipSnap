@@ -478,6 +478,11 @@ testkit/rime-audition/
 testkit/trefoil-audition/
 testkit/trefoil-model-two-audition/
 testkit/trefoil-playable-bank/
+testkit/trefoil-held-proof/
+testkit/trefoil-held-native/
+testkit/trefoil-held-mpc/
+experiments/trefoil-hold/__pycache__/
+.venv-trefoil-hold/
 
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/

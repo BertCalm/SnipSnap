@@ -471,3 +471,13 @@ tasks.register<JavaExec>("generateFilamentHaloAudition") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("filamentHaloOutput").orElse("${rootDir}/testkit/filament-halo-release").get())
 }
+
+tasks.register<JavaExec>("generateTrefoilHeldMpc") {
+    group = "distribution"
+    description = "Export the native three-root Trefoil HOLD sampler trial and render its note-off demonstration."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TrefoilHeldMpcGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
+}
