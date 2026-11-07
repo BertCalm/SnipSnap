@@ -1806,6 +1806,20 @@ tasks.register<JavaExec>("generateArcoRetune") {
     args("${rootDir}/testkit/arco-retune")
 }
 
+/**
+ * Draw SARANGI's GRIP window (R2): the bare bow's lock times at a grid of pressures and corners at every semitone from D3 to D5, each candidate law along
+ * GRIP, and GRIP's pitch travel. Prints the tables and, given `-ParcoSarangiMap=<file>`, writes them there. See ArcoSarangiWindowMap.
+ */
+tasks.register<JavaExec>("mapArcoSarangiWindow") {
+    group = "verification"
+    description = "Draw SARANGI's GRIP window map on the bare bow, D3 to D5."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoSarangiWindowMap")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    providers.gradleProperty("arcoSarangiMap").orNull?.let { args(it) }
+}
+
 /** Render the ARCO R1d BODY listening clips, manifest and page under testkit/arco-body/ and the key beside it. See ArcoBodyGenerator. */
 tasks.register<JavaExec>("generateArcoBody") {
     group = "distribution"

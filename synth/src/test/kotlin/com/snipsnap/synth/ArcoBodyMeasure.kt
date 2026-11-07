@@ -381,7 +381,7 @@ internal object ArcoBodyMeasure {
                     "${f(capture(spectrum(top.samples, WINDOW_FROM, WINDOW_TO), c.f0), 1)} at BODY ${f(top.body.toDouble())}",
             )
         }
-        for (v in ArcoVoice.entries) for (step in cells.filter { it.voice == v }.map { it.step }.distinct()) {
+        for (v in ArcoMeasure.BODY_VOICES) for (step in cells.filter { it.voice == v }.map { it.step }.distinct()) {
             val above = cells.filter { it.voice == v && it.step == step && it.body >= reference }.sortedBy { it.body }
             if (above.size < 2) continue
             val steps = above.zipWithNext { a, b -> b.colour.d - a.colour.d }
@@ -395,7 +395,7 @@ internal object ArcoBodyMeasure {
         for (b in bodies) {
             val row = cells.filter { it.body == b }
             if (row.isEmpty()) continue
-            val parts = ArcoVoice.entries.joinToString("  |  ") { v ->
+            val parts = ArcoMeasure.BODY_VOICES.joinToString("  |  ") { v ->
                 row.filter { it.voice == v }.joinToString(" ") { "${it.name} ${f(it.colour.d)}" }
             }
             println("ARCO   BODY ${f(b.toDouble())}: $parts  | median of ${row.size} ${f(median(row.map { it.colour.d }))}")

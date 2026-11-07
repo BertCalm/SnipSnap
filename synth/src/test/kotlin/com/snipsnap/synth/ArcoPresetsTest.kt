@@ -113,6 +113,13 @@ class ArcoPresetsTest {
         /** The frozen roster: names in order, per voice (the kit's pads and the audition page ask for these by name). */
         val celloNames = listOf("SLOW BOW", "SHORT STAB", "DEEP PEDAL", "GRIT BOW", "DRY SCRAPE", "CINEMA LOW", "HORSEHAIR", "ENDLESS DRAW")
         val erhuNames = listOf("NASAL LINE", "MOON FIDDLE", "THIN SCRAPE", "HIGH CRY", "SLOW CRY", "TEA HOUSE", "TWO STRING", "ENDLESS CRY")
+        val sarangiNames = listOf("LOW SA", "SILVER HALO", "GUT ACCENT", "HIGH LAMENT", "ENDLESS SA", "ENDLESS PA")
+
+        /** How many presets each voice ships: eight for R1's two, six for SARANGI (R2: four to eight, by the owner's brief, two of them loops). */
+        val rosterSize = mapOf(ArcoVoice.CELLO to 8, ArcoVoice.ERHU to 8, ArcoVoice.SARANGI to 6)
+
+        /** Each voice's HOLD 1 presets, in roster order. */
+        val loopNames = mapOf(ArcoVoice.CELLO to listOf("ENDLESS DRAW"), ArcoVoice.ERHU to listOf("ENDLESS CRY"), ArcoVoice.SARANGI to listOf("ENDLESS SA", "ENDLESS PA"))
 
         /** The note each preset's comment in [ArcoPresets] names (TUNE is k over 24 for CELLO, k over 19 for ERHU, snapped to a semitone). */
         val notes = mapOf(
@@ -120,6 +127,7 @@ class ArcoPresetsTest {
             "DRY SCRAPE" to "E2", "CINEMA LOW" to "A#2", "HORSEHAIR" to "C4", "ENDLESS DRAW" to "G2",
             "NASAL LINE" to "C#5", "MOON FIDDLE" to "G4", "THIN SCRAPE" to "A#4", "HIGH CRY" to "G5",
             "SLOW CRY" to "B4", "TEA HOUSE" to "E4", "TWO STRING" to "A4", "ENDLESS CRY" to "E5",
+            "LOW SA" to "D3", "SILVER HALO" to "A3", "GUT ACCENT" to "G3", "HIGH LAMENT" to "C5", "ENDLESS SA" to "D4", "ENDLESS PA" to "A3",
         )
     }
 
@@ -344,7 +352,7 @@ class ArcoPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in ArcoVoice.entries) {
             val names = ArcoPresets.forVoice(voice).map { it.name }
-            assertEquals(8, names.size, "$voice should ship 8 presets, has ${names.size}")
+            assertEquals(rosterSize.getValue(voice), names.size, "$voice should ship ${rosterSize.getValue(voice)} presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")
@@ -357,6 +365,7 @@ class ArcoPresetsTest {
     fun `the roster carries the frozen names, in order`() {
         assertEquals(celloNames, ArcoPresets.forVoice(ArcoVoice.CELLO).map { it.name })
         assertEquals(erhuNames, ArcoPresets.forVoice(ArcoVoice.ERHU).map { it.name })
+        assertEquals(sarangiNames, ArcoPresets.forVoice(ArcoVoice.SARANGI).map { it.name })
     }
 
     @Test
@@ -440,7 +449,7 @@ class ArcoPresetsTest {
     fun `the roster's HOLD 1 presets are loops and the rest are not`() {
         for (voice in ArcoVoice.entries) {
             val loops = readings.filter { it.voice == voice && it.loop }.map { it.preset.name }
-            assertEquals(listOf(if (voice == ArcoVoice.CELLO) "ENDLESS DRAW" else "ENDLESS CRY"), loops, "$voice's loops")
+            assertEquals(loopNames.getValue(voice), loops, "$voice's loops")
         }
         for (r in readings) {
             assertEquals(r.loop, Arco.isLoop(r.preset.macros.getValue("HOLD")))
@@ -570,7 +579,9 @@ class ArcoPresetsTest {
     fun `the dispatcher knows ARCO`() {
         assertEquals(ArcoPresets.forVoice(ArcoVoice.CELLO), Presets.forVoice("ARCO", "CELLO"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU), Presets.forVoice("ARCO", "ERHU"))
+        assertEquals(ArcoPresets.forVoice(ArcoVoice.SARANGI), Presets.forVoice("ARCO", "SARANGI"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU).first(), Presets.byName("ARCO", "ERHU", "NASAL LINE"))
+        assertEquals(ArcoPresets.forVoice(ArcoVoice.SARANGI).first(), Presets.byName("ARCO", "SARANGI", "LOW SA"))
         assertTrue(Presets.all().containsAll(ArcoPresets.all()))
     }
 }
