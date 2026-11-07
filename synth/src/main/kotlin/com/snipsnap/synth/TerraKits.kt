@@ -73,15 +73,16 @@ object TerraKits {
         slot("Cajon Slap", TerraVoice.BOX, DrumClass.SNARE, "TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f), // A07
         // Djembe Open Tone: 245Hz, hardness 0.50, droop 0.05, POS 0.5 ("harmonic mode resonance").
         slot("Djembe Open", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f), // A08
-        // Tabla Dayan (Tin): D4/293.6Hz, hardness 0.80, droop 0.02, POS 0.95 ("high-edge rim strike").
-        slot("Tabla Tin", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f), // A09
+        // Tabla Dayan (Tin): D4/293.6Hz, a rim strike. The DAYAN voice (TerraHands), from the owner's three listening rounds (2026-11-07):
+        // round 3's open ring "C but tighter, more forceful snap". Its macros are spelled out so the pad
+        // never moves with the voice's defaults.
+        slot("Tabla Tin", TerraVoice.DAYAN, DrumClass.PERC, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.8f, "OPEN" to 1f, "CLICK" to 0.5f), // A09
         // Tabla Dayan (Tun): same D4 fundamental as Tin, hardness 0.45, center strike ("resonant open center strike").
         slot("Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f), // A10
-        // Dumbek Tek: 440Hz, hardness 0.92, POS 0.95 ("hard fingertip on aluminum rim").
-        slot("Dumbek Tek", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 1.0f, "FORCE" to 0.92f, "POS" to 0.95f), // A11
-        // Djembe Sharp Slap: 370Hz, hardness 0.95, droop 0.20, POS 0.9, fast decay ("60ms rim slap") - DECAY 0 is this
-        // engine's own floor (80ms), the closest it comes; see Terra.DECAY_MIN_SECONDS.
-        slot("Djembe Slap", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.9167f, "FORCE" to 0.95f, "POS" to 0.9f, "DROOP" to 0.3077f, "DECAY" to 0f), // A12
+        // Dumbek Tek: a hard fingertip at the rim. The DARBUKA voice (TerraHands, 2026-11-07): round 3's B, a ceramic goblet with more ring.
+        slot("Dumbek Tek", TerraVoice.DARBUKA, DrumClass.PERC, "TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f), // A11
+        // Djembe Slap: the SLAP voice (TerraHands, 2026-11-07): round 2's A, "full body", the palm then the fingers over the bowl's air.
+        slot("Djembe Slap", TerraVoice.SLAP, DrumClass.PERC, "TUNE" to 0.53f, "DECAY" to 0.5f, "FORCE" to 0.95f, "POS" to 0.875f, "BOWL" to 0.5f, "SMACK" to 0.5f), // A12
         // Agogo Low Bell: D5/587.3Hz, hardness 0.85 ("forged iron conical modes").
         slot("Agogo Low", TerraVoice.CONICAL_BELL, DrumClass.PERC, "TUNE" to 0.2508f, "FORCE" to 0.85f), // A13
         // Agogo High Bell: A5/880Hz, hardness 0.90 ("upper bell tone, perfect 5th up").
