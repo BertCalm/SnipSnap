@@ -30,6 +30,23 @@ object NativePads {
     ): Boolean
 
     /**
+     * [noteOn] on the engine's own frame [atFrame] (the count [framesRendered] reads), not at the next callback.
+     * A target behind the count plays at the top of the next callback.
+     */
+    external fun noteOnAt(
+        handle: Long, voiceId: Int, sample: Int,
+        startFrame: Long, endFrame: Long, loopStart: Long, gainL: Float, gainR: Float, pitch: Double,
+        reverse: Boolean, atFrame: Long,
+    ): Boolean
+
+    /** [noteOnLayers] on the engine's own frame [atFrame]; the group still starts together. */
+    external fun noteOnLayersAt(
+        handle: Long, voiceIds: IntArray, samples: IntArray,
+        startFrame: Long, endFrame: Long, loopStart: Long,
+        gainsL: FloatArray, gainsR: FloatArray, pitch: Double, reverses: BooleanArray, atFrame: Long,
+    ): Boolean
+
+    /**
      * The layers of one sample, started together: window and speed are
      * shared, the id, bank sample, gains and direction are per layer.
      * False means none of them was queued.
@@ -58,6 +75,12 @@ object NativePads {
     /** The engine's whole mix times [gain] 0..1, gliding over [glideMs]. False when the ring dropped it. */
     external fun setMasterGain(handle: Long, gain: Float, glideMs: Float): Boolean
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float): Boolean
+
+    /** [stopVoice] on the engine's own frame [atFrame], so a choke lands with the scheduled note that asked for it. */
+    external fun stopVoiceAt(handle: Long, voiceId: Int, fadeMs: Float, atFrame: Long): Boolean
+
+    /** Drop every scheduled note that has not begun, reporting each ended; sounding voices ring on. False when the ring was full. */
+    external fun cancelPending(handle: Long): Boolean
     external fun allOff(handle: Long, fadeMs: Float): Boolean
     external fun drainEnded(handle: Long): IntArray
     external fun framesRendered(handle: Long): Long

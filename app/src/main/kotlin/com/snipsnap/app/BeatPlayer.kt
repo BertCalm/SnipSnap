@@ -17,6 +17,7 @@ import com.snipsnap.kit.LiveRecord
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.BeatClock
+import com.snipsnap.shell.BeatSchedule
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MidiGate
 import com.snipsnap.shell.MidiPads
@@ -142,6 +143,12 @@ class BeatPlayer(
     val triggered: SharedFlow<Int> = _triggered
 
     private val tick = Tick()
+
+    /** The engine's frame counter against the frame clock, for putting a step's time on a frame of the audio stream. */
+    private val audioClock = BeatSchedule.AudioClock()
+
+    /** How far ahead of the needle steps have been handed to the engine, so each goes once. */
+    private val cursor = BeatSchedule.Cursor()
     private var clip: Mpc3Clip? = null
     private var fromScratchSteps = LiveRecord.DEFAULT_BARS * GrooveEdit.STEPS_PER_BAR
     private var programDir: File? = null
@@ -173,6 +180,7 @@ class BeatPlayer(
     /** Where the needle stands now; RECORD resets it to the top. */
     fun seek(pos: Float) {
         position = pos
+        dropScheduled()
         noteBar()
     }
 
@@ -208,8 +216,21 @@ class BeatPlayer(
     fun stop() {
         if (!playing) return
         playing = false
+        // Steps handed to the engine ahead of their time must not start after the stop.
+        dropScheduled()
         AudioFocus.release(this)
         hosts.release(this)
+    }
+
+    /**
+     * Take back every step the engine has been given that has not begun, and forget how far ahead they went:
+     * the next window starts at the needle. Voices already sounding ring on. Called wherever the needle stops
+     * being where the windows were counting from - a stop, a seek, the loop ending for a restart.
+     */
+    private fun dropScheduled() {
+        cursor.reset()
+        val entry = kitNow() ?: return
+        hosts.peek(entry.dir)?.engine?.cancelPending()
     }
 
     /**
@@ -343,6 +364,7 @@ class BeatPlayer(
         recording = false
         countingIn = false
         stop()
+        cursor.reset()
         clip = null
         programDir = null
         position = 0f
@@ -360,29 +382,41 @@ class BeatPlayer(
      * "the pattern". The step editor's preview and RECORD's touch input call
      * this too, but a manual tap is not the automatic bar-line swap, so they
      * get the pad's plain sound.
+     *
+     * [atFrame] is the engine frame the clock's lookahead has worked out the step is due on
+     * ([PadEngine.NOW], the next callback, for everything else), and [delayNanos] how long from now
+     * that is: the voice, a choke of the voice it replaces and the MIDI note all wait for it, so a
+     * step handed over early is not heard, choked or sent early.
      */
-    fun hit(slot: Int, velocity: Float = 1f, auditionPos: Float? = null, auditionBarSteps: Int = GrooveEdit.STEPS_PER_BAR) {
+    fun hit(
+        slot: Int,
+        velocity: Float = 1f,
+        auditionPos: Float? = null,
+        auditionBarSteps: Int = GrooveEdit.STEPS_PER_BAR,
+        atFrame: Long = PadEngine.NOW,
+        delayNanos: Long = 0L,
+    ) {
         val entry = kitNow() ?: return
         val host = hosts.peek(entry.dir) ?: return
         val pad = entry.kit.pad(slot) ?: return
         if (!host.up || !host.engine.isUp()) return
         val allocator: VoiceAllocator = host.allocator
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
-        for (voice in allocation.choked + allocation.stolen) host.engine.stop(voice.id)
+        for (voice in allocation.choked + allocation.stolen) host.engine.stop(voice.id, atFrame = atFrame)
         // Resolved here, on the caller's side of `PadEngine.hit`'s own
         // monitor, so the tap's lookups happen before the swap is built and
         // never inside it: `hit`'s own KDoc is explicit that the lambda runs
         // while its monitor is held and must not call back into the engine.
         val swap = if (auditionPos != null) tap?.swapFor(slot, auditionPos, auditionBarSteps) else null
-        if (!host.engine.hit(pad, velocity, allocation.started.id, swap = swap)) {
+        if (!host.engine.hit(pad, velocity, allocation.started.id, swap = swap, atFrame = atFrame)) {
             allocator.voiceEnded(allocation.started.id)
             return
         }
-        // Out over MIDI. The frame time is not in scope here, so this stamps
-        // System.nanoTime() at the call; the clock batch will stamp the frame.
-        // No release exists, so MidiOut schedules the note-off one step later.
+        // Out over MIDI, when the sound is due: `delayNanos` is 0 for a hit that is not scheduled, which
+        // stamps System.nanoTime() at the call as it always did. No release exists, so MidiOut schedules
+        // the note-off one step later.
         val note = MidiPads.noteForSlot(slot, MidiPads.Map.MPC) ?: return
-        MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(entry.kit.tempoBpm)))
+        MidiOut.drumOnGatedAfter(note, velocity, MidiGate.stepNanos(KitPreview.playedBpm(entry.kit.tempoBpm)), delayNanos)
     }
 
     private fun noteBar() {
@@ -432,6 +466,9 @@ class BeatPlayer(
         while (!host.bankReady) withFrameNanos { }
         var lastNanos = withFrameNanos { it }
         var lastPos = position
+        // A new loop reads the stream afresh (it may be a new one) and counts its windows from the needle.
+        audioClock.reset(engine.sampleRate())
+        cursor.reset()
         anchorNanos = lastNanos
         anchorPos = lastPos
         // Fix 1's own seam bug: the count-in's click loop fires its four
@@ -497,45 +534,7 @@ class BeatPlayer(
                     // queueing, closes that gap as far as this frame can.
                     tap?.beforeNotes(tick)
 
-                    if (clip != null && clip.notes.isNotEmpty()) {
-                        // `BeatClock.crossed` is the old inline test, wrap clause
-                        // and all (`BeatClockTest` pins it).
-                        BeatClock.forEachHitCrossed(clip, lastPos, np, totalSteps) { slot, velocity ->
-                            // `BeatClock.forEachHitCrossed` maps through Mpc3Note.slotFor, not `note - 35`: the map wraps, so
-                            // notes 0..35 are pads 93..128 and subtracting alone
-                            // gives them a slot no kit has. A clip that plays on
-                            // the MPC would be silent in this roll.
-                            //
-                            // AUDITION's own seam: `np`, the playhead THIS
-                            // frame is advancing to, not the note's own
-                            // position within the clip, which the wrap clause
-                            // can offset by a full `totalSteps` - `np`
-                            // is what the position is about to become, so it's
-                            // the same "which bar is this" the screen itself
-                            // will show a moment later.
-                            // `velocity` is the note's own, stored value: the roll
-                            // used to leave it out and play every step at full.
-                            hit(slot, velocity, auditionPos = np, auditionBarSteps = barSteps)
-                            _triggered.tryEmit(slot)
-                        }
-                    }
-                    // Fix 1 - the metronome through the WHOLE take, not just the
-                    // count-in: driven from THIS clock's own beat-boundary
-                    // crossings (same `crossed` shape the note loop above just
-                    // used), never a second delay-based loop timed off
-                    // System.nanoTime() - that reintroduces the two-timebase
-                    // bug class the anchor mechanism already cost this project
-                    // a shipped defect closing once. A beat is 4 steps;
-                    // accent lands on every bar downbeat, same as the
-                    // count-in's own `beat == 0` accent. Gated on `recording`,
-                    // not `playing` - ordinary PLAY/STOP must stay silent
-                    // here; only a take actually in progress gets a click to
-                    // play against.
-                    if (recording) {
-                        BeatClock.forEachBeatCrossed(totalSteps, lastPos, np, barSteps) { accent ->
-                            engine.clickHit(accent = accent)
-                        }
-                    }
+                    dispatch(now, engine, tick, lastPos, np)
                     // The rare early-DONE case (PadEngine's own byte budget
                     // filled before the loop naturally wrapped) is checked
                     // after dispatch, not before - nothing about it is tied
@@ -555,8 +554,70 @@ class BeatPlayer(
                 }
             }
         } finally {
+            // Whatever was handed over ahead of the needle belongs to the loop that is ending: a restart
+            // resumes from `position`, behind it, and would hand the same steps over again.
+            dropScheduled()
             tap?.loopEnded()
         }
+    }
+
+    /**
+     * One frame's notes and, while RECORD is taking, its metronome, handed to the engine.
+     *
+     * The window is `(cursor, np + lookahead]`, not `(lastPos, np]`: each step is found up to
+     * [BeatSchedule.LOOKAHEAD_NANOS] before the needle reaches it, and goes to the engine with the frame
+     * of the audio stream it is due on, so the voice starts there and not at the next callback after this
+     * frame. With no usable audio clock yet, or while the tap asks for the old behaviour
+     * ([BeatTap.needsImmediate] - a BOUNCE arming or printing), the lookahead is nothing and every step is
+     * handed over as it is crossed, at the next callback, as it was before.
+     *
+     * The needle, [position] and the anchors the touch placement reads are untouched: they are still the
+     * frame's own, so RECORD places a hit against exactly the reference it always did.
+     */
+    private fun dispatch(now: Long, engine: PadEngine, t: Tick, lastPos: Float, np: Float) {
+        audioClock.observe(engine.framesRendered(), System.nanoTime())
+        val scheduling = audioClock.ready && tap?.needsImmediate() != true
+        if (!scheduling && cursor.leadOver(np) > 0.0) {
+            // Scheduling went off with steps already ahead of the needle: take them back, and walk them
+            // again as ordinary crossings. Those at or behind the needle are due now and stay.
+            engine.cancelPending()
+            cursor.rewindTo(np)
+        }
+        val from = cursor.start(lastPos)
+        val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(scheduling, t.stepsPerSecond))
+        val clip = t.clip
+        if (clip != null && clip.notes.isNotEmpty()) {
+            BeatSchedule.forEachNoteDue(clip, from, to, t.totalSteps) { n, pos ->
+                // Mpc3Note.slotFor, not `note - 35`: the map wraps, so notes 0..35 are pads 93..128 and
+                // subtracting alone gives them a slot no kit has.
+                //
+                // AUDITION's seam gets the note's own place in the loop, not the needle's: a downbeat
+                // handed over early is still bar two's, and would take bar one's swap from `np`.
+                val slot = Mpc3Note.slotFor(n.note)
+                val due = BeatSchedule.dueNanos(now, np, pos, t.stepsPerSecond)
+                if (scheduling) {
+                    hit(
+                        slot, n.velocity, auditionPos = BeatSchedule.wrapPos(pos, t.totalSteps), auditionBarSteps = t.barSteps,
+                        atFrame = audioClock.frameAt(due), delayNanos = due - now,
+                    )
+                } else {
+                    hit(slot, n.velocity, auditionPos = BeatSchedule.wrapPos(pos, t.totalSteps), auditionBarSteps = t.barSteps)
+                }
+                _triggered.tryEmit(slot)
+            }
+        }
+        // The metronome through the WHOLE take, on the same windows as the notes so a click and the step
+        // it counts are never a lookahead apart; ordinary PLAY/STOP stays silent here.
+        if (recording) {
+            BeatSchedule.forEachBeatDue(t.totalSteps, from, to, t.barSteps) { accent, pos ->
+                if (scheduling) {
+                    engine.clickHit(accent, atFrame = audioClock.frameAt(BeatSchedule.dueNanos(now, np, pos, t.stepsPerSecond)))
+                } else {
+                    engine.clickHit(accent)
+                }
+            }
+        }
+        cursor.advance(to, if (t.wrapped) t.totalSteps else 0f)
     }
 
     private companion object {
@@ -578,6 +639,13 @@ interface BeatTap {
 
     /** The loop ended - stopped, or restarted by a kit change - so whatever hung on it has no downbeat left to wait for. */
     fun loopEnded()
+
+    /**
+     * True while the beat's steps must be handed over as they are crossed rather than ahead of time: a
+     * BOUNCE armed or printing arms and stops its print on the frame's own wrap, and a downbeat already
+     * scheduled would start before that. Asked every frame.
+     */
+    fun needsImmediate(): Boolean = false
 
     /** AUDITION: a rewrite of the hit about to sound at [slot], or null to play the pad as it is. The lookups happen here, not in what is returned. */
     fun swapFor(slot: Int, pos: Float, barSteps: Int): ((PadHit.Hit) -> PadHit.Hit?)? = null

@@ -825,6 +825,90 @@ TEST(pad_engine_a_stop_due_mid_block_starts_the_fade_there) {
     CHECK_EQ(static_cast<int>(ended(e).size()), 1);
 }
 
+namespace {
+PadCommand atAbs(PadCommand c, int64_t atFrame) {
+    c.atFrame = atFrame;
+    return c;
+}
+PadCommand cancelPending() {
+    PadCommand c;
+    c.type = PadCommand::Type::CancelPending;
+    return c;
+}
+}  // namespace
+
+TEST(pad_engine_an_absolute_frame_is_measured_from_the_top_of_the_block_that_takes_it) {
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    // Pushed before the block, due 37 frames into it: the same note as frameOffset 37, however long the push waited.
+    CHECK(e.pushCommand(atAbs(noteOn(1, 0, 100, 1000), base + 37)));
+    auto out = callback(e, 128);
+    CHECK_NEAR(out[2 * 36], 0.0f, 1e-7);
+    CHECK_NEAR(out[2 * 37], 0.100f, 1e-6);
+    CHECK_NEAR(out[2 * 38], 0.101f, 1e-6);
+    // A target in a later block waits for it, counted in frames across blocks of any size.
+    PadEngine& f = seeded();
+    const int64_t fbase = f.framesRendered();
+    CHECK(f.pushCommand(atAbs(noteOn(2, 0, 100, 1000), fbase + 150)));
+    callback(f, 64);
+    callback(f, 64);
+    auto third = callback(f, 64);
+    CHECK_NEAR(third[2 * 21], 0.0f, 1e-7);
+    CHECK_NEAR(third[2 * 22], 0.100f, 1e-6);
+}
+
+TEST(pad_engine_an_absolute_frame_already_behind_the_count_plays_at_the_top_of_the_block) {
+    PadEngine& e = seeded();
+    callback(e, 256);
+    CHECK(e.pushCommand(atAbs(noteOn(1, 0, 100, 1000), 5)));
+    auto out = callback(e, 64);
+    CHECK_NEAR(out[0], 0.100f, 1e-6);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+}
+
+TEST(pad_engine_a_choke_at_an_absolute_frame_lands_with_the_note_that_asked_for_it) {
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    // Voice 1 is a hat already sounding; voice 2 chokes it, due 64 frames on. The stop waits for the note.
+    CHECK(e.pushCommand(noteOn(1, 0, 500, 1000, 0.002f, 0.002f)));
+    callback(e, 4);
+    CHECK(e.pushCommand(atAbs(stop(1, 1.0f), base + 4 + 64)));
+    auto out = callback(e, 128);
+    CHECK_NEAR(out[2 * 60], (0.504f + 60 * 0.001f) * 0.002f, 1e-6);  // untouched until the frame
+    CHECK(out[2 * 70] < out[2 * 60]);                                // falling after it
+    CHECK_EQ(static_cast<int>(ended(e).size()), 1);
+}
+
+TEST(pad_engine_cancel_pending_drops_a_note_that_has_not_begun_and_reports_it) {
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    CHECK(e.pushCommand(atAbs(noteOn(7, 0, 100, 1000), base + 400)));
+    callback(e, 64);  // taken off the ring and held, 336 frames to go
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+    CHECK(e.pushCommand(cancelPending()));
+    auto out = callback(e, 512);
+    CHECK_NEAR(peak(out), 0.0f, 1e-7);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 7);
+}
+
+TEST(pad_engine_cancel_pending_leaves_sounding_voices_and_notes_pushed_after_it) {
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    CHECK(e.pushCommand(noteOn(1, 0, 100, 1000)));
+    callback(e, 8);  // voice 1 is sounding
+    CHECK(e.pushCommand(atAbs(noteOn(2, 0, 100, 1000), base + 8 + 200)));
+    CHECK(e.pushCommand(cancelPending()));
+    CHECK(e.pushCommand(atAbs(noteOn(3, 0, 100, 1000), base + 8 + 300)));
+    auto out = callback(e, 512);
+    // Voice 1 plays on through the cancel; voice 2 never starts; voice 3, pushed after, does.
+    CHECK(out[2 * 100] > 0.0f);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 2);
+}
+
 TEST(pad_engine_stop_reports_a_note_still_waiting_for_its_frame) {
     PadEngine& e = seeded();
     e.pushCommand(at(noteOn(11, 0, 100, 1000), 10000));
