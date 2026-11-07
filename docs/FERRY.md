@@ -1,5 +1,10 @@
 # Ferry: PASSAGE, MATCH and LOSS
 
+Current handoff (2026-11-07): the owner rejected the model-4 short release as
+still abrupt. Study 07 compares the previous ending with the full physical
+decay and awaits a listening verdict. See [FERRY_HANDOFF.md](FERRY_HANDOFF.md)
+for the retained source, measurements, reproduction commands and next steps.
+
 The characteristic gesture is **strike → handoff → sympathetic bloom → return**.
 
 This is one finite, dry, mono PASSAGE voice. It ports the owner-approved Python

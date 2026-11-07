@@ -1,0 +1,1238 @@
+{
+  "source_commit": "341ac7fdbe82cba7e256b08d2e93d0958ef8710b",
+  "entries": [
+    {
+      "register": "low",
+      "midi": 36,
+      "audio_frames": 418950,
+      "silence_frames": 44100,
+      "gain": 0.999999594413579,
+      "raw_state_energy_at_end": 5.18722708968528e-11,
+      "future_raw_pickup_bound_after_gain": 1.63682638618955e-05,
+      "final_500ms_rms": 8.28472842792476e-07,
+      "peak": 0.824946403503418,
+      "render_ms_including_prefix_check": 153.289849,
+      "base_recipe": "natural-recipes/low-base.json",
+      "previous_audio": "natural-audio/low-previous.wav",
+      "full_audio": "natural-audio/low-full.wav",
+      "previous_audio_sha256": "0d9c6aace7675a5c10fa9b719c1745c7a0ef9b968d3bc71cb0f66e25dd32bb26",
+      "full_audio_sha256": "8921c871826fff492bcf5d63cda6d8aa7c6b40191efb165b18bd73018dc5fd3b",
+      "old_audible_pcm_preserved": true,
+      "final_half_second_dbfs": -121.63443446230207,
+      "note_seconds": 9.5,
+      "total_seconds": 10.5,
+      "previous_total_seconds": 2.35,
+      "first_250ms_pcm_correlation": 0.9999999999381768,
+      "envelope_100ms": [
+        {
+          "from_seconds": 0.0,
+          "rms_dbfs": -9.243191386996054
+        },
+        {
+          "from_seconds": 0.1,
+          "rms_dbfs": -10.717078139780536
+        },
+        {
+          "from_seconds": 0.2,
+          "rms_dbfs": -12.567265734162481
+        },
+        {
+          "from_seconds": 0.3,
+          "rms_dbfs": -14.139554132617349
+        },
+        {
+          "from_seconds": 0.4,
+          "rms_dbfs": -16.289693748556992
+        },
+        {
+          "from_seconds": 0.5,
+          "rms_dbfs": -18.258914513247117
+        },
+        {
+          "from_seconds": 0.6,
+          "rms_dbfs": -20.712195316240866
+        },
+        {
+          "from_seconds": 0.7,
+          "rms_dbfs": -23.153887252078434
+        },
+        {
+          "from_seconds": 0.8,
+          "rms_dbfs": -25.768395238281485
+        },
+        {
+          "from_seconds": 0.9,
+          "rms_dbfs": -28.998193228686148
+        },
+        {
+          "from_seconds": 1.0,
+          "rms_dbfs": -31.56865897505884
+        },
+        {
+          "from_seconds": 1.1,
+          "rms_dbfs": -34.36634127331978
+        },
+        {
+          "from_seconds": 1.2,
+          "rms_dbfs": -35.67031446852659
+        },
+        {
+          "from_seconds": 1.3,
+          "rms_dbfs": -36.308481977646686
+        },
+        {
+          "from_seconds": 1.4,
+          "rms_dbfs": -36.069734732404626
+        },
+        {
+          "from_seconds": 1.5,
+          "rms_dbfs": -35.92623613598219
+        },
+        {
+          "from_seconds": 1.6,
+          "rms_dbfs": -36.03131219735451
+        },
+        {
+          "from_seconds": 1.7,
+          "rms_dbfs": -36.0228209431482
+        },
+        {
+          "from_seconds": 1.8,
+          "rms_dbfs": -36.41155799224147
+        },
+        {
+          "from_seconds": 1.9,
+          "rms_dbfs": -36.702702266702914
+        },
+        {
+          "from_seconds": 2.0,
+          "rms_dbfs": -37.26480044022664
+        },
+        {
+          "from_seconds": 2.1,
+          "rms_dbfs": -37.794390090899924
+        },
+        {
+          "from_seconds": 2.2,
+          "rms_dbfs": -38.50657668856908
+        },
+        {
+          "from_seconds": 2.3,
+          "rms_dbfs": -39.30060913378183
+        },
+        {
+          "from_seconds": 2.4,
+          "rms_dbfs": -40.14719442462286
+        },
+        {
+          "from_seconds": 2.5,
+          "rms_dbfs": -41.16292656280506
+        },
+        {
+          "from_seconds": 2.6,
+          "rms_dbfs": -42.20533820789261
+        },
+        {
+          "from_seconds": 2.7,
+          "rms_dbfs": -43.342025724467426
+        },
+        {
+          "from_seconds": 2.8,
+          "rms_dbfs": -44.57449499563985
+        },
+        {
+          "from_seconds": 2.9,
+          "rms_dbfs": -45.8271130011476
+        },
+        {
+          "from_seconds": 3.0,
+          "rms_dbfs": -47.198598011284304
+        },
+        {
+          "from_seconds": 3.1,
+          "rms_dbfs": -48.58923362161597
+        },
+        {
+          "from_seconds": 3.2,
+          "rms_dbfs": -50.1086133684705
+        },
+        {
+          "from_seconds": 3.3,
+          "rms_dbfs": -51.68205090466656
+        },
+        {
+          "from_seconds": 3.4,
+          "rms_dbfs": -53.360340306230015
+        },
+        {
+          "from_seconds": 3.5,
+          "rms_dbfs": -55.212536108997
+        },
+        {
+          "from_seconds": 3.6,
+          "rms_dbfs": -57.08499213254385
+        },
+        {
+          "from_seconds": 3.7,
+          "rms_dbfs": -59.26529392611967
+        },
+        {
+          "from_seconds": 3.8,
+          "rms_dbfs": -61.47264570918742
+        },
+        {
+          "from_seconds": 3.9,
+          "rms_dbfs": -64.02875535430977
+        },
+        {
+          "from_seconds": 4.0,
+          "rms_dbfs": -66.79454813551038
+        },
+        {
+          "from_seconds": 4.1,
+          "rms_dbfs": -69.97411125871957
+        },
+        {
+          "from_seconds": 4.2,
+          "rms_dbfs": -73.67426686332142
+        },
+        {
+          "from_seconds": 4.3,
+          "rms_dbfs": -77.7754357242222
+        },
+        {
+          "from_seconds": 4.4,
+          "rms_dbfs": -81.21334928236789
+        },
+        {
+          "from_seconds": 4.5,
+          "rms_dbfs": -80.75612465016218
+        },
+        {
+          "from_seconds": 4.6,
+          "rms_dbfs": -79.0100755547314
+        },
+        {
+          "from_seconds": 4.7,
+          "rms_dbfs": -77.46538573210482
+        },
+        {
+          "from_seconds": 4.8,
+          "rms_dbfs": -76.46855592244987
+        },
+        {
+          "from_seconds": 4.9,
+          "rms_dbfs": -75.99560366406257
+        },
+        {
+          "from_seconds": 5.0,
+          "rms_dbfs": -75.6929800221371
+        },
+        {
+          "from_seconds": 5.1,
+          "rms_dbfs": -75.77182907831924
+        },
+        {
+          "from_seconds": 5.2,
+          "rms_dbfs": -75.89626787263077
+        },
+        {
+          "from_seconds": 5.3,
+          "rms_dbfs": -76.28310312506139
+        },
+        {
+          "from_seconds": 5.4,
+          "rms_dbfs": -76.67309083958637
+        },
+        {
+          "from_seconds": 5.5,
+          "rms_dbfs": -77.28579268480857
+        },
+        {
+          "from_seconds": 5.6,
+          "rms_dbfs": -77.86825966902656
+        },
+        {
+          "from_seconds": 5.7,
+          "rms_dbfs": -78.64263984405491
+        },
+        {
+          "from_seconds": 5.8,
+          "rms_dbfs": -79.43166995314587
+        },
+        {
+          "from_seconds": 5.9,
+          "rms_dbfs": -80.30236578141142
+        },
+        {
+          "from_seconds": 6.0,
+          "rms_dbfs": -81.3048725185697
+        },
+        {
+          "from_seconds": 6.1,
+          "rms_dbfs": -82.25179105234149
+        },
+        {
+          "from_seconds": 6.2,
+          "rms_dbfs": -83.40646573578408
+        },
+        {
+          "from_seconds": 6.3,
+          "rms_dbfs": -84.45351341942497
+        },
+        {
+          "from_seconds": 6.4,
+          "rms_dbfs": -85.6940299328287
+        },
+        {
+          "from_seconds": 6.5,
+          "rms_dbfs": -86.8455298520671
+        },
+        {
+          "from_seconds": 6.6,
+          "rms_dbfs": -88.1689964538201
+        },
+        {
+          "from_seconds": 6.7,
+          "rms_dbfs": -89.40133210234394
+        },
+        {
+          "from_seconds": 6.8,
+          "rms_dbfs": -90.83903595049907
+        },
+        {
+          "from_seconds": 6.9,
+          "rms_dbfs": -92.170380621005
+        },
+        {
+          "from_seconds": 7.0,
+          "rms_dbfs": -93.68290468033459
+        },
+        {
+          "from_seconds": 7.1,
+          "rms_dbfs": -95.2170170532739
+        },
+        {
+          "from_seconds": 7.2,
+          "rms_dbfs": -96.72111831850754
+        },
+        {
+          "from_seconds": 7.3,
+          "rms_dbfs": -98.51835083869246
+        },
+        {
+          "from_seconds": 7.4,
+          "rms_dbfs": -99.99985127009411
+        },
+        {
+          "from_seconds": 7.5,
+          "rms_dbfs": -101.96807370372653
+        },
+        {
+          "from_seconds": 7.6,
+          "rms_dbfs": -103.5267685357948
+        },
+        {
+          "from_seconds": 7.7,
+          "rms_dbfs": -105.50580371438855
+        },
+        {
+          "from_seconds": 7.8,
+          "rms_dbfs": -107.18941223672438
+        },
+        {
+          "from_seconds": 7.9,
+          "rms_dbfs": -109.07333480843695
+        },
+        {
+          "from_seconds": 8.0,
+          "rms_dbfs": -110.78727752802303
+        },
+        {
+          "from_seconds": 8.1,
+          "rms_dbfs": -112.40026045375527
+        },
+        {
+          "from_seconds": 8.2,
+          "rms_dbfs": -113.99427155280371
+        },
+        {
+          "from_seconds": 8.3,
+          "rms_dbfs": -115.06905057249355
+        },
+        {
+          "from_seconds": 8.4,
+          "rms_dbfs": -116.46278978288137
+        },
+        {
+          "from_seconds": 8.5,
+          "rms_dbfs": -117.03740089665484
+        },
+        {
+          "from_seconds": 8.6,
+          "rms_dbfs": -118.09438214232665
+        },
+        {
+          "from_seconds": 8.7,
+          "rms_dbfs": -118.49010576152065
+        },
+        {
+          "from_seconds": 8.8,
+          "rms_dbfs": -119.19683582350784
+        },
+        {
+          "from_seconds": 8.9,
+          "rms_dbfs": -119.85352979370406
+        },
+        {
+          "from_seconds": 9.0,
+          "rms_dbfs": -120.23645909699154
+        },
+        {
+          "from_seconds": 9.1,
+          "rms_dbfs": -121.274095431773
+        },
+        {
+          "from_seconds": 9.2,
+          "rms_dbfs": -121.452938545862
+        },
+        {
+          "from_seconds": 9.3,
+          "rms_dbfs": -122.68945871748983
+        }
+      ],
+      "final_half_second_excluding_house_fade_dbfs": -121.61438265337327
+    },
+    {
+      "register": "middle",
+      "midi": 48,
+      "audio_frames": 407925,
+      "silence_frames": 44100,
+      "gain": 1.00000030636723,
+      "raw_state_energy_at_end": 7.10739019453173e-11,
+      "future_raw_pickup_bound_after_gain": 1.91597737063986e-05,
+      "final_500ms_rms": 8.76774971516153e-07,
+      "peak": 0.6022869348526,
+      "render_ms_including_prefix_check": 136.391667,
+      "base_recipe": "natural-recipes/middle-base.json",
+      "previous_audio": "natural-audio/middle-previous.wav",
+      "full_audio": "natural-audio/middle-full.wav",
+      "previous_audio_sha256": "d30b9773f6d4cd0ad9ee6604d1942674f7836ab9c79ceae4561352c2f33bb178",
+      "full_audio_sha256": "43807d99ea9679ece9ccda136e335d171034ae05d33c7638c2cd155a0cd88e48",
+      "old_audible_pcm_preserved": true,
+      "final_half_second_dbfs": -121.14223712170981,
+      "note_seconds": 9.25,
+      "total_seconds": 10.25,
+      "previous_total_seconds": 2.35,
+      "first_250ms_pcm_correlation": 0.9999999997889399,
+      "envelope_100ms": [
+        {
+          "from_seconds": 0.0,
+          "rms_dbfs": -11.685359725036196
+        },
+        {
+          "from_seconds": 0.1,
+          "rms_dbfs": -13.561745404130654
+        },
+        {
+          "from_seconds": 0.2,
+          "rms_dbfs": -15.631431983581976
+        },
+        {
+          "from_seconds": 0.3,
+          "rms_dbfs": -18.09038754652348
+        },
+        {
+          "from_seconds": 0.4,
+          "rms_dbfs": -21.025486209305626
+        },
+        {
+          "from_seconds": 0.5,
+          "rms_dbfs": -24.47154650489084
+        },
+        {
+          "from_seconds": 0.6,
+          "rms_dbfs": -28.147138501992824
+        },
+        {
+          "from_seconds": 0.7,
+          "rms_dbfs": -30.733232406806298
+        },
+        {
+          "from_seconds": 0.8,
+          "rms_dbfs": -30.94044508919177
+        },
+        {
+          "from_seconds": 0.9,
+          "rms_dbfs": -30.19806519384805
+        },
+        {
+          "from_seconds": 1.0,
+          "rms_dbfs": -29.66959253426595
+        },
+        {
+          "from_seconds": 1.1,
+          "rms_dbfs": -29.582473793874588
+        },
+        {
+          "from_seconds": 1.2,
+          "rms_dbfs": -30.070609325734896
+        },
+        {
+          "from_seconds": 1.3,
+          "rms_dbfs": -31.025786566156903
+        },
+        {
+          "from_seconds": 1.4,
+          "rms_dbfs": -32.38127242172037
+        },
+        {
+          "from_seconds": 1.5,
+          "rms_dbfs": -34.16774801502926
+        },
+        {
+          "from_seconds": 1.6,
+          "rms_dbfs": -36.46706358776096
+        },
+        {
+          "from_seconds": 1.7,
+          "rms_dbfs": -39.44488068246012
+        },
+        {
+          "from_seconds": 1.8,
+          "rms_dbfs": -43.42961461776432
+        },
+        {
+          "from_seconds": 1.9,
+          "rms_dbfs": -48.82325430321454
+        },
+        {
+          "from_seconds": 2.0,
+          "rms_dbfs": -52.53568082595244
+        },
+        {
+          "from_seconds": 2.1,
+          "rms_dbfs": -49.55901442569568
+        },
+        {
+          "from_seconds": 2.2,
+          "rms_dbfs": -46.69955103950629
+        },
+        {
+          "from_seconds": 2.3,
+          "rms_dbfs": -45.05195916412675
+        },
+        {
+          "from_seconds": 2.4,
+          "rms_dbfs": -44.29034484961676
+        },
+        {
+          "from_seconds": 2.5,
+          "rms_dbfs": -44.14263585110576
+        },
+        {
+          "from_seconds": 2.6,
+          "rms_dbfs": -44.43073950826047
+        },
+        {
+          "from_seconds": 2.7,
+          "rms_dbfs": -45.05646976356516
+        },
+        {
+          "from_seconds": 2.8,
+          "rms_dbfs": -45.98149885413834
+        },
+        {
+          "from_seconds": 2.9,
+          "rms_dbfs": -47.215067735112875
+        },
+        {
+          "from_seconds": 3.0,
+          "rms_dbfs": -48.791004295008555
+        },
+        {
+          "from_seconds": 3.1,
+          "rms_dbfs": -50.72810471663624
+        },
+        {
+          "from_seconds": 3.2,
+          "rms_dbfs": -53.03328485911415
+        },
+        {
+          "from_seconds": 3.3,
+          "rms_dbfs": -55.78220787809723
+        },
+        {
+          "from_seconds": 3.4,
+          "rms_dbfs": -59.19429979426704
+        },
+        {
+          "from_seconds": 3.5,
+          "rms_dbfs": -63.7162229896684
+        },
+        {
+          "from_seconds": 3.6,
+          "rms_dbfs": -70.45318456431531
+        },
+        {
+          "from_seconds": 3.7,
+          "rms_dbfs": -79.13716528323548
+        },
+        {
+          "from_seconds": 3.8,
+          "rms_dbfs": -72.81377602097054
+        },
+        {
+          "from_seconds": 3.9,
+          "rms_dbfs": -69.062786435937
+        },
+        {
+          "from_seconds": 4.0,
+          "rms_dbfs": -67.38846189254568
+        },
+        {
+          "from_seconds": 4.1,
+          "rms_dbfs": -66.79433525030512
+        },
+        {
+          "from_seconds": 4.2,
+          "rms_dbfs": -66.91792172515567
+        },
+        {
+          "from_seconds": 4.3,
+          "rms_dbfs": -67.57898604714013
+        },
+        {
+          "from_seconds": 4.4,
+          "rms_dbfs": -68.67211435718754
+        },
+        {
+          "from_seconds": 4.5,
+          "rms_dbfs": -70.16462030665917
+        },
+        {
+          "from_seconds": 4.6,
+          "rms_dbfs": -72.10455223376543
+        },
+        {
+          "from_seconds": 4.7,
+          "rms_dbfs": -74.61239878889708
+        },
+        {
+          "from_seconds": 4.8,
+          "rms_dbfs": -77.88400196235281
+        },
+        {
+          "from_seconds": 4.9,
+          "rms_dbfs": -82.23822384802055
+        },
+        {
+          "from_seconds": 5.0,
+          "rms_dbfs": -87.98863710226291
+        },
+        {
+          "from_seconds": 5.1,
+          "rms_dbfs": -90.85599191655004
+        },
+        {
+          "from_seconds": 5.2,
+          "rms_dbfs": -87.17843151523624
+        },
+        {
+          "from_seconds": 5.3,
+          "rms_dbfs": -84.41177927388617
+        },
+        {
+          "from_seconds": 5.4,
+          "rms_dbfs": -82.97494249570683
+        },
+        {
+          "from_seconds": 5.5,
+          "rms_dbfs": -82.39741541525132
+        },
+        {
+          "from_seconds": 5.6,
+          "rms_dbfs": -82.36951210074595
+        },
+        {
+          "from_seconds": 5.7,
+          "rms_dbfs": -82.73609153366054
+        },
+        {
+          "from_seconds": 5.8,
+          "rms_dbfs": -83.45180209835985
+        },
+        {
+          "from_seconds": 5.9,
+          "rms_dbfs": -84.51094577647561
+        },
+        {
+          "from_seconds": 6.0,
+          "rms_dbfs": -85.90698960561271
+        },
+        {
+          "from_seconds": 6.1,
+          "rms_dbfs": -87.63375584781895
+        },
+        {
+          "from_seconds": 6.2,
+          "rms_dbfs": -89.70404466085192
+        },
+        {
+          "from_seconds": 6.3,
+          "rms_dbfs": -92.1621888290752
+        },
+        {
+          "from_seconds": 6.4,
+          "rms_dbfs": -95.09380433651053
+        },
+        {
+          "from_seconds": 6.5,
+          "rms_dbfs": -98.60874666320697
+        },
+        {
+          "from_seconds": 6.6,
+          "rms_dbfs": -102.63772255000657
+        },
+        {
+          "from_seconds": 6.7,
+          "rms_dbfs": -105.76265918145589
+        },
+        {
+          "from_seconds": 6.8,
+          "rms_dbfs": -105.63644785613357
+        },
+        {
+          "from_seconds": 6.9,
+          "rms_dbfs": -104.1788569903704
+        },
+        {
+          "from_seconds": 7.0,
+          "rms_dbfs": -103.12522556777891
+        },
+        {
+          "from_seconds": 7.1,
+          "rms_dbfs": -102.67717644295357
+        },
+        {
+          "from_seconds": 7.2,
+          "rms_dbfs": -102.78799234125947
+        },
+        {
+          "from_seconds": 7.3,
+          "rms_dbfs": -103.35658146961785
+        },
+        {
+          "from_seconds": 7.4,
+          "rms_dbfs": -104.26622950968121
+        },
+        {
+          "from_seconds": 7.5,
+          "rms_dbfs": -105.48643463180943
+        },
+        {
+          "from_seconds": 7.6,
+          "rms_dbfs": -107.08318748145672
+        },
+        {
+          "from_seconds": 7.7,
+          "rms_dbfs": -109.0949473012
+        },
+        {
+          "from_seconds": 7.8,
+          "rms_dbfs": -111.4777539217855
+        },
+        {
+          "from_seconds": 7.9,
+          "rms_dbfs": -114.20036251629114
+        },
+        {
+          "from_seconds": 8.0,
+          "rms_dbfs": -117.1455804512965
+        },
+        {
+          "from_seconds": 8.1,
+          "rms_dbfs": -119.68572776767886
+        },
+        {
+          "from_seconds": 8.2,
+          "rms_dbfs": -120.72466204147737
+        },
+        {
+          "from_seconds": 8.3,
+          "rms_dbfs": -120.37864911654631
+        },
+        {
+          "from_seconds": 8.4,
+          "rms_dbfs": -119.68761772315709
+        },
+        {
+          "from_seconds": 8.5,
+          "rms_dbfs": -119.21691137294692
+        },
+        {
+          "from_seconds": 8.6,
+          "rms_dbfs": -119.10607711791363
+        },
+        {
+          "from_seconds": 8.7,
+          "rms_dbfs": -119.33058244073187
+        },
+        {
+          "from_seconds": 8.8,
+          "rms_dbfs": -119.85712875899303
+        },
+        {
+          "from_seconds": 8.9,
+          "rms_dbfs": -120.62513885131233
+        },
+        {
+          "from_seconds": 9.0,
+          "rms_dbfs": -121.64298762746562
+        },
+        {
+          "from_seconds": 9.1,
+          "rms_dbfs": -122.93630976583175
+        }
+      ],
+      "final_half_second_excluding_house_fade_dbfs": -121.11316235166115
+    },
+    {
+      "register": "high",
+      "midi": 72,
+      "audio_frames": 407925,
+      "silence_frames": 44100,
+      "gain": 1.00000002026372,
+      "raw_state_energy_at_end": 7.10735930338255e-11,
+      "future_raw_pickup_bound_after_gain": 1.91597265872229e-05,
+      "final_500ms_rms": 6.98059640741265e-07,
+      "peak": 0.472384572029114,
+      "render_ms_including_prefix_check": 123.143108,
+      "base_recipe": "natural-recipes/high-base.json",
+      "previous_audio": "natural-audio/high-previous.wav",
+      "full_audio": "natural-audio/high-full.wav",
+      "previous_audio_sha256": "c1d5f0514c33a23e0b83ed794352f04e2751fe871d70e93d9a1720d85023c231",
+      "full_audio_sha256": "cd036d7a504a89abb6962f7d2b476844b5234be6160bc15cd5a7096b559ca42d",
+      "old_audible_pcm_preserved": true,
+      "final_half_second_dbfs": -123.1221494117687,
+      "note_seconds": 9.25,
+      "total_seconds": 10.25,
+      "previous_total_seconds": 2.35,
+      "first_250ms_pcm_correlation": 0.9999999999363687,
+      "envelope_100ms": [
+        {
+          "from_seconds": 0.0,
+          "rms_dbfs": -13.682195267542273
+        },
+        {
+          "from_seconds": 0.1,
+          "rms_dbfs": -15.483242691977072
+        },
+        {
+          "from_seconds": 0.2,
+          "rms_dbfs": -17.554652377650736
+        },
+        {
+          "from_seconds": 0.3,
+          "rms_dbfs": -20.056597973579755
+        },
+        {
+          "from_seconds": 0.4,
+          "rms_dbfs": -23.010832151443058
+        },
+        {
+          "from_seconds": 0.5,
+          "rms_dbfs": -26.45582131815555
+        },
+        {
+          "from_seconds": 0.6,
+          "rms_dbfs": -30.160481474430092
+        },
+        {
+          "from_seconds": 0.7,
+          "rms_dbfs": -32.74832434012141
+        },
+        {
+          "from_seconds": 0.8,
+          "rms_dbfs": -32.93172829508953
+        },
+        {
+          "from_seconds": 0.9,
+          "rms_dbfs": -32.122141707680555
+        },
+        {
+          "from_seconds": 1.0,
+          "rms_dbfs": -31.621110098012196
+        },
+        {
+          "from_seconds": 1.1,
+          "rms_dbfs": -31.59386131741154
+        },
+        {
+          "from_seconds": 1.2,
+          "rms_dbfs": -32.036201326998025
+        },
+        {
+          "from_seconds": 1.3,
+          "rms_dbfs": -32.964017230574925
+        },
+        {
+          "from_seconds": 1.4,
+          "rms_dbfs": -34.30463172106439
+        },
+        {
+          "from_seconds": 1.5,
+          "rms_dbfs": -36.095870028525766
+        },
+        {
+          "from_seconds": 1.6,
+          "rms_dbfs": -38.44054049173126
+        },
+        {
+          "from_seconds": 1.7,
+          "rms_dbfs": -41.439601744568776
+        },
+        {
+          "from_seconds": 1.8,
+          "rms_dbfs": -45.426253591095566
+        },
+        {
+          "from_seconds": 1.9,
+          "rms_dbfs": -50.785224527239464
+        },
+        {
+          "from_seconds": 2.0,
+          "rms_dbfs": -54.552808607988794
+        },
+        {
+          "from_seconds": 2.1,
+          "rms_dbfs": -51.475520022897506
+        },
+        {
+          "from_seconds": 2.2,
+          "rms_dbfs": -48.63740880078667
+        },
+        {
+          "from_seconds": 2.3,
+          "rms_dbfs": -47.02733903566043
+        },
+        {
+          "from_seconds": 2.4,
+          "rms_dbfs": -46.2581212390435
+        },
+        {
+          "from_seconds": 2.5,
+          "rms_dbfs": -46.10443452647729
+        },
+        {
+          "from_seconds": 2.6,
+          "rms_dbfs": -46.35553166176189
+        },
+        {
+          "from_seconds": 2.7,
+          "rms_dbfs": -46.977800651351025
+        },
+        {
+          "from_seconds": 2.8,
+          "rms_dbfs": -47.9518892501042
+        },
+        {
+          "from_seconds": 2.9,
+          "rms_dbfs": -49.19576482088729
+        },
+        {
+          "from_seconds": 3.0,
+          "rms_dbfs": -50.76172126607738
+        },
+        {
+          "from_seconds": 3.1,
+          "rms_dbfs": -52.682600451270304
+        },
+        {
+          "from_seconds": 3.2,
+          "rms_dbfs": -54.95182612825171
+        },
+        {
+          "from_seconds": 3.3,
+          "rms_dbfs": -57.72433730917732
+        },
+        {
+          "from_seconds": 3.4,
+          "rms_dbfs": -61.18042994582652
+        },
+        {
+          "from_seconds": 3.5,
+          "rms_dbfs": -65.69326070008475
+        },
+        {
+          "from_seconds": 3.6,
+          "rms_dbfs": -72.459758431447
+        },
+        {
+          "from_seconds": 3.7,
+          "rms_dbfs": -81.21700522376602
+        },
+        {
+          "from_seconds": 3.8,
+          "rms_dbfs": -74.75201637162458
+        },
+        {
+          "from_seconds": 3.9,
+          "rms_dbfs": -70.97480567722135
+        },
+        {
+          "from_seconds": 4.0,
+          "rms_dbfs": -69.35440394216216
+        },
+        {
+          "from_seconds": 4.1,
+          "rms_dbfs": -68.76231924942626
+        },
+        {
+          "from_seconds": 4.2,
+          "rms_dbfs": -68.8735917854631
+        },
+        {
+          "from_seconds": 4.3,
+          "rms_dbfs": -69.52746992439484
+        },
+        {
+          "from_seconds": 4.4,
+          "rms_dbfs": -70.59482670621153
+        },
+        {
+          "from_seconds": 4.5,
+          "rms_dbfs": -72.11310367503648
+        },
+        {
+          "from_seconds": 4.6,
+          "rms_dbfs": -74.09852732747058
+        },
+        {
+          "from_seconds": 4.7,
+          "rms_dbfs": -76.59896621058606
+        },
+        {
+          "from_seconds": 4.8,
+          "rms_dbfs": -79.83987885866907
+        },
+        {
+          "from_seconds": 4.9,
+          "rms_dbfs": -84.16136868415407
+        },
+        {
+          "from_seconds": 5.0,
+          "rms_dbfs": -89.98099592268433
+        },
+        {
+          "from_seconds": 5.1,
+          "rms_dbfs": -92.81592391631237
+        },
+        {
+          "from_seconds": 5.2,
+          "rms_dbfs": -89.07841645706395
+        },
+        {
+          "from_seconds": 5.3,
+          "rms_dbfs": -86.37028459542572
+        },
+        {
+          "from_seconds": 5.4,
+          "rms_dbfs": -84.97542817841135
+        },
+        {
+          "from_seconds": 5.5,
+          "rms_dbfs": -84.35297358018929
+        },
+        {
+          "from_seconds": 5.6,
+          "rms_dbfs": -84.28039832159213
+        },
+        {
+          "from_seconds": 5.7,
+          "rms_dbfs": -84.68393845910173
+        },
+        {
+          "from_seconds": 5.8,
+          "rms_dbfs": -85.41585891608058
+        },
+        {
+          "from_seconds": 5.9,
+          "rms_dbfs": -86.47116599407504
+        },
+        {
+          "from_seconds": 6.0,
+          "rms_dbfs": -87.8799608346614
+        },
+        {
+          "from_seconds": 6.1,
+          "rms_dbfs": -89.57718206997211
+        },
+        {
+          "from_seconds": 6.2,
+          "rms_dbfs": -91.63110141956487
+        },
+        {
+          "from_seconds": 6.3,
+          "rms_dbfs": -94.12234145046584
+        },
+        {
+          "from_seconds": 6.4,
+          "rms_dbfs": -97.07663574104485
+        },
+        {
+          "from_seconds": 6.5,
+          "rms_dbfs": -100.63071172190732
+        },
+        {
+          "from_seconds": 6.6,
+          "rms_dbfs": -104.68648658182893
+        },
+        {
+          "from_seconds": 6.7,
+          "rms_dbfs": -107.74940582851346
+        },
+        {
+          "from_seconds": 6.8,
+          "rms_dbfs": -107.52859298262501
+        },
+        {
+          "from_seconds": 6.9,
+          "rms_dbfs": -106.12248611598288
+        },
+        {
+          "from_seconds": 7.0,
+          "rms_dbfs": -105.07025778102312
+        },
+        {
+          "from_seconds": 7.1,
+          "rms_dbfs": -104.64994083166036
+        },
+        {
+          "from_seconds": 7.2,
+          "rms_dbfs": -104.78817411109405
+        },
+        {
+          "from_seconds": 7.3,
+          "rms_dbfs": -105.28600663636013
+        },
+        {
+          "from_seconds": 7.4,
+          "rms_dbfs": -106.2001132628886
+        },
+        {
+          "from_seconds": 7.5,
+          "rms_dbfs": -107.49348786842454
+        },
+        {
+          "from_seconds": 7.6,
+          "rms_dbfs": -109.06360210319262
+        },
+        {
+          "from_seconds": 7.7,
+          "rms_dbfs": -111.04190137961417
+        },
+        {
+          "from_seconds": 7.8,
+          "rms_dbfs": -113.42893856648418
+        },
+        {
+          "from_seconds": 7.9,
+          "rms_dbfs": -116.12577231168187
+        },
+        {
+          "from_seconds": 8.0,
+          "rms_dbfs": -119.11854687758664
+        },
+        {
+          "from_seconds": 8.1,
+          "rms_dbfs": -121.73126156203114
+        },
+        {
+          "from_seconds": 8.2,
+          "rms_dbfs": -122.78424830549886
+        },
+        {
+          "from_seconds": 8.3,
+          "rms_dbfs": -122.40954926270966
+        },
+        {
+          "from_seconds": 8.4,
+          "rms_dbfs": -121.63999693419781
+        },
+        {
+          "from_seconds": 8.5,
+          "rms_dbfs": -121.16855801763548
+        },
+        {
+          "from_seconds": 8.6,
+          "rms_dbfs": -121.07628666294434
+        },
+        {
+          "from_seconds": 8.7,
+          "rms_dbfs": -121.26196761622624
+        },
+        {
+          "from_seconds": 8.8,
+          "rms_dbfs": -121.80824539254503
+        },
+        {
+          "from_seconds": 8.9,
+          "rms_dbfs": -122.6485687144057
+        },
+        {
+          "from_seconds": 9.0,
+          "rms_dbfs": -123.65442031117986
+        },
+        {
+          "from_seconds": 9.1,
+          "rms_dbfs": -124.93531934891045
+        }
+      ],
+      "final_half_second_excluding_house_fade_dbfs": -123.09234032579755
+    }
+  ],
+  "title": "Ferry full-decay ending audition",
+  "study_scope": "Native Kotlin network and house output stage, extended by a standalone audition harness. No new production engine version.",
+  "heard": [
+    {
+      "date": "2026-11-06",
+      "response": "Ferry LOSS listen: Something sounds wrong. Short stops abruptly rather than fade."
+    },
+    {
+      "date": "2026-11-07",
+      "response": "Ferry LOSS revised listen: Still stops abruptly."
+    }
+  ],
+  "pending": [
+    "Owner listening to full-decay ending",
+    "Production ending design and cost across all LOSS settings"
+  ],
+  "proposed": [
+    "Stop when the passive state bounds future raw pickup amplitude below 2e-5, with a 32-second refusal cap.",
+    "Append one second of exact silence for the listening comparison."
+  ],
+  "verified": [
+    "Native raw first second is exactly the existing network trajectory.",
+    "A preserves every previous PCM sample, then adds silence.",
+    "Both files contain exact trailing silence.",
+    "B final half-second measured below -120dBFS in the server-JVM float render."
+  ],
+  "production_source_sha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Ferry.kt": "20e9ea5eb5e496c68f2972e6fd5f1f3a4c15e6f2e267f2bf266aff2ed7f753a7",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryNetwork.kt": "9688e6c34be63b5aeca17a4b3bc007b61b69b583a0eb108607e75d23989b397f",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "4879e47fc26f1ee776aac06e564ab2a35feae7694c5002f6f67c788e8e3da010"
+  },
+  "timing_scope": "Server JVM, already compiled network; includes raw render, a prefix consistency render, output conditioning and gain matching. Not phone timing or a full production-cache benchmark.",
+  "verification": {
+    "native_harness_exit_code": 0,
+    "physical_prefix_exact": true,
+    "old_audio_pcm_prefix_exact": true,
+    "independent_jvm_replay_all_six_wav_hashes": "passed",
+    "browser_new_B_full_playback": "passed",
+    "browser_previous_then_full_playback": "passed",
+    "browser_stop_note_selection_copy_mobile_archives": "passed",
+    "browser_page_errors": []
+  },
+  "harness_sha256": "edc482a7a4463f595f6f35ca5fe0198111f4bf04bb437f1cec81684ad464de4c"
+}

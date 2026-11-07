@@ -1,0 +1,16 @@
+{
+  "engine": "FERRY",
+  "version": 1,
+  "name": "Passage dry ending",
+  "voice": "PASSAGE",
+  "macros": {
+    "HANDOFF": 0.5,
+    "HOLD": 0,
+    "MATCH": 1,
+    "LOSS": 1
+  },
+  "model": 4,
+  "midi": 72,
+  "velocity": 1,
+  "seed": "7"
+}

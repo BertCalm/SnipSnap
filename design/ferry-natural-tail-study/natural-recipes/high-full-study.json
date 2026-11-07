@@ -1,0 +1,30 @@
+{
+  "base_patch": {
+    "engine": "FERRY",
+    "version": 1,
+    "name": "Passage dry ending",
+    "voice": "PASSAGE",
+    "macros": {
+      "HANDOFF": 0.5,
+      "HOLD": 0,
+      "MATCH": 1,
+      "LOSS": 1
+    },
+    "model": 4,
+    "midi": 72,
+    "velocity": 1,
+    "seed": "7"
+  },
+  "study_renderer": "FerryNaturalTailStudy.java",
+  "study_scope": "Extended network observation. The standard saved model-4 patch alone still renders the previous 1.35-second note.",
+  "render_output_frames_before_silence": 407925,
+  "release_seconds_override": 0,
+  "attack_match_frames": 11025,
+  "attack_match_gain": 1.00000002026372,
+  "trailing_silence_frames": 44100,
+  "stop_rule": {
+    "quarter_second_search": true,
+    "unconditioned_pickup_bound": 2e-05,
+    "maximum_seconds": 32
+  }
+}
