@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Candidate RIVET bank; not a factory starter until the expanded kit is heard. */
+    fun rivet(size: Float? = null) = RivetKits.build(size)
+
     /** Candidate finite CHITIN kit, with complete pad recipes. */
     fun chitin(): List<ArrangedPad?> = ChitinKits.build()
 

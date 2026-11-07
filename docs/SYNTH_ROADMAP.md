@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIVET kit trial (2026-11-07).** The user approved continuing the initial direction.
+Model 2 adds TOM/METAL and a shared-source closed/open hat pair while frozen hashes protect
+all original corner/strike PCM. `RivetKits`/`SynthKits.rivet` supply sixteen candidate roles,
+three native velocity zones and hat choking. `generateRivetKit` exports workshop/factory/
+warehouse MPC 3 programs with MPC 2 twins and grooves using actual exported samples.
+New-role listening, hardware checks, phone integration and factory promotion remain open.
+See the [expansion specification](superpowers/specs/2026-11-07-rivet-kit-expansion.md).
+
 **RIVET industrial drum prototype (2026-11-07).** A registered KICK/SNARE engine owns
 the source, metal bank, oversampled drive and parallel ROOM response. Six shared macros
 include SIZE from workshop to warehouse, with an independent close branch. Complete

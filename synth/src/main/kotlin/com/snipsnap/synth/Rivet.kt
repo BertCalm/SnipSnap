@@ -7,17 +7,17 @@ import kotlin.math.cos
 import kotlin.math.tanh
 import kotlin.random.Random
 
-enum class RivetVoice { KICK, SNARE }
+enum class RivetVoice { KICK, SNARE, TOM, METAL, HAT_CLOSED, HAT_OPEN }
 
 /**
  * Industrial drums: contact -> membrane and metal -> drive -> the building answers.
  * RIVET owns the macro mapping and reuses Modes and ROOM without changing either.
  * Modal ratios, mix weights and contact times are designed shapes, not measured materials.
  * The room is a one-way branch. A fixed close path keeps its mic move off the attack.
- * Model 1 is finite and explicitly refuses HOLD; it is a listening prototype.
+ * Model 1 kick/snare playback is retained. Model 2 adds four roles; all voices refuse HOLD.
  */
 object Rivet {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val RATE = Dsp.RATE
     private const val IR = RATE * Dsp.OVERSAMPLE
     internal const val CLOSE_WEIGHT = .60f
@@ -35,22 +35,35 @@ object Rivet {
     internal fun settled(voice: RivetVoice, macros: Map<String, Float>): Map<String, Float> =
         defaults(voice).mapValues { (key, default) -> macros[key]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: default }
 
-    internal fun requireModelVersion(@Suppress("UNUSED_PARAMETER") voice: RivetVoice, version: Int) {
-        require(version == MODEL_VERSION) { "unsupported RIVET model version: $version" }
+    internal fun requireModelVersion(voice: RivetVoice, version: Int) {
+        require(version in 1..MODEL_VERSION && (version >= 2 || voice == RivetVoice.KICK || voice == RivetVoice.SNARE)) { "unsupported RIVET model version: $version" }
     }
 
     internal fun requireFinite(macros: Map<String, Float>) {
-        require(macros.getValue("HOLD") == 0f) { "RIVET model 1 is a finite drum; HOLD is unsupported" }
+        require(macros.getValue("HOLD") == 0f) { "RIVET is a finite drum; HOLD is unsupported" }
     }
 
     fun drumClassFor(voice: RivetVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         requireFinite(settled(voice, macros))
-        return if (voice == RivetVoice.KICK) DrumClass.KICK else DrumClass.SNARE
+        return when (voice) {
+            RivetVoice.KICK -> DrumClass.KICK
+            RivetVoice.SNARE -> DrumClass.SNARE
+            RivetVoice.TOM -> DrumClass.TOM
+            RivetVoice.METAL -> DrumClass.PERC
+            RivetVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
+            RivetVoice.HAT_OPEN -> DrumClass.HAT_OPEN
+        }
     }
 
     fun frequencyFor(voice: RivetVoice, macros: Map<String, Float> = emptyMap()): Float {
         val tune = settled(voice, macros).getValue("TUNE")
-        return if (voice == RivetVoice.KICK) Dsp.expMap(tune, 42f, 78f) else Dsp.expMap(tune, 140f, 260f)
+        return when (voice) {
+            RivetVoice.KICK -> Dsp.expMap(tune, 42f, 78f)
+            RivetVoice.SNARE -> Dsp.expMap(tune, 140f, 260f)
+            RivetVoice.TOM -> Dsp.expMap(tune, 75f, 220f)
+            RivetVoice.METAL -> Dsp.expMap(tune, 180f, 620f)
+            RivetVoice.HAT_CLOSED, RivetVoice.HAT_OPEN -> Dsp.expMap(tune, 1800f, 4200f)
+        }
     }
 
     fun scramble(voice: RivetVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
@@ -79,8 +92,9 @@ object Rivet {
     }
 
     /** One primary contact. Its integral stays one as a softer strike widens it. */
-    private fun contact(frames: Int, strike: Float, effort: Float): FloatArray {
-        val seconds = Dsp.lin(strike * StrikeVelocity.cornerFactor(effort), .0035f, .00025f)
+    private fun contact(frames: Int, strike: Float, effort: Float,
+        softSeconds: Float = .0035f, hardSeconds: Float = .00025f): FloatArray {
+        val seconds = Dsp.lin(strike * StrikeVelocity.cornerFactor(effort), softSeconds, hardSeconds)
         val width = (seconds * IR).toInt().coerceAtLeast(3)
         val x = FloatArray(frames)
         var sum = 0f
@@ -121,6 +135,7 @@ object Rivet {
         val m = settled(voice, macros)
         requireFinite(m)
         val effort = StrikeVelocity.settled(velocity)
+        if (voice != RivetVoice.KICK && voice != RivetVoice.SNARE) return extended(voice, m, effort)
         val kick = voice == RivetVoice.KICK
         // Source + ROOM's maximum one second remains below the classifier's 1.5 s loop boundary.
         val seconds = if (kick) .45f else .36f
@@ -135,7 +150,7 @@ object Rivet {
         for (i in ratios.indices) ratios[i] *= 1f + metal * .12f * (i + 1)
         val plate = body(pulse, hz, ratios, floatArrayOf(.42f, .26f, .18f, .10f),
             Dsp.lin(metal, .08f, .30f), effort)
-        val noise = Dsp.Noise(Dsp.seedFor("RIVET", MODEL_VERSION, voice.name))
+        val noise = Dsp.Noise(Dsp.seedFor("RIVET", 1, voice.name))
         val lp = Dsp.OnePole(IR)
         val shaped = Dsp.OnePole(IR)
         val source = FloatArray(pulse.size)
@@ -154,6 +169,10 @@ object Rivet {
             rawPeak = maxOf(rawPeak, kotlin.math.abs(x))
             source[i] = saturateSample(x, gain)
         }
+        return finish(voice, m, source, rawPeak)
+    }
+
+    private fun finish(voice: RivetVoice, m: Map<String, Float>, source: FloatArray, rawPeak: Float): Probe {
         Tide.bandLimit(source, IR)
         val closeSamples = Dsp.decimate(source, RATE)
         dcAndFade(closeSamples)
@@ -167,6 +186,60 @@ object Rivet {
         dcAndFade(out)
         Dsp.normalize(out, .95f) // Drum peak convention; sampler velocity owns playback level.
         return Probe(Snip(out, 1, RATE), close, room, rawPeak)
+    }
+
+    /** Model 2 adds roles while the original model-1 sources retain their exact arithmetic and seed. */
+    private fun extended(voice: RivetVoice, m: Map<String, Float>, effort: Float): Probe {
+        val hat = voice == RivetVoice.HAT_CLOSED || voice == RivetVoice.HAT_OPEN
+        val seconds = when (voice) {
+            RivetVoice.TOM, RivetVoice.HAT_OPEN -> .42f
+            RivetVoice.METAL -> .40f
+            RivetVoice.HAT_CLOSED -> .14f
+            RivetVoice.KICK, RivetVoice.SNARE -> error("Original voices use the retained source")
+        }
+        val strike = m.getValue("STRIKE")
+        val metal = m.getValue("METAL")
+        val hz = frequencyFor(voice, m)
+        val frames = (seconds * IR).toInt()
+        val pulse = if (hat) contact(frames, strike, effort, .00030f, .000035f)
+            else contact(frames, strike, effort)
+        val ratios = when (voice) {
+            RivetVoice.TOM -> floatArrayOf(1f, 1.59f, 2.14f, 2.65f)
+            RivetVoice.METAL -> floatArrayOf(1f, 2.76f, 4.82f, 7.13f)
+            RivetVoice.HAT_CLOSED, RivetVoice.HAT_OPEN -> floatArrayOf(1f, 1.34f, 1.91f, 2.47f)
+            else -> error("Not an extension voice")
+        }
+        for (i in 1 until ratios.size) ratios[i] *= 1f + .08f * metal * i
+        val life = when (voice) {
+            RivetVoice.TOM -> .28f
+            RivetVoice.METAL -> Dsp.lin(metal, .12f, .32f)
+            RivetVoice.HAT_CLOSED -> Dsp.lin(metal, .035f, .065f)
+            RivetVoice.HAT_OPEN -> Dsp.lin(metal, .18f, .30f)
+            else -> error("Not an extension voice")
+        }
+        val gains = if (voice == RivetVoice.TOM) floatArrayOf(.70f, .20f, .10f, .06f)
+            else floatArrayOf(.42f, .26f, .18f, .10f)
+        val ring = body(pulse, hz, ratios, gains, life, effort)
+        val shell = body(pulse, hz, if (hat) floatArrayOf(1.13f, 1.67f, 2.31f, 3.41f) else floatArrayOf(1.37f, 3.91f, 6.27f, 9.4f),
+            floatArrayOf(.30f, .18f, .10f, .06f), if (hat) life else Dsp.lin(metal, .08f, .28f), effort)
+        // The hats share a source and grain realization; closure changes damping, not the metal identity.
+        val noise = Dsp.Noise(Dsp.seedFor("RIVET", 2, if (hat) "HATS" else voice.name))
+        val low = Dsp.OnePole(IR)
+        val high = Dsp.OnePole(IR)
+        val noiseLife = if (hat) life else if (voice == RivetVoice.TOM) .012f else .035f
+        val gain = Dsp.expMap(m.getValue("DRIVE"), 1f, 12f) * effort
+        var rawPeak = 0f
+        val source = FloatArray(frames) { i ->
+            val n = noise.next()
+            val edge = high.lp(n - low.lp(n, if (hat) hz * .8f else 1200f),
+                Dsp.lin(strike, 3500f, 14000f) * StrikeVelocity.cornerFactor(effort))
+            val grit = edge * Dsp.envAt(i.toFloat() / IR, noiseLife) * StrikeVelocity.gritFactor(effort)
+            val x = ring[i] * (if (hat) .25f else 1f) + shell[i] * metal * (if (hat) .15f else .6f) +
+                grit * (if (hat) .8f + .5f * metal else .14f * strike)
+            rawPeak = maxOf(rawPeak, kotlin.math.abs(x))
+            saturateSample(x, gain)
+        }
+        return finish(voice, m, source, rawPeak)
     }
 
     private fun dcAndFade(out: FloatArray) {

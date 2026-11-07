@@ -101,7 +101,7 @@ object RivetAuditionGenerator {
         File(root, "index.html").writeText(template.replace("{{ROWS}}", rows.toString()).replace("{{SUMMARY}}", summary))
         File(root, "manifest.json").writeText(Json.write(JsonValue.Arr(manifest)))
         File(root, "metrics.csv").writeText(metrics.toString())
-        File(root, "README.txt").writeText("RIVET model 1, Kotlin prototype. Nothing heard yet.\n$summary\nOpen index.html. Each clip's saved patch is in recipes/. Replay soft clips with Rivet.render(voice, patch.macros, patch.modelVersion, velocity); velocity is in manifest.json. Grooves contain complete event patches and one shared gain. HOLD is refused. No factory kit or Android picker yet.\n")
+        File(root, "README.txt").writeText("RIVET model ${Rivet.MODEL_VERSION}, Kotlin prototype. Original kick/snare core approved; new voices and candidates await listening.\n$summary\nOpen index.html. Each clip's saved patch is in recipes/. Replay soft clips with Rivet.render(voice, patch.macros, patch.modelVersion, velocity); velocity is in manifest.json. Grooves contain complete event patches and one shared gain. HOLD is refused. No factory kit or Android picker yet.\n")
         println("RIVET audition: ${root.absolutePath}\n$summary")
     }
 }

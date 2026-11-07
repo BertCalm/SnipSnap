@@ -21,7 +21,7 @@ class RivetTest {
             (a.getOrElse(it) { 0f } - b.getOrElse(it) { 0f }).toDouble().pow(2)
         } / maxOf(energy(a), 1e-20))
 
-    @Test fun `all 128 drum corners have finite bounded raw sources and non-looping output`() {
+    @Test fun `all drum corners have finite bounded raw sources and non-looping output`() {
         var largestRaw = 0f
         var largestMean = 0.0
         for (voice in RivetVoice.entries) for (bits in 0 until 64) {
@@ -79,7 +79,7 @@ class RivetTest {
     }
 
     @Test fun `defaults keep drum identity in every space`() {
-        for (voice in RivetVoice.entries) for (size in listOf(0f, .5f, 1f)) {
+        for (voice in listOf(RivetVoice.KICK, RivetVoice.SNARE)) for (size in listOf(0f, .5f, 1f)) {
             val m = mapOf("SIZE" to size)
             val snip = Rivet.render(voice, m)
             val expected = if (voice == RivetVoice.KICK) DrumClass.KICK else DrumClass.SNARE
@@ -134,7 +134,7 @@ class RivetTest {
                 Rivet.render(voice, mapOf("METAL" to 20f)).samples)
             val holdError = assertFailsWith<IllegalArgumentException> { Rivet.render(voice, mapOf("HOLD" to .1f)) }
             assertTrue(holdError.message.orEmpty().contains("HOLD is unsupported"))
-            val versionError = assertFailsWith<IllegalArgumentException> { Rivet.render(voice, modelVersion = 2) }
+            val versionError = assertFailsWith<IllegalArgumentException> { Rivet.render(voice, modelVersion = 99) }
             assertTrue(versionError.message.orEmpty().contains("unsupported RIVET model version"))
             for (t in listOf(0f, .5f, 1f, Float.NaN)) {
                 val m = Rivet.scramble(voice, Random(5), t)

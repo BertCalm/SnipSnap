@@ -4,7 +4,8 @@ Industrial drums whose building grows from workshop to warehouse.
 
 The characteristic gesture is **impact → metal rattle → walls answer → dark decay**.
 
-RIVET is a registered two-voice Kotlin prototype, KICK and SNARE. It owns its source,
+RIVET is a registered six-voice Kotlin candidate: KICK, SNARE, TOM, METAL, HAT_CLOSED and
+HAT_OPEN. The first kick/snare direction was approved for continuation. It owns its source,
 metallic shaping, oversampled drive and parallel room response. The shared `Modes` and
 `Room` implementations supply the DSP. Existing engines and ROOM recipes are unchanged.
 
@@ -14,7 +15,19 @@ the strike. Nonzero HOLD is explicitly unsupported; all renders are finite one-s
 
 The [engineering specification](superpowers/specs/2026-11-07-rivet-industrial-drum-engine-design.md)
 records the model, macro contracts, integration surfaces, risks, build rounds and evidence.
-All voicing constants remain hypotheses until the owner hears the first audition.
+The [model-2 kit trial](superpowers/specs/2026-11-07-rivet-kit-expansion.md) records the
+expansion, frozen model-1 compatibility checks and three portable sixteen-pad kits.
+New roles and pad colors remain listening candidates.
+
+Generate the full kit trial:
+
+```sh
+./gradlew --no-daemon :synth:generateRivetKit
+```
+
+Open `testkit/rivet-kit/index.html`. Workshop, factory and warehouse versions share the
+same sixteen source recipes, with three native strike zones per pad and hat choking.
+Each download contains native MPC 3 and MPC 2 programs. Physical loading is still pending.
 
 Generate the native listening pack:
 
@@ -29,7 +42,8 @@ every normal hit. `manifest.json` records velocity separately; use
 `Rivet.render(patch.voice, patch.macros, patch.modelVersion, velocity)` to reproduce a soft
 clip. Groove event files carry complete patches, velocities, frame positions and shared gain.
 
-Saved `RivetPatch` recipes require a full immutable macro snapshot and model version 1.
+Saved `RivetPatch` recipes require a full immutable macro snapshot and an explicit model version.
+Model 1 retains KICK/SNARE; model 2 adds four roles while reproducing those old sounds exactly.
 `Patches.fromJsonText` and `PadRecipe` replay them. `Velocity.atVelocity` strikes the native
 source again, retaining the room and macro map rather than filtering a previously rendered hit.
 
@@ -38,8 +52,8 @@ with a short decay; a several-second hang needs a later, explicit design. The pa
 branch includes ROOM's direct signal. A crushed or gated isolated room return is not part
 of this first implementation.
 
-Listening, phone performance, other drum voices, factory presets, a sixteen-pad kit, MPC
-hardware checks and the Android picker remain future rounds. No SDK is present here, and
+Listening to the new roles, phone performance, factory presets, MPC hardware checks and
+the Android picker remain future rounds. No SDK is present here, and
 no factory presets or starter kit are promoted before the listening verdict. The new engine
 is explicitly listed in the test registry's prototype exemptions.
 
@@ -48,4 +62,4 @@ is explicitly listed in the test registry's prototype exemptions.
 - The close branch anchors the rhythm as the room grows.
 - A separate metal bank changes upper resonances while the drum root stays fixed.
 - Reusing modal and room DSP keeps the first round focused on the shared instrument controls.
-- Two voices make it possible to judge the fixed close/room balance before expanding the kit.
+- The original two-voice gate established the close/room balance before the kit expansion.
