@@ -623,6 +623,8 @@ testkit/resin-audition/
 testkit/render-times/
 testkit/loop-instruments/
 testkit/loop-instruments-pack/
+# Short Pluck Keys is regenerated with :cli:generateScannedChainKeys.
+/testkit/scanned-chain-keys/
 
 # Regenerable EROSION three-zone bank and separate SCAR listening study.
 testkit/erosion-playable-bank/
