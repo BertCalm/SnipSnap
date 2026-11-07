@@ -96,6 +96,7 @@ internal fun ExpansionRow(
                 enabled = !busy || armed,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                // twin: the ⋮ at the end of this row (RowMoreDoor), which calls the same onArm
                 onLongClickLabel = "RENAME OR DELETE",
                 onLongClick = onArm,
                 onClick = { if (armed) onDisarm() else onOpen(e) },
@@ -122,6 +123,8 @@ internal fun ExpansionRow(
                 Door("RENAME", "RENAME ${e.title.uppercase()}", busy, scheme.amber.tape) { onRequestRename(e) }
                 Door("DELETE", "DELETE ${e.title.uppercase()}", busy, BinRedGlow) { onRequestDelete(e) }
             }
+        } else {
+            RowMoreDoor(label = "RENAME OR DELETE: ${e.title.uppercase()}", enabled = !busy, onClick = onArm)
         }
     }
 }

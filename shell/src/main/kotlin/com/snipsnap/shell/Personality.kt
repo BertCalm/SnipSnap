@@ -607,6 +607,22 @@ object Copy {
     /** A pick that could not be written to the kit's art.json: this export still uses it. */
     const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
 
+    // Press-and-hold twins (docs/superpowers/specs/2026-10-27-ui-clarity-design.md 7.4): every
+    // hold in the app has a visible control that does the same thing, and ConventionTest's
+    // hold-twin law keeps it that way.
+    /**
+     * The `⋮` on a kit, expansion or room row: a tap does exactly what holding the row does
+     * (arms the row's RENAME, DELETE and EXPANSION doors, or reveals FORGET). A glyph, not a sentence.
+     */
+    const val ROW_MORE = "⋮"
+    /** The YOURS preset door beside the strip: opens the same forget dialog a hold on the chip opens. */
+    const val PRESET_FORGET_DOOR = "FORGET"
+    /** ORBIT's strip, tap mode off: a tap places or lifts a hit, as it always did. */
+    const val ORBIT_TAP_PLACES = "TAP · PLACE"
+
+    /** ORBIT's strip, tap mode on: a tap moves the brush's property one rung, as holding the square does. */
+    fun orbitTapWrites(brush: String): String = "TAP · $brush"
+
     // Expansions on the phone: born from a held kit, gathered on the shelf.
     /** The armed kit row's third door. */
     const val EXPANSION_DOOR = "EXPANSION ▸"

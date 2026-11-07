@@ -989,6 +989,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    // twin: the ⋮ beside SHARE on this row (RowMoreDoor), which sets the same armed flag
                     onLongClickLabel = "REVEAL FORGET",
                     onLongClick = { armed = true },
                     onClick = { armed = false },
@@ -1034,6 +1035,9 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                 TapeText("%.1f s".format(Locale.ROOT, room.seconds), TapeType.lcdSmall, scheme.amber.tape)
             }
+        }
+        if (!armed) {
+            RowMoreDoor(label = "REVEAL FORGET: ${room.name.uppercase()}", enabled = !busy) { armed = true }
         }
     }
 }
@@ -1184,6 +1188,7 @@ private fun KitRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         // The same words as the legend under the shelf, so the sighted and the spoken app agree.
+                        // twin: the ⋮ at the end of this row (RowMoreDoor), which calls the same onArm
                         onLongClickLabel = if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE",
                         onLongClick = { onArm() },
                         onClick = { if (armed) onDisarm() else onOpen(entry) },
@@ -1254,6 +1259,14 @@ private fun KitRow(
             // wizard records the stamp; DubStamp.status decides what may
             // honestly be claimed, and never claims a card that isn't there.
             TapeText(Copy.dubChip(dubStatus), TapeType.pixelSmall, scheme.ink2.tape)
+            // The visible twin of the hold. Not while a pick is on: that shape
+            // has no hold at all (see the KDoc), so it has no door either.
+            if (!pickModeActive) {
+                RowMoreDoor(
+                    label = "${if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE"}: ${kit.name.uppercase()}",
+                    enabled = !busy,
+                ) { onArm() }
+            }
         }
     }
 }
