@@ -270,9 +270,9 @@ retained with the published audition's integration evidence.
 <!-- relay-final-validation:begin -->
 ### Integration validation
 
-The complete local JVM run finished with exit 0: 8,770 tests across
+The complete local JVM run finished with exit 0: 8,846 tests across
 all nine JVM modules, 0 failures, 0 errors and 0 skipped. The command was
-`./gradlew --no-daemon :synth:generateRelayPulseMusicalAudition test` at source revision `20f4e75f67b17a4fc2840ad469f5de3c6998f0bd`.
+`./gradlew --no-daemon :synth:generateRelayPulseMusicalAudition test` at source revision `fabf2873557ed0d665fb9cd17bd517111995abd4`.
 
 Android main Kotlin and instrumentation-test Kotlin compilation passed locally
 with the pinned SDK/NDK and Temurin 17.0.21. The four new UI tests were compiled;
