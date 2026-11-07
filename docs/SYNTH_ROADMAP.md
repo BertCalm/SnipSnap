@@ -3262,3 +3262,5 @@ record. The pre-existing saved-pad device callback failure above is not claimed
 fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
 is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
 See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
+
+Backroom update: the user-accepted More Snap recipes now feed the six-pad candidate and its velocity layers. A separate four-bar phrase adds a second-bar variation and turnaround; the accepted two-bar render is retained. Factory promotion awaits MPC checks. See `docs/BOOM_BAP.md`.

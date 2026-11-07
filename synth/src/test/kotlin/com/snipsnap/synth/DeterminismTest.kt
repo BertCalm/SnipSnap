@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class DeterminismTest {
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
-        val fx = BoomBapKits.coloration
+        val fx = BoomBapKits.colorationFor("snare")
         val ref = fx.process(p.render())
         val first = Velocity.variantsAt(ref, p, fx)
         val replay = PadRecipe.fromJsonText(PadRecipe(p, fx).toJsonText())
