@@ -221,8 +221,11 @@ class SynthScreenTest : ComposeScreenTest() {
                     shelfRoot = root,
                     onToast = { recordedToasts += it },
                     onKitUpdated = { kit ->
-                        updatedKit.set(kit)
+                        // The entry first, then the signal: a test that sees
+                        // updatedKit must find the state write already made,
+                        // so waitForPadWrite's pump always draws the new kit.
                         currentEntry = currentEntry?.copy(kit = kit)
+                        updatedKit.set(kit)
                     },
                     onShelfAssetWritten = {},
                     onDroneToLoop = { _, _, _ -> },
@@ -286,12 +289,12 @@ class SynthScreenTest : ComposeScreenTest() {
      * over the kit (onKitUpdated, which [condition] watches) and clears
      * padChooser.sendBusy in its finally block, both in the same main-thread
      * step. But waitFor returns the moment [condition] holds, with no frame
-     * drawn since. The semantics still show the send in flight, with REOPEN
-     * PAD RECIPE and UPDATE PAD disabled. [activate] rightly refuses a
-     * disabled control, so a test that reopens a pad straight after sending
-     * one failed on that stale frame, not on the screen. The pump runs on the
-     * main thread after that step, so the frame it draws shows the send
-     * done.
+     * drawn since. The semantics still show the send in flight: REOPEN PAD
+     * RECIPE disabled, and UPDATE PAD, where it is shown, disabled and named
+     * "…". [activate] rightly refuses a disabled control, so a test that
+     * reopens a pad straight after sending or updating one failed on that
+     * stale frame, not on the screen. The frames the pump advances run on
+     * the main thread, queued behind that step, so they show the send done.
      */
     private fun waitForPadWrite(
         what: String,
