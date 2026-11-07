@@ -253,9 +253,9 @@ class KitBuilderTest {
     }
 
     @Test
-    fun `ghost layers on a synth-backed pad WITH an fx rack fall back to soften - atVelocity can't replay the rack`() {
+    fun `ghost layers on a synth-backed pad replay its rack after the soft strike`() {
         val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
-        val fx = com.snipsnap.synth.FxChain(reverse = false)
+        val fx = com.snipsnap.synth.FxChain(tape = mapOf("AGE" to .6f, "DRIVE" to .3f))
         val dir = File(temp, "SynthGhostsFx")
         val m = KitBuilderModel.create("SynthGhostsFx", dir)
         val recipe = com.snipsnap.synth.PadRecipe(patch = patch, fx = fx)
@@ -266,20 +266,33 @@ class KitBuilderTest {
         val layered = m.addGhostLayers(1)
         val soft = com.snipsnap.audio.WavReader.read(File(dir, layered.velocityLayers[0].sampleFile))
 
-        // The same path a captured pad takes, not merely "different from
-        // atVelocity" - a patch riding its own fx chain has no way for
-        // atVelocity to replay the rack on top of its re-render, so it
-        // must soften() the fx-processed take exactly like a captured pad
-        // would (tolerance is the WAV's 16-bit quantizing on the way to
-        // and from disk, same as every other byte-match in this file).
-        val viaSoften = com.snipsnap.synth.Velocity.soften(main, 0.55f)
-        assertEquals(viaSoften.samples.size, soft.samples.size)
+        // The shared velocity path must retain the rack, at WAV quantization tolerance.
+        val viaRack = com.snipsnap.synth.Velocity.layerAt(main, patch, fx, .45f,
+            com.snipsnap.synth.Velocity.brightnessSpec(patch))
+        assertEquals(viaRack.samples.size, soft.samples.size)
         for (i in soft.samples.indices) {
             assertTrue(
-                kotlin.math.abs(soft.samples[i] - viaSoften.samples[i]) <= 2f / 32767f,
-                "sample $i: ghost ${soft.samples[i]} vs soften() ${viaSoften.samples[i]} - should fall back exactly",
+                kotlin.math.abs(soft.samples[i] - viaRack.samples[i]) <= 2f / 32767f,
+                "sample $i: ghost ${soft.samples[i]} vs source-then-rack ${viaRack.samples[i]} - should replay exactly",
             )
         }
+    }
+
+    @Test
+    fun `ghost layers preserve a richer recipe that this path cannot replay`() {
+        val patch = com.snipsnap.synth.BoomBapKits.parts().single { it.id == "snare" }.patch
+        val recipe = com.snipsnap.synth.PadRecipe(patch, com.snipsnap.synth.BoomBapKits.coloration,
+            terminalFadeMs = 50f)
+        val dir = File(temp, "FinishedGhosts")
+        val model = KitBuilderModel.create("FinishedGhosts", dir)
+        model.assign(1, recipe.render(), DrumClass.SNARE)
+        model.update(1) { it.copy(recipe = recipe.toJsonValue()) }
+        val main = com.snipsnap.audio.WavReader.read(File(dir, model.pad(1)!!.sampleFile))
+        val pad = model.addGhostLayers(1)
+        val soft = com.snipsnap.audio.WavReader.read(File(dir, pad.velocityLayers.first().sampleFile))
+        val expected = com.snipsnap.synth.Velocity.soften(main, .55f)
+        assertEquals(expected.frameCount, soft.frameCount)
+        assertTrue(soft.samples.indices.all { kotlin.math.abs(soft.samples[it] - expected.samples[it]) <= 2f / 32767f })
     }
 
     @Test

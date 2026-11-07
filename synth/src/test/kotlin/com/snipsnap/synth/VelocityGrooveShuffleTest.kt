@@ -188,17 +188,12 @@ class VelocityGrooveShuffleTest {
     }
 
     @Test
-    fun `variantsAt falls back for a patch+fx recipe too, and for voices with no brightness macro`() {
-        val patch = ThumpPresets.forVoice(ThumpVoice.KICK).first() // measured non-monotonic DRIVE, excluded
-        val fx = FxChain(reverse = false)
-        val viaVariantsWithFx = Velocity.variantsAt(patch.render(), patch, fx, count = 2)
-        val viaVariantsNoPatch = Velocity.variantsAt(patch.render(), null, null, count = 2)
-        for (i in viaVariantsWithFx.indices) {
-            assertTrue(
-                viaVariantsWithFx[i].samples.contentEquals(viaVariantsNoPatch[i].samples),
-                "variant $i: a patch+fx recipe should fall back exactly like no patch at all",
-            )
-        }
+    fun `an empty fx chain preserves the dry strike layers`() {
+        val patch = ThumpPresets.forVoice(ThumpVoice.KICK).first()
+        val snip = patch.render()
+        val wet = Velocity.variantsAt(snip, patch, FxChain(), count = 2)
+        val dry = Velocity.variantsAt(snip, patch, count = 2)
+        for (i in wet.indices) assertTrue(wet[i].samples.contentEquals(dry[i].samples))
     }
 
     @Test
@@ -208,7 +203,7 @@ class VelocityGrooveShuffleTest {
         // layer) instead of being resolved once per pad alongside
         // brightnessSpec. Hoisting it must not change a single sample -
         // this proves the two-argument-list forms agree exactly, for a
-        // patch-only pad, a patch+fx pad (falls back), and a captured
+        // patch-only pad, a patch+fx pad (rack replayed), and a captured
         // (patch=null) pad.
         val cases: List<Triple<String, Patch, FxChain?>> = listOf(
             Triple("VELVET BASS, no fx", VelvetPresets.forVoice(VelvetVoice.BASS).first(), null),

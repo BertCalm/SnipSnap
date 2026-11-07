@@ -78,9 +78,17 @@ object Velocity {
     }
 
     /**
-     * [variants], but re-rendered via [atVelocity] when [patch] is a plain
-     * synth patch riding no [fx] — the third production velocity-layer
-     * generator (`StarterKits`' VELOCITY starter), wired through the exact
+     * Source eligible for this layer path. Only the patch and FxChain are
+     * replayed here; richer recipes must keep their delivered audio intact.
+     */
+    fun patchForLayers(recipe: PadRecipe?): Patch? = recipe?.takeIf {
+        it.board == null && it.pedals == null && it.layers == null && it.terminalFadeMs == null
+    }?.patch
+
+    /**
+     * [variants], but re-rendered via [atVelocity] when [patch] is a synth
+     * patch, replaying its [fx] after the softer strike. This is the third
+     * production velocity-layer generator (`StarterKits`' VELOCITY starter), wired through the exact
      * same decision [layerAt] makes for Robin's zone grid and KitBuilder's
      * ghost layers, so this doesn't grow a fourth, divergent copy of it.
      */
@@ -105,23 +113,11 @@ object Velocity {
      * written once here so the three sites can't drift into three
      * slightly different answers to "does this pad get to re-render".
      *
-     * Three reasons [patch] is set aside for the [soften] fallback even
-     * when it's non-null:
-     * - [fx] is non-null — a recipe carrying both a patch and its own FX
-     *   chain (a BREED cross can leave both) can't be re-rendered by
-     *   [atVelocity], which only knows the bare voice, not the rack on
-     *   top of it. Composing "atVelocity's render, then replay the rack"
-     *   is a real capability nothing here has been asked to build.
-     * - [patch]'s own render doesn't match [reference]'s channel count or
-     *   sample rate — an engine's output format is a property of the
-     *   engine, not the velocity, so one render settles it: something
-     *   (fx, an old export path, a hand-edited file) has made the pad's
-     *   actual audio disagree with what the patch would produce today,
-     *   and a caller building a chain out of these takes ([Robin]) needs
-     *   every take to share one format.
-     * - [spec] is null and the raw macro is at/near zero — both of those
-     *   are [atVelocity]'s own fallback conditions, applied here too so
-     *   [layerAt] and a bare [atVelocity] call never disagree.
+     * A captured pad (no patch), or a recipe whose delivered format differs
+     * from the reference, keeps the filtered-audio fallback. A usable synth
+     * recipe replays its rack after the softer strike. Rack input is scaled
+     * by strike strength before nonlinear processing; peak matching happens
+     * only after the rack, because the sampler owns playback loudness.
      *
      * [useAtVelocity] defaults to resolving [canUseAtVelocity] inline, so a
      * one-off caller gets the old, self-contained behavior for free. A
@@ -149,14 +145,25 @@ object Velocity {
             // with an absolute .3/.6 strike that could be harder than the saved note.
             val strike = if (patch is OrigamiPatch && OrigamiExpressions.colorsWithVelocity(patch.expression))
                 OrigamiExpressions.relativeVelocity(patch, velocity) else velocity
-            peakMatch(reference, atVelocity(patch!!, strike, spec))
+            val dry = atVelocity(patch!!, strike, spec)
+            val wet = if (fx == null || fx.isBypass) dry else {
+                // Synth outputs are normally normalized. Give the rack the
+                // strike's level so a ghost note drives saturation less.
+                val seen = StrikeVelocity.levelSeen(velocity)
+                fx.process(dry.copy(samples = FloatArray(dry.samples.size) { dry.samples[it] * seen }))
+            }
+            // Also guard the actual soft render: some voices can change format
+            // with articulation even if the full-strength probe matched.
+            if (wet.channels != reference.channels || wet.sampleRate != reference.sampleRate)
+                soften(reference, 1f - velocity.coerceIn(0f, 1f))
+            else peakMatch(reference, wet)
         } else {
             soften(reference, 1f - velocity.coerceIn(0f, 1f))
         }
     }
 
     /**
-     * Whether [patch] (riding no [fx]) can stand in for [reference] via
+     * Whether [patch] with its [fx] can stand in for [reference] via
      * [atVelocity] — same channel count and sample rate. This is
      * [layerAt]'s format probe, and it is not free: it means rendering
      * [patch] once just to read its shape off the result and throw the
@@ -167,7 +174,7 @@ object Velocity {
      * already gets resolved once per pad rather than once per layer.
      */
     fun canUseAtVelocity(reference: Snip, patch: Patch?, fx: FxChain?): Boolean =
-        patch != null && fx == null && patch.render().let {
+        patch != null && patch.render().let { dry -> fx?.process(dry) ?: dry }.let {
             it.channels == reference.channels && it.sampleRate == reference.sampleRate
         }
 
@@ -474,9 +481,8 @@ object Velocity {
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         // A harder stick or beater: more upper modes, a deeper bend, a
-        // brighter click (StrikeVelocity). SKIN's snare, hats, ride and
-        // shaker are noise through filters or wires, which that contact law
-        // does not describe, so they keep their brightness macro or soften().
+        // brighter click (StrikeVelocity). SKIN SNARE additionally changes
+        // its wire excitation; hats, ride and shaker retain their macro response.
         is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower

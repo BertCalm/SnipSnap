@@ -418,8 +418,8 @@ class MagnetTest {
         // centroid at least 1 percent per tenth on both voices (smallest 16.82 percent on JANGLE, 13.85
         // percent on CHUG: the numbers `PICK raises the centroid by at least 1 percent at every tenth on
         // both voices` asserts), so a soft hit is a re-render with a lower PICK. This reaches a bare patch
-        // only: a landed pad's velocity layers still fall back to soften, because `layerAt` and
-        // `canUseAtVelocity` require its fx to be null.
+        // directly; a landed pad can now replay its saved FxChain after this excitation,
+        // before peak matching for the sampler's own velocity gain.
         for (voice in voices) {
             val patch = MagnetPatch("Vel Canary", voice, Magnet.defaults(voice))
             assertEquals("PICK", Velocity.brightnessSpec(patch)?.name, "$voice did not resolve PICK as its brightness macro")
