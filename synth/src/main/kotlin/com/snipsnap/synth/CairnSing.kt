@@ -98,7 +98,8 @@ internal object CairnSing {
     fun finiteFrames(rub: Cairn.Rubbing) = ceil((rub.energy.size - 1).toDouble() / rub.rate * Cairn.RATE).toInt()
 
     fun inspect(m: Map<String, Float>, hz: Double, velocity: Float, startAtContact: Boolean,
-                options: Cairn.Options, motion: Cairn.Motion, cacheHit: Boolean, mechanicsMs: Double): Cairn.Render {
+                options: Cairn.Options, motion: Cairn.Motion, cacheHit: Boolean, mechanicsMs: Double,
+                model: Int): Cairn.Render {
         val started = System.nanoTime()
         val rub = requireNotNull(motion.rubbing)
         val rate = Cairn.RATE * options.oversample
@@ -111,9 +112,20 @@ internal object CairnSing {
         val rotateC = cos(stepAngle); val rotateS = sin(stepAngle)
         val second = (.08 + .3 * m.getValue("GROOVE")) * (.55 + .45 * velocity)
         val third = (.03 + .14 * m.getValue("FRICTION")) * (.4 + .6 * velocity)
+        // A bowl-inspired moving contact, rather than a simulation of bowl
+        // geometry. One rim revolution shares the existing two-second pressure
+        // clock. Opposed harmonic weights create slow beating and moving colour
+        // while the carrier and the passive bank keep their original tuning.
+        // Saved model 4 and every finite gesture retain their exact waveform.
+        val movingRim = held && model >= 5
+        val depth = (.26 + .32 * m.getValue("GROOVE")) *
+            (.8 + .2 * m.getValue("BODY")) * (.75 + .25 * velocity)
+        val rimAngle = 2 * PI / periodInternal
+        val rimRotateC = cos(rimAngle); val rimRotateS = sin(rimAngle)
         fun traction(energies: List<Double>): FloatArray {
             val result = FloatArray(forceFrames)
             var c = 1.0; var s = 0.0
+            var rimC = 1.0; var rimS = 0.0
             for (i in result.indices) {
                 val x = i.toDouble() * rub.rate / rate
                 val index = x.toInt().coerceAtMost(energies.size - 2)
@@ -122,9 +134,21 @@ internal object CairnSing {
                 val pressure = rub.pressure[index] + mix * (rub.pressure[index + 1] - rub.pressure[index])
                 // One smooth traction waveform. These harmonics belong to this
                 // single rubbing contact, not higher stones or repeated knocks.
-                result[i] = (.6 * sqrt(max(0.0, energy)) * pressure *
-                    (s + second * 2 * s * c + third * s * (3 - 4 * s * s))).toFloat()
+                val wave = if (movingRim) {
+                    val twiceC = 2 * rimC * rimC - 1
+                    val rootWeight = 1 + .48 * depth * rimC
+                    val secondWeight = 1 + depth * (-.95 * rimC + .45 * rimS + .12 * twiceC)
+                    val thirdWeight = 1 + depth * (.9 * rimS - .35 * twiceC)
+                    rootWeight * s + secondWeight * second * 2 * s * c +
+                        thirdWeight * third * s * (3 - 4 * s * s)
+                } else s + second * 2 * s * c + third * s * (3 - 4 * s * s)
+                result[i] = (.6 * sqrt(max(0.0, energy)) * pressure * wave).toFloat()
                 val old = c; c = rotateC * old - rotateS * s; s = rotateS * old + rotateC * s
+                if (movingRim) {
+                    val previous = rimC
+                    rimC = rimRotateC * previous - rimRotateS * rimS
+                    rimS = rimRotateS * previous + rimRotateC * rimS
+                }
             }
             return result
         }

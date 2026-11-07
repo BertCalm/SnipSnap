@@ -27,11 +27,11 @@ object CairnSingAuditionGenerator {
         val hashes=listOf("Cairn.kt","CairnPatch.kt","CairnTumble.kt","CairnSing.kt","Modes.kt").associateWith {
             sha(File(repo,"synth/src/main/kotlin/com/snipsnap/synth/$it").readBytes())
         }
-        var started=System.nanoTime();Cairn.renderLoop(CairnVoice.SING)
+        var started=System.nanoTime();held(CairnVoice.SING)
         val coldMs=(System.nanoTime()-started)/1e6
         val cases=mutableListOf<Case>()
         fun add(id:String,section:String,voice:CairnVoice,m:Map<String,Float>,note:Int=60,velocity:Float=1f,isolated:Boolean=false) {
-            cases+=Case(id,section,CairnPatch(id,voice,m,note,velocity),isolated)
+            cases+=Case(id,section,CairnPatch(id,voice,m,note,velocity,model=4),isolated)
         }
         for(voice in CairnVoice.entries) for(held in listOf(false,true)) {
             val mode=if(held)"hold" else "shot";val flag=if(held)1f else 0f
@@ -121,29 +121,29 @@ object CairnSingAuditionGenerator {
         }
         val examples=listOf(
             phrase("four-roles",16,"Four seconds each: punctuation, conversation, cascade, song.") { out ->
-                for(i in 0..2)mix(out,Cairn.render(CairnVoice.KNOCK,midi=listOf(48,55,58)[i]).samples,i.toDouble(),.8f)
-                mix(out,Cairn.renderLoop(CairnVoice.ANSWER).samples,4.0,.8f)
-                for(i in 0..1)mix(out,Cairn.renderLoop(CairnVoice.TUMBLE,midi=if(i==0)60 else 67).samples,8.0+i*2,.75f)
-                mix(out,Cairn.render(CairnVoice.SING,midi=60).samples,12.0,.8f)
+                for(i in 0..2)mix(out,finite(CairnVoice.KNOCK,midi=listOf(48,55,58)[i]).samples,i.toDouble(),.8f)
+                mix(out,held(CairnVoice.ANSWER).samples,4.0,.8f)
+                for(i in 0..1)mix(out,held(CairnVoice.TUMBLE,midi=if(i==0)60 else 67).samples,8.0+i*2,.75f)
+                mix(out,finite(CairnVoice.SING,midi=60).samples,12.0,.8f)
             },
             phrase("sung-sketch",16,"SING carries a short melody over KNOCK, ANSWER and TUMBLE. All dry.") { out ->
-                for((i,n) in listOf(60,67,65,62).withIndex())mix(out,Cairn.render(CairnVoice.SING,midi=n,velocity=.8f).samples,i*4.0,.7f)
-                for(i in 0..7)mix(out,Cairn.render(CairnVoice.KNOCK,midi=if(i%2==0)48 else 55,velocity=.7f).samples,i*2.0,.35f)
-                for(i in listOf(2,10))mix(out,Cairn.render(CairnVoice.ANSWER,midi=60,velocity=.65f).samples,i.toDouble(),.35f)
-                for(i in listOf(6,14))mix(out,Cairn.render(CairnVoice.TUMBLE,midi=72,velocity=.6f).samples,i.toDouble(),.35f)
+                for((i,n) in listOf(60,67,65,62).withIndex())mix(out,finite(CairnVoice.SING,midi=n,velocity=.8f).samples,i*4.0,.7f)
+                for(i in 0..7)mix(out,finite(CairnVoice.KNOCK,midi=if(i%2==0)48 else 55,velocity=.7f).samples,i*2.0,.35f)
+                for(i in listOf(2,10))mix(out,finite(CairnVoice.ANSWER,midi=60,velocity=.65f).samples,i.toDouble(),.35f)
+                for(i in listOf(6,14))mix(out,finite(CairnVoice.TUMBLE,midi=72,velocity=.6f).samples,i.toDouble(),.35f)
             })
-        repeat(6) { Cairn.renderLoop(voice) }
+        repeat(6) { held(voice) }
         val bench=mutableListOf<Map<String,Any>>()
         for(held in listOf(false,true)) for(i in 0..11) {
             val m=Cairn.defaults(voice)+mapOf("SLOPE" to (.311f+i*.0113f),"HOLD" to if(held)1f else 0f)
-            Cairn.clearMotionCache();started=System.nanoTime();val a=Cairn.inspect(voice,m)
-            val ms=(System.nanoTime()-started)/1e6;started=System.nanoTime();val b=Cairn.inspect(voice,m,midi=62)
+            Cairn.clearMotionCache();started=System.nanoTime();val a=Cairn.inspect(voice,m,model=4)
+            val ms=(System.nanoTime()-started)/1e6;started=System.nanoTime();val b=Cairn.inspect(voice,m,midi=62,model=4)
             bench+=mapOf("held" to held,"uncachedMs" to ms,"mechanicsMs" to a.diagnostics.mechanicsMs,
                 "audioMs" to a.diagnostics.audioMs,"cachedMotionPitchMs" to (System.nanoTime()-started)/1e6,"cacheHit" to b.diagnostics.mechanicsCacheHit)
         }
         val rates=listOf(false,true).map { held ->
             val m=Cairn.defaults(voice)+("HOLD" to if(held)1f else 0f)
-            val a=Cairn.inspect(voice,m,72);val b=Cairn.inspect(voice,m,72,options=Cairn.Options(oversample=8))
+            val a=Cairn.inspect(voice,m,72,model=4);val b=Cairn.inspect(voice,m,72,options=Cairn.Options(oversample=8),model=4)
             mapOf("held" to held,"relativeRms4x8x" to relative(a.samples,b.samples).also { check(it<.04) })
         }
         val legacy=mutableListOf<Map<String,Any>>()
@@ -180,6 +180,11 @@ object CairnSingAuditionGenerator {
         ))))
         println("CAIRN SING wrote ${cases.size} comparisons and ${examples.size} dry phrases; cold HOLD $coldMs ms")
     }
+    // Keep the published model-4 audition reproducible as new models arrive.
+    private fun finite(voice:CairnVoice,macros:Map<String,Float> = emptyMap(),midi:Int=Cairn.DEFAULT_MIDI,
+                       velocity:Float=1f) = Cairn.render(voice,macros,midi,velocity,model=4)
+    private fun held(voice:CairnVoice,macros:Map<String,Float> = emptyMap(),midi:Int=Cairn.DEFAULT_MIDI,
+                     velocity:Float=1f) = Cairn.inspect(voice,macros+("HOLD" to 1f),midi,velocity,model=4)
     private fun relative(a:FloatArray,b:FloatArray)=sqrt(a.indices.sumOf { (a[it]-b[it]).toDouble().pow(2) }/b.sumOf { it.toDouble().pow(2) })
     private fun file(root:File,name:String)=File(root,name).apply { parentFile.mkdirs() }
     private fun sha(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
