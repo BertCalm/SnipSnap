@@ -453,9 +453,9 @@ class TerraTest {
     /**
      * The controller's ruling for R1b: phi = 0 must reproduce R1's HIT bit for
      * bit. Compared with LegacyTerraHit, R1's colouring frozen at 58757f10,
-     * not with the floored code itself: every level curve on the four voices,
-     * the ten strikers and four strengths, then the forty cases rendered at
-     * HIT 1 with a dark and a bright head.
+     * not with the floored code itself: every level curve on the five voices
+     * (BOX's plate included), the ten strikers and four strengths, then the
+     * forty cases rendered at HIT 1 with a dark and a bright head.
      */
     @Test
     fun `a floor of 0 is R1's HIT bit for bit`() {
@@ -473,7 +473,7 @@ class TerraTest {
                 }
             }
         }
-        assertEquals(160, curves)
+        assertEquals(200, curves)
         var renders = 0
         for (id in listOf("kick01", "tsnare")) {
             val x = Terra.upsample(TerraStrikers.head(id))
@@ -728,8 +728,9 @@ class TerraTest {
     /**
      * Spec "Testing", test 8, over the ten strikers and c in {0, .25, .5,
      * .75, 1}:
-     * - Every striker's OB moves monotonically on every voice (Phase 0: 10 of
-     *   10), at the 0.01 dB step tolerance, except a curve that moves under
+     * - Every striker's OB moves monotonically on every voice Phase 0
+     *   measured (Phase 0: 10 of 10; BOX, which came after, has the next
+     *   test), at the 0.01 dB step tolerance, except a curve that moves under
      *   0.5 dB across the whole knob: |OB(1) - OB(0)| and the max-min span
      *   both under 0.5 dB, Phase 0's materiality rule. Such a curve has no
      *   audible effect to be monotone in, and is printed with the word
@@ -764,7 +765,7 @@ class TerraTest {
         var flipsAtStrong = 0
         var renders = 0
         var exempt = 0
-        for (voice in TerraVoice.entries) {
+        for (voice in TerraCases.FROZEN_VOICES) {
             val body = TerraMeasure.bodyOf(voice)
             val today = Terra.render(voice)
             val todayClass = Classifier.classify(today).drumClass
@@ -809,6 +810,38 @@ class TerraTest {
         println("TERRA HIT 1: $flipsAtStrong class changes in 40 renders (Phase 0: 5, all membrane TOM to PERC)")
         println("TERRA HIT sweep: $exempt of 40 curves exempt from the step check (total OB move under 0.5 dB)")
         assertEquals(160, renders)
+    }
+
+    /**
+     * HIT on BOX (2026-11-06), which Phase 0's claims above do not cover:
+     * Phase 0 measured four voices whose modes outlive the 20 ms head. The
+     * box's plate modes die in as little as 15 ms, so the head plays into
+     * the plate: its projection takes gains in the thousands on the top
+     * modes, and at HIT .5 a dark head (FACTORY KICK) leaves the slap's
+     * first 5 ms at about 0.2 of the peak and the class can change.
+     * Measured and disclosed (docs/TERRA_BOX.md), not held to Phase 0's
+     * figures. What is held: HIT 0 is today's box, a bright head brightens
+     * the body and a dark head darkens it, by more than 3 dB at HIT 1.
+     */
+    @Test
+    fun `HIT colours BOX's plate, brighter under a bright head and darker under a dark one`() {
+        val voice = TerraVoice.BOX
+        val body = TerraMeasure.bodyOf(voice)
+        val today = Terra.render(voice)
+        val todayOb = TerraMeasure.ob(today, body.fundamentalHz)
+        for (s in TerraStrikers.TEN) {
+            val head = TerraStrikers.head(s.id)
+            val sweep = listOf(0.25f, 0.5f, 1f).map { c -> Terra.renderStruck(voice, emptyMap(), head, c) }
+            println(
+                "TERRA HIT sweep BOX ${s.name}: OB ${"%.2f".format(todayOb)} / " + sweep.joinToString(" / ") { "%.2f".format(TerraMeasure.ob(it, body.fundamentalHz)) } +
+                    " at HIT 0 / .25 / .5 / 1; first-5-ms peak at .5 ${"%.3f".format(TerraMeasure.firstFiveMsPeak(sweep[1]))}, class ${Classifier.classify(sweep[1]).drumClass} (today ${Classifier.classify(today).drumClass})",
+            )
+        }
+        assertContentEquals(today.samples, Terra.renderStruck(voice, emptyMap(), TerraStrikers.head("tsnare"), 0f).samples, "HIT 0 is today's box")
+        val bright = TerraMeasure.ob(Terra.renderStruck(voice, emptyMap(), TerraStrikers.head("snare01"), 1f), body.fundamentalHz)
+        val dark = TerraMeasure.ob(Terra.renderStruck(voice, emptyMap(), TerraStrikers.head("kick01"), 1f), body.fundamentalHz)
+        assertTrue(bright > todayOb + 3f, "FACTORY SNARE at HIT 1 brightens the box: OB $bright against today's $todayOb")
+        assertTrue(dark < todayOb - 3f, "FACTORY KICK at HIT 1 darkens the box: OB $dark against today's $todayOb")
     }
 
     /** The pre-roll keeps under the 50 % ceiling `clack is quiet, and the bell only starts ringing after it` holds it to (Phase 0: 5.9 % today, 16.5 % at HIT 1 with THUMP KICK). */
@@ -1067,10 +1100,13 @@ class TerraTest {
             return times[3]
         }
         for (voice in TerraVoice.entries) {
-            val legacy = medianMs { LegacyTerraBank.render(voice, emptyMap()) }
             val plain = medianMs { Terra.render(voice) }
             val struck = medianMs { Terra.renderStruck(voice, emptyMap(), head, 0.5f) }
-            println("TERRA cost $voice: neutral ${"%.1f".format(plain)} ms against the frozen copy's ${"%.1f".format(legacy)} ms (${"%.2f".format(plain / legacy)}x; Phase 0 0.98-1.05x)")
+            // BOX came after the freeze, so it has no frozen copy to time against.
+            if (voice in TerraCases.FROZEN_VOICES) {
+                val legacy = medianMs { LegacyTerraBank.render(voice, emptyMap()) }
+                println("TERRA cost $voice: neutral ${"%.1f".format(plain)} ms against the frozen copy's ${"%.1f".format(legacy)} ms (${"%.2f".format(plain / legacy)}x; Phase 0 0.98-1.05x)")
+            }
             println("TERRA cost $voice: unstruck ${"%.1f".format(plain)} ms, HIT 0.5 ${"%.1f".format(struck)} ms (${"%.2f".format(struck / plain)}x; Phase 0 1.4-1.7x)")
         }
     }

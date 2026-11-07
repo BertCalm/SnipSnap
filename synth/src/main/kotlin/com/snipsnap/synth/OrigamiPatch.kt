@@ -39,6 +39,7 @@ data class OrigamiPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render(): Snip {
+        if (expression == OrigamiExpression.TOUCH) return OrigamiExpressions.renderTouch(this)
         val patch = OrigamiExpressions.appliedPatch(this)
         return if (patch.gesture == OrigamiGesture.STEADY)
             Origami.render(patch.voice, patch.macros, patch.velocity, patch.midi, patch.seed, patch.model)

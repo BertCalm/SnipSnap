@@ -322,11 +322,22 @@ class ScourTest {
         // apart), PLATE's 3.906 and 6.301 against SHEET's 3.881 and 6.328 (under 1 %), PANE's 9.413 against
         // SHEET's 9.331, and BEAM's 8.933 and 13.344 against SHEET's 8.947 and 13.112. The narrowest margin is
         // SHEET's at C3, 15.6 dB over the floor at PLATE's ratios: its louder roller raises the floor (measured).
+        // DISC's 2.181, 4.932 and 7.285 and ROD's 3rd, 5th and 6th harmonics. They were chosen by measuring every
+        // candidate partial in all six renders at TUNE .5 and 1 and taking the triples that keep every pairing of a
+        // new voice over the 15 dB floor, widest first: the narrowest is PANE's against DISC's 2.181, 3.0 dB. DISC's
+        // 2.675 was dropped, because PANE's build sits only 13.0 dB under its own partials there (its 2.549 mode,
+        // 4.9 % away, spreads under the shot rain), and ROD's 2nd and 4th harmonics because SHEET's build already
+        // rings near 2 and 4 (its 1.837 and 3.881). Where a probe lies within 2 % of the listening voice's own mode it
+        // is left out of that voice's check, as for the old bodies: DISC's 4.932 against ROD's 5th harmonic, 7.285
+        // against PLATE's 7.338. Each new voice hears its own probes: DISC's strongest sits 8.6 dB under its root at
+        // TUNE .5 and 15.6 at 1, ROD's 9.6 and 8.0.
         val bodies = mapOf(
             ScourVoice.PLATE to listOf(2.328, 4.112, 6.711),
             ScourVoice.PANE to listOf(2.549, 4.650, 8.659),
             ScourVoice.SHEET to listOf(2.778, 10.222, 13.821),
             ScourVoice.BEAM to listOf(5.404, 24.814, 31.872),
+            ScourVoice.DISC to listOf(2.181, 4.932, 7.285),
+            ScourVoice.ROD to listOf(3.0, 5.0, 6.0),
         )
         for (tune in listOf(.5f, 1f)) {
             for ((voice, own) in bodies) {

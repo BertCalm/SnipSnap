@@ -54,6 +54,10 @@ plt.close(fig)
 for name in ['manifest.json','report.json','README.txt','reader-verification.json','137ms-transition.png','137ms-transition.pdf']:
     entries[name]=(out/name).read_bytes()
 entries['playable-protocol.md']=Path(__file__).with_name('playable-protocol.md').read_bytes()
+if m['format']=='crease-shared-pcm-v1':
+    entries['shared-protocol.md']=Path(__file__).with_name('shared-protocol.md').read_bytes()
+    for name in ['development.json','fresh-positions.json','native-verification.json']:
+        entries[name]=(out/name).read_bytes()
 zip_path=out/'crease-playable-reference-wavs.zip'
 with zipfile.ZipFile(zip_path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for name,data in sorted(entries.items()):
@@ -73,4 +77,8 @@ worklet=(player/'release-worklet.mjs').read_text()
 import_line="import { ReleaseReader } from './pcm-engine.mjs';\n"
 b.p.require(worklet.startswith(import_line),'worklet import boundary changed')
 (out/'release-worklet-bundle.mjs').write_text('// Generated from the canonical PCM reader and worklet; no separate DSP implementation.\n'+engine+'\n'+worklet[len(import_line):])
+decoder=(player/'cache.mjs').read_text()
+decoder_import="import { validateManifest } from './pcm-engine.mjs';\n"
+b.p.require(decoder.startswith(decoder_import),'decoder import boundary changed')
+(out/'cache-bundle.mjs').write_text('// Generated from the canonical PCM reader and decoder; no separate DSP implementation.\n'+engine+'\n'+decoder[len(decoder_import):])
 print(json.dumps(delivery))

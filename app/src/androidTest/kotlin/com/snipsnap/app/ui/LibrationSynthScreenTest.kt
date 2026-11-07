@@ -8,6 +8,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -162,6 +164,29 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         assertEquals("48", pad.source["rootMidi"])
         assertEquals(0, pad.tuneFine)
         assertTrue(pad.oneShot)
+    }
+
+    @Test fun held_instrument_touch_layers_open_enabled_and_toggle_without_editing_any_voice() {
+        show()
+        for (voice in LibrationVoice.entries) {
+            invokeClick(voice.name)
+            val factory = LibrationPresets.forVoice(voice).first()
+            invokeClick("PRESET ${factory.name}")
+            waitFor("complete $voice factory recipe") { stored(voice) == factory }
+            val before = requireNotNull(stored(voice))
+            invokeClick("MAKE INSTRUMENT")
+            compose.onNodeWithContentDescription("TOUCH LAYERS").assertIsSelected()
+            assertReadsInFull("TOUCH LAYERS ON")
+            invokeClick("TOUCH LAYERS")
+            compose.onNodeWithContentDescription("TOUCH LAYERS").assertIsNotSelected()
+            assertReadsInFull("TOUCH LAYERS OFF")
+            invokeClick("TOUCH LAYERS")
+            val close = requireNotNull(compose.onAllNodes(hasContentDescription("CANCEL") and hasClickAction())
+                .fetchSemanticsNodes().last().config[SemanticsActions.OnClick].action)
+            compose.runOnIdle { assertTrue(close()) }
+            pump()
+            assertEquals(before, stored(voice))
+        }
     }
 
     @Test fun explicit_hold_survives_navigation_scramble_save_and_gated_pad_then_returns_to_note() {

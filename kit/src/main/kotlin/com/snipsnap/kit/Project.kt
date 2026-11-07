@@ -79,6 +79,27 @@ data class Project(
         require(holds(kitFolderName)) { "cannot activate '$kitFolderName': not held by '$name'" }
         return copy(activeKit = kitFolderName)
     }
+
+    /**
+     * BEAT's BPM control (the 2026-11-06 ruling, `docs/UAT_2026_11.md`: one
+     * project tempo, set from BEAT): the project's tempo is [bpm], held to
+     * [MIN_BPM]..[MAX_BPM] — the range ORBIT's rings and LOOP's grid
+     * require — so every screen that follows it can take it as it is.
+     * Non-finite input is refused rather than clamped into a tempo nobody
+     * chose.
+     */
+    fun withTempo(bpm: Float): Project {
+        require(bpm.isFinite()) { "tempo must be finite: $bpm" }
+        return copy(tempoBpm = bpm.coerceIn(MIN_BPM, MAX_BPM))
+    }
+
+    companion object {
+        /** The slowest project tempo BEAT sets; ORBIT's and LOOP's own lower bound. */
+        const val MIN_BPM = 40f
+
+        /** The fastest project tempo BEAT sets; ORBIT's and LOOP's own upper bound. */
+        const val MAX_BPM = 220f
+    }
 }
 
 /**

@@ -57,5 +57,21 @@ class PhoneAdmissionTest(unittest.TestCase):
         self.manifest['container']['pcmBytes']=32*1024**2+1;self.save('manifest.json',self.manifest)
         with self.assertRaisesRegex(ValueError,'byte limits'): stage(self.source,self.target)
 
+    def test_shared_budget_and_coefficient_receipt_are_required(self):
+        self.manifest.update(format='crease-shared-pcm-v1',shared={'residentBytes':8192,'coefficientsSha256':'test-weights'})
+        self.save('manifest.json',self.manifest);self.save('report.json',{'approximationPassed':True,'residentBytes':8192})
+        manifest_hash=hashlib.sha256((self.source/'manifest.json').read_bytes()).hexdigest()
+        self.native['manifestSha256']=manifest_hash;self.save('native-verification.json',self.native)
+        self.save('reader-verification.json',{'result':'passed','cacheIdentity':self.manifest['cacheIdentity'],'manifestSha256':manifest_hash})
+        with self.assertRaisesRegex(ValueError,'other coefficients',msg='coefficient receipt guard must reject a different basis mix'): stage(self.source,self.target)
+        self.native['sharedCoefficientsSha256']='test-weights';self.save('native-verification.json',self.native)
+        stage(self.source,self.target);stage(self.source,self.target)
+        self.manifest['shared']['residentBytes']=8*1024**2+1;self.save('manifest.json',self.manifest)
+        with self.assertRaisesRegex(ValueError,'manifest changed',msg='complete manifest binding guard must reject changed metadata'): stage(self.source,self.target)
+        manifest_hash=hashlib.sha256((self.source/'manifest.json').read_bytes()).hexdigest()
+        self.native['manifestSha256']=manifest_hash;self.save('native-verification.json',self.native)
+        self.save('reader-verification.json',{'result':'passed','cacheIdentity':self.manifest['cacheIdentity'],'manifestSha256':manifest_hash})
+        with self.assertRaisesRegex(ValueError,'8 MiB',msg='8 MiB residency guard must reject an oversized shared cache'): stage(self.source,self.target)
+
 
 if __name__=='__main__': unittest.main()

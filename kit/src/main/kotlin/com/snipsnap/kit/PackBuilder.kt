@@ -80,13 +80,17 @@ object PackBuilder {
                 skipped += kit.name to findings.first { it.severity == Severity.FAIL }.message
                 continue
             }
+            val samplesDir = File(dest, "Samples/${kit.name}")
             val (program, _) = KitExporter.writeProgramAndSamples(
                 kit, kitDir,
                 programDir = File(dest, "Programs"),
-                samplesDir = File(dest, "Samples/${kit.name}"),
+                samplesDir = samplesDir,
             )
+            // Robin pads shipped as take files: bind the sidecar to those, not the chain.
+            val takes = kit.pads.filter { it.isRobinChain && it.velocityLayers.isEmpty() }
+                .associate { it.slot to RobinSplit.written(it, samplesDir) }
             val programEntry = "Programs/${program.name}"
-            XpnSourceMetadata.render(kit, kitDir, programEntry, program.readBytes(), "Samples/${kit.name}")?.let { bytes ->
+            XpnSourceMetadata.render(kit, kitDir, programEntry, program.readBytes(), "Samples/${kit.name}", takes)?.let { bytes ->
                 File(dest, XpnSourceMetadata.entryName(programEntry)).writeBytes(bytes)
             }
             if (withPreviews) {

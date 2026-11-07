@@ -4,6 +4,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateLibrationTouchAudition") {
+    group = "distribution"
+    description = "Render two-touch Libration instruments and performances of their exported PCM24 samples."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationTouchAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("librationTouchOutput").orNull ?: "${rootDir}/testkit/libration-touch")
+}
+
 repositories {
     mavenCentral()
 }
@@ -237,9 +247,11 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
     maxHeapSize = "1g"
     val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
     val touch = providers.gradleProperty("filamentKeysTouchLayers").orElse("false").get().toBooleanStrict()
+    val wide = providers.gradleProperty("filamentKeysWideKeys").orElse("false").get().toBooleanStrict()
+    val rangeTag = if (wide) "-wide" else ""
     val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
     val touchTag = if (touch) "-touch" else ""
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$touchTag-keys").get(), voice, touch.toString())
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$rangeTag$touchTag-keys").get(), voice, touch.toString(), wide.toString())
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
@@ -252,6 +264,17 @@ tasks.register<JavaExec>("generateKeelKeys") {
     mainClass.set("com.snipsnap.shell.KeelKeysGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/keel-keys")
+}
+
+/** BORE held: the held keygroup's zones as held keys beside the loop-only zones they replace. See BoreHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateBoreHeldAudition") {
+    group = "distribution"
+    description = "Render BORE's held keygroup as held keys (hard and soft layers) beside the loop-only zones, at three notes a voice, under testkit/bore-held-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoreHeldAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("boreHeldOutput").orElse("${rootDir}/testkit/bore-held-audition").get())
 }
 
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
@@ -343,6 +366,7 @@ tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
     mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
+    if (providers.gradleProperty("origamiPerformanceLegacyFold").orNull == "true") args("--legacy-fold")
 }
 
 /** Model-2 CAUSTIC motion, measured continuous loops and real exported keygroups. */
@@ -354,6 +378,44 @@ tasks.register<JavaExec>("generateCausticCompleteAudition") {
     mainClass.set("com.snipsnap.shell.CausticCompleteAuditionGenerator")
     workingDir = rootDir
     args(providers.gradleProperty("causticCompleteOutput").orElse(rootDir.resolve("testkit/caustic-complete-audition").absolutePath).get())
+}
+
+/** Held TRACE delivery and note-on/off recordings from the exported keygroup samples. */
+tasks.register<JavaExec>("generateLatticeKeysAudition") {
+    group = "distribution"
+    description = "Render TRACE attack/sustain keygroups, independent-cycle evidence and exported-file listening clips."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LatticeKeysAuditionGenerator")
+    workingDir = rootDir
+    val recipe = providers.gradleProperty("latticeKeysRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("latticeKeysReplayOutput").get())
+    } else {
+        args(providers.gradleProperty("latticeKeysOutput").orElse(rootDir.resolve("testkit/lattice-keys-audition").absolutePath).get())
+        providers.gradleProperty("latticeKeysBaseline").orNull?.let { args(it) }
+    }
+}
+
+/** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoHeldAudition") {
+    group = "distribution"
+    description = "Render ARCO's held keys, both layers, through the instrument player beside the loop-only zone, three notes per voice, under testkit/arco-held-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ArcoHeldAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("arcoHeldOutput").orElse("${rootDir}/testkit/arco-held-audition").get())
+}
+
+tasks.register<JavaExec>("generateHeldStartAudition") {
+    group = "distribution"
+    description = "Render ARCO's and BORE's held keys with the hit lasting as shipped, medium, short or not at all, three notes per voice, under testkit/held-start-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.HeldStartAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("heldStartOutput").orElse("${rootDir}/testkit/held-start-audition").get())
 }
 
 /** Qualify the HOLD-loop engines for a shared keys instrument; writes testkit/loop-instruments/. See LoopInstrumentScan. */

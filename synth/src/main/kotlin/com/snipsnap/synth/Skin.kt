@@ -120,19 +120,42 @@ object Skin {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
-    /** Render [voice] with [macros]; missing macros fall back to defaults. */
-    fun render(voice: SkinVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The voices a strike velocity reshapes ([StrikeVelocity]): the modal
+     * drums, where a harder beater or stick changes the mode balance, the
+     * pitch drop and the click. The snare, hats, ride and shaker keep the
+     * velocity response [Velocity] already gives them (a brightness macro,
+     * or [Velocity.soften] for the snare): their sound is noise through
+     * filters or wires, which this contact law does not describe. STICK
+     * keeps [Velocity.soften] too: every factory STICK is one partial (BODY
+     * and CLICK at 0), so there is no balance for a contact law to move.
+     */
+    val STRUCK: Set<SkinVoice> = setOf(SkinVoice.KICK, SkinVoice.TOM)
+
+    /**
+     * Render [voice] with [macros]; missing macros fall back to defaults.
+     *
+     * [velocity] is how hard the hit was, 0..1, and only the [STRUCK]
+     * voices read it. Full velocity (the default) is the render SKIN has
+     * always made, bit for bit; the factory sound is the hard hit.
+     *
+     * [take] is which hit of a re-struck run this is ([Restrike]): take 0
+     * is today's render, and any other take re-seeds the beater or stick
+     * click's noise, so two hits do not share one click. The [STRUCK]
+     * voices read it; nothing else in the hit is random.
+     */
+    fun render(voice: SkinVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         // U6 (docs/SYNTH_UPGRADE.md): render oversampled, same contract as
         // every other engine — see Dsp.OVERSAMPLE's own doc comment.
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = when (voice) {
-            SkinVoice.KICK -> kick(m, renderRate)
+            SkinVoice.KICK -> kick(m, renderRate, velocity = velocity, take = take)
             SkinVoice.SNARE -> snare(m, renderRate)
             SkinVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
             SkinVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
-            SkinVoice.TOM -> tom(m, renderRate)
+            SkinVoice.TOM -> tom(m, renderRate, velocity, take)
             SkinVoice.RIDE -> ride(m, renderRate)
             SkinVoice.SHAKER -> shaker(m, renderRate)
             SkinVoice.STICK -> stick(m, renderRate)
@@ -141,6 +164,12 @@ object Skin {
         // Punch (U3) needs its loudness reference set before it reshapes
         // the hit — see Thump.render's own comment on this same ordering.
         Dsp.normalize(raw)
+        // Velocity does not reach PUNCH: it is the designer's shaping stage,
+        // not part of the drum. Handing it the hit's own level was tried and
+        // measured backwards - every factory KICK came out brighter soft
+        // than hard (default: first 30 ms centroid 175 Hz at v = .25,
+        // 123 Hz at 1) - so a high-PUNCH tom with no CLICK or DROP (FAST
+        // TOM, RUSH DRUM) keeps one brightness across velocity.
         val buf = Punch.applyOversampled(raw, punch, RATE)
         Dsp.limitPeak(buf)
         Dsp.fadeTail(buf)
@@ -209,18 +238,27 @@ object Skin {
     // ---------- voices ----------
 
     /** Unfinished ONSET source; beater is suppressed in favor of its shared transient. */
-    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, body: Float, edge: Float, rate: Int): FloatArray =
+    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, body: Float, edge: Float, rate: Int, velocity: Float = 1f): FloatArray =
         kick(defaults(SkinVoice.KICK) + mapOf("CLICK" to 0f, "DROP" to snap,
             "TONE" to ((1f - body) * (0.35f + 0.65f * edge))), rate, rootHz, t60Seconds,
-            dropDepth = snap * 1.5f, dropSpeed = 90.0)
+            dropDepth = snap * 1.5f, dropSpeed = 90.0, velocity = velocity)
 
     internal fun onsetHat(baseHz: Float, t60Seconds: Float, body: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
         hat(defaults(SkinVoice.HAT_CLOSED) + mapOf("TONE" to edge, "RING" to (0.35f + 0.6f * body)),
             open = open, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
 
+    /** [Partial]s re-weighted for a hit at [velocity] ([StrikeVelocity.modeFactor], relative to [rootHz]); the same list at full velocity. */
+    private fun struck(partials: List<Partial>, rootHz: Float, velocity: Float): List<Partial> {
+        if (StrikeVelocity.isFull(velocity)) return partials
+        val f = StrikeVelocity.modeFactors(
+            FloatArray(partials.size) { partials[it].freqHz / rootHz }, FloatArray(partials.size) { partials[it].level }, velocity,
+        )
+        return partials.mapIndexed { k, p -> Partial(p.freqHz, p.level * f[k], p.t60) }
+    }
+
     private fun kick(
         m: Map<String, Float>, rate: Int, rootHz: Float? = null, decaySeconds: Float? = null,
-        dropDepth: Float? = null, dropSpeed: Double = 30.0,
+        dropDepth: Float? = null, dropSpeed: Double = 30.0, velocity: Float = 1f, take: Int = 0,
     ): FloatArray {
         val fundamental = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 45f, 75f)
         val t60 = decaySeconds ?: Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.9f)
@@ -231,11 +269,17 @@ object Skin {
         // the level through a lowpass three times as open. Linear pieces
         // meeting at 0.5, so the default is 0.5 and 1400 to the bit.
         val clickMacro = m.getValue("CLICK")
-        val clickLevel = if (clickMacro < 0.5f) clickMacro else 0.5f + (clickMacro - 0.5f) * 2f
-        val clickHz = if (clickMacro < 0.5f) 1400f else 1400f * (1f + (clickMacro - 0.5f) * 4f)
+        // Velocity (StrikeVelocity): a softer beater lands quieter and
+        // duller - level by sqrt(v), the low-pass corner by v^0.8. Both
+        // factors are exactly 1 at full velocity.
+        val clickLevel = (if (clickMacro < 0.5f) clickMacro else 0.5f + (clickMacro - 0.5f) * 2f) *
+            StrikeVelocity.pulseLevel(velocity)
+        val clickHz = (if (clickMacro < 0.5f) 1400f else 1400f * (1f + (clickMacro - 0.5f) * 4f)) *
+            StrikeVelocity.cornerFactor(velocity)
         // DROP: the head's pitch dip (see modalBody) - up to 90% sharp at
-        // the strike, settling at 30/s, a hard hit on a loose kick.
-        val drop = dropDepth ?: m.getValue("DROP") * 0.9f
+        // the strike, settling at 30/s, a hard hit on a loose kick. A
+        // softer hit stretches the head less: depth by v^2.
+        val drop = (dropDepth ?: m.getValue("DROP") * 0.9f) * StrikeVelocity.droopFactor(velocity)
         // TONE balances the shell's fundamental against two inharmonic
         // overtones (1.59x/2.14x, circular-membrane ratios) — up, and the
         // hit reads as a smaller, rattlier shell rather than a bigger one.
@@ -244,10 +288,13 @@ object Skin {
         // in the numbers but inaudible next to the fundamental, which is
         // most of why a factory KICK read as close kin to THUMP's own.
         val body = modalBody(
-            listOf(
-                Partial(fundamental, 1f, t60),
-                Partial(fundamental * 1.59f, 0.25f + 0.65f * tone, t60 * 0.35f),
-                Partial(fundamental * 2.14f, 0.08f + 0.22f * tone, t60 * 0.18f),
+            struck(
+                listOf(
+                    Partial(fundamental, 1f, t60),
+                    Partial(fundamental * 1.59f, 0.25f + 0.65f * tone, t60 * 0.35f),
+                    Partial(fundamental * 2.14f, 0.08f + 0.22f * tone, t60 * 0.18f),
+                ),
+                fundamental, velocity,
             ),
             seconds = t60 * 1.4f,
             rate = rate,
@@ -257,7 +304,7 @@ object Skin {
         // The mallet strike itself: a brief low-passed noise click, same
         // role as Thump.kick's own CLICK burst, layered under the body.
         val out = body.copyOf()
-        val noise = Dsp.Noise(11)
+        val noise = Dsp.Noise(if (take == 0) 11 else Dsp.seedFor("SKIN", "KICK", "CLICK", take))
         val clickLp = Dsp.OnePole(rate)
         for (i in out.indices) {
             val t = i.toFloat() / rate
@@ -368,7 +415,7 @@ object Skin {
         return out
     }
 
-    private fun tom(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun tom(m: Map<String, Float>, rate: Int, velocity: Float = 1f, take: Int = 0): FloatArray {
         val fundamental = Dsp.expMap(m.getValue("TUNE"), 90f, 220f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.15f, 0.7f)
         val tone = m.getValue("TONE")
@@ -379,25 +426,31 @@ object Skin {
         // DROP: the classic tom bend - up to 60% sharp, settling slower than
         // the kick's (18/s), so the glide is heard as a glide.
         // CLICK: a stick on the head, which the shell-only tom never had.
-        val click = m.getValue("CLICK")
+        // Velocity (StrikeVelocity): the overtone, the bend and the stick's
+        // click all soften with the hit; every factor is 1 at full velocity.
+        val click = m.getValue("CLICK") * StrikeVelocity.pulseLevel(velocity)
+        val clickHz = 5000f * StrikeVelocity.cornerFactor(velocity)
         val out = modalBody(
-            listOf(
-                Partial(fundamental, 1f, t60),
-                Partial(fundamental * 1.63f, 0.25f + 0.55f * tone, t60 * 0.4f),
+            struck(
+                listOf(
+                    Partial(fundamental, 1f, t60),
+                    Partial(fundamental * 1.63f, 0.25f + 0.55f * tone, t60 * 0.4f),
+                ),
+                fundamental, velocity,
             ),
             seconds = t60 * 1.4f,
             rate = rate,
-            drop = m.getValue("DROP") * 0.6f,
+            drop = m.getValue("DROP") * 0.6f * StrikeVelocity.droopFactor(velocity),
             dropRate = 18.0,
         )
         if (click > 0f) {
-            val noise = Dsp.Noise(Dsp.seedFor("SKIN", "TOM", "CLICK"))
+            val noise = Dsp.Noise(if (take == 0) Dsp.seedFor("SKIN", "TOM", "CLICK") else Dsp.seedFor("SKIN", "TOM", "CLICK", take))
             val clickLp = Dsp.OnePole(rate)
             for (i in out.indices) {
                 val t = i.toFloat() / rate
                 if (t >= 0.003f) break
                 val clickAttack = (t / 0.0005f).coerceAtMost(1f)
-                out[i] += click * 4f * clickLp.lp(noise.next(), 5000f) * (1f - t / 0.003f) * clickAttack
+                out[i] += click * 4f * clickLp.lp(noise.next(), clickHz) * (1f - t / 0.003f) * clickAttack
             }
         }
         return out
@@ -521,13 +574,13 @@ object Skin {
         // wood crack of bright noise on the strike. Both 0 by default,
         // and at 0 the partial list and length are exactly what they were.
         val body = m.getValue("BODY")
-        val click = m.getValue("CLICK")
         val partials = if (body > 0f) {
             listOf(Partial(freq, 1f, t60), Partial(freq * 0.22f, body * 1.2f, t60 * 2.5f))
         } else {
             listOf(Partial(freq, 1f, t60))
         }
         val seconds = maxOf(t60 * 1.6f, 0.05f).let { if (body > 0f) maxOf(it, t60 * 2.5f * 1.4f) else it }
+        val click = m.getValue("CLICK")
         val out = modalBody(partials, seconds = seconds, rate = rate)
         if (click > 0f) {
             val noise = Dsp.Noise(Dsp.seedFor("SKIN", "STICK", "CLICK"))

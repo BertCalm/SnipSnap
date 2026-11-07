@@ -2041,11 +2041,6 @@ class CliTest {
         assertEquals(4, chained!!.sliceCount)
         assertTrue(padFile.readBytes().size > before.size * 3, "four takes ride in the WAV")
 
-        // A chained pad refuses the other audio doors with a pointer home.
-        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
-        assertTrue(guardCode != 0)
-        assertContains(guardErr, "robin --undo")
-
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "undo is byte-identical")
         assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain)
@@ -2061,12 +2056,38 @@ class CliTest {
         val grid = KitStore.load(kitDir).pad(1)!!.chain!!
         assertEquals(6, grid.sliceCount)
         assertEquals(3, grid.zones!!.size)
+
+        // A zone-grid chain refuses the other audio doors with a pointer home (a plain robin chain lifts instead).
+        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
+        assertTrue(guardCode != 0)
+        assertContains(guardErr, "robin --undo")
+
         assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
         assertTrue(before.contentEquals(padFile.readBytes()), "grid undo is byte-identical too")
 
         val (bzCode, _, bzErr) = cli("robin", kitDir.path, "A01", "--zones", "9")
         assertTrue(bzCode != 0)
         assertContains(bzErr, "zones")
+
+        // --amount renders on the dial and records typed settings; --undo still restores.
+        val (aCode, aOut, aErr) = cli("robin", kitDir.path, "A01", "--amount", "0.6", "--takes", "5", "--seed", "2")
+        assertEquals(0, aCode, "stderr: $aErr")
+        assertContains(aOut, "amount 0.6")
+        val dialed = KitStore.load(kitDir).pad(1)!!
+        assertEquals(5, dialed.chain!!.sliceCount)
+        assertEquals(com.snipsnap.kit.RobinSettings(0.6f, 5, 2, followsKit = false), dialed.robin)
+        assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "dial undo is byte-identical too")
+        val (baCode, _, baErr) = cli("robin", kitDir.path, "A01", "--amount", "1.5")
+        assertTrue(baCode != 0)
+        assertContains(baErr, "amount")
+        val (btCode, _, btErr) = cli("robin", kitDir.path, "A01", "--amount", "0.5", "--takes", "1")
+        assertTrue(btCode != 0)
+        assertContains(btErr, "takes")
+        assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain, "a refused robin leaves the pad alone")
+        val (bxCode, _, bxErr) = cli("robin", kitDir.path, "A01", "--amount", "0.5", "--zones", "3")
+        assertTrue(bxCode != 0)
+        assertContains(bxErr, "zones")
     }
 
     @Test

@@ -69,7 +69,7 @@ import kotlinx.coroutines.withContext
  * Shown, not fixed: a picked take that peaks over LIVE is flagged in
  * words beside the stack ([Copy.stackOverLive]) and left exactly that
  * loud — the user reorders, or keeps it. No auto-gain. And the cost is
- * said before COMMIT, not after: a stacked pad is layered, which locks
+ * said before KEEP, not after: a stacked pad is layered, which locks
  * every single-sample door until SOFT HITS is cleared, and clearing
  * deletes the copies ([Copy.STACK_LOCKS]).
  */
@@ -85,7 +85,7 @@ fun StackTakesScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    // Declared ahead of the BackHandler, which reads it. A COMMIT in flight
+    // Declared ahead of the BackHandler, which reads it. A KEEP in flight
     // swallows Back (the chip dims too): the screen it lands on is the pad
     // editor, which re-opens the kit from disk, and a Back that cancelled this
     // coroutine would drop the post-write callbacks that bring `open.kit` and
@@ -98,7 +98,7 @@ fun StackTakesScreen(
     var alreadyLayered by remember(entry.dir) { mutableStateOf(false) }
     var live by remember(entry.dir) { mutableStateOf<Candidate?>(null) }
     var candidates by remember(entry.dir) { mutableStateOf<List<Candidate>>(emptyList()) }
-    // The pad this screen opened on, by its file - COMMIT's identity check,
+    // The pad this screen opened on, by its file - KEEP's identity check,
     // same reasoning as TapeSpliceScreen's own `liveSampleFile`.
     var liveSampleFile by remember(entry.dir) { mutableStateOf<String?>(null) }
     // Softest first. BinEntries, not row indices: the list never reorders
@@ -240,7 +240,7 @@ fun StackTakesScreen(
                 val said = refusal
                 if (said == null) {
                     onKitUpdated(fresh.kit)
-                    onToast(Copy.stacked(stackedSoft))
+                    onToast("${Copy.stacked(stackedSoft)} ${Copy.STACK_UNDO_AT}")
                     onBack()
                 } else {
                     onToast(said)
@@ -325,7 +325,7 @@ fun StackTakesScreen(
             when {
                 busy -> "STACKING…"
                 picked.isEmpty() -> "STACK · PICK A TAKE FIRST"
-                else -> "STACK · COMMIT ${picked.size} UNDER LIVE"
+                else -> "STACK · KEEP ${picked.size} UNDER LIVE"
             },
             scheme,
             enabled = !busy && picked.isNotEmpty(),
@@ -348,7 +348,7 @@ private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, ti
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Dimmed while a COMMIT is in flight, as system Back is swallowed: a tap
+        // Dimmed while a KEEP is in flight, as system Back is swallowed: a tap
         // that did nothing with no sign would be the worse answer.
         ActionButton(
             backLabel,

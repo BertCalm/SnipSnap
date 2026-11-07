@@ -111,7 +111,7 @@ object TerraAuditionGenerator {
         sections.append(
             sectionJson(
                 id = "KIT", display = "THE TERRA KIT", body = "sixteen pads as the MPC gets them",
-                readout = listOf("A01-A12 MEMBRANE + CAVITY (A07 IS BAR)", "A13-A16 BELL + BAR"),
+                readout = listOf("A01-A12 MEMBRANE + CAVITY (A07 IS BOX)", "A13-A16 BELL + BAR"),
                 groups = listOf(Group("ALL SIXTEEN PADS", key = true, clips = kitClips)),
             ),
         )
@@ -196,8 +196,10 @@ object TerraAuditionGenerator {
      * three questions under [root]/R1, with their own manifest. Every clip
      * is the render a struck pad's recipe gives, `TerraPatch.render`. Each
      * striker is captured by `Terra.captureStriker`, as the phone will
-     * capture it. The BUZZ pad is A07 CAJON SLAP, the kit's most BUZZ: 0.75,
-     * against A16's 0.60 and A04's 0.15.
+     * capture it. The BUZZ pad is A07 CAJON SLAP as R1 heard it (2026-10),
+     * the TUNED_BAR slap, the kit's most BUZZ then: 0.75, against A16's 0.60
+     * and A04's 0.15. A07 has since been rebuilt twice (now a BOX), so the
+     * page spells the pad it played instead of reading today's kit.
      */
     private fun renderR1(root: File) {
         val dir = File(root, "R1").apply { mkdirs() }
@@ -207,9 +209,7 @@ object TerraAuditionGenerator {
             val head = Terra.captureStriker(s.snip) ?: error("${s.name} captured as silence")
             return TerraPatch.Striker(head, hit, s.name)
         }
-        val a07 = requireNotNull(TerraKits.classic()[6]) { "the terra kit has no A07" }
-        val buzzPad = PadRecipe.fromJsonValue(requireNotNull(a07.recipe) { "A07 carries no recipe" }).patch as TerraPatch
-        check(buzzPad.name == "Cajon Slap" && buzzPad.macros["BUZZ"] == 0.75f) { "A07 is ${buzzPad.name} ${buzzPad.macros}, not the BUZZ pad this page names" }
+        val buzzPad = TerraPatch("Cajon Slap", TerraVoice.TUNED_BAR, mapOf("TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f))
         val membrane = TerraPatch("Membrane", TerraVoice.COMPOUND_MEMBRANE, emptyMap())
         val cavity = TerraPatch("Cavity", TerraVoice.RESONANT_CAVITY, emptyMap())
         val bell = TerraPatch("Bell", TerraVoice.CONICAL_BELL, emptyMap())

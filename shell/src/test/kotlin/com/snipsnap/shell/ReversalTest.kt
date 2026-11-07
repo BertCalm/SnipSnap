@@ -87,6 +87,7 @@ class ReversalTest {
      */
     private val notADestructiveLanding = mapOf(
         "SHELF_LEGEND" to "a legend under the shelf naming the gesture; nothing has happened yet",
+        "SONG_DELETE" to "SONG's button label; nothing has happened yet, and the UNDO beside it then reads UNDO DELETE and puts the section back",
         // Refusals: the delete did NOT happen, so there is nothing to take back.
         // TWINS_KEEP_OWN arrived from PR #136 while #137 was open, and broke
         // the default branch: `App.kt`'s `evilTwins` checks `ownPadsOnBankB`
@@ -134,6 +135,8 @@ class ReversalTest {
         "STACK_LOCKS" to "a standing caveat; the landing is Copy.stacked()",
         // A legend on the export card row, naming the gesture. Nothing has happened yet.
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
+        // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
+        "CARD_FORGET" to "a button label, not a landing",
     )
 
     /**

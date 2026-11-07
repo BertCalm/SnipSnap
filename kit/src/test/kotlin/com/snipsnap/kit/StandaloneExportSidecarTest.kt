@@ -36,10 +36,12 @@ class StandaloneExportSidecarTest {
         val recipe = JsonValue.Obj(linkedMapOf("futureRecipe" to JsonValue.Str("keep this history")))
         val kit = Kit("Editable Export", listOf(
             KitPad(1, names[1], "Saved kick", DrumClass.KICK, "#e8542e", level = 1f,
-                tuneCoarse = -2, source = mapOf("file" to "capture.wav", "rawSha256" to "old take"), recipe = recipe,
+                tuneCoarse = -2, source = mapOf("file" to "capture.wav", "rawSha256" to "old take",
+                    "rawVelocitySha256" to "old velocity bank"), recipe = recipe,
                 velocityLayers = listOf(KitLayer(names[0], 1, 63, "DRY"), KitLayer(names[1], 64, 127, "ECHO"))),
             KitPad(3, names[2], "Saved open hat", DrumClass.HAT_OPEN, level = .8f, muteGroup = 1,
-                recipe = recipe, attack = .1f, decay = .2f, cutoff = .7f, humanize = .15f),
+                recipe = recipe, attack = .1f, decay = .2f, cutoff = .7f, humanize = .15f,
+                source = mapOf("rawVelocitySha256" to "a former bank")),
         ), tempoBpm = 104f, wear = WearLedger(mileage = 17.0))
 
         for (native in listOf(false, true)) {
@@ -55,7 +57,11 @@ class StandaloneExportSidecarTest {
                     velocityLayers = if (pad.slot == 1) listOf(
                         KitLayer("K_ck_soft.wav", 1, 63, "DRY"), KitLayer("K_ck_hard.wav", 64, 127, "ECHO"),
                     ) else emptyList(),
-                    source = pad.source + ("rawSha256" to hash(File(samples, sample))),
+                    source = (pad.source - "rawVelocitySha256") + ("rawSha256" to hash(File(samples, sample))) +
+                        if (pad.slot == 1) mapOf("rawVelocitySha256" to Json.write(JsonValue.Obj(linkedMapOf(
+                            "K_ck_soft.wav" to JsonValue.Str(hash(File(samples, "K_ck_soft.wav"))),
+                            "K_ck_hard.wav" to JsonValue.Str(hash(File(samples, "K_ck_hard.wav"))),
+                        )))) else emptyMap(),
                 )
             })
             assertEquals(expected, restored)
@@ -73,6 +79,7 @@ class StandaloneExportSidecarTest {
             // always fingerprints the current copied file and never mutates the
             // caller's saved kit or encodes its audio again.
             assertEquals("old take", kit.pad(1)!!.source["rawSha256"])
+            assertEquals("old velocity bank", kit.pad(1)!!.source["rawVelocitySha256"])
             assertNotEquals("old take", restored.pad(1)!!.source["rawSha256"])
             assertTrue(File(samples, "${kit.name}.xpm").isFile)
         }

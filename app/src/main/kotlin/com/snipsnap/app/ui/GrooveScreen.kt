@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +56,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.BeatPlayer
+import com.snipsnap.app.RecordLatency
 import com.snipsnap.app.BeatTap
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
@@ -82,10 +84,12 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
+import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.LiveRecord
 import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.Project
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Audition
@@ -105,6 +109,7 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -172,8 +177,8 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * content living at the edge to protect: the row was padded in from
  * a gutter on both sides, so the cue never overlapped a tab (that row is
  * the four-place row now, which does not scroll).
- * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
- * GROOVE / the write-and-doors row run edge to edge, so whichever control the
+ * This screen's scroll region has no such margin — GO TO / SHAPE THE
+ * GROOVE / SEND IT OUT run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
  * repro) is bisected by the same hard clip a gutter would have avoided.
  * A fade reads as "this continues" where a hard clip reads as "this
@@ -249,15 +254,6 @@ private const val YOURS_INDEX = 4
 
 /** Lane display order, straight from [GrooveEdit.Lane]'s own declaration order. */
 private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
-private val LANE_LABEL: Map<GrooveEdit.Lane, String> = mapOf(
-    GrooveEdit.Lane.KICK to "KICK",
-    GrooveEdit.Lane.SNARE to "SNARE",
-    GrooveEdit.Lane.CLAP to "CLAP",
-    GrooveEdit.Lane.HAT_CLOSED to "HAT C",
-    GrooveEdit.Lane.HAT_OPEN to "HAT O",
-    GrooveEdit.Lane.TOM to "TOM",
-    GrooveEdit.Lane.PERC to "PERC",
-)
 private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
     GrooveEdit.Lane.KICK to DrumClass.KICK,
     GrooveEdit.Lane.SNARE to DrumClass.SNARE,
@@ -382,6 +378,13 @@ fun GrooveScreen(
     onAuditionArmed: () -> Unit = {},
     /** AUDITION's own choose-a-winner write — same shape as every other screen's `onKitUpdated`. */
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit = {},
+    /**
+     * BEAT's BPM − / + (the 2026-11-06 ruling: one project tempo, set here):
+     * called with the new tempo once the taps settle, and App saves it to the
+     * project. Null (no project open to keep it in) leaves the control off,
+     * not drawn dead: the readout in the header is still the tempo.
+     */
+    onTempo: ((Float) -> Unit)? = null,
 ) {
     val scheme = LocalScheme.current
 
@@ -1281,23 +1284,21 @@ fun GrooveScreen(
         }
     }
 
-    fun toggleCell(lane: GrooveEdit.Lane, step: Int) {
-        val c = eClip ?: return
-        val note = GrooveEdit.noteFor(lane)
-        val pulses = step * GrooveEdit.STEP_PULSES
-        val turningOn = c.notes.none { it.note == note && it.timePulses == pulses }
-        setYours(GrooveEdit.toggleStep(c, lane, step))
-        editorDirty = true
-        editorSaveTick++
-        if (turningOn) beat.hit(GrooveEdit.LANE_SLOT.getValue(lane))
-    }
-
-    fun clearEditorBar() {
-        val c = eClip ?: return
-        setYours(GrooveEdit.clearBar(c, editorBar))
-        editorDirty = true
-        editorSaveTick++
-        onToast(Copy.BAR_WIPED)
+    /**
+     * Every change the step editor makes arrives here as one [StepEdit]: a
+     * new clip (a toggle, a velocity, CLEAR BAR), a pad to sound, a toast.
+     * The editor owns the lane map, so it says what to change; this applies
+     * that to the live clip, marks it for the autosave, and sounds the pad.
+     */
+    fun applyStepEdit(edit: StepEdit) {
+        edit.change?.let { change ->
+            val live = eClip ?: return
+            setYours(change(live))
+            editorDirty = true
+            editorSaveTick++
+        }
+        edit.toast?.let(onToast)
+        edit.previewSlot?.let { beat.hit(it, edit.previewVelocity) }
     }
 
     /**
@@ -1511,7 +1512,9 @@ fun GrooveScreen(
         flash(slot)
         val t = take
         if (!recording || t == null) return
-        val hitNanos = uptimeMillis * 1_000_000L
+        // When the touch was HEARD to land, not issued: on Bluetooth the sound
+        // reaches the ear a codec's delay after the beat's anchor (RecordLatency).
+        val hitNanos = RecordLatency.hitNanos(uptimeMillis)
         // Narrows the early-open gate to "a few ms early against the
         // downbeat," per this fn's own KDoc — a tap on an earlier
         // count-in beat is more than the clamp window away and is simply
@@ -2019,25 +2022,7 @@ fun GrooveScreen(
                 Modifier.fillMaxSize().then(if (isEditing) Modifier.clearAndSetSemantics { } else Modifier),
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                Box(
-                    Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
-                        val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                        // The meter rides along only when it is not 4/4 —
-                        // ORBIT's "BAR 12 · 3/4" said it, and this readout
-                        // used to say "2 BARS" of the same clip.
-                        val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
-                        TapeText(
-                            "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
-                                Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
-                            TapeType.lcdSmall,
-                            scheme.lcdInk2,
-                        )
-                    }
-                }
+                BeatHeader(scheme, kit.tempoBpm, currentClip, appScope, onTempo)
 
                 ProgramSelector(
                     names = PROG_NAMES,
@@ -2161,7 +2146,7 @@ fun GrooveScreen(
                         // below, outside their scrollable region, rather
                         // than folded into any one group — it is a
                         // time-boxed decision about the take that just
-                        // landed, not a standing SHAPE/SEND/TRANSPORT
+                        // landed, not a standing GO TO/SHAPE/SEND
                         // control, and it must stay on screen the instant
                         // the take lands, not wait behind a scroll.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2220,95 +2205,33 @@ fun GrooveScreen(
                             Modifier.fillMaxSize().verticalScroll(groupedControlsScroll),
                             verticalArrangement = Arrangement.spacedBy(9.dp),
                         ) {
-                            // ► PLAY / ■ STOP are the dock's now (plan §3.4):
-                            // the frame's foot carries the transport on every
-                            // screen and asks the beat for the flip itself.
-                            // BOUNCE stays here — it prints what the clock is
-                            // playing and needs the clip's own controls beside
-                            // it.
-                            TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink2.tape)
-                            // Needs a loop already running, over a clip that
-                            // actually has something in it (`currentClip`,
-                            // not just `playing` — a from-scratch screen
-                            // still advances the clock with nothing to hit,
-                            // and BOUNCE tapped there would land a silent
-                            // SNIP) and a bank that has actually finished
-                            // loading (`bankReady` — the bank loads
-                            // independently of the transport, so `playing`
-                            // alone does not mean there is anything for the
-                            // print to capture). See BOUNCE's own wrap-based
-                            // logic in the frame clock above for why it
-                            // needs the loop already running at all: it
-                            // prints the pattern as it plays, starting at
-                            // the next downbeat, so there is nothing to
-                            // start it against otherwise. Not offered
-                            // mid-take either: RECORD owns this same clock
-                            // while it runs, and a bounce racing a take that
-                            // has not landed yet is scope this PR leaves for
-                            // later, not a case handled here.
-                            // Cancel is STOP, not a second tap — the frame
-                            // effect's own `finally` discards an armed or
-                            // in-flight bounce the instant playback stops,
-                            // so a dedicated cancel would do the same thing
-                            // through a second door.
-                            // SHARE ▸ sits beside it: BOUNCE prints the beat INTO the app, this
-                            // renders it offline and sends it OUT, so the two answer different
-                            // questions and neither waits on the other. Short enough to share the
-                            // row, and it says what it opens - the share sheet - with its arrow.
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                GrooveActionButton(
-                                    label = when {
-                                        bounceArmed -> "WAITING…"
-                                        bouncing || landingBounce -> "BOUNCING…"
-                                        else -> Copy.GROOVE_BOUNCE_BUTTON
-                                    },
-                                    scheme = scheme,
-                                    modifier = Modifier.weight(2f),
-                                    // `playing` is deliberately not in this gate: a
-                                    // stopped loop is a stable state a user can sit
-                                    // in, not a transient one, so it gets the same
-                                    // toast-beats-gating treatment RECORD's own
-                                    // `!bankReady` case gets (Finding #8) rather
-                                    // than a dimmed button with no explanation.
-                                    enabled = currentClip != null && host.bankReady &&
-                                        !recording && !countingIn &&
-                                        !bounceArmed && !bouncing && !landingBounce,
-                                ) {
-                                    if (!beat.playing) {
-                                        onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
-                                    } else {
-                                        bounceSnapshot = currentClip
-                                        bounceArmed = true
-                                    }
-                                }
-                                GrooveActionButton(
-                                    label = Places.SHARE_BEAT,
-                                    scheme = scheme,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = currentClip != null && !shareBusy,
-                                    accent = true,
-                                    spoken = Places.SHARE_BEAT_SPOKEN,
-                                ) { shareBeat() }
-                            }
-
-                            TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
-                            Row(
-                                Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
-                                }
-                                SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
-                            }
-
-                            FeelRow(
+                            // The scroll region reads top to bottom as GO TO (the three
+                            // benches), SHAPE THE GROOVE, SEND IT OUT. Each group is its
+                            // own composable below, which is also what keeps this method
+                            // under the dex register cliff (256 registers).
+                            //
+                            // ► PLAY / ■ STOP are the dock's now (plan §3.4): the frame's
+                            // foot carries the transport on every screen, so there is no
+                            // heading here for controls that live elsewhere. BOUNCE stays
+                            // with SEND IT OUT - it prints what the clock is playing.
+                            BeatGoTo(
+                                scheme = scheme,
+                                swingPercent = swingPercent,
+                                feel = feel,
+                                feelTemplate = feelTemplate,
+                                clearJustLanded = ::clearJustLanded,
+                                onOrbit = onOrbit,
+                                onArrange = onArrange,
+                                onLoop = onLoop,
+                            )
+                            BeatShape(
+                                scheme = scheme,
+                                swingPercent = swingPercent,
+                                onSwingChange = { swingPercent = it },
                                 feel = feel,
                                 seed = seed,
-                                scheme = scheme,
+                                busy = busy,
+                                onFeelChange = { feel = it },
                                 // Deliberately does NOT clearJustLanded — FEEL is a
                                 // non-destructive preview lens, same as `► PLAY`
                                 // above. The take is already written to disk once
@@ -2316,101 +2239,46 @@ fun GrooveScreen(
                                 // dismissing it just because the user nudged FEEL to
                                 // audition the take tighter or looser would strand
                                 // them with no undo. See `justLanded`'s own KDoc.
-                                onChange = { feel = it },
                                 onRecentre = {
                                     if (feel != 0) {
                                         feel = 0
                                         onToast(Copy.FEEL_RECENTRED)
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                // HUMANIZE ⚄ is gone (feel axis, task 6): RESEED only
+                                // rerolls the template feel is currently drawing from, so
+                                // it's disabled at feel <= 0 and never touches progIndex.
+                                onReseed = {
+                                    clearJustLanded()
+                                    seed++
+                                    onToast(Copy.feelRolled(seed))
+                                },
                             )
-
-                            // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
-                            // PROG A once and forced a jump to it — a control
-                            // whose whole job the feel axis now does continuously,
-                            // on every program the axis rides. RESEED only rerolls
-                            // the template feel is currently drawing from, so it's
-                            // disabled at feel <= 0 (nothing is applying it yet)
-                            // and, unlike the old button, never touches progIndex:
-                            // the axis reaches A, C and D alike, so there is no
-                            // one program to jump to.
-                            GrooveActionButton("⚄ RESEED", scheme, Modifier.fillMaxWidth(), enabled = !busy && feel > 0) {
-                                clearJustLanded()
-                                seed++
-                                onToast(Copy.feelRolled(seed))
-                            }
-
-                            // "SEND IT SOMEWHERE" until J46, which is true of
-                            // two of these four: SONG ▸ and ORBIT ▸ leave the
-                            // screen, while MIDI and CHART write a file where
-                            // you stand and leave you on GROOVE. One legend
-                            // over both, with the two kinds interleaved
-                            // (MIDI, SONG ▸, ORBIT ▸, CHART), left the ▸ glyph
-                            // as the only thing telling a player which was
-                            // which. The row is now sorted by what the button
-                            // does, and the legend names both halves in the
-                            // order they sit.
-                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink2.tape)
-                            // Batch 3, Task 1: one row of four rather than a
-                            // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
-                            // label here is five characters or fewer at 9sp, so
-                            // a single row reads fine and costs this column one
-                            // fewer row than any split would, which is the row
-                            // NeedleRoll actually needed back. J46 keeps the one
-                            // row and sorts it rather than splitting it, for the
-                            // same reason.
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // Batch 3, Task 4: MIDI writes files in place —
-                                // no navigation, no panel — so it lost the ▸ a
-                                // navigate/panel-opener keeps.
-                                GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
-                                // CHART writes a text file in place — no
-                                // navigation, no panel — so it lost its ▸ too
-                                // (Task 4).
-                                GrooveActionButton(
-                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
-                                    scheme,
-                                    Modifier.weight(1f),
-                                    enabled = !chartBusy,
-                                    accent = true,
-                                ) { exportChart() }
-                            }
-                            // The three benches off BEAT, one row (plan §3.4).
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // ORBIT ▸ — the kit on rings of different lengths, one
-                                // needle speed: polymeter and polyrhythm from the same
-                                // pads this screen already has loaded.
-                                GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onOrbit()
-                                }
-                                // SONG ▸ — the same four programs laid into a structure, not
-                                // just cycled: intro/theme/variation/the turn/reprise/outro,
-                                // one tap away from what this screen already has loaded.
-                                GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onArrange(swingPercent, feel / 100f, feelTemplate)
-                                }
-                                // LOOP ▸ — the six-track grid of snips, with its own
-                                // engine; it used to be the shelf's door and its own
-                                // Activity, and is a bench inside the frame now.
-                                GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
-                                    clearJustLanded()
-                                    onLoop()
-                                }
-                            }
-
-                            TapeText(
-                                "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
-                                TapeType.pixelSmall,
-                                scheme.ink2.tape,
-                                Modifier.fillMaxWidth(),
-                                maxLines = 2,
+                            BeatSendOut(
+                                scheme = scheme,
+                                bounceArmed = bounceArmed,
+                                bouncing = bouncing,
+                                landingBounce = landingBounce,
+                                hasClip = currentClip != null,
+                                bankReady = host.bankReady,
+                                recording = recording,
+                                countingIn = countingIn,
+                                shareBusy = shareBusy,
+                                midiBusy = midiBusy,
+                                chartBusy = chartBusy,
+                                offLaneCount = offLaneCount,
+                                onBounce = {
+                                    if (!beat.playing) {
+                                        onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
+                                    } else {
+                                        bounceSnapshot = currentClip
+                                        bounceArmed = true
+                                    }
+                                },
+                                onShare = ::shareBeat,
+                                onMidi = ::exportMidi,
+                                onChart = ::exportChart,
                             )
-                            if (offLaneCount > 0) {
-                                TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
-                            }
 
                             // Trailing clearance, sized to match the scrim
                             // below: without it the last control (the off-lane
@@ -2478,10 +2346,11 @@ fun GrooveScreen(
                     posSteps = posSteps,
                     scheme = scheme,
                     onBarSelect = { editorBar = it },
-                    onClear = ::clearEditorBar,
-                    onToggle = ::toggleCell,
+                    onEdit = ::applyStepEdit,
+                    kitDir = kitDir,
                     onDone = ::closeEditor,
                     yoursCount = yoursAll.size,
+                    kit = entry.kit,
                 )
             }
         }
@@ -2618,6 +2487,162 @@ private fun FeelRow(
             TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
+    }
+}
+
+/**
+ * BEAT's GO TO group: the three benches off this screen, one row (plan §3.4).
+ * A child of [GrooveScreen] rather than inline in it - the method sits at the
+ * dex register cliff (256) and every group that can leave it, must.
+ */
+@Composable
+private fun ColumnScope.BeatGoTo(
+    scheme: Scheme,
+    swingPercent: Int,
+    feel: Int,
+    feelTemplate: GrooveFeel.Template,
+    clearJustLanded: () -> Unit,
+    onOrbit: () -> Unit,
+    onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit,
+    onLoop: () -> Unit,
+) {
+    TapeText(Copy.BEAT_HEADING_GO_TO, TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // ORBIT ▸ — the kit on rings of different lengths, one
+        // needle speed: polymeter and polyrhythm from the same
+        // pads this screen already has loaded.
+        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onOrbit()
+        }
+        // SONG ▸ — the same four programs laid into a structure, not
+        // just cycled: intro/theme/variation/the turn/reprise/outro,
+        // one tap away from what this screen already has loaded.
+        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onArrange(swingPercent, feel / 100f, feelTemplate)
+        }
+        // LOOP ▸ — the six-track grid of snips, with its own
+        // engine; it used to be the shelf's door and its own
+        // Activity, and is a bench inside the frame now.
+        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+            clearJustLanded()
+            onLoop()
+        }
+    }
+}
+
+/** BEAT's SHAPE THE GROOVE group: the SWING stepper, the FEEL stepper and RESEED. */
+@Composable
+private fun ColumnScope.BeatShape(
+    scheme: Scheme,
+    swingPercent: Int,
+    onSwingChange: (Int) -> Unit,
+    feel: Int,
+    seed: Int,
+    busy: Boolean,
+    onFeelChange: (Int) -> Unit,
+    onRecentre: () -> Unit,
+    onReseed: () -> Unit,
+) {
+    TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(
+        Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SwingStepper("−", scheme, description = "SWING DOWN") { onSwingChange((swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN)) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+            TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        SwingStepper("+", scheme, description = "SWING UP") { onSwingChange((swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX)) }
+    }
+    FeelRow(
+        feel = feel,
+        seed = seed,
+        scheme = scheme,
+        onChange = onFeelChange,
+        onRecentre = onRecentre,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    GrooveActionButton("⚄ RESEED", scheme, Modifier.fillMaxWidth(), enabled = !busy && feel > 0, onClick = onReseed)
+}
+
+/**
+ * BEAT's SEND IT OUT group: everything that takes the beat somewhere else.
+ * BOUNCE prints the beat INTO the app, SHARE renders it offline and sends it
+ * OUT, MIDI and CHART write a file where you stand. The enable gates are the
+ * ones BOUNCE and SHARE always had: BOUNCE needs a clip with something in it
+ * and a bank that has finished loading (not just a running loop - a stopped
+ * loop gets the toast-beats-gating treatment RECORD's `!bankReady` case does),
+ * and never mid-take; SHARE needs only a clip.
+ */
+@Composable
+private fun ColumnScope.BeatSendOut(
+    scheme: Scheme,
+    bounceArmed: Boolean,
+    bouncing: Boolean,
+    landingBounce: Boolean,
+    hasClip: Boolean,
+    bankReady: Boolean,
+    recording: Boolean,
+    countingIn: Boolean,
+    shareBusy: Boolean,
+    midiBusy: Boolean,
+    chartBusy: Boolean,
+    offLaneCount: Int,
+    onBounce: () -> Unit,
+    onShare: () -> Unit,
+    onMidi: () -> Unit,
+    onChart: () -> Unit,
+) {
+    TapeText(Copy.BEAT_HEADING_SEND_OUT, TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        GrooveActionButton(
+            label = when {
+                bounceArmed -> "WAITING…"
+                bouncing || landingBounce -> "BOUNCING…"
+                else -> Copy.GROOVE_BOUNCE_BUTTON
+            },
+            scheme = scheme,
+            modifier = Modifier.weight(2f),
+            enabled = hasClip && bankReady && !recording && !countingIn &&
+                !bounceArmed && !bouncing && !landingBounce,
+            onClick = onBounce,
+        )
+        GrooveActionButton(
+            label = Places.SHARE_BEAT,
+            scheme = scheme,
+            modifier = Modifier.weight(1f),
+            enabled = hasClip && !shareBusy,
+            accent = true,
+            spoken = Places.SHARE_BEAT_SPOKEN,
+            onClick = onShare,
+        )
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // MIDI and CHART write a file in place - no navigation, no panel -
+        // so neither carries the ▸ a navigate/panel-opener keeps.
+        GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true, onClick = onMidi)
+        GrooveActionButton(
+            if (chartBusy) Copy.CHART_BUSY else "CHART",
+            scheme,
+            Modifier.weight(1f),
+            enabled = !chartBusy,
+            accent = true,
+            onClick = onChart,
+        )
+    }
+    TapeText(
+        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+        TapeType.pixelSmall,
+        scheme.ink2.tape,
+        Modifier.fillMaxWidth(),
+        maxLines = 2,
+    )
+    if (offLaneCount > 0) {
+        TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
     }
 }
 
@@ -2872,7 +2897,7 @@ private fun NeedleRoll(
                         .background(scheme.lcd.tape, RoundedCornerShape(3.dp))
                         .padding(horizontal = 5.dp, vertical = 1.dp),
                 ) {
-                    TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, c)
+                    TapeText(LANE_DRUM_WORD.getValue(lane), TapeType.pixelSmall, c)
                 }
             }
             // Fix 3's eighth column, legended: same chip shape as the seven
@@ -2892,6 +2917,21 @@ private fun NeedleRoll(
         }
     }
 }
+
+/** One BEAT lane's row label: the pad's name on one line, shrunk to the 46dp box [laneLabel] fills. */
+@Composable
+private fun LaneNameCell(label: String, color: Color) {
+    FitTapeText(label, TapeType.pixelSmall, color)
+}
+
+/** Each lane's colour: the pad's own class ([laneClass]), else the lane's drum class, else LCD ink. */
+@Composable
+private fun laneColorsFor(kit: Kit, scheme: Scheme, pads: List<Int>): Map<GrooveEdit.Lane, Color> =
+    remember(kit, scheme, pads) {
+        LANE_ORDER.associateWith { lane ->
+            LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(laneClass(lane, kit, it, pads)).tape } ?: scheme.lcdInk.tape
+        }
+    }
 
 /**
  * The fork-to-E step editor, full-screen over the groove screen. E keeps
@@ -2918,12 +2958,18 @@ private fun StepEditorOverlay(
     posSteps: Float,
     scheme: Scheme,
     onBarSelect: (Int) -> Unit,
-    onClear: () -> Unit,
-    onToggle: (GrooveEdit.Lane, Int) -> Unit,
+    onEdit: (StepEdit) -> Unit,
+    kitDir: File,
     onDone: () -> Unit,
     /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
     yoursCount: Int,
+    /** The loaded kit: each lane's row is named and coloured after the pad it plays. */
+    kit: Kit,
 ) {
+    val state = rememberStepEditorState(kitDir, clip.name, onEdit)
+    val pads = state.lanePads
+    val laneNames = remember(kit, pads) { LANE_ORDER.associateWith { laneLabel(it, kit, pads) } }
+    val laneColors = laneColorsFor(kit, scheme, pads)
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
     val barSteps = GrooveEdit.stepsPerBar(clip)
@@ -2933,14 +2979,9 @@ private fun StepEditorOverlay(
 
     // Recomputed only when the clip or the visible bar changes, not every
     // animation frame while the playhead ring is live.
-    val onSteps = remember(clip, editorBar) {
-        LANE_ORDER.associateWith { lane ->
-            val note = GrooveEdit.noteFor(lane)
-            (0 until barSteps).filter { col ->
-                val step = editorBar * barSteps + col
-                clip.notes.any { it.note == note && it.timePulses == step * GrooveEdit.STEP_PULSES }
-            }.toSet()
-        }
+    val onSteps = remember(clip, editorBar, pads) { velocitiesByLane(clip, editorBar, barSteps, pads) }
+    val otherSteps = remember(clip, editorBar, pads) {
+        if (GrooveEdit.offLaneNotes(clip, pads).isEmpty()) null else offLaneVelocities(clip, editorBar, barSteps, pads)
     }
 
     Box(Modifier.fillMaxSize().background(scheme.lcd.tape).padding(8.dp)) {
@@ -3001,7 +3042,7 @@ private fun StepEditorOverlay(
                     }
                 }
                 Box(
-                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = "CLEAR BAR", onClick = onClear).padding(horizontal = 10.dp),
+                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = "CLEAR BAR") { onEdit(clearedBar(editorBar, state)) }.padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("CLEAR BAR", TapeType.pixelSmall, scheme.ink2.tape)
@@ -3025,21 +3066,24 @@ private fun StepEditorOverlay(
             // reclaiming exactly the gap that used to be unclickable.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (lane in LANE_ORDER) {
-                    val laneColor = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
+                    val laneColor = laneColors.getValue(lane)
                     val laneOnSteps = onSteps.getValue(lane)
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Box(
-                            Modifier.width(46.dp).fillMaxHeight().sunkenField(scheme, 3.dp).padding(horizontal = 4.dp),
+                            Modifier.width(46.dp).fillMaxHeight().sunkenField(scheme, 3.dp)
+                                .tapeClick(label = Copy.stepLanePadSpoken(LANE_DRUM_WORD.getValue(lane), laneNames.getValue(lane))) { state.pickLane = lane }
+                                .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, laneColor)
+                            LaneNameCell(laneNames.getValue(lane), laneColor)
                         }
                         Row(Modifier.weight(1f).fillMaxHeight()) {
                             for (col in 0 until barSteps) {
-                                val on = col in laneOnSteps
+                                val vel = laneOnSteps[col]
+                                val on = vel != null
                                 val isPlayhead = col == playheadCol
                                 val fillColor = when {
-                                    on -> laneColor
+                                    on -> laneColor.copy(alpha = 0.22f)
                                     col % 4 == 0 -> scheme.field.tape
                                     else -> scheme.lcd.tape
                                 }
@@ -3053,12 +3097,17 @@ private fun StepEditorOverlay(
                                         // 16-cell grid with no name at all
                                         // read as identical unlabelled
                                         // squares to a screen reader.
-                                        .tapeClick(label = "${LANE_LABEL.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}") { onToggle(lane, step) }
+                                        .stepCellClick(
+                                            label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}",
+                                            onLongClick = { state.select(lane, step) },
+                                        ) { onEdit(toggledStep(clip, lane, step, state)) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
+                                        .velocityFill(vel, laneColor)
                                         .border(
-                                            1.dp,
-                                            if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            if (state.selLane == lane && state.selStep == step) 2.dp else 1.dp,
+                                            if (state.selLane == lane && state.selStep == step) scheme.amber.tape
+                                            else if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
                                             RoundedCornerShape(3.dp),
                                         ),
                                 )
@@ -3066,7 +3115,10 @@ private fun StepEditorOverlay(
                         }
                     }
                 }
+                OffLaneRow(otherSteps, barSteps, scheme)
             }
+
+            StepEditorPanel(state, clip, kit, scheme, laneNames, editorBar, onEdit)
 
             TapeText(
                 Copy.stepEditFooter(totalSteps, sourceLabel),
@@ -3078,3 +3130,82 @@ private fun StepEditorOverlay(
         }
     }
 }
+
+/**
+ * BEAT's header: the LCD panel naming the screen and reading the tempo, the
+ * bars and the notes of the program on screen, and under it BPM − / + when
+ * there is a project to keep the tempo in ([onTempo] non-null; see
+ * [BeatTempoRow]). Its own composable, and not inline in [GrooveScreen]: that
+ * method is within a register or two of the dex limit, and the header's own
+ * locals left it when the tempo control came in.
+ */
+@Composable
+private fun BeatHeader(
+    scheme: Scheme,
+    tempoBpm: Float?,
+    currentClip: Mpc3Clip?,
+    appScope: CoroutineScope,
+    onTempo: ((Float) -> Unit)?,
+) {
+    Box(
+        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
+            val bpm = tempoBpm ?: KitPreview.DEFAULT_BPM
+            // The meter rides along only when it is not 4/4 —
+            // ORBIT's "BAR 12 · 3/4" said it, and this readout
+            // used to say "2 BARS" of the same clip.
+            val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
+            TapeText(
+                "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
+                    Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
+                TapeType.lcdSmall,
+                scheme.lcdInk2,
+            )
+        }
+    }
+    if (onTempo != null) BeatTempoRow(scheme, tempoBpm ?: KitPreview.DEFAULT_BPM, appScope, onTempo)
+}
+
+/**
+ * BEAT's tempo control: BPM − and BPM +, hold to run, with the tempo
+ * between them. The readout moves at once; the save waits [TEMPO_SETTLE_MS]
+ * of quiet (ORBIT's old BPM row did the same), so a held run is one write to
+ * project.json and one restart of the clock, not forty. [bpm] is the
+ * project's tempo as the screen was handed it; the pending value is dropped
+ * when that changes, which is the save landing. The wait runs on [appScope],
+ * so leaving BEAT inside it does not lose the tempo. Its own composable, and
+ * not inline in [GrooveScreen]: that method is near the dex register limit.
+ */
+@Composable
+private fun BeatTempoRow(scheme: Scheme, bpm: Float, appScope: CoroutineScope, onSettled: (Float) -> Unit) {
+    var pending by remember(bpm) { mutableStateOf<Float?>(null) }
+    val job = remember { arrayOfNulls<Job>(1) }
+    val settled by rememberUpdatedState(onSettled)
+    fun step(by: Float) {
+        val next = ((pending ?: bpm) + by).coerceIn(Project.MIN_BPM, Project.MAX_BPM)
+        if (next == (pending ?: bpm)) return
+        pending = next
+        job[0]?.cancel()
+        job[0] = appScope.launch {
+            delay(TEMPO_SETTLE_MS)
+            settled(next)
+        }
+    }
+    val shown = pending ?: bpm
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RepeatButton("BPM −", "SLOWER", scheme, Modifier.weight(1f)) { step(-1f) }
+        TapeText(
+            (if (shown % 1f == 0f) "%.0f" else "%.1f").format(java.util.Locale.ROOT, shown) + " BPM",
+            TapeType.pixel,
+            scheme.ink2.tape,
+            Modifier.weight(1f),
+        )
+        RepeatButton("BPM +", "FASTER", scheme, Modifier.weight(1f)) { step(1f) }
+    }
+}
+
+/** How long the tempo waits for another tap before it is saved; ORBIT's `BPM_SETTLE_MS` and LOOP's `TEMPO_SETTLE_MS` are the same idea. */
+private const val TEMPO_SETTLE_MS = 400L

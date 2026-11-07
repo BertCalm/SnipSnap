@@ -74,8 +74,8 @@ import kotlinx.coroutines.withContext
  * rewrites it), then drag a shared needle over both stacked waveforms to
  * choose the one frame where the head hands off to the tail.
  * [TapeSplice.join] decides on its own whether the raw cut needs a short
- * declick overlap; COMMIT is honest about which happened
- * ([Copy.spliced]). Whatever was live before COMMIT is itself binned,
+ * declick overlap; KEEP is honest about which happened
+ * ([Copy.spliced]). Whatever was live before KEEP is itself binned,
  * same as every other pad rewrite, and the pad sheet's UNDO SPLICE
  * (`KitBuilderModel.unsplicePad`) gives it back and takes the splice's
  * recipe off. THE BIN shows no BACK on that kept take while the splice is
@@ -93,7 +93,7 @@ fun TapeSpliceScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    // Declared ahead of the BackHandler, which reads it. A COMMIT in flight
+    // Declared ahead of the BackHandler, which reads it. A KEEP in flight
     // swallows Back (the chip dims too): the screen it lands on is the pad
     // editor, which re-opens the kit from disk, and a Back that cancelled this
     // coroutine would drop the post-write callbacks that bring `open.kit` and
@@ -104,7 +104,7 @@ fun TapeSpliceScreen(
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
     var candidates by remember(entry.dir) { mutableStateOf<List<Take>>(emptyList()) }
-    // The pad this screen opened on, by its file - COMMIT's identity check.
+    // The pad this screen opened on, by its file - KEEP's identity check.
     // A slot reassigned underneath an open overlay is exactly the
     // "Frankenstein entry" PadSheetScreen's onDesample already guards
     // against; splicing these takes into a stranger's pad would silently
@@ -161,7 +161,7 @@ fun TapeSpliceScreen(
     var loadedTail by remember(entry.dir) { mutableStateOf<LoadedTake?>(null) }
     // Why the pair can't be spliced, in words - null while it can. Said
     // here, before the needle ever shows, rather than as a thrown refusal
-    // out of TapeSplice.join at PREVIEW or COMMIT.
+    // out of TapeSplice.join at PREVIEW or KEEP.
     var pairRefusal by remember(entry.dir) { mutableStateOf<String?>(null) }
     var needleFrame by remember(entry.dir) { mutableStateOf(0) }
 
@@ -183,7 +183,7 @@ fun TapeSpliceScreen(
             // TapeSplice.join's own contract, checked up front: a mutated
             // take is stereo where its original was mono, and the two
             // can't be butted together without folding one - refused
-            // here in words instead of thrown at COMMIT.
+            // here in words instead of thrown at KEEP.
             pairRefusal = Copy.SPLICE_FORMATS_DIFFER
             loadedHead = null
             loadedTail = null
@@ -252,7 +252,7 @@ fun TapeSpliceScreen(
                                 val spliced = result
                                 if (spliced != null) {
                                     onKitUpdated(fresh.kit)
-                                    onToast(Copy.spliced(spliced.crossfaded))
+                                    onToast("${Copy.spliced(spliced.crossfaded)} ${Copy.SPLICE_UNDO_AT}")
                                     onBack()
                                 } else {
                                     onToast(refusal ?: Copy.SPLICE_KIT_GONE)
@@ -308,7 +308,7 @@ fun TapeSpliceScreen(
  * The header's words: the tool and the pad it is working on. SPLICE is a bench
  * over the pad editor and Back can restore it after the editor was left on
  * another pad (the history keeps one pad slot, latest opening wins), so the
- * pad has to be on screen for the user to see which one COMMIT will splice.
+ * pad has to be on screen for the user to see which one KEEP will splice.
  */
 private fun spliceTitle(slot: Int): String = "SPLICE · ${PadBanks.tag(slot)}"
 
@@ -322,7 +322,7 @@ private fun SpliceHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, t
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Dimmed while a COMMIT is in flight, as system Back is swallowed: a tap
+        // Dimmed while a KEEP is in flight, as system Back is swallowed: a tap
         // that did nothing with no sign would be the worse answer.
         ActionButton(
             backLabel,
@@ -456,7 +456,7 @@ private fun NeedleStep(
                     voice?.release()
                     // The pair was format-checked at load, so join can't
                     // refuse here in practice - but a refusal is a toast,
-                    // never a crash, same as COMMIT's own guard.
+                    // never a crash, same as KEEP's own guard.
                     val samples = runCatching { previewSamples(head, tail, needleFrame) }
                         .getOrElse { e ->
                             Log.e("TapeSpliceScreen", "preview: failed", e)
@@ -469,9 +469,9 @@ private fun NeedleStep(
                 },
             )
             ActionButton(
-                // Batch 3, Task 4: no ▸ — COMMIT writes the splice in
+                // Batch 3, Task 4: no ▸ — KEEP writes the splice in
                 // place; it doesn't navigate or open a panel.
-                if (busy) "SPLICING…" else "SPLICE · COMMIT",
+                if (busy) "SPLICING…" else "SPLICE · KEEP",
                 scheme,
                 enabled = !busy,
                 modifier = Modifier.weight(1.4f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),

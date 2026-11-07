@@ -17,10 +17,11 @@ enum class FerryVoice { PASSAGE }
  * shared fundamental is retained. At MATCH=1
  * the model-1 sound is unchanged, including seeded excitation. SPAN/BODY
  * remain later rounds. Model 3 adds LOSS to the physical damping, with the
- * approved four-second sound at its neutral setting. HOLD remains unavailable.
+ * approved four-second sound at its neutral setting. Model 4 gives short LOSS
+ * settings a shaped release after their observation window. HOLD remains unavailable.
  */
 object Ferry {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val MAX_MISTUNE_CENTS = 6.0
     const val DEFAULT_MIDI = 48
     const val MIN_MIDI = 36
@@ -61,7 +62,15 @@ object Ferry {
         if (loss <= .5f) 2.0.pow(2.0 * loss - 1.0) else 4.0.pow(2.0 * loss - 1.0)
 
     /** A bounded prototype observation horizon, not a claim of physical silence. */
-    internal fun outputFrames(loss: Float) = (DURATION_SECONDS * Dsp.RATE / lossScale(loss)).roundToInt()
+    internal fun observationFrames(loss: Float) = (DURATION_SECONDS * Dsp.RATE / lossScale(loss)).roundToInt()
+
+    /** A proposed musical release, distinct from the network's material losses. */
+    internal fun releaseSeconds(loss: Float, model: Int = MODEL_VERSION): Float =
+        if (model < 4 || loss <= .5f) 0f else .35f * (2f * loss - 1f)
+
+    internal fun releaseFrames(loss: Float, model: Int = MODEL_VERSION) = (releaseSeconds(loss, model) * Dsp.RATE).toInt()
+
+    internal fun outputFrames(loss: Float, model: Int = MODEL_VERSION) = observationFrames(loss) + releaseFrames(loss, model)
 
     /** .25/.5/1 preserve the approved slow/normal/fast rates .35/1/3.5. */
     internal fun pace(handoff: Float): Double = when {
@@ -115,15 +124,15 @@ object Ferry {
         require(voice == FerryVoice.PASSAGE)
         val m = settled(macros, model)
         val loss = m["LOSS"] ?: .5f
-        val frames = outputFrames(loss)
+        val frames = outputFrames(loss, model)
         if (velocity == 0f) return Snip(FloatArray(frames), channels = 1, sampleRate = Dsp.RATE)
         val raw = plan(midi, m.getValue("HANDOFF"), m["MATCH"] ?: 1f, loss)
             .render(initial(velocity, seed), frames * Dsp.OVERSAMPLE)
-        return Snip(finish(raw), channels = 1, sampleRate = Dsp.RATE)
+        return Snip(finish(raw, releaseSeconds(loss, model)), channels = 1, sampleRate = Dsp.RATE)
     }
 
     /** Normal SnipSnap output stage; no limiter is used to hide internal growth. */
-    internal fun finish(raw: FloatArray): FloatArray {
+    internal fun finish(raw: FloatArray, releaseSeconds: Float = 0f): FloatArray {
         Tide.bandLimit(raw, INTERNAL_RATE)
         val out = Dsp.decimate(raw, Dsp.RATE)
         val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
@@ -132,6 +141,10 @@ object Ferry {
             val x = out[i] - mean.toFloat()
             out[i] = x - hp.lp(x, 20f)
         }
+        // Continue the real network beyond the old cut, then ease its readout
+        // to rest. A cosine release reaches zero with zero slope; the 4 ms
+        // house fade alone removed a still-audible dry tail too abruptly.
+        Dsp.fadeTailCosine(out, releaseSeconds)
         Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return out

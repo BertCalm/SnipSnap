@@ -113,6 +113,14 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of the VIBRATO pedal, on either sheet, swings the pitch the 42 cents the owner chose`() {
+        val chosen = 0.7f // DEPTH 0.7 x 60 cents = 42 cents, the middle of the three depths heard on 2026-11-04
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            assertEquals(chosen, Treatments.chain("vibratoed", tap).vibrato!!.getValue("DEPTH"), "a tap at $tap misses the chosen depth")
+        }
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -135,8 +143,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(40, PadSheet.ALL_SEGMENTS.size, "the card should hold 40 segments")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(41, PadSheet.ALL_SEGMENTS.size, "the card should hold 41 segments")
     }
 
     /**
@@ -147,7 +155,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine and FADE IN forty`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty and VIBRATO forty-one`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -178,9 +186,11 @@ class PadSheetTest {
             "ROOM",
             // FADE IN's gate (2026-11-02): on the slate, behind MORE
             "FADE IN",
+            // VIBRATO's gate (2026-11-04): on the slate, behind MORE
+            "VIBRATO",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(40, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(41, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test

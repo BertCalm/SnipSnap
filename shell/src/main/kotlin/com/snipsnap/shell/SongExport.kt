@@ -84,9 +84,16 @@ object SongExport {
         return Written(xpj, mixed)
     }
 
-    /** The plan's clips named `01 intro`, `02 theme` … so the sequence list reads as the song. */
+    /**
+     * The plan's clips named `01 intro`, `02 theme` … so the sequence list
+     * reads as the song, each one written through its repeats: a 2-bar
+     * section played ×2 is one 4-bar sequence, so the project is as long as
+     * the WAV. The MPC has no song steps here yet (the writer still refuses
+     * them), so this is how a repeat reaches the hardware; it used to be
+     * dropped, and a section meant to play twice arrived once.
+     */
     fun sectionClips(plan: Arranger.Arrangement): List<Mpc3Clip> =
         plan.sections.mapIndexed { i, s ->
-            s.clip.copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
+            Arranger.tiled(s.clip, s.repeats).copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
         }
 }

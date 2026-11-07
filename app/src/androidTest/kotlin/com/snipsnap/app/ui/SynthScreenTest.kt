@@ -24,6 +24,8 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.SynthDrafts
+import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Eq
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.Ohm
@@ -33,6 +35,7 @@ import com.snipsnap.synth.OhmOptions
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
+import com.snipsnap.synth.OnsetPresets
 import com.snipsnap.synth.OnsetVoice
 import com.snipsnap.synth.PadRecipe
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +51,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -69,6 +73,7 @@ class SynthScreenTest : ComposeScreenTest() {
     private var screenVisible by mutableStateOf(true)
     private val settings = mutableMapOf<String, String>()
     private val updatedKit = AtomicReference<Kit?>(null)
+    private val recordedToasts = CopyOnWriteArrayList<String>()
 
     @After
     fun cleanUp() {
@@ -214,10 +219,13 @@ class SynthScreenTest : ComposeScreenTest() {
                 SynthScreen(
                     entry = currentEntry,
                     shelfRoot = root,
-                    onToast = {},
+                    onToast = { recordedToasts += it },
                     onKitUpdated = { kit ->
-                        updatedKit.set(kit)
+                        // The entry first, then the signal: a test that sees
+                        // updatedKit must find the state write already made,
+                        // so waitForPadWrite's pump always draws the new kit.
                         currentEntry = currentEntry?.copy(kit = kit)
+                        updatedKit.set(kit)
                     },
                     onShelfAssetWritten = {},
                     onDroneToLoop = { _, _, _ -> },
@@ -230,11 +238,12 @@ class SynthScreenTest : ComposeScreenTest() {
     }
 
     /** Remove the screen's remember state, then mount it with the same navigation bag. */
-    private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
+    private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry, beforeReturn: () -> Unit = {}) {
         compose.runOnIdle { screenVisible = false }
         pump()
         button("ENGINE ONSET. CHOOSE ENGINE").assertDoesNotExist()
         compose.runOnIdle {
+            beforeReturn()
             currentEntry = entry
             screenVisible = true
         }
@@ -271,8 +280,38 @@ class SynthScreenTest : ComposeScreenTest() {
         pump()
     }
 
+    /**
+     * Keep write failures visible: a refused pad must not look like an
+     * unexplained timeout. Then give the screen one pump to draw the
+     * finished send.
+     *
+     * The pump is needed because the clock here is frozen. sendToSlot hands
+     * over the kit (onKitUpdated, which [condition] watches) and clears
+     * padChooser.sendBusy in its finally block, both in the same main-thread
+     * step. But waitFor returns the moment [condition] holds, with no frame
+     * drawn since. The semantics still show the send in flight: REOPEN PAD
+     * RECIPE disabled, and UPDATE PAD, where it is shown, disabled and named
+     * "…". [activate] rightly refuses a disabled control, so a test that
+     * reopens a pad straight after sending or updating one failed on that
+     * stale frame, not on the screen. The frames the pump advances run on
+     * the main thread, queued behind that step, so they show the send done.
+     */
+    private fun waitForPadWrite(
+        what: String,
+        timeoutMillis: Long = 30_000,
+        condition: () -> Boolean = { updatedKit.get() != null },
+    ) {
+        try {
+            waitFor(what, timeoutMillis, condition)
+        } catch (failure: AssertionError) {
+            val messages = recordedToasts.joinToString(" | ").ifBlank { "<none>" }
+            throw AssertionError("$what did not complete within ${timeoutMillis}ms. Captured SYNTH toasts: $messages", failure)
+        }
+        pump()
+    }
+
     @Test
-    fun onset_follows_skin_and_all_four_voices_expose_their_six_live_controls() {
+    fun onset_follows_skin_and_all_eight_voices_expose_their_six_live_controls() {
         show(shelfRoot())
         button("ENGINE THUMP. CHOOSE ENGINE").assertExists()
         tap("NEXT ENGINE")
@@ -287,9 +326,13 @@ class SynthScreenTest : ComposeScreenTest() {
             "SNARE" to OnsetVoice.SNARE,
             "HAT CL" to OnsetVoice.HAT_CLOSED,
             "HAT OP" to OnsetVoice.HAT_OPEN,
+            "TOM" to OnsetVoice.TOM,
+            "PLUCK" to OnsetVoice.PERC_PLUCK,
+            "WOOD" to OnsetVoice.PERC_WOOD,
+            "METAL" to OnsetVoice.PERC_METAL,
         )
         for ((label, voice) in voices) {
-            tap(label)
+            activate(label)
             button(label).assertIsSelected()
             val controls = compose.onAllNodes(
                 SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),
@@ -301,6 +344,17 @@ class SynthScreenTest : ComposeScreenTest() {
             }
         }
 
+        // Visiting a fresh voice freezes its renderer without requiring a
+        // preset selection, so a later app version can restore this sound.
+        compose.runOnIdle {
+            val draft = SynthDrafts.read(settings).filterIsInstance<OnsetPatch>().single { it.voice == OnsetVoice.PERC_METAL }
+            assertEquals(4, draft.modelVersion)
+            assertEquals(Onset.defaults(OnsetVoice.PERC_METAL), draft.macros)
+        }
+        leaveAndReturn()
+        button("METAL").assertIsSelected()
+        for ((macro, value) in Onset.defaults(OnsetVoice.PERC_METAL)) assertEquals(value, macroValue(macro), 0f)
+
         // Changing a knob reaches the adapter's per-voice state, and returning
         // from another voice restores the edit rather than reseeding defaults.
         tap("KICK")
@@ -310,6 +364,143 @@ class SynthScreenTest : ComposeScreenTest() {
         assertEquals(.5f, macroValue("BLEND"), 0f)
         tap("KICK")
         assertEquals(.73f, macroValue("BLEND"), 0f)
+    }
+
+    @Test
+    fun restoring_a_named_user_preset_finishes_loading_its_saved_onset_renderer() {
+        val root = shelfRoot()
+        val original = OnsetPatch("MY OLD KICK", OnsetVoice.KICK,
+            Onset.defaults(OnsetVoice.KICK) + ("TUNE" to .72f), modelVersion = 1)
+        UserPresets.save(root, original, nowMillis = 1L)
+        settings["engine"] = "ONSET"
+        settings["voice"] = "KICK"
+        settings["preset.ONSET.KICK"] = original.name
+        // No macro bag: the asynchronously loaded YOURS recipe is the whole sound.
+        show(root)
+        waitFor("the historical YOURS recipe to finish loading") {
+            compose.runOnIdle {
+                SynthDrafts.read(settings).filterIsInstance<OnsetPatch>().any {
+                    it.voice == OnsetVoice.KICK && it.modelVersion == 1
+                }
+            }
+        }
+        for ((macro, value) in original.macros) assertEquals("restored YOURS $macro", value, macroValue(macro), 0f)
+        dialMacro("BODY", .69f)
+        leaveAndReturn()
+        assertEquals(.69f, macroValue("BODY"), 0f)
+        compose.runOnIdle {
+            val restored = SynthDrafts.read(settings).filterIsInstance<OnsetPatch>().single { it.voice == OnsetVoice.KICK }
+            assertEquals(original.copy(macros = original.macros + ("BODY" to .69f)), restored)
+        }
+    }
+
+    @Test
+    fun new_onset_voices_land_as_native_recipes_and_reopen_without_losing_their_model() {
+        val root = shelfRoot()
+        val dir = File(root, "NEW ONSET KIT").apply { check(mkdirs()) }
+        val kit = Kit("NEW ONSET KIT", emptyList())
+        KitStore.save(kit, dir)
+        settings["engine"] = "ONSET"
+        settings["voice"] = "TOM"
+        show(root, KitShelf.Entry(dir, kit))
+        val voices = listOf(
+            "TOM" to OnsetVoice.TOM,
+            "PLUCK" to OnsetVoice.PERC_PLUCK,
+            "WOOD" to OnsetVoice.PERC_WOOD,
+            "METAL" to OnsetVoice.PERC_METAL,
+        )
+        for ((index, pair) in voices.withIndex()) {
+            val (label, voice) = pair
+            activate(label)
+            val preset = OnsetPresets.forVoice(voice).last()
+            activate("PRESET ${preset.name}")
+            for ((macro, value) in preset.macros) assertEquals(value, macroValue(macro), 0f)
+            dialMacro("BLEND", .63f)
+            dialMacro("DECAY", .42f)
+            // The draft itself carries the latest controls and the renderer,
+            // independently of the separate macro bag or preset highlight.
+            compose.runOnIdle {
+                val draft = SynthDrafts.read(settings).filterIsInstance<OnsetPatch>().single { it.voice == voice }
+                assertEquals(4, draft.modelVersion)
+                assertEquals(.63f, draft.macros.getValue("BLEND"), 0f)
+            }
+            leaveAndReturn(beforeReturn = {
+                // A complete native draft wins even when the separate legacy
+                // slider bag missed the last edit before navigation.
+                settings["macro.ONSET.${voice.name}.BLEND"] = ".01"
+                settings["macro.ONSET.${voice.name}.DECAY"] = ".99"
+            })
+            button(label).assertIsSelected()
+            assertEquals(.63f, macroValue("BLEND"), 0f)
+            assertEquals(.42f, macroValue("DECAY"), 0f)
+            val slot = index + 1
+            updatedKit.set(null)
+            activate("SEND TO PAD")
+            activate("${PadBanks.tag(slot)}, EMPTY")
+            waitForPadWrite("the native $voice pad", timeoutMillis = 60_000) { updatedKit.get()?.pad(slot)?.recipe != null }
+            val pad = checkNotNull(KitStore.load(dir).pad(slot))
+            val recipe = PadRecipe.fromJsonValue(checkNotNull(pad.recipe))
+            val saved = recipe.patch as OnsetPatch
+            assertEquals(voice, saved.voice)
+            assertEquals(4, saved.modelVersion)
+            assertEquals(preset.macros + ("BLEND" to .63f) + ("DECAY" to .42f), saved.macros)
+            assertEquals(if (voice == OnsetVoice.TOM) DrumClass.TOM else DrumClass.PERC, pad.drumClass)
+            assertEquals(0, pad.muteGroup)
+            assertTrue(pad.oneShot && !pad.loop)
+            assertTrue(recipe.fx == null)
+            val expected = ByteArrayOutputStream().also { WavWriter.write(it, recipe.render()) }.toByteArray()
+            assertArrayEquals(expected, File(dir, pad.sampleFile).readBytes())
+        }
+
+        val wood = checkNotNull(KitStore.load(dir).pad(3))
+        activate("REOPEN PAD RECIPE")
+        activate("REOPEN ${PadBanks.tag(wood.slot)} ${wood.displayName}")
+        button("WOOD").assertIsSelected()
+        dialMacro("BODY", .71f)
+        leaveAndReturn()
+        updatedKit.set(null)
+        activate("UPDATE PAD ${PadBanks.tag(wood.slot)}")
+        waitForPadWrite("the reopened native wood pad", timeoutMillis = 60_000)
+        val updated = PadRecipe.fromJsonValue(checkNotNull(KitStore.load(dir).pad(3)?.recipe)).patch as OnsetPatch
+        assertEquals(OnsetVoice.PERC_WOOD, updated.voice)
+        assertEquals(4, updated.modelVersion)
+        assertEquals(.71f, updated.macros.getValue("BODY"), 0f)
+    }
+
+    @Test
+    fun original_and_model_three_recipes_keep_their_renderers_when_reopened_after_model_four() {
+        val root = shelfRoot()
+        val dir = File(root, "HISTORIC ONSET").apply { check(mkdirs()) }
+        val patches = listOf(
+            OnsetPatch("ORIGINAL KICK", OnsetVoice.KICK, modelVersion = 1),
+            OnsetPatch("KEPT SNARE", OnsetVoice.SNARE, modelVersion = 3),
+        )
+        val recipes = patches.map { PadRecipe(it, FxChain(reverse = true), treatment = "KEPT", amount = .31f, alias = true) }
+        val pads = recipes.mapIndexed { index, recipe ->
+            val file = "historic-${index + 1}.wav"
+            WavWriter.write(File(dir, file), recipe.render())
+            KitPad(index + 1, file, displayName = patches[index].name,
+                drumClass = if (index == 0) DrumClass.KICK else DrumClass.SNARE, recipe = recipe.toJsonValue())
+        }
+        val kit = Kit("HISTORIC ONSET", pads)
+        KitStore.save(kit, dir)
+        show(root, KitShelf.Entry(dir, kit))
+        for ((index, pad) in pads.withIndex()) {
+            activate("REOPEN PAD RECIPE")
+            activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
+            dialMacro("BLEND", .82f)
+            val expected = recipes[index].copy(patch = patches[index].copy(macros = patches[index].macros + ("BLEND" to .82f)))
+            leaveAndReturn()
+            updatedKit.set(null)
+            activate("UPDATE PAD ${PadBanks.tag(pad.slot)}")
+            waitForPadWrite("the historical model-${patches[index].modelVersion} pad", timeoutMillis = 60_000)
+            val storedPad = checkNotNull(KitStore.load(dir).pad(pad.slot))
+            val stored = PadRecipe.fromJsonValue(checkNotNull(storedPad.recipe))
+            assertEquals(expected, stored)
+            assertEquals(patches[index].modelVersion, (stored.patch as OnsetPatch).modelVersion)
+            val expectedWav = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
+            assertArrayEquals(expectedWav, File(dir, storedPad.sampleFile).readBytes())
+        }
     }
 
     @Test
@@ -379,7 +570,7 @@ class SynthScreenTest : ComposeScreenTest() {
             assertEquals("restored $macro", value, macroValue(macro), 0f)
         }
         activate(updateLabel)
-        waitFor("the edited ONSET pad to be saved", timeoutMillis = 30_000) { updatedKit.get() != null }
+        waitForPadWrite("the edited ONSET pad to be saved")
 
         val saved = checkNotNull(updatedKit.get())
         val savedPad = checkNotNull(saved.pad(pad.slot))
@@ -400,7 +591,7 @@ class SynthScreenTest : ComposeScreenTest() {
         leaveAndReturn()
         button(updateLabel).assertExists()
         activate(updateLabel)
-        waitFor("the restored ONSET pad to be saved again", timeoutMillis = 30_000) { updatedKit.get() != null }
+        waitForPadWrite("the restored ONSET pad to be saved again")
         assertEquals(saved, updatedKit.get())
         assertEquals(saved, KitStore.load(dir))
         assertArrayEquals("a restored unchanged recipe must regenerate identically", expectedWav, sample.readBytes())

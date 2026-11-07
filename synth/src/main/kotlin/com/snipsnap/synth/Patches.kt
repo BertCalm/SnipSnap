@@ -43,6 +43,8 @@ object Patches {
     fun fromJsonValue(value: JsonValue): Patch {
         val engine = value.obj()["engine"]?.str() ?: throw JsonException("patch has no engine")
         return when (engine) {
+            HydroformPatch.ENGINE -> HydroformPatch.fromJsonValue(value)
+            ChitinPatch.ENGINE -> ChitinPatch.fromJsonValue(value)
             AccordPatch.ENGINE -> AccordPatch.fromJsonValue(value)
             ErosionPatch.ENGINE -> ErosionPatch.fromJsonValue(value)
             RimePatch.ENGINE -> RimePatch.fromJsonValue(value)
@@ -85,6 +87,7 @@ object Patches {
             NimbusPatch.ENGINE -> NimbusPatch.fromJsonValue(value)
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
             ScourPatch.ENGINE -> ScourPatch.fromJsonValue(value)
+            FillPatch.ENGINE -> FillPatch.fromJsonValue(value)
             UndertowPatch.ENGINE -> UndertowPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             SuturePatch.ENGINE -> SuturePatch.fromJsonValue(value)

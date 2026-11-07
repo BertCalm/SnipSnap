@@ -54,6 +54,13 @@ class PersonalityTest {
     }
 
     @Test
+    fun `kit round robin copy counts pads in the singular and the plural`() {
+        assertEquals("ROUND ROBIN ON 1 PAD.", Copy.robinKitOn(1))
+        assertEquals("ROUND ROBIN ON 5 PADS.", Copy.robinKitOn(5))
+        assertEquals("ROUND ROBIN ON 0 PADS.", Copy.robinKitOn(0))
+    }
+
+    @Test
     fun `law 3 - funny copy still says exactly what happened`() {
         // The capture-blocked box names the problem and the way out.
         assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
@@ -360,6 +367,21 @@ class PersonalityTest {
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
 
+    /** ORBIT's UNDO chip says how deep the undo goes, and drops the count when there is nothing to undo. */
+    @Test
+    fun `the ORBIT undo chip counts its steps`() {
+        assertEquals("UNDO", Copy.orbitUndo(0))
+        assertEquals("UNDO (3)", Copy.orbitUndo(3))
+    }
+
+    /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
+    @Test
+    fun `the SPLICE and STACK landings say where the undo is`() {
+        assertTrue("UNDO SPLICE" in Copy.SPLICE_UNDO_AT && "PAD EDITOR" in Copy.SPLICE_UNDO_AT, Copy.SPLICE_UNDO_AT)
+        assertTrue("SOFT HITS" in Copy.STACK_UNDO_AT && "PAD EDITOR" in Copy.STACK_UNDO_AT, Copy.STACK_UNDO_AT)
+        assertEquals("USE THIS PART ▸", Copy.USE_THIS_PART)
+    }
+
     /**
      * A print refuses TAPE SPLICE and DE-SAMPLE (2026-11-02) in the words it already refuses SOFT
      * HITS, STACK THE TAKES and SPREAD with: REMOVE, the print's own name, then the door it blocks.
@@ -608,31 +630,63 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
+        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_OTHER_ROW", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
+        // The Bubble permission line's door: a label, not a toast.
+        "BUBBLE_ALLOW",
+        // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
+        // LIVE's small READING label over the four read-only sliders.
+        "LIVE_READING_LABEL",
+        "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
         "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading and the rename dialog title.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
+        // SYNTH's four group headings: labels over a run of controls, not landings.
+        "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
+        // The starter picker's nine group headings: labels over a run of starters, not landings.
+        "STARTER_HEADING_START_HERE", "STARTER_HEADING_BASS", "STARTER_HEADING_KEYS", "STARTER_HEADING_PLUCKS", "STARTER_HEADING_BREATH",
+        "STARTER_HEADING_VOICES", "STARTER_HEADING_METAL", "STARTER_HEADING_SKINS", "STARTER_HEADING_MOVING",
         // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
         "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
         "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // The pad editor's two doors and their screens' titles, and its per-tool UNDO buttons: labels, not landings.
+        "PAD_EFFECTS_DOOR", "PAD_VARIATIONS_DOOR", "PAD_EFFECTS_TITLE", "PAD_VARIATIONS_TITLE",
+        "UNDO_MUTATE", "UNDO_SPLICE", "UNDO_DESAMPLE", "UNDO_OUTSIDE", "UNDO_BOARD",
+        // BEAT's GO TO and SEND IT OUT group headings: labels over a run of controls, not landings.
+        "BEAT_HEADING_GO_TO", "BEAT_HEADING_SEND_OUT",
+        // MAKE's two group headings: labels, not landings.
+        "MAKE_A_SOUND", "WHAT_YOU_MADE",
+        // SNAP's four group headings: labels, not landings.
+        "SNAP_SOURCE", "SNAP_ONE_PAD", "SNAP_ALL_SIXTEEN", "SNAP_PLAY_IT",
         // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
         "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
-        "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
+        "COMMIT_NEEDS_SELECTION", "USE_THIS_PART", "CAPTURE_BLOCKED_BUTTON",
+        // Headings over a group of controls (the deck's NEXT, the CUT screen's LAND AS) and the PAD CAPTURE tap twin's two labels.
+        "DECK_NEXT", "CHOP_LAND_AS", "PAD_CAPTURE_TAP_TO_REC", "PAD_CAPTURE_TAP_STOP",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
         // SNIPS' SHARE, while the snip is copied into the share cache under
         // a readable name — like every other *_BUSY here, an overlay line
         // rather than a landing.
         "SHARE_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
+        // SONG's buttons on the selected section, its UNDO button and the two words it prints on a chip or a row: labels, not toasts.
+        "SONG_UP", "SONG_DOWN", "SONG_REPEAT_LESS", "SONG_REPEAT_MORE", "SONG_SWAP", "SONG_DUPLICATE", "SONG_DELETE",
+        "SONG_LOCK", "SONG_UNLOCK", "SONG_ADD", "SONG_REROLL", "SONG_UNDO", "SONG_PICK_NOW", "SONG_LOCKED",
+        // The words UNDO names an edit by, and the spoken names of SONG's glyph buttons: labels, not toasts.
+        "SONG_VERB_REORDER", "SONG_VERB_REPEATS", "SONG_VERB_SWAP", "SONG_VERB_REROLL",
+        "SONG_A11Y_UP", "SONG_A11Y_DOWN", "SONG_A11Y_REPEAT_LESS", "SONG_A11Y_REPEAT_MORE", "SONG_A11Y_REROLL",
         "CHOP_ALL_BUSY",
         // SETUP's MIDI OUT heading and the two words beside a device's port
         // (OUT / BUSY): labels, not landings.
         "SETUP_MIDI_OUT_HEADING", "SETUP_MIDI_OUT_PORT_OK", "SETUP_MIDI_OUT_PORT_BUSY",
+        // SETUP's LISTEN FROM heading: a label over two rows, not a landing.
+        "SETUP_LISTEN_HEADING", "SETUP_LISTEN_ASKS",
         // The MIDI screen's CLOCK CHECK button and its label while it runs:
         // button labels, not landings. The other three MIDI_CLOCK_* lines are
         // sentences and keep their full stops.
@@ -644,6 +698,11 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
+        // track's name follows it): labels, not landings.
+        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
+        // LOOP's header title, like the other benches' names: a title, not a landing.
+        "LOOP_TITLE",
         // SNAP's FIELD and CLOUD, while the photo is cut into grains and
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.
@@ -677,7 +736,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED", "CARD_FORGET",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -766,7 +825,7 @@ class PersonalityTest {
         // kit moves (open a kit row, add a kit from the shelf, switch the
         // open project's kit) - the same `…`-suffixed dock line as every
         // other *_BUSY constant above.
-        "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
+        "KEY_BUSY", "IN_KEY_BUSY", "ROBIN_KIT_BUSY", "NEW_PROJECT_BUSY",
         "OPENING_KIT_BUSY", "ADDING_KIT_BUSY", "SWITCHING_KIT_BUSY",
         // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
         // are read off disk: the same `…`-suffixed dock line as every other
@@ -785,7 +844,7 @@ class PersonalityTest {
      * e.g. `tapeTruncated`/`imported`'s templated output) rather than a
      * violation of "TapeOS shouts". Still checked for the full-stop law.
      */
-    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED")
+    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED", "NO_TAPE_YET_ARMED")
 
     /**
      * The exact ~30 names the old hand-listed `listOf(Copy.A, Copy.B, ...)`
@@ -1264,10 +1323,45 @@ class PersonalityTest {
     }
 
 
+    /** OUT's first line names what is going out, in a sentence that ends on a full stop. */
+    @Test
+    fun `out names what it is exporting`() {
+        assertEquals("EXPORTING THE KIT BREAKS.", Copy.exportingKit("BREAKS"))
+        assertEquals("EXPORTING THE KIT BREAKS AND THE PROJECT DEMO.", Copy.exportingKitAndProject("BREAKS", "DEMO"))
+        assertEquals("EXPORTING THE EXPANSION VOL 1.", Copy.exportingExpansion("VOL 1"))
+    }
+
     /** J30: CHOP's fallback source, named only when the app picked it rather than the player. */
     @Test
     fun `chop names the kit sample it fell back to`() {
         assertEquals("FROM A03_SNARE", Copy.chopFromKit("A03_SNARE"))
     }
 
+    @Test
+    fun `the armed empty deck makes the same claim as the snip toast and sends nobody to a pressed button`() {
+        // TAPE's empty deck, once LISTEN is armed, says what SNIP keeps. It must
+        // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
+        // not repeat NO_TAPE_YET's instruction to tap LISTEN.
+        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
+        assertTrue("UP TO 60s" in Copy.NO_TAPE_YET_ARMED && "UP TO 60s" in Copy.SNIPPED)
+        assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
+    }
+
+    @Test
+    fun `the SURFACE tab captions stay short enough for a fifth of a phone and say the live value`() {
+        val all = listOf(
+            Copy.surfacePeekVoice(true, "A01"), Copy.surfacePeekVoice(false, "A01"), Copy.surfacePeekVoice(false, null),
+            Copy.surfacePeekShape('B'), Copy.surfacePeekShape(null),
+            Copy.surfacePeekMod(0), Copy.surfacePeekMod(2),
+            Copy.surfacePeekMidi(true), Copy.surfacePeekMidi(false),
+            Copy.surfacePeekFx(true), Copy.surfacePeekFx(false),
+        )
+        for (c in all) {
+            assertTrue(c.length <= 8, "'$c' must fit under a tab at 360 dp")
+            assertEquals(c.uppercase(), c, "TapeOS shouts: '$c'")
+        }
+        assertEquals("PAD A01", Copy.surfacePeekVoice(false, "A01"))
+        assertEquals("ARM B", Copy.surfacePeekShape('B'))
+        assertEquals("2 ON", Copy.surfacePeekMod(2))
+    }
 }

@@ -9,6 +9,8 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.Chitin
+import com.snipsnap.synth.ChitinPatch
 import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
@@ -39,6 +41,7 @@ import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.TidalPatch
+import com.snipsnap.synth.WickPatch
 import kotlin.math.roundToInt
 
 /**
@@ -117,6 +120,7 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is ChitinPatch -> Chitin.midiFor(patch.voice, (Chitin.defaults(patch.voice) + patch.macros).getValue("TUNE")).toFloat()
         is AccordPatch -> patch.midi.toFloat()
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is OtisPatch -> Otis.midiFor(patch).toFloat()
@@ -138,6 +142,7 @@ object Spread {
         is CreasePatch -> patch.midi.toFloat()
         is CausticPatch -> patch.midi.toFloat()
         is ChamberPatch -> patch.midi.toFloat()
+        is WickPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

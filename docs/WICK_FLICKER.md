@@ -1,5 +1,9 @@
 # WICK FLICKER listening round
 
+Current integration (2026-11-06): WICK now has a shared 36-recipe factory bank,
+Android picker and FRESH TAPE starter. This document preserves the earlier
+voice-design round; see [WICK](WICK.md) for current build and acceptance status.
+
 The characteristic gesture is a pitched strike → a brief metallic opening →
 a release-triggered answer → a quieter pitched tail. FLICKER is a voice inside
 WICK, following the accepted PLUCK, WOOD, revised BUBBLE and BREATH voices.

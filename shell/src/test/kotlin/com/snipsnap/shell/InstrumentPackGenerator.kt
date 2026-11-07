@@ -3,6 +3,11 @@ package com.snipsnap.shell
 import com.snipsnap.kit.ExpansionMeta
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.PackBuilder
+import com.snipsnap.synth.Arco
+import com.snipsnap.synth.ArcoPatch
+import com.snipsnap.synth.ArcoVoice
+import com.snipsnap.synth.BorePresets
+import com.snipsnap.synth.BoreVoice
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.Mercury
@@ -13,7 +18,11 @@ import java.io.File
 /**
  * The factory expansion of the instruments made reachable on 2026-11-04: MERCURY's three
  * picker voices and KEEL's three through their own makers, and every [LoopPadMaker]
- * qualifier through the shared one, each voice from its first factory preset. Each is
+ * qualifier through the shared one, each voice from its first factory preset. ARCO's two
+ * voices joined on 2026-11-06 through [ArcoPadMaker] (the bow's stroke, then the loop, in
+ * two touch layers), at their defaults, and BORE's two through [BorePadMaker] (the note's
+ * own breath, then the loop) from FLUTE STEADY LOOP and SAX SOLO LOOP: each from the patch
+ * its listening clips use. Each is
  * written as the phone writes one (a keygroup package with its sidecar) and the lot is
  * packed by [PackBuilder] as one MPC expansion, both the on-card folder and the `.xpn`.
  *
@@ -65,6 +74,19 @@ object InstrumentPackGenerator {
                 KeelPadMaker.export("KEEL ${voice.name}", spec, KeelPadMaker.zoneMidis(spec).map { KeelPadMaker.renderZone(spec, it) }, instruments)
             }
         }
+        if (wanted("ARCO")) for (voice in ArcoVoice.entries) {
+            val spec = ArcoPadMaker.spec(ArcoPatch("ARCO ${voice.name}", voice, Arco.defaults(voice)), RELEASE)
+            make("ARCO ${voice.name}") {
+                ArcoPadMaker.export("ARCO ${voice.name}", spec, ArcoPadMaker.zoneMidis(spec).map { ArcoPadMaker.renderZone(spec, it) }, instruments)
+            }
+        }
+        if (wanted("BORE")) for ((voice, preset) in listOf(BoreVoice.FLUTE to "STEADY LOOP", BoreVoice.SAX to "SOLO LOOP")) {
+            val patch = BorePresets.forVoice(voice).single { it.name == preset }
+            val spec = BorePadMaker.spec(patch, RELEASE)
+            make("BORE ${voice.name}") {
+                BorePadMaker.export("BORE ${voice.name}", spec, BorePadMaker.zoneMidis(spec).map { BorePadMaker.renderZone(spec, it) }, instruments)
+            }
+        }
         val presets = Presets.all().groupBy { it.engine }
         for ((engine, voices) in LoopPadMaker.QUALIFIED.toSortedMap()) {
             if (!wanted(engine)) continue
@@ -81,7 +103,7 @@ object InstrumentPackGenerator {
         val meta = ExpansionMeta(
             title = TITLE,
             identifier = "app.snipsnap.newkeys",
-            description = "Held keys instruments from SnipSnap's synth engines: MERCURY, KEEL and the HOLD-loop qualifiers.",
+            description = "Held keys instruments from SnipSnap's synth engines: MERCURY, KEEL, ARCO, BORE and the HOLD-loop qualifiers.",
         )
         val result = PackBuilder.build(emptyList(), out, meta, asXpn = true, overwrite = true, instruments = made)
         println("packed ${result.instruments.size} instruments into ${result.directory.absolutePath} and ${result.xpn?.absolutePath}")

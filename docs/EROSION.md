@@ -339,3 +339,148 @@ exactly. Native playing clips range up to .8333 seconds, with maximum absolute
 mean .00110706 before PCM encoding. The full JVM suite is attempted separately
 and remains unverified until its final exit code is recorded. The new bank,
 SCAR and physical MPC loading still await the owner's listening/hardware pass.
+
+
+## Contrast revision, 2026-11-06
+
+Status: response to the owner's report that many of the first sixteen recipes
+sound similar. Baseline: `5c9ba711ff10559143df1fafdeebd9baedda9cd5`.
+This round is REVIEW followed by a focused native revision. The owner likes the
+sound family; the overlap is the reported defect. The new revision awaits listening.
+
+### Review findings
+
+**Fix now [A]:** the sixteen-role bank overstates its articulation range.
+The old spectra have close pairs even when duration differs substantially:
+PIT/BASIN have 2.67 dB RMS distance in centered log-power across 32 log-frequency
+bands from 80 Hz to 18 kHz; their 90%-energy times are 64 and 268 ms.
+TACK/ASH measure 3.29 dB by the same diagnostic, with 90%-energy times of
+48 and 201 ms. These distances are descriptive measurements, not audibility
+scores. The owner's listening report is the evidence of the musical problem.
+
+**Try next [A/B]:** changing the length and color of a dense micro-discharge
+field leaves its onset mechanism largely intact. The lowest existing thresholds
+and fixed recovery ranges still spend the budget through many small events.
+Expose packet size/recovery, then curate fewer roles from that wider event range.
+
+**Disclosed, not fixed:** a spectral distance cannot establish that two presets
+will be useful as different pads. The revised palette, controlled GRAIN on/off
+pairs and the old bank are retained for another human comparison. Physical MPC
+loading and full regression remain separate checks.
+
+### Selected direction
+
+The characteristic gesture is charge → isolated packet or dense spark cloud →
+collapse or dust. The finite charge model runs literally; the erosion/material
+language remains an analogy. The selected PORT extends the existing reservoir
+law instead of introducing a new sound source or an effect rack.
+
+| Direction | Gesture / roster / risk / cost |
+| --- | --- |
+| Selected: PORT packet size into charge/recovery | Clear sparse-to-dense gesture; extends EROSION beyond its previous dense field; fixed cost, low numerical risk; one native revision. |
+| DISTIL eight extremes from the original five controls | Cheap bank-only change; onset family remains crowded; lowest implementation risk but does not address the exciter's restricted range. |
+| STACK contrasting processing recipes | Can widen color quickly; adds rack behavior and more level interactions; higher risk of obscuring the source identity. |
+
+The nearest siblings are still SKIN's filtered-noise percussion and THUMP's
+oscillator-based metallic SPARK. This remains an EROSION voice-bank revision;
+no engine, voice or preset count is added to create apparent variety.
+
+### GRAIN contract
+
+GRAIN is the sixth macro, default zero for ARC, CRATER and SCAR. It changes the
+energy collected before a discharge and how long the system recovers afterwards.
+All constants are shape choices, not calibrated electrical measurements.
+
+```text
+threshold = baseThreshold                            when GRAIN = 0
+          = min(.10, baseThreshold * (1 + 40*g*g))    otherwise
+recovery  = baseRecovery                             when GRAIN = 0
+          = baseRecovery * (1 + 20*g*g)               otherwise
+masterGain = .035                                    when GRAIN = 0
+           = .035 * (1 - .25*g*g)                    otherwise
+```
+
+The cap prevents a coarse threshold exceeding the finite available energy.
+The smooth master-gain law keeps raw source headroom as crest factor rises.
+An initial coarse-corner probe measured 2.0294 before conditioning, above the
+existing source guard of 2; the fixed gain law corrected headroom without a
+limiter or per-event normalization. Packet energy still comes from the same
+reservoir, with `reservoir + charge + emitted = 1`. Frequency filters, kernels,
+output stage, seed parts and random draw order are unchanged at GRAIN zero.
+The zero branch retains the previous arithmetic exactly. Old saved five-control
+recipes therefore retain their output, while new contrast recipes store GRAIN
+explicitly. Older builds reject this unknown control rather than silently
+reconstructing a different saved patch.
+
+VOLTAGE × GRAIN sets the threshold/recovery balance; FEED × GRAIN controls how
+many packets fit into the decaying supply. TUNE, FLUID and SLAG retain their
+existing readout roles. No stable-note, tempo-lock or HOLD claim is added.
+Work stays bounded by the existing 8 kHz scheduler and finite output length;
+coarse settings render fewer events. There is no new solver or geometry cache.
+
+### Eight playing roles
+
+The revised bank contains THUD, CHIP, RASP, WIRE, DUST, DROPS, SPLINTER and SCAR.
+Their intended roles are low body, coarse bright strike, rough middle packets,
+fine closed wire, sustained dust, spaced tuned collapses, loose bright crackle,
+and a separated aftershock. These are intended roles for the next listen.
+Three velocity zones remain on every pad. The new MPC programs use eight pads
+and 24 zone samples; remaining pads are free. The original sixteen recipes
+remain in `ErosionBank.legacyEntries()` and the previous hosted archive.
+The new output directory and internal program name keep both banks separate.
+
+The page provides a matched eight-hit palette, three matched GRAIN on/off pairs
+with every other control fixed, native and matched velocity clips, the exported-
+sample groove and the existing SCAR aftershock controls. A/B levels use the same
+loudest-50-ms target and peak ceiling. The old and new related-role comparisons
+retain actual old WAVs as the historical baseline.
+After generation, `scripts/erosion-contrast-review.py NEW_OUTPUT OLD_PLAYING_ROUND`
+attaches frozen previous files, matched listening copies and the feature report.
+It uses NumPy/SciPy and never writes into the old archive.
+
+### Measurements and limits
+
+The first native checks pass with the six-macro cube expanded to 192 corners.
+Maximum raw source peak is 1.522044, maximum absolute delivered mean .00253235,
+and accounting error is below 6.67e-16. Twelve 4x/8x bright-corner comparisons
+include both GRAIN endpoints; maximum matched-chain relative RMS residual is
+.006603. These are convergence observations, not pure alias-power measurements.
+
+Controlled THUD has 3 discharges with GRAIN on versus 42 with GRAIN zero; CHIP
+has 3 versus 30; DROPS has 7 versus 55. Each comparison preserves the other
+five controls. The nearest revised spectral-shape pair is CHIP/WIRE at 6.29 dB
+by the diagnostic above. Reducing the number of comparisons from sixteen roles
+to eight itself raises the nearest-pair statistic; this is not a proof of
+musical separation. The revised 90%-energy times span 49–412 ms.
+
+All 198 frozen original-voice float renders pass. Independently replaying the
+48 previous native bank WAVs and three SCAR default/short/long WAVs produced
+51 byte-identical PCM24 files. The artifact records hashes, recipes, export
+read-back, source checks and the focused test result. The new GRAIN law and
+bank still await the owner's listen; no claim to have heard them is made.
+
+### Why it is built this way
+
+- Eight roles remove the filler that the earlier sixteen-pad bank exposed.
+- Packet size changes articulation at the source, giving sparse strikes and
+  crackle room beside the fine wire/dust family.
+- GRAIN zero preserves saved sounds and lets the new mechanism be switched off
+  in a controlled comparison.
+- Matching audition levels helps separate a new gesture from a louder hit.
+- The remaining risk is musical: the owner must judge whether these roles are
+  different enough while still belonging to the same instrument.
+
+
+### Contrast revision as built
+
+All 83 focused checks passed: seven core tests, four bank/preservation tests,
+one EROSION determinism canary, three patch-dispatch tests and 68 shell
+conventions. Native generation completed with exit code 0 and produced eight
+pads with three touch zones, 24 native patch recipes, matched copies, controlled
+packet-size comparisons and both MPC program formats. Export read-back and all
+24 encoded zone comparisons passed. An additional 480-case raw source sweep,
+including intermediate GRAIN values, measured a maximum peak of 1.566876.
+The 192 endpoint corners measured 1.522044. Neither sweep uses output leveling
+to establish the raw headroom result. All 51 actual previous PCM files replayed
+byte-identically. New musical separation remains a listening question; no full
+JVM pass or hardware acceptance is claimed.

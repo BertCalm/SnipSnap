@@ -47,6 +47,7 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
@@ -182,6 +183,10 @@ fun PadCaptureScreen(
     var committing by remember { mutableStateOf<Gesture?>(null) }
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
+    // The tap twin's own latch: true from the TAP TO REC tap that started a take
+    // until the STOP tap (or the mic going away) that ends it. `holding` is the
+    // shared "a take is running" flag; this says it was started by a tap.
+    var tapRecording by remember { mutableStateOf(false) }
 
     // Liveness signal ONLY — nothing is launched into this scope. It exists
     // purely so `commitToPad`'s onSuccess closure (below) has something to
@@ -333,6 +338,34 @@ fun PadCaptureScreen(
         }
     }
 
+    // The tap twin of HOLD TO REC. The first tap is exactly a press (startHold);
+    // the second is exactly a release (endHold), so a take is cut, capped and
+    // placed by the same code whichever control made it: the ring has been
+    // recording all along, and the take is the last `elapsed` of it, capped at
+    // PadCapture.MAX_HOLD_FRAMES. A second tap inside MIN_HOLD_MS is ignored:
+    // the take keeps recording and nothing is said, because the hold's "HOLD TO
+    // RECORD." hint is the wrong instruction for a tap button and a sliver
+    // should not end the take.
+    fun toggleTapRecording() {
+        if (tapRecording) {
+            if (SystemClock.elapsedRealtime() - holdStart < MIN_HOLD_MS) return
+            tapRecording = false
+            endHold()
+        } else {
+            tapRecording = true
+            startHold()
+        }
+    }
+
+    // A take that was running when the mic went away has nothing to cut: end it
+    // without a commit rather than leave STOP lit on a dead ring.
+    LaunchedEffect(armed) {
+        if (!armed && tapRecording) {
+            tapRecording = false
+            holding = false
+        }
+    }
+
     Column(
         Modifier.fillMaxSize().padding(bottom = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -406,16 +439,59 @@ fun PadCaptureScreen(
             enabled = armed && committing == null,
             onClick = ::grab,
         )
-        HoldRecordAction(
-            label = when {
+        RecordRow(
+            holdLabel = when {
                 holding -> "RECORDING…"
                 committing == Gesture.HOLD -> "PLACING…"
                 else -> "HOLD TO REC"
             },
-            enabled = armed && committing == null,
+            // A finger on HOLD and a tap take cannot both own the one take:
+            // each waits for the other.
+            holdEnabled = armed && committing == null && !tapRecording,
+            tapLabel = if (tapRecording) Copy.PAD_CAPTURE_TAP_STOP else Copy.PAD_CAPTURE_TAP_TO_REC,
+            tapEnabled = (armed && committing == null && !holding) || tapRecording,
             onPress = ::startHold,
             onRelease = ::endHold,
+            onTap = ::toggleTapRecording,
         )
+    }
+}
+
+/**
+ * HOLD TO REC and its tap twin side by side. A private non-inline child so the
+ * two controls are not counted in [PadCaptureScreen]'s own registers.
+ */
+@Composable
+private fun RecordRow(
+    holdLabel: String,
+    holdEnabled: Boolean,
+    tapLabel: String,
+    tapEnabled: Boolean,
+    onPress: () -> Unit,
+    onRelease: () -> Unit,
+    onTap: () -> Unit,
+) {
+    val scheme = LocalScheme.current
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        HoldRecordAction(holdLabel, holdEnabled, onPress, onRelease, Modifier.weight(1f))
+        Box(
+            Modifier
+                .weight(1f)
+                .height(Layout.PRIMARY_ACTION_H.dp)
+                .then(
+                    if (tapEnabled) {
+                        Modifier
+                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                            .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                    } else {
+                        Modifier.raisedBevel(scheme)
+                    },
+                )
+                .tapeClick(label = tapLabel, enabled = tapEnabled, onClick = onTap),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(tapLabel, TapeType.displayBig, if (tapEnabled) scheme.lcdInk.tape else scheme.ink3.tape)
+        }
     }
 }
 
@@ -446,12 +522,12 @@ private fun HeaderChip(
  * it needs the raw down/up events instead.
  */
 @Composable
-private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Unit, onRelease: () -> Unit) {
+private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Unit, onRelease: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
     val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
             .height(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))

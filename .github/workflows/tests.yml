@@ -1,10 +1,13 @@
 name: tests
 
-# Three rules keep this from costing more than it is worth. The repo is
-# private, so every minute here is metered, and on 2026-09-10 a night of
-# three agents working in parallel exhausted the month's allowance - every
-# run then failed in three seconds with no logs, which looks exactly like a
-# broken build and is not one.
+# Three rules keep this from costing more than it is worth. They date from
+# when the repo was private and every minute here was metered: on
+# 2026-09-10 a night of three agents working in parallel exhausted the
+# month's allowance, and every run then failed in three seconds with no
+# logs, which looks exactly like a broken build and is not one. The repo is
+# public now (checked 2026-11-06: the runs bill 0 minutes), so runner time
+# is free and the JVM tests run on four runners at once (see the comment
+# above jvm-other). The rules still stand, because each one saves waiting.
 #
 # 1. A branch is tested ONCE. `push: ["**"]` plus `pull_request` ran the whole
 #    suite twice for every push to a branch with a PR open - the paired runs
@@ -17,21 +20,33 @@ name: tests
 #    completion on a commit nobody will look at again. Default-branch runs
 #    are never cancelled: they write the cache and record what merged.
 # 3. Documentation does not build anything. No test reads docs/ or a .md
-#    file (`reference/` is fixture data and is deliberately NOT listed here -
-#    the audio and MPC-importer suites read it).
+#    file, with two exceptions: ConventionTest reads README.md and
+#    app/README.md (the picker lists and counts), so those two are listed
+#    back in below. A later positive pattern re-includes what an earlier
+#    `!` excluded; `paths` and `paths-ignore` cannot be combined. (`reference/`
+#    is fixture data and is deliberately NOT excluded - the audio and
+#    MPC-importer suites read it.)
 on:
   push:
     branches: [claude/mobile-mpc-drum-sampler-t58x74]
     # Repeated rather than shared with a YAML anchor: GitHub Actions'
     # workflow parser does not support anchors or aliases, however happily
     # every other YAML tool reads them.
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
+    paths:
+      - "**"
+      - ".github/**"
+      - "!docs/**"
+      - "!**/*.md"
+      - "README.md"
+      - "app/README.md"
   pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
+    paths:
+      - "**"
+      - ".github/**"
+      - "!docs/**"
+      - "!**/*.md"
+      - "README.md"
+      - "app/README.md"
 
 concurrency:
   # One in flight per PR (or per branch for the default-branch push).
@@ -42,7 +57,12 @@ permissions:
   contents: read
 
 jobs:
-  jvm-tests:
+  # The JVM tests run on four runners at once: jvm-other takes every module
+  # but :synth, and jvm-synth takes :synth in three shards (a class-hash
+  # split, see "Sharding by test class" in the root build.gradle.kts). One
+  # job used to run them all in turn and took 2 h, 88.6 min of it :synth.
+  # jvm-tests, at the end, is the one check that says all of them passed.
+  jvm-other:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,11 +72,13 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # :app is included only when an SDK is located (settings.gradle.kts).
-      # This job installs one so :app is in the graph and `-x :app:test`
-      # has something to exclude. A machine with no SDK leaves :app out
-      # and the nine JVM modules configure on their own; copying the
-      # `-x :app:test` line into that session fails because there is no
-      # :app to exclude.
+      # The runner image has one and presets ANDROID_HOME and
+      # ANDROID_SDK_ROOT to it, so :app is in this job's graph and
+      # `-x :app:test` has something to exclude. This step points both
+      # variables at that SDK and accepts its licences. A machine with no
+      # SDK leaves :app out and the nine JVM modules configure on their own;
+      # copying the `-x :app:test` line into that session fails because
+      # there is no :app to exclude.
       #
       # packages: '' skips this action's own default install (`tools
       # platform-tools`) — Google removed the legacy `tools` package from
@@ -69,29 +91,108 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
-      # Everything except :app, by exclusion rather than by list — a module added
-      # later must not be silently untested because nobody updated this line.
-      - name: Run JVM test suites
-        # The compiler needs 4 GiB for the complete synth tests. Release it
-        # between long test tasks so its heap does not remain beside the two
-        # 2 GiB test workers on an 8 GiB runner. Busy compilation stays alive.
+      # Everything except :app and :synth, by exclusion rather than by list —
+      # a module added later must not be silently untested because nobody
+      # updated this line. :synth runs in jvm-synth.
+      - name: Run JVM test suites except :synth
+        # Release the Kotlin compiler once it is idle, so its heap does not
+        # sit beside the test JVMs (one per CPU). Busy compilation stays alive.
         run: >-
           ./gradlew --no-daemon
           -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
-          test -x :app:test
+          test -x :app:test -x :synth:test
       # A worker/framework failure can leave only a skipped method and a
       # generic Gradle error in the console. Retain the actual failure.
       - name: Keep JVM failure reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: jvm-test-reports-${{ github.sha }}
+          # Each JVM job names its own, so two failing jobs do not collide.
+          name: jvm-test-reports-other-${{ github.sha }}
           path: |
             **/build/test-results/test/**
             **/build/reports/tests/test/**
             **/build/reports/problems/**
           if-no-files-found: warn
           retention-days: 3
+
+  jvm-synth:
+    name: jvm-synth (shard ${{ strategy.job-index }} of ${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard reports, so one red shard does not hide another.
+      fail-fast: false
+      matrix:
+        # The number of entries is the number of shards. The build reads the
+        # count and the index from strategy.job-total and strategy.job-index
+        # below, never from this list, so adding a shard is adding an entry.
+        shard: [0, 1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # One shard of :synth's test classes. To run the same shard locally:
+      # ./gradlew --no-daemon :synth:test -PtestShards=3 -PtestShard=<index>
+      - name: Run one shard of :synth's tests
+        # No Android SDK here, unlike jvm-other: nothing excludes :app, and
+        # :synth needs nothing from it. The runner image presets both
+        # variables to its own SDK, so they are blanked rather than left
+        # unset. settings.gradle.kts then leaves :app out, as in a cloud
+        # session, and the shard does not install the NDK at configuration
+        # time (about 14 s, and a dl.google.com fetch that could fail it).
+        env:
+          ANDROID_HOME: ""
+          ANDROID_SDK_ROOT: ""
+        run: >-
+          ./gradlew --no-daemon
+          -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
+          :synth:test
+          -PtestShards=${{ strategy.job-total }}
+          -PtestShard=${{ strategy.job-index }}
+      - name: Keep JVM failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-reports-synth-${{ strategy.job-index }}-${{ github.sha }}
+          path: |
+            **/build/test-results/test/**
+            **/build/reports/tests/test/**
+            **/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 3
+
+  # The one check that says every JVM test passed, under the name the single
+  # job had, so anything that waits on `jvm-tests` still waits on all of them.
+  # Its check appears only once all four jobs have ended.
+  jvm-tests:
+    needs: [jvm-other, jvm-synth]
+    # always(), so this job is never skipped: GitHub counts a skipped check as
+    # passing. With no `if`, a failed test job would skip it. With
+    # !cancelled(), a cancelled run would: one cancelled by hand, or by a
+    # reopened PR starting again on the same commit. Here every one of those
+    # ends red, naming the result. always() is safe because nothing below can
+    # hang (no checkout, no download). A superseded run still needs a runner
+    # for this job before the next run in the concurrency group starts:
+    # seconds while runners are free (5 s in #925's first run).
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every JVM test job passed
+        env:
+          # One result per job named in `needs`; jvm-synth's is all its shards.
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "jvm-other, jvm-synth: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "A JVM test job ended '$result', so not every JVM test passed."
+              echo "A failed job's log names the failing test; a cancelled one was stopped or superseded."
+              exit 1
+            fi
+          done
 
   android-build:
     runs-on: ubuntu-latest
@@ -102,12 +203,20 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # See jvm-tests' identical step for why packages is empty.
+      # See jvm-other's identical step for why packages is empty.
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
+      # This job compiles :app three times at once (debug, strikeFx,
+      # creaseStudy) in one Kotlin compiler, and the 3 GiB gradle.properties
+      # gives it ran out twice on 2026-11-06. #917's failed in
+      # :app:compileCreaseStudyKotlin with "OutOfMemoryError: GC overhead
+      # limit exceeded" and passed on a re-run. #920's printed "Not enough
+      # memory to run compilation" and its next push passed. 5 GiB is for this
+      # job only: the JVM test jobs compile less and keep 3 GiB beside their
+      # test JVMs. The runner has 16 GiB.
       - name: Assemble the app and compile device tests
-        run: ./gradlew --no-daemon -PcreaseStudyBuild=true :app:testDebugUnitTest :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin :app:testCreaseStudyUnitTest :app:compileCreaseStudyKotlin
+        run: ./gradlew --no-daemon -PcreaseStudyBuild=true -Pkotlin.daemon.jvmargs=-Xmx5g :app:testDebugUnitTest :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin :app:testCreaseStudyUnitTest :app:compileCreaseStudyKotlin
       # The job already builds a working APK and then throws it away with
       # the runner. Keeping it is the difference between "the app compiles"
       # and "here is the app" — every green build on every branch becomes
@@ -122,10 +231,10 @@ jobs:
           name: snipsnap-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          # A private repo meters artifact storage as well as minutes, and
-          # the default is 90 days - hundreds of APKs nobody will install
-          # after the evening they were built. A week is longer than any of
-          # these has ever stayed interesting.
+          # The default is 90 days - hundreds of APKs nobody will install
+          # after the evening they were built (and, while the repo was
+          # private, metered storage). A week is longer than any of these
+          # has ever stayed interesting.
           retention-days: 7
 
       - name: Keep the separately installable STRIKE FX demo

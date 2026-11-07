@@ -233,6 +233,37 @@ class XpmWriterTest {
             ),
         )
     }
+
+    @Test fun `a cycling pad writes zone play cycle and one full-range layer per take`() {
+        val xml = XpmWriter().write(DrumProgram("K", listOf(Pad("K_RR1", 100, cycleLayers = (1..4).map { VelocityLayer("K_RR$it", 100L + it, 0, 127) }))))
+        assertTrue("<ZonePlay>0</ZonePlay>" in xml)
+        assertEquals(4, Regex("<SampleName>K_RR\\d</SampleName>").findAll(xml).count())
+        assertEquals(4, Regex("<VelStart>0</VelStart>\\s*<VelEnd>127</VelEnd>").findAll(xml).count())
+        // Each layer windows exactly its own take: 0 .. that take's frames, in layer order.
+        val windows = Regex("<SliceStart>(\\d+)</SliceStart>\\s*<SliceEnd>(\\d+)</SliceEnd>").findAll(xml).map { it.groupValues[1] to it.groupValues[2] }.toList()
+        assertEquals((1..4).map { "0" to "${100 + it}" }, windows)
+    }
+
+    @Test fun `a plain pad still writes zone play one`() {
+        val xml = XpmWriter().write(DrumProgram("K", listOf(Pad("K", 100))))
+        assertTrue("<ZonePlay>0</ZonePlay>" !in xml)
+        assertTrue("<ZonePlay>1</ZonePlay>" in xml)
+    }
+
+    @Test fun `cycle layers are two to four full-range takes and exclude velocity layers`() {
+        val one = listOf(VelocityLayer("a", 10, 0, 127))
+        val five = (1..5).map { VelocityLayer("t$it", 10, 0, 127) }
+        val soft = listOf(VelocityLayer("a", 10, 0, 63), VelocityLayer("b", 10, 64, 127))
+        assertFailsWith<IllegalArgumentException> { Pad("a", 10, cycleLayers = one) }
+        assertFailsWith<IllegalArgumentException> { Pad("a", 10, cycleLayers = five) }
+        assertFailsWith<IllegalArgumentException> { Pad("a", 10, cycleLayers = soft) }
+        assertFailsWith<IllegalArgumentException> {
+            Pad("a", 10, cycleLayers = (1..2).map { VelocityLayer("t$it", 10, 0, 127) }, velocityLayers = one)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Pad("a", 10, cycleLayers = (1..2).map { VelocityLayer("t$it", 10, 0, 127) }, chain = ChainPlay(5, 2))
+        }
+    }
 }
 
 private fun createTempDir(): File =

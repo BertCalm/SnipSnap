@@ -143,8 +143,16 @@ object Thump {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
-    /** Render [voice] with [macros]; missing macros fall back to defaults. */
-    fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * Render [voice] with [macros]; missing macros fall back to defaults.
+     *
+     * [velocity] is how hard the hit was, 0..1 ([StrikeVelocity]), and only
+     * KICK reads it: a softer hit drops less in pitch, lands a quieter and
+     * duller click, and drives its saturator less. Full velocity (the
+     * default) is the render THUMP has always made, bit for bit. The other
+     * voices keep the touch [Velocity] gives them.
+     */
+    fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) {
             // Keep legacy mappings byte-identical; the new voice rejects a
@@ -156,7 +164,7 @@ object Thump {
         // into the audible band, then Dsp.decimate brings it back to RATE.
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = when (voice) {
-            ThumpVoice.KICK -> kick(m, renderRate)
+            ThumpVoice.KICK -> kick(m, renderRate, velocity = velocity)
             ThumpVoice.SNARE -> snare(m, renderRate)
             ThumpVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
             ThumpVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
@@ -371,9 +379,9 @@ object Thump {
     }
 
     /** Unfinished source for ONSET; the stock render path keeps its original mappings. */
-    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, edge: Float, rate: Int): FloatArray =
+    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, edge: Float, rate: Int, velocity: Float = 1f): FloatArray =
         kick(defaults(ThumpVoice.KICK) + mapOf("CLICK" to 0f, "DRIVE" to edge * 0.25f),
-            rate, rootHz, t60Seconds, 1f + snap * 1.5f)
+            rate, rootHz, t60Seconds, 1f + snap * 1.5f, velocity)
 
     /** Hats share transposition with SKIN, whose resonances have a different natural base. */
     internal fun onsetHat(baseHz: Float, t60Seconds: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
@@ -395,9 +403,19 @@ object Thump {
         return Modes.ring(strike, rootHz, modes, rate)
     }
 
+    /**
+     * KICK at [rate]. [velocity] is the hit ([StrikeVelocity]): the sweep's
+     * depth above the base scales by v^2 (a softer beater stretches the
+     * head less), the click by sqrt(v) in level and v^0.8 in its low-pass
+     * corner, and DRIVE's saturator sees the hit's level, so a soft hit is
+     * driven less and scaled back after. Every factor is exactly 1 at full
+     * velocity. PUNCH, the designer's shaping stage after the voice, stays
+     * out of it, as on SKIN (docs/STRIKE_VELOCITY.md).
+     */
     private fun kick(
         m: Map<String, Float>, rate: Int,
         rootHz: Float? = null, decaySeconds: Float? = null, sweepMultiplier: Float? = null,
+        velocity: Float = 1f,
     ): FloatArray {
         // Ranges stay in kick territory on purpose: the playability contract
         // says a scrambled kick still reads as a kick, and spectral centroid
@@ -406,6 +424,10 @@ object Thump {
         // sweep, both tuned against the classifier.
         val base = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 34f, 62f)
         val sweepMult = sweepMultiplier ?: Dsp.lin(m.getValue("SWEEP"), 1.2f, 4f)
+        val sweepDepth = (sweepMult - 1f) * StrikeVelocity.droopFactor(velocity)
+        val clickLevel = StrikeVelocity.pulseLevel(velocity)
+        val clickHz = 1000f * StrikeVelocity.cornerFactor(velocity)
+        val seen = StrikeVelocity.levelSeen(velocity)
         val t60 = decaySeconds ?: Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.85f)
         val click = m.getValue("CLICK")
         val driveAmt = m.getValue("DRIVE")
@@ -436,7 +458,7 @@ object Thump {
         for (i in out.indices) {
             val t = i.toFloat() / rate
             // The defining kick shape: frequency falls fast onto the base.
-            val f = base * (1f + (sweepMult - 1f) * exp((-bendRate * t)).toFloat())
+            val f = base * (1f + sweepDepth * exp((-bendRate * t)).toFloat())
             phase += f / rate
             var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
             if (t < 0.005f) {
@@ -447,9 +469,9 @@ object Thump {
                 // env above - stacking t60's decay onto a 5ms burst would
                 // also quietly change the click's shape, not just declick it.
                 val clickAttack = (t / 0.001f).coerceAtMost(1f)
-                s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * clickAttack * 2f
+                s += click * 0.6f * clickLp.lp(noise.next(), clickHz) * (1f - t / 0.005f) * clickAttack * 2f * clickLevel
             }
-            out[i] = Dsp.drive(s, driveAmt)
+            out[i] = if (seen == 1f) Dsp.drive(s, driveAmt) else Dsp.drive(s * seen, driveAmt) / seen
         }
         return out
     }

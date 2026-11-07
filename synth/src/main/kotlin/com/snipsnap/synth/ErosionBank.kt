@@ -2,12 +2,28 @@ package com.snipsnap.synth
 
 /**
  * Provisional playing recipes for the owner's next listen, not a factory roster.
- * Every pad stores all five controls; ARC/CRATER synthesis stays unchanged.
+ * The original sixteen recipes remain available; the contrast bank uses six controls.
  */
 object ErosionBank {
     val velocities = listOf(.35f, .65f, 1f)
     data class Entry(val name: String, val role: String, val patch: ErosionPatch)
-    fun entries(): List<Entry> {
+    /** Eight roles for the contrast audition; previous recipes remain below. */
+    fun entries(): List<Entry> = listOf(
+        contrast("THUD", "short low body", ErosionVoice.CRATER, 0f,.18f,0f,0f,1f,1f),
+        contrast("CHIP", "coarse bright strike", ErosionVoice.ARC, 1f,0f,0f,1f,0f,.85f),
+        contrast("RASP", "rough mid-band packets", ErosionVoice.ARC, .30f,.25f,.30f,.15f,0f,.65f),
+        contrast("WIRE", "fine closed wire", ErosionVoice.ARC, 1f,.90f,.08f,1f,0f,0f),
+        contrast("DUST", "long continuous dust", ErosionVoice.ARC, .55f,1f,1f,.65f,0f,0f),
+        contrast("DROPS", "spaced tuned collapses", ErosionVoice.CRATER, .85f,0f,1f,.20f,.95f,1f),
+        contrast("SPLINTER", "loose bright crackle", ErosionVoice.ARC, .70f,.70f,.55f,1f,.05f,.95f),
+        contrast("SCAR", "crack then separated aftershock", ErosionVoice.SCAR, .35f,.40f,.65f,.55f,.45f,.35f),
+    )
+    private fun contrast(name: String, role: String, voice: ErosionVoice, tune: Float,
+                         voltage: Float, feed: Float, fluid: Float, slag: Float, grain: Float) =
+        Entry(name, role, ErosionPatch(name, voice, mapOf("TUNE" to tune, "VOLTAGE" to voltage,
+            "FEED" to feed, "FLUID" to fluid, "SLAG" to slag, "GRAIN" to grain)))
+
+    fun legacyEntries(): List<Entry> {
         fun arc(name: String, role: String, tune: Float, voltage: Float, feed: Float, fluid: Float, slag: Float) =
             entry(name, role, ErosionVoice.ARC, tune, voltage, feed, fluid, slag)
         fun crater(name: String, role: String, tune: Float, voltage: Float, feed: Float, fluid: Float, slag: Float) =

@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,6 +98,7 @@ import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.ProjectTempo
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
@@ -140,7 +142,7 @@ import kotlin.math.sin
  * A snip that knows its tempo offers it to the set once, when it lands.
  *
  * Every edit is one step of undo away (UNDO in the panel, [UNDO_DEPTH]
- * deep), BPM runs while held, and the rings and every cell describe
+ * deep), the tempo is the project's (set in BEAT, shown here and followed live), and the rings and every cell describe
  * themselves to a screen reader.
  *
  * Interaction, in full: tap a ring to pick it, long-press a ring to solo
@@ -237,6 +239,10 @@ fun OrbitScreen(
     val scope = rememberCoroutineScope()
     val kitDir = entry.dir
     val kit = entry.kit
+    // The tempo is the one project tempo, set from BEAT (the 2026-11-06
+    // ruling), read off `entry`, which is App's effective kit: see
+    // [FollowProjectTempo] and the loader below. ORBIT has no control of its
+    // own; `OrbitSet.bpm` is the tempo the set was last fitted at.
     val filesDir = remember(context) { context.filesDir }
     val rate = remember(context) { deviceSampleRate(context) }
     val source = remember(kitDir) { OrbitSampleSource(kitsRoot, filesDir) }
@@ -286,7 +292,7 @@ fun OrbitScreen(
     var bouncing by remember(kitDir) { mutableStateOf(false) }
     /** A snip ring just added whose tempo the set does not match: SET it or KEEP the set's. Asked once. */
     var tempoOffer by remember(kitDir) { mutableStateOf<TempoOffer?>(null) }
-    /** BPM taps settle before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
+    /** A new project tempo settles before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
     var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
     /**
@@ -482,10 +488,12 @@ fun OrbitScreen(
                 val loaded = if (OrbitStore.exists(kitDir)) {
                     OrbitStore.load(kitDir)
                 } else {
-                    val bpm = (kit.tempoBpm ?: 92f).coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
-                    OrbitPresets.fromKit(kitDir.name, kit, bpm, rate)
+                    OrbitPresets.fromKit(kitDir.name, kit, ProjectTempo.clamped(null, kit), rate)
                 }
-                loaded.copy(sampleRate = rate)
+                // The project's tempo, not the bpm the file was written at:
+                // that is only what it last said. The ring set is prepared at
+                // the tempo it will be heard at.
+                loaded.copy(sampleRate = rate, bpm = ProjectTempo.clamped(null, kit))
             }
         }
         result.onSuccess { loaded ->
@@ -548,8 +556,8 @@ fun OrbitScreen(
     /**
      * Persist and, if the transport is up, hand the edit to the engine at
      * the next block. Every edit is recorded for UNDO unless [record] says
-     * not to (UNDO itself, and the settled end of a BPM run, which was
-     * recorded once when the run began).
+     * not to (UNDO itself, and the settled end of a tempo change, which was
+     * recorded, if at all, when it began).
      */
     fun commit(next: OrbitSet, record: Boolean = true) {
         val before = set
@@ -856,18 +864,21 @@ fun OrbitScreen(
         commit(previous, record = false)
     }
 
-    /** Take the snip's tempo: the set moves to it and the snip's ring is re-sized to its natural length there. */
-    fun acceptTempo(offer: TempoOffer) {
-        tempoOffer = null
-        val s = set ?: return
-        bpmJob?.cancel()
-        bpmPending = false
-        val at = s.copy(bpm = offer.bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
-        val steps = OrbitClock.naturalSteps(at, offer.frames)
-        commit(at.copy(orbits = at.orbits.map { o ->
-            val content = o.content
-            if (content is SnipOrbit && content.sampleFile == offer.sampleFile) o.copy(steps = steps) else o
-        }))
+    /**
+     * SET PROJECT TO n: the snip's tempo goes to the project, which every
+     * screen follows. This set does not move itself: it follows the project's
+     * tempo like every other change of it, and [followTempo] re-sizes the
+     * snip's ring to its natural length there once the tempo has landed on
+     * the offered number. Returns the tempo to ask the project for, which the
+     * caller does through [LocalProjectTempoSetter].
+     */
+    fun acceptTempo(offer: TempoOffer): Float {
+        val bpm = offer.bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
+        // Kept, not cleared: the offer is what followTempo re-sizes the ring
+        // from once the project's tempo has landed on it. The panel stops
+        // showing it as soon as it is accepted.
+        tempoOffer = offer.copy(bpm = bpm, accepted = true)
+        return bpm
     }
 
     /**
@@ -929,18 +940,30 @@ fun OrbitScreen(
     }
 
     /**
-     * The tempo, debounced: the readout moves at once, the save and the
-     * refit wait for [BPM_SETTLE_MS] of quiet, so ten taps on BPM + do not
-     * slice a snip ten times. A set with no snip rings needs no refit —
-     * pads do not change with tempo — so the engine takes the new tempo
-     * on the next block and only the save waits.
+     * The set taking the project's tempo, debounced: the readout moves at
+     * once, the save and the refit wait for [BPM_SETTLE_MS] of quiet, so a
+     * held run on BEAT's BPM + does not slice a snip forty times. A set with no
+     * snip rings needs no refit — pads do not change with tempo — so the
+     * engine takes the new tempo on the next block and only the save waits.
+     * Not an UNDO step by itself: undoing it would put back a tempo the
+     * project no longer has (UNDO of an older step is followed back to the
+     * project's tempo by the effect that calls this). The exception is a snip
+     * ring re-sized by an accepted offer, which is an edit like any other.
      */
-    fun setBpm(bpm: Float) {
+    fun followTempo(bpm: Float) {
         val s = set ?: return
-        val next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
+        var next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
+        val offer = tempoOffer?.takeIf { it.accepted && it.bpm == next.bpm }
+        if (offer != null) {
+            tempoOffer = null
+            val steps = OrbitClock.naturalSteps(next, offer.frames)
+            next = next.copy(orbits = next.orbits.map { o ->
+                val content = o.content
+                if (content is SnipOrbit && content.sampleFile == offer.sampleFile) o.copy(steps = steps) else o
+            })
+        }
         if (next == s) return
-        // One UNDO steps back the whole run of taps, not one tap of it.
-        if (!bpmPending) history = (history + OrbitStep(s, solo)).takeLast(UNDO_DEPTH)
+        if (offer != null && !bpmPending) history = (history + OrbitStep(s, solo)).takeLast(UNDO_DEPTH)
         set = next
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
@@ -1192,6 +1215,9 @@ fun OrbitScreen(
             }
             return@Column
         }
+        // Inside this Column's own lambda, so its few registers are not main's.
+        FollowProjectTempo(kit, current, ::followTempo)
+        val setProjectTempo = LocalProjectTempoSetter.current
 
         val stripRows = ring?.pads?.size ?: 0
         // The frame the PICTURE is drawn from: the section's own, so the
@@ -1233,7 +1259,7 @@ fun OrbitScreen(
                 onCycleHit = { slot, step -> cycleHit(selected, slot, step) },
                 onRailTap = { slot -> railTap(selected, slot) },
                 onBrushChange = { brush = brush.next },
-                onAcceptTempo = { offer -> acceptTempo(offer) },
+                onAcceptTempo = { offer -> setProjectTempo(acceptTempo(offer)) },
                 onDismissTempoOffer = { tempoOffer = null },
             )
 
@@ -1323,8 +1349,7 @@ fun OrbitScreen(
                 outOpen = outOpen,
                 playing = playing,
                 onRewind = { engine?.rewind() },
-                onBpmDown = { set?.let { setBpm(it.bpm - 2f) } },
-                onBpmUp = { set?.let { setBpm(it.bpm + 2f) } },
+                bpm = current.bpm,
                 onAddPatternRing = { addPatternRing() },
                 onToggleSnipPicker = {
                     snipPickerOpen = !snipPickerOpen
@@ -1399,6 +1424,17 @@ private fun padLabel(slot: Int): String {
 private fun padColor(kit: Kit, slot: Int, fallback: Color): Color =
     kit.pads.firstOrNull { it.slot == slot }?.let { Schemes.classColor(it.drumClass).tape } ?: fallback
 
+/**
+ * UNDO, in the ring's title row where it is always on screen (it used to be first in a sideways-scrolling
+ * chip row, off-screen on a narrow phone). The history keeps sets, not names for the edits that made
+ * them, and edits reach `commit` from dozens of ring controls, so the label says how many steps back there
+ * are ([Copy.orbitUndo]) rather than naming the last one.
+ */
+@Composable
+private fun RingUndoChip(steps: Int, scheme: Scheme, onUndo: () -> Unit) {
+    SmallChip(Copy.orbitUndo(steps), scheme, enabled = steps > 0, description = "UNDO THE LAST EDIT") { onUndo() }
+}
+
 @Composable
 private fun RingDetailPanel(
     ring: Orbit,
@@ -1426,17 +1462,20 @@ private fun RingDetailPanel(
     onOpenSpanPicker: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText(ring.name, TapeType.display, scheme.ink.tape)
-        TapeText(
-            when {
-                solo == selected -> "SOLO"
-                ring.content is SnipOrbit -> "SNIP"
-                ring.pads.size > 1 -> "${ring.pads.size} PADS"
-                else -> "PAD"
-            },
-            TapeType.pixelSmall,
-            if (solo == selected) scheme.accent.tape else scheme.ink3.tape,
-        )
+        TapeText(ring.name, TapeType.display, scheme.ink.tape, Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TapeText(
+                when {
+                    solo == selected -> "SOLO"
+                    ring.content is SnipOrbit -> "SNIP"
+                    ring.pads.size > 1 -> "${ring.pads.size} PADS"
+                    else -> "PAD"
+                },
+                TapeType.pixelSmall,
+                if (solo == selected) scheme.accent.tape else scheme.ink3.tape,
+            )
+            RingUndoChip(history.size, scheme, onUndo)
+        }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "ONE STEP FEWER") { onSetSteps(ring.steps - 1) }
@@ -1468,7 +1507,6 @@ private fun RingDetailPanel(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { onUndo() }
         SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged, description = if (ring.engaged) "RING ON — TAP TO MUTE" else "RING OFF — TAP TO HEAR") {
             onUpdateRing { it.copy(engaged = !it.engaged) }
         }
@@ -1825,7 +1863,7 @@ private fun TheSetPanel(
         }
     }
     TapeText(
-        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
+        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — THE PROJECT'S, SET IN BEAT.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -2315,19 +2353,19 @@ private fun OrbitRingRail(
     }
 
     // The offer a snip makes on landing: its own tempo, once.
-    tempoOffer?.let { offer ->
+    tempoOffer?.takeIf { !it.accepted }?.let { offer ->
         Column(
             Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp)).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText(
-                "${offer.ringName} SOUNDS LIKE ${offer.bpm.roundToInt()} BPM · THE SET IS AT ${current.bpm.roundToInt()}.",
+                "${offer.ringName} SOUNDS LIKE ${offer.bpm.roundToInt()} BPM · THE PROJECT IS AT ${current.bpm.roundToInt()}.",
                 TapeType.pixel,
                 scheme.ink.tape,
                 maxLines = 2,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { onAcceptTempo(offer) }
+                SmallChip("SET PROJECT TO ${offer.bpm.roundToInt()}", scheme, accent = true) { onAcceptTempo(offer) }
                 SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { onDismissTempoOffer() }
                 TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             }
@@ -2343,8 +2381,7 @@ private fun OrbitFooterRow(
     outOpen: Boolean,
     playing: Boolean,
     onRewind: () -> Unit,
-    onBpmDown: () -> Unit,
-    onBpmUp: () -> Unit,
+    bpm: Float,
     onAddPatternRing: () -> Unit,
     onToggleSnipPicker: () -> Unit,
     onToggleOut: () -> Unit,
@@ -2352,9 +2389,12 @@ private fun OrbitFooterRow(
     // One row: the tempo and the ring shelf. PLAY is in the header.
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing, description = "BACK TO THE TOP") { onRewind() }
-        // Hold to run: forty taps is not a way to get from 92 to 172.
-        RepeatButton("BPM −", "SLOWER", scheme, Modifier.weight(1f)) { onBpmDown() }
-        RepeatButton("BPM +", "FASTER", scheme, Modifier.weight(1f)) { onBpmUp() }
+        // Read-only: the tempo is the project's, set from BEAT. Said where the
+        // BPM buttons used to be, so the row does not move under a thumb that
+        // learned it.
+        Box(Modifier.weight(2f).height(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
+            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+        }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
         ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
             onToggleSnipPicker()
@@ -2367,7 +2407,7 @@ private fun OrbitFooterRow(
     // controls, and at 173 characters (the `hasSnips` variant) it
     // was ellipsized after roughly three screen-widths' worth of
     // text — everything from "HOLD" on (that holding a ring solos
-    // it, that holding BPM runs the set, how ring ordering resolves
+    // it, how ring ordering resolves
     // ties) was unreadable. `maxLines = 3` wasn't a deliberate
     // clamp, just the value that happened to survive whatever this
     // TapeText started as; raised here rather than restructuring
@@ -2887,10 +2927,6 @@ private const val WAVE_AMP_DP = 9f
 /** How many edits UNDO can step back through. */
 private const val UNDO_DEPTH = 40
 
-/** A held BPM button waits this long before it runs, then steps every [REPEAT_EVERY_MS]. */
-private const val REPEAT_AFTER_MS = 400L
-private const val REPEAT_EVERY_MS = 90L
-
 /** One tap on LEVEL − / +, as a share of full; and the loudest a ring goes. */
 private const val LEVEL_STEP = 0.1f
 private const val MAX_LEVEL = 1.5f
@@ -2904,7 +2940,7 @@ private const val ARP_GATE_STEP = 0.1f
 /** How long after the ear a thumb lands, taken off a REC tap along with the output buffer. */
 private const val REC_TOUCH_MS = 30
 
-/** Quiet after the last BPM tap before the set saves and its snips refit. */
+/** Quiet after the project's tempo last changed before the set saves and its snips refit. */
 private const val BPM_SETTLE_MS = 400L
 
 /** Below this, a tempo estimate is numerology (see [Tempo]) and no offer is made. */
@@ -2913,8 +2949,36 @@ private const val TEMPO_TRUST = 0.3f
 /** As much of a snip as the tempo estimate reads — the bank's own cap. */
 private const val TEMPO_MAX_SEC = 30f
 
-/** A snip ring's own tempo, offered to the set once when the ring lands. */
-private data class TempoOffer(val ringName: String, val sampleFile: String, val bpm: Float, val frames: Int)
+/**
+ * What accepting a snip's tempo (SET PROJECT TO n) asks of the project: its
+ * tempo becomes the number, the way BEAT's BPM control would set it, and the
+ * set follows once it lands like any other change of it. App provides it; the
+ * default does nothing, for a screen with no project behind it. A local and not
+ * a parameter of [OrbitScreen] because that method is a few registers from the
+ * dex limit and a parameter costs two.
+ */
+val LocalProjectTempoSetter = staticCompositionLocalOf<(Float) -> Unit> { {} }
+
+/**
+ * The set following the project's tempo: BEAT's BPM control moved it, an
+ * accepted snip offer asked for it, or UNDO put back a set fitted at an older
+ * one. [follow] is [OrbitScreen]'s own `followTempo`, with the refit its BPM
+ * taps used to run; on entry the loader has already taken the tempo, so this
+ * finds nothing to do. A composable of its own, and not inline in
+ * [OrbitScreen]: that method is a few registers from the dex limit.
+ */
+@Composable
+private fun FollowProjectTempo(kit: Kit, set: OrbitSet?, follow: (Float) -> Unit) {
+    val setBpm = set?.bpm
+    val tempo = ProjectTempo.clamped(null, kit)
+    val latest by rememberUpdatedState(follow)
+    LaunchedEffect(tempo, setBpm) {
+        if (setBpm != tempo) latest(tempo)
+    }
+}
+
+/** A snip ring's own tempo, offered to the project once when the ring lands; [accepted] once SET PROJECT TO has asked for it, until the project's tempo arrives and the ring is re-sized. */
+private data class TempoOffer(val ringName: String, val sampleFile: String, val bpm: Float, val frames: Int, val accepted: Boolean = false)
 
 /** Where display slot [i] of [count] sits inside a [w]×[h] canvas, and the inverse for taps. */
 private class RingGeometry(w: Float, h: Float, private val count: Int, density: Float) {
@@ -3065,56 +3129,3 @@ private fun ActionButton(
     }
 }
 
-/**
- * An [ActionButton] that steps once on touch and keeps stepping while
- * held — [REPEAT_AFTER_MS] before the run starts, then every
- * [REPEAT_EVERY_MS] — the way a hardware tempo button runs. The pointer
- * loop is KIT's own press-and-hold shape; for a screen reader the button
- * is a plain click that steps once, under [description].
- */
-@Composable
-private fun RepeatButton(
-    label: String,
-    description: String,
-    scheme: Scheme,
-    modifier: Modifier = Modifier,
-    onStep: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    // The pointer loop is keyed once; the latest step reaches it through this.
-    val step by rememberUpdatedState(onStep)
-    Box(
-        modifier
-            .height(Layout.MIN_HIT_TARGET.dp)
-            .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .semantics {
-                contentDescription = description
-                onClick { step(); true }
-            }
-            .pointerInput(Unit) {
-                while (true) {
-                    val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                    step()
-                    val run = scope.launch {
-                        delay(REPEAT_AFTER_MS)
-                        while (isActive) {
-                            step()
-                            delay(REPEAT_EVERY_MS)
-                        }
-                    }
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
-                        }
-                    }
-                    run.cancel()
-                }
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(label, TapeType.pixel, scheme.ink2.tape)
-    }
-}

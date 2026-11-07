@@ -12,6 +12,37 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `WICK factory voices and held saved bodies replay byte for byte`() {
+        for (voice in WickVoice.entries) {
+            val patch = assertIs<WickPatch>(Presets.forVoice(WickPatch.ENGINE, voice.name).first())
+            val replay = Patches.fromJsonText(patch.toJsonText())
+            assertEquals(patch, replay)
+            assertContentEquals(patch.render().samples, replay.render().samples, "$voice factory recipe")
+        }
+        // CURRENT is the compatibility source of older saved RATTLE patches. It stays
+        // reproducible alongside all three editable bodies after the factory promotion.
+        for (source in Wick.RattleSource.entries) {
+            val patch = WickPatch("Held canary", WickVoice.RATTLE,
+                Wick.defaults(WickVoice.RATTLE) + ("HOLD" to 1f), midi = 57, velocity = .6f,
+                rattleSource = source)
+            val replay = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, replay.render().samples, "$source held recipe")
+        }
+    }
+
+    @Test fun `HYDROFORM replays both voices and the measured DOME loop`() {
+        for (voice in HydroformVoice.entries) {
+            val patch = HydroformPatch("Canary", voice, emptyMap(), velocity = .6f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+        val loop = HydroformPatch("Held", HydroformVoice.DOME, mapOf("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples)
+    }
+
+    @Test fun `CHITIN finite voices replay without cache state`() {
+        for (v in ChitinVoice.entries) assertContentEquals(Chitin.inspect(v).snip.samples, Chitin.inspect(v).snip.samples)
+    }
+
     @Test fun `APSIS saved populations reproduce finite and held material after cold geometry preparation`() {
         for (voice in listOf(ApsisVoice.GRAIN, ApsisVoice.ANCHOR)) for (hold in listOf(0f, 1f)) {
             val patch = ApsisPatch("Population canary", voice,
@@ -511,6 +542,21 @@ class DeterminismTest {
         }
     }
 
+    // R2: BUZZ is the first thing in ARCO that draws noise (Dsp.Noise from a fixed seed per voice: free-running in a one-shot, a table one loop
+    // long in a LOOP), so the same canary again with it on, one-shot and LOOP, and the control that the rows are rows of the buzz: each differs
+    // from the same render at BUZZ 0.
+    @Test
+    fun `ARCO with BUZZ on is byte-identical across renders, both voices, one-shot and loop`() {
+        for (voice in ArcoVoice.entries) for (buzz in listOf(0.5f, 1f)) {
+            val shot = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("BUZZ" to buzz))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot at BUZZ $buzz")
+            assertTrue(!shot.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice)).samples), "$voice one-shot at BUZZ $buzz equals BUZZ 0")
+            val loop = ArcoPatch("Canary", voice, Arco.defaults(voice) + mapOf("HOLD" to 1f, "BUZZ" to buzz))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop at BUZZ $buzz")
+            assertTrue(!loop.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice) + ("HOLD" to 1f)).samples), "$voice loop at BUZZ $buzz equals BUZZ 0")
+        }
+    }
+
     // R1g: BODY above the middle of the knob is a lift on the plain note (a low shelf and a bell, a cap searched by bisection on the note's own peak, and for a loop a cut chosen on the lifted window), none of it seeded,
     // and none of the rows above renders above the knee (the default BODY is the knee itself, which is the old finish to the sample). So the same canary again at BODY 0.75 and BODY 1, both voices, one-shot and LOOP, at the
     // default note (where the cap is idle or nearly so) and at the root of the voice (CELLO C2, where the cap acts at both BODYs: its bisection and its halving check are arithmetic that must repeat to the last bit). The control
@@ -535,15 +581,15 @@ class DeterminismTest {
         }
     }
 
-    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29) and
-    // BUZZ's noise (13, 23) per voice (Terra.kt), so a saved pad
-    // regenerates only if all of them stay fixed. One per voice, with BUZZ
-    // and CLACK up so the noise paths run.
+    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29),
+    // BUZZ's noise (13, 23) and BOX's grit and wires (41, 43) per voice
+    // (Terra.kt), so a saved pad regenerates only if all of them stay fixed.
+    // One per voice, with BUZZ and CLACK up so the noise paths run.
     @Test
-    fun `TERRA is byte-identical across renders, all four voices`() {
+    fun `TERRA is byte-identical across renders, every voice`() {
         for (voice in TerraVoice.entries) {
             val loud = when (voice) {
-                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR -> mapOf("BUZZ" to 1f)
+                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR, TerraVoice.BOX -> mapOf("BUZZ" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }
@@ -676,6 +722,18 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
             assertContentEquals(Scour.render(voice, patch.macros, velocity = .3f).samples,
                 Scour.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
+        }
+    }
+
+    @Test
+    fun `FILL is byte-identical across renders, every voice, a saved recipe and a soft hit included`() {
+        for (voice in FillVoice.entries) {
+            val patch = FillPatch("Canary", voice, Fill.defaults(voice) + ("DENSITY" to 1f))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
+            assertContentEquals(Fill.render(voice, patch.macros, velocity = .3f).samples,
+                Fill.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
         }
     }
 

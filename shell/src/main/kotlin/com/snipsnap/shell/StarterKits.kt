@@ -6,6 +6,7 @@ import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
+import com.snipsnap.synth.ChordStabs
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.ConfluenceVoiceBank
 import com.snipsnap.synth.SkinKits
@@ -157,6 +158,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tidal() },
         Starter(
+            "nacre", "NACRE",
+            "Paired harp notes with soft and hard touch, coral replies and seaweed paths.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.nacreVelocity() },
+        Starter(
             "ohm", "OHM",
             "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
             seeded = false,
@@ -196,7 +203,7 @@ object StarterKits {
         ) { SynthKits.thaw() },
         Starter(
             "scour", "SCOUR",
-            "Metal, glass, thunder-sheet and girder impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            "Metal, glass, thunder-sheet, girder, disc and rod impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scour() },
@@ -455,6 +462,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            "wick", "WICK",
+            "Six pitched voices with recovering motion and three RATTLE bodies.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.wick() },
+        Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
             seeded = false,
@@ -464,14 +477,21 @@ object StarterKits {
             // Velocity.kt's SNARE_TONE_EXCLUDED) rather than low-passing
             // the same take - Velocity.variantsAt makes the same
             // patch-vs-captured call Robin and KitBuilder's velocity doors
-            // do (KICK/TOM/COWBELL/RIM still fall back inside it, same as
-            // everywhere else atVelocity has no macro to move).
+            // do. KICK is struck softer (StrikeVelocity, since 2026-11-07);
+            // TOM/COWBELL/RIM still fall back inside it, same as everywhere
+            // else atVelocity has no macro to move.
             ThumpKits.classic().map { pad ->
                 if (pad == null) return@map null
                 val recipe = Breed.recipeOf(pad.recipe)
                 pad.copy(softVariants = Velocity.variantsAt(pad.snip, recipe?.patch, recipe?.fx, count = 2))
             }
         },
+        Starter(
+            "chord-stabs", "CHORD STABS",
+            "Every chord in C minor, one per pad: triads, then sevenths. Hit a progression.",
+            seeded = false,
+            key = KeySpec.parse("Cm"),
+        ) { ChordStabs.kit(KeySpec.parse("Cm")) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

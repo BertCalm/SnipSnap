@@ -30,6 +30,8 @@ import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.NacrePatch
+import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.OrphicaConfig
 import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
@@ -308,7 +310,14 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.LorentzPatch) {
+            if (preset is com.snipsnap.synth.WickPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("WickPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.WickPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete body, root and native touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.LorentzPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("LorentzPatch", (call.receiver as KotlinLiteral.Call).name)
@@ -369,6 +378,11 @@ class UserPresetsTest {
             } else if (preset is OrigamiPatch) {
                 val promoted = origamiFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is NacrePatch) {
+                val promoted = nacreFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete saved renderer and native performance promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is ChamberPatch) {
@@ -919,6 +933,31 @@ class UserPresetsTest {
         return ChamberPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
     }
 
+    private fun nacreFromRosterLine(line: String): NacrePatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("NacrePatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty() && call.named.isEmpty())
+        return NacrePatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
+    @Test
+    fun `NACRE promotion preserves every saved renderer native performance and signed seed bit`() {
+        val seeds = listOf(Long.MIN_VALUE, Long.MAX_VALUE, 9_007_199_254_740_993L)
+        for (model in 1..3) {
+            val patch = NacrePatch("HARP \"$\"\n\\", NacreVoice.PEARL,
+                mapOf("TOUCH" to .41f, "DUET" to .23f, "CURRENT" to .61f,
+                    "VENUE" to .72f, "BLOOM" to .19f, "HOLD" to 0f),
+                midi = 43, velocity = .37f, seed = seeds[model - 1], model = model)
+            val promoted = nacreFromRosterLine(UserPresets.rosterLine(patch))
+            assertEquals(patch, promoted)
+            assertEquals(patch.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            assertEquals(patch.velocity.toRawBits(), promoted.velocity.toRawBits())
+            assertEquals("NacrePresets.kt", UserPresets.rosterFile(patch))
+        }
+    }
+
     private fun filamentFromRosterLine(line: String): FilamentPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -1086,6 +1125,13 @@ class UserPresetsTest {
             } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == NacrePatch.ENGINE) {
+                val decoder = NacrePatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(NacrePatch::class.java, decoder.returnType,
+                    "NACRE promotion names its public complete-recipe constructor")
+                assertTrue("NacrePatch(" in text, "NACRE's table accepts complete typed recipes")
+                val patch = Presets.all().first { it.engine == engine }
+                assertEquals(patch, nacreFromRosterLine(UserPresets.rosterLine(patch)))
             } else if (engine == ChamberPatch.ENGINE) {
                 val decoder = ChamberPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ChamberPatch::class.java, decoder.returnType,
@@ -1151,6 +1197,10 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.WickPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.WickPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.WickPatch::class.java, decoder.returnType,
+                    "WICK promotion names its public constructor retaining the selected body")
             } else if (engine != TrioPatch.ENGINE) {
                 // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"

@@ -30,6 +30,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.synth.PedalSide
 import kotlinx.coroutines.CoroutineScope
@@ -69,6 +70,8 @@ class PedalSlateScreenTest : ComposeScreenTest() {
     private val toasts = CopyOnWriteArrayList<String>()
     private var currentSlot by mutableStateOf(1)
     private var openBoxState by mutableStateOf<String?>(PadSheetBoxes.Box.TREATMENT.name)
+    /** The page the sheet draws, hoisted the way App's `Navigation` holds it: a door opens EFFECTS and Back returns to the editor. */
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
 
     // The app-wide row, held here the way App holds it.
     private var pedalRow by mutableStateOf(PedalSlate.DEFAULT)
@@ -91,13 +94,17 @@ class PedalSlateScreenTest : ComposeScreenTest() {
     }
 
     private fun show(entry: KitShelf.Entry) {
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
                 backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
-                onBack = {},
+                page = pageState,
+                onOpenEffects = { pageState = PadSheetPage.EFFECTS },
+                onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = { toasts += it },
                 onNavigateTape = {},
                 onGrainField = {},
@@ -114,6 +121,8 @@ class PedalSlateScreenTest : ComposeScreenTest() {
             )
         }
         waitFor("the pad sheet", timeoutMillis = 60_000) { hasText("PAD ${PadBanks.tag(1)}") }
+        // The slate is on EFFECTS, one door from the editor.
+        activate(Copy.PAD_EFFECTS_DOOR)
         waitFor("row seven's MORE", timeoutMillis = 60_000) { nodes(PadSheet.MORE).isNotEmpty() }
     }
 
@@ -355,10 +364,14 @@ class PedalSlateScreenTest : ComposeScreenTest() {
 
         show(entry)
         val pad = padName(entry)
+        // show() leaves the sheet on EFFECTS, where the slate is, but the
+        // provenance line is the editor page's: read it there, then come back.
+        compose.runOnIdle { pageState = PadSheetPage.EDITOR }
         waitFor("the provenance line to say the bin keeps the original", timeoutMillis = 60_000) {
             compose.onAllNodesWithText("original in bin, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("original in bin, kept", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        compose.runOnIdle { pageState = PadSheetPage.EFFECTS }
 
         activate(PadSheet.NONE)
         waitForToast(Copy.unTreated(pad))

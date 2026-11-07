@@ -119,7 +119,9 @@ MAKE INSTRUMENT retains the attack and exposes .1..1.5-second release. Minor-thi
 sampled roots span up to twelve semitones either side of the saved root, clipped
 to MIDI 36..84. Adjacent keygroups tile that span with at most one semitone of
 sample transposition. One authored excitation touch is rendered per zone; live
-key velocity changes playback gain. Optional velocity layers remain future work.
+key velocity changes playback gain. Optional [two-touch captures](LIBRATION_TOUCH.md)
+extend instrument delivery with separate soft/hard samples while retaining this
+single-layer version-one recipe and renderer.
 
 The screen cache retains at most 4 MiB of final loop audio and two physical
 populations. Each keygroup-generation session retains one physical population;

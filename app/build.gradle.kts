@@ -18,6 +18,15 @@ val creaseStudyDeviceTests = providers.gradleProperty("creaseStudyDeviceTests").
 val creaseStudyEnabled = creaseStudyDeviceTests || providers.gradleProperty("creaseStudyCache").isPresent ||
     providers.gradleProperty("creaseStudyBuild").getOrElse("false").toBooleanStrict()
 
+androidComponents {
+    onVariants(selector().withBuildType("creaseStudy")) { variant ->
+        // This isolated player reads only its generated Crease cache. Factory
+        // vocal recordings are Java resources, so R8 cannot remove them.
+        // Keep them in every normal sampler variant.
+        variant.packaging.resources.excludes.addAll("confluence/**", "confluence-selected-bank/**")
+    }
+}
+
 
 android {
     namespace = "com.snipsnap.app"

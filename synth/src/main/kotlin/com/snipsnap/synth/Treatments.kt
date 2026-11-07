@@ -135,6 +135,14 @@ object Treatments {
         // 16 percent of its peak under it), so nothing here tries to rescue a drum.
         // docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 4.
         "eased" to FxChain(volume = mapOf("RISE" to 0.8f)),
+        // A vibrato (the VIBRATO chip): the VIBRATO section's pitch swing at DEPTH 1.0 (60 cents), RATE left at its own neutral
+        // (5.5 Hz, a singing rate) and LATE at 0. The owner heard the section on JANGLE, the choir and the snare beside TAPE's wobble
+        // (2026-11-04), chose a tap of 42 cents, and found it different from TAPE WOBBLE on JANGLE. A tap puts a pedal on at AMT 0.7
+        // (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT, which synth cannot see; PadSheetTest pins that they still land here)
+        // and DEPTH fades linearly toward 0, so DEPTH 1.0 makes a tap 0.7, 42 cents; AMT 1 is the 60 cents also heard.
+        // A held sound's pedal: the choir (loud for 0.48 s, 2.6 cycles at 5.5 Hz) and the snare (0.09 s, half a cycle) are too short
+        // for a vibrato to read, so nothing here tries to rescue them. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
+        "vibratoed" to FxChain(vibrato = mapOf("DEPTH" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

@@ -25,19 +25,19 @@ pack and through the phone's own EXPANSION export.
   `Samples/<Name>/`, beside the kits. On the phone, MAKE > INSTRUMENTS rows have
   EXPANSION >, and EXPORT's EXPANSION subject lists and writes them.
 - **A factory pack**: `./gradlew :shell:generateInstrumentPack` renders MERCURY's three picker
-  voices, KEEL's three and every qualifier, and packs them as `SnipSnap New Keys` (folder and
+  voices, KEEL's three, ARCO's two (through `ArcoPadMaker`, at their defaults), BORE's two
+  (through `BorePadMaker`, from FLUTE STEADY LOOP and SAX SOLO LOOP) and every qualifier,
+  and packs them as `SnipSnap New Keys` (folder and
   `.xpn`) under `testkit/loop-instruments-pack/`. `-Pengines=THAW,ARCO` limits it.
 
 ## Who qualified
 
-63 voices across 15 engines, each from its first factory preset:
+59 voices across 13 engines, each from its first factory preset:
 
 | Engine | Voices |
 |---|---|
 | AEROSTAT | FLOAT |
 | ALLOY | BASS, KEY, PLUCK, BRASS, STRING, SOFT |
-| ARCO | CELLO, ERHU |
-| BORE | FLUTE, SAX |
 | COROLLA | TONGUE, CHOIR, CHATTER, ORBIT |
 | EMBOUCHURE | REED, BRASS, BASS, SOFT, BOW, WHISTLE (octave to check by ear) |
 | FLOTILLA | KNOCK, DRIFT |
@@ -58,17 +58,28 @@ the owner's ear decides.
 
 | Engine | Reason |
 |---|---|
-| APSIS, CIRCUIT, CISTERN, MURK, REVEL, SCOUR, SPOOL, SUTURE | the loop pulses (7 to 95 dB spread): a rhythm, not a held note |
+| APSIS, CIRCUIT, CISTERN, MURK, REVEL, SPOOL, SUTURE | the loop pulses (7 to 95 dB spread): a rhythm, not a held note |
+| SCOUR | no loop at all: since R3 HOLD only sets how long the ring lasts, so every sound is a build, a slam and a decay (corrected 2026-11-06; this scan first filed it with the pulsing loops) |
 | NIMBUS | cymbals: no keyboard pitch (readings hundreds of cents off) |
 | RELAY, TESSERA | in every voice the join clicks, the loop pulses, or both (TESSERA CHAMBER would not settle) |
 | COROLLA BLOSSOM and HUSK, MURMUR LEAD and CHOIR, PITCHWHEEL CLUNK and RECOIL, STOOP BASS and CHORD, TANGLE BASS and KNOT, FLOTILLA RIPPLE, HOLLOW, CROSSWAVE and GATHER | that voice's pitch, octave or steadiness failed; the engine's other voices passed |
 | OVEN | no HOLD control |
 | SHOAL | its factory voices are WOOD, which refuses HOLD loops by design |
-| CAIRN, WICK | prototypes with no factory presets |
+| CAIRN | prototype with no factory presets |
+| WICK | excluded from the November 4 scan before factory integration; it now has 36 presets, but its rhythmic HOLD has not been qualified as a continuous keyboard instrument |
 
-BORE and ARCO have their own round-two specs for dedicated held instruments (breath and bow
-attention, an attack before the loop). The shared maker gives them a held instrument now;
-the dedicated ones remain possible later.
+ARCO and BORE qualified here on 2026-11-04 and left the shared maker on 2026-11-06 for
+makers of their own, each in a soft and a hard touch layer:
+
+- **`ArcoPadMaker`:** each key starts with the bow's own stroke, then holds the LOOP's loop,
+  retuned to close on itself (the ARCO design spec's "R2: the held keygroup, as built").
+- **`BorePadMaker`:** each key plays the note's own breath, then its loop, closed by BORE's
+  blend at the loop's end; OVERBLOW stays off in a held key (the BORE design spec's "R2: the
+  held keygroup, as built").
+
+Heard (2026-11-06): the first build's start was "too long or too different from the held portion". On an A/B of
+four hit lengths the owner picked Short: each key's own hit plays for 80 ms and hands over to its loop by 300 ms, under
+the hit's own swell (`HeldStart.SHORT`), so the loop starts at 0.31 to 0.64 s instead of 1.80 to 3.08 s.
 
 ## How to try it
 

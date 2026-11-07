@@ -249,7 +249,7 @@
       state.sequence = [];
       state.sequenceIndex = -1;
       updateCards();
-      tell('Audio could not start. Try the clip again or download its WAV.');
+      tell('Audio could not start. Try the clip again or use its audio download.');
     }
   }
   function toggleClip(clip) {
@@ -397,6 +397,7 @@
       const badge = clip.id.startsWith('source_current_') ? 'Previous body' : clip.id.startsWith('source_warm_wire_') ? 'Default body' : 'Saved body';
       top.append(el('span', 'source-tag', badge));
     }
+    if (clip.newRecipe === true) top.append(el('span', 'source-tag', 'New recipe'));
     if (clip.loop) top.append(el('span', 'hold-tag', 'HOLD'));
     top.append(el('span', 'clip-id', clip.id));
     const main = el('div', 'clip-main');
@@ -584,6 +585,7 @@
       [clip.kind === 'pattern' ? 'MIDI note range' : 'MIDI note', clip.kind === 'pattern' ? clip.noteRange ? `${clip.noteRange.minMidi}–${clip.noteRange.maxMidi}` : 'Varies by sequence event' : finite(clip.midi) ? `${clip.midi} (${noteName(clip.midi)})` : undefined],
       [clip.kind === 'pattern' ? 'Velocity range' : 'Velocity', clip.kind === 'pattern' ? clip.velocityRange ? `${numeric(clip.velocityRange.min)}–${numeric(clip.velocityRange.max)}` : 'Varies by sequence event' : clip.velocity],
       ['Render status', clip.status],
+      ['Listening status', clip.newRecipe === true ? 'New factory recipe, awaiting listening' : undefined],
       ['Underlying source', clip.sourceFamily || clip.rattleSource],
       ['Raw peak', metrics.rawPeak],
       ['Event count', diagnosticData.eventCount ?? clip.diagnostics?.eventCount ?? (Array.isArray(diagnosticData.events) ? diagnosticData.events.length : undefined)],
@@ -648,7 +650,7 @@
   }
   $('#export-feedback').addEventListener('click', () => {
     saveFeedback();
-    downloadJson({ study: 'SnipSnap Wick listening prototype', exportedAt: new Date().toISOString(), generatedAt: state.manifest?.generatedAt, schemaVersion: state.manifest?.schemaVersion, sections: notes }, 'wick-listening-notes.json');
+    downloadJson({ study: 'SnipSnap Wick factory-bank audition', exportedAt: new Date().toISOString(), generatedAt: state.manifest?.generatedAt, schemaVersion: state.manifest?.schemaVersion, sections: notes }, 'wick-listening-notes.json');
     tell('Listening notes exported. Nothing was sent to a server.');
   });
   window.addEventListener('pagehide', () => { if ($('#feedback-text').value || $('#feedback-verdict').value) saveFeedback(); });
@@ -660,7 +662,7 @@
       if (!response.ok) throw new Error(String(response.status));
       const info = await response.json();
       host.replaceChildren();
-      const pairs = [['Prototype', info.status || info.scope || info.description], ['Source commit', info.commit || info.sourceCommit], ['Built', info.generatedAt || info.builtAt]];
+      const pairs = [['Build', info.status || info.scope || info.description], ['Source commit', info.commit || info.sourceCommit], ['Built', info.generatedAt || info.builtAt]];
       pairs.forEach(([label, value]) => { if (value && typeof value === 'string') host.append(el('p', '', `${label}: ${value}`)); });
       const tests = info.tests || info.validation || info.checks;
       if (tests) {
@@ -679,7 +681,7 @@
       if (!host.children.length) host.append(el('pre', '', JSON.stringify(info, null, 2)));
       host.append(link('Download build information ↓', 'build-info.json'));
     } catch (_) {
-      host.replaceChildren(el('p', '', 'This page presents the RATTLE/FLICKER/BREATH/WOOD/PLUCK/BUBBLE prototype and finite musical phrases. Per-render metrics and diagnostic traces are available on each clip; no full-release validation is claimed.'));
+      host.replaceChildren(el('p', '', 'This page presents the six WICK voices, factory patches and finite musical phrases. Per-render metrics and diagnostic traces remain available on each clip. Build-validation records are unavailable in this preview.'));
     }
   }
   async function init() {
@@ -689,6 +691,14 @@
       const manifest = await response.json();
       let entries = Array.isArray(manifest.entries) ? manifest.entries : Array.isArray(manifest.clips) ? manifest.clips : [];
       if (!entries.length) throw new Error('No clips found');
+      const bank = manifest.factoryBank;
+      if (bank && finite(bank.patchCount) && finite(bank.patchesPerVoice) && safePath(bank.archiveFile) !== '#') {
+        $('#factory-bank-intro').hidden = false;
+        $('#factory-bank-count').textContent = `${bank.patchCount} factory patches · ${bank.patchesPerVoice} per voice`;
+        $('#factory-bank-download').hidden = false;
+        $('#factory-bank-download').href = safePath(bank.archiveFile);
+        $('#factory-bank-download').textContent = `${bank.patchCount}-patch bank ZIP ↓`;
+      }
       let sourceStudy = null;
       if (manifest.sourceStudyFile) {
         try {
@@ -713,7 +723,7 @@
         $('#first-play-label').textContent = 'Hear Warm wire at C4';
         $('#source-study-download').hidden = false;
         $('#source-study-download').href = safePath(manifest.sourceStudyFile);
-        $('#audition-scope').textContent = 'RATTLE now uses Warm wire by default, with Hollow reed and Rubbed glass as saved variants. Download a normal editable patch from each body’s single-note or held card, or try all three at C4 in the playable kit. The previous body remains as a comparison. The five accepted voices are preserved. All renders are dry; the body names describe tonal directions, not physical models.';
+        $('#audition-scope').textContent = 'RATTLE uses Warm wire by default, with Hollow reed and Rubbed glass as saved variants. Download a normal editable patch from each body’s single-note or held card, or try all three at C4 in the playable kit. The previous body remains as a comparison. The five established voices are preserved. All renders are dry; the body names describe tonal directions, not physical models.';
       }
       state.manifest = manifest;
       entries.forEach((clip, index) => { clip.id = String(clip.id ?? `clip-${index + 1}`); state.clips.set(clip.id, clip); });
@@ -723,6 +733,9 @@
         const groups = state.groups.filter(group => group.section === name);
         if (name === 'start') {
           const priority = group => group.id === 'source-register' ? -2 : group.id === 'source-phrases' ? -1 : group.id === 'rattle-cohesion' ? 0 : group.id === 'defaults' ? 1 : group.id === 'rattle-register' ? 2 : group.id === 'rattle-reserve' ? 3 : group.id === 'musical-patterns' ? 4 : group.id === 'flicker-register' ? 5 : group.id === 'breath-sustain' ? 6 : group.id === 'bubble-tone' ? 8 : 7;
+          groups.sort((a, b) => priority(a) - priority(b));
+        } else if (name === 'range') {
+          const priority = group => group.id === 'new-recipes' ? 0 : group.id === 'presets' ? 1 : 2;
           groups.sort((a, b) => priority(a) - priority(b));
         }
         groups.forEach(group => host.append(createGroup(group)));

@@ -136,4 +136,45 @@ class SongExportTest {
         assertNull(none.mixdown)
         assertFalse(File(temp, "none/Held Song.wav").exists())
     }
+
+    private fun sequenceLengths(xpj: File): List<Long> {
+        val project = Mpc3Project.read(xpj)
+        return (project.data!!["sequences"] as JsonValue.Arr).items.map { seq ->
+            val value = (seq as JsonValue.Obj).entries["value"] as JsonValue.Obj
+            (value.entries["lengthPulses"] as JsonValue.Num).value.toLong()
+        }
+    }
+
+    @Test
+    fun `a section played twice reaches the project at twice the length`() {
+        val m = model("Repeats")
+        val base = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val plan = Arranger.toPlan(base).let { kept ->
+            // Section 1 (the theme) forced to a 1-bar clip x2, and the intro x3.
+            kept.withRepeats(0, 3)!!.withRepeats(1, 2)!!
+        }
+        val arrangement = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        val written = SongExport.write(m.kit, m.kitDir, arrangement, File(temp, "repeats"))
+
+        val barPulses = Mpc3Clip.PULSES_PER_BAR
+        val lengths = sequenceLengths(written.project)
+        assertEquals(arrangement.sections.map { it.bars * barPulses }, lengths, "every sequence is its section's full length")
+        assertEquals(3 * barPulses, lengths[0])
+        assertEquals(2 * barPulses, lengths[1])
+
+        // The notes were laid end to end, not just the sequence stretched.
+        val clips = SongExport.sectionClips(arrangement)
+        val expected = (0 until 3).flatMap { r -> arrangement.sections[0].clip.notes.map { it.timePulses + r * barPulses } }
+        assertEquals(expected.sorted(), clips[0].notes.map { it.timePulses }.sorted())
+    }
+
+    @Test
+    fun `a section played once is written exactly as the plan holds it`() {
+        val m = model("Once")
+        val arrangement = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val once = arrangement.copy(sections = arrangement.sections.map { it.copy(repeats = 1) })
+        val clips = SongExport.sectionClips(once)
+        assertEquals(once.sections.map { it.clip.notes }, clips.map { it.notes })
+        assertEquals(once.sections.map { it.clip.bars }, clips.map { it.bars })
+    }
 }

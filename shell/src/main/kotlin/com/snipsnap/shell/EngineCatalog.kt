@@ -57,7 +57,7 @@ object EngineCatalog {
         "THUMP" to EngineEntry(listOf(EngineCategory.DRUMS), "Analog-style kick, snare, hats, clap, tom, cowbell, rim"),
         "SCANNED_CHAIN" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Evolving pitched notes: springy plucks, metal and swells"),
         "SKIN" to EngineEntry(listOf(EngineCategory.DRUMS), "Acoustic-style kick, snare, hats, toms, ride and shaker"),
-        "ONSET" to EngineEntry(listOf(EngineCategory.DRUMS), "Kick, snare and hats that blend electronic and acoustic"),
+        "ONSET" to EngineEntry(listOf(EngineCategory.DRUMS), "Kick, snare, hats, tom and pluck, wood or metal percussion"),
         "TINES" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Bells, chimes, kalimba and small percussion hits"),
         "VELVET" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BASS), "Classic subtractive synth: bass, brass, acid and chip"),
         "VOX" to EngineEntry(listOf(EngineCategory.VOICES, EngineCategory.PADS), "Choir, robot, speech, throat singing and beatbox"),
@@ -131,6 +131,10 @@ object EngineCatalog {
         "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello and erhu notes, from slow swells to stabs"),
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
+        "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
+        // Last, as it is in the `Engine` enum: the picker steps in the enum's order and a device test
+        // holds that walk to this map's order, so a new engine goes at the end of both.
+        "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

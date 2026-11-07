@@ -73,10 +73,11 @@ class WickBodyPresetTest {
     }
 
     @Test
-    fun `body selection survives patch pad editing and native velocity routes`() {
+    fun `factory body selection survives patch pad editing and native velocity routes`() {
         for ((name, source) in bodies) {
-            val patch = WickPatch(name, WickVoice.RATTLE, Wick.defaults(WickVoice.RATTLE),
-                midi = 57, velocity = .7f, rattleSource = source)
+            val selected = assertIs<WickPatch>(Presets.byName(WickPatch.ENGINE, WickVoice.RATTLE.name, name))
+            assertEquals(source, selected.rattleSource, "$name factory selection must retain its body")
+            val patch = selected.copy(midi = 57, velocity = .7f)
             assertEquals(JsonValue.Str(source.name), patch.toJsonValue().entries["rattleSource"])
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             val pad = PadRecipe(patch)
@@ -117,7 +118,7 @@ class WickBodyPresetTest {
     @Test
     fun `playable kit keeps the ten accepted notes and supplies all three saved RATTLE bodies`() {
         val bank = WickPresets.all()
-        assertEquals(27, bank.size)
+        assertEquals(36, bank.size)
         val rattle = WickPresets.forVoice(WickVoice.RATTLE)
         assertEquals(bodies.map { it.first }, rattle.take(3).map { it.name })
         assertEquals(bodies.map { it.second }, rattle.take(3).map { it.rattleSource })

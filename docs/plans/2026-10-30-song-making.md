@@ -237,6 +237,14 @@ clipping.
 
 ### Phase 5. An arrangement you can edit (M pure, then M app)
 
+**Status (2026-11-06, Song Mode Phase 1, owner approved the list-you-own shape):** built, both halves. Where this section and the shipped code differ, the code wins:
+- `song.json` lives in the PROJECT (`Projects/<name>/song.json`, `SongPlanStore`), one plan per kit keyed by kit folder name, not in the kit folder. D3 is settled that way.
+- A section is `name`, `clip` (by name), `repeats` (1..16), `locked`, and the `seed` its ghosts and fill were drawn with. The per-section seed is what lets REROLL leave a locked section's take alone. There is no per-section transition yet: the pull-up still keys off a section named "the turn" (Phase 6).
+- `Arranger.resolve` re-derives every clip at load; a name that no longer resolves is refused by name and that section is planned again. `Arranger.toPlan` writes the first plan from `arrange(seed = 0)`.
+- The `.xpj` writes each section through its repeats as one longer sequence, until song steps exist (the writer still refuses them).
+- OUT's demo WAV renders the active kit's kept song when there is one.
+- SONG (`ArrangeScreen`, `SongKeeper`) edits the kept song: move up and down (no drag yet), repeats - and +, swap the clip for any the kit can play (every user program included), duplicate, delete, + SECTION, lock, REROLL for the unlocked sections only, and UNDO naming what it undoes. Swing and FEEL are not kept with a song; they are laid over it each visit.
+
 **Goal:** the Arranger suggests a song, and the user changes it.
 
 - **Pure:** a stored `SongPlan` (`song.json` next to `groove.json`, written through `AtomicFile`).

@@ -1292,7 +1292,14 @@ class ConventionTest {
 
     /**
      * Where the picker's engines and the catalogue's keys part company, as sentences naming each
-     * engine; empty when they agree exactly. The law and its positive control both ask this.
+     * engine; empty when they agree exactly, order included. The law and its positive control both
+     * ask this.
+     *
+     * The order is compared only once the two hold the same engines, so a missing or extra engine
+     * is reported as itself and not as every position after it. It is held here because the arrows
+     * step in the enum's order while `SynthEngineHeaderTest` expects the catalogue's, and that test
+     * runs only on a device: #931 put WICK third in the enum and second in the catalogue, and only
+     * the emulator job saw it.
      */
     private fun catalogueProblems(pickerEngines: List<String>, catalogued: Set<String>): List<String> {
         val problems = mutableListOf<String>()
@@ -1304,6 +1311,15 @@ class ConventionTest {
         if (orphaned.isNotEmpty()) {
             problems += "EngineCatalog has entries for engines the picker does not have: ${orphaned.joinToString()}"
         }
+        if (problems.isEmpty()) {
+            val listed = catalogued.toList()
+            val at = pickerEngines.indices.firstOrNull { pickerEngines[it] != listed.getOrNull(it) }
+            if (at != null) {
+                problems += "the picker's order and EngineCatalog's part at position ${at + 1}: the arrows step from " +
+                    "${pickerEngines.getOrNull(at - 1) ?: "the start"} to ${pickerEngines[at]}, where the catalogue lists " +
+                    (listed.getOrNull(at) ?: "nothing")
+            }
+        }
         return problems
     }
 
@@ -1312,7 +1328,7 @@ class ConventionTest {
      * both come from `EngineCatalog`. An engine added to `Engine` without an entry would show a
      * bare row and appear under no chip, the quiet way a filter goes stale; this is what makes the
      * filters safe to grow. The other direction is held too, so a retired engine does not leave
-     * its tags behind to be found by a search for nothing.
+     * its tags behind to be found by a search for nothing. So is the order (see [catalogueProblems]).
      */
     @Test
     fun `law - every engine in the picker is catalogued`() {
@@ -1327,7 +1343,8 @@ class ConventionTest {
             problems.isEmpty(),
             problems.joinToString("\n  ", prefix = "`Engine` in SynthScreen.kt and `EngineCatalog` disagree:\n  ") +
                 "\nGive every new engine an entry in EngineCatalog.kt: one or two categories and a description " +
-                "of at most 60 characters. Remove the entry of an engine that is gone.",
+                "of at most 60 characters. Remove the entry of an engine that is gone. Keep the entries in the " +
+                "enum's order; a new engine goes last in both.",
         )
     }
 
@@ -1356,6 +1373,16 @@ class ConventionTest {
         val orphan = catalogueProblems(pickerEngineConstants(enumOf(*without), "synthetic"), catalogued)
         assertEquals(1, orphan.size, "only the orphaned entry should be reported: $orphan")
         assertTrue("OHM" in orphan.single() && "does not have" in orphan.single(), "the report must name the entry: $orphan")
+
+        // The same engines in another order: the arrows would step one way and the device test expect the other.
+        val keys = catalogued.toList()
+        val swapped = listOf(keys[0], keys[2], keys[1]) + keys.drop(3)
+        val order = catalogueProblems(pickerEngineConstants(enumOf(*swapped.toTypedArray()), "synthetic"), catalogued)
+        assertEquals(1, order.size, "only the order should be reported: $order")
+        assertTrue(
+            "position 2" in order.single() && "to ${keys[2]}," in order.single() && order.single().endsWith("lists ${keys[1]}"),
+            "the report must name where the orders part and both engines: $order",
+        )
 
         // The parse refuses what it cannot read, rather than dropping it and letting an engine through.
         val unreadable = runCatching { pickerEngineConstants("private enum class Engine { THUMP(1), SKIN; }", "synthetic") }.exceptionOrNull()
@@ -1710,6 +1737,9 @@ class ConventionTest {
         // shelf root, named by its store and nowhere else — SYNTH and
         // SEND TO BENCH both reach it through UserPresets.file.
         "presets.json" to "UserPresets.kt",
+        // The song a project keeps (SONG, docs/plans/2026-10-30-song-making.md
+        // Phase 5): one file in the project's folder, named by its store.
+        "song.json" to "SongPlanStore.kt",
     )
 
     @Test
@@ -2474,7 +2504,7 @@ class ConventionTest {
         for ((marker, dimmed) in listOf(
             "MutateSheet.HEAR_LABEL" to "dimmed = partner == null",
             "MutateSheet.KEEP_LABEL" to "dimmed = partner == null",
-            "\"UNDO\"" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
+            "Copy.UNDO_MUTATE" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
         )) {
             val b = button(marker)
             assertTrue(
@@ -2623,31 +2653,32 @@ class ConventionTest {
      *   null`, toasts it (`onToast(nothing)`) and returns before `commitPadEditNow(`, which then runs
      *   the model's own undo (`unsplicePad`, `undesamplePad`, which ask the same refusal) and lands
      *   on `Copy.UNSPLICED` or `Copy.UNDESAMPLED`.
-     * - Where they sit: UNDO SPLICE shares one Row with SPLICE ▸, half each. Its label is its own,
-     *   "UNDO SPLICE", because the sheet's foot is always composed and WidePadSheetScreenTest
-     *   finds the open box's UNDO by the bare word. DE-SAMPLE's is a visible "UNDO" in the DE-SAMPLE
-     *   header row inside the MAKE box, which composes only while open, and it is spoken as "UNDO
-     *   DE-SAMPLE", because MAKE holds five doors.
+     * - Where they sit: UNDO SPLICE shares one Row with SPLICE ▸, half each. Every per-tool UNDO on the
+     *   sheet is named in full by `Copy` (UNDO SPLICE, UNDO DE-SAMPLE, UNDO MUTATE, UNDO OUTSIDE, UNDO
+     *   BOARD), as the button and as the word its failure toast says: the sheet draws several, and its
+     *   pages draw more than one at a time, so a bare UNDO would not say whose it is. There is no single
+     *   undo for the sheet. DE-SAMPLE's sits in the DE-SAMPLE header row inside the MAKE box, which
+     *   composes only while open.
      */
     @Test
     fun `law - UNDO SPLICE dims with the refusal its door toasts, as MUTATE's UNDO does`() {
         val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
-        val splice = undoButton(code, "\"UNDO SPLICE\"")
+        val splice = undoButtonLabelled(code, "Copy.UNDO_SPLICE")
         assertUndoGreysOnlyForBusy(
             splice,
             "dimmed = PadSheet.spliceUndoRefusal(pad, binDaysLeft != null) != null",
             "onClick = ::onUnsplice",
         )
         assertTrue(
-            splice.startsWith("( \"UNDO SPLICE\",") && "▸" !in splice,
-            "UNDO SPLICE's label is not its own `\"UNDO SPLICE\"`, or carries a ▸. The foot is always composed, so a bare " +
+            splice.startsWith("( Copy.UNDO_SPLICE,") && "▸" !in splice && Copy.UNDO_SPLICE == "UNDO SPLICE",
+            "UNDO SPLICE's label is not its own `Copy.UNDO_SPLICE` (\"UNDO SPLICE\"), or carries a ▸. The foot is always composed, so a bare " +
                 "UNDO would be a second one beside the open box's; and it opens nothing:\n  $splice",
         )
         val spliceAt = code.indexOf("\"SPLICE ▸\"")
         assertTrue(spliceAt >= 0, "expected PadSheetScreen to draw `\"SPLICE ▸\"`")
         val row = blockAfter(code.substring(code.lastIndexOf("Row(", spliceAt)), "Row(")
         assertTrue(
-            "\"UNDO SPLICE\"" in row && "modifier = Modifier.weight(1f)" in undoButton(code, "\"SPLICE ▸\"") &&
+            "Copy.UNDO_SPLICE" in row && "modifier = Modifier.weight(1f)" in undoButton(code, "\"SPLICE ▸\"") &&
                 "modifier = Modifier.weight(1f)" in splice,
             "UNDO SPLICE does not share one Row with SPLICE ▸ at half width each (`modifier = Modifier.weight(1f)`):\n  $row",
         )
@@ -2664,15 +2695,15 @@ class ConventionTest {
     @Test
     fun `law - DE-SAMPLE's UNDO dims with the refusal its door toasts, as MUTATE's UNDO does`() {
         val code = codeOnly(padSheetScreen.readText(Charsets.UTF_8))
-        val desample = undoButton(code, "accessibilityLabel = \"UNDO DE-SAMPLE\"")
+        val desample = undoButtonLabelled(code, "Copy.UNDO_DESAMPLE")
         assertUndoGreysOnlyForBusy(
             desample,
             "dimmed = PadSheet.desampleUndoRefusal(pad, binDaysLeft != null) != null",
             "onClick = ::onUndesample",
         )
         assertTrue(
-            desample.startsWith("( \"UNDO\","),
-            "DE-SAMPLE's UNDO does not read UNDO, as MUTATE's and OUTSIDE's header buttons do:\n  $desample",
+            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO DE-SAMPLE",
+            "DE-SAMPLE's UNDO does not read `Copy.UNDO_DESAMPLE` (UNDO DE-SAMPLE, in full: MAKE holds five doors), as MUTATE's and OUTSIDE's header buttons name theirs:\n  $desample",
         )
         val legend = code.indexOf("legend = PadSheetBoxes.Box.MAKE.legend")
         assertTrue(legend >= 0, "expected the MAKE box's GroupBox")
@@ -2682,7 +2713,7 @@ class ConventionTest {
         val header = make.indexOf("TapeText(\"DE-SAMPLE · THE NEAREST PATCH\"")
         val rowAt = if (header >= 0) make.lastIndexOf("Row(", header) else -1
         assertTrue(
-            rowAt >= 0 && "accessibilityLabel = \"UNDO DE-SAMPLE\"" in blockAfter(make.substring(rowAt), "Row("),
+            rowAt >= 0 && "Copy.UNDO_DESAMPLE" in blockAfter(make.substring(rowAt), "Row("),
             "DE-SAMPLE's UNDO is not in the DE-SAMPLE header row inside the MAKE box. Outside a box it would be a " +
                 "second bare UNDO on the always-composed sheet.",
         )
@@ -2746,6 +2777,13 @@ class ConventionTest {
         return normalizeSpan(blockAfterList(code.substring(code.lastIndexOf("ActionButton(", at)), "ActionButton("))
     }
 
+    /** The whole `ActionButton(...)` call whose first argument is [label] (a `Copy` constant), whitespace-normalised. */
+    private fun undoButtonLabelled(code: String, label: String): String {
+        val at = Regex("""ActionButton\(\s*${Regex.escape(label)}""").find(code)?.range?.first ?: -1
+        assertTrue(at >= 0, "expected PadSheetScreen to draw an `ActionButton($label, ...)`")
+        return normalizeSpan(blockAfterList(code.substring(at), "ActionButton("))
+    }
+
     private fun assertUndoGreysOnlyForBusy(button: String, dimmed: String, click: String) {
         assertTrue(
             Regex("""enabled = !busy\s*[,)]""").containsMatchIn(button) && dimmed in button && click in button,
@@ -2758,7 +2796,7 @@ class ConventionTest {
         val body = codeOnly(blockAfter(code, door))
         val ask = body.indexOf(refusal)
         val toast = body.indexOf("onToast(nothing)")
-        val commit = body.indexOf("commitPadEditNow(\"UNDO\"")
+        val commit = body.indexOf("commitPadEditNow(Copy.UNDO_")
         assertTrue(
             ask >= 0 && toast > ask && commit > toast,
             "`$door` commits without asking `$refusal` first and toasting it (`onToast(nothing)`), so a dimmed " +
@@ -5403,9 +5441,9 @@ class ConventionTest {
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
         "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
-        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
+        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 11
+    private val BACK_LABEL_WAIVER_CEILING = 8
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5491,6 +5529,94 @@ class ConventionTest {
             1,
             backLabelProblems(mapOf("ui/XScreen.kt" to listOf("◄ KIT", "◄ KIT")), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3E, "◄ KIT"))).size,
             "two literals against one waiver: the second has no owner",
+        )
+    }
+
+    // ---- Law: the strike strip shows what is on by its border, and draws its LCD marks in the LCD's ink ----
+
+    private val strikeStripUi = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStrip.kt")
+
+    /**
+     * The strike strip is played with a thumb mid-performance, so what is on has to read at a
+     * glance, and three shapes of that failed before this law:
+     *
+     * - The on state was `sunkenField`, whose fill is the `field` colour, where a raised button
+     *   draws `raised`. The two are one colour in every shipped scheme, so a sunken button was
+     *   pixel-identical to a raised one and the state rested on a word. `Bevel.kt` says why
+     *   `pressedBevel` exists (a 2dp accent border: a weight change, not only a hue one), and most
+     *   of the app's pickers already use it. The strip's two state sites, the layer chip and the
+     *   control, now do too.
+     * - The fader's tick marks were drawn in `ink2`, a chrome ink tuned against the gray and
+     *   2.3 to 2.8 against the dark LCD of the paper schemes, under the 3:1 a graphic needs. A
+     *   mark on the LCD reads the LCD's ink, `lcdInk2` (`TapeTheme.kt`).
+     * - Side, return and volume change nothing about a hit while STRIKE is off, so they read in
+     *   the quiet ink until it is on. `StrikeStripTest` in this module holds that for strength
+     *   and volume, the two inputs `StrikeStrip.hit` takes; the side is only ever read to place
+     *   the fader, which is drawn only when STRIKE is on. They are dimmed and not disabled: they
+     *   stay tappable and keep their value for when STRIKE comes on. Nothing is refused, so no
+     *   toast has anything to explain (ChopScreen's rule is "dimmed, not disabled; the toast
+     *   explains"); TalkBack is told in the state description instead. STRIKE itself never waits:
+     *   it is the switch the others wait on.
+     */
+    @Test
+    fun `law - the strike strip shows what is on by its border and draws its LCD marks in the LCD's ink`() {
+        val code = codeOnly(strikeStripUi.readText(Charsets.UTF_8))
+
+        assertFalse(
+            "sunkenField(" in code,
+            "StrikeStrip.kt draws a state with `sunkenField(`, which paints the same fill as the raised button " +
+                "beside it. A state that is on is `pressedBevel`, the 2dp accent border (Bevel.kt).",
+        )
+        val stateSites = Regex("""if \(active\) it\.pressedBevel\(scheme\) else it\.raisedBevel\(scheme\)""").findAll(code).count()
+        assertEquals(
+            2,
+            stateSites,
+            "the strike strip draws a state in two places, the last-hit layer chip and the control, and both " +
+                "read `if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme)`; found $stateSites",
+        )
+
+        val fader = blockAfter(code, "Canvas(Modifier.matchParentSize())")
+        assertFalse(
+            Regex("""scheme\.ink[23]?\b""").containsMatchIn(fader),
+            "the strike fader's canvas draws with a chrome ink (`scheme.ink`, `ink2` or `ink3`). Those are tuned " +
+                "against the gray, not the LCD this canvas sits on, so nothing holds them to a contrast floor " +
+                "there. Draw its marks with `scheme.lcdInk2`, which ContrastTest holds at AA over the LCD.",
+        )
+        assertTrue(
+            "val tickInk = scheme.lcdInk2" in fader && "drawLine(tickInk," in fader,
+            "the fader's tick marks no longer take their colour from `scheme.lcdInk2`, the LCD's second ink " +
+                "(TapeTheme.kt): expected `val tickInk = scheme.lcdInk2` and `drawLine(tickInk,` in the canvas",
+        )
+
+        val controls = blockAfter(code, "internal fun StrikeControls(")
+        assertTrue(
+            "val waiting = !state.enabled" in controls,
+            "StrikeControls no longer derives `waiting` from the strip being off; the settings behind STRIKE " +
+                "would look live while the strip ignores them",
+        )
+        assertEquals(
+            3,
+            Regex("""state\.\w+, waiting, Modifier\.weight""").findAll(controls).count(),
+            "exactly the three settings behind STRIKE (side, return, volume) wait on it",
+        )
+        assertTrue(
+            Regex(""""STRIKE STRIP", state\.enabled, false,""").containsMatchIn(controls),
+            "STRIKE itself must never wait on the strip it turns on",
+        )
+        assertTrue(
+            "if (waiting) scheme.ink2.tape else scheme.ink.tape" in controls,
+            "a waiting control no longer reads in the quiet ink (`ink2`) against `ink`; the settings behind " +
+                "STRIKE would look as live as STRIKE itself while the strip ignores them",
+        )
+        assertTrue(
+            "takes effect when STRIKE is on" in controls,
+            "a waiting control no longer tells TalkBack it takes effect when STRIKE is on, so the quiet ink " +
+                "would be the only cue",
+        )
+        assertFalse(
+            Regex("""tapeClick\([^)]*enabled""").containsMatchIn(controls),
+            "a control behind STRIKE passes `enabled` to tapeClick. These are dimmed, not disabled: they stay " +
+                "tappable and keep their value for when STRIKE comes on.",
         )
     }
 }

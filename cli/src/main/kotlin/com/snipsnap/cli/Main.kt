@@ -78,6 +78,9 @@ object Cli {
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
         |                        render factory presets to wav, to hear them
         |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/LATTICE/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO/SCANNED_CHAIN: --midi N --velocity 0..1)
+        |                        (ORIGAMI: --expression LEVEL|FOLD|TOUCH; TOUCH darkens source
+        |                        and folded color on soft hits; --gesture STEADY|BLOOM|UNFOLD;
+        |                        FAN/STILL --instrument retains three FOLD/TOUCH velocity layers)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
         |                        six factory positions with saved root and velocity;
         |                        model 3: --instrument [--touch] [--release .1..1.5]
@@ -93,15 +96,17 @@ object Cli {
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
-        |                         --model 1|2|3 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;
-        |                         MATCH requires model 2+; LOSS requires model 3; finite exchange, HOLD unavailable)
+        |                         --model 1|2|3|4 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;
+        |                         MATCH requires model 2+; LOSS requires model 3+; model 4 adds a dry release;
+        |                         finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
         |                        --instrument [--release .02..3] exports C3..C5 held keys;
         |                        new instruments use model 4; saved model 3|4 recipes retain their renderer)
-        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; six factory recipes per voice;
+        |                         --midi 24..84 --velocity 0..1; saved RATTLE patches retain their body)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
@@ -206,8 +211,10 @@ object Cli {
         |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
         |                        into a chain WAV - the MPC 3 cycles one per
         |                        hit (Slice Motion), the MPC 2 plays take one
-        |                        ([--takes N] [--seed S]; --undo restores the
-        |                        single take byte-identical); --zones Z (2..4)
+        |                        ([--takes N] [--seed S]; --amount 0..1 sets how
+        |                        far the takes stray and keeps a synth pad's
+        |                        patch; --undo restores the single take
+        |                        byte-identical); --zones Z (2..4)
         |                        renders the full velocity x robin grid - a
         |                        dynamics-graded chain where soft hits play
         |                        quieter, darker takes
