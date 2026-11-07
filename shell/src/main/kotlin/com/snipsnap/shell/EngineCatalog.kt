@@ -53,7 +53,6 @@ data class EngineEntry(val categories: List<EngineCategory>, val description: St
 object EngineCatalog {
     val ENTRIES: Map<String, EngineEntry> = mapOf(
         "LATTICE" to EngineEntry(listOf(EngineCategory.SYNTH), "Warm, plucked or hollow notes that drop out and come back"),
-        "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
         "ACCORD" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Pitched brushes, wood and tines finding shared timing"),
         "THUMP" to EngineEntry(listOf(EngineCategory.DRUMS), "Analog-style kick, snare, hats, clap, tom, cowbell, rim"),
         "SCANNED_CHAIN" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Evolving pitched notes: springy plucks, metal and swells"),
@@ -132,9 +131,10 @@ object EngineCatalog {
         "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello and erhu notes, from slow swells to stabs"),
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
+        "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
         // Last, as it is in the `Engine` enum: the picker steps in the enum's order and a device test
         // holds that walk to this map's order, so a new engine goes at the end of both.
-        "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
+        "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
