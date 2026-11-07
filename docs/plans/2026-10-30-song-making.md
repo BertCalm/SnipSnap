@@ -233,7 +233,11 @@ clipping.
   3. The held mix is reused: `SongExport.write` gained an optional `mix: Arranger.Mix? = null`. ARRANGE passes the mix PLAY already rendered; with none held, the write renders it once and ARRANGE keeps it for PLAY.
 - **Copy:** `ARRANGE_EXPORT_BUSY`, `ARRANGE_EXPORT_FAILED`, `songShared`, `songKept`. All shout and end on a full stop, so none needed an entry in `PersonalityTest`'s `notASentence`; none uses a destroying word, so `ReversalTest` has nothing to answer.
 - **Tests:** `SongExportTest` proves a supplied mix is the one written and that omitting it still renders. `ArrangeScreenTest` presses EXPORT SONG on a three-pad kit with a groove and waits (up to 30 s) for the `.xpj`, its `_[ProjectData]` folder and a readable `.wav` under `exports/<stem>/song/`.
-- **Not verified here:** the session that wrote this had no Gradle run and no emulator (a memory-limited Mac), so nothing below was compiled or run locally; CI's `android-build`, the JVM suites and `emulator-tests` are the check. Nothing was listened to. The share sheet itself, and the "kept at" toast when nothing takes the WAV, are not asserted by the device test.
+- **Verified since (2026-11-03 to 2026-11-07):**
+  - CI on #861: `android-build`, `jvm-tests`, `native-tests` and `emulator-tests` all green. The session that wrote this had no Gradle run and no emulator, so CI was the first check.
+  - Locally, on the owner's Mac: `./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin` exited 0. The app's own tasks were up-to-date from an earlier build of the same sources; the androidTest Kotlin compiled fresh. `ArrangeScreenTest` ran on the `snipsnap_pixel` emulator: 3 tests, 0 failures, 0 skipped, the export test in 2.7 s.
+  - Listened: the owner heard a mixdown written by `snipsnap arrange --mixdown`. That command calls the same `SongExport.write` the button does. The kit was Brass House (124 bpm, A minor) at seed 0, with a stand-in `euclid` groove (kick 4,16; clap 2,16,4; hat 8,16; openhat 4,16,2): 20 bars in 6 sections, 39.3 s, peak -3.6 dBFS, no clipped samples. The owner passed it. Section loudness measured nearly flat, about -20 dB RMS from intro to reprise with the outro at -23 dB; the ear did not hear that as a fault.
+- **Still not verified:** the button pressed on a real phone, the share sheet itself, and the "kept at" toast when nothing takes the WAV. The device test asserts none of these.
 
 ### Phase 5. An arrangement you can edit (M pure, then M app)
 
