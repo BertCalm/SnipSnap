@@ -383,7 +383,7 @@ class GrooveEditTest {
     }
 
     @Test
-    fun `a discarded slot is reused, and the ones left keep their numbers`() {
+    fun `a discarded number is retired, and the ones left keep theirs`() {
         val dir = dirWith(base)
         GrooveEdit.fork(dir, base)
         GrooveEdit.forkNew(dir, base)
@@ -395,11 +395,11 @@ class GrooveEditTest {
         // one went away.
         assertTrue(GrooveEdit.deleteProgE(dir) { it == 1 })
         assertEquals(listOf("Break Groove E", "Break Groove E3"), GrooveEdit.loadAll(dir).map { it.name })
-        assertEquals(1, GrooveEdit.freeSlot(dir), "the hole is what the next fork fills")
+        assertEquals(3, GrooveEdit.nextProgramId(dir), "the hole stays a hole: the next one is new")
 
         GrooveEdit.forkNew(dir, base)
         assertEquals(
-            listOf("Break Groove E", "Break Groove E2", "Break Groove E3"),
+            listOf("Break Groove E", "Break Groove E3", "Break Groove E4"),
             GrooveEdit.loadAll(dir).map { it.name },
         )
     }
@@ -409,8 +409,8 @@ class GrooveEditTest {
         val dir = dirWith(base)
         repeat(GrooveEdit.MAX_USER_PROGRAMS) { assertTrue(GrooveEdit.forkNew(dir, base) != null, "slot $it") }
         assertEquals(GrooveEdit.MAX_USER_PROGRAMS, GrooveEdit.loadAll(dir).size)
-        assertNull(GrooveEdit.freeSlot(dir))
-        assertNull(GrooveEdit.forkNew(dir, base), "a full kit says no rather than writing a ninth")
+        assertNull(GrooveEdit.nextProgramId(dir))
+        assertNull(GrooveEdit.forkNew(dir, base), "a full kit says no rather than writing a thirty-third")
     }
 
     @Test

@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.SongPlan
 import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.shell.Arranger
@@ -73,6 +74,10 @@ internal class SongKeeper(
     var picks by mutableStateOf<List<Arranger.Pick>>(emptyList())
         private set
 
+    /** What the person called their patterns, by program number: a section that plays one shows the name. */
+    var names by mutableStateOf<Map<Int, String>>(emptyMap())
+        private set
+
     var undoStack by mutableStateOf<List<Undo>>(emptyList())
         private set
 
@@ -84,7 +89,7 @@ internal class SongKeeper(
 
     private var layout: Job? = null
 
-    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean)
+    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>)
 
     /**
      * Reads the kept song, or drafts one: the first open of a kit with
@@ -100,6 +105,7 @@ internal class SongKeeper(
             kept = o.kept
             plan = o.plan
             picks = o.picks
+            names = o.names
             refusal = null
             if (o.refused.isNotEmpty()) toast(Copy.songRefused(o.refused))
             if (o.save) persist(o.kept)
@@ -117,10 +123,10 @@ internal class SongKeeper(
         val picks = Arranger.available(kit, kitDir, swingPercent, feel, feelTemplate)
         if (stored == null) {
             val draft = Arranger.arrange(kit, kitDir, 0, swingPercent, feel, feelTemplate)
-            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null)
+            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null, names = GrooveEdit.namesById(kitDir))
         }
         val resolved = Arranger.resolve(kit, kitDir, stored, swingPercent, feel, feelTemplate)
-        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty())
+        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty(), names = GrooveEdit.namesById(kitDir))
     }
 
     // ---- edits ----

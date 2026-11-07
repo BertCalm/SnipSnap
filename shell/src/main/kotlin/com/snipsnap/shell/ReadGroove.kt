@@ -91,8 +91,8 @@ object ReadGroove {
      * untouched — the user's own edits are never the price of a new ear.
      */
     fun land(kitDir: File, reading: Reading): File {
-        val e = GrooveEdit.load(kitDir)
-        return GrooveStore.save(kitDir, GrooveVariations.standard(reading.clip) + listOfNotNull(e))
+        // Every program of yours, not the first: this rewrites the sidecar.
+        return GrooveStore.save(kitDir, GrooveVariations.standard(reading.clip) + GrooveEdit.loadAll(kitDir))
     }
 
     /**

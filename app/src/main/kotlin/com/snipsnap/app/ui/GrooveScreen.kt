@@ -407,19 +407,23 @@ fun GrooveScreen(
      */
     var yoursAll by remember(kitDir) { mutableStateOf<List<Mpc3Clip>>(emptyList()) }
     var yoursIndex by remember(kitDir) { mutableIntStateOf(0) }
+    // What the person called their patterns (clip name -> name) and whether the list of them is open.
+    var names by remember(kitDir) { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var listOpen by remember(kitDir) { mutableStateOf(false) }
     var eClip by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
     var loading by remember(kitDir) { mutableStateOf(true) }
     LaunchedEffect(kitDir, reloadRequest) {
         loading = true
-        val (b, all) = offMain {
+        val (b, all, nm) = offMain {
             // The captured base used to be taken as whatever was stored
             // first, on a convention several call sites shared. It is now
             // taken by the same predicate `GrooveEdit` and `Arranger` use,
             // so the three cannot drift: the base is the clip that is not
             // one of yours, whatever order the sidecar holds them in.
-            GrooveStore.load(kitDir).firstOrNull { !GrooveEdit.isProgE(it) } to GrooveEdit.loadAll(kitDir)
+            Triple(GrooveStore.load(kitDir).firstOrNull { !GrooveEdit.isProgE(it) }, GrooveEdit.loadAll(kitDir), GrooveStore.loadNames(kitDir))
         }
         base = b
+        names = nm
         yoursAll = all
         yoursIndex = yoursIndex.coerceIn(0, maxOf(0, all.size - 1))
         eClip = all.getOrNull(yoursIndex)
@@ -2034,7 +2038,7 @@ fun GrooveScreen(
                     // the segment has 55dp to play with and this line has
                     // the whole row.
                     sub = if (progIndex == YOURS_INDEX && yoursAll.size > 1) {
-                        Copy.yoursOf(yoursIndex + 1, yoursAll.size)
+                        yoursSub(yoursAll, yoursIndex, names)
                     } else {
                         PROG_SUBS[progIndex]
                     },
@@ -2057,7 +2061,11 @@ fun GrooveScreen(
                     // taller than its neighbours.
                     onPick = {
                         clearJustLanded()
-                        if (it == YOURS_INDEX && progIndex == YOURS_INDEX && yoursAll.size > 1) {
+                        if (it == YOURS_INDEX && progIndex == YOURS_INDEX && yoursAll.size > GrooveEdit.CYCLE_UP_TO) {
+                            // Past a handful, a tap opens the list: one tap per
+                            // pattern is no way to reach the thirtieth.
+                            listOpen = true
+                        } else if (it == YOURS_INDEX && progIndex == YOURS_INDEX && yoursAll.size > 1) {
                             val next = (yoursIndex + 1) % yoursAll.size
                             yoursIndex = next
                             eClip = yoursAll[next]
@@ -2355,8 +2363,20 @@ fun GrooveScreen(
                     onDone = ::closeEditor,
                     yoursCount = yoursAll.size,
                     kit = entry.kit,
+                    names = names,
+                    onNames = { names = it },
+                    place = yoursAll.indexOfFirst { it.name == editing.name } + 1,
                 )
             }
+        }
+        if (listOpen) {
+            PatternList(
+                kitDir, yoursAll, names, yoursIndex,
+                onPick = { listOpen = false; yoursIndex = it; eClip = yoursAll[it] },
+                onNames = { names = it },
+                onToast = onToast,
+                onClose = { listOpen = false },
+            )
         }
     }
 }
@@ -2365,6 +2385,10 @@ fun GrooveScreen(
 private fun EmptyGroove(hasProject: Boolean, onAddFromShelf: () -> Unit, onNavigateKits: () -> Unit) {
     NoKitPanel(Copy.READ_GROOVE_NEEDS_KIT, hasProject, onAddFromShelf, onNavigateKits)
 }
+
+/** The PROGRAM sub-line while YOURS is live and there is more than one: the open pattern's name (or the old words), where it sits, and what a tap does. */
+private fun yoursSub(all: List<Mpc3Clip>, index: Int, names: Map<String, String>): String =
+    Copy.yoursOf(index + 1, all.size, all.getOrNull(index)?.let { names[it.name] }, listed = all.size > GrooveEdit.CYCLE_UP_TO)
 
 /**
  * The five programs, all of them on screen at once (J18).
@@ -2974,6 +2998,11 @@ private fun StepEditorOverlay(
     yoursCount: Int,
     /** The loaded kit: each lane's row is named and coloured after the pad it plays. */
     kit: Kit,
+    /** What the person called their patterns, by clip name, and the way back when one is renamed. */
+    names: Map<String, String>,
+    onNames: (Map<String, String>) -> Unit,
+    /** Where [clip] sits among yours, from 1: its place in the list, not its number, which a deleted program leaves a gap in. */
+    place: Int,
 ) {
     val state = rememberStepEditorState(kitDir, clip.name, onEdit)
     val pads = state.lanePads
@@ -3008,11 +3037,19 @@ private fun StepEditorOverlay(
                 // derived from the index would have said the right thing
                 // while the wrong clip was on screen; derived from the
                 // clip, it can only say what is actually open.
-                Column(Modifier.weight(1f)) {
+                // The name line is the way to rename: the whole block is one
+                // button, said in its last words ([Copy.PATTERN_RENAME_HINT]).
+                var renaming by remember { mutableStateOf(false) }
+                Column(
+                    Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = Copy.PATTERN_RENAME) { renaming = true },
+                ) {
                     TapeText(Copy.STEP_EDIT_TITLE, TapeType.lcd(20), scheme.lcdInk.tape)
-                    val ofYours = GrooveEdit.progIndexOf(clip)?.plus(1)
-                    if (ofYours != null && yoursCount > 1) {
-                        TapeText(Copy.stepEditOf(ofYours, yoursCount), TapeType.pixelSmall, scheme.lcdInk2)
+                    TapeText(Copy.stepEditSub(names[clip.name], place, yoursCount), TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
+                }
+                if (renaming) {
+                    PatternNameDialog(kitDir, clip, { onEdit(StepEdit(toast = it)) }, onCancel = { renaming = false }) {
+                        renaming = false
+                        onNames(it)
                     }
                 }
                 Box(
