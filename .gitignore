@@ -175,6 +175,8 @@ testkit/arco-bell-gate/
 testkit/arco-bell-gate-key.json
 # ARCO's held-key A/B clips and manifest, rendered by :shell:generateArcoHeldAudition; never committed.
 testkit/arco-held-audition/
+# SARANGI's first-listen clips and manifest, rendered by :shell:generateArcoSarangiAudition; never committed.
+testkit/arco-sarangi-audition/
 # The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
 # and published as the listening artifact; never committed.
 testkit/mercury-audition/
@@ -621,6 +623,8 @@ testkit/resin-audition/
 testkit/render-times/
 testkit/loop-instruments/
 testkit/loop-instruments-pack/
+# Short Pluck Keys is regenerated with :cli:generateScannedChainKeys.
+/testkit/scanned-chain-keys/
 
 # Regenerable EROSION three-zone bank and separate SCAR listening study.
 testkit/erosion-playable-bank/

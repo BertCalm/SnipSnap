@@ -50,7 +50,8 @@ class ArcoTest {
      * to lock because a period is long and the bridge's loss per period is small: the friction has to beat it a hundred
      * times over before the scratch gives way to one slip.
      */
-    private val lockBar = mapOf(ArcoVoice.CELLO to 1.2, ArcoVoice.ERHU to 0.5)
+    private val lockBar = mapOf(ArcoVoice.CELLO to 1.2, ArcoVoice.ERHU to 0.5, ArcoVoice.SARANGI to 0.8)
+    // SARANGI's (R2): R2 saw 0.649 s (D#3 at GRIP 0) along its law at every step, ArcoSarangiWindowMap's table 2 to the millisecond; the bar is 0.8 s.
 
     /**
      * What it takes to count as speaking: a lock inside the voice's bar, a last slip within 1.5 periods of the end, and a wave
@@ -154,9 +155,9 @@ class ArcoTest {
      * in 1.6 s). Each cell asserts the window starts at least 0.3 s past its own lock, so a slower engine fails here and
      * not in the cents; CELLO's has 0.26 s of room left (2.0 against 1.44 plus 0.3).
      */
-    private val tunedBowOn = mapOf(ArcoVoice.CELLO to 3.2f, ArcoVoice.ERHU to 1.6f)
-    private val tunedFrom = mapOf(ArcoVoice.CELLO to 2.0f, ArcoVoice.ERHU to 0.8f)
-    private val tunedSpan = mapOf(ArcoVoice.CELLO to 1.0f, ArcoVoice.ERHU to 0.7f)
+    private val tunedBowOn = mapOf(ArcoVoice.CELLO to 3.2f, ArcoVoice.ERHU to 1.6f, ArcoVoice.SARANGI to 3.2f)
+    private val tunedFrom = mapOf(ArcoVoice.CELLO to 2.0f, ArcoVoice.ERHU to 0.8f, ArcoVoice.SARANGI to 2.0f)
+    private val tunedSpan = mapOf(ArcoVoice.CELLO to 1.0f, ArcoVoice.ERHU to 0.7f, ArcoVoice.SARANGI to 1.0f)
 
     /** The pitch read and the cell's lock time, at one TUNE step, GRIP and BOW (with GRIP's pressure replaced when [pressure] is given). */
     private fun tunedRead(voice: ArcoVoice, step: Int, grip: Float, bow: Float, pressure: Float? = null): Pair<ArcoMeasure.PitchRead, Double> {
@@ -237,7 +238,7 @@ class ArcoTest {
      */
     @Test
     fun `GRIP is not a pitch knob, and a lower ERHU pressure floor would have made it one`() {
-        val cases = listOf(ArcoVoice.CELLO to listOf(0, 12, 24), ArcoVoice.ERHU to listOf(0, 15, 19))
+        val cases = listOf(ArcoVoice.CELLO to listOf(0, 12, 24), ArcoVoice.ERHU to listOf(0, 15, 19), ArcoVoice.SARANGI to ArcoMeasure.steps(ArcoVoice.SARANGI).toList())
         val failures = ArrayList<String>()
         for ((voice, steps) in cases) {
             val travels = steps.pmap { step ->
@@ -259,6 +260,15 @@ class ArcoTest {
         }
         for ((step, travel) in control) println("ARCO GRIP control ERHU ${name(erhu, step)} with the pressure floor at 0.85: travel ${f(travel)} c")
         for ((step, travel) in control) assertTrue(travel > 5.0, "ERHU ${name(erhu, step)} with a 0.85 floor moves ${f(travel)} cents, which the 5 cent bar should refuse")
+        // SARANGI's law is ERHU's floor carried across D3 to D5 (one law, no seam at D4): its control is CELLO's 0.85 floor at its top three notes.
+        val sarangi = ArcoVoice.SARANGI
+        val sarangiControl = listOf(22, 23, 24).pmap { step ->
+            val lo = tunedRead(sarangi, step, 0f, Arco.DEFAULT_BOW, pressure = Arco.PRESSURE_LOW).first
+            val hi = tunedRead(sarangi, step, 1f, Arco.DEFAULT_BOW).first
+            step to hi.fftCents - lo.fftCents
+        }
+        for ((step, travel) in sarangiControl) println("ARCO GRIP control SARANGI ${name(sarangi, step)} with the pressure floor at 0.85: travel ${f(travel)} c")
+        for ((step, travel) in sarangiControl) assertTrue(travel > 5.0, "SARANGI ${name(sarangi, step)} with a 0.85 floor moves ${f(travel)} cents, which the 5 cent bar should refuse")
     }
 
     // ---------------------------------------------------------------- 4. lifted: silence, and the engine lifts
@@ -276,8 +286,8 @@ class ArcoTest {
                 for (body in listOf(0f, 1f)) {
                     val c = ArcoMeasure.core(voice, step, body = body, gateSeconds = 0.6f, lifted = true, vibrato = true)
                     assertTrue(c.out.all { it == 0f } && c.bowPoint.all { it == 0f }, "$voice ${name(voice, step)}: a bow that never touched the string made sound")
-                    val done = ArcoMeasure.finished(c.out, voice, body)
-                    assertTrue(done.isNotEmpty() && done.all { it == 0f }, "$voice ${name(voice, step)} BODY $body: the finished render of silence is not silence")
+                    val done = ArcoMeasure.finishedAt(c.out, voice, body)
+                    assertTrue(done.isNotEmpty() && done.all { it == 0f }, "$voice ${name(voice, step)} ${Arco.boxKnob(voice)} $body: the finished render of silence is not silence")
                 }
             }
         }
@@ -465,6 +475,16 @@ class ArcoTest {
     }
 
     /**
+     * The notes the stopped-tail test reads: root, middle and top ([spread]), but C5 for SARANGI's top, the note ERHU's own middle cell reads. At C#5 and
+     * D5 (SARANGI's top two steps, ERHU's eleventh and twelfth, which ERHU's three notes never visit) the string's own free ring is 0.171 s and 0.157 s,
+     * just over the stop's 0.15 s floor, so the release is the free ring and the stop adds nothing: the tail reaches -60 dB in the render's last 20 ms,
+     * where the test's windows of whole periods run past the end and cannot see it. R2 measured it the same for both voices, to the sample (a probe at
+     * both C#5s and both D5s, vibrato on and off): -60 dB not found inside the buffer, with the last 5 ms of the tail at -69.5 to -73.1 dB against the
+     * note. It is the measure's edge and not a ringing note; both notes are printed below for both voices and not held.
+     */
+    private fun stopSteps(voice: ArcoVoice): List<Int> = if (voice == ArcoVoice.SARANGI) listOf(0, 12, 22) else spread(voice)
+
+    /**
      * The stopped tail reaches -60 dB within its release plus 50 ms, and never later than a lifted string with no stop would, at HOLD 0,
      * 0.4 and 0.95 and three TUNEs a voice (root, middle, top), default GRIP and BOW, vibrato as the engine plays it, BODY 0. The level is
      * the AC level of a window of whole periods against the note's own level just before its bow's velocity ramps down (the level
@@ -489,13 +509,14 @@ class ArcoTest {
      * The negative control: a lifted string with no stop at CELLO C2 takes 1.76 s to reach -60 dB against the stop's 134 ms, so the
      * first bar can fail, and the engine's tail is compared with that string's in every cell.
      */
+
     @Test
     fun `the stopped tail reaches minus 60 dB in its release and is never later than a string with no stop`() {
         val failures = ArrayList<String>()
         var latest = Double.NEGATIVE_INFINITY
         var slowest = Double.POSITIVE_INFINITY
         for (voice in ArcoVoice.entries) {
-            for (step in spread(voice)) {
+            for (step in stopSteps(voice)) {
                 for (hold in listOf(0f, 0.4f, 0.95f)) {
                     val c = ArcoMeasure.core(voice, step, hold = hold, vibrato = true)
                     val release = c.stopN.toDouble() / rate
@@ -514,6 +535,15 @@ class ArcoTest {
             }
         }
         println("ARCO stop: -60 dB at worst ${f(latest * 1000, 0)} ms after the release's end, slowest window ${f(slowest)} of the formula")
+        // C#5 and D5, printed and not held (see [stopSteps]): SARANGI's top two steps and ERHU's eleventh and twelfth, the same string, read the same way.
+        for ((voice, step) in listOf(ArcoVoice.SARANGI to 23, ArcoVoice.ERHU to 11, ArcoVoice.SARANGI to 24, ArcoVoice.ERHU to 12)) for (hold in listOf(0f, 0.4f)) {
+            val c = ArcoMeasure.core(voice, step, hold = hold, vibrato = true)
+            val e = ArcoMeasure.Energy(c.out)
+            val w = ArcoMeasure.wholePeriods(c.hz)
+            val ref = e.ac(c.liftN - (Arco.RELEASE_RAMP_SECONDS * rate).toInt() - w, w)
+            val last = 20 * log10(max(e.ac(c.out.size - rate / 200, rate / 200), 1e-12) / ref)
+            println("ARCO stop $voice ${name(voice, step)} HOLD $hold (printed, not held): release ${f(c.stopN.toDouble() / rate * 1000, 0)} ms, free ring ${f(Arco.freeRingSeconds(c.hz, Arco.cornerFor(voice, step, Arco.DEFAULT_GRIP)).toDouble())} s, -60 dB found after ${f(minus60(c.out, c.liftN, c.hz) * 1000, 0)} ms, the last 5 ms at ${f(last, 1)} dB")
+        }
         assertTrue(failures.isEmpty(), failures.joinToString("\n"))
         val c = ArcoMeasure.core(ArcoVoice.CELLO, 0, hold = 0f)
         val bare = byHand(ArcoVoice.CELLO, 0, Arco.DEFAULT_GRIP, 0.3f, 4 * rate, lift = true, stop = false)
@@ -604,7 +634,8 @@ class ArcoTest {
     )
 
     /** The largest raw |mean| a note may have, per voice: R1b saw 0.0714 (CELLO) and 0.0130 (ERHU), both on the 0.3 s note at BOW 0 and GRIP 1. */
-    private val rawMeanBar = mapOf(ArcoVoice.CELLO to 0.09, ArcoVoice.ERHU to 0.02)
+    private val rawMeanBar = mapOf(ArcoVoice.CELLO to 0.09, ArcoVoice.ERHU to 0.02, ArcoVoice.SARANGI to 0.05)
+    // SARANGI's (R2): R2 saw 0.0336 (D3, BOW 0, GRIP 1, HOLD 0); its finished peak at most 0.809 (D3, BOW 0, GRIP 1, WASH 0.5, HOLD 0).
 
     /** The finished peak must stay under this, clear of the 0.99 where [Dsp.levelTo] starts turning a peak down: a limited note sits at exactly 0.99, and fails. */
     private val finishedPeakBar = Arco.FINISHED_PEAK_BAR
@@ -635,9 +666,9 @@ class ArcoTest {
             val cells = cases.pmap { (t, b, g, body, h) ->
                 val step = Arco.semitoneFor(voice, t)
                 val c = ArcoMeasure.core(voice, step, bow = b, grip = g, body = body, hold = h, vibrato = true)
-                val done = ArcoMeasure.finished(c.out, voice, body)
+                val done = ArcoMeasure.finishedAt(c.out, voice, body)
                 Cell(
-                    "$voice TUNE $t(${name(voice, step)}) BOW $b GRIP $g BODY $body HOLD $h",
+                    "$voice TUNE $t(${name(voice, step)}) BOW $b GRIP $g ${Arco.boxKnob(voice)} $body HOLD $h",
                     c.out.all { it.isFinite() } && c.bowPoint.all { it.isFinite() } && done.all { it.isFinite() },
                     BowMeter.maxAbs(c.out), BowMeter.mean(c.out, 0, c.out.size),
                     BowMeter.maxAbs(done), BowMeter.mean(done, 0, done.size),
@@ -675,8 +706,9 @@ class ArcoTest {
      */
     @Test
     fun `the raw mean is the onset's displacement and drains away`() {
-        val firstBar = mapOf(ArcoVoice.CELLO to 0.05, ArcoVoice.ERHU to 0.01)
-        val lastBar = mapOf(ArcoVoice.CELLO to 0.005, ArcoVoice.ERHU to 0.001)
+        // SARANGI (R2) at D3: R2 saw 0.0400 in the first half second and -0.0001 over the last 1.5 s.
+        val firstBar = mapOf(ArcoVoice.CELLO to 0.05, ArcoVoice.ERHU to 0.01, ArcoVoice.SARANGI to 0.02)
+        val lastBar = mapOf(ArcoVoice.CELLO to 0.005, ArcoVoice.ERHU to 0.001, ArcoVoice.SARANGI to 0.001)
         for (voice in ArcoVoice.entries) {
             val c = ArcoMeasure.core(voice, 0, bow = 0f, grip = 1f, gateSeconds = 3f)
             val halves = (0..5).map { k -> BowMeter.mean(c.out, (k * 0.5 * rate).toInt(), ((k + 1) * 0.5 * rate).toInt()) }
@@ -810,7 +842,8 @@ class ArcoTest {
     fun `the lock across BOW is printed and bounded`() {
         val bows = listOf(0f, 0.3f, 0.6f, 0.8f, 1f)
         val grips = listOf(0f, Arco.DEFAULT_GRIP, 1f)
-        val bar = mapOf(ArcoVoice.CELLO to 2.0, ArcoVoice.ERHU to 0.6)
+        // SARANGI (R2): R2 saw its latest lock across BOW at 0.61 s (D#3, BOW 0.3, GRIP 0); its bar is 0.8 s.
+        val bar = mapOf(ArcoVoice.CELLO to 2.0, ArcoVoice.ERHU to 0.6, ArcoVoice.SARANGI to 0.8)
         for (voice in ArcoVoice.entries) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
@@ -855,7 +888,7 @@ class ArcoTest {
     fun `the onset table, and a stab starts sooner than a slow bow`() {
         val bows = listOf(0f, 0.5f, 0.6f, 0.8f, 1f)
         val problems = ArrayList<String>()
-        for ((voice, steps) in listOf(ArcoVoice.CELLO to listOf(0, 12, 24), ArcoVoice.ERHU to listOf(0, 6, 19))) {
+        for ((voice, steps) in listOf(ArcoVoice.CELLO to listOf(0, 12, 24), ArcoVoice.ERHU to listOf(0, 6, 19), ArcoVoice.SARANGI to listOf(0, 12, 24))) {
             for (step in steps) {
                 val rows = bows.pmap { b ->
                     val c = ArcoMeasure.core(voice, step, bow = b, gateSeconds = 3f)
@@ -1294,6 +1327,16 @@ class ArcoTest {
         assertEquals(1500f, Arco.gripFor(ArcoVoice.ERHU, 0).cornerLow, 0.5f)
         assertEquals(2828.3f, Arco.gripFor(ArcoVoice.ERHU, 19).cornerLow, 1f, "ERHU's dark corner at A5")
         assertEquals(Strings.Bow.BRIDGE_HZ, Arco.gripFor(ArcoVoice.ERHU, 19).cornerHigh, 0.5f)
+        // SARANGI (R2): ERHU's floor and ERHU's corner line carried an octave down, one law from D3 to D5 (ArcoSarangiWindowMap drew it)
+        assertEquals(0.85f, Arco.shareFor(ArcoVoice.SARANGI), "SARANGI's share moved: its tuning table was read at 0.85")
+        assertEquals(24, Arco.tuneSemitones(ArcoVoice.SARANGI), "SARANGI's span moved")
+        assertEquals(50, Arco.rootMidi(ArcoVoice.SARANGI))
+        assertEquals(0.94f, Arco.SARANGI_PRESSURE_LOW, "SARANGI's pressure floor moved: at 0.85 GRIP moves C5 to D5 by 5.6 to 6.3 cents")
+        assertEquals(33, Arco.SARANGI_CORNER_RISE_SEMITONES)
+        assertEquals(1005.3f, Arco.SARANGI_CORNER_LOW_ROOT_HZ, 0.5f, "SARANGI's dark corner at D3")
+        assertEquals(1500f, Arco.gripFor(ArcoVoice.SARANGI, 12).cornerLow, 0.5f, "SARANGI's dark corner at D4 is not ERHU's")
+        assertEquals(2238.6f, Arco.gripFor(ArcoVoice.SARANGI, 24).cornerLow, 1f, "SARANGI's dark corner at D5")
+        assertEquals(Strings.Bow.BRIDGE_HZ, Arco.gripFor(ArcoVoice.SARANGI, 0).cornerHigh, 0.5f)
         // the shape: a floor that only falls, a dark corner that only rises, a ceiling that never moves
         for (voice in ArcoVoice.entries) {
             val steps = ArcoMeasure.steps(voice).toList()

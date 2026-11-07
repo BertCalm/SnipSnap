@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -49,6 +50,7 @@ import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.StepHistory
+import com.snipsnap.kit.StepShape
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
@@ -253,8 +255,8 @@ internal class StepEditorState(
     }
 
     /** APPLY SWING: [percent] baked into the notes, from their straight positions ([GrooveEdit.bakeSwing]). */
-    fun applySwing(percent: Int) {
-        onEdit(StepEdit(change = recorded { GrooveEdit.bakeSwing(it, percent) }, toast = Copy.stepSwingBaked(percent)))
+    fun applySwing(clip: Mpc3Clip, percent: Int) {
+        onEdit(StepEdit(change = recorded { GrooveEdit.bakeSwing(it, percent) }, toast = Copy.stepSwingBaked(percent, StepShape.rollsIn(clip))))
     }
 
     /** Back with a panel open closes that panel; false when there was none, so the caller leaves the editor. */
@@ -315,6 +317,24 @@ internal fun Modifier.velocityFill(velocity: Float?, color: Color): Modifier =
     }
 
 /**
+ * [velocityFill] for a cell that may be rolled or nudged: a tick for every hit,
+ * where it sits in the cell (the step line is a quarter of the way in: a cell
+ * starts [GrooveEdit.CELL_EARLY] pulses before it and is one step wide). A plain step draws only its fill. Each tick
+ * is a dark bar with a light one on it, so it reads on any lane colour.
+ */
+internal fun Modifier.velocityFill(cell: StepCell?, color: Color): Modifier =
+    if (cell == null) this else velocityFill(cell.velocity, color).let { base ->
+        if (!cell.shaped) base else base.drawWithContent {
+            drawContent()
+            for (pulses in cell.hits) {
+                val x = size.width * ((GrooveEdit.CELL_EARLY + pulses) / GrooveEdit.STEP_PULSES.toFloat()).coerceIn(0.04f, 0.96f)
+                drawRect(Color.Black.copy(alpha = 0.75f), Offset(x - 1.5.dp.toPx(), 0f), Size(3.dp.toPx(), 7.dp.toPx()))
+                drawRect(Color.White, Offset(x - 0.5.dp.toPx(), 1.dp.toPx()), Size(1.dp.toPx(), 5.dp.toPx()))
+            }
+        }
+    }
+
+/**
  * The pad picker (a lane's name was tapped) or the step-detail strip (a step
  * was held) when one is open, and the tools under it always. Shown below the
  * grid. System back closes an open picker or strip, and only then leaves the
@@ -362,7 +382,7 @@ private fun StepTools(state: StepEditorState, clip: Mpc3Clip, scheme: Scheme, ed
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             StepToolButton(Copy.STEP_DOUBLE, scheme, GrooveBars.canDouble(clip, STEP_EDITOR_MAX_BARS), Modifier.weight(1f)) { state.doubleLength(clip) }
             StepToolButton(Copy.STEP_HALF, scheme, GrooveBars.canHalve(clip), Modifier.weight(1f)) { state.halveLength(clip) }
-            StepToolButton(Copy.stepApplySwing(swingPercent), scheme, true, Modifier.weight(1.3f)) { state.applySwing(swingPercent) }
+            StepToolButton(Copy.stepApplySwing(swingPercent), scheme, true, Modifier.weight(1.3f)) { state.applySwing(clip, swingPercent) }
         }
     }
 }
@@ -493,8 +513,93 @@ internal fun StepDetailStrip(
                     }
                 }
             }
+            StepShapeRows(state, lane, clip, scheme, onEdit)
         }
     }
+}
+
+/** A step's shape as the strip edits it: what [StepShape] reads off the clip for the held step. */
+private fun shapeEdit(state: StepEditorState, change: (Mpc3Clip, Int) -> Mpc3Clip): StepEdit {
+    val step = state.selStep
+    return StepEdit(change = state.recorded { change(it, step) })
+}
+
+/**
+ * ROLL, NUDGE and LENGTH for the held step: three rows of buttons under the
+ * velocity levels, plus a line saying where the hits sit and what APPLY SWING
+ * will do to them when there is something for it to do. Private and not
+ * inline, like everything new here, to stay under the dex register ceiling.
+ */
+@Composable
+private fun StepShapeRows(state: StepEditorState, lane: GrooveEdit.Lane, clip: Mpc3Clip, scheme: Scheme, onEdit: (StepEdit) -> Unit) {
+    val step = state.selStep
+    val pads = state.lanePads
+    val roll = StepShape.rollOf(clip, lane, step, pads)
+    val offset = StepShape.offsetOf(clip, lane, step, pads) ?: 0
+    val length = StepShape.lengthOf(clip, lane, step, pads)
+    val early = StepShape.nudge(clip, lane, step, -StepShape.NUDGE_PULSES, pads) != clip
+    val late = StepShape.nudge(clip, lane, step, StepShape.NUDGE_PULSES, pads) != clip
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ShapeRow(Copy.STEP_ROLL, scheme) {
+            for (n in 1..StepShape.MAX_ROLL) {
+                ShapeButton(Copy.stepRollName(n), Copy.stepRollSpoken(n), roll == n, true, scheme, Modifier.weight(1f)) {
+                    onEdit(shapeEdit(state) { c, st -> StepShape.setRoll(c, lane, st, n, state.lanePads) })
+                }
+            }
+        }
+        ShapeRow(Copy.STEP_NUDGE, scheme) {
+            ShapeButton(Copy.STEP_EARLY, Copy.STEP_EARLY, false, early, scheme, Modifier.weight(1f)) {
+                onEdit(shapeEdit(state) { c, st -> StepShape.nudge(c, lane, st, -StepShape.NUDGE_PULSES, state.lanePads) })
+            }
+            ShapeButton(Copy.STEP_LATE, Copy.STEP_LATE, false, late, scheme, Modifier.weight(1f)) {
+                onEdit(shapeEdit(state) { c, st -> StepShape.nudge(c, lane, st, StepShape.NUDGE_PULSES, state.lanePads) })
+            }
+            ShapeButton(Copy.STEP_CENTRE, Copy.STEP_CENTRE, false, offset != 0, scheme, Modifier.weight(1f)) {
+                onEdit(shapeEdit(state) { c, st -> StepShape.centre(c, lane, st, state.lanePads) })
+            }
+        }
+        ShapeRow(Copy.STEP_LENGTH, scheme) {
+            for (choice in StepShape.NoteLength.entries) {
+                val name = lengthName(choice)
+                ShapeButton(name, Copy.stepLengthSpoken(name), length == choice, true, scheme, Modifier.weight(1f)) {
+                    onEdit(shapeEdit(state) { c, st -> StepShape.setLength(c, lane, st, choice, state.lanePads) })
+                }
+            }
+        }
+        if (offset != 0) TapeText(Copy.stepNudgeReading(offset), TapeType.pixelSmall, scheme.lcdInk2, Modifier.fillMaxWidth())
+        if (offset != 0 || roll > 1) TapeText(Copy.STEP_SWING_RESETS, TapeType.pixelSmall, scheme.lcdInk2, Modifier.fillMaxWidth(), maxLines = 2)
+    }
+}
+
+@Composable
+private fun ShapeRow(caption: String, scheme: Scheme, buttons: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(56.dp)) { FitTapeText(caption, TapeType.pixelSmall, scheme.lcdInk2) }
+        buttons()
+    }
+}
+
+@Composable
+private fun ShapeButton(label: String, spoken: String, chosen: Boolean, enabled: Boolean, scheme: Scheme, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .let { if (chosen) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }
+            .semantics { selected = chosen }
+            .tapeClick(label = label, enabled = enabled, spoken = spoken, onClick = onClick)
+            .padding(horizontal = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        FitTapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else if (enabled) scheme.ink2.tape else scheme.ink3.tape)
+    }
+}
+
+private fun lengthName(choice: StepShape.NoteLength): String = when (choice) {
+    StepShape.NoteLength.SHORT -> Copy.STEP_LEN_SHORT
+    StepShape.NoteLength.HALF -> Copy.STEP_LEN_HALF
+    StepShape.NoteLength.STEP -> Copy.STEP_LEN_STEP
+    StepShape.NoteLength.TIE_2 -> Copy.STEP_LEN_TIE_2
+    StepShape.NoteLength.TIE_4 -> Copy.STEP_LEN_TIE_4
 }
 
 private fun levelName(level: GrooveEdit.VelocityLevel): String = when (level) {
@@ -524,17 +629,31 @@ internal fun OffLaneRow(cells: Map<Int, Float>?, barSteps: Int, scheme: Scheme) 
     }
 }
 
-/** Per lane, the velocity of each lit step of the bar on screen, by column. */
-internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: List<Int>): Map<GrooveEdit.Lane, Map<Int, Float>> =
+/**
+ * What a lit cell draws: its velocity (the fill's height) and where its hits sit in pulses from the step line,
+ * so a roll draws a tick per hit and a nudged step draws its tick off-centre. [shaped] is false for the plain
+ * case, which draws nothing extra.
+ */
+internal class StepCell(val velocity: Float, val hits: List<Int>) {
+    val shaped: Boolean get() = hits.size > 1 || hits.firstOrNull() != 0
+}
+
+/** Per lane, the [StepCell] of each lit step of the bar on screen, by column. */
+internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: List<Int>): Map<GrooveEdit.Lane, Map<Int, StepCell>> =
     GrooveEdit.Lane.entries.associateWith { lane ->
         val note = GrooveEdit.noteFor(lane, pads)
-        val out = HashMap<Int, Float>()
+        val vel = HashMap<Int, Float>()
+        val hits = HashMap<Int, MutableSet<Int>>()
         for (n in clip.notes) {
             if (n.note != note) continue
-            val col = GrooveEdit.cellOf(n.timePulses) - bar * barSteps
-            if (col in 0 until barSteps) out[col] = maxOf(out[col] ?: 0f, n.velocity)
+            val cell = GrooveEdit.cellOf(n.timePulses)
+            val col = cell - bar * barSteps
+            if (col in 0 until barSteps) {
+                vel[col] = maxOf(vel[col] ?: 0f, n.velocity)
+                hits.getOrPut(col) { sortedSetOf() }.add((n.timePulses - cell * GrooveEdit.STEP_PULSES).toInt())
+            }
         }
-        out
+        vel.mapValues { (col, v) -> StepCell(v, hits.getValue(col).toList()) }
     }
 
 /** The same for hits on pads no lane plays, one row for all of them. */

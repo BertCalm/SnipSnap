@@ -52,16 +52,11 @@ class ArcoLoopVibratoTest {
 
     @Test
     fun `R1b's 225 loops close with the snapped vibrato and with the humanised one`() {
+        // R1b's grid for CELLO and ERHU, every step; SARANGI (R2) at every third step and its top, with WASH where the others have BODY (ArcoMeasure.loopGridSteps).
         val cases = ArcoVoice.entries.flatMap { voice ->
-            (0..Arco.tuneSemitones(voice)).flatMap { step ->
+            ArcoMeasure.loopGridSteps(voice).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
-                listOf(
-                    "defaults" to emptyMap(),
-                    "GRIP 0" to mapOf("GRIP" to 0f),
-                    "GRIP 1" to mapOf("GRIP" to 1f),
-                    "BODY 0" to mapOf("BODY" to 0f),
-                    "BODY 1" to mapOf("BODY" to 1f),
-                ).map { (corner, knobs) -> Case(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f)) }
+                ArcoMeasure.loopGridCorners(voice).map { (corner, knobs) -> Case(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f)) }
             }
         }
         val kinds = listOf(Arco.LoopVibrato.SNAPPED, Arco.LoopVibrato.HUMAN)
@@ -70,11 +65,12 @@ class ArcoLoopVibratoTest {
             val r = Arco.renderLoopMeasured(c.voice, c.macros, loopVibrato = kind)
             Outcome(c, kind, r.seam, r.loop.all { it.isFinite() && it in -1f..1f }, (System.nanoTime() - started) / 1_000_000L)
         }.toList()
-        assertEquals(450, outcomes.size)
+        assertEquals(450, outcomes.count { it.case.voice in ArcoMeasure.BODY_VOICES }, "R1b's 225 loops, once per variant")
+        assertEquals(2 * ArcoMeasure.SARANGI_LOOP_GRID, outcomes.count { it.case.voice == ArcoVoice.SARANGI })
         for (kind in kinds) for (voice in ArcoVoice.entries) {
             val mine = outcomes.filter { it.kind == kind && it.case.voice == voice }
             val worst = mine.maxBy { it.seam }
-            val rows = listOf("defaults", "GRIP 0", "GRIP 1", "BODY 0", "BODY 1").joinToString(", ") { corner ->
+            val rows = ArcoMeasure.loopGridCorners(voice).map { it.first }.joinToString(", ") { corner ->
                 "$corner ${e(mine.filter { it.case.corner == corner }.maxOf { it.seam })}"
             }
             println("ARCO loop vibrato $kind $voice: ${mine.size} loops, worst seam ${e(worst.seam)} at step ${worst.case.step} ${worst.case.corner} (bar ${e(Keys.MAX_SEAM_ERROR)}); worst per row: $rows; ${mine.sumOf { it.millis }} ms summed")

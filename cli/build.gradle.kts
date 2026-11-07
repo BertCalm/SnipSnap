@@ -69,3 +69,12 @@ tasks.register<JavaExec>("generateBellowsInstruments") {
     args("bellows-keys", "--out", rootProject.file("testkit/bellows-audition").absolutePath, "--overwrite")
     workingDir = rootProject.projectDir
 }
+
+tasks.register<JavaExec>("generateScannedChainKeys") {
+    group = "distribution"
+    description = "Export Short Pluck C2-C5 keygroups with 39 finite physical-touch samples and source recipes."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("com.snipsnap.cli.MainKt")
+    args("scanned-chain-keys", "--out", rootProject.file("testkit/scanned-chain-keys").absolutePath, "--overwrite")
+    workingDir = rootProject.projectDir
+}

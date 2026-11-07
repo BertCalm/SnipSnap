@@ -20,10 +20,11 @@ import kotlin.test.assertTrue
 /**
  * ARCO held ([ArcoKeys], [Arco.renderHeldMeasured]): the keygroup zone that is the bow's own stroke, then the shipped LOOP's loop.
  *
- *  - **Every zone closes.** Both voices, every zone ([ArcoKeys.zoneMidis]: CELLO's nine, ERHU's eight), both layers, at the defaults: the
+ *  - **Every zone closes.** Every voice, every zone ([ArcoKeys.zoneMidis]: CELLO's nine, ERHU's eight, SARANGI's nine), both layers, at the defaults: the
  *    file's own seam at its loop start under the Organ's bar ([Keys.MAX_SEAM_ERROR]), finite, under [Arco.HELD_PEAK_CEILING], levelled on
  *    its loop region, the loop exactly the plan's whole periods. The per-zone render time is measured (this thread's CPU time) and printed.
- *  - **The corners close.** GRIP 0 and 1, BODY 0 and 1, BUZZ 1, BOW 0 and 1, at each voice's lowest, middle and top zone, both layers.
+ *  - **The corners close.** GRIP 0 and 1, BODY 0 and 1 (SARANGI: WASH 0 and 1, its knob in BODY's place), BUZZ 1, BOW 0 and 1, at each voice's lowest,
+ *    middle and top zone, both layers.
  *  - **The attack is the stroke.** The held stretch's raw string is the one-shot's, sample for sample, for as long as the one-shot's bow is
  *    on; the finished file's first 300 ms follow the one-shot's envelope at the same BOW and not at another; and it starts from silence,
  *    where the loop-only instrument's zone starts at its loop's level.
@@ -132,9 +133,10 @@ class ArcoKeysTest {
     @Test
     fun `every zone of both voices closes in both layers at the defaults, levelled on its loop`() {
         val all = defaults
-        assertEquals(2 * (ArcoKeys.zoneMidis(ArcoVoice.CELLO).size + ArcoKeys.zoneMidis(ArcoVoice.ERHU).size), all.size)
+        assertEquals(2 * ArcoVoice.entries.sumOf { ArcoKeys.zoneMidis(it).size }, all.size)
         assertEquals(listOf(36, 39, 42, 45, 48, 51, 54, 57, 60), ArcoKeys.zoneMidis(ArcoVoice.CELLO))
         assertEquals(listOf(62, 65, 68, 71, 74, 77, 80, 81), ArcoKeys.zoneMidis(ArcoVoice.ERHU))
+        assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), ArcoKeys.zoneMidis(ArcoVoice.SARANGI), "SARANGI's nine zones, D3 to D5 every minor third")
         val bad = all.flatMap { checkZone(it) }.toMutableList()
         for (r in all) {
             // Levelled on the loop: at the target, or below it by exactly what the peak guard took.
@@ -162,15 +164,19 @@ class ArcoKeysTest {
 
     @Test
     fun `the corners close at each voice's lowest, middle and top zones, both layers`() {
-        val corners = listOf(
-            "GRIP 0" to mapOf("GRIP" to 0f), "GRIP 1" to mapOf("GRIP" to 1f),
-            "BODY 0" to mapOf("BODY" to 0f), "BODY 1" to mapOf("BODY" to 1f),
-            "BUZZ 1" to mapOf("BUZZ" to 1f),
-            "BOW 0" to mapOf("BOW" to 0f), "BOW 1" to mapOf("BOW" to 1f),
-        )
+        // the fourth knob is BODY on CELLO and ERHU and WASH on SARANGI, so a corner of it is that knob at 0 and 1
+        fun corners(v: ArcoVoice): List<Pair<String, Map<String, Float>>> {
+            val knob = Arco.boxKnob(v)
+            return listOf(
+                "GRIP 0" to mapOf("GRIP" to 0f), "GRIP 1" to mapOf("GRIP" to 1f),
+                "$knob 0" to mapOf(knob to 0f), "$knob 1" to mapOf(knob to 1f),
+                "BUZZ 1" to mapOf("BUZZ" to 1f),
+                "BOW 0" to mapOf("BOW" to 0f), "BOW 1" to mapOf("BOW" to 1f),
+            )
+        }
         val cases = ArcoVoice.entries.flatMap { v ->
             val z = ArcoKeys.zoneMidis(v)
-            listOf(z.first(), z[z.size / 2], z.last()).flatMap { midi -> corners.flatMap { c -> ArcoKeys.Layer.entries.map { Triple(v, midi, it) to c } } }
+            listOf(z.first(), z[z.size / 2], z.last()).flatMap { midi -> corners(v).flatMap { c -> ArcoKeys.Layer.entries.map { Triple(v, midi, it) to c } } }
         }
         val out = cases.parallelStream().map { (k, c) -> render(k.first, k.second, k.third, c.second, c.first) }.toList()
         val bad = out.flatMap { checkZone(it) }.toMutableList()
@@ -179,7 +185,7 @@ class ArcoKeysTest {
             // GRIP 0 is GRIP 0 in both layers, so only the hard layer need differ from the default there; every corner moves the hard layer.
             if (r.layer == ArcoKeys.Layer.HARD && r.samples.contentEquals(base.samples)) bad += "${r.voice} ${noteName(r.midi)} ${r.label}: the corner renders the default"
         }
-        for (voice in ArcoVoice.entries) for ((corner, _) in corners) {
+        for (voice in ArcoVoice.entries) for ((corner, _) in corners(voice)) {
             val mine = out.filter { it.voice == voice && it.label == corner }
             val worst = mine.maxBy { it.zone.render.seam }
             val lift = if (corner == "BODY 1") ", lift delivered ${mine.joinToString("/") { f(it.zone.render.lift.delivered.toDouble()) }} dB" else ""
@@ -293,6 +299,9 @@ class ArcoKeysTest {
         val b5 = assertFailsWith<IllegalArgumentException> { ArcoKeys.pad(ArcoVoice.ERHU, Arco.defaults(ArcoVoice.ERHU), 83, ArcoKeys.Layer.HARD) }
         assertTrue("ERHU" in b5.message!! && "B5" in b5.message!! && "A5" in b5.message!!, b5.message)
         assertFailsWith<IllegalArgumentException> { ArcoKeys.pad(ArcoVoice.CELLO, Arco.defaults(ArcoVoice.CELLO), 35, ArcoKeys.Layer.SOFT) }
+        val c3 = assertFailsWith<IllegalArgumentException> { ArcoKeys.pad(ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI), 48, ArcoKeys.Layer.HARD) }
+        assertTrue("SARANGI" in c3.message!! && "D3" in c3.message!! && "D5" in c3.message!! && "C3" in c3.message!!, c3.message)
+        assertFailsWith<IllegalArgumentException> { ArcoKeys.pad(ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI), 75, ArcoKeys.Layer.SOFT) }
         // The LOOP's own failing control: BUZZ 1 with its noise running free does not repeat with the loop, so the seam opens at both tries.
         val free = Arco.BuzzLaw(Arco.BUZZ_THRESHOLD_FROM, Arco.BUZZ_THRESHOLD_TO, Arco.BUZZ_GAIN, loopTable = false, top = Arco.BUZZ_TOP, curve = Arco.BUZZ_CURVE)
         val refused = assertFailsWith<IllegalArgumentException> {

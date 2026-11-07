@@ -288,6 +288,7 @@ object ArcoAuditionGenerator {
                 otherDesc = "VOX's CHOIR at DECAY 1, its longest note (the vowel held for ${f1(Vox.holdFractionFor(1f) * Vox.lengthFor(1f))} s, then faded), mono, " +
                     (if (voxMidi == midi) "at $note" else "at ${noteName(voxMidi)}, an octave under the bowed note, because the choir's TUNE tops out at A4")
             }
+            ArcoVoice.SARANGI -> error("the R1 gate page is CELLO's and ERHU's (ArcoMeasure.BODY_VOICES); SARANGI's clips are ArcoSarangiAuditionGenerator's")
         }
 
         return HeldSet(
@@ -474,7 +475,7 @@ object ArcoAuditionGenerator {
         // The held note, blind: the page's first and key card.
         val heldGroups = mutableListOf<Group>()
         var setIndex = 0
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             for (tune in HELD_TUNES) {
                 val set = heldSet(voice, tune)
                 val order = HELD_ORDERS[setIndex++]
@@ -532,7 +533,7 @@ object ArcoAuditionGenerator {
         )
         sections += kitSection
 
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val dir = voice.name
             val defaults = Arco.defaults(voice)
             fun render(id: String, macros: Map<String, Float>) = write(dir, id, AuditionLevel.level(Arco.render(voice, macros)))
@@ -598,7 +599,7 @@ object ArcoAuditionGenerator {
         // R2: the sixth knob, last, after the voices' own cards.
         sections += buzzSection(::write)
 
-        for (voice in ArcoVoice.entries) check(File(File(root, voice.name), "loop.wav").isFile) { "the surface's ${voice.name} loop was not written" }
+        for (voice in ArcoMeasure.BODY_VOICES) check(File(File(root, voice.name), "loop.wav").isFile) { "the surface's ${voice.name} loop was not written" }
         writePage(root, sections, loops, count)
     }
 
@@ -621,7 +622,7 @@ object ArcoAuditionGenerator {
      */
     private fun buzzSection(write: (String, String, Snip) -> Unit): Section {
         val groups = mutableListOf<Group>()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             for (tune in BUZZ_TUNES) {
                 val midi = Arco.midiFor(voice, tune)
                 val clips = BUZZ_LEVELS.map { b ->
@@ -830,7 +831,7 @@ object ArcoAuditionGenerator {
 
     /** This page's own render path must be the engine's, to the sample, for the default and for the held note, in both voices. */
     private fun checkReRender() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             for (macros in listOf(emptyMap(), mapOf("HOLD" to HELD_HOLD))) {
                 check(renderWith(voice, macros, vibrato = true, table = null).samples.contentEquals(Arco.render(voice, macros).samples)) {
                     "the audition's re-render of $voice $macros is not what Arco.render makes"
