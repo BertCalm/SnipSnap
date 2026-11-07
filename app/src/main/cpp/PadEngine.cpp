@@ -479,7 +479,20 @@ void PadEngine::applyMaster(float* out, int32_t numFrames) {
 
 void PadEngine::takeCommands() {
     PadCommand c;
+    // The count at the top of this block: what an `atFrame` is measured from.
+    const int64_t blockStart = framesRendered_.load(std::memory_order_relaxed);
     while (commands_.pop(c)) {
+        if (c.type == PadCommand::Type::CancelPending) {
+            // Everything pushed before this one that has not begun; whatever
+            // was pushed after it is still to come off the ring.
+            dropPendingNoteOns();
+            continue;
+        }
+        if (c.atFrame >= 0) {
+            const int64_t wait = c.atFrame - blockStart;
+            const int64_t cap = static_cast<int64_t>(kMaxAheadSeconds) * sampleRate_;
+            c.frameOffset = wait <= 0 ? 0 : static_cast<int32_t>(std::min(wait, cap));
+        }
         if (heldCount_ < kHeldMax) {
             held_[heldCount_++] = c;
         } else {
@@ -488,6 +501,19 @@ void PadEngine::takeCommands() {
             apply(c);
         }
     }
+}
+
+void PadEngine::dropPendingNoteOns() {
+    int32_t kept = 0;
+    for (int32_t i = 0; i < heldCount_; ++i) {
+        if (held_[i].type == PadCommand::Type::NoteOn && held_[i].frameOffset > 0) {
+            ended_.push(held_[i].voiceId);
+        } else {
+            if (kept != i) held_[kept] = held_[i];
+            ++kept;
+        }
+    }
+    heldCount_ = kept;
 }
 
 int32_t PadEngine::applyDue(int32_t frame, int32_t numFrames) {
