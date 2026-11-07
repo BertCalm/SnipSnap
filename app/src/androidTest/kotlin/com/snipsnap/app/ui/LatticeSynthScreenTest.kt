@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTextReplacement
@@ -13,8 +14,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Scales
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
+import com.snipsnap.mpc3.Mpc3TrackWriter
+import com.snipsnap.shell.LatticePadMaker
 import com.snipsnap.shell.SynthWork
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Lattice
@@ -44,6 +48,7 @@ class LatticeSynthScreenTest : ComposeScreenTest() {
     private val settings = ConcurrentHashMap<String, String>()
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private val kitUpdates = AtomicInteger()
+    private val instrumentUpdates = AtomicInteger()
 
     @After
     fun cleanUp() {
@@ -66,7 +71,8 @@ class LatticeSynthScreenTest : ComposeScreenTest() {
             SynthScreen(
                 entry = entry, shelfRoot = shelf, onToast = {},
                 onKitUpdated = { updated -> entry = entry?.copy(kit = updated); kitUpdates.incrementAndGet() },
-                onShelfAssetWritten = {}, onDroneToLoop = { _, _, _ -> }, onOpenSurface = {},
+                onShelfAssetWritten = { instrumentUpdates.incrementAndGet() },
+                onDroneToLoop = { _, _, _ -> }, onOpenSurface = {},
                 appScope = appScope, settings = settings,
             )
         }
@@ -89,6 +95,62 @@ class LatticeSynthScreenTest : ComposeScreenTest() {
         val action = clickAction(label)
         compose.runOnIdle { assertTrue(action.invoke()) }
         pump(16)
+    }
+
+    @Test
+    fun onlyTraceOffersKeysAndItsAuthoredAttackHasNoExtraAttackKnob() {
+        show(source())
+        button("MAKE INSTRUMENT").assertExists()
+        activate("MAKE INSTRUMENT")
+        button("RELEASE").assertExists()
+        button("ATTACK").assertDoesNotExist()
+        button("TOUCH LAYERS").assertDoesNotExist()
+        // The scrim and the visible button share CANCEL's description.
+        val cancel = compose.onAllNodes(hasContentDescription("CANCEL"), useUnmergedTree = true)
+            .fetchSemanticsNodes().last().config[SemanticsActions.OnClick].action!!
+        compose.runOnIdle { assertTrue(cancel.invoke()) }
+        pump(16)
+        for (voice in listOf("WARM", "PLUCK", "HOLLOW")) {
+            activate(voice)
+            button("MAKE INSTRUMENT").assertDoesNotExist()
+        }
+        activate("TRACE")
+        button("MAKE INSTRUMENT").assertExists()
+    }
+
+    @Test
+    fun lastSpeedAndReleaseEditsReachTheBoundedKeygroupPackage() {
+        val source = source()
+        show(source)
+        // The bench callback remains live underneath the sheet. Both edits and
+        // MAKE can arrive before Compose has drawn their next values.
+        val speed = progressAction("SPEED")
+        activate("MAKE INSTRUMENT")
+        val release = progressAction("RELEASE")
+        val make = clickAction("MAKE")
+        compose.runOnIdle {
+            assertTrue(speed.invoke(.84f))
+            assertTrue(release.invoke(.8f))
+            assertTrue(make.invoke())
+        }
+        waitFor("the TRACE keyboard instrument", timeoutMillis = 300_000) {
+            instrumentUpdates.get() > 0
+        }
+        val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
+        val instrument = InstrumentStore.read(dir.listFiles()!!.single { it.name.endsWith(InstrumentStore.SUFFIX) })
+        val recipe = LatticePadMaker.Spec.fromJsonText(LatticePadMaker.recipeFile(dir, instrument.name).readText())
+        assertEquals(source.copy(name = recipe.patch.name, macros = source.macros + ("SPEED" to .84f)), recipe.patch)
+        assertEquals(LatticePadMaker.RELEASE.value(.8f), recipe.releaseSeconds, .00001f)
+        assertEquals(recipe.releaseSeconds, instrument.release, .00001f)
+        assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
+        assertEquals(48, instrument.zones.minOf { it.lowNote })
+        assertEquals(72, instrument.zones.maxOf { it.highNote })
+        assertTrue(instrument.zones.all { it.loopStartFrame > 0 && it.loopStartFrame < it.frameCount })
+        assertTrue(instrument.sampleFiles.all { File(dir, it).isFile })
+        val dataDir = File(dir, Mpc3TrackWriter.trackDataDirName(instrument.name))
+        assertTrue(File(dataDir, "${instrument.name}.xpm").isFile)
+        assertTrue(File(dir, "${instrument.name}.xty").isFile)
+        assertEquals(0, kitUpdates.get())
     }
 
     @Test
