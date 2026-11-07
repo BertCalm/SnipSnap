@@ -1,0 +1,223 @@
+{
+  "heldModel": 1,
+  "sourceCommit": "ded941b056151952412fc32c08f029d28bb1bc0e",
+  "hashEncoding": "SHA-256 of IEEE754 Float32 raw bits in big-endian order, complete native KeyNote audio; no PCM quantization",
+  "examples": [
+    {
+      "midi": 48,
+      "speed": 0.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "3f8aec9f35cc753181aa3e92ab01122ebae50f2fb16f6067432fb071cf291a0a"
+    },
+    {
+      "midi": 48,
+      "speed": 0.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "fa11b94cff3a9e43bfb4005dad635445cf496001e4c903beb8043e436eb0a3e8"
+    },
+    {
+      "midi": 48,
+      "speed": 0.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "ad99a5804425b916ba74703de997d45cf05902bdaeb46184b296ae86bb8137a9"
+    },
+    {
+      "midi": 48,
+      "speed": 0.5,
+      "velocity": 0.2,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "7a4085cfa5a13050e887460fc1c9ce83fdf92cfcf834d35c29f469a1faf2e207"
+    },
+    {
+      "midi": 48,
+      "speed": 0.5,
+      "velocity": 0.75,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "50055a50795dcb846bf42ec6b6cc90b3db1cde5df4fc67c744be9eb6c52081b9"
+    },
+    {
+      "midi": 48,
+      "speed": 0.5,
+      "velocity": 1.0,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "46b85e69647b719f01feb22166486c0d270155e800d17608bc7ea819b2b7eaef"
+    },
+    {
+      "midi": 48,
+      "speed": 1.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "46a91f837fc82006d393c89526cd31d894168c6d0880a42277f45002ee2db8e8"
+    },
+    {
+      "midi": 48,
+      "speed": 1.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "5709ef09af7d4d6c5d17ad89df60424b08b6a8f46a3e43d39711c710fbdf1907"
+    },
+    {
+      "midi": 48,
+      "speed": 1.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264978,
+      "frameCount": 353304,
+      "float32Sha256": "0347db7f142797b02bea55bccee47da5c08c4208b155801c98644fa6031777b4"
+    },
+    {
+      "midi": 60,
+      "speed": 0.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "72d1865208e99106d560a852fb585f97dd4d3b576bc628d9a3f6b208cbcb6af6"
+    },
+    {
+      "midi": 60,
+      "speed": 0.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "e734801df7a20e2a20482f1d204dde71ce7cdd769616f173bfbd51b547aa105e"
+    },
+    {
+      "midi": 60,
+      "speed": 0.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "7de278cd58b887557eae43e615ca0849e1a335619718de682605fce1e7cf7b0a"
+    },
+    {
+      "midi": 60,
+      "speed": 0.5,
+      "velocity": 0.2,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "8429de45136f6b60f92d25fd7d8665bfa0ff00b3fc3037e543db454f95806fc7"
+    },
+    {
+      "midi": 60,
+      "speed": 0.5,
+      "velocity": 0.75,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "dee210dc1d8bf375dff3f2346c22dfbdb21e75308f97d8fe41a27329dcd6af4e"
+    },
+    {
+      "midi": 60,
+      "speed": 0.5,
+      "velocity": 1.0,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "37a0d73331f1b2343d7ff84e13e81fd1957b71ce1d0c607976ea1fc2ee128bb2"
+    },
+    {
+      "midi": 60,
+      "speed": 1.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "4c98ec94cc84857458ab3fa728dbae273a9ffc2882c9b917476501875e058d14"
+    },
+    {
+      "midi": 60,
+      "speed": 1.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "92fb3d5ea36d3d4ba4bf771a6f8759a153223909b51b493044db5a39e49490dd"
+    },
+    {
+      "midi": 60,
+      "speed": 1.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264474,
+      "frameCount": 352632,
+      "float32Sha256": "d09aa15c99c30ae1fbc2fec4e6ad69fba58b3cc97217ce1ced9f9d25f5fedb23"
+    },
+    {
+      "midi": 72,
+      "speed": 0.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "293e5c7feb82008c807c4dbb39c92290142cc595dac680f625f68de004b22afc"
+    },
+    {
+      "midi": 72,
+      "speed": 0.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "2edddec3eed7a3d05e2191939bfab02ff5342e886f9b5d9273548ac8877d4fa0"
+    },
+    {
+      "midi": 72,
+      "speed": 0.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "9f2fee6b35c4f9c94717c83961cd48e7a0f1f4544ae81e0a7a2cacd226fee078"
+    },
+    {
+      "midi": 72,
+      "speed": 0.5,
+      "velocity": 0.2,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "e3cd1ee20216b12c3cd6a10d8abcf379235db8087594c2dc428241ff3127c2b3"
+    },
+    {
+      "midi": 72,
+      "speed": 0.5,
+      "velocity": 0.75,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "5dfd6cb2fa9cf40bb07da6a1a0b7375896e23eb8175224610d0458b4e93ff0b3"
+    },
+    {
+      "midi": 72,
+      "speed": 0.5,
+      "velocity": 1.0,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "0e2e3ad7dc9129e930b3928c9538a42acfe81490aa225b45a1c55fff1c54b9fb"
+    },
+    {
+      "midi": 72,
+      "speed": 1.0,
+      "velocity": 0.2,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "f31c4964a83e7f57a7cf4ad5591874c18c07e434044d435b740fbc05efc4e6ec"
+    },
+    {
+      "midi": 72,
+      "speed": 1.0,
+      "velocity": 0.75,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "0128b1fae8c37d7beeedc540b993f344e9ec0ac2c1d6071bfa0ba9270fb5e999"
+    },
+    {
+      "midi": 72,
+      "speed": 1.0,
+      "velocity": 1.0,
+      "loopStartFrame": 264726,
+      "frameCount": 352968,
+      "float32Sha256": "50d15e3bd3f6e4eb8954e21d78787bd648651b1a3af8627b8688c133c2f9881b"
+    }
+  ]
+}

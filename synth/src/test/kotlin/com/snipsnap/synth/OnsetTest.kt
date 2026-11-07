@@ -14,7 +14,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class OnsetTest {
-    @Test fun `settings share kick fundamental decay and hat transposition across blend`() {
+    @Test fun `settings share pitched roots decay and hat transposition across blend`() {
         for (voice in OnsetVoice.entries) {
             val settings = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map {
                 Onset.settingsFor(voice, mapOf("BLEND" to it))
@@ -23,7 +23,7 @@ class OnsetTest {
             assertEquals(1, settings.map { it.electronicGain }.distinct().size)
             assertEquals(1, settings.map { it.physicalGain }.distinct().size)
             for (s in settings) {
-                if (voice == OnsetVoice.KICK || voice == OnsetVoice.SNARE) {
+                if (voice != OnsetVoice.HAT_CLOSED && voice != OnsetVoice.HAT_OPEN) {
                     assertEquals(s.electronicRootHz, s.physicalRootHz)
                     assertEquals(s.rootHz, s.electronicRootHz)
                 } else {
@@ -34,8 +34,11 @@ class OnsetTest {
         }
     }
 
-    @Test fun `blend stays coherent and has a distinct midpoint`() {
-        for (voice in OnsetVoice.entries) {
+    @Test fun `core parallel blend stays coherent and has a distinct midpoint`() {
+        // Model4 extensions have their own handoff/AM contracts and may retain
+        // a contact at SNAP0. This parallel-source contract remains pinned to
+        // the original four voices; OnsetExtensionsTest covers the new paths.
+        for (voice in CORE_VOICES) {
             val taps = listOf(0f, 0.5f, 1f).map { Onset.probe(voice, mapOf("BLEND" to it, "SNAP" to 0f)) }
             assertContentEquals(taps[0].electronic, taps[1].electronic)
             assertContentEquals(taps[1].physical, taps[2].physical)
@@ -102,8 +105,11 @@ class OnsetTest {
         assertTrue(xy / sqrt(xx * yy) > 0.97, "fundamental phase drifted between layers")
     }
 
-    @Test fun `fixed source calibration keeps default endpoints comparably loud`() {
-        for (voice in OnsetVoice.entries) {
+    @Test fun `fixed core source calibration keeps default endpoints comparably loud`() {
+        // This is the original four-voice calibration contract. The extension
+        // raw gains are independently frozen by the published Study009 hashes;
+        // applying this old tolerance would recolor their auditioned balance.
+        for (voice in CORE_VOICES) {
             val electronic = Loudness.of(Onset.render(voice, mapOf("BLEND" to 0f)))
             val physical = Loudness.of(Onset.render(voice, mapOf("BLEND" to 1f)))
             val ratio = electronic / physical
@@ -224,4 +230,8 @@ class OnsetTest {
 
     private fun rms(samples: FloatArray): Float =
         sqrt(samples.sumOf { it.toDouble() * it } / samples.size).toFloat()
+
+    private companion object {
+        val CORE_VOICES = listOf(OnsetVoice.KICK, OnsetVoice.HAT_CLOSED, OnsetVoice.SNARE, OnsetVoice.HAT_OPEN)
+    }
 }

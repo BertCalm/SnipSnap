@@ -128,6 +128,7 @@ import com.snipsnap.shell.CausticPadMaker
 import com.snipsnap.shell.CausticPad
 import com.snipsnap.shell.CausticEditing
 import com.snipsnap.shell.LibrationPadMaker
+import com.snipsnap.shell.LatticePadMaker
 import com.snipsnap.shell.LibrationPad
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.RimePad
@@ -895,7 +896,8 @@ fun SynthScreen(
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
-                        ?: if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
+                        ?: if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seed.seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
@@ -1062,6 +1064,14 @@ fun SynthScreen(
     LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
         // Temporary model-2 controls must not replace a still-unread YOURS recipe.
         if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        if (engine == Engine.ONSET && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            // Freeze a fresh renderer before leaving only a macro bag behind.
+            // A named YOURS recipe must finish loading before it is replaced.
+            loadedPatchesByVoice[engine to voice] = OnsetPatch(
+                engine.patchDisplayName(voice), voice as OnsetVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1082,7 +1092,7 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
-        else if (patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1240,7 +1250,7 @@ fun SynthScreen(
                 ?: engine.buildPatch(name, voice, controls)
         }
         if (engine == Engine.LATTICE) {
-            // A SPEED accessibility edit can share a frame with SAVE or SEND.
+            // A SPEED accessibility edit can share a frame with SAVE, SEND or MAKE.
             // Keep its newest controls together with the authored note and excitation.
             val current = loadedPatchesByVoice[engine to voice] as? LatticePatch
             val controls = macrosByVoice.getValue(engine to voice)
@@ -1716,6 +1726,7 @@ fun SynthScreen(
                     if (mine != null) {
                         val editable = editablePreset(mine)
                         loadedPatchesByVoice[pair] = editable
+                        if (editable is OnsetPatch) macrosByVoice[pair] = Onset.defaults(editable.voice) + editable.macros
                         if (editable is PrismPatch) {
                             macrosByVoice[pair] = Prism.defaults(editable.voice) + editable.macros
                             if (pair == (engine to voice)) prismMotionStudio.selected(editable)
@@ -2284,6 +2295,7 @@ fun SynthScreen(
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
+        (engine == Engine.LATTICE && LatticePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch)) ||
         (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice)))) ||
         (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
             LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
@@ -2320,11 +2332,17 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.LATTICE -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch
+            if (LatticePadMaker.supports(patch))
+                HeldSpec.Lattice(LatticePadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.CAUSTIC -> HeldSpec.Caustic(CausticPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
         Engine.LIBRATION -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch
-            if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(LibrationPadMaker.spec(patch, heldSheet.holdRelease)) else null
+            if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(
+                LibrationPadMaker.spec(patch, heldSheet.holdRelease, heldSheet.holdLibrationTouchLayers)) else null
         }
         Engine.MERIDIAN -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch
@@ -2414,7 +2432,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2453,13 +2471,13 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
                         // and ORIGAMI keeps its oversampled attack and sustain
                         // work to one zone at a time.
-                        // FILAMENT similarly bounds its network history to one root.
+                        // FILAMENT and LATTICE similarly bound their causal histories to one root.
                         // BALLAST simulates a frame, six strings and six tiles at 4x for
                         // each of its thirteen zones. A MERCURY zone is seconds of audio
                         // rendered several times over, a KEEL zone runs up to 15 s at 4x,
@@ -2470,7 +2488,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3811,6 +3829,7 @@ fun SynthScreen(
                     onTouchLayers = {
                         sampleHeldPreview?.silence()
                         if (engine == Engine.FLOCK) heldSheet.holdFlockTouchLayers = it
+                        else if (engine == Engine.LIBRATION) heldSheet.holdLibrationTouchLayers = it
                         else if (engine == Engine.FILAMENT) heldSheet.holdFilamentTouchLayers = it
                         else heldSheet.holdTouchLayers = it
                     },
@@ -4198,6 +4217,7 @@ private class HeldSheetState {
     // FLOCK opens with physical touch enabled without changing CREASE's existing choice.
     var holdFlockTouchLayers by mutableStateOf(true)
     var holdFilamentTouchLayers by mutableStateOf(true)
+    var holdLibrationTouchLayers by mutableStateOf(true)
     var holdFilamentWideKeys by mutableStateOf(true)
     // Completed zones (or touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
@@ -4731,6 +4751,7 @@ private fun contourMacroGroup(name: String): String = when (name) {
  * CREASE keeps its first pressure attack before the repeating moving sustain.
  * CONTOUR begins at its settled tone, omitting the original finite attack.
  * BALLAST keeps its onset and the structure settling before its held loop.
+ * LATTICE TRACE keeps its moving pluck before the collector reaches its held tone.
  */
 internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -4752,15 +4773,33 @@ internal sealed interface HeldSpec {
     fun previewPlayback(cancelled: () -> Boolean): HeldPreviewPlayback = HeldPreviewPlayback(preview(cancelled))
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
+    class Lattice(private val spec: LatticePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = LatticePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${LatticePadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "C3–C5 · KEEPS THE MOVING PLUCK, THEN HOLDS ITS RINGING TONE. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LatticePadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = LatticePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            LatticePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Libration(private val spec: LibrationPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = LibrationPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
-        override val instrumentNote get() = "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
+        override val touchLayers get() = spec.touchLayers
+        override val progressPerZone get() = spec.layerCount
+        override val touchLayersNote get() =
+            "ON: SOFT AND HARD TOUCH CHANGE ATTACK AND TONE. TOUCH SETS THE HARD CAPTURE. TWO SAMPLES PER NOTE; ABOUT 2× THE TIME AND STORAGE."
+        override val instrumentNote get() = if (spec.touchLayers)
+            "PREVIEW PLAYS SOFT, THEN HARD, THROUGH TWO WRAPS AND KEY-UP. EACH TOUCH KEEPS ITS ATTACK AND MOVING SUSTAIN."
+            else "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
         override val knobLabel get() = "RELEASE ${LibrationPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LibrationPadMaker.renderZone(spec, midi, cancelled))
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = LibrationPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = LibrationPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            LibrationPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            LibrationPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
@@ -5551,7 +5590,10 @@ private enum class Engine {
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
         SKIN -> SkinVoice.entries
-        ONSET -> listOf(OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN)
+        ONSET -> listOf(
+            OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
+            OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
+        )
         TINES -> TinesVoice.entries
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
@@ -6167,6 +6209,8 @@ private val OnsetVoice.drumClass: DrumClass
         OnsetVoice.SNARE -> DrumClass.SNARE
         OnsetVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
         OnsetVoice.HAT_OPEN -> DrumClass.HAT_OPEN
+        OnsetVoice.TOM -> DrumClass.TOM
+        OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL -> DrumClass.PERC
     }
 
 private val ThumpVoice.drumClass: DrumClass
@@ -6248,6 +6292,10 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         OnsetVoice.SNARE -> "SNARE"
         OnsetVoice.HAT_CLOSED -> "HAT CL"
         OnsetVoice.HAT_OPEN -> "HAT OP"
+        OnsetVoice.TOM -> "TOM"
+        OnsetVoice.PERC_PLUCK -> "PLUCK"
+        OnsetVoice.PERC_WOOD -> "WOOD"
+        OnsetVoice.PERC_METAL -> "METAL"
     }
     Engine.OBBLIGATO -> "AIR + REED"
     Engine.BALLAST -> (voice as BallastVoice).displayName

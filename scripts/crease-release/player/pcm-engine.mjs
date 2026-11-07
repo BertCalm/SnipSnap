@@ -3,17 +3,29 @@ export const VOICE_GAIN = .12; // Eight overlapping cached voices retain bus hea
 
 export function validateManifest(m) {
   const integer = (v, lo, hi) => Number.isSafeInteger(v) && v >= lo && v <= hi;
-  if (!m || m.format !== 'crease-playable-pcm-v1' || m.rate !== 44100 || m.midi !== 60 ||
+  if (!m || !['crease-playable-pcm-v1', 'crease-shared-pcm-v1'].includes(m.format) || m.rate !== 44100 || m.midi !== 60 ||
       !integer(m.heldFrames, 2, 44100 * 64) || !integer(m.loopStart, 0, m.heldFrames - 2) ||
       !integer(m.loopFrames, 2, m.heldFrames) || m.loopStart + m.loopFrames !== m.heldFrames ||
       !integer(m.rootCycles, 8, m.loopFrames) || !integer(m.leadFrames, 4, 512) ||
       !integer(m.tailFrames, 44100, 60000) || m.releaseSeconds !== 1.2 ||
       !integer(m.releaseFrames, 52900, 53000) || m.crossfadeFrames !== 221 || m.maxVoices !== 8 ||
-      !Array.isArray(m.tailCuts) || !m.tailCuts.length || m.tailCuts[0] !== 0 ||
+      !Array.isArray(m.tailCuts) || !m.tailCuts.length || m.tailCuts.length > 400 || m.tailCuts[0] !== 0 ||
       !m.tailCuts.includes(m.loopStart) || m.tailCuts.some((x, i) => !integer(x, 0, m.heldFrames - 1) || (i && x <= m.tailCuts[i - 1]))) {
     throw new Error('This release cache has an unsupported or incomplete layout.');
   }
-  const frames = m.heldFrames + m.tailCuts.length * m.tailFrames;
+  let frames = m.heldFrames + m.tailCuts.length * m.tailFrames;
+  if (m.format === 'crease-shared-pcm-v1') {
+    const s = m.shared;
+    if (!s || !integer(s.components, 1, 64) || s.pad !== 89 || s.frames !== m.tailFrames + 2 * s.pad ||
+        s.storage !== 'frame-major' || !Array.isArray(s.offsets) || s.offsets.length !== m.tailCuts.length ||
+        s.offsets.some((v) => !integer(v, -85, 85)) || !Array.isArray(s.coefficients) ||
+        s.coefficients.length !== m.tailCuts.length * s.components ||
+        s.coefficients.some((v) => !Number.isFinite(v) || Math.abs(v) > 8 || Math.fround(v) !== v) ||
+        !/^[a-f0-9]{64}$/.test(s.coefficientsSha256)) throw new Error('Invalid shared release basis.');
+    frames = m.heldFrames + s.frames * s.components;
+    const resident = frames * 2 + s.coefficients.length * 4 + s.offsets.length * 8 + 8192;
+    if (resident !== s.residentBytes || resident > 8 * 1024 ** 2) throw new Error('Shared release cache exceeds 8 MiB.');
+  }
   const c = m.container;
   if (frames * 2 > 32 * 1024 ** 2 || !c || c.pcmBytes !== frames * 2 || c.compression !== 'gzip' ||
       c.bytePlanes !== 2 || !integer(c.deltaOrder, 0, 2) || !integer(c.compressedBytes, 1, 12 * 1024 ** 2) ||
@@ -38,6 +50,7 @@ export class ReleaseReader {
     const frames = validateManifest(manifest);
     if (!(pcm instanceof Int16Array) || pcm.length !== frames) throw new Error('Release PCM dimensions differ.');
     this.meta = manifest; this.pcm = pcm; this.voices = []; this.lastPeak = 0;
+    this.coefficients = manifest.format === 'crease-shared-pcm-v1' ? Float32Array.from(manifest.shared.coefficients) : null;
   }
   sample(offset, length, pos, loop = -1) {
     if (loop >= 0 && pos >= length) pos = loop + (pos - loop) % (length - loop);
@@ -52,6 +65,21 @@ export class ReleaseReader {
   }
   held(pos) { return this.sample(0, this.meta.heldFrames, pos, this.meta.loopStart); }
   tail(index, pos) {
+    if (this.coefficients) {
+      const m = this.meta, s = m.shared, rank = s.components;
+      const i = Math.floor(pos), t = pos - i, t2 = t * t, t3 = t2 * t;
+      const a = .5 * (2 * t2 - t3 - t), b = 1 - 2.5 * t2 + 1.5 * t3;
+      const c = .5 * t + 2 * t2 - 1.5 * t3, d = .5 * (t3 - t2);
+      const offset = s.pad + s.offsets[index];
+      const k0 = m.heldFrames + (offset + Math.max(0, Math.min(m.tailFrames - 1, i - 1))) * rank;
+      const k1 = m.heldFrames + (offset + Math.max(0, Math.min(m.tailFrames - 1, i))) * rank;
+      const k2 = m.heldFrames + (offset + Math.max(0, Math.min(m.tailFrames - 1, i + 1))) * rank;
+      const k3 = m.heldFrames + (offset + Math.max(0, Math.min(m.tailFrames - 1, i + 2))) * rank;
+      let sum = 0;
+      for (let j = 0; j < rank; j++) sum += this.coefficients[index * rank + j] *
+        (a * this.pcm[k0 + j] + b * this.pcm[k1 + j] + c * this.pcm[k2 + j] + d * this.pcm[k3 + j]);
+      return sum / 32767;
+    }
     return this.sample(this.meta.heldFrames + index * this.meta.tailFrames, this.meta.tailFrames, pos);
   }
   start(id, mode = 'unfold', velocity = 1) {

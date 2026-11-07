@@ -7,6 +7,9 @@ export async function digest(bytes) {
 
 export async function decodeCache(m, compressed) {
   const frames = validateManifest(m), c = m.container;
+  if (m.format === 'crease-shared-pcm-v1' && await digest(Float32Array.from(m.shared.coefficients).buffer) !== m.shared.coefficientsSha256) {
+    throw new Error('Shared release coefficients failed their integrity check.');
+  }
   if (compressed.byteLength !== c.compressedBytes || await digest(compressed) !== c.compressedSha256) {
     throw new Error('The release download is incomplete or changed. Reload to try again.');
   }

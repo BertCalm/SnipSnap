@@ -13,6 +13,12 @@ for _ in range(m['container']['deltaOrder']): pcm=np.cumsum(pcm,dtype=np.int64)
 pcm=pcm.astype('<i2');assert b.sha(pcm.tobytes())==m['container']['pcmSha256']
 pcm.tofile(r/'native-pcm.i16')
 values=[m[k] for k in ['heldFrames','loopStart','loopFrames','rootCycles','leadFrames','tailFrames','crossfadeFrames','releaseFrames']]
-(r/'native-layout.txt').write_text(' '.join(map(str,values+[len(m['tailCuts'])]+m['tailCuts']))+'\n')
+values += [len(m['tailCuts'])]+m['tailCuts']
+if m['format']=='crease-shared-pcm-v1':
+    s=m['shared']; weights=np.asarray(s['coefficients'],dtype='<f4')
+    b.p.require(b.sha(weights.tobytes())==s['coefficientsSha256'],'coefficient hash')
+    weights.tofile(r/'shared-coefficients.f32')
+    values += [s['components'],s['pad']]+s['offsets']
+(r/'native-layout.txt').write_text(' '.join(map(str,values))+'\n')
 cases=json.loads((r/'reader-fixtures.json').read_text())
 (r/'native-cases.txt').write_text(' '.join(map(str,[len(cases['cuts']),cases['frames']]+cases['cuts']))+'\n')

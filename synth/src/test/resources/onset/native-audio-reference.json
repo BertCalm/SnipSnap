@@ -1,0 +1,1315 @@
+{
+  "format": "ONSET_NATIVE_AUDIO_REFERENCE_V1",
+  "sampleRate": 44100,
+  "channels": 1,
+  "bitDepth": 24,
+  "referenceCommit": "c9807eba50e46df832365b7ba2cf7e7302439def",
+  "portBaseCommit": "83546a61731ab24fbaeb4f76ef91ebb0beaade98",
+  "provenance": {
+    "legacy": "40 references rendered against the pre-port c9807eba compiled classes, with complete original controls. New native code was not used to generate expectations.",
+    "legacyGeneratorSha256": "8ae0cecd2d3f3a724d094f1c0c98934efeed777b3d99db2cc00130d62cce7db2",
+    "legacyOnsetClassSha256": "02d37096dcf049c13db0435cac6209ad4defe5f9e64f07c34cf7f8e855a93add",
+    "study009ManifestSha256": "ca6d864c33fa80c44b505067a2f9a3b69222086b6bc21fd3436401843de1d495",
+    "study009GeneratorSha256": "d560d52226d9bdcd7906d0bbb45ab23c25667dccaadd0f38073d0594c258216c",
+    "productionManifestSha256": "30e406d65352548d3c43fe7e27fee3d2b811ed033cc7d3e2884df6d081165af8",
+    "production": "16 approved raw production files, with native model3 macro snapshots.",
+    "extensions": "21 Study009 raw WAV files, mapped to the four appended native voices. No matched listening gain."
+  },
+  "cases": [
+    {
+      "id": "legacy-model1-KICK-0",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "b6748d7630392526e30e16883139dc3c9144662327a15d0a914bf36b2095df4e",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model1-KICK-25",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.25,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "bfa1df2cc2f5ead5f478672488fcf4d4294dd25af235294a42dae44785dcb22d",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model1-KICK-50",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.5,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "564fd7f5f1aec3981009d9e3a42eb81b52f11d942ced58cf509f44f629b7ccb0",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model1-KICK-75",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.75,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "ad6e4706667c30a37a7caf85e234419e1a9632c18922265271fb3a3fa1c3aceb",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model1-KICK-100",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 1,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "7e30de327c890222a7ba90c0b93c659818644317bfcd4ed92dae4d5d7fbaca89",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model1-HAT_CLOSED-0",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "deefa9011f44835287bc47bc0498458a79945ce083fa32e9be8ec06c591b21ac",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model1-HAT_CLOSED-25",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.25,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1e30976f3f8eb28445b7d880f3c7a4828e9185dc54acde2c023a7876860786e0",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model1-HAT_CLOSED-50",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.5,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "605c3739bc501f231dcee4fd0e614020be0cc32b8fd66e966abdbb4a36111631",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model1-HAT_CLOSED-75",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.75,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "c0ef1e98a1ae1e14f8468a7ade04180a6544900f3d0cddcf0a608bfe85f1b822",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model1-HAT_CLOSED-100",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 1,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "40ccf106b878b429c8b03492a4316b7ece21983316e7f604d40209a6177e000d",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model2-KICK-0",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "b6748d7630392526e30e16883139dc3c9144662327a15d0a914bf36b2095df4e",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model2-KICK-25",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.25,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "32ee8b830da2655ca8cb77abb0d4907941c6db1805a2935f07a3f57f31c8646d",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model2-KICK-50",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.5,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1d8f323cddd6dfc07128981202f61055bfa89a4999b91aa266177ee208d9aff3",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model2-KICK-75",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.75,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "5d9aea5c79c263eafcf8e898e66d6983a73c0787fdb2d7f20f511f42fddaa9bc",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model2-KICK-100",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 1,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "424b8b81f99f280df0e2066827b5c5ba81ced31521c0db3b7a1518d8e54ac2fe",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model2-HAT_CLOSED-0",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "deefa9011f44835287bc47bc0498458a79945ce083fa32e9be8ec06c591b21ac",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model2-HAT_CLOSED-25",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.25,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1e30976f3f8eb28445b7d880f3c7a4828e9185dc54acde2c023a7876860786e0",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model2-HAT_CLOSED-50",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.5,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "605c3739bc501f231dcee4fd0e614020be0cc32b8fd66e966abdbb4a36111631",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model2-HAT_CLOSED-75",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.75,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "c0ef1e98a1ae1e14f8468a7ade04180a6544900f3d0cddcf0a608bfe85f1b822",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model2-HAT_CLOSED-100",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 2,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 1,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "40ccf106b878b429c8b03492a4316b7ece21983316e7f604d40209a6177e000d",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-KICK-0",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "b6748d7630392526e30e16883139dc3c9144662327a15d0a914bf36b2095df4e",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model3-KICK-25",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.25,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "32ee8b830da2655ca8cb77abb0d4907941c6db1805a2935f07a3f57f31c8646d",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model3-KICK-50",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.5,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1d8f323cddd6dfc07128981202f61055bfa89a4999b91aa266177ee208d9aff3",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model3-KICK-75",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 0.75,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "5d9aea5c79c263eafcf8e898e66d6983a73c0787fdb2d7f20f511f42fddaa9bc",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model3-KICK-100",
+      "group": "legacy-core",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3499999940395355,
+        "DECAY": 0.44999998807907104,
+        "BLEND": 1,
+        "SNAP": 0.5,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "424b8b81f99f280df0e2066827b5c5ba81ced31521c0db3b7a1518d8e54ac2fe",
+      "frames": 17879
+    },
+    {
+      "id": "legacy-model3-HAT_CLOSED-0",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "deefa9011f44835287bc47bc0498458a79945ce083fa32e9be8ec06c591b21ac",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-HAT_CLOSED-25",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.25,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1e30976f3f8eb28445b7d880f3c7a4828e9185dc54acde2c023a7876860786e0",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-HAT_CLOSED-50",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.5,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "605c3739bc501f231dcee4fd0e614020be0cc32b8fd66e966abdbb4a36111631",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-HAT_CLOSED-75",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.75,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "c0ef1e98a1ae1e14f8468a7ade04180a6544900f3d0cddcf0a608bfe85f1b822",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-HAT_CLOSED-100",
+      "group": "legacy-core",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 1,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "40ccf106b878b429c8b03492a4316b7ece21983316e7f604d40209a6177e000d",
+      "frames": 3743
+    },
+    {
+      "id": "legacy-model3-SNARE-0",
+      "group": "legacy-core",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.4000000059604645,
+        "DECAY": 0.5,
+        "BLEND": 0,
+        "SNAP": 0.6000000238418579,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "0bdd23de059409054610860b36171ad586f509798a41ad2a4a8632c09bcaf13e",
+      "frames": 13471
+    },
+    {
+      "id": "legacy-model3-SNARE-25",
+      "group": "legacy-core",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.4000000059604645,
+        "DECAY": 0.5,
+        "BLEND": 0.25,
+        "SNAP": 0.6000000238418579,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "a7b9d4008a2fde2d830d650353bffb107f0f2992178e711a3bff3cbfcc9c5e17",
+      "frames": 13471
+    },
+    {
+      "id": "legacy-model3-SNARE-50",
+      "group": "legacy-core",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.4000000059604645,
+        "DECAY": 0.5,
+        "BLEND": 0.5,
+        "SNAP": 0.6000000238418579,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "5add331c32b83265292139b6f0585ba1e3319a70d07ad0b53d054ad5dc755045",
+      "frames": 13471
+    },
+    {
+      "id": "legacy-model3-SNARE-75",
+      "group": "legacy-core",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.4000000059604645,
+        "DECAY": 0.5,
+        "BLEND": 0.75,
+        "SNAP": 0.6000000238418579,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "493b361bd3d3cdf81e56bfb8fb8b38150984b3a0ae1c30ad1ab244f5aab272dc",
+      "frames": 13471
+    },
+    {
+      "id": "legacy-model3-SNARE-100",
+      "group": "legacy-core",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.4000000059604645,
+        "DECAY": 0.5,
+        "BLEND": 1,
+        "SNAP": 0.6000000238418579,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "1a6bfd675d0715c148ecfb46c8bcad7f993e20fc3a0123ef792bfa980bf9c3dc",
+      "frames": 13471
+    },
+    {
+      "id": "legacy-model3-HAT_OPEN-0",
+      "group": "legacy-core",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.550000011920929,
+        "BLEND": 0,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "d1c6ee795dc8370f30a8c74326eedbff288cc0fffb82f3c27679414b173ced89",
+      "frames": 33085
+    },
+    {
+      "id": "legacy-model3-HAT_OPEN-25",
+      "group": "legacy-core",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.550000011920929,
+        "BLEND": 0.25,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "447f144da83638b7e825c30303bc0471347f88be2eeaab50f33fd654fe297b05",
+      "frames": 33085
+    },
+    {
+      "id": "legacy-model3-HAT_OPEN-50",
+      "group": "legacy-core",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.550000011920929,
+        "BLEND": 0.5,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "704ef73a00762fea91e6d286ff767968deb756db85fb6b28745c07853de7b96e",
+      "frames": 33085
+    },
+    {
+      "id": "legacy-model3-HAT_OPEN-75",
+      "group": "legacy-core",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.550000011920929,
+        "BLEND": 0.75,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "71e805152b722245fc47922016e7e672f3dc7f5ed65616b3d200264540170a6a",
+      "frames": 33085
+    },
+    {
+      "id": "legacy-model3-HAT_OPEN-100",
+      "group": "legacy-core",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5,
+        "DECAY": 0.550000011920929,
+        "BLEND": 1,
+        "SNAP": 0.3499999940395355,
+        "BODY": 0.44999998807907104,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "d43602cb380745107ffc9f91ac88d35c7a34e102217a6d912388600d92b29a9b",
+      "frames": 33085
+    },
+    {
+      "id": "production-r5-low-fold",
+      "group": "accepted-production",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.18000000715255737,
+        "DECAY": 0.6399999856948853,
+        "BLEND": 0.2800000011920929,
+        "SNAP": 0.25,
+        "BODY": 0.800000011920929,
+        "EDGE": 0.25
+      },
+      "rawWavSha256": "30c385241521868034ba21ce22dc6fb45f8e8c56b72e14fb4b6c5d9cf6784c62",
+      "frames": 25935
+    },
+    {
+      "id": "production-r5-dry-stitch",
+      "group": "accepted-production",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.30000001192092896,
+        "DECAY": 0.2199999988079071,
+        "BLEND": 0.2199999988079071,
+        "SNAP": 0.5600000023841858,
+        "BODY": 0.550000011920929,
+        "EDGE": 0.4000000059604645
+      },
+      "rawWavSha256": "835fbfd66094c82b9c285f18285fb2614b850909726adc1cf23ddc1e68fd4e75",
+      "frames": 9443
+    },
+    {
+      "id": "production-r5-fine-tick",
+      "group": "accepted-production",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.6299999952316284,
+        "DECAY": 0.18000000715255737,
+        "BLEND": 0.4399999976158142,
+        "SNAP": 0.25,
+        "BODY": 0.30000001192092896,
+        "EDGE": 0.6200000047683716
+      },
+      "rawWavSha256": "e530b17c08086e870978e416bd47fd57eb79db6f6c7bd37c3cfcd4dd35a83609",
+      "frames": 3169
+    },
+    {
+      "id": "production-r5-loose-air",
+      "group": "accepted-production",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.47999998927116394,
+        "DECAY": 0.550000011920929,
+        "BLEND": 0.7200000286102295,
+        "SNAP": 0.23999999463558197,
+        "BODY": 0.6200000047683716,
+        "EDGE": 0.4399999976158142
+      },
+      "rawWavSha256": "e19c64fb78c9d16fe4b21bc5c33b56aac055a5cd544ab0539f49dcc8232ffd3c",
+      "frames": 33085
+    },
+    {
+      "id": "production-r5-hard-knock",
+      "group": "accepted-production",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.7200000286102295,
+        "DECAY": 0.28999999165534973,
+        "BLEND": 0.8199999928474426,
+        "SNAP": 0.7599999904632568,
+        "BODY": 0.3799999952316284,
+        "EDGE": 0.8199999928474426
+      },
+      "rawWavSha256": "4cdf3e25fb974dc58c063f8438ab3bf4880a232bbe91574376db265481c1c901",
+      "frames": 13071
+    },
+    {
+      "id": "production-r5-glass-stitch",
+      "group": "accepted-production",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.6499999761581421,
+        "DECAY": 0.6600000262260437,
+        "BLEND": 0.7799999713897705,
+        "SNAP": 0.41999998688697815,
+        "BODY": 0.7599999904632568,
+        "EDGE": 0.7200000286102295
+      },
+      "rawWavSha256": "56645d4733b0201b50922cf1d18c6bdca7cea0af0e5fac112816f58725bda5e7",
+      "frames": 16502
+    },
+    {
+      "id": "production-r5-pin-tick",
+      "group": "accepted-production",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.6600000262260437,
+        "DECAY": 0.03999999910593033,
+        "BLEND": 0.5600000023841858,
+        "SNAP": 0.20000000298023224,
+        "BODY": 0.27000001072883606,
+        "EDGE": 0.6499999761581421
+      },
+      "rawWavSha256": "166067829319d4990812ee251b516bfb3bbc141d79d1666e9840b91c4172344a",
+      "frames": 2610
+    },
+    {
+      "id": "production-r5-cut-air",
+      "group": "accepted-production",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.5199999809265137,
+        "DECAY": 0.2800000011920929,
+        "BLEND": 0.6800000071525574,
+        "SNAP": 0.2800000011920929,
+        "BODY": 0.5400000214576721,
+        "EDGE": 0.5
+      },
+      "rawWavSha256": "6c94d2b62d1a077129cc7c669ce1d98368caafa4e5567ffcf2e222be2adb373d",
+      "frames": 22755
+    },
+    {
+      "id": "production-r5-deep-fold",
+      "group": "accepted-production",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.05999999865889549,
+        "DECAY": 0.4300000071525574,
+        "BLEND": 0.14000000059604645,
+        "SNAP": 0.20000000298023224,
+        "BODY": 0.8600000143051147,
+        "EDGE": 0.20000000298023224
+      },
+      "rawWavSha256": "4e73349a26acbbd8c60676c0ffbe2901b17a48a859ec6a55b7a651cee34bea59",
+      "frames": 17192
+    },
+    {
+      "id": "production-r5-light-stitch",
+      "group": "accepted-production",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.3400000035762787,
+        "DECAY": 0.2800000011920929,
+        "BLEND": 0.3799999952316284,
+        "SNAP": 0.30000001192092896,
+        "BODY": 0.699999988079071,
+        "EDGE": 0.3199999928474426
+      },
+      "rawWavSha256": "817224138ea008c0688570f02781c6e50bdad2a2d04ba219d0298935237e4a9d",
+      "frames": 10190
+    },
+    {
+      "id": "production-r5-dark-tick",
+      "group": "accepted-production",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.30000001192092896,
+        "DECAY": 0.3499999940395355,
+        "BLEND": 0.7799999713897705,
+        "SNAP": 0.18000000715255737,
+        "BODY": 0.699999988079071,
+        "EDGE": 0.20000000298023224
+      },
+      "rawWavSha256": "8f39fb61b2b617e24afa749c2c045e301508c2c427143818d07d7b18b2b1a3f7",
+      "frames": 4011
+    },
+    {
+      "id": "production-r5-dark-air",
+      "group": "accepted-production",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.25,
+        "DECAY": 0.6800000071525574,
+        "BLEND": 0.8600000143051147,
+        "SNAP": 0.18000000715255737,
+        "BODY": 0.7400000095367432,
+        "EDGE": 0.2199999988079071
+      },
+      "rawWavSha256": "becbed6bb0adad417d47cad7664c73bf9db7fc02ee34cf41df4b5d67b8fd432c",
+      "frames": 39619
+    },
+    {
+      "id": "production-r5-firm-knock",
+      "group": "accepted-production",
+      "voice": "KICK",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.46000000834465027,
+        "DECAY": 0.4300000071525574,
+        "BLEND": 0.5799999833106995,
+        "SNAP": 0.6200000047683716,
+        "BODY": 0.6000000238418579,
+        "EDGE": 0.5799999833106995
+      },
+      "rawWavSha256": "d17d4c6df493eb213b20d8b892c6436804cd6b3933a078856fc5a4500072862d",
+      "frames": 17192
+    },
+    {
+      "id": "production-r5-bright-stitch",
+      "group": "accepted-production",
+      "voice": "SNARE",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.8199999928474426,
+        "DECAY": 0.4000000059604645,
+        "BLEND": 0.6200000047683716,
+        "SNAP": 0.6700000166893005,
+        "BODY": 0.5400000214576721,
+        "EDGE": 0.8600000143051147
+      },
+      "rawWavSha256": "c3ee072ed38b882e3f16aa585e25d515da8bc8c907a584cad79b5a1e31af1a3d",
+      "frames": 11866
+    },
+    {
+      "id": "production-r5-sharp-tick",
+      "group": "accepted-production",
+      "voice": "HAT_CLOSED",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.8199999928474426,
+        "DECAY": 0.30000001192092896,
+        "BLEND": 0.15000000596046448,
+        "SNAP": 0.5,
+        "BODY": 0.36000001430511475,
+        "EDGE": 0.8999999761581421
+      },
+      "rawWavSha256": "2e06462a27744ed3b33a091847521d4e520163be907def9552a95fea103a09dc",
+      "frames": 3743
+    },
+    {
+      "id": "production-r5-bright-air",
+      "group": "accepted-production",
+      "voice": "HAT_OPEN",
+      "modelVersion": 3,
+      "macros": {
+        "TUNE": 0.7799999713897705,
+        "DECAY": 0.6399999856948853,
+        "BLEND": 0.30000001192092896,
+        "SNAP": 0.4000000059604645,
+        "BODY": 0.4000000059604645,
+        "EDGE": 0.800000011920929
+      },
+      "rawWavSha256": "671e762d0c5b171af84a0bb573a9b5817debb117604b930eb6bd0726f05d55aa",
+      "frames": 37482
+    },
+    {
+      "id": "extension-r9-floor-tom-000",
+      "group": "study-009-extension",
+      "setupId": "floor-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.157575786113739,
+        "DECAY": 0.5600000023841858,
+        "BLEND": 0,
+        "SNAP": 0.3799999952316284,
+        "BODY": 0.6200000047683716,
+        "EDGE": 0.36000001430511475
+      },
+      "rawWavSha256": "40ba860a6523a446cd6e74a578189fce916d83414699651e3ebdb802119dab16",
+      "frames": 25140
+    },
+    {
+      "id": "extension-r9-floor-tom-050",
+      "group": "study-009-extension",
+      "setupId": "floor-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.157575786113739,
+        "DECAY": 0.5600000023841858,
+        "BLEND": 0.5,
+        "SNAP": 0.3799999952316284,
+        "BODY": 0.6200000047683716,
+        "EDGE": 0.36000001430511475
+      },
+      "rawWavSha256": "7b670ae3f9495a3a99f4e28e208b18e63b346fbba2e38119a22c353dd6016fcf",
+      "frames": 25140
+    },
+    {
+      "id": "extension-r9-floor-tom-100",
+      "group": "study-009-extension",
+      "setupId": "floor-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.157575786113739,
+        "DECAY": 0.5600000023841858,
+        "BLEND": 1,
+        "SNAP": 0.3799999952316284,
+        "BODY": 0.6200000047683716,
+        "EDGE": 0.36000001430511475
+      },
+      "rawWavSha256": "e362f5191adf71ec106ff1d19d8b726e4c5feb2f0450322b0859a6c6c6dac922",
+      "frames": 25140
+    },
+    {
+      "id": "extension-r9-mid-tom-000",
+      "group": "study-009-extension",
+      "setupId": "mid-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.4705770015716553,
+        "DECAY": 0.46000000834465027,
+        "BLEND": 0,
+        "SNAP": 0.4399999976158142,
+        "BODY": 0.5799999833106995,
+        "EDGE": 0.4399999976158142
+      },
+      "rawWavSha256": "c2a795927fbc91bf7bb7a224feb31279789d2e882b8a0091969d8bb507a38c0a",
+      "frames": 21542
+    },
+    {
+      "id": "extension-r9-mid-tom-050",
+      "group": "study-009-extension",
+      "setupId": "mid-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.4705770015716553,
+        "DECAY": 0.46000000834465027,
+        "BLEND": 0.5,
+        "SNAP": 0.4399999976158142,
+        "BODY": 0.5799999833106995,
+        "EDGE": 0.4399999976158142
+      },
+      "rawWavSha256": "c27a2c99b9f8e714490e810171e40b7d0210b95dd6e19015ba1fc51bb658e861",
+      "frames": 21542
+    },
+    {
+      "id": "extension-r9-mid-tom-100",
+      "group": "study-009-extension",
+      "setupId": "mid-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.4705770015716553,
+        "DECAY": 0.46000000834465027,
+        "BLEND": 1,
+        "SNAP": 0.4399999976158142,
+        "BODY": 0.5799999833106995,
+        "EDGE": 0.4399999976158142
+      },
+      "rawWavSha256": "96e1e5fa8bf55f1ac13083e77ba5c6decf96883fb3161ff171de599c5a487946",
+      "frames": 21542
+    },
+    {
+      "id": "extension-r9-high-tom-000",
+      "group": "study-009-extension",
+      "setupId": "high-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7887558937072754,
+        "DECAY": 0.36000001430511475,
+        "BLEND": 0,
+        "SNAP": 0.5,
+        "BODY": 0.5,
+        "EDGE": 0.5199999809265137
+      },
+      "rawWavSha256": "da39992f150d6ad0af1b7e19cbf73f2f2189aef1afa33f9b63e474be4727fa35",
+      "frames": 18458
+    },
+    {
+      "id": "extension-r9-high-tom-050",
+      "group": "study-009-extension",
+      "setupId": "high-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7887558937072754,
+        "DECAY": 0.36000001430511475,
+        "BLEND": 0.5,
+        "SNAP": 0.5,
+        "BODY": 0.5,
+        "EDGE": 0.5199999809265137
+      },
+      "rawWavSha256": "ace7e63f105e42f5d144f749b423c74df77e9824ac7dea7e2ad5dd03fb93de63",
+      "frames": 18458
+    },
+    {
+      "id": "extension-r9-high-tom-100",
+      "group": "study-009-extension",
+      "setupId": "high-tom",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "TOM",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7887558937072754,
+        "DECAY": 0.36000001430511475,
+        "BLEND": 1,
+        "SNAP": 0.5,
+        "BODY": 0.5,
+        "EDGE": 0.5199999809265137
+      },
+      "rawWavSha256": "a435ca75c8bee1f64e1617317ff2e060d651e60617717958943082ab4b18db00",
+      "frames": 18458
+    },
+    {
+      "id": "extension-r9-dry-pluck-000",
+      "group": "study-009-extension",
+      "setupId": "dry-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.31739380955696106,
+        "DECAY": 0.2800000011920929,
+        "BLEND": 0,
+        "SNAP": 0.3199999928474426,
+        "BODY": 0.23999999463558197,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "8af47a0b64c3b573bf22dada1d796e6e349ed9cb7c12dc2db7cb7103e8a22030",
+      "frames": 9514
+    },
+    {
+      "id": "extension-r9-dry-pluck-050",
+      "group": "study-009-extension",
+      "setupId": "dry-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.31739380955696106,
+        "DECAY": 0.2800000011920929,
+        "BLEND": 0.5,
+        "SNAP": 0.3199999928474426,
+        "BODY": 0.23999999463558197,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "266b5644f99d87f64c3cd9108fc06df5f829b2afd179afbb0f1258762e7af5e9",
+      "frames": 9514
+    },
+    {
+      "id": "extension-r9-dry-pluck-100",
+      "group": "study-009-extension",
+      "setupId": "dry-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.31739380955696106,
+        "DECAY": 0.2800000011920929,
+        "BLEND": 1,
+        "SNAP": 0.3199999928474426,
+        "BODY": 0.23999999463558197,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "81a1fbf9d0d72f5e5b81f9ea6e8eb1be66cf4d9263460aa6860390c1934b1132",
+      "frames": 9514
+    },
+    {
+      "id": "extension-r9-wire-pluck-000",
+      "group": "study-009-extension",
+      "setupId": "wire-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.8072898983955383,
+        "DECAY": 0.6200000047683716,
+        "BLEND": 0,
+        "SNAP": 0.5400000214576721,
+        "BODY": 0.7200000286102295,
+        "EDGE": 0.7599999904632568
+      },
+      "rawWavSha256": "70ed6be6eaa2173e5294c167ac024539323289723bf3aa48eb42e25013d16945",
+      "frames": 19396
+    },
+    {
+      "id": "extension-r9-wire-pluck-050",
+      "group": "study-009-extension",
+      "setupId": "wire-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.8072898983955383,
+        "DECAY": 0.6200000047683716,
+        "BLEND": 0.5,
+        "SNAP": 0.5400000214576721,
+        "BODY": 0.7200000286102295,
+        "EDGE": 0.7599999904632568
+      },
+      "rawWavSha256": "d14cbe05f3ecce70d157ac691acee52b5d4444ecb0e6ec706feab4e519ca248e",
+      "frames": 19396
+    },
+    {
+      "id": "extension-r9-wire-pluck-100",
+      "group": "study-009-extension",
+      "setupId": "wire-pluck",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_PLUCK",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.8072898983955383,
+        "DECAY": 0.6200000047683716,
+        "BLEND": 1,
+        "SNAP": 0.5400000214576721,
+        "BODY": 0.7200000286102295,
+        "EDGE": 0.7599999904632568
+      },
+      "rawWavSha256": "09e71568b052e60af48c5bfc99c80a1a3925a93583f850e273dac681f46d436d",
+      "frames": 19396
+    },
+    {
+      "id": "extension-r9-wood-knock-000",
+      "group": "study-009-extension",
+      "setupId": "wood-knock",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_WOOD",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.21166135370731354,
+        "DECAY": 0.18000000715255737,
+        "BLEND": 0,
+        "SNAP": 0.4000000059604645,
+        "BODY": 0.18000000715255737,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "f9d5937869dd92872e4beecc6f765ab7ffb2543a259b89617887756a2c0c56de",
+      "frames": 9723
+    },
+    {
+      "id": "extension-r9-wood-knock-050",
+      "group": "study-009-extension",
+      "setupId": "wood-knock",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_WOOD",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.21166135370731354,
+        "DECAY": 0.18000000715255737,
+        "BLEND": 0.5,
+        "SNAP": 0.4000000059604645,
+        "BODY": 0.18000000715255737,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "4cbe59677c6c01d7b6def26569f80a6c92d344d94cd9737abf851342c1e909e8",
+      "frames": 9723
+    },
+    {
+      "id": "extension-r9-wood-knock-100",
+      "group": "study-009-extension",
+      "setupId": "wood-knock",
+      "sourceRevision": 3,
+      "blendRevision": 4,
+      "voice": "PERC_WOOD",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.21166135370731354,
+        "DECAY": 0.18000000715255737,
+        "BLEND": 1,
+        "SNAP": 0.4000000059604645,
+        "BODY": 0.18000000715255737,
+        "EDGE": 0.3400000035762787
+      },
+      "rawWavSha256": "f4576fe47761786c9510887497285a2a882a0f81ec2b1f06f7aa88873c662472",
+      "frames": 9723
+    },
+    {
+      "id": "extension-r9-metal-ring-000",
+      "group": "study-009-extension",
+      "setupId": "metal-ring",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "PERC_METAL",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7625662684440613,
+        "DECAY": 0.7200000286102295,
+        "BLEND": 0,
+        "SNAP": 0.47999998927116394,
+        "BODY": 0.8600000143051147,
+        "EDGE": 0.7400000095367432
+      },
+      "rawWavSha256": "0079496f71799074d683fcd6c95e56adc0875a30575fada3bb584d83f4f7f35e",
+      "frames": 30882
+    },
+    {
+      "id": "extension-r9-metal-ring-050",
+      "group": "study-009-extension",
+      "setupId": "metal-ring",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "PERC_METAL",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7625662684440613,
+        "DECAY": 0.7200000286102295,
+        "BLEND": 0.5,
+        "SNAP": 0.47999998927116394,
+        "BODY": 0.8600000143051147,
+        "EDGE": 0.7400000095367432
+      },
+      "rawWavSha256": "f0bed732603bfa01b84042bba151f6bc53394f189b2102055a5f9820770a28a1",
+      "frames": 30882
+    },
+    {
+      "id": "extension-r9-metal-ring-100",
+      "group": "study-009-extension",
+      "setupId": "metal-ring",
+      "sourceRevision": 2,
+      "blendRevision": 3,
+      "voice": "PERC_METAL",
+      "modelVersion": 4,
+      "macros": {
+        "TUNE": 0.7625662684440613,
+        "DECAY": 0.7200000286102295,
+        "BLEND": 1,
+        "SNAP": 0.47999998927116394,
+        "BODY": 0.8600000143051147,
+        "EDGE": 0.7400000095367432
+      },
+      "rawWavSha256": "aa436b072a5db3bb1e1e7a1f98d1bc51467b4cbf2164c62c1ccc33c995d5cbca",
+      "frames": 30882
+    }
+  ]
+}

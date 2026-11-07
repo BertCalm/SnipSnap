@@ -720,6 +720,9 @@ and revisited audio; fresh rendering remains an offline operation. NOTE retains
 the finite sound. Explicit HOLD repeats a phase-fitted orbit, and MAKE INSTRUMENT
 keeps its attack before a verified sustain loop, with key-up amplitude release.
 Held recipes use a separate version; existing finite recipes retain their sound.
+Optional [two-touch delivery](docs/LIBRATION_TOUCH.md) gives each held root soft
+and hard excitation captures selected by playing velocity. Single-layer recipes
+remain available; the three-voice roster is unchanged.
 The
 [published audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site)
 retains the musical bank and MPC download.
