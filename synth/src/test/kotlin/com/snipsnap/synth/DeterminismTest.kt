@@ -643,6 +643,9 @@ class DeterminismTest {
         for (voice in TerraVoice.entries) {
             val loud = when (voice) {
                 TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR, TerraVoice.BOX -> mapOf("BUZZ" to 1f)
+                TerraVoice.SLAP -> mapOf("SMACK" to 1f)
+                TerraVoice.DAYAN -> mapOf("CLICK" to 1f)
+                TerraVoice.DARBUKA -> mapOf("SNAP" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }

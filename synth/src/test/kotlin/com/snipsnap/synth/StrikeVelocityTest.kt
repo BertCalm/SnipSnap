@@ -167,17 +167,19 @@ class StrikeVelocityTest {
      * tilted, read off [Terra.Body] through the input hook. BOX is the
      * exception, by design: its contact law is the slap's own pulse width
      * (TerraBox.render), so its modes reach the bank untilted at every hit.
+     * So are the hand drums (SLAP, DAYAN, DARBUKA; TerraHands), for the
+     * same reason.
      */
     @Test
     fun `TERRA's bank sees the bend by v squared and the tilted modes`() {
         for (voice in TerraVoice.entries) {
-            if (voice == TerraVoice.BOX) {
+            if (voice == TerraVoice.BOX || voice in Terra.HAND_DRUMS) {
                 fun gainsAt(v: Float): List<Float> {
                     var seen: Terra.Body? = null
                     Terra.renderAt(voice, Terra.defaults(voice), v) { body -> seen = body; null }
                     return assertNotNull(seen).modes.map { it.gain }
                 }
-                assertEquals(gainsAt(1f), gainsAt(.5f), "BOX's modes are not tilted by velocity")
+                assertEquals(gainsAt(1f), gainsAt(.5f), "$voice's modes are not tilted by velocity")
                 continue
             }
             val macros = Terra.defaults(voice) + ("DROOP" to .8f).takeIf { "DROOP" in Terra.defaults(voice) }.let { listOfNotNull(it).toMap() }
