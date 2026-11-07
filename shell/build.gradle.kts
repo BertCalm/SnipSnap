@@ -422,3 +422,13 @@ tasks.register<JavaExec>("splitInstrumentPack") {
     workingDir = projectDir
     args("${rootDir}/testkit/loop-instruments-pack", "--split")
 }
+
+tasks.register<JavaExec>("generateTrefoilHeldMpc") {
+    group = "distribution"
+    description = "Export the native three-root Trefoil HOLD sampler trial and render its note-off demonstration."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TrefoilHeldMpcGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
+}

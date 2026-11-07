@@ -110,8 +110,12 @@ a sixteen-pad MPC starter and two exported-sample musical studies extend that
 baseline without changing its DSP. Preset, phone-adapter, starter and complete
 saved-recipe registration are implemented. `generateTrefoilPlayableBank` rebuilds
 the kit, MPC 3/MPC 2 programs, browser bank and replay artifacts. The original and
-revised physics/causal auditions remain available. HOLD, PAIR, on-device performance
-and physical MPC acceptance remain later work. Owner feedback on the playable
+revised physics/causal auditions remain available. The owner accepted the finite
+hardware pass on 2026-11-01. [Ordered Kotlin held playback](TREFOIL_HELD.md) now
+has separate saved state, an independent Python check, bounded capture cache,
+phone controls and a three-root MPC trial. NUDGE remains zero in this mode.
+Cold host captures take about .6 seconds after warmup; phone timing and held MPC
+listening remain pending. PAIR remains later work. Owner feedback on the playable
 bank was positive on 2026-10-26.
 See [TREFOIL.md](TREFOIL.md) for the model and reproduction.
 

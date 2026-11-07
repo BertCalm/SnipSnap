@@ -1,4 +1,4 @@
-# TREFOIL — finite three-body resonator study
+# TREFOIL — three-body resonator studies
 
 The first listening prototype adapts the supplied Trefoil engineering spec v1.0
 (18 October 2026) to SnipSnap's offline path. Equal-mass Newtonian motion drives
@@ -9,8 +9,9 @@ there is no fourth anchor. Output is dry mono, 4x internal / 44.1 kHz delivery.
 
 Finite bank and hardware listening were accepted by the owner on 2026-11-01.
 Instrumented on-device performance and a validated PAIR departure family remain
-later work. A separate [Python HOLD proof](../experiments/trefoil-hold/README.md)
-is ready for listening; production HOLD remains refused. Model-two presets and phone registration are
+later work. The owner accepted the revised [Python HOLD proof](../experiments/trefoil-hold/README.md)
+and authorized its Kotlin port on 2026-11-07. [Ordered held playback](TREFOIL_HELD.md)
+is implemented separately; finite HOLD remains zero. Model-two presets and phone registration are
 implemented in the playable-bank round below. COMPLETE means only that a finite simulation
 horizon was reached. No trajectory is claimed to escape forever.
 

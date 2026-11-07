@@ -3105,3 +3105,13 @@ tasks.register<JavaExec>("generateChitinBank") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
 }
+
+tasks.register<JavaExec>("generateTrefoilHeldAudition") {
+    group = "distribution"
+    description = "Render native Trefoil HOLD, independent Python bridge fixtures and labelled host benchmarks."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilHeldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("trefoilHeldOutput").orNull ?: "${rootDir}/testkit/trefoil-held-native")
+}

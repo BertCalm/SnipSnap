@@ -283,6 +283,9 @@ import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.Trefoil
 import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrefoilVoice
+import com.snipsnap.synth.TrefoilHeld
+import com.snipsnap.synth.TrefoilPlayback
+import com.snipsnap.shell.TrefoilPadMaker
 import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
@@ -689,6 +692,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
     is OrphicaPatch -> Orphica.macrosFrom(editable.config)
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+    is TrefoilPatch -> if (editable.playback == TrefoilPlayback.HELD) TrefoilHeld.defaults(editable.voice) else Trefoil.defaults(editable.voice)
     is OverlapPatch -> if (editable.playback == OverlapPlayback.HELD) OverlapHeld.defaults(editable.topology)
         else Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
@@ -1521,6 +1525,15 @@ fun SynthScreen(
         loadedPatchesByVoice[engine to voice] = updated
         macrosByVoice[engine to voice] = editableDefaults(Overlap.defaults(updated.topology, updated.model), updated) + updated.macros
     }
+    fun updateTrefoilPatch(change: (TrefoilPatch) -> TrefoilPatch) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrefoilPatch ?: return
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        macrosByVoice[engine to voice] = editableDefaults(Trefoil.defaults(updated.voice), updated) + updated.macros
+        SynthDrafts.write(settings, currentDrafts())
+    }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
         currentPresetByVoice.remove(engine to voice)
@@ -1803,7 +1816,9 @@ fun SynthScreen(
 
     var snip by remember { mutableStateOf<Snip?>(null) }
     var rendering by remember { mutableStateOf(false) }
-    val sampleHeldPreview = if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
+    val sampleHeldPreview = if (engine == Engine.TREFOIL) rememberTrefoilHeldPreview(
+        buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch,
+    ) { onToast(Copy.RENDER_FAILED) } else if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
         buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
     ) { onToast(Copy.RENDER_FAILED) } else rememberFlockHeldPreview(
         if (engine == Engine.FLOCK) buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch else null,
@@ -2076,6 +2091,7 @@ fun SynthScreen(
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
+                                patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD -> TrefoilPadMaker.ONE_SHOT_FADE_MS
                                 patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> OverlapPadMaker.ONE_SHOT_FADE_MS
                                 patch is OhmPatch && Ohm.isHeld(patch) -> 20f
                                 patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
@@ -2240,6 +2256,7 @@ fun SynthScreen(
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
+        (engine == Engine.TREFOIL && TrefoilPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
@@ -2327,6 +2344,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
             if (OverlapPadMaker.supports(patch)) HeldSpec.Overlap(OverlapPadMaker.Spec(patch)) else null
         }
+        Engine.TREFOIL -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
+            if (TrefoilPadMaker.supports(patch)) HeldSpec.Trefoil(TrefoilPadMaker.Spec(patch)) else null
+        }
         Engine.FLOCK -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
             if (FlockPadMaker.supports(patch))
@@ -2373,7 +2394,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2412,7 +2433,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2429,7 +2450,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2662,6 +2683,8 @@ fun SynthScreen(
                         is TidalPatch -> Tidal.render(patch.voice, patch.macros, patch.midi, patch.velocity,
                             patch.seed, patch.model, cancelled)
                         is OpenSkyPatch -> patch.render(cancelled)
+                        is TrefoilPatch -> if (patch.playback == TrefoilPlayback.HELD)
+                            TrefoilPadMaker.deliveryRecipe(patch).render() else patch.render()
                         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD)
                             OverlapPadMaker.deliveryRecipe(patch).render() else patch.render()
                         else -> patch.render()
@@ -2701,6 +2724,8 @@ fun SynthScreen(
             drumClass = spreadState.drumClass,
             colorHex = AutoPlace.colorFor(spreadState.drumClass),
             recipe = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).recipe
+                else if (patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD)
+                TrefoilPadMaker.deliveryRecipe(patch)
                 else if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
                 OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
             source = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).source else emptyMap()) + (Spread.FROM_KEY to "SYNTH"),
@@ -3036,11 +3061,13 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
+                    else if (loadedPatch is TrefoilPatch && loadedPatch.playback == TrefoilPlayback.HELD)
+                        TrefoilHeld.macrosFor(loadedPatch.voice).filter { it.name != "WEAVE" }
                     else if (loadedPatch is OverlapPatch && loadedPatch.playback == OverlapPlayback.HELD)
                         OverlapHeld.macrosFor(loadedPatch.topology)
                     else if (loadedPatch is OverlapPatch) Overlap.macrosFor(loadedPatch.topology, loadedPatch.model)
@@ -3077,6 +3104,11 @@ fun SynthScreen(
                                 Libration.scramble(voice as LibrationVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice))) +
                                     ("HOLD" to (macros["HOLD"] ?: 0f))
+                            engine == Engine.TREFOIL &&
+                                (loadedPatchesByVoice[engine to voice] as? TrefoilPatch)?.playback == TrefoilPlayback.HELD ->
+                                TrefoilHeld.defaults(voice as TrefoilVoice) +
+                                    TrefoilHeld.macrosFor(voice as TrefoilVoice).associate { spec -> spec.name to
+                                        if (spec.name == "WEAVE") TrefoilHeld.MIN_MOVING_WEAVE + random.nextFloat() * (1f - TrefoilHeld.MIN_MOVING_WEAVE) else random.nextFloat() }
                             engine == Engine.OVERLAP &&
                                 (loadedPatchesByVoice[engine to voice] as? OverlapPatch)?.playback == OverlapPlayback.HELD ->
                                 OverlapHeld.defaults(voice as OverlapTopology) +
@@ -3451,23 +3483,8 @@ fun SynthScreen(
                 }
 
                 if (engine == Engine.TREFOIL) {
-                    val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
-                    MacroSlider(
-                        label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
-                    MacroSlider(
-                        label = "CONTACT", value = (patch.activeSeconds - .05f) / (patch.seconds - .15f),
-                        fillColor = classColor, scheme = scheme, readout = "%.2fs".format(Locale.ROOT, patch.activeSeconds),
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            val current = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
-                            loadedPatchesByVoice[engine to voice] = current.copy(activeSeconds = (.05f + value * (current.seconds - .15f)).coerceIn(.05f, current.seconds - .1f))
-                        },
-                    )
+                    TrefoilPerformanceControls(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch,
+                        settings, classColor, scheme, ::updateTrefoilPatch)
                 }
 
                 if (engine == Engine.OBBLIGATO) {
@@ -3757,6 +3774,9 @@ fun SynthScreen(
                         if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.TREFOIL) updateTrefoilPatch {
+                            it.copy(releaseSeconds = TrefoilPadMaker.RELEASE.value(fraction)
+                                .coerceIn(TrefoilPadMaker.RELEASE.lo, TrefoilPadMaker.RELEASE.hi))
                         } else if (engine == Engine.OVERLAP) updateOverlapPatch {
                             it.copy(releaseSeconds = OverlapPadMaker.RELEASE.value(fraction)
                                 .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi))
@@ -4954,6 +4974,18 @@ internal sealed interface HeldSpec {
             OverlapPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Trefoil(private val spec: TrefoilPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = TrefoilPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val releaseFraction get() = TrefoilPadMaker.RELEASE.fraction(spec.releaseSeconds)
+        override val knobLabel get() = "RELEASE ${TrefoilPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "ORDERED ENERGY EXCHANGE WHILE HELD. LIFT A KEY TO RELEASE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TrefoilPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = TrefoilPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            TrefoilPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Ohm(private val spec: OhmPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OhmPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -5922,7 +5954,7 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         TRIO -> DrumClass.TONAL
-        TREFOIL -> DrumClass.TONAL
+        TREFOIL -> if ((macros["HOLD"] ?: 0f) == 1f) DrumClass.LOOP else DrumClass.TONAL
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
