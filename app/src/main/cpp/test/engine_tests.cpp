@@ -3308,4 +3308,28 @@ TEST(pads_aquarium_bank_swap_never_carries_the_previous_banks_room_into_new_note
     CHECK(peak(std::vector<float>(replacement.begin() + 2 * 2000, replacement.end())) <= peak(aquariumIdle(s, 5000)) + 1e-30f);
 }
 
+TEST(pad_engine_synchronized_components_release_independently) {
+    PadEngine e(kRate);
+    e.beginBank();
+    e.addSample(std::vector<float>(1024, 0.1f), 1, kRate);
+    e.commitBank();
+    callback(e, 8);
+    PadCommand pair[] = {looping(901, 0, 1024, 16), looping(902, 0, 1024, 16)};
+    CHECK(e.pushCommands(pair, 2));
+    const auto held = callback(e, 2048); // both components wrap before key-up
+    CHECK_NEAR(held.front(), 0.2f, 1e-6);
+    CHECK_NEAR(held.back(), 0.2f, 1e-6);
+    CHECK(e.pushCommand(stop(901, 10.0f)));
+    CHECK(e.pushCommand(stop(902, 100.0f)));
+    const auto tail = callback(e, kRate / 20);
+    CHECK_NEAR(tail.back(), 0.05f, 5e-4);
+    const auto firstEnded = ended(e);
+    CHECK(std::find(firstEnded.begin(), firstEnded.end(), 901) != firstEnded.end());
+    CHECK(std::find(firstEnded.begin(), firstEnded.end(), 902) == firstEnded.end());
+    const auto rest = callback(e, kRate / 10);
+    CHECK(rest.back() == 0.0f);
+    const auto lastEnded = ended(e);
+    CHECK(std::find(lastEnded.begin(), lastEnded.end(), 902) != lastEnded.end());
+}
+
 int main() { return check::runAll(); }

@@ -67,6 +67,7 @@ class InstrumentEngine(
         val step: Double,
         val gain: Float,
         val born: Long,
+        val releaseSeconds: Float,
     ) {
         var pos = 0.0
         var releasing = false
@@ -80,26 +81,29 @@ class InstrumentEngine(
     private var clock = 0L
 
     /** Notes sounding now, released ones included until they fade. */
-    val activeNotes: List<Int> get() = voices.filter { !it.dead }.map { it.note }
+    val activeNotes: List<Int> get() = voices.filter { !it.dead }.distinctBy { it.born }.map { it.note }
 
     /** Start [note] at [velocity] 0..1; silently nothing when no zone covers it. Returns whether a voice started. */
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
-        val zone = instrument.instrument.zoneFor(note) ?: return false
-        val zoneIndex = instrument.instrument.zones.indexOf(zone)
-        val hit = KeyHit.resolve(instrument.instrument, note, velocity.coerceIn(0f, 1f)) { file ->
-            instrument.sampleFor(file, zoneIndex)?.size?.toLong()
-        } ?: return false
-        val sample = instrument.sampleFor(hit.sampleFile, zoneIndex) ?: return false
-        val step = hit.pitchRatio * instrument.sampleRate / outRate
+        val components = KeyHit.resolveAllByZone(instrument.instrument, note, velocity.coerceIn(0f, 1f)) { file, index ->
+            instrument.sampleFor(file, index)?.size?.toLong()
+        }
+        if (components.isEmpty()) return false
         // LEAD and GLIDE are monophonic: a note that sounds chokes every voice still sounding, released ones included,
         // the way the steal below takes a voice. GLIDE's pitch slide is the hardware's; the player does not slide.
         if (instrument.instrument.voiceMode.mono) {
             for (v in voices) v.choking = true
-        } else if (voices.count { !it.dead && !it.choking } >= maxVoices) {
+        } else if (voices.filter { !it.dead && !it.choking }.map { it.born }.distinct().size >= maxVoices) {
             // Steal the oldest.
-            voices.filter { !it.dead && !it.choking }.minByOrNull { it.born }?.choking = true
+            val oldest = voices.filter { !it.dead && !it.choking }.minOfOrNull { it.born }
+            voices.filter { it.born == oldest }.forEach { it.choking = true }
         }
-        voices.add(Voice(note, zoneIndex, sample, hit.loopStartFrame.toInt(), step, hit.gain, clock++))
+        val group = clock++
+        for ((hit, zoneIndex, release) in components) {
+            val sample = requireNotNull(instrument.sampleFor(hit.sampleFile, zoneIndex))
+            voices.add(Voice(note, zoneIndex, sample, hit.loopStartFrame.toInt(),
+                hit.pitchRatio * instrument.sampleRate / outRate, hit.gain, group, release))
+        }
         return true
     }
 
@@ -119,11 +123,10 @@ class InstrumentEngine(
     fun render(out: FloatArray, frames: Int) {
         require(out.size >= frames * 2) { "out holds ${out.size / 2} frames, asked $frames" }
         java.util.Arrays.fill(out, 0, frames * 2, 0f)
-        val releaseFrames = (instrument.instrument.playableRelease * outRate).coerceAtLeast(1f)
-        val releaseStep = 1f / releaseFrames
         val chokeStep = 1f / (CHOKE_FADE_SECONDS * outRate)
         for (v in voices) {
             if (v.dead) continue
+            val releaseStep = 1f / (v.releaseSeconds * outRate).coerceAtLeast(1f)
             val s = v.sample
             val end = s.size
             val last = end - 1
