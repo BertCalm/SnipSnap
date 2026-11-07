@@ -103,6 +103,11 @@ finite bank. Its source patch and the loop start/end frames remain in the export
 
 ## Verification scope
 
+The unfiltered nine-module JVM run passes 8,779 tests in 1,086 reports, with
+zero failures, errors or skips. That run used frozen DSP source
+`c3e7c2469a5fa51a46c9ee69ed70600d49602b2c` on base `22a6b4005` and Temurin 17.
+Its complete XML reports are retained separately from the later focused run.
+
 The integration at `8e86303069570039f37a2ed546ce0b11640d274f` includes upstream
 `2f79ee6ef9587d30354c65cb51d77aac595c56cb`. Forty focused Trefoil JVM tests pass,
 including valid declared defaults for all five held voices. Android debug
