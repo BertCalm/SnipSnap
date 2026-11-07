@@ -206,7 +206,7 @@ object Velocity {
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
-        // intact and use the existing soften fallback.
+        // intact: the KICK is struck softer (touchedRender), the rest soften.
         is OnsetPatch -> Onset.macrosFor(patch.voice)
         is ThumpPatch -> Thump.macrosFor(patch.voice).let { specs ->
             // SNARE's TONE stopped being a brightness macro when the snare
@@ -479,12 +479,17 @@ object Velocity {
         // does not describe, so they keep their brightness macro or soften().
         is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
+        // THUMP's and ONSET's kicks take the same contact law (a shallower
+        // pitch drop, a quieter and duller click); their other voices keep
+        // their brightness macro or soften().
+        is ThumpPatch -> if (patch.voice == ThumpVoice.KICK) Thump.render(patch.voice, patch.macros, velocity = v) else null
+        is OnsetPatch -> if (patch.voice == OnsetVoice.KICK) Onset.render(patch.voice, patch.macros, patch.modelVersion, velocity = v) else null
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
         is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch,
-        is SnapPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
-        is VelvetPatch, is VoxPatch, is OnsetPatch,
+        is SnapPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
+        is VelvetPatch, is VoxPatch,
         -> null
     }
 

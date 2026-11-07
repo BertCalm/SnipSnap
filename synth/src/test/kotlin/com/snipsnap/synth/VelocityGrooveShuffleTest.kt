@@ -239,20 +239,20 @@ class VelocityGrooveShuffleTest {
     }
 
     @Test
-    fun `THUMP KICK falls back to soften too - DRIVE measured out, not assumed`() {
-        // KICK's only other macro (DRIVE) was excluded from BRIGHTNESS_MACROS
-        // after measuring it: spectral centroid vs. DRIVE is U-shaped around
-        // shipped presets' own settings, not monotonic, so scaling it down
-        // for a soft hit does not reliably read as darker. KICK must fall
-        // back to soften like PLUCK/VOX do.
+    fun `THUMP KICK is struck softer, not softened - and DRIVE stays a macro velocity never scales`() {
+        // KICK's DRIVE was excluded from BRIGHTNESS_MACROS after measuring
+        // it: spectral centroid vs. DRIVE is U-shaped around shipped presets'
+        // own settings, not monotonic, so scaling the macro down for a soft
+        // hit does not reliably read as darker. Since 2026-11-07 a KICK is
+        // struck at the velocity instead (StrikeVelocity: a shallower sweep,
+        // a quieter and duller click, and the drive stage seeing the hit's
+        // level), and DRIVE itself still never moves.
         val patch = ThumpPresets.forVoice(ThumpVoice.KICK).first()
         val velocity = 0.3f
-        val viaFallback = Velocity.atVelocity(patch, velocity)
-        val viaSoftenDirect = Velocity.soften(patch.render(), 1f - velocity)
-        assertTrue(
-            viaFallback.samples.contentEquals(viaSoftenDirect.samples),
-            "KICK's DRIVE was measured non-monotonic and excluded; atVelocity should match soften() exactly",
-        )
+        val layer = Velocity.atVelocity(patch, velocity)
+        assertTrue(layer.samples.contentEquals(Thump.render(ThumpVoice.KICK, patch.macros, velocity).samples), "a KICK layer is the KICK struck at that velocity")
+        assertTrue(!layer.samples.contentEquals(Velocity.soften(patch.render(), 1f - velocity).samples), "not soften() over the hard hit")
+        assertTrue(Velocity.brightnessSpec(patch) == null, "DRIVE is still not a brightness macro")
     }
 
     // ---------- the groove ----------

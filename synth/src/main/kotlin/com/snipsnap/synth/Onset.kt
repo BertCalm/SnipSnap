@@ -129,14 +129,17 @@ object Onset {
         val sharedWires: FloatArray? = null,
     )
 
-    /** Calibrated source taps are deliberately before shelf, PUNCH and decimation. */
-    internal fun probe(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): Probe {
+    /**
+     * Calibrated source taps are deliberately before shelf, PUNCH and decimation.
+     * [velocity] is how hard a KICK was hit ([StrikeVelocity]); the other voices ignore it.
+     */
+    internal fun probe(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION, velocity: Float = 1f): Probe {
         val s = settingsFor(voice, macros, modelVersion)
         val m = s.macros
         val snareFrames = (s.t60Seconds * 1.8f * RENDER_RATE).toInt().coerceAtLeast(64)
         val electronic = when (voice) {
             OnsetVoice.KICK -> Thump.onsetKick(s.electronicRootHz, s.t60Seconds,
-                m.getValue("SNAP"), m.getValue("EDGE"), RENDER_RATE)
+                m.getValue("SNAP"), m.getValue("EDGE"), RENDER_RATE, velocity)
             OnsetVoice.HAT_CLOSED -> Thump.onsetHat(s.electronicRootHz, s.t60Seconds,
                 m.getValue("EDGE"), RENDER_RATE)
             OnsetVoice.HAT_OPEN -> Thump.onsetHat(s.electronicRootHz, s.t60Seconds,
@@ -147,10 +150,10 @@ object Onset {
                     for (i in body.indices) body[i] *= gain
                 }
         }
-        val material = if (voice == OnsetVoice.KICK) kickMaterial(s) else null
+        val material = if (voice == OnsetVoice.KICK) kickMaterial(s, velocity) else null
         val physical = when (voice) {
             OnsetVoice.KICK -> if (modelVersion == 1) Skin.onsetKick(s.physicalRootHz, s.t60Seconds,
-                m.getValue("SNAP"), m.getValue("BODY"), m.getValue("EDGE"), RENDER_RATE)
+                m.getValue("SNAP"), m.getValue("BODY"), m.getValue("EDGE"), RENDER_RATE, velocity)
                 else material!!.samples
             OnsetVoice.HAT_CLOSED -> Skin.onsetHat(s.physicalRootHz, s.t60Seconds,
                 m.getValue("BODY"), m.getValue("EDGE"), RENDER_RATE)
@@ -173,14 +176,17 @@ object Onset {
         val noise = Dsp.Noise(Dsp.seedFor("ONSET", TRANSIENT_SEED_VERSION, voice.name, "TRANSIENT"))
         val filter = Dsp.OnePole(RENDER_RATE)
         val snap = m.getValue("SNAP")
+        // A KICK's strike click softens with the hit: sqrt(v) in level, v^0.8 in its corner (both 1 at full velocity).
+        val clickLevel = if (voice == OnsetVoice.KICK) StrikeVelocity.pulseLevel(velocity) else 1f
+        val clickHz = 1500f * if (voice == OnsetVoice.KICK) StrikeVelocity.cornerFactor(velocity) else 1f
         val duration = if (voice == OnsetVoice.KICK) 0.004f else 0.002f
         for (i in 0 until minOf(n, (duration * RENDER_RATE).toInt())) {
             val t = i.toFloat() / RENDER_RATE
             val envelope = (t / 0.0003f).coerceAtMost(1f) * (1f - t / duration)
             val white = noise.next()
-            val shaped = if (voice == OnsetVoice.KICK) filter.lp(white, 1500f)
+            val shaped = if (voice == OnsetVoice.KICK) filter.lp(white, clickHz)
                 else white - filter.lp(white, 2000f)
-            transient[i] = shaped * envelope * snap * if (voice == OnsetVoice.KICK) 0.15f else 0.035f
+            transient[i] = shaped * envelope * snap * (if (voice == OnsetVoice.KICK) 0.15f else 0.035f) * clickLevel
         }
         val blend = m.getValue("BLEND")
         // Exact endpoints also avoid a tiny residual from cos(PI/2)'s rounding.
@@ -241,7 +247,13 @@ object Onset {
         return sum
     }
 
-    private fun kickMaterial(s: OnsetSettings): KickMaterial {
+    /**
+     * The struck membrane. [velocity] is the hit ([StrikeVelocity]): the
+     * modes tilt toward the root (their summed level held), and the shared
+     * pitch bend's depth scales by v^2. Exactly today's material at full
+     * velocity.
+     */
+    private fun kickMaterial(s: OnsetSettings, velocity: Float = 1f): KickMaterial {
         val m = s.macros
         val frames = (s.t60Seconds * 1.4f * RENDER_RATE).toInt().coerceAtLeast(64)
         val out = FloatArray(frames)
@@ -254,7 +266,15 @@ object Onset {
                 val participation = (contactProjection(mode, position, radius) / reference).coerceIn(-1.4, 1.4)
                 mode.strength * participation.toFloat() * Dsp.lin(m.getValue("EDGE"), 0.6f, 1.4f)
             }
+        }.let { table ->
+            if (StrikeVelocity.isFull(velocity)) table else {
+                // A mode's participation can be negative (its phase at the strike); the tilt reads its size.
+                val ratios = FloatArray(kickModes.size) { (kickModes[it].zero / kickModes[0].zero).toFloat() }
+                val f = StrikeVelocity.modeFactors(ratios, FloatArray(table.size) { abs(table[it]) }, velocity)
+                table.mapIndexed { k, level -> level * f[k] }
+            }
         }
+        val bendDepth = 1.5f * StrikeVelocity.droopFactor(velocity)
         val envs = kickModes.map {
             Dsp.Env(attackSeconds = 0.001f, decay2T60 = s.t60Seconds * it.t60Scale)
         }
@@ -265,7 +285,7 @@ object Onset {
             // The fundamental uses the identical pitch trajectory and clock as THUMP.
             // All modes share head tension; their individual losses and contact projection
             // supply the material difference rather than a different root or stereo trick.
-            val bend = 1f + snap * 1.5f * exp(-90.0 * t).toFloat()
+            val bend = 1f + snap * bendDepth * exp(-90.0 * t).toFloat()
             var sum = 0f
             for (k in kickModes.indices) {
                 val ratio = (kickModes[k].zero / kickModes[0].zero).toFloat()
@@ -279,8 +299,14 @@ object Onset {
         return KickMaterial(out, fundamental)
     }
 
-    fun render(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): Snip {
-        val p = probe(voice, macros, modelVersion)
+    /**
+     * [voice] at [macros] in [modelVersion]. [velocity] is how hard a KICK was
+     * hit, 0..1 ([StrikeVelocity]): both sources and the strike click soften
+     * with it. Full velocity (the default) is the render ONSET has always
+     * made, bit for bit; the other voices ignore it.
+     */
+    fun render(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION, velocity: Float = 1f): Snip {
+        val p = probe(voice, macros, modelVersion, velocity)
         val raw = p.mixed
         val body = p.settings.macros.getValue("BODY")
         val shelf = Dsp.OnePole(RENDER_RATE)

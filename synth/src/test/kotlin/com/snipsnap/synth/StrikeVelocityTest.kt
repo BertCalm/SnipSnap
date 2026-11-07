@@ -19,9 +19,11 @@ import kotlin.test.assertTrue
 
 /**
  * A strike velocity for the modal drums ([StrikeVelocity]): SKIN's KICK and
- * TOM, and every TERRA voice. A soft hit tilts the modes toward the root,
- * bends a membrane less, lands with less grit, and drives TERRA's buzz and
- * cavity less. Full velocity is each engine's existing render, bit for bit.
+ * TOM, every TERRA voice, and THUMP's and ONSET's kicks. A soft hit tilts the
+ * modes toward the root, bends a membrane (or a kick's sweep) less, lands
+ * with less grit or a quieter, duller click, and drives TERRA's buzz and
+ * cavity and THUMP's DRIVE less. Full velocity is each engine's existing
+ * render, bit for bit.
  *
  * Brightness here is the magnitude-weighted centroid of the first 30 ms
  * ([attackCentroid]), not [com.snipsnap.audio.FeatureExtractor]'s
@@ -35,12 +37,13 @@ class StrikeVelocityTest {
     private val velocities = listOf(0.25f, 0.5f, 0.75f, 1f)
 
     /** Magnitude-weighted spectral centroid of the first [seconds], Hann-windowed over that span and zero-padded to 16384. */
-    private fun attackCentroid(s: Snip, seconds: Double = 0.030): Double {
-        val n = minOf(s.samples.size, (seconds * s.sampleRate).toInt())
+    private fun attackCentroid(s: Snip, seconds: Double = 0.030, from: Double = 0.0): Double {
+        val o = (from * s.sampleRate).toInt()
+        val n = minOf(s.samples.size - o, (seconds * s.sampleRate).toInt())
         val size = 16384
         val re = FloatArray(size)
         val im = FloatArray(size)
-        for (i in 0 until n) re[i] = s.samples[i] * (0.5f - 0.5f * cos(2.0 * Math.PI * i / (n - 1)).toFloat())
+        for (i in 0 until n) re[i] = s.samples[o + i] * (0.5f - 0.5f * cos(2.0 * Math.PI * i / (n - 1)).toFloat())
         Fft.forward(re, im)
         var weighted = 0.0
         var total = 0.0
@@ -54,6 +57,14 @@ class StrikeVelocityTest {
 
     private fun skinCases(voice: SkinVoice): List<SkinPatch> =
         listOf(SkinPatch("default", voice, Skin.defaults(voice))) + SkinPresets.forVoice(voice)
+
+    private fun thumpKicks(): List<ThumpPatch> =
+        listOf(ThumpPatch("default", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK))) + ThumpPresets.forVoice(ThumpVoice.KICK)
+
+    /** ONSET's default kick, its three presets and the acceptance kit's four blends, at the current model. */
+    private fun onsetKicks(): List<OnsetPatch> =
+        listOf(OnsetPatch("default", OnsetVoice.KICK, Onset.defaults(OnsetVoice.KICK))) + OnsetPresets.forVoice(OnsetVoice.KICK) +
+            OnsetKits.patches().filter { it.voice == OnsetVoice.KICK }
 
     private fun terraCases(): List<TerraPatch> =
         TerraVoice.entries.map { TerraPatch("default", it, Terra.defaults(it)) } +
@@ -88,9 +99,34 @@ class StrikeVelocityTest {
         }
     }
 
+    /**
+     * THUMP's and ONSET's kicks at full velocity, against hashes taken from
+     * the source before they read a velocity (22a6b4005): THUMP's default
+     * and twenty presets; ONSET's default, three presets and four kit blends
+     * at each saved model. Hashed as in the SKIN pin above.
+     */
+    @Test
+    fun `THUMP and ONSET kicks at full velocity are the renders they always made`() {
+        fun hex(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }.take(16)
+        fun hash(s: FloatArray): String {
+            val bb = ByteBuffer.allocate(s.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+            for (x in s) bb.putFloat(x)
+            return hex(bb.array())
+        }
+        val thump = thumpKicks()
+        assertEquals(21, thump.size)
+        assertEquals("8fef496220685a1b", hex(thump.joinToString("") { hash(Thump.render(ThumpVoice.KICK, it.macros, velocity = 1f).samples) }.toByteArray()), "THUMP KICK")
+        val onset = onsetKicks()
+        assertEquals(8, onset.size)
+        val pinned = mapOf(1 to "c896d49ef18708fb", 2 to "7808097023b24cca", 3 to "7808097023b24cca")
+        for ((model, pin) in pinned) {
+            assertEquals(pin, hex(onset.joinToString("") { hash(Onset.render(OnsetVoice.KICK, it.macros, model, velocity = 1f).samples) }.toByteArray()), "ONSET KICK model $model")
+        }
+    }
+
     @Test
     fun `a full-velocity touch is the patch's own render`() {
-        val patches = Skin.STRUCK.flatMap { skinCases(it) } + terraCases()
+        val patches = Skin.STRUCK.flatMap { skinCases(it) } + terraCases() + thumpKicks() + onsetKicks()
         for (p in patches) assertContentEquals(p.render().samples, Velocity.atVelocity(p, 1f).samples, "${p.engine} ${p.voiceName} ${p.name}")
     }
 
@@ -164,8 +200,8 @@ class StrikeVelocityTest {
     // ---------------------------------------------------------------- what it sounds like, measured
 
     /** Every way [render] fails to brighten with velocity, as messages; empty when it does. */
-    private fun brightening(label: String, minRise: Double, render: (Float) -> Snip): List<String> {
-        val c = velocities.map { attackCentroid(render(it)) }
+    private fun brightening(label: String, minRise: Double, from: Double = 0.0, render: (Float) -> Snip): List<String> {
+        val c = velocities.map { attackCentroid(render(it), from = from) }
         val shown = c.joinToString { "%.0f".format(it) }
         val out = mutableListOf<String>()
         for (i in 1 until c.size) if (!(c[i] > c[i - 1])) out += "$label: not brighter at ${velocities[i]} than ${velocities[i - 1]}: [$shown]"
@@ -205,6 +241,33 @@ class StrikeVelocityTest {
         }
     }
 
+    /**
+     * THUMP's kicks are read from 2.5 ms on, past PUNCH's 2 ms onset window.
+     * Inside it PUNCH's saturator has a step at the window's end that is
+     * there on every hit: for any PUNCH above 0, a sample's drive amount
+     * there is above 0, and [Dsp.drive] at an amount just above 0 is
+     * tanh(x) / tanh(1), about 1.31x for a small sample, not x. So the first
+     * 2 ms sit ~2.4 dB above the rest, and that edge is a fixed click. On a
+     * soft hit, with the sweep and the beater click softened, it is the
+     * brightest thing left: from 0 ms, 18 of THUMP's 21 kicks read brighter
+     * at v = .25 than at .5 (default 86 / 80 / 81 / 103 Hz); from 2.5 ms all
+     * 21 brighten at every step, by at least 52%. It predates velocity and
+     * moves every THUMP, SKIN and TERRA render, so it is disclosed
+     * (docs/STRIKE_VELOCITY.md), not fixed here. ONSET's kicks, which run
+     * their own saturator, brighten from 0 ms (at least 22% at the time of
+     * writing).
+     */
+    @Test
+    fun `a harder hit is brighter, on every THUMP and ONSET kick`() {
+        val failures = thumpKicks().flatMap { p -> brightening("THUMP KICK ${p.name}", .40, from = .0025) { Velocity.atVelocity(p, it) } } +
+            onsetKicks().flatMap { p -> brightening("ONSET KICK ${p.name}", .15) { Velocity.atVelocity(p, it) } } +
+            (1..2).flatMap { model ->
+                val p = OnsetPatch("default", OnsetVoice.KICK, Onset.defaults(OnsetVoice.KICK), model)
+                brightening("ONSET KICK model $model", .15) { Velocity.atVelocity(p, it) }
+            }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
     @Test
     fun `a harder hit is brighter at its onset, on every TERRA voice and kit pad`() {
         val failures = terraCases().flatMap { p ->
@@ -218,7 +281,7 @@ class StrikeVelocityTest {
     @Test
     fun `the root survives a soft hit`() {
         var checked = 0
-        val patches = Skin.STRUCK.flatMap { skinCases(it) } + terraCases()
+        val patches = Skin.STRUCK.flatMap { skinCases(it) } + terraCases() + thumpKicks() + onsetKicks()
         // Read after the bend has settled (TERRA's droop has a 20 ms time
         // constant, SKIN's tom 1/18 s), so a hard hit's own sharp start is
         // not mistaken for a moved root.
@@ -258,6 +321,24 @@ class StrikeVelocityTest {
         assertTrue(bent > flat + 1, "a hard hit's bend adds crossings a soft one lacks: $bent with DROP 1, $flat with DROP 0")
     }
 
+    /** THUMP's SWEEP is its kick's bend: a soft hit sweeps less, by more than the click and drive explain (SWEEP 0 against 1, CLICK 0). */
+    @Test
+    fun `a soft THUMP kick sweeps less`() {
+        fun crossings(s: Snip): Int {
+            val n = (0.040 * s.sampleRate).toInt()
+            var c = 0
+            for (i in 1 until n) if ((s.samples[i - 1] < 0f) != (s.samples[i] < 0f)) c++
+            return c
+        }
+        fun gap(sweep: Float): Int {
+            val m = Thump.defaults(ThumpVoice.KICK) + mapOf("SWEEP" to sweep, "CLICK" to 0f)
+            return crossings(Thump.render(ThumpVoice.KICK, m, 1f)) - crossings(Thump.render(ThumpVoice.KICK, m, .25f))
+        }
+        val swept = gap(1f)
+        val flat = gap(0f)
+        assertTrue(swept > flat + 1, "a hard hit's sweep adds crossings a soft one lacks: $swept with SWEEP 1, $flat with SWEEP 0")
+    }
+
     // ---------------------------------------------------------------- what it leaves alone
 
     @Test
@@ -271,8 +352,20 @@ class StrikeVelocityTest {
     }
 
     @Test
+    fun `THUMP and ONSET voices other than KICK ignore velocity`() {
+        for (voice in ThumpVoice.entries - ThumpVoice.KICK) {
+            val m = Thump.defaults(voice)
+            assertContentEquals(Thump.render(voice, m).samples, Thump.render(voice, m, .3f).samples, "THUMP $voice ignores a render velocity")
+        }
+        for (voice in OnsetVoice.entries - OnsetVoice.KICK) {
+            val m = Onset.defaults(voice)
+            assertContentEquals(Onset.render(voice, m).samples, Onset.render(voice, m, velocity = .3f).samples, "ONSET $voice ignores a render velocity")
+        }
+    }
+
+    @Test
     fun `soft hits are deterministic, finite and bounded`() {
-        val patches = Skin.STRUCK.flatMap { skinCases(it).take(3) } + terraCases()
+        val patches = Skin.STRUCK.flatMap { skinCases(it).take(3) } + terraCases() + thumpKicks().take(5) + onsetKicks()
         for (p in patches) {
             val a = Velocity.atVelocity(p, .37f)
             assertContentEquals(a.samples, Velocity.atVelocity(p, .37f).samples, "${p.name} twice")
