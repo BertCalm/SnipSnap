@@ -76,10 +76,22 @@ go clearly, and whether a lingering halo obscures the next note. The owner
 has not yet accepted the sound. Physical phone and MPC tests remain open;
 the generated manifest keeps those flags false.
 
-For phone testing use a build containing this change and retain each program's
-sidecar next to its complete track-data directory on the instrument shelf.
-An older build cannot read the v3 experiment. The existing synth MAKE/PREVIEW
-workflow continues to create the established mixed instruments.
+For phone testing use a debuggable build containing this change, open it once,
+then close it. Extract the download and use the development admission helper:
+
+```sh
+bash scripts/install-filament-halo-prototype.sh --check-only /path/to/extracted-bundle
+bash scripts/install-filament-halo-prototype.sh /path/to/extracted-bundle
+```
+
+The shelf is app-private (`files/Kits/Instruments`); ordinary audio/kit import
+does not install these sidecars. The helper uses authorized ADB and `run-as`
+for the default debug package `com.snipsnap.app.brassgrow` (an optional second
+argument selects another debuggable package). It verifies the bundle hashes,
+refuses existing destinations and streams only the two named programs. It
+does not install or uninstall an app. After import open **MAKE → INSTRUMENTS**
+and play C4. An older build cannot read the v3 experiment. The existing synth
+MAKE/PREVIEW workflow continues to create the established mixed instruments.
 
 ## Cost and cache boundary
 
