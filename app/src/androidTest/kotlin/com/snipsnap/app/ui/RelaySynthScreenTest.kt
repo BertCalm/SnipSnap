@@ -162,11 +162,14 @@ class RelaySynthScreenTest : ComposeScreenTest() {
         pump()
         assertEquals(chosen, draft(RelayVoice.FLOW))
         press("SAVE PRESET")
-        compose.onNode(hasSetTextAction()).performTextReplacement("MY PULSING FLOW")
+        // Within UserPresets.MAX_NAME: a longer name dims SAVE and nothing is written.
+        val presetName = "MY PULSE FLOW"
+        compose.onNode(hasSetTextAction()).performTextReplacement(presetName)
         pump()
+        button("SAVE").assertIsEnabled()
         press("SAVE")
-        waitFor("saved repeating Relay") { UserPresets.read(shelf).any { it.name == "MY PULSING FLOW" } }
-        val saved = UserPresets.read(shelf).single { it.name == "MY PULSING FLOW" }.patch as RelayPatch
+        waitFor("saved repeating Relay") { UserPresets.read(shelf).any { it.name == presetName } }
+        val saved = UserPresets.read(shelf).single { it.name == presetName }.patch as RelayPatch
         assertEquals(chosen.copy(name = saved.name), saved)
         press("SEND TO PAD")
         press("A01, EMPTY")
