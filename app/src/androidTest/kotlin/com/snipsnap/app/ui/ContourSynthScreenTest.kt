@@ -112,6 +112,8 @@ class ContourSynthScreenTest : ComposeScreenTest() {
         assertTrue("phone MAKE keeps table pair, velocity and edited BODY within PCM24 rounding",
             actual.samples.indices.all { abs(actual.samples[it] - expected.snip.samples[it]) < 2e-7f })
         assertEquals(.2f, settings.getValue("macro.CONTOUR.KEY.BODY").toFloat(), 1e-6f)
-        assertEquals(source.config, (SynthDrafts.read(settings).single() as ContourPatch).config)
+        // CONTOUR's own draft. It is not the only one: an untouched OHM bench is
+        // seeded with its Reply/Ring default on every visit, and so is kept too.
+        assertEquals(source.config, SynthDrafts.read(settings).filterIsInstance<ContourPatch>().single().config)
     }
 }
