@@ -1542,7 +1542,7 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD OR TAP · EDIT FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
     /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
     fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
 
@@ -1571,6 +1571,12 @@ object Copy {
 
     /** The strip's exact reading of the stored velocity, 1..100, beside the four levels. */
     fun stepDetailVelocity(percent: Int): String = "VELOCITY $percent"
+
+    /** BEAT's step chip, tap mode off: a tap flips the step on or off, as it always did. */
+    const val STEP_TAP_TOGGLES = "TAP · ON/OFF"
+
+    /** BEAT's step chip, tap mode on: a tap opens the step's detail, as holding the step does. */
+    const val STEP_TAP_EDITS = "TAP · EDIT"
 
     /** A step cell's long-press, as a screen reader names it. A label, not a toast. */
     const val STEP_DETAIL_LONG_LABEL = "EDIT STEP"
