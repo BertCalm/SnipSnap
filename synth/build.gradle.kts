@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateApsisAcceptance") {
+    group = "distribution"
+    description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAcceptanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisAcceptanceOutput").orNull ?: "${rootDir}/testkit/apsis-acceptance")
+}
+
 tasks.register<JavaExec>("generateFerryReleaseAudition") {
     group = "distribution"
     description = "Render Ferry's revised short-note release with saved recipes and ending measurements."
