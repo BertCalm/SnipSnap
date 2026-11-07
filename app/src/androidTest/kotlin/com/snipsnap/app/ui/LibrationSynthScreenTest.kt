@@ -170,7 +170,10 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         show()
         for (voice in LibrationVoice.entries) {
             invokeClick(voice.name)
-            val before = stored(voice)
+            val factory = LibrationPresets.forVoice(voice).first()
+            invokeClick("PRESET ${factory.name}")
+            waitFor("complete $voice factory recipe") { stored(voice) == factory }
+            val before = requireNotNull(stored(voice))
             invokeClick("MAKE INSTRUMENT")
             compose.onNodeWithContentDescription("TOUCH LAYERS").assertIsSelected()
             assertReadsInFull("TOUCH LAYERS ON")
