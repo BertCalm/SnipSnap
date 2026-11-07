@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "publishedWavHashesExact": 15,
+  "nativeAndMatchedFloatPinsExact": 15,
+  "matrixCases": 54,
+  "deterministicRepeats": 9,
+  "mechanicalPairsExact": 9,
+  "otherVoicesExact": 20,
+  "worstAttackCents": 0.7172123502047179,
+  "worstHeldCents": 1.4369822714201623,
+  "limit": "Fresh render verification; does not rerun browser QA or the independent 536-grain diagnostic-copy audit."
+}

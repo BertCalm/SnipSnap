@@ -1,0 +1,34 @@
+{
+  "status": "succeeded",
+  "url": "https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-roll-shaker-r2/",
+  "project_id": "appgprj_6ac2e11be4848191b1c340709302b992",
+  "deployment_id": "appgdep_6aec4d70b03c8191b18740a4e35abc0a",
+  "saved_version_id": "appgprj_6ac2e11be4848191b1c340709302b992~appgver_30c520fb5f9881919fb07a40c9629847",
+  "version_number": 14,
+  "source": "0672dfe575ba685029e187bd902e0d4bce7a20d4",
+  "private_to_owner": true,
+  "phase": "tremor_roll_shaker_r2",
+  "candidate_bundle_sha256": "a472d6bf0b030c2ada13c87064fdec58bd607a0e9d015db09dd8d558099d90f0",
+  "previous_bundle_sha256": "1322af6dda586402c6d852195a19c469b3916e85e01c7467d89fc2ceda025c4a",
+  "baseline_product_source": "8c9c01254ed5c363b0127b3a40cf52067b8c7e92",
+  "clips": 15,
+  "recipes": 4,
+  "voice": "ROLL",
+  "owner_feedback": {
+    "previous_phase": "tremor_roll_shaker_r1",
+    "preferred": "LIGHT BED shaker",
+    "remaining": [
+      "ROLL DEFAULT",
+      "SETTLING BED",
+      "HELD ROLL"
+    ],
+    "overall": "Right direction, just not there yet",
+    "clarification": "Still too scratchy or harsh"
+  },
+  "scope": "Listening prototype rounds stronger collision grains with lower pressure knee, longer envelopes and lower high-frequency radiation. LIGHT BED R1 preserved exactly. Mechanical solver, held excitation, production saved models and prior audition files unchanged.",
+  "hearing": "R2 awaiting owner listening. Only owner heard and preferred R1 LIGHT BED.",
+  "limitations": [
+    "HOLD revision affects opening grain texture; no continuing grain field was added to the marked drum sustain.",
+    "No app sound version was promoted by this audition."
+  ]
+}

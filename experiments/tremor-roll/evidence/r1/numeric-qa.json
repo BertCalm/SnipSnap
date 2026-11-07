@@ -1,0 +1,3618 @@
+{
+  "status": "passed",
+  "clips": 24,
+  "pairs": [
+    {
+      "recipe": "roll_default",
+      "touch": "soft",
+      "relativeDifferenceL2": 0.0,
+      "current": {
+        "id": "roll_default_soft_current",
+        "peak": 0.114471435546875,
+        "dc": 1.0967254638671875e-07,
+        "loudness": 0.02999905157068215,
+        "globalAttackPeak": {
+          "hz": 130.8108882342994,
+          "cents": -0.02507171825171496
+        },
+        "globalHeldPeak": null,
+        "sha256": "4ada9dc6850d1fcd4a58a9c6b10949dced19f2839541807215503680a8550d13",
+        "above2kShare": 9.183739431256345e-07,
+        "centroidHz": 131.02613631404012,
+        "rootPeriodEnvelopeShare": 0.013326724361094533
+      },
+      "shaker": {
+        "id": "roll_default_soft_shaker",
+        "peak": 0.114471435546875,
+        "dc": 1.0967254638671875e-07,
+        "loudness": 0.02999905157068215,
+        "globalAttackPeak": {
+          "hz": 130.8108882342994,
+          "cents": -0.02507171825171496
+        },
+        "globalHeldPeak": null,
+        "sha256": "4ada9dc6850d1fcd4a58a9c6b10949dced19f2839541807215503680a8550d13",
+        "above2kShare": 9.183739431256345e-07,
+        "centroidHz": 131.02613631404012,
+        "rootPeriodEnvelopeShare": 0.013326724361094533
+      }
+    },
+    {
+      "recipe": "roll_default",
+      "touch": "middle",
+      "relativeDifferenceL2": 0.39263918368353795,
+      "current": {
+        "id": "roll_default_middle_current",
+        "peak": 0.2359619140625,
+        "dc": 1.0609626770019531e-07,
+        "loudness": 0.02999899981170503,
+        "globalAttackPeak": {
+          "hz": 130.81031966171793,
+          "cents": -0.032596583841512615
+        },
+        "globalHeldPeak": null,
+        "sha256": "e75becb865418ce461c441c8e687f0e11962c772ff35e0d384c0d9fba386af2e",
+        "above2kShare": 8.646157405154475e-05,
+        "centroidHz": 133.18306895866385,
+        "rootPeriodEnvelopeShare": 0.06347776201259797
+      },
+      "shaker": {
+        "id": "roll_default_middle_shaker",
+        "peak": 0.197357177734375,
+        "dc": 1.6808509826660155e-07,
+        "loudness": 0.029999014186843777,
+        "globalAttackPeak": {
+          "hz": 130.81045373610675,
+          "cents": -0.030822151757771976
+        },
+        "globalHeldPeak": null,
+        "sha256": "7c00e4ba760dcfacb45d2c6bffd0fb957ff6898f11af32c79af7a6dfc06bb585",
+        "above2kShare": 0.005066973478086491,
+        "centroidHz": 182.89969361971356,
+        "rootPeriodEnvelopeShare": 0.029880337279219422
+      }
+    },
+    {
+      "recipe": "roll_default",
+      "touch": "hard",
+      "relativeDifferenceL2": 0.8145137250258927,
+      "current": {
+        "id": "roll_default_hard_current",
+        "peak": 0.36187744140625,
+        "dc": -1.1434360426299425e-07,
+        "loudness": 0.029998983891804342,
+        "globalAttackPeak": {
+          "hz": 130.80069932741296,
+          "cents": -0.1599234096306358
+        },
+        "globalHeldPeak": null,
+        "sha256": "f07cde2e73f87fd8a31fe7bb2ba064f6f176e6ad22f00252a566b0b521593544",
+        "above2kShare": 0.042611503051585044,
+        "centroidHz": 427.449412247705,
+        "rootPeriodEnvelopeShare": 0.029746315775208285
+      },
+      "shaker": {
+        "id": "roll_default_hard_shaker",
+        "peak": 0.22894287109375,
+        "dc": 7.2985279316804845e-09,
+        "loudness": 0.029999138913870595,
+        "globalAttackPeak": {
+          "hz": 130.80924934898013,
+          "cents": -0.04676189924069375
+        },
+        "globalHeldPeak": null,
+        "sha256": "13801c35860a91f2c93480b39c8c15cbcc260a8b724e1a067748d16958109410",
+        "above2kShare": 0.25482929772958746,
+        "centroidHz": 2936.203561392667,
+        "rootPeriodEnvelopeShare": 0.1450016079867447
+      }
+    },
+    {
+      "recipe": "light_bed",
+      "touch": "soft",
+      "relativeDifferenceL2": 0.0,
+      "current": {
+        "id": "light_bed_soft_current",
+        "peak": 0.12933349609375,
+        "dc": 2.6880526075176165e-08,
+        "loudness": 0.029998952339291743,
+        "globalAttackPeak": {
+          "hz": 130.80972570624502,
+          "cents": -0.04045741833421473
+        },
+        "globalHeldPeak": null,
+        "sha256": "9d369a5a4ae75c97c5d1c1e76e2dfa2249288c4d4fce3d1b5298e89ae5b7f444",
+        "above2kShare": 1.0306267996478655e-06,
+        "centroidHz": 130.98705188458027,
+        "rootPeriodEnvelopeShare": 0.014732391093494916
+      },
+      "shaker": {
+        "id": "light_bed_soft_shaker",
+        "peak": 0.12933349609375,
+        "dc": 2.6880526075176165e-08,
+        "loudness": 0.029998952339291743,
+        "globalAttackPeak": {
+          "hz": 130.80972570624502,
+          "cents": -0.04045741833421473
+        },
+        "globalHeldPeak": null,
+        "sha256": "9d369a5a4ae75c97c5d1c1e76e2dfa2249288c4d4fce3d1b5298e89ae5b7f444",
+        "above2kShare": 1.0306267996478655e-06,
+        "centroidHz": 130.98705188458027,
+        "rootPeriodEnvelopeShare": 0.014732391093494916
+      }
+    },
+    {
+      "recipe": "light_bed",
+      "touch": "middle",
+      "relativeDifferenceL2": 0.08307711273127005,
+      "current": {
+        "id": "light_bed_middle_current",
+        "peak": 0.1314697265625,
+        "dc": -8.531645232555913e-08,
+        "loudness": 0.029999021116618087,
+        "globalAttackPeak": {
+          "hz": 130.80967206835422,
+          "cents": -0.0411673025681952
+        },
+        "globalHeldPeak": null,
+        "sha256": "c69ee0455969cdf19741179f92d26c7cc846f3c4c6d00f58dc360ac6f3a7401c",
+        "above2kShare": 3.0450512220955458e-05,
+        "centroidHz": 132.91572616114217,
+        "rootPeriodEnvelopeShare": 0.06857891222221935
+      },
+      "shaker": {
+        "id": "light_bed_middle_shaker",
+        "peak": 0.13092041015625,
+        "dc": -9.232876347560509e-08,
+        "loudness": 0.02999903816217118,
+        "globalAttackPeak": {
+          "hz": 130.80971126688274,
+          "cents": -0.04064851969822804
+        },
+        "globalHeldPeak": null,
+        "sha256": "3c216ef2c3bd3b13247a712979bd2545c455e1374e89ec272a80ad724a4f4d71",
+        "above2kShare": 0.00048543586930744226,
+        "centroidHz": 137.8829431549338,
+        "rootPeriodEnvelopeShare": 0.017150846174335432
+      }
+    },
+    {
+      "recipe": "light_bed",
+      "touch": "hard",
+      "relativeDifferenceL2": 0.1916612081903466,
+      "current": {
+        "id": "light_bed_hard_current",
+        "peak": 0.187896728515625,
+        "dc": -1.921945688675861e-07,
+        "loudness": 0.02999902636681606,
+        "globalAttackPeak": {
+          "hz": 130.80632526929887,
+          "cents": -0.0854619369888252
+        },
+        "globalHeldPeak": null,
+        "sha256": "e839b0ac38ee98bb27a2201a838264fa2018d70d298e8bdda9fc37eaa3fa5902",
+        "above2kShare": 0.0013384865144619783,
+        "centroidHz": 153.32974303542244,
+        "rootPeriodEnvelopeShare": 0.13166060511580682
+      },
+      "shaker": {
+        "id": "light_bed_hard_shaker",
+        "peak": 0.184173583984375,
+        "dc": 4.257474626813616e-08,
+        "loudness": 0.029999075782410605,
+        "globalAttackPeak": {
+          "hz": 130.81002363109462,
+          "cents": -0.03651446184869335
+        },
+        "globalHeldPeak": null,
+        "sha256": "903f69ead463520dbe289f131688a3fd8b32fd960dff353d635a817af946a60e",
+        "above2kShare": 0.014369438567508561,
+        "centroidHz": 301.6155365748796,
+        "rootPeriodEnvelopeShare": 0.17754842745820457
+      }
+    },
+    {
+      "recipe": "settling_bed",
+      "touch": "soft",
+      "relativeDifferenceL2": 0.0,
+      "current": {
+        "id": "settling_bed_soft_current",
+        "peak": 0.111724853515625,
+        "dc": 6.20881716410319e-09,
+        "loudness": 0.02999902760302369,
+        "globalAttackPeak": {
+          "hz": 146.83072467007526,
+          "cents": -0.019564030254883426
+        },
+        "globalHeldPeak": null,
+        "sha256": "45bb9ecc6868fd7cc4d4185ed8fa72f2a9a9815490df0bd01f3bf7a31760ef4f",
+        "above2kShare": 9.296212993347255e-07,
+        "centroidHz": 147.01779114096055,
+        "rootPeriodEnvelopeShare": 0.03471185326632963
+      },
+      "shaker": {
+        "id": "settling_bed_soft_shaker",
+        "peak": 0.111724853515625,
+        "dc": 6.20881716410319e-09,
+        "loudness": 0.02999902760302369,
+        "globalAttackPeak": {
+          "hz": 146.83072467007526,
+          "cents": -0.019564030254883426
+        },
+        "globalHeldPeak": null,
+        "sha256": "45bb9ecc6868fd7cc4d4185ed8fa72f2a9a9815490df0bd01f3bf7a31760ef4f",
+        "above2kShare": 9.296212993347255e-07,
+        "centroidHz": 147.01779114096055,
+        "rootPeriodEnvelopeShare": 0.03471185326632963
+      }
+    },
+    {
+      "recipe": "settling_bed",
+      "touch": "middle",
+      "relativeDifferenceL2": 0.5752748643579643,
+      "current": {
+        "id": "settling_bed_middle_current",
+        "peak": 0.363311767578125,
+        "dc": 1.0145471451130319e-08,
+        "loudness": 0.029999155194561596,
+        "globalAttackPeak": {
+          "hz": 146.83077107963413,
+          "cents": -0.019016830096129093
+        },
+        "globalHeldPeak": null,
+        "sha256": "39d2e1f4024bb005187a00d7c77239bcdff07a2b928cac754eb7bb08f014f38a",
+        "above2kShare": 0.00015697319514953214,
+        "centroidHz": 149.73807687601385,
+        "rootPeriodEnvelopeShare": 0.056215268166832734
+      },
+      "shaker": {
+        "id": "settling_bed_middle_shaker",
+        "peak": 0.232177734375,
+        "dc": 7.48228519520861e-08,
+        "loudness": 0.029999061147186177,
+        "globalAttackPeak": {
+          "hz": 146.83098329984816,
+          "cents": -0.016514612119718892
+        },
+        "globalHeldPeak": null,
+        "sha256": "0fd0bd9e3a365629ac886df859c62df827c5d1cc9b74f8c373b6153dc622c250",
+        "above2kShare": 0.009292984949610202,
+        "centroidHz": 255.8198120905033,
+        "rootPeriodEnvelopeShare": 0.05969718975552656
+      }
+    },
+    {
+      "recipe": "settling_bed",
+      "touch": "hard",
+      "relativeDifferenceL2": 1.0461341018809511,
+      "current": {
+        "id": "settling_bed_hard_current",
+        "peak": 0.336395263671875,
+        "dc": -1.6844790914784306e-08,
+        "loudness": 0.02999897309437004,
+        "globalAttackPeak": {
+          "hz": 146.8130175225444,
+          "cents": -0.2283559256686879
+        },
+        "globalHeldPeak": null,
+        "sha256": "fb6ee20a470880c83772642818635f309040f2a16c9779d0be87ce56a92a382f",
+        "above2kShare": 0.3085001950996953,
+        "centroidHz": 2064.6526598751548,
+        "rootPeriodEnvelopeShare": 0.07552812781484339
+      },
+      "shaker": {
+        "id": "settling_bed_hard_shaker",
+        "peak": 0.17742919921875,
+        "dc": -5.183012589164402e-09,
+        "loudness": 0.02999911405394637,
+        "globalAttackPeak": {
+          "hz": 146.82969937504706,
+          "cents": -0.03165299776842105
+        },
+        "globalHeldPeak": null,
+        "sha256": "850137ee832b3b7c9515b90247d6b793b200b0a7b32764390741d1ba14821acb",
+        "above2kShare": 0.5999558137572074,
+        "centroidHz": 6725.987980187807,
+        "rootPeriodEnvelopeShare": 0.028387768299866438
+      }
+    },
+    {
+      "recipe": "held_roll",
+      "touch": "soft",
+      "relativeDifferenceL2": 0.0,
+      "current": {
+        "id": "held_roll_soft_current",
+        "peak": 0.118560791015625,
+        "dc": -6.961048466799608e-08,
+        "loudness": 0.02999908167238279,
+        "globalAttackPeak": {
+          "hz": 130.81412843599912,
+          "cents": 0.01781062977513229
+        },
+        "globalHeldPeak": {
+          "hz": 130.7878956165598,
+          "cents": -0.3293973135354096
+        },
+        "sha256": "32b49f2f5ddea858fa00f589e95f143f2f0692661f4caa7b0db675862dc083dd",
+        "above2kShare": 1.7233012230941826e-06,
+        "centroidHz": 128.81238431041666,
+        "rootPeriodEnvelopeShare": 0.027459532265870296
+      },
+      "shaker": {
+        "id": "held_roll_soft_shaker",
+        "peak": 0.118560791015625,
+        "dc": -6.961048466799608e-08,
+        "loudness": 0.02999908167238279,
+        "globalAttackPeak": {
+          "hz": 130.81412843599912,
+          "cents": 0.01781062977513229
+        },
+        "globalHeldPeak": {
+          "hz": 130.7878956165598,
+          "cents": -0.3293973135354096
+        },
+        "sha256": "32b49f2f5ddea858fa00f589e95f143f2f0692661f4caa7b0db675862dc083dd",
+        "above2kShare": 1.7233012230941826e-06,
+        "centroidHz": 128.81238431041666,
+        "rootPeriodEnvelopeShare": 0.027459532265870296
+      }
+    },
+    {
+      "recipe": "held_roll",
+      "touch": "middle",
+      "relativeDifferenceL2": 0.283351462039575,
+      "current": {
+        "id": "held_roll_middle_current",
+        "peak": 0.30316162109375,
+        "dc": -2.5623491288832913e-09,
+        "loudness": 0.029999132683729262,
+        "globalAttackPeak": {
+          "hz": 130.81421368235442,
+          "cents": 0.018938805657348852
+        },
+        "globalHeldPeak": {
+          "hz": 130.771360242025,
+          "cents": -0.5482892304198472
+        },
+        "sha256": "2e3ccb8a7005dbc8d628aca231ef55dab66ef0b48ba1a3c4b369799360b46c77",
+        "above2kShare": 6.340347189856684e-06,
+        "centroidHz": 135.16560612697236,
+        "rootPeriodEnvelopeShare": 0.0662527088209241
+      },
+      "shaker": {
+        "id": "held_roll_middle_shaker",
+        "peak": 0.145355224609375,
+        "dc": -2.3915258536244054e-08,
+        "loudness": 0.02999918079669599,
+        "globalAttackPeak": {
+          "hz": 130.8141530899607,
+          "cents": 0.018136907786653406
+        },
+        "globalHeldPeak": {
+          "hz": 130.77115394067798,
+          "cents": -0.5510203804010232
+        },
+        "sha256": "6951c6fafba36f633164a1103733ec0b2a911d60e8fc39f91f16b47c9cdce932",
+        "above2kShare": 7.405876378989226e-05,
+        "centroidHz": 135.8454340956979,
+        "rootPeriodEnvelopeShare": 0.03011011134530043
+      }
+    },
+    {
+      "recipe": "held_roll",
+      "touch": "hard",
+      "relativeDifferenceL2": 0.5237132943655007,
+      "current": {
+        "id": "held_roll_hard_current",
+        "peak": 0.19036865234375,
+        "dc": 4.2705818814721523e-10,
+        "loudness": 0.029999018390856776,
+        "globalAttackPeak": {
+          "hz": 130.808432354554,
+          "cents": -0.0575746895631219
+        },
+        "globalHeldPeak": {
+          "hz": 130.7287791537749,
+          "cents": -1.1120964287392978
+        },
+        "sha256": "1463bd7b099e2bf29842fa78e1c505780107d87fcac4e2d9c2dc0375abca7686",
+        "above2kShare": 0.000473963845282773,
+        "centroidHz": 163.2413457894373,
+        "rootPeriodEnvelopeShare": 0.1328894484487389
+      },
+      "shaker": {
+        "id": "held_roll_hard_shaker",
+        "peak": 0.203369140625,
+        "dc": 6.19234372813462e-08,
+        "loudness": 0.029999044158289613,
+        "globalAttackPeak": {
+          "hz": 130.81452401512885,
+          "cents": 0.023045836638360347
+        },
+        "globalHeldPeak": {
+          "hz": 130.72866628737393,
+          "cents": -1.1135911129393556
+        },
+        "sha256": "a54ba22671ae0bd517fea81474d5738fd3ea307ddc84583b31f4d37018f2a63b",
+        "above2kShare": 0.0025558989056831158,
+        "centroidHz": 187.76934086393,
+        "rootPeriodEnvelopeShare": 0.07500851751630347
+      }
+    }
+  ],
+  "matrix": [
+    {
+      "id": "roll_t0.0_b0.0_v0.2_h0.0",
+      "attack": {
+        "hz": 65.37987036300875,
+        "cents": -0.7021225732586223
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.0_v0.2_h1.0",
+      "attack": {
+        "hz": 65.37990560662445,
+        "cents": -0.7011893359988257
+      },
+      "held": {
+        "hz": 65.35215431718983,
+        "cents": -1.436188507959399
+      }
+    },
+    {
+      "id": "roll_t0.0_b0.0_v0.55_h0.0",
+      "attack": {
+        "hz": 65.38074437428075,
+        "cents": -0.678979242578729
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.0_v0.55_h1.0",
+      "attack": {
+        "hz": 65.38258028070403,
+        "cents": -0.6303664726070354
+      },
+      "held": {
+        "hz": 65.36095464847162,
+        "cents": -1.203075956331251
+      }
+    },
+    {
+      "id": "roll_t0.0_b0.0_v1.0_h0.0",
+      "attack": {
+        "hz": 65.3818136372082,
+        "cents": -0.6506661778055746
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.0_v1.0_h1.0",
+      "attack": {
+        "hz": 65.3873878433173,
+        "cents": -0.5030740030553397
+      },
+      "held": {
+        "hz": 65.36047982061146,
+        "cents": -1.2156529015322353
+      }
+    },
+    {
+      "id": "roll_t0.0_b0.5_v0.2_h0.0",
+      "attack": {
+        "hz": 65.37982399840313,
+        "cents": -0.7033502907799697
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.5_v0.2_h1.0",
+      "attack": {
+        "hz": 65.37979242283208,
+        "cents": -0.7041864006615193
+      },
+      "held": {
+        "hz": 65.35211894869606,
+        "cents": -1.4371254496392956
+      }
+    },
+    {
+      "id": "roll_t0.0_b0.5_v0.55_h0.0",
+      "attack": {
+        "hz": 65.3800761182988,
+        "cents": -0.6966742601702787
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.5_v0.55_h1.0",
+      "attack": {
+        "hz": 65.38239542060317,
+        "cents": -0.6352613016574377
+      },
+      "held": {
+        "hz": 65.36086776540105,
+        "cents": -1.2053772542669972
+      }
+    },
+    {
+      "id": "roll_t0.0_b0.5_v1.0_h0.0",
+      "attack": {
+        "hz": 65.38157641002665,
+        "cents": -0.6569476878505902
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b0.5_v1.0_h1.0",
+      "attack": {
+        "hz": 65.38739198517443,
+        "cents": -0.5029643408694655
+      },
+      "held": {
+        "hz": 65.36067957653898,
+        "cents": -1.210361879560951
+      }
+    },
+    {
+      "id": "roll_t0.0_b1.0_v0.2_h0.0",
+      "attack": {
+        "hz": 65.37990225723702,
+        "cents": -0.7012780264556686
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b1.0_v0.2_h1.0",
+      "attack": {
+        "hz": 65.38027394588791,
+        "cents": -0.6914358854193909
+      },
+      "held": {
+        "hz": 65.35214479862191,
+        "cents": -1.4364406629228972
+      }
+    },
+    {
+      "id": "roll_t0.0_b1.0_v0.55_h0.0",
+      "attack": {
+        "hz": 65.37979548768448,
+        "cents": -0.7041052444434026
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b1.0_v0.55_h1.0",
+      "attack": {
+        "hz": 65.38228227505913,
+        "cents": -0.638257239426011
+      },
+      "held": {
+        "hz": 65.3607679145253,
+        "cents": -1.2080220381246949
+      }
+    },
+    {
+      "id": "roll_t0.0_b1.0_v1.0_h0.0",
+      "attack": {
+        "hz": 65.38412509424325,
+        "cents": -0.5894625775215621
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.0_b1.0_v1.0_h1.0",
+      "attack": {
+        "hz": 65.38709243891162,
+        "cents": -0.5108953174928886
+      },
+      "held": {
+        "hz": 65.36084667094913,
+        "cents": -1.2059359898005104
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.0_v0.2_h0.0",
+      "attack": {
+        "hz": 130.8108882342994,
+        "cents": -0.02507171825171496
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.0_v0.2_h1.0",
+      "attack": {
+        "hz": 130.81412843599912,
+        "cents": 0.01781062977513229
+      },
+      "held": {
+        "hz": 130.7878956165598,
+        "cents": -0.3293973135354096
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.0_v0.55_h0.0",
+      "attack": {
+        "hz": 130.8103607893114,
+        "cents": -0.03205227297082487
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.0_v0.55_h1.0",
+      "attack": {
+        "hz": 130.8141254078883,
+        "cents": 0.01777055483280516
+      },
+      "held": {
+        "hz": 130.7712253971718,
+        "cents": -0.5500743928675924
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.0_v1.0_h0.0",
+      "attack": {
+        "hz": 130.80959632008745,
+        "cents": -0.04216981266148354
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.0_v1.0_h1.0",
+      "attack": {
+        "hz": 130.81438236575914,
+        "cents": 0.021171210357645315
+      },
+      "held": {
+        "hz": 130.72889938076588,
+        "cents": -1.110504270026759
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.5_v0.2_h0.0",
+      "attack": {
+        "hz": 130.8108882342994,
+        "cents": -0.02507171825171496
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.5_v0.2_h1.0",
+      "attack": {
+        "hz": 130.81412843599912,
+        "cents": 0.01781062977513229
+      },
+      "held": {
+        "hz": 130.7878956165598,
+        "cents": -0.3293973135354096
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.5_v0.55_h0.0",
+      "attack": {
+        "hz": 130.8102707887602,
+        "cents": -0.03324340241444922
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.5_v0.55_h1.0",
+      "attack": {
+        "hz": 130.8141728959374,
+        "cents": 0.018399026049864858
+      },
+      "held": {
+        "hz": 130.7712196409822,
+        "cents": -0.5501505970298392
+      }
+    },
+    {
+      "id": "roll_t0.5_b0.5_v1.0_h0.0",
+      "attack": {
+        "hz": 130.80947681183284,
+        "cents": -0.043751476850187
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b0.5_v1.0_h1.0",
+      "attack": {
+        "hz": 130.81466431726406,
+        "cents": 0.024902631250674188
+      },
+      "held": {
+        "hz": 130.72889868944273,
+        "cents": -1.1105134251728552
+      }
+    },
+    {
+      "id": "roll_t0.5_b1.0_v0.2_h0.0",
+      "attack": {
+        "hz": 130.8108882342994,
+        "cents": -0.02507171825171496
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b1.0_v0.2_h1.0",
+      "attack": {
+        "hz": 130.81412843599912,
+        "cents": 0.01781062977513229
+      },
+      "held": {
+        "hz": 130.7878956165598,
+        "cents": -0.3293973135354096
+      }
+    },
+    {
+      "id": "roll_t0.5_b1.0_v0.55_h0.0",
+      "attack": {
+        "hz": 130.81025548518576,
+        "cents": -0.03344594056778265
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b1.0_v0.55_h1.0",
+      "attack": {
+        "hz": 130.81406201232664,
+        "cents": 0.016931558423635213
+      },
+      "held": {
+        "hz": 130.77120565221404,
+        "cents": -0.5503357894069533
+      }
+    },
+    {
+      "id": "roll_t0.5_b1.0_v1.0_h0.0",
+      "attack": {
+        "hz": 130.809687037679,
+        "cents": -0.040969187223450304
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t0.5_b1.0_v1.0_h1.0",
+      "attack": {
+        "hz": 130.81453985530072,
+        "cents": 0.023255469654585997
+      },
+      "held": {
+        "hz": 130.7287067299479,
+        "cents": -1.1130555337717007
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.0_v0.2_h0.0",
+      "attack": {
+        "hz": 261.62261835365626,
+        "cents": -0.019500707491598292
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.0_v0.2_h1.0",
+      "attack": {
+        "hz": 261.6159158224368,
+        "cents": -0.06385390208551958
+      },
+      "held": {
+        "hz": 261.60911272481934,
+        "cents": -0.10887374476343316
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.0_v0.55_h0.0",
+      "attack": {
+        "hz": 261.6225774393191,
+        "cents": -0.019771449752077546
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.0_v0.55_h1.0",
+      "attack": {
+        "hz": 261.61524696642556,
+        "cents": -0.0682800386879472
+      },
+      "held": {
+        "hz": 261.6362320399603,
+        "cents": 0.07058272731502968
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.0_v1.0_h0.0",
+      "attack": {
+        "hz": 261.6232961230637,
+        "cents": -0.015015713177651095
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.0_v1.0_h1.0",
+      "attack": {
+        "hz": 261.6175123082177,
+        "cents": -0.05328924625808016
+      },
+      "held": {
+        "hz": 261.6811470080376,
+        "cents": 0.3677573496465585
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.5_v0.2_h0.0",
+      "attack": {
+        "hz": 261.62261835365626,
+        "cents": -0.019500707491598292
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.5_v0.2_h1.0",
+      "attack": {
+        "hz": 261.6159158224368,
+        "cents": -0.06385390208551958
+      },
+      "held": {
+        "hz": 261.60911272481934,
+        "cents": -0.10887374476343316
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.5_v0.55_h0.0",
+      "attack": {
+        "hz": 261.6225774393191,
+        "cents": -0.019771449752077546
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.5_v0.55_h1.0",
+      "attack": {
+        "hz": 261.61524696642556,
+        "cents": -0.0682800386879472
+      },
+      "held": {
+        "hz": 261.6362320399603,
+        "cents": 0.07058272731502968
+      }
+    },
+    {
+      "id": "roll_t1.0_b0.5_v1.0_h0.0",
+      "attack": {
+        "hz": 261.6232961230637,
+        "cents": -0.015015713177651095
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b0.5_v1.0_h1.0",
+      "attack": {
+        "hz": 261.6175123082177,
+        "cents": -0.05328924625808016
+      },
+      "held": {
+        "hz": 261.6811470080376,
+        "cents": 0.3677573496465585
+      }
+    },
+    {
+      "id": "roll_t1.0_b1.0_v0.2_h0.0",
+      "attack": {
+        "hz": 261.62261835365626,
+        "cents": -0.019500707491598292
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b1.0_v0.2_h1.0",
+      "attack": {
+        "hz": 261.6159158224368,
+        "cents": -0.06385390208551958
+      },
+      "held": {
+        "hz": 261.60911272481934,
+        "cents": -0.10887374476343316
+      }
+    },
+    {
+      "id": "roll_t1.0_b1.0_v0.55_h0.0",
+      "attack": {
+        "hz": 261.6225774393191,
+        "cents": -0.019771449752077546
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b1.0_v0.55_h1.0",
+      "attack": {
+        "hz": 261.61524696642556,
+        "cents": -0.0682800386879472
+      },
+      "held": {
+        "hz": 261.6362320399603,
+        "cents": 0.07058272731502968
+      }
+    },
+    {
+      "id": "roll_t1.0_b1.0_v1.0_h0.0",
+      "attack": {
+        "hz": 261.6232961230637,
+        "cents": -0.015015713177651095
+      },
+      "held": null
+    },
+    {
+      "id": "roll_t1.0_b1.0_v1.0_h1.0",
+      "attack": {
+        "hz": 261.6175123082177,
+        "cents": -0.05328924625808016
+      },
+      "held": {
+        "hz": 261.6811470080376,
+        "cents": 0.3677573496465585
+      }
+    }
+  ],
+  "factoryBaselineFloatHashesExact": 6,
+  "checks": {
+    "deterministicCandidateRepeats": 12,
+    "mechanicsPairsExact": 12,
+    "otherVoiceBuffersExact": 20,
+    "matrix": [
+      {
+        "id": "roll_t0.0_b0.0_v0.2_h0.0",
+        "file": "matrix/roll_t0.0_b0.0_v0.2_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.12376528233289719,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 30.0,
+          "acceptedPackets": 30.0,
+          "grainCount": 30.0,
+          "queuePeak": 10.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 30.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.009821369809738563,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 20.997732426303855,
+          "maxGrainMs": 4.467120181405896,
+          "peakReadout": 0.04905375232232214,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0012469862175597814,
+          "shakerContactRms": 0.002464407761777901,
+          "contactRmsRatio": 1.9762910985499766,
+          "legacyContactPeak": 0.038317683077009806,
+          "shakerContactPeak": 0.04905375232232214,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 3.283737391335308e-09,
+          "legacyReferencePeakOutputEnergy": 0.008702058514011294
+        },
+        "renderPairMs": 78.335051,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.0_v0.2_h1.0",
+        "file": "matrix/roll_t0.0_b0.0_v0.2_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.14292189478874207,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 24.0,
+          "acceptedPackets": 24.0,
+          "grainCount": 24.0,
+          "queuePeak": 8.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 24.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.008454857629698907,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 21.519274376417233,
+          "maxGrainMs": 4.421768707482993,
+          "peakReadout": 0.05047243736702138,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0007535181300731175,
+          "shakerContactRms": 0.0013497709530523622,
+          "contactRmsRatio": 1.7912919400113005,
+          "legacyContactPeak": 0.056792854722891466,
+          "shakerContactPeak": 0.05047243736702138,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.233545715573882e-06,
+          "legacyReferencePeakOutputEnergy": 0.010943387095908957
+        },
+        "renderPairMs": 293.762036,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b0.0_v0.55_h0.0",
+        "file": "matrix/roll_t0.0_b0.0_v0.55_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.22309134900569916,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 30.0,
+          "acceptedPackets": 30.0,
+          "grainCount": 30.0,
+          "queuePeak": 9.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 30.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.01881631632924342,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 19.387755102040817,
+          "maxGrainMs": 4.308390022675737,
+          "peakReadout": 0.13218903887373723,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.003256519192540428,
+          "shakerContactRms": 0.006200876807422029,
+          "contactRmsRatio": 1.9041425647440118,
+          "legacyContactPeak": 0.12320605783132044,
+          "shakerContactPeak": 0.13218903887373723,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 7.124577750374813e-09,
+          "legacyReferencePeakOutputEnergy": 0.02245595799279863
+        },
+        "renderPairMs": 95.176177,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.0_v0.55_h1.0",
+        "file": "matrix/roll_t0.0_b0.0_v0.55_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.23482011258602142,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 84.0,
+          "acceptedPackets": 84.0,
+          "grainCount": 84.0,
+          "queuePeak": 12.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 84.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.021842638384015272,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 20.589569160997733,
+          "maxGrainMs": 4.35374149659864,
+          "peakReadout": 0.060655280113646806,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0009417885329743458,
+          "shakerContactRms": 0.0021514481314509966,
+          "contactRmsRatio": 2.284428038910516,
+          "legacyContactPeak": 0.03570570785271356,
+          "shakerContactPeak": 0.060655280113646806,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 6.4871664535807085e-06,
+          "legacyReferencePeakOutputEnergy": 0.029908333747953732
+        },
+        "renderPairMs": 211.119136,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b0.0_v1.0_h0.0",
+        "file": "matrix/roll_t0.0_b0.0_v1.0_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.42538613080978394,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 30.0,
+          "acceptedPackets": 30.0,
+          "grainCount": 36.0,
+          "queuePeak": 8.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 30.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.01478874310165254,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 18.571428571428573,
+          "maxGrainMs": 4.104308390022676,
+          "peakReadout": 0.1645553864183359,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0023040494067289555,
+          "shakerContactRms": 0.0060379971912583475,
+          "contactRmsRatio": 2.62060230723544,
+          "legacyContactPeak": 0.11254086390694798,
+          "shakerContactPeak": 0.1645553864183359,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 2.3175364258470513e-08,
+          "legacyReferencePeakOutputEnergy": 0.06551642486652168
+        },
+        "renderPairMs": 64.042142,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.0_v1.0_h1.0",
+        "file": "matrix/roll_t0.0_b0.0_v1.0_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.5222464799880981,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 96.0,
+          "acceptedPackets": 96.0,
+          "grainCount": 96.0,
+          "queuePeak": 12.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 96.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.029962518993999793,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 19.63718820861678,
+          "maxGrainMs": 4.149659863945578,
+          "peakReadout": 0.1563299914755908,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0014328848811889006,
+          "shakerContactRms": 0.00358881555248079,
+          "contactRmsRatio": 2.5046084298852107,
+          "legacyContactPeak": 0.0834169488586098,
+          "shakerContactPeak": 0.1563299914755908,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.562353942521648e-05,
+          "legacyReferencePeakOutputEnergy": 0.08709525369317886
+        },
+        "renderPairMs": 213.137801,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b0.5_v0.2_h0.0",
+        "file": "matrix/roll_t0.0_b0.5_v0.2_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.22006528079509735,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 90.0,
+          "acceptedPackets": 90.0,
+          "grainCount": 90.0,
+          "queuePeak": 34.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 90.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.03801641030406285,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 30.8843537414966,
+          "maxGrainMs": 4.444444444444445,
+          "peakReadout": 0.2642193420923573,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.014526817248173554,
+          "shakerContactRms": 0.016754656187664255,
+          "contactRmsRatio": 1.1533604299848135,
+          "legacyContactPeak": 0.4425660884850755,
+          "shakerContactPeak": 0.2642193420923573,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 6.0071630777330725e-09,
+          "legacyReferencePeakOutputEnergy": 0.011793827054020973
+        },
+        "renderPairMs": 67.005172,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.5_v0.2_h1.0",
+        "file": "matrix/roll_t0.0_b0.5_v0.2_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.2132827341556549,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 60.0,
+          "acceptedPackets": 60.0,
+          "grainCount": 60.0,
+          "queuePeak": 24.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 60.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.02281544308725144,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 30.430839002267575,
+          "maxGrainMs": 4.444444444444445,
+          "peakReadout": 0.22582537871898525,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.006060725535658344,
+          "shakerContactRms": 0.006890354208322104,
+          "contactRmsRatio": 1.1368860325026484,
+          "legacyContactPeak": 0.4691666193411683,
+          "shakerContactPeak": 0.22582537871898525,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.2335459350297276e-06,
+          "legacyReferencePeakOutputEnergy": 0.010943387095908957
+        },
+        "renderPairMs": 234.041386,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b0.5_v0.55_h0.0",
+        "file": "matrix/roll_t0.0_b0.5_v0.55_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.5195598602294922,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 90.0,
+          "acceptedPackets": 90.0,
+          "grainCount": 120.0,
+          "queuePeak": 32.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 90.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.07248413537205049,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 30.0,
+          "maxGrainMs": 4.331065759637188,
+          "peakReadout": 0.7111340629875758,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.018328540745916295,
+          "shakerContactRms": 0.038320062401535154,
+          "contactRmsRatio": 2.0907317681617994,
+          "legacyContactPeak": 0.5299654705334887,
+          "shakerContactPeak": 0.7111340629875758,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 7.115858671557195e-09,
+          "legacyReferencePeakOutputEnergy": 0.0240073849478515
+        },
+        "renderPairMs": 67.791606,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.5_v0.55_h1.0",
+        "file": "matrix/roll_t0.0_b0.5_v0.55_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.23482011258602142,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 210.0,
+          "acceptedPackets": 210.0,
+          "grainCount": 210.0,
+          "queuePeak": 32.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 82.0,
+          "acceptedImpulse": 0.061080983139162645,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 30.158730158730158,
+          "maxGrainMs": 4.331065759637188,
+          "peakReadout": 0.23685260501742567,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.008125923367887172,
+          "shakerContactRms": 0.011431821439206402,
+          "contactRmsRatio": 1.4068335279143542,
+          "legacyContactPeak": 0.2771444730219482,
+          "shakerContactPeak": 0.23685260501742567,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 6.487445913627836e-06,
+          "legacyReferencePeakOutputEnergy": 0.029908333747953732
+        },
+        "renderPairMs": 222.409897,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b0.5_v1.0_h0.0",
+        "file": "matrix/roll_t0.0_b0.5_v1.0_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.6472402215003967,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 90.0,
+          "acceptedPackets": 90.0,
+          "grainCount": 120.0,
+          "queuePeak": 28.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 90.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0637758290667007,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 28.798185941043084,
+          "maxGrainMs": 4.126984126984127,
+          "peakReadout": 0.7670053488439945,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.016258575691663932,
+          "shakerContactRms": 0.04083383631979351,
+          "contactRmsRatio": 2.511526045957996,
+          "legacyContactPeak": 0.47466760634258776,
+          "shakerContactPeak": 0.7670053488439945,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 2.3165351083329416e-08,
+          "legacyReferencePeakOutputEnergy": 0.06551642486652168
+        },
+        "renderPairMs": 65.857111,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b0.5_v1.0_h1.0",
+        "file": "matrix/roll_t0.0_b0.5_v1.0_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.5222464799880981,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 240.0,
+          "acceptedPackets": 240.0,
+          "grainCount": 270.0,
+          "queuePeak": 30.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 112.0,
+          "acceptedImpulse": 0.09216443217743159,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 28.843537414965986,
+          "maxGrainMs": 4.104308390022676,
+          "peakReadout": 0.545022491825267,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.011718026356616701,
+          "shakerContactRms": 0.020711109293852815,
+          "contactRmsRatio": 1.7674571351478552,
+          "legacyContactPeak": 0.47822132866944855,
+          "shakerContactPeak": 0.545022491825267,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.5620027993242496e-05,
+          "legacyReferencePeakOutputEnergy": 0.08709525369317886
+        },
+        "renderPairMs": 219.453783,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b1.0_v0.2_h0.0",
+        "file": "matrix/roll_t0.0_b1.0_v0.2_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 24064,
+        "rawPeak": 0.5859178900718689,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 144.0,
+          "acceptedPackets": 144.0,
+          "grainCount": 144.0,
+          "queuePeak": 40.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 16.0,
+          "acceptedImpulse": 0.09288041081089747,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 39.61451247165533,
+          "maxGrainMs": 4.421768707482993,
+          "peakReadout": 0.8339873056873192,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.03447200722693931,
+          "shakerContactRms": 0.05390167103068896,
+          "contactRmsRatio": 1.563635986609033,
+          "legacyContactPeak": 0.8599332073484953,
+          "shakerContactPeak": 0.8339873056873192,
+          "contactReadoutSamples": 96257.0,
+          "legacyReferenceOutputEnergy": 5.9865452960137785e-09,
+          "legacyReferencePeakOutputEnergy": 0.020582222139007355
+        },
+        "renderPairMs": 68.719283,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b1.0_v0.2_h1.0",
+        "file": "matrix/roll_t0.0_b1.0_v0.2_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.36297518014907837,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 120.0,
+          "acceptedPackets": 120.0,
+          "grainCount": 120.0,
+          "queuePeak": 42.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 120.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0573950665669103,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 39.70521541950114,
+          "maxGrainMs": 4.444444444444445,
+          "peakReadout": 0.5032419324376669,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.016898389055228374,
+          "shakerContactRms": 0.019178978089261365,
+          "contactRmsRatio": 1.1349589612701796,
+          "legacyContactPeak": 0.7761149671289014,
+          "shakerContactPeak": 0.5032419324376669,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.233545854443457e-06,
+          "legacyReferencePeakOutputEnergy": 0.017431475375456248
+        },
+        "renderPairMs": 234.89083,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b1.0_v0.55_h0.0",
+        "file": "matrix/roll_t0.0_b1.0_v0.55_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.9321141839027405,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 168.0,
+          "acceptedPackets": 168.0,
+          "grainCount": 240.0,
+          "queuePeak": 51.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 40.0,
+          "acceptedImpulse": 0.1694064606641259,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 38.435374149659864,
+          "maxGrainMs": 4.240362811791384,
+          "peakReadout": 1.3058112746986872,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.04056791196910803,
+          "shakerContactRms": 0.09637878512710084,
+          "contactRmsRatio": 2.3757393577587163,
+          "legacyContactPeak": 0.8921652499026437,
+          "shakerContactPeak": 1.3058112746986872,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 1.4425272667183589e-08,
+          "legacyReferencePeakOutputEnergy": 0.038068040377283445
+        },
+        "renderPairMs": 69.094676,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b1.0_v0.55_h1.0",
+        "file": "matrix/roll_t0.0_b1.0_v0.55_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.3893076479434967,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 264.0,
+          "acceptedPackets": 264.0,
+          "grainCount": 264.0,
+          "queuePeak": 56.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 136.0,
+          "acceptedImpulse": 0.0888157063405893,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 39.002267573696145,
+          "maxGrainMs": 4.308390022675737,
+          "peakReadout": 0.5250354059690214,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.02156735807695075,
+          "shakerContactRms": 0.02379753521789154,
+          "contactRmsRatio": 1.1034052076746572,
+          "legacyContactPeak": 0.7342287460041562,
+          "shakerContactPeak": 0.5250354059690214,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 6.487914598634862e-06,
+          "legacyReferencePeakOutputEnergy": 0.029908333747953732
+        },
+        "renderPairMs": 225.313895,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.0_b1.0_v1.0_h0.0",
+        "file": "matrix/roll_t0.0_b1.0_v1.0_h0.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.8792417049407959,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 120.0,
+          "acceptedPackets": 120.0,
+          "grainCount": 240.0,
+          "queuePeak": 44.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 120.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.12984537739899737,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 37.528344671201815,
+          "maxGrainMs": 3.9909297052154193,
+          "peakReadout": 1.3188693885605485,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.03333871139676278,
+          "shakerContactRms": 0.09636433294049578,
+          "contactRmsRatio": 2.8904636353117366,
+          "legacyContactPeak": 0.7997072146972605,
+          "shakerContactPeak": 1.3188693885605485,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 2.3156386290259265e-08,
+          "legacyReferencePeakOutputEnergy": 0.06551642486652168
+        },
+        "renderPairMs": 66.999744,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.0_b1.0_v1.0_h1.0",
+        "file": "matrix/roll_t0.0_b1.0_v1.0_h1.0.wav",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.7859736084938049,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 384.0,
+          "acceptedPackets": 384.0,
+          "grainCount": 672.0,
+          "queuePeak": 62.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 256.0,
+          "acceptedImpulse": 0.16078502785171697,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 38.36734693877551,
+          "maxGrainMs": 4.149659863945578,
+          "peakReadout": 1.026159614209559,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.025772521818841744,
+          "shakerContactRms": 0.04685996506578877,
+          "contactRmsRatio": 1.8182141970884058,
+          "legacyContactPeak": 0.926346804788343,
+          "shakerContactPeak": 1.026159614209559,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.5615906324181915e-05,
+          "legacyReferencePeakOutputEnergy": 0.08709525369317886
+        },
+        "renderPairMs": 230.43093,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.0_v0.2_h0.0",
+        "file": "matrix/roll_t0.5_b0.0_v0.2_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.05028523877263069,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 4.881629583514634e-10,
+          "legacyReferencePeakOutputEnergy": 0.001245298318786762
+        },
+        "renderPairMs": 66.482318,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.0_v0.2_h1.0",
+        "file": "matrix/roll_t0.5_b0.0_v0.2_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.058560919016599655,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.538193912339858e-07,
+          "legacyReferencePeakOutputEnergy": 0.0016782262734604035
+        },
+        "renderPairMs": 215.510669,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.0_v0.55_h0.0",
+        "file": "matrix/roll_t0.5_b0.0_v0.55_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.10866396874189377,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 18.0,
+          "acceptedPackets": 18.0,
+          "grainCount": 18.0,
+          "queuePeak": 13.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 18.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.003699239810981517,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 19.773242630385486,
+          "maxGrainMs": 4.285714285714286,
+          "peakReadout": 0.02887536587505045,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.000607306472166125,
+          "shakerContactRms": 0.0013883542373418942,
+          "contactRmsRatio": 2.2860850344471846,
+          "legacyContactPeak": 0.022895697838039623,
+          "shakerContactPeak": 0.02887536587505045,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 1.4640465886661895e-09,
+          "legacyReferencePeakOutputEnergy": 0.004001741710613361
+        },
+        "renderPairMs": 66.57756,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.0_v0.55_h1.0",
+        "file": "matrix/roll_t0.5_b0.0_v0.55_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.1098589301109314,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 6.0,
+          "acceptedPackets": 6.0,
+          "grainCount": 6.0,
+          "queuePeak": 6.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 6.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0010682901437610178,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 13.26530612244898,
+          "maxGrainMs": 4.104308390022676,
+          "peakReadout": 0.02430109916907327,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.00016505646140694,
+          "shakerContactRms": 0.0003785001917328808,
+          "contactRmsRatio": 2.293155860161717,
+          "legacyContactPeak": 0.016062785356509925,
+          "shakerContactPeak": 0.02430109916907327,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 5.503949615803857e-07,
+          "legacyReferencePeakOutputEnergy": 0.005296989948810149
+        },
+        "renderPairMs": 227.50465,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.0_v1.0_h0.0",
+        "file": "matrix/roll_t0.5_b0.0_v1.0_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.22151784598827362,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 18.0,
+          "acceptedPackets": 18.0,
+          "grainCount": 18.0,
+          "queuePeak": 6.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 18.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.005507928646937687,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 18.662131519274375,
+          "maxGrainMs": 4.081632653061225,
+          "peakReadout": 0.10439120189594273,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0009550676639223205,
+          "shakerContactRms": 0.002552652729406253,
+          "contactRmsRatio": 2.672745425096782,
+          "legacyContactPeak": 0.036951347229374626,
+          "shakerContactPeak": 0.10439120189594273,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 3.363543177180871e-09,
+          "legacyReferencePeakOutputEnergy": 0.011214972966377502
+        },
+        "renderPairMs": 65.902908,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.0_v1.0_h1.0",
+        "file": "matrix/roll_t0.5_b0.0_v1.0_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.2664221227169037,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 30.0,
+          "acceptedPackets": 30.0,
+          "grainCount": 30.0,
+          "queuePeak": 13.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 30.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.007756687265979967,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 20.068027210884352,
+          "maxGrainMs": 4.104308390022676,
+          "peakReadout": 0.05014493154622961,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0005340060774989175,
+          "shakerContactRms": 0.0015311915609230293,
+          "contactRmsRatio": 2.8673672930738006,
+          "legacyContactPeak": 0.03021972205501588,
+          "shakerContactPeak": 0.05014493154622961,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 7.760306514703827e-07,
+          "legacyReferencePeakOutputEnergy": 0.013887922685410453
+        },
+        "renderPairMs": 238.974266,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.5_v0.2_h0.0",
+        "file": "matrix/roll_t0.5_b0.5_v0.2_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.05028523877263069,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 4.881629583514634e-10,
+          "legacyReferencePeakOutputEnergy": 0.001245298318786762
+        },
+        "renderPairMs": 66.771872,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.5_v0.2_h1.0",
+        "file": "matrix/roll_t0.5_b0.5_v0.2_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.058560919016599655,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.538193912339858e-07,
+          "legacyReferencePeakOutputEnergy": 0.0016782262734604035
+        },
+        "renderPairMs": 232.060325,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.5_v0.55_h0.0",
+        "file": "matrix/roll_t0.5_b0.5_v0.55_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.1597299426794052,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 60.0,
+          "acceptedPackets": 60.0,
+          "grainCount": 60.0,
+          "queuePeak": 42.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 60.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.013259736786061252,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 30.34013605442177,
+          "maxGrainMs": 4.331065759637188,
+          "peakReadout": 0.15263231329904303,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.005347243563504949,
+          "shakerContactRms": 0.008099445650943586,
+          "contactRmsRatio": 1.5146954790356801,
+          "legacyContactPeak": 0.16143047227953547,
+          "shakerContactPeak": 0.15263231329904303,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 1.4640265297720338e-09,
+          "legacyReferencePeakOutputEnergy": 0.004222480247486807
+        },
+        "renderPairMs": 70.57717,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.5_v0.55_h1.0",
+        "file": "matrix/roll_t0.5_b0.5_v0.55_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.11474166810512543,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 15.0,
+          "acceptedPackets": 15.0,
+          "grainCount": 15.0,
+          "queuePeak": 15.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 15.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0029649578142519764,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 28.775510204081634,
+          "maxGrainMs": 4.308390022675737,
+          "peakReadout": 0.08481785717945844,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.00137430485874846,
+          "shakerContactRms": 0.0020095003508865316,
+          "contactRmsRatio": 1.4621940234690913,
+          "legacyContactPeak": 0.13374310688788973,
+          "shakerContactPeak": 0.08481785717945844,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 5.503949615801929e-07,
+          "legacyReferencePeakOutputEnergy": 0.005585092398651929
+        },
+        "renderPairMs": 250.301497,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b0.5_v1.0_h0.0",
+        "file": "matrix/roll_t0.5_b0.5_v1.0_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.29551658034324646,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 90.0,
+          "acceptedPackets": 90.0,
+          "grainCount": 90.0,
+          "queuePeak": 42.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 90.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.03287353099759798,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 28.75283446712018,
+          "maxGrainMs": 4.126984126984127,
+          "peakReadout": 0.32869341701962346,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.01230572150139175,
+          "shakerContactRms": 0.020154485127240808,
+          "contactRmsRatio": 1.6378141765162963,
+          "legacyContactPeak": 0.36938250839724845,
+          "shakerContactPeak": 0.32869341701962346,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 3.363442388331532e-09,
+          "legacyReferencePeakOutputEnergy": 0.012099258175398423
+        },
+        "renderPairMs": 69.308547,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b0.5_v1.0_h1.0",
+        "file": "matrix/roll_t0.5_b0.5_v1.0_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.2664221227169037,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 60.0,
+          "acceptedPackets": 60.0,
+          "grainCount": 60.0,
+          "queuePeak": 29.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 60.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.017290098753069864,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 29.070294784580497,
+          "maxGrainMs": 4.126984126984127,
+          "peakReadout": 0.2501417237483877,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.004075031246317669,
+          "shakerContactRms": 0.0070037164448686,
+          "contactRmsRatio": 1.718690243466817,
+          "legacyContactPeak": 0.23331439557036387,
+          "shakerContactPeak": 0.2501417237483877,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 7.760306514703675e-07,
+          "legacyReferencePeakOutputEnergy": 0.013887922685410453
+        },
+        "renderPairMs": 240.887075,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b1.0_v0.2_h0.0",
+        "file": "matrix/roll_t0.5_b1.0_v0.2_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25600,
+        "rawPeak": 0.05028523877263069,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 102401.0,
+          "legacyReferenceOutputEnergy": 4.881629583514634e-10,
+          "legacyReferencePeakOutputEnergy": 0.001245298318786762
+        },
+        "renderPairMs": 71.842187,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b1.0_v0.2_h1.0",
+        "file": "matrix/roll_t0.5_b1.0_v0.2_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.058560919016599655,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 2.538193912339858e-07,
+          "legacyReferencePeakOutputEnergy": 0.0016782262734604035
+        },
+        "renderPairMs": 232.814889,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b1.0_v0.55_h0.0",
+        "file": "matrix/roll_t0.5_b1.0_v0.55_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.25399214029312134,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 48.0,
+          "acceptedPackets": 48.0,
+          "grainCount": 48.0,
+          "queuePeak": 42.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 48.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.012650333023452589,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 38.41269841269841,
+          "maxGrainMs": 4.331065759637188,
+          "peakReadout": 0.29039521754903813,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.012368115251546501,
+          "shakerContactRms": 0.014564092827914075,
+          "contactRmsRatio": 1.1775515130401935,
+          "legacyContactPeak": 0.4515097621188334,
+          "shakerContactPeak": 0.29039521754903813,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 2.771820963501435e-09,
+          "legacyReferencePeakOutputEnergy": 0.008212029734217552
+        },
+        "renderPairMs": 69.988127,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b1.0_v0.55_h1.0",
+        "file": "matrix/roll_t0.5_b1.0_v0.55_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.17894232273101807,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 24.0,
+          "acceptedPackets": 24.0,
+          "grainCount": 24.0,
+          "queuePeak": 24.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 24.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.005069851529713303,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 36.71201814058957,
+          "maxGrainMs": 4.308390022675737,
+          "peakReadout": 0.16900898589567656,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0039165939994867125,
+          "shakerContactRms": 0.004455254327519582,
+          "contactRmsRatio": 1.1375328482103237,
+          "legacyContactPeak": 0.3811508389680317,
+          "shakerContactPeak": 0.16900898589567656,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 5.503952042370654e-07,
+          "legacyReferencePeakOutputEnergy": 0.007956595938946756
+        },
+        "renderPairMs": 257.101063,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t0.5_b1.0_v1.0_h0.0",
+        "file": "matrix/roll_t0.5_b1.0_v1.0_h0.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.5800197720527649,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 192.0,
+          "acceptedPackets": 192.0,
+          "grainCount": 336.0,
+          "queuePeak": 78.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 128.0,
+          "ledgerFullPacketCount": 64.0,
+          "acceptedImpulse": 0.0827700622877948,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 38.52607709750567,
+          "maxGrainMs": 4.172335600907029,
+          "peakReadout": 0.7643835005985989,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.03339200277563744,
+          "shakerContactRms": 0.05887341209723375,
+          "contactRmsRatio": 1.7630991615809088,
+          "legacyContactPeak": 0.864814152540258,
+          "shakerContactPeak": 0.7643835005985989,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 4.781906306586846e-09,
+          "legacyReferencePeakOutputEnergy": 0.017096295126330385
+        },
+        "renderPairMs": 73.305379,
+        "seam": null
+      },
+      {
+        "id": "roll_t0.5_b1.0_v1.0_h1.0",
+        "file": "matrix/roll_t0.5_b1.0_v1.0_h1.0.wav",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.3512246012687683,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 72.0,
+          "acceptedPackets": 72.0,
+          "grainCount": 96.0,
+          "queuePeak": 46.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 72.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0200602756813908,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 37.68707482993197,
+          "maxGrainMs": 4.126984126984127,
+          "peakReadout": 0.4679850391022302,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.009010650710039075,
+          "shakerContactRms": 0.01249863326110136,
+          "contactRmsRatio": 1.3870955232096838,
+          "legacyContactPeak": 0.6367660039404055,
+          "shakerContactPeak": 0.4679850391022302,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 7.760306514703794e-07,
+          "legacyReferencePeakOutputEnergy": 0.015751287762569857
+        },
+        "renderPairMs": 256.248981,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.0_v0.2_h0.0",
+        "file": "matrix/roll_t1.0_b0.0_v0.2_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.02249889448285103,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 6.636815709697418e-11,
+          "legacyReferencePeakOutputEnergy": 0.0001686862756614491
+        },
+        "renderPairMs": 71.823629,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.0_v0.2_h1.0",
+        "file": "matrix/roll_t1.0_b0.0_v0.2_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.02528947964310646,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 9.868466639602729e-09,
+          "legacyReferencePeakOutputEnergy": 0.00021580071016977215
+        },
+        "renderPairMs": 233.165775,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.0_v0.55_h0.0",
+        "file": "matrix/roll_t1.0_b0.0_v0.55_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.03414738178253174,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 1.4665696616481404e-10,
+          "legacyReferencePeakOutputEnergy": 0.00040742539910269685
+        },
+        "renderPairMs": 71.595418,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.0_v0.55_h1.0",
+        "file": "matrix/roll_t1.0_b0.0_v0.55_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.03772180899977684,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 3.71226254304223e-08,
+          "legacyReferencePeakOutputEnergy": 0.0005149603014849704
+        },
+        "renderPairMs": 235.549444,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.0_v1.0_h0.0",
+        "file": "matrix/roll_t1.0_b0.0_v1.0_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.10332734882831573,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 7.023383424957441e-10,
+          "legacyReferencePeakOutputEnergy": 0.0021701652402340865
+        },
+        "renderPairMs": 69.280502,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.0_v1.0_h1.0",
+        "file": "matrix/roll_t1.0_b0.0_v1.0_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.1273653358221054,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.795431771245348e-07,
+          "legacyReferencePeakOutputEnergy": 0.0025796400813115077
+        },
+        "renderPairMs": 234.475056,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.5_v0.2_h0.0",
+        "file": "matrix/roll_t1.0_b0.5_v0.2_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.02249889448285103,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 6.636815709697418e-11,
+          "legacyReferencePeakOutputEnergy": 0.0001686862756614491
+        },
+        "renderPairMs": 72.749245,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.5_v0.2_h1.0",
+        "file": "matrix/roll_t1.0_b0.5_v0.2_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.02528947964310646,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 9.868466639602729e-09,
+          "legacyReferencePeakOutputEnergy": 0.00021580071016977215
+        },
+        "renderPairMs": 240.407179,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.5_v0.55_h0.0",
+        "file": "matrix/roll_t1.0_b0.5_v0.55_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.03414738178253174,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 1.4665696616481404e-10,
+          "legacyReferencePeakOutputEnergy": 0.00040742539910269685
+        },
+        "renderPairMs": 72.136218,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.5_v0.55_h1.0",
+        "file": "matrix/roll_t1.0_b0.5_v0.55_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.03772180899977684,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 3.71226254304223e-08,
+          "legacyReferencePeakOutputEnergy": 0.0005149603014849704
+        },
+        "renderPairMs": 238.454564,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b0.5_v1.0_h0.0",
+        "file": "matrix/roll_t1.0_b0.5_v1.0_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.10332734882831573,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 7.023383424957441e-10,
+          "legacyReferencePeakOutputEnergy": 0.0021701652402340865
+        },
+        "renderPairMs": 70.5887,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b0.5_v1.0_h1.0",
+        "file": "matrix/roll_t1.0_b0.5_v1.0_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 0.5,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.1273653358221054,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.795431771245348e-07,
+          "legacyReferencePeakOutputEnergy": 0.0025796400813115077
+        },
+        "renderPairMs": 238.455266,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b1.0_v0.2_h0.0",
+        "file": "matrix/roll_t1.0_b1.0_v0.2_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.02249889448285103,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 6.636815709697418e-11,
+          "legacyReferencePeakOutputEnergy": 0.0001686862756614491
+        },
+        "renderPairMs": 73.817776,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b1.0_v0.2_h1.0",
+        "file": "matrix/roll_t1.0_b1.0_v0.2_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.20000000298023224,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.02528947964310646,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 9.868466639602729e-09,
+          "legacyReferencePeakOutputEnergy": 0.00021580071016977215
+        },
+        "renderPairMs": 243.331317,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b1.0_v0.55_h0.0",
+        "file": "matrix/roll_t1.0_b1.0_v0.55_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": -1,
+        "frames": 25088,
+        "rawPeak": 0.03414738178253174,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 100353.0,
+          "legacyReferenceOutputEnergy": 1.4665696616481404e-10,
+          "legacyReferencePeakOutputEnergy": 0.00040742539910269685
+        },
+        "renderPairMs": 73.569715,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b1.0_v0.55_h1.0",
+        "file": "matrix/roll_t1.0_b1.0_v0.55_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 0.550000011920929,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.03772180899977684,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 3.71226254304223e-08,
+          "legacyReferencePeakOutputEnergy": 0.0005149603014849704
+        },
+        "renderPairMs": 246.855982,
+        "seam": 0.0
+      },
+      {
+        "id": "roll_t1.0_b1.0_v1.0_h0.0",
+        "file": "matrix/roll_t1.0_b1.0_v1.0_h0.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 0.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": -1,
+        "frames": 24576,
+        "rawPeak": 0.10332734882831573,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 98305.0,
+          "legacyReferenceOutputEnergy": 7.023383424957441e-10,
+          "legacyReferencePeakOutputEnergy": 0.0021701652402340865
+        },
+        "renderPairMs": 74.637874,
+        "seam": null
+      },
+      {
+        "id": "roll_t1.0_b1.0_v1.0_h1.0",
+        "file": "matrix/roll_t1.0_b1.0_v1.0_h1.0.wav",
+        "midi": 60,
+        "macros": {
+          "TUNE": 1.0,
+          "STRIKE": 0.4000000059604645,
+          "ENSEMBLE": 0.5,
+          "BEADS": 1.0,
+          "CAGE": 0.25,
+          "CURRENT": 0.20000000298023224,
+          "FAULT": 0.10000000149011612,
+          "HOLD": 1.0
+        },
+        "velocity": 1.0,
+        "loopStartFrame": 47187,
+        "frames": 71460,
+        "rawPeak": 0.1273653358221054,
+        "rails": 0,
+        "mechanicsMatch": true,
+        "shakerDiagnostics": {
+          "receivedPackets": 0.0,
+          "acceptedPackets": 0.0,
+          "grainCount": 0.0,
+          "queuePeak": 0.0,
+          "pendingAtEnd": 0.0,
+          "droppedRatePackets": 0.0,
+          "droppedPackets": 0.0,
+          "retainedLedgerCount": 0.0,
+          "ledgerFullPacketCount": 0.0,
+          "acceptedImpulse": 0.0,
+          "droppedImpulse": 0.0,
+          "maxDelayMs": 0.0,
+          "maxGrainMs": 0.0,
+          "peakReadout": 0.0,
+          "futureRingFrames": 8192.0,
+          "maxPacketsPer10msWindow": 64.0,
+          "legacyContactRms": 0.0,
+          "shakerContactRms": 0.0,
+          "contactRmsRatio": 1.0,
+          "legacyContactPeak": 0.0,
+          "shakerContactPeak": 0.0,
+          "contactReadoutSamples": 329940.0,
+          "legacyReferenceOutputEnergy": 1.795431771245348e-07,
+          "legacyReferencePeakOutputEnergy": 0.0025796400813115077
+        },
+        "renderPairMs": 243.735873,
+        "seam": 0.0
+      }
+    ]
+  },
+  "limits": [
+    "Numerical texture descriptors do not establish perceived shaker character; owner listening remains required.",
+    "HOLD retains the production constructed join and driven micro-strikes; no natural-convergence claim.",
+    "Standalone Kotlin prototype; no product source, saved models or previously accepted audition audio changed."
+  ]
+}

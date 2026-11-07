@@ -1,0 +1,157 @@
+{
+  "phase": "tremor_roll_shaker_r3",
+  "candidateSha256": "c26081aa4cecafc42628d10d10b0999268b9e8799d3fa46c6cfe2269bbee8705",
+  "publishedSiteSourceCommit": "c9d0aa037d318b293aa157d81f1b99d37a5793b7",
+  "clips": {
+    "roll_default_middle_previous": {
+      "nativeFloatSha256": "9a5c1a9444212abe4e07e4ccf04f75c59e31c93b9d8166d2dfb4c99eece8e168",
+      "matchedFloatSha256": "b644c3009fef6bd1d0c44b4ea793479e237d10e23a8b1ce9e4b7b17158227919",
+      "wavSha256": "ccf69f23d8c29523f89a837a90bbb865a1e479f6a647e4f965f454df804a8f75",
+      "frames": 25600,
+      "loopStartFrame": -1,
+      "presetId": "roll_default",
+      "variant": "previous",
+      "touch": "middle"
+    },
+    "roll_default_middle_looser": {
+      "nativeFloatSha256": "ad2ba77bc13014d9efa39437ec0c51a144b5efc1daa92eaf256cfb5fb0da8f32",
+      "matchedFloatSha256": "fbc9be8f0c00ed2177a8558857a52c50231b2819969c9f77b9e297e41df8d001",
+      "wavSha256": "a6667293ffee23fbb62c16113b81923342a107120a3ebc9e6d6022ce4c37ce74",
+      "frames": 25600,
+      "loopStartFrame": -1,
+      "presetId": "roll_default",
+      "variant": "looser",
+      "touch": "middle"
+    },
+    "roll_default_hard_previous": {
+      "nativeFloatSha256": "b098146b807b476603e5f6fc0d584cb06c4beab48393e6583be07554311ee78b",
+      "matchedFloatSha256": "d3eaa50a1db3efa0e415ef8271d64bf403492d2378641fe7eeca0271f7705c37",
+      "wavSha256": "50f674644fad209e78c40f7a85615a33677c3d902d44455ab41e29b65d887bab",
+      "frames": 25088,
+      "loopStartFrame": -1,
+      "presetId": "roll_default",
+      "variant": "previous",
+      "touch": "hard"
+    },
+    "roll_default_hard_looser": {
+      "nativeFloatSha256": "2aeb187fdb8006be42b0e2b999acc8b4d4d6bcf8d73d7d21df850d52292708d5",
+      "matchedFloatSha256": "d1e0c45b99295dc1c58b57678f5788e9772f121e87a36efbfcb08fd3a7ddfcf5",
+      "wavSha256": "972fd72810d19125f55d970ba79578e10da2e3c24319f58d7ef93517dc29537b",
+      "frames": 25088,
+      "loopStartFrame": -1,
+      "presetId": "roll_default",
+      "variant": "looser",
+      "touch": "hard"
+    },
+    "light_bed_soft_reference": {
+      "nativeFloatSha256": "b67e95fa226df333e34aafb5efcedb3b11348b7795e770d7b56408bc8b215901",
+      "matchedFloatSha256": "5a3c85895173eebfa7e212d4063fe34da8f8099a7848dd31823a8043615beec5",
+      "wavSha256": "9d369a5a4ae75c97c5d1c1e76e2dfa2249288c4d4fce3d1b5298e89ae5b7f444",
+      "frames": 26112,
+      "loopStartFrame": -1,
+      "presetId": "light_bed",
+      "variant": "reference",
+      "touch": "soft"
+    },
+    "light_bed_middle_reference": {
+      "nativeFloatSha256": "5b70f4601533d2d509bae5e8d45898d3dbb1903bccfd7348cb235b646801c7b5",
+      "matchedFloatSha256": "f59499f8e2ce168dc5675287ea1c69c7f89992cb78446f06916e6be871fcf3b4",
+      "wavSha256": "3c216ef2c3bd3b13247a712979bd2545c455e1374e89ec272a80ad724a4f4d71",
+      "frames": 26112,
+      "loopStartFrame": -1,
+      "presetId": "light_bed",
+      "variant": "reference",
+      "touch": "middle"
+    },
+    "light_bed_hard_reference": {
+      "nativeFloatSha256": "7628d93839dc8ee365866e85feb05bcfad703c1557bab6a9d18cfbf05266e6dd",
+      "matchedFloatSha256": "11ebff3f75dc392147f3b5c1623e917e038ee75eceb2ab7ede2d6ae8edc76d14",
+      "wavSha256": "903f69ead463520dbe289f131688a3fd8b32fd960dff353d635a817af946a60e",
+      "frames": 25088,
+      "loopStartFrame": -1,
+      "presetId": "light_bed",
+      "variant": "reference",
+      "touch": "hard"
+    },
+    "settling_bed_middle_previous": {
+      "nativeFloatSha256": "7323a6fdf25cbab546161ffd5bde37b490d22b72be4457f2db6504d75f17de93",
+      "matchedFloatSha256": "2c52dee37583ce98ef0ad8f757cbdfd0a9418a8c2e3c1b17878bf120c80d5462",
+      "wavSha256": "319923ac18ab0750c9870439cb7f087e88acb321182e6983c712e1aadb77f5e4",
+      "frames": 24064,
+      "loopStartFrame": -1,
+      "presetId": "settling_bed",
+      "variant": "previous",
+      "touch": "middle"
+    },
+    "settling_bed_middle_looser": {
+      "nativeFloatSha256": "5f8a677813dccc4afdc73f8ac4a476519a891e2bddc053856f2bdbea5ff9263e",
+      "matchedFloatSha256": "3129a282ae1a3649462820dea85aeaf3d66009c1f60a596e7dee9ffa31e58067",
+      "wavSha256": "1e7bc3c84c7a0a5929b3cc42555b2bb7db1bb9ddf268b6e87b6eb50764c580a8",
+      "frames": 24064,
+      "loopStartFrame": -1,
+      "presetId": "settling_bed",
+      "variant": "looser",
+      "touch": "middle"
+    },
+    "settling_bed_hard_previous": {
+      "nativeFloatSha256": "41e7905b53e5b6e28d52d236625e60a7fd64c834c377154b445c5c2ad70fb027",
+      "matchedFloatSha256": "8e3b9339e394c35ced794b0364338a16c00f66de5f47a07bfaa830fa25676d20",
+      "wavSha256": "f71ba94fc536fa58adb8e686a6edefb7e592252ebcc2d871e5dd43a3a0d0c68e",
+      "frames": 23552,
+      "loopStartFrame": -1,
+      "presetId": "settling_bed",
+      "variant": "previous",
+      "touch": "hard"
+    },
+    "settling_bed_hard_looser": {
+      "nativeFloatSha256": "088e4bd06f596e3a7056a95d8f0582bb243bcfd44a411f18f0e7f7898ee31080",
+      "matchedFloatSha256": "8fd1271841b409148d600ca9cb787528329b6fac6fd489d22fd733f0dd919163",
+      "wavSha256": "f6c19e36256c3d497751a8656fde2df9937fddc2db9d55860ca567f46a091f3a",
+      "frames": 23552,
+      "loopStartFrame": -1,
+      "presetId": "settling_bed",
+      "variant": "looser",
+      "touch": "hard"
+    },
+    "held_roll_middle_previous": {
+      "nativeFloatSha256": "675d1f6bd09033b28100ed6a2eb8d9b565cc191b1eb6850cb04fef8aaf8823f4",
+      "matchedFloatSha256": "f365b9da9c9c3ef5c042f7346fad283c72645a3f6aa7ca74f7abad68bf6afe4b",
+      "wavSha256": "a15ef565b3664ec4b97132aba07aec105121b4dde1cecf2407c4595874e34c2d",
+      "frames": 71460,
+      "loopStartFrame": 47187,
+      "presetId": "held_roll",
+      "variant": "previous",
+      "touch": "middle"
+    },
+    "held_roll_middle_looser": {
+      "nativeFloatSha256": "64de9643b211931b757fc023ada4bbe8f10b4b6514e5a9d4948f265b4d407222",
+      "matchedFloatSha256": "af8c2d5a833e6323912206e4d52c30dd8acd96705074756b4d1bd975b1ea1e7e",
+      "wavSha256": "f14a1d2fbd7c69fe30143afea5ea3ed665dbc6d913e5595ba679452cf7bcb886",
+      "frames": 71460,
+      "loopStartFrame": 47187,
+      "presetId": "held_roll",
+      "variant": "looser",
+      "touch": "middle"
+    },
+    "held_roll_hard_previous": {
+      "nativeFloatSha256": "a67036fdf77c0bc715babe6195bf3ba8f8711622728a12b81750f544cf2b7c52",
+      "matchedFloatSha256": "abbabf4238674c5416412f17721259eb0b6d68f1b697c7508b5887be95e2c923",
+      "wavSha256": "4b114f7a08b81db2ce177c0ebab27ac319941c6e06f340e421b1b6bbcb56652a",
+      "frames": 71460,
+      "loopStartFrame": 47187,
+      "presetId": "held_roll",
+      "variant": "previous",
+      "touch": "hard"
+    },
+    "held_roll_hard_looser": {
+      "nativeFloatSha256": "d84d3b97893d2373497402ab1fa082e9a7d3d3dce0142f90ddc049514a1aac13",
+      "matchedFloatSha256": "f32966635d86a00cba42b2cf2eb6c34017a1d9d3a501038b45e022d60f9aecb9",
+      "wavSha256": "505f4a9e47522c59080a7b229113a32a671de1f12cdf73bac07e4623cd7beeef",
+      "frames": 71460,
+      "loopStartFrame": 47187,
+      "presetId": "held_roll",
+      "variant": "looser",
+      "touch": "hard"
+    }
+  }
+}

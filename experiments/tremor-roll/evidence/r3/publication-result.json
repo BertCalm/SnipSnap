@@ -1,0 +1,35 @@
+{
+  "status": "succeeded",
+  "url": "https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-roll-shaker-r3/",
+  "project_id": "appgprj_6ac2e11be4848191b1c340709302b992",
+  "deployment_id": "appgdep_6aef3082cd8c81918c3cee5e4d85e9fe",
+  "saved_version_id": "appgprj_6ac2e11be4848191b1c340709302b992~appgver_3f65854ac870819199ee627169c77424",
+  "version_number": 15,
+  "source": "c9d0aa037d318b293aa157d81f1b99d37a5793b7",
+  "private_to_owner": true,
+  "phase": "tremor_roll_shaker_r3",
+  "candidate_bundle_sha256": "c26081aa4cecafc42628d10d10b0999268b9e8799d3fa46c6cfe2269bbee8705",
+  "previous_bundle_sha256": "a472d6bf0b030c2ada13c87064fdec58bd607a0e9d015db09dd8d558099d90f0",
+  "preferred_reference_bundle_sha256": "1322af6dda586402c6d852195a19c469b3916e85e01c7467d89fc2ceda025c4a",
+  "baseline_product_source": "8c9c01254ed5c363b0127b3a40cf52067b8c7e92",
+  "clips": 15,
+  "recipes": 4,
+  "voice": "ROLL",
+  "owner_feedback": {
+    "previous_phase": "tremor_roll_shaker_r2",
+    "remaining": [
+      "SETTLING BED",
+      "ROLL DEFAULT",
+      "HELD ROLL"
+    ],
+    "overall": "Better, maybe just a little bit of disorder in the shake. It sound like all the beads land at the same time",
+    "preferred_reference": "LIGHT BED shaker from R1"
+  },
+  "scope": "Listening prototype staggers whole bead-radiation packets with separate per-bead offsets and small per-impact jitter, while keeping R2 individual grain waveforms and shapes exact. Physical solver, held excitation, saved product sound models and previous pages remain unchanged.",
+  "hearing": "R3 awaits owner listening; no assistant hearing or physical phone/MPC listening claimed",
+  "limits": [
+    "Offsets are audible radiation timing shapes, not a new physical flight simulation.",
+    "Arrival spans grow but the maximum five-ms onset count does not decrease in every case.",
+    "HOLD change is opening bead scatter; existing marked drum sustain and constructed join remain."
+  ]
+}

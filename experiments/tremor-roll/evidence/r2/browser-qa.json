@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "phase": "tremor_roll_shaker_r2",
+  "sourceCommit": "8c9c01254ed5c363b0127b3a40cf52067b8c7e92",
+  "candidateSha256": "a472d6bf0b030c2ada13c87064fdec58bd607a0e9d015db09dd8d558099d90f0",
+  "decodedWavs": 15,
+  "verifiedPlaybackMappings": 15,
+  "playedThroughHeldRegions": 4,
+  "actualAudioPeakConcurrent": 1,
+  "referenceWavsExactR1": 3,
+  "sourceArtifactsVerified": [
+    {
+      "file": "source/TremorRollRoundedCandidate.kt",
+      "sha256": "249c96e0e5811ced8ccb0234a802636f30209d525f6793a3d903a5ecf3894de9"
+    },
+    {
+      "file": "source/RollRoundedPackets.kt",
+      "sha256": "918dfbe0b8e6de04ccaa2b28f613e0a8ea06a78a7e5d80dda4dc604bfbac574f"
+    }
+  ],
+  "previousSourceArtifactsVerified": [
+    {
+      "file": "source/TremorRollShakerCandidate.kt",
+      "sha256": "96e7adbe896a2bea14e9c3e31df72bdd9f111259d802fa29899a4955fd7dab09"
+    },
+    {
+      "file": "source/RollShakerPackets.kt",
+      "sha256": "c176faac4e83d5a55a34bf409b3fc1a70266023b23b80182b84cc62d95fb1d13"
+    }
+  ],
+  "feedbackPreservation": "R1 LIGHT BED preference, factory and R4 notes retained byte-for-byte in isolated temporary browser context",
+  "checks": [
+    "12 Middle/Hard Previous/Rounded comparison clips; no soft comparison pairs",
+    "3 preferred LIGHT BED R1 reference clips, byte-identical to original WAVs",
+    "all15WAVs decode and playback mappings match",
+    "all4held Previous/Rounded loops play through exact source-frame markers",
+    "one actual audio BufferSource/Stop/samebuttonstop/rapidrequest race",
+    "complete recipes/model/source distinction persist and export",
+    "previous and rounded source HTTP file hashes match exported manifest",
+    "old R1/factory/R4 notes unchanged",
+    "mobile375x812 and desktop1440x1100 have no horizontal overflow",
+    "all15audio buttons at least44x44",
+    "reference has no new approval vote",
+    "prototype status clear",
+    "no browser errors or HTTP failures"
+  ],
+  "visualInspection": {
+    "mobile": "375x812 screenshot inspected: paired Middle/Hard controls fit, preferred LIGHT BED reference has its three single-touch buttons, no clipping",
+    "desktop": "1440x1100 screenshot inspected: main comparisons and preferred reference form a clear two-column grid; prototype and HELD ROLL opening/sustain guidance visible",
+    "screenshots": [
+      "/workspace/tools/tremor-roll-shaker-r2/mobile.png",
+      "/workspace/tools/tremor-roll-shaker-r2/desktop.png"
+    ]
+  }
+}

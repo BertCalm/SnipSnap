@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "baselineProductCheckpoint": "2f7282a9a1a93a04984808da6985044576a0ceae",
+  "productionSourceFilesChanged": 0,
+  "portableReproduction": {
+    "status": "passed",
+    "publishedWavHashesExact": 15,
+    "nativeAndMatchedFloatPinsExact": 15,
+    "matrixCases": 54,
+    "deterministicRepeats": 9,
+    "mechanicalPairsExact": 9,
+    "otherVoicesExact": 20,
+    "worstAttackCents": 0.7172123502047179,
+    "worstHeldCents": 1.4369822714201623,
+    "limit": "Fresh render verification; does not rerun browser QA or the independent 536-grain diagnostic-copy audit."
+  },
+  "repositoryJvmGate": {
+    "command": "./gradlew --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process test",
+    "javaMajor": 17,
+    "sdkEnvironmentUnset": true,
+    "exit": 0,
+    "duration": "9s",
+    "actionableTasks": 42,
+    "upToDateTasks": 42,
+    "note": "Unchanged production inputs reused existing passing reports; no test bypass, disabled test or exclusion was added."
+  },
+  "browserAndGrainAudit": "Original published-run evidence archived; not rerun by the portable renderer."
+}

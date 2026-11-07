@@ -1,0 +1,44 @@
+{
+  "r1": {
+    "files": [
+      {
+        "file": "TremorRollShakerCandidate.kt",
+        "sha256": "96e7adbe896a2bea14e9c3e31df72bdd9f111259d802fa29899a4955fd7dab09"
+      },
+      {
+        "file": "RollShakerPackets.kt",
+        "sha256": "c176faac4e83d5a55a34bf409b3fc1a70266023b23b80182b84cc62d95fb1d13"
+      }
+    ],
+    "candidateSha256": "1322af6dda586402c6d852195a19c469b3916e85e01c7467d89fc2ceda025c4a",
+    "algorithm": "sha256 of UTF8 JSON compact source-file records in stated order"
+  },
+  "r2": {
+    "files": [
+      {
+        "file": "TremorRollRoundedCandidate.kt",
+        "sha256": "249c96e0e5811ced8ccb0234a802636f30209d525f6793a3d903a5ecf3894de9"
+      },
+      {
+        "file": "RollRoundedPackets.kt",
+        "sha256": "918dfbe0b8e6de04ccaa2b28f613e0a8ea06a78a7e5d80dda4dc604bfbac574f"
+      }
+    ],
+    "candidateSha256": "a472d6bf0b030c2ada13c87064fdec58bd607a0e9d015db09dd8d558099d90f0",
+    "algorithm": "sha256 of UTF8 JSON compact source-file records in stated order"
+  },
+  "r3": {
+    "files": [
+      {
+        "file": "TremorRollLooseCandidate.kt",
+        "sha256": "602fa8ac273eadd9763b61b428b460bc3b4ecc210b4ca70f25cada6c65e72b6a"
+      },
+      {
+        "file": "RollLoosePackets.kt",
+        "sha256": "692e013ba6719f8034fd4503b0f03aa33970bdce6f921b663ee903d42ed5a56e"
+      }
+    ],
+    "candidateSha256": "c26081aa4cecafc42628d10d10b0999268b9e8799d3fa46c6cfe2269bbee8705",
+    "algorithm": "sha256 of UTF8 JSON compact source-file records in stated order"
+  }
+}

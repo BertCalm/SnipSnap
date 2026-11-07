@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "phase": "tremor_roll_shaker_r1",
+  "sourceCommit": "8c9c01254ed5c363b0127b3a40cf52067b8c7e92",
+  "candidateSha256": "1322af6dda586402c6d852195a19c469b3916e85e01c7467d89fc2ceda025c4a",
+  "decodedWavs": 24,
+  "verifiedPlaybackMappings": 24,
+  "playedThroughHeldRegions": 6,
+  "actualAudioPeakConcurrent": 1,
+  "sourceArtifactsVerified": [
+    {
+      "file": "TremorRollShakerCandidate.kt",
+      "sha256": "96e7adbe896a2bea14e9c3e31df72bdd9f111259d802fa29899a4955fd7dab09"
+    },
+    {
+      "file": "RollShakerPackets.kt",
+      "sha256": "c176faac4e83d5a55a34bf409b3fc1a70266023b23b80182b84cc62d95fb1d13"
+    }
+  ],
+  "feedbackPreservation": "Earlier R4 and factory notes retained byte-for-byte in isolated temporary browser context",
+  "checks": [
+    "Current/Shaker pairs for4recipes at3touches",
+    "all24WAVs decode and playback mappings match",
+    "all6held Current/Shaker loops play through exact source-frame markers",
+    "one actual audio BufferSource/Stop/samebuttonstop/rapidrequest race",
+    "complete recipe/model/source distinction persists and exports",
+    "renderer and grain-helper source-link hashes match exported manifest",
+    "R4 and factory notes unchanged",
+    "mobile375x812 and desktop1440x1100 no horizontal overflow",
+    "all comparison buttons at least44x44",
+    "prototype status clear",
+    "no browser errors or HTTP failures"
+  ],
+  "visualInspection": {
+    "mobile": "375x812 screenshot inspected; four cards stack cleanly, paired buttons fit, no clipping",
+    "desktop": "1440x1100 screenshot inspected; two-column comparison cards and visible prototype/held guidance fit cleanly",
+    "screenshots": [
+      "/workspace/tools/tremor-roll-shaker/mobile.png",
+      "/workspace/tools/tremor-roll-shaker/desktop.png"
+    ]
+  },
+  "resolvedDuringQa": "Clip duration now derives from source frames/sampleRate for repeat, progress and loopEnd; root also canonicalized redundant manifest seconds. Original Java Float seconds were slightly rounded."
+}
