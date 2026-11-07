@@ -153,4 +153,46 @@ class BeatScheduleTest {
         BeatSchedule.forEachBeatDue(32f, 31.0, 32.3, 16) { accent, pos -> wrap += accent to pos }
         assertEquals(listOf(true to 32.0), wrap, "the top of the loop is the next pass's downbeat")
     }
+
+    @Test
+    fun `a x4 roll at 120 BPM is four distinct engine frames on the audio clock path, none merged and none dropped`() {
+        val lane = GrooveEdit.Lane.HAT_CLOSED
+        val base = GrooveEdit.toggleStep(Mpc3Clip("Kit E", 1, emptyList()), lane, 4)
+        val rolled = com.snipsnap.kit.StepShape.setRoll(base, lane, 4, 4)
+        assertEquals(4, rolled.notes.size)
+        val total = GrooveEdit.stepsInClip(rolled).toFloat()
+        val rate = 48_000
+        // A steady stream: the engine's counter read against the frame clock, as BeatPlayer feeds it.
+        val audio = BeatSchedule.AudioClock()
+        audio.reset(rate)
+        for (i in 0 until 20) audio.observe(framesRendered = (i * 16_666_667L * rate / 1_000_000_000L), nanos = i * 16_666_667L)
+        assertTrue(audio.ready)
+
+        val cursor = BeatSchedule.Cursor()
+        val frames = ArrayList<Long>()
+        val positions = ArrayList<Double>()
+        var lastPos = 0f
+        var now = 0L
+        // 130 frames of 60 Hz: the roll's hits fall in different windows, and the loop wraps (at 2 s) before the end.
+        for (i in 0 until 130) {
+            now += 16_666_667L
+            val np = BeatClock.advance(lastPos, BeatClock.dtNanos(16_666_667L, 0L), sps)
+            val wrapped = BeatClock.wrapped(np, total)
+            val from = cursor.start(lastPos)
+            val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(true, sps))
+            BeatSchedule.forEachNoteDue(rolled, from, to, total) { _, pos ->
+                positions += pos
+                frames += audio.frameAt(BeatSchedule.dueNanos(now, np, pos, sps))
+            }
+            cursor.advance(to, if (wrapped) total else 0f)
+            lastPos = BeatClock.wrap(np, total)
+        }
+                assertEquals(listOf(4.0, 4.125, 4.25, 4.375), positions.take(4))
+        assertEquals(4, frames.take(4).toSet().size, "four hits, four frames")
+        val gaps = frames.take(4).zipWithNext { a, b -> b - a }
+        // 30 pulses at 120 BPM is 15.625 ms: 750 frames at 48 kHz, to within the clock's rounding.
+        for (g in gaps) assertTrue(g in 749L..751L, "gap $g frames")
+        assertEquals(frames.take(4).sorted(), frames.take(4), "in order")
+        assertEquals(4, positions.size, "each hit was handed over exactly once, across window boundaries and the loop's wrap")
+    }
 }
