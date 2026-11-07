@@ -1533,6 +1533,31 @@ object Copy {
     /** The strip over a step with no hit: it names what to do rather than offering levels that would do nothing. */
     const val STEP_DETAIL_EMPTY = "NO HIT HERE. TAP THE STEP ON FIRST."
 
+    /**
+     * The step editor's tools. Each undo is named in full (UNDO STEP EDIT, like UNDO SPLICE),
+     * and the buttons are labels, not toasts. The swing button carries the amount it will bake.
+     */
+    const val STEP_UNDO = "UNDO STEP EDIT"
+    const val STEP_COPY_BAR = "COPY BAR"
+    const val STEP_PASTE_BAR = "PASTE BAR"
+    const val STEP_DOUBLE = "DOUBLE"
+    const val STEP_HALF = "HALF"
+    fun stepApplySwing(percent: Int): String = "APPLY SWING $percent%"
+
+    /** A tap on a tool, said back. Facts, not praise; the swing line says what a second apply does. */
+    const val STEP_UNDONE = "STEP EDIT UNDONE."
+    const val STEP_NOTHING_TO_UNDO = "NOTHING TO UNDO."
+    fun stepBarCopied(bar: Int): String = "BAR $bar COPIED."
+    fun stepBarPasted(bar: Int): String = "PASTED INTO BAR $bar."
+    const val STEP_PASTE_WRONG_LENGTH = "THAT BAR IS A DIFFERENT LENGTH. IT CAN'T GO IN HERE."
+    fun stepDoubled(bars: Int): String = "NOW ${countOf(bars, "BAR", "BARS")}."
+    fun stepDoubleFull(max: Int): String = "ALREADY $max BARS. NO ROOM TO DOUBLE."
+    fun stepHalved(bars: Int): String = "NOW ${countOf(bars, "BAR", "BARS")}. THE REST IS GONE. UNDO STEP EDIT BRINGS IT BACK."
+    const val STEP_CANT_HALVE = "AN ODD NUMBER OF BARS CAN'T BE HALVED."
+    fun stepSwingBaked(percent: Int): String =
+        if (percent == 50) "STRAIGHT. SWING TAKEN OUT OF THIS PATTERN. UNDO STEP EDIT BRINGS IT BACK."
+        else "$percent% SWING BAKED IN. APPLYING AGAIN REPLACES IT. UNDO STEP EDIT BRINGS IT BACK."
+
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."

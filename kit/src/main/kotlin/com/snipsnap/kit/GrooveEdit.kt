@@ -166,11 +166,21 @@ object GrooveEdit {
             compareBy<VelocityLevel> { kotlin.math.abs(it.velocity - velocity) }.thenByDescending { it.velocity },
         )
 
+    /**
+     * The editor cell a note at [pulses] is drawn in and answers to: the
+     * step whose straight position it is nearest, a tie going to the
+     * earlier one. A hand-placed note is on a step's own pulse; a baked
+     * swing ([bakeSwing]) pushes an "and" step late by at most half a step
+     * ([Mpc3Clip.swingPush] at 75%), which is the tie, so it stays in the
+     * cell it was baked from. The cell for step `s` therefore owns pulses
+     * `s*240 - 119 .. s*240 + 120`.
+     */
+    fun cellOf(pulses: Long): Int = ((pulses + STEP_PULSES / 2 - 1) / STEP_PULSES).toInt()
+
     /** The velocity of the note at ([lane], [step]) in [pads], or null when there is none. */
     fun velocityAt(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = DEFAULT_LANE_PADS): Float? {
         val note = noteFor(lane, pads)
-        val pulses = step * STEP_PULSES
-        return clip.notes.filter { it.note == note && it.timePulses == pulses }.maxOfOrNull { it.velocity }
+        return clip.notes.filter { it.note == note && cellOf(it.timePulses) == step }.maxOfOrNull { it.velocity }
     }
 
     /**
@@ -183,10 +193,38 @@ object GrooveEdit {
         val steps = stepsInClip(clip)
         require(step in 0 until steps) { "step out of range for a ${clip.bars}-bar clip: $step" }
         val note = noteFor(lane, pads)
-        val pulses = step * STEP_PULSES
-        if (clip.notes.none { it.note == note && it.timePulses == pulses }) return clip
+        if (clip.notes.none { it.note == note && cellOf(it.timePulses) == step }) return clip
         val v = velocity.coerceIn(0.01f, 1f)
-        return clip.copy(notes = clip.notes.map { if (it.note == note && it.timePulses == pulses) it.copy(velocity = v) else it })
+        return clip.copy(notes = clip.notes.map { if (it.note == note && cellOf(it.timePulses) == step) it.copy(velocity = v) else it })
+    }
+
+
+    /**
+     * Bakes swing into [clip]: every note goes back to its straight 16th
+     * ([cellOf], wrapping past the loop point like [quantized]) and every
+     * "and" step (odd step index, the same rule as
+     * [GrooveVariations.swing]) is pushed late by [Mpc3Clip.swingPush] at
+     * [percent]. Velocities and lengths are untouched.
+     *
+     * **A second apply replaces the first, it never stacks**: the result
+     * is a function of each note's cell and [percent] alone, so applying
+     * the same percent twice is the same clip, applying another percent
+     * re-bakes from the straight positions, and 50 straightens it. A
+     * straight clip gives exactly the notes [GrooveVariations.swing]
+     * gives, which is what SONG, SHARE and the .xpj read from here.
+     *
+     * Two notes landing on one (note, pulse) keep the louder ([dedupeLouder]).
+     */
+    fun bakeSwing(clip: Mpc3Clip, percent: Int): Mpc3Clip {
+        val push = Mpc3Clip.swingPush(percent)
+        val steps = stepsInClip(clip)
+        val limit = clip.lengthPulses
+        val moved = clip.notes.map { n ->
+            val step = cellOf(n.timePulses) % steps
+            val straight = step * STEP_PULSES
+            n.copy(timePulses = if (step % 2 == 1) (straight + push).coerceAtMost(limit - 1) else straight)
+        }
+        return clip.copy(notes = dedupeLouder(moved))
     }
 
     /** The naming convention that makes E findable among stored clips. */
@@ -435,8 +473,10 @@ object GrooveEdit {
     /**
      * Toggle a step on/off for (lane, step); returns a NEW clip, matching
      * the codebase's immutable style. Off → on lands a note at the lane's
-     * velocity; on → off drops every note at that exact (lane, step)
-     * address, so a stray duplicate never survives one tap. The result is
+     * velocity; on → off drops every note in that (lane, step)
+     * cell (a swung note counts as in its own cell, [cellOf]), so a stray
+     * duplicate never survives one tap. A new step lands on the straight
+     * pulse, swung or not: [bakeSwing] again to swing it. The result is
      * always time-sorted, so repeated toggles round-trip byte-for-byte.
      */
     fun toggleStep(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = DEFAULT_LANE_PADS): Mpc3Clip {
@@ -444,7 +484,7 @@ object GrooveEdit {
         require(step in 0 until steps) { "step out of range for a ${clip.bars}-bar clip: $step" }
         val note = noteFor(lane, pads)
         val pulses = step * STEP_PULSES
-        val without = clip.notes.filterNot { it.note == note && it.timePulses == pulses }
+        val without = clip.notes.filterNot { it.note == note && cellOf(it.timePulses) == step }
         val notes = if (without.size == clip.notes.size) {
             without + Mpc3Note(note, pulses, velocityFor(lane))
         } else {
