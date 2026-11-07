@@ -49,9 +49,9 @@ Every stage boundary is a whole number of its notes, so every hit is on the fine
   flat.
 - **LAND.** The landing's strength. 0 means no landing.
 - **HUMANIZE.** From 0 (the exact grid, the default, the sound the owner accepted) to 1 (a human feel).
-  - Each run hit drifts early or late by up to 12 ms × HUMANIZE. The drift is capped at a third of the
-    gap to either neighbour, so the order holds and a roll never smears.
-  - Each hit's strength moves by up to 15 % × HUMANIZE, and on-beat hits gain a 12 % × HUMANIZE accent.
+  - Each run hit drifts early or late by up to 30 ms × HUMANIZE. The drift is capped at 40 % of the
+    gap to either neighbour (under half, so two hits never swap places).
+  - Each hit's strength moves by up to 30 % × HUMANIZE, and on-beat hits gain a 25 % × HUMANIZE accent.
   - The landing never moves.
   - The draws come from a fixed seed per voice, one pair per hit in order. A patch always plays the
     same performance, and turning HUMANIZE scales one fixed feel (tested: half the control is half the
@@ -70,7 +70,7 @@ engines. Hits are rendered on 12 velocity steps and cached per (drum, step, take
 - The 1/2–1/4–1/4 stage split.
 - The minor-third tom spacing.
 - The 1 s tail after the landing.
-- The HUMANIZE amounts (12 ms drift, 15 % spread, 12 % accent).
+- The HUMANIZE amounts (30 ms drift, 40 % gap share, 30 % spread, 25 % accent).
 
 ## Tests (`FillTest`, plus the determinism canary)
 
@@ -107,6 +107,13 @@ engines. Hits are rendered on 12 velocity steps and cached per (drum, step, take
 
 In chat: "good across the board. Humanize should be a control so it can range from machine like to
 human". R1.1 adds HUMANIZE as that control, with one question (`f1b-humanize`) on the same page.
+
+**R1.1, 2026-11-07:** HUMANIZE was "Too subtle at 1". R1.2 makes its top end stronger:
+- Drift goes from 12 to 30 ms, with the gap share raised from a third to 40 %.
+- Strength spread goes from 15 to 30 %.
+- The on-beat accent goes from 12 to 25 %.
+
+HUMANIZE 0 is unchanged.
 
 ## After the listen
 

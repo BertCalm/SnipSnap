@@ -52,11 +52,13 @@ object Fill {
     private const val RISE_FLOOR = .2f
     /** Velocities are rendered on this many steps, so a long run reuses its hits (shape: 1/12 is under 1 dB). */
     private const val VELOCITY_STEPS = 12
-    /** HUMANIZE 1's largest timing drift, in seconds (shape: a loose drummer, not a sloppy one). */
-    private const val DRIFT_SECONDS = .012
+    /** HUMANIZE 1's largest timing drift, in seconds (shape; R1.1 had 12 ms, heard "too subtle at 1"). */
+    private const val DRIFT_SECONDS = .030
+    /** The largest share of the gap to a neighbour a hit may drift: under half, so two hits never swap. */
+    private const val GAP_SHARE = .4
     /** HUMANIZE 1's largest share of a hit's strength it can gain or lose, and the on-beat accent (shape). */
-    private const val LEVEL_SPREAD = .15f
-    private const val BEAT_ACCENT = .12f
+    private const val LEVEL_SPREAD = .30f
+    private const val BEAT_ACCENT = .25f
     /** The fixed seed of HUMANIZE's feel: the same patch always plays the same performance. */
     private const val FEEL_SEED = 0x46494C4C
     /** SKIN's struck voices re-seed their click per take; two takes alternate so neighbours never share one. */
@@ -169,7 +171,7 @@ object Fill {
 
     /**
      * HUMANIZE [h] applied to the run [hits]: from 0 (the exact grid, unchanged) to 1 (a human feel). Each
-     * hit drifts early or late by up to [DRIFT_SECONDS] × [h], and never more than a third of the gap to
+     * hit drifts early or late by up to [DRIFT_SECONDS] × [h], and never more than [GAP_SHARE] of the gap to
      * either neighbour, so the order holds and a roll never smears into itself; no hit moves before the
      * start. Each hit's strength moves by up to [LEVEL_SPREAD] × [h], and hits on a beat gain [BEAT_ACCENT] × [h],
      * as a drummer leans on the count. The draws come from [FEEL_SEED] and the voice, one pair per hit in
@@ -184,7 +186,7 @@ object Fill {
             val spread = random.nextFloat() + random.nextFloat() - 1f
             val before = if (i == 0) Double.MAX_VALUE else hit.seconds - hits[i - 1].seconds
             val after = (if (i == hits.lastIndex) length else hits[i + 1].seconds) - hit.seconds
-            val cap = minOf(DRIFT_SECONDS, before / 3, after / 3)
+            val cap = minOf(DRIFT_SECONDS, before * GAP_SHARE, after * GAP_SHARE)
             val t = (hit.seconds + h * cap * drift).coerceAtLeast(0.0)
             val beats = hit.seconds / beat
             val onBeat = kotlin.math.abs(beats - kotlin.math.round(beats)) < 1e-6
