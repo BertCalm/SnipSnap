@@ -363,6 +363,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `MERIDIAN material voices replay their saved native model and contact performance exactly`() {
+        for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+            val patch = MeridianPatch("Material canary", voice,
+                Meridian.defaults(voice) + mapOf("LATITUDE" to .2f, "MEMORY" to .3f),
+                midi = 51, velocity = .65f, model = 3, seedContext = -41)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `RIME models preserve complete recipe determinism through velocity and body changes`() {
         for (model in 1..Rime.MODEL_VERSION) for (voice in if (model < 6) Rime.LEGACY_VOICES else RimeVoice.entries) {
             val patch = RimePatch("Rime canary", voice, Rime.defaults(voice, model) + ("BODY" to .8f),

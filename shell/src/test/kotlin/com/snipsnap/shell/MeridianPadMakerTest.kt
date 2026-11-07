@@ -11,6 +11,7 @@ import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.MeridianPresets
+import com.snipsnap.synth.MeridianVoice
 import com.snipsnap.synth.PadRecipe
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -34,7 +35,7 @@ class MeridianPadMakerTest {
     @AfterTest fun cleanUp() { destination.deleteRecursively() }
 
     private companion object {
-        val patch = MeridianPresets.all().first { it.name == "ROUND THREAD" }.let {
+        val patch = MeridianPresets.forVoice(MeridianVoice.SWEEP).first { it.name == "ROUND THREAD" }.let {
             it.copy(midi = 81, velocity = .45f, seedContext = 41,
                 macros = it.macros + mapOf("TUNE" to .75f, "MEMORY" to .25f))
         }
@@ -53,7 +54,7 @@ class MeridianPadMakerTest {
         val midi = 60
         val actual = notes[midis.indexOf(midi)]
         for ((index, velocity) in MeridianPadMaker.VELOCITIES.withIndex()) {
-            val expected = Meridian.renderHeld(patch.voice, melody.macros, midi, velocity, patch.seedContext)
+            val expected = Meridian.renderHeld(patch.voice, melody.macros, midi, velocity, patch.seedContext, patch.model)
             assertEquals(Keys.midiHz(midi).toDouble(), expected.rootHz)
             assertContentEquals(expected.snip.samples, actual[index].snip.samples,
                 "zone MIDI is absolute and each touch must retain its native excitation and noise context")
@@ -67,6 +68,38 @@ class MeridianPadMakerTest {
         assertEquals(.45f, spec.patch.velocity)
         assertEquals(41, spec.patch.seedContext)
         assertEquals(2, spec.patch.model)
+    }
+
+    @Test
+    fun `model three held voices render their own native physical layers without adopting the saved TUNE offset`() {
+        val hardLayers = mutableListOf<FloatArray>()
+        for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+            val factory = MeridianPresets.forVoice(voice).single { Meridian.isLoop(it.macros, it.model) }
+            val saved = factory.copy(midi = 81, velocity = .45f, seedContext = -37,
+                macros = factory.macros + mapOf("TUNE" to .75f, "MEMORY" to .25f))
+            assertEquals(3, saved.model, voice.name)
+            assertTrue(MeridianPadMaker.supports(saved), voice.name)
+            val voiceSpec = MeridianPadMaker.Spec(saved, releaseSeconds = .25f)
+            val melody = MeridianPadMaker.melodyPatch(saved)
+            val actual = MeridianPadMaker.renderZone(voiceSpec, 60)
+            assertEquals(3, actual.size, voice.name)
+            for ((index, velocity) in MeridianPadMaker.VELOCITIES.withIndex()) {
+                val expected = Meridian.renderHeld(voice, melody.macros, 60, velocity, saved.seedContext, saved.model)
+                assertEquals(Keys.midiHz(60).toDouble(), expected.rootHz)
+                assertContentEquals(expected.snip.samples, actual[index].snip.samples,
+                    "${voice.name}: maker lost the saved model or physical velocity")
+                assertEquals(expected.loopStartFrame.toLong(), actual[index].loopStartFrame)
+                assertTrue(Keys.seamError(actual[index].snip.samples, actual[index].loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR,
+                    "${voice.name}: native layer lost its genuine preceding cycle")
+            }
+            assertFalse(actual.first().snip.samples.contentEquals(actual.last().snip.samples), voice.name)
+            assertEquals(saved, voiceSpec.patch, "rendering a zone must preserve its authored source recipe")
+            assertEquals(saved.copy(macros = saved.macros + ("TUNE" to .5f)), melody)
+            hardLayers += actual.last().snip.samples
+        }
+        for ((index, a) in hardLayers.withIndex()) for (b in hardLayers.drop(index + 1)) {
+            assertFalse(a.contentEquals(b), "new voice dispatch collapsed distinct held instruments")
+        }
     }
 
     @Test

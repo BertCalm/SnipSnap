@@ -13,7 +13,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class MeridianVoice { SWEEP }
+enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP }
 
 /**
  * A maintained precessing swing touches twelve independently
@@ -30,10 +30,14 @@ enum class MeridianVoice { SWEEP }
  * setting. Model 2 keeps that path below the top step and adds a fixed-alignment
  * held swing at HOLD >= .975. The held path closes excitation and modal state;
  * it does not claim to repeat the full precessing material traversal.
+ * Model 3 adds CLACK, CHIME and RASP material families. Their brighter contact
+ * pulses and upper modes retain the same motion and damped modal architecture.
+ * SWEEP keeps its original setup arithmetic and defaults to saved model 2.
  */
 object Meridian {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
+    const val SWEEP_MODEL_VERSION = 2
     // Model one recipes keep their original acoustic-noise identity when a
     // later model adds a held adaptation or a different rendering contract.
     internal const val LEGACY_MODEL_VERSION = 1
@@ -69,10 +73,11 @@ object Meridian {
         Material.GLASS, Material.METAL, Material.WIRE)
     internal fun materialFor(surface: Int): Material = materialRing[surface]
 
-    fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: MeridianVoice): List<MacroSpec> = listOf(
+    fun macrosFor(voice: MeridianVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", .5f, .5f), MacroSpec("LATITUDE", .80f, .80f),
         MacroSpec("LENGTH", .45f, .45f), MacroSpec("REACH", .60f, .60f),
-        MacroSpec("SURFACE", .55f, .55f), MacroSpec("MEMORY", .40f, .40f),
+        MacroSpec("SURFACE", if (voice == MeridianVoice.SWEEP) .55f else 1f,
+            if (voice == MeridianVoice.SWEEP) .55f else 1f), MacroSpec("MEMORY", .40f, .40f),
         MacroSpec("HOLD", 0f, 0f))
 
     fun defaults(voice: MeridianVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -98,15 +103,31 @@ object Meridian {
 
     fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
 
+    /** Adding material voices must not change the default saved SWEEP identity. */
+    fun defaultModelFor(voice: MeridianVoice): Int =
+        if (voice == MeridianVoice.SWEEP) SWEEP_MODEL_VERSION else MODEL_VERSION
+
+    fun supportsVoice(voice: MeridianVoice, model: Int): Boolean =
+        supportsModel(model) && (voice == MeridianVoice.SWEEP || model >= 3)
+
+    // The heard material studies used the same roughness performance as SWEEP.
+    // Changing the object therefore keeps that seed tuple, including old SWEEP.
+    internal fun noiseIdentity(voice: MeridianVoice): String = when (voice) {
+        MeridianVoice.SWEEP -> voice.name
+        MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> MeridianVoice.SWEEP.name
+    }
+
     fun isLoop(macros: Map<String, Float>, model: Int = MODEL_VERSION): Boolean {
         require(supportsModel(model)) { "unsupported meridian model $model" }
         return model >= 2 && (macros["HOLD"]?.takeIf { it.isFinite() } ?: 0f) >= .975f
     }
 
     /** A held result files as LOOP; finite model-1 filing is retained. */
-    fun drumClassFor(@Suppress("UNUSED_PARAMETER") voice: MeridianVoice,
-        macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): DrumClass =
-        if (isLoop(macros, model)) DrumClass.LOOP else DrumClass.TONAL
+    fun drumClassFor(voice: MeridianVoice,
+        macros: Map<String, Float> = emptyMap(), model: Int = defaultModelFor(voice)): DrumClass {
+        require(supportsVoice(voice, model)) { "unsupported meridian model $model for ${voice.name}" }
+        return if (isLoop(macros, model)) DrumClass.LOOP else DrumClass.TONAL
+    }
 
     data class HeldResult(
         val snip: Snip,
@@ -135,11 +156,13 @@ object Meridian {
      * for sampler repetition; the first has a short entry fade. The errors are
      * measured before that fade against the real preceding continuation. */
     fun renderHeld(voice: MeridianVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seedContext: Int = 0): HeldResult {
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seedContext: Int = 0,
+        model: Int = defaultModelFor(voice)): HeldResult {
+        require(supportsVoice(voice, model) && model >= 2) { "unsupported held meridian model $model for ${voice.name}" }
         require(midi in MIDI_MIN..MIDI_MAX) { "MERIDIAN midi out of $MIDI_MIN..$MIDI_MAX: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "MERIDIAN velocity must be in 0..1: $velocity" }
         stopIfUnwanted()
-        val held = MeridianHeld.render(voice, settled(voice, macros), midi, velocity, seedContext)
+        val held = MeridianHeld.render(voice, settled(voice, macros), midi, velocity, seedContext, model)
         return HeldResult(held.snip, held.loopStartFrame, held.loopEndFrameExclusive,
             held.seamError, held.cycleError, held.stateError, held.loopFrames, held.swings,
             held.nominalSwingPeriodSeconds, held.effectiveSwingPeriodSeconds,
@@ -204,6 +227,12 @@ object Meridian {
         }
     }
 
+    /** Keep the legacy material arithmetic isolated from additive voices. */
+    internal fun setupsForVoice(voice: MeridianVoice, hz: Double, surface: Double,
+        memory: Float, reach: Double, velocity: Double): Array<SurfaceSetup> =
+        if (voice == MeridianVoice.SWEEP) setups(hz, surface, memory, reach, velocity)
+        else MeridianMaterials.setups(voice, hz, surface, memory, reach, velocity)
+
     /** Raw conditioned mono at RATE, before shared leveling unless [normalize].
      * [activeSeconds]/[tailSeconds] select bounded audition windows, not a second
      * sound design. [fixedAlignment] and [resetOnContact] are causal ablations.
@@ -237,7 +266,7 @@ object Meridian {
         val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val reach = m.getValue("REACH").toDouble()
         val surface = m.getValue("SURFACE").toDouble()
-        val configs = setups(hz, surface, m.getValue("MEMORY"), reach, velocity.toDouble())
+        val configs = setupsForVoice(voice, hz, surface, m.getValue("MEMORY"), reach, velocity.toDouble())
         if (!diagnostics && !taps && !resetOnContact) {
             val raw = MeridianFinite.raw(configs, motion, active, tail, reach, velocity, voice, seedContext)
             // The public path needs only audio. Keep the diagnostic path below
@@ -256,7 +285,7 @@ object Meridian {
         val activeFrames = ceil(active * INTERNAL_RATE).toInt()
         val raw = FloatArray(count)
         val rawTaps = if (taps) Array(SURFACES) { FloatArray(count) } else emptyArray()
-        val noise = Array(SURFACES) { j -> Dsp.Noise(Dsp.seedFor("MERIDIAN", LEGACY_MODEL_VERSION, voice.name, seedContext, j)) }
+        val noise = Array(SURFACES) { j -> Dsp.Noise(Dsp.seedFor("MERIDIAN", LEGACY_MODEL_VERSION, noiseIdentity(voice), seedContext, j)) }
         val noise1 = DoubleArray(SURFACES)
         val noise2 = DoubleArray(SURFACES)
         val nextEvent = IntArray(SURFACES)
@@ -415,9 +444,9 @@ object Meridian {
     }
 
     fun render(voice: MeridianVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, seedContext: Int = 0, model: Int = MODEL_VERSION): Snip {
-        require(supportsModel(model)) { "unsupported meridian model $model" }
-        if (isLoop(macros, model)) return renderHeld(voice, macros, midi, velocity, seedContext).snip
+        velocity: Float = 1f, seedContext: Int = 0, model: Int = defaultModelFor(voice)): Snip {
+        require(supportsVoice(voice, model)) { "unsupported meridian model $model for ${voice.name}" }
+        if (isLoop(macros, model)) return renderHeld(voice, macros, midi, velocity, seedContext, model).snip
         return Snip(pass(voice, macros, midi, velocity, seedContext, null, null, normalize = true,
             taps = false, fixedAlignment = false, pMax = MeridianMotion.MAX_PRECESSION,
             resetOnContact = false, diagnostics = false).samples,

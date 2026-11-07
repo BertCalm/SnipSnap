@@ -752,8 +752,12 @@ object SynthCommand {
             } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is MeridianPatch) {
+                val model = modelOverride ?: withNote.model
+                if (!Meridian.supportsVoice(withNote.voice, model)) {
+                    throw CliError("MERIDIAN ${withNote.voiceName} does not support model $model")
+                }
                 withNote.copy(macros = withNote.macros + macroOverrides,
-                    seedContext = seedOverride ?: withNote.seedContext, model = modelOverride ?: withNote.model)
+                    seedContext = seedOverride ?: withNote.seedContext, model = model)
             } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is CausticPatch) {
@@ -924,7 +928,7 @@ object SynthCommand {
             val heldOverlap = if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD) OverlapHeld.render(patch) else null
             val heldOhm = if (patch is OhmPatch && Ohm.isHeld(patch)) Ohm.renderHeld(patch) else null
             val meridianHeld = if (patch is MeridianPatch && Meridian.isLoop(patch.macros, patch.model)) {
-                Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext)
+                Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
             } else null
             val snip = if (heldOverlap != null) heldOverlap.snip else if (meridianHeld != null) meridianHeld.snip else if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
                 val dry = Velocity.atVelocity(patch, velocityOverride)

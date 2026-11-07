@@ -53,7 +53,7 @@ object MeridianBankAuditionGenerator {
         )
         val source = retainSource(root, repository, sourcePaths)
         val reference = copyReference(root, previous, prior)
-        val presets = MeridianPresets.all()
+        val presets = MeridianPresets.forVoice(MeridianVoice.SWEEP)
         check(presets.size == 8 && presets.map { it.name }.distinct().size == 8)
         check(presets.all { it.model == MODEL })
         val cards = presets.mapIndexed { index, patch -> renderPreset(root, index, patch) }
@@ -128,7 +128,8 @@ object MeridianBankAuditionGenerator {
         val id = "${(index + 1).toString().padStart(2, '0')}-${slug(patch.name)}"
         val held = Meridian.isLoop(patch.macros, patch.model)
         val began = System.nanoTime()
-        val result = if (held) Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext) else null
+        val result = if (held) Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext,
+            model = patch.model) else null
         val native = result?.snip ?: patch.render()
         val renderMillis = (System.nanoTime() - began) / 1e6
         checkAudio(patch.name, native)
