@@ -200,7 +200,7 @@ class GrooveScreenTest : ComposeScreenTest() {
             if (i > 0) tap(PROG_NAMES[i])
             if (i == YOURS_INDEX) {
                 // With more than one of yours the count replaces the sub.
-                assertReadsInFull("PROGRAM · " + Copy.yoursOf(1, GrooveEdit.MAX_USER_PROGRAMS))
+                assertReadsInFull("PROGRAM · " + Copy.yoursOf(1, GrooveEdit.MAX_USER_PROGRAMS, listed = true))
             } else {
                 assertReadsInFull("PROGRAM · $sub")
             }

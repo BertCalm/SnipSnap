@@ -1436,7 +1436,8 @@ object Copy {
      * Only shown when there is more than one, so a player who never makes
      * a second program never reads a count.
      */
-    fun yoursOf(n: Int, total: Int): String = "YOUR STEPS · $n OF $total · TAP AGAIN FOR THE NEXT"
+    fun yoursOf(n: Int, total: Int, name: String? = null, listed: Boolean = false): String =
+        "${name ?: "YOUR STEPS"} · $n OF $total · TAP AGAIN FOR ${if (listed) "THE LIST" else "THE NEXT"}"
 
     /**
      * The step editor's own title, and the line under it naming which of
@@ -1465,6 +1466,40 @@ object Copy {
 
     /** Under [STEP_EDIT_TITLE], when there is more than one of yours to be in. */
     fun stepEditOf(n: Int, total: Int): String = "$n OF $total"
+
+    /**
+     * The line under [STEP_EDIT_TITLE]: the name the pattern was given (if
+     * any), which of yours it is when there are several, and the way to
+     * rename it. The title stays as it is, short; this line carries the name.
+     */
+    fun stepEditSub(name: String?, n: Int, total: Int): String =
+        listOfNotNull(name, stepEditOf(n, total).takeIf { total > 1 }, PATTERN_RENAME_HINT).joinToString(" · ")
+
+    // ---- Pattern names (BEAT's YOURS programs, and what SONG calls them) ----
+    /** The hint on the editor's name line. A label. */
+    const val PATTERN_RENAME_HINT = "RENAME ▸"
+    /** The list's button for the pattern that is open, and the name slip's title. Labels. */
+    const val PATTERN_RENAME = "RENAME"
+    const val PATTERN_NAME_TITLE = "NAME THIS PATTERN"
+    /** The list's heading and its close chip. Labels. */
+    const val PATTERN_LIST_TITLE = "YOUR PATTERNS"
+    const val PATTERN_LIST_CLOSE = "CLOSE"
+    /** The name slip's buttons: the name goes in, or goes back to the default when the field is empty. */
+    const val PATTERN_NAME_SAVE = "SAVE"
+    const val PATTERN_NAME_RESET = "USE DEFAULT"
+    /** The slip's caption: what a name can be. Says what a SONG does with it. */
+    const val PATTERN_NAME_NOTE = "UP TO 12 LETTERS OR NUMBERS. A SONG SHOWS IT TOO."
+    /** The slip's caption when the name is another pattern's, or one of SONG's own words. */
+    const val PATTERN_NAME_TAKEN = "THAT NAME IS TAKEN. PICK ANOTHER."
+    /** The slip's caption when the field is empty. */
+    fun patternNameEmpty(default: String): String = "EMPTY GOES BACK TO $default."
+    /** Landed: the pattern is called [name] now, here and in a SONG. */
+    fun patternNamed(name: String): String = "THIS PATTERN IS NOW CALLED $name."
+    /** Landed: the name was cleared and the pattern is [default] again. */
+    fun patternUnnamed(default: String): String = "THIS PATTERN IS $default AGAIN."
+    /** The list's row, said aloud: which pattern, where it sits, and that it is the one open. */
+    fun patternRow(name: String, n: Int, total: Int, now: Boolean): String =
+        "PATTERN $n OF $total: $name" + if (now) ", OPEN NOW" else ""
 
     /**
      * RECORD's own line while a take is going down over the captured
@@ -1661,9 +1696,9 @@ object Copy {
     fun songRerolled(redrawn: Int, locked: Int): String =
         "REROLLED ${countOf(redrawn, "SECTION", "SECTIONS")}." + if (locked > 0) " $locked LOCKED, LEFT AS THEY WERE." else ""
     /** A clip name in words: `CAPTURED`, `YOURS 2` (program number, from 1). */
-    fun songClipLabel(ref: String): String {
+    fun songClipLabel(ref: String, names: Map<Int, String> = emptyMap()): String {
         val program = com.snipsnap.kit.ClipRef.yoursId(ref)
-        return if (program != null) "YOURS ${program + 1}" else ref.uppercase(java.util.Locale.ROOT)
+        return if (program != null) names[program] ?: com.snipsnap.kit.GrooveEdit.defaultLabel(program) else ref.uppercase(java.util.Locale.ROOT)
     }
     /** Opening a kept song whose clips are not all there: [refs] are the names that are gone, said once, and those sections were planned again. */
     fun songRefused(refs: List<String>): String =
