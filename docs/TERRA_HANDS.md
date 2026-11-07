@@ -51,7 +51,8 @@ levelled to one loudness.
    5.2, dumbek 7.8, tabla 8.6 dB, as RMS). A quieter clip reads thinner. The
    three tabla settings were levelled alike, so that pick stands. The djembe
    went back to the owner with every clip on one meter (`Loudness.of`):
-   https://claude.ai/artifact/DaDn9mYg8ajVCjWS6p5nnD.
+   https://claude.ai/artifact/DaDn9mYg8ajVCjWS6p5nnD. Heard there: "Sounds
+   consistent now". The djembe needed no change; the level did.
 
 ## The model
 
@@ -150,9 +151,10 @@ Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 437 / 580 / 840 Hz, DAYAN
 ## Ledger
 
 - **Heard:** the three rounds above, each for the Python clips it played; the
-  app's dumbek as the same drum; the tabla's setting 3.
-- **Not yet heard:** the app's djembe against the prototype at one level
-  (round 4's page played it 5.2 dB quieter).
+  app's dumbek as the same drum; the tabla's setting 3; the app's djembe,
+  at one level, as consistent with the prototype.
+- **Not yet heard clearly:** soft and medium hits in the app ("Can't tell"
+  on round 4's page, whose levels were off).
 - **Proposed (design shapes):** the strip widths and the finger timings, the
   split range, each drum's T60 and tilt, the bowl's 72 Hz and the shells'
   modes, the noise bursts' bands and lengths, and the mix levels.
