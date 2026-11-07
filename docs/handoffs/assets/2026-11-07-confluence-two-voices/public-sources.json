@@ -1,0 +1,230 @@
+{
+  "format": "snipsnap-confluence-two-singers-sources/v1",
+  "schemaVersion": 1,
+  "preparedAtUtc": "2026-11-06T22:13:15.882762+00:00",
+  "status": "numerically-qualified-native-pair-owner-listening-pending",
+  "sources": [
+    {
+      "id": "a",
+      "label": "Singer A",
+      "singerId": "male3",
+      "recordedVowel": "a",
+      "technique": "straight",
+      "independentRecording": true,
+      "relativePath": "sources/a.wav",
+      "sha256": "2b98cc138a2772fa9414cf94cf8214f684daf47f93853a6c2f40bb78e8d32a51",
+      "bytes": 264644,
+      "sampleRate": 44100,
+      "channels": 1,
+      "bitDepth": 24,
+      "frames": 88200,
+      "seconds": 2.0,
+      "canonicalPcmSha256": "8f2581cc3fb59455f568ddc5b44d3e67a35f04d145a149cb32cca75b7b308d3a",
+      "canonicalPcmHashDefinition": "SnipSnap WavReader PCM24-decoded float32 /8388607f, hash of LEint32rate+LEint32frames+LEfloat32samples.",
+      "originalSha256": "0220658c4ac8b96392c2bbcc3348fa757ed6264185610d31daef87ec0399cf4f",
+      "originalArchiveMember": "FULL/male3/long_tones/straight/m3_long_straight_a.wav",
+      "originalFrames": 518742,
+      "originalSampleRate": 44100,
+      "originalChannels": 1,
+      "originalBitDepth": 16,
+      "originalCropStartFrame": 220500,
+      "originalCropEndFrame": 308700,
+      "originalCropStartSeconds": 5.0,
+      "originalCropEndSeconds": 7.0,
+      "cropBasis": "Steady interior of the recorded long-tone /a/ near native C4; excludes register transitions and breath releases. These are body cuts, not complete naturally released gestures.",
+      "qualification": {
+        "startSeconds": 0,
+        "endSeconds": 2.0,
+        "windowCount": 191,
+        "voicedWindows": 191,
+        "voicedShare": 1.0,
+        "medianHz": 256.19076853797463,
+        "p05Hz": 251.66461718727163,
+        "p95Hz": 260.4291734003374,
+        "p05p95Cents": 59.26502038876103,
+        "minHz": 250.0081860647698,
+        "maxHz": 262.15945371422373,
+        "medianConfidence": 0.9932063344330613,
+        "minConfidence": 0.9221962949050659,
+        "medianCorrelation": 0.9930930593349787
+      },
+      "harmonicSpectrumCheck": [
+        {
+          "order": 0.5,
+          "peakHz": 120.11489868164062,
+          "relativePowerToFundamental": 1.9070993189051055e-06
+        },
+        {
+          "order": 1,
+          "peakHz": 255.706787109375,
+          "relativePowerToFundamental": 1.0
+        },
+        {
+          "order": 2,
+          "peakHz": 512.2547149658203,
+          "relativePowerToFundamental": 2.1393560061228323
+        },
+        {
+          "order": 3,
+          "peakHz": 773.0083465576172,
+          "relativePowerToFundamental": 0.23684528847183411
+        }
+      ],
+      "metrics": {
+        "peak": 0.101654052734375,
+        "rms": 0.04270652222443974,
+        "dc": 2.295150237829507e-05,
+        "firstSample": -0.012908935546875,
+        "lastSample": 0.049072265625,
+        "first100msRms": 0.03311687328708717,
+        "last100msRms": 0.044010419259299494,
+        "nonfiniteSamples": 0,
+        "fullScaleSamples": 0
+      },
+      "metricDecodeConvention": "OriginalPCM16/32768 and expandedPCM24/8388608; amplitudes exactly equal.",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://zenodo.org/records/1193957",
+      "doi": "10.5281/zenodo.1193957",
+      "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+      "performerCreditNote": "VocalSet anonymous singer identifier; no personal performer name is asserted. Dataset file labels supply singer, vowel and technique.",
+      "originalAcquisitionDate": "2026-10-17",
+      "acquisitionThisTask": "Cached originals only; no network access or additional downloads.",
+      "modifications": [
+        "Cropped exactly to the listed half-open source frame interval.",
+        "Lossless integer PCM16-to-PCM24 expansion (each signed sample shifted left8bits); original amplitude retained.",
+        "No pitch correction, transpose, time stretch, gain, normalization, fades, filtering, denoising, DC removal, repetition or synthesized replacement."
+      ],
+      "boundaryNote": "First/last samples may be nonzero because a steady-vowel body was cut. Any audition edge fades and level matching belong to the separately declared rendering recipe.",
+      "path": "sources/a.wav"
+    },
+    {
+      "id": "b",
+      "label": "Singer B",
+      "singerId": "female1",
+      "recordedVowel": "a",
+      "technique": "straight",
+      "independentRecording": true,
+      "relativePath": "sources/b.wav",
+      "sha256": "a49742f4fc604265f3e34534a4e1acf3481266894a5614af05d0c01dcd9b4b6f",
+      "bytes": 264644,
+      "sampleRate": 44100,
+      "channels": 1,
+      "bitDepth": 24,
+      "frames": 88200,
+      "seconds": 2.0,
+      "canonicalPcmSha256": "0c63b48104cab77a6bc12f11d4775da03f335ee1ffdacc5d908bc1bb5a876fe6",
+      "canonicalPcmHashDefinition": "SnipSnap WavReader PCM24-decoded float32 /8388607f, hash of LEint32rate+LEint32frames+LEfloat32samples.",
+      "originalSha256": "e1ff90d89de7e30a4dd717dd642173e57b083832f38e74eb8033d349c02bc340",
+      "originalArchiveMember": "FULL/female1/long_tones/straight/f1_long_straight_a.wav",
+      "originalFrames": 521379,
+      "originalSampleRate": 44100,
+      "originalChannels": 1,
+      "originalBitDepth": 16,
+      "originalCropStartFrame": 50715,
+      "originalCropEndFrame": 138915,
+      "originalCropStartSeconds": 1.15,
+      "originalCropEndSeconds": 3.15,
+      "cropBasis": "Steady interior of the recorded long-tone /a/ near native C4; excludes register transitions and breath releases. These are body cuts, not complete naturally released gestures.",
+      "qualification": {
+        "startSeconds": 0,
+        "endSeconds": 2.0,
+        "windowCount": 191,
+        "voicedWindows": 190,
+        "voicedShare": 0.9947643979057592,
+        "medianHz": 260.7071119744289,
+        "p05Hz": 256.2391124164871,
+        "p95Hz": 265.9159756709143,
+        "p05p95Cents": 64.17566522738039,
+        "minHz": 255.66855014898036,
+        "maxHz": 269.9431897150348,
+        "medianConfidence": 0.9666436559480363,
+        "minConfidence": 0.857962944510969,
+        "medianCorrelation": 0.9657120784938498
+      },
+      "harmonicSpectrumCheck": [
+        {
+          "order": 0.5,
+          "peakHz": 124.15237426757812,
+          "relativePowerToFundamental": 3.3792632237139227e-06
+        },
+        {
+          "order": 1,
+          "peakHz": 261.090087890625,
+          "relativePowerToFundamental": 1.0
+        },
+        {
+          "order": 2,
+          "peakHz": 520.6661224365234,
+          "relativePowerToFundamental": 0.13738699405216026
+        },
+        {
+          "order": 3,
+          "peakHz": 787.6441955566406,
+          "relativePowerToFundamental": 0.38072486312642767
+        }
+      ],
+      "metrics": {
+        "peak": 0.027313232421875,
+        "rms": 0.009372560580480449,
+        "dc": 1.6805774230265022e-05,
+        "firstSample": 0.009796142578125,
+        "lastSample": -0.003997802734375,
+        "first100msRms": 0.008183698101626462,
+        "last100msRms": 0.008816899873660348,
+        "nonfiniteSamples": 0,
+        "fullScaleSamples": 0
+      },
+      "metricDecodeConvention": "OriginalPCM16/32768 and expandedPCM24/8388608; amplitudes exactly equal.",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://zenodo.org/records/1193957",
+      "doi": "10.5281/zenodo.1193957",
+      "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+      "performerCreditNote": "VocalSet anonymous singer identifier; no personal performer name is asserted. Dataset file labels supply singer, vowel and technique.",
+      "originalAcquisitionDate": "2026-10-17",
+      "acquisitionThisTask": "Cached originals only; no network access or additional downloads.",
+      "modifications": [
+        "Cropped exactly to the listed half-open source frame interval.",
+        "Lossless integer PCM16-to-PCM24 expansion (each signed sample shifted left8bits); original amplitude retained.",
+        "No pitch correction, transpose, time stretch, gain, normalization, fades, filtering, denoising, DC removal, repetition or synthesized replacement."
+      ],
+      "boundaryNote": "First/last samples may be nonzero because a steady-vowel body was cut. Any audition edge fades and level matching belong to the separately declared rendering recipe.",
+      "path": "sources/b.wav"
+    }
+  ],
+  "pair": {
+    "distinctSingerIds": true,
+    "distinctOriginalHashes": true,
+    "sharedRecordedVowel": "a",
+    "sharedTechnique": "straight",
+    "sameNominalNote": "C4 vicinity",
+    "nativePitchDifferenceCents": 30.253737953253506,
+    "pitchAlignedOrCorrected": false,
+    "commonFrames": 88200,
+    "commonSeconds": 2.0,
+    "actualSimultaneousPerformance": false,
+    "positiveControlDescription": "Dry mono sum of two independent singers recorded separately, not a claimed live duet or traditional ensemble."
+  },
+  "measurementMethod": {
+    "primaryF0": "Python/SciPy YIN cumulative-mean-normalized difference; firstlocalminimumunder.15 over70–600Hz; parabolicperiodrefinement.",
+    "voicedThreshold": "WindowRMS>.0003 and1-CMND>.85",
+    "analysisOnlyResampling": "scipy.signal.resample_poly4:1; savedWAV stays44100Hz",
+    "windowFramesAt11025": 1104,
+    "hopFramesAt11025": 110,
+    "reportedWindows": "Full100mswindows inside the actual saved2secondcrops;nozero-paddedboundarywindows.",
+    "pitchSpread": "p05–p95windowF0 in cents; natural recorded microvariation retained.",
+    "crossCheck": "Normalized broad autocorrelation and whole-crop harmonic-spectrum observations. Autocorrelationoccasionallychoosessubharmoniclags; primaryYIN avoids selecting a longer period solely for a slightly higher ACF score."
+  },
+  "evidence": {
+    "licenseText": "sources/LICENSE-CC-BY-4.0.txt",
+    "attribution": "sources/ATTRIBUTION.txt",
+    "originalArchiveMemberAndHashes": "Listed per source; original full recordings are retained in the repository fixture archive."
+  },
+  "limits": [
+    "Numerical source qualification is not a listening verdict.",
+    "The two recordings are independent takes, not sample-synchronized performances.",
+    "Native pitches differ slightly; no transposition was applied.",
+    "No current bank, approved cultural passage, or Site asset was modified."
+  ]
+}

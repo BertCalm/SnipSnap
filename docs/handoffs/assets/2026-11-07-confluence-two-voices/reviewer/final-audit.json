@@ -1,0 +1,136 @@
+{
+  "allAudioAndSourceChecksPass": true,
+  "manifestSha256": "36f0577e01b6667de75f79cea9f158f324e651febef32ebb38437e51df707f83",
+  "sourceEvidence": "reviewer/source-audit.json",
+  "clips": [
+    {
+      "id": "a-alone",
+      "sha256": "697dec493d9dec1f8666883890524581330f8f716311de9621e61692ae1fc5ec",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -21.999,
+      "reportedIntegratedLufs": -21.999,
+      "independentTruePeakLinear": 0.214,
+      "samplePeak": 0.21377792954444885,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    },
+    {
+      "id": "b-alone",
+      "sha256": "e7541821c71e6b21ca34a00b0f35c5d3b2690fda05ec1fcbb4ab049e3be72a4f",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -21.999,
+      "reportedIntegratedLufs": -21.999,
+      "independentTruePeakLinear": 0.259,
+      "samplePeak": 0.2569163143634796,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    },
+    {
+      "id": "a-plus-a",
+      "sha256": "4181961b0c10e5716bbf239b2d706900f4a33e9ac0e75adcc765d3c55a9263c1",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -22.001,
+      "reportedIntegratedLufs": -22.001,
+      "independentTruePeakLinear": 0.255,
+      "samplePeak": 0.2551971971988678,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    },
+    {
+      "id": "a-plus-b",
+      "sha256": "9303aac83bdff7ac558f98c35a19f63349b3060b553b2d5126830b2e9590c9ab",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -22.001,
+      "reportedIntegratedLufs": -22.001,
+      "independentTruePeakLinear": 0.305,
+      "samplePeak": 0.30466166138648987,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    },
+    {
+      "id": "synthetic-b-alone",
+      "sha256": "e227dd42926ebdc33a86e849ea87402aae5e9d35ee846addb18270697130d7f6",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -22.0,
+      "reportedIntegratedLufs": -22.0,
+      "independentTruePeakLinear": 0.225,
+      "samplePeak": 0.22449126839637756,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    },
+    {
+      "id": "a-plus-synthetic-b",
+      "sha256": "d5d7bd44888305cfe4bd4d5059e48b1e0d527faca94dcea1e6b9c375468126b1",
+      "shape": [
+        1,
+        3,
+        44100,
+        132300
+      ],
+      "independentIntegratedLufs": -22.001,
+      "reportedIntegratedLufs": -22.001,
+      "independentTruePeakLinear": 0.275,
+      "samplePeak": 0.2750413715839386,
+      "maxVsDeclaredStemSumError": 5.960464477539063e-08,
+      "last250msExactlySilent": true
+    }
+  ],
+  "independentLufsSpread": 0.0020000000000024443,
+  "referenceFiles": [
+    {
+      "url": "sources/a.wav",
+      "exists": true
+    },
+    {
+      "url": "sources/b.wav",
+      "exists": true
+    },
+    {
+      "url": "public-sources.json",
+      "exists": true
+    },
+    {
+      "url": "sources/LICENSE-CC-BY-4.0.txt",
+      "exists": true
+    },
+    {
+      "url": "reports/measurement.json",
+      "exists": true
+    },
+    {
+      "url": "generator.zip",
+      "exists": true
+    }
+  ],
+  "allReferenceFilesPresent": true,
+  "ownerListeningVerdict": null,
+  "limits": [
+    "This verifies declared signal operations and source identities, not whether two people are perceived.",
+    "Raw source and delivered audition files are different processing stages."
+  ]
+}

@@ -1,0 +1,26 @@
+VocalSet: A Singing Voice Dataset
+Julia Wilkins, Prem Seetharaman, Alison Wahl and Bryan Pardo (2018).
+CC BY4.0 — https://creativecommons.org/licenses/by/4.0/
+Dataset: https://zenodo.org/records/1193957
+DOI: https://doi.org/10.5281/zenodo.1193957
+
+Independent recorded source takes for the dry two-singer comparison.
+Singer labels are anonymized VocalSet dataset IDs; no personal name or endorsement is asserted.
+The two people were recorded separately; this is not represented as a simultaneously performed duet.
+
+Singer A: dataset male3, straight /a/
+FULL/male3/long_tones/straight/m3_long_straight_a.wav
+Original SHA-256: 0220658c4ac8b96392c2bbcc3348fa757ed6264185610d31daef87ec0399cf4f
+Original half-open crop: frames 220500–308700 at44100Hz (5.00–7.00s)
+Source WAV: a.wav; SHA-256 2b98cc138a2772fa9414cf94cf8214f684daf47f93853a6c2f40bb78e8d32a51
+
+Singer B: dataset female1, straight /a/
+FULL/female1/long_tones/straight/f1_long_straight_a.wav
+Original SHA-256: e1ff90d89de7e30a4dd717dd642173e57b083832f38e74eb8033d349c02bc340
+Original half-open crop: frames 50715–138915 at44100Hz (1.15–3.15s)
+Source WAV: b.wav; SHA-256 a49742f4fc604265f3e34534a4e1acf3481266894a5614af05d0c01dcd9b4b6f
+
+Source modifications: exact2-second steady-vowel body crop and lossless PCM16-to-PCM24 integer expansion only. Original level and native pitch retained. No fades, gain, pitch correction, transposition, time stretch, denoising, filtering, repetition or generated replacement in these source files.
+The body crops have nonquiet cut edges. Any audition level matching, edge envelopes, mixing or synthetic counterpart processing is declared separately in the audition manifest.
+Complete originals and primary licensing metadata were already cached before this work. No new acquisition or download was performed.
+Sources were numerically qualified; no owner listening verdict is claimed.

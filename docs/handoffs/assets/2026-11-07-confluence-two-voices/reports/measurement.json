@@ -1,0 +1,408 @@
+{
+  "format": "snipsnap-two-singers-measurement/v1",
+  "createdAtUtc": "2026-11-06T22:27:27.328413+00:00",
+  "scope": "Actual Kotlin analysis/stockTEXTURE and scratch independent-clockPSOLA generation; FFmpegEBUR128 matching; independent Python signal measurements. Owner listening pending. No app/bank/CI change.",
+  "repositoryRead": "5c028180f",
+  "productionRendererSnapshotSha256": "d6bfeb8aa7c0ae97a86b4d6e88585bd663c7d66ed69830c3d814b23df2de2af9",
+  "adapterSourceSha256": "b404c6a6c2db6257a3353f69f4d8c18909127690024a71ce485ce237a8f9de49",
+  "rawSourcesUnmodified": true,
+  "determinism": {
+    "floatPipelineRepeatedIdentically": true,
+    "finalPcm24EncodingRepeatedIdentically": true
+  },
+  "hostCost": {
+    "scope": "Actual calls on this Java 17 JVM, 1 CPU: six clips plus a private formant-scale ablation. Not phone latency. FFmpeg measurement excluded.",
+    "prepareAnalysisMilliseconds": 93.789557,
+    "sixClipRenderMilliseconds": 94.752191
+  },
+  "conditions": {
+    "mono": true,
+    "dry": true,
+    "matched": true,
+    "seconds": 3.0,
+    "sampleRate": 44100,
+    "channels": 1,
+    "matching": "Constant gain to −22 LUFS integrated by FFmpeg EBU R128 over the common 3-second window. Components matched first, then complete clips; no compressor/limiter. This is measured loudness matching, not a claim of identical perceived loudness.",
+    "maximumMeasuredLufsSpread": 0.0020000000000024443
+  },
+  "componentMatching": {
+    "a": {
+      "input": {
+        "integratedLufs": -19.058,
+        "truePeakDbtp": -10.4
+      },
+      "constantGain": 0.7126889228820801,
+      "measuredAfterPcm24": {
+        "integratedLufs": -21.998,
+        "truePeakDbtp": -13.4
+      },
+      "path": "work/lufs-stem-a.wav"
+    },
+    "b": {
+      "input": {
+        "integratedLufs": -18.817,
+        "truePeakDbtp": -8.6
+      },
+      "constantGain": 0.693186342716217,
+      "measuredAfterPcm24": {
+        "integratedLufs": -22.001,
+        "truePeakDbtp": -11.7
+      },
+      "path": "work/lufs-stem-b.wav"
+    },
+    "double-0": {
+      "input": {
+        "integratedLufs": -19.068,
+        "truePeakDbtp": -10.5
+      },
+      "constantGain": 0.7135099172592163,
+      "measuredAfterPcm24": {
+        "integratedLufs": -22.0,
+        "truePeakDbtp": -13.4
+      },
+      "path": "work/lufs-stem-double-0.wav"
+    },
+    "double-1": {
+      "input": {
+        "integratedLufs": -19.063,
+        "truePeakDbtp": -10.5
+      },
+      "constantGain": 0.7130993008613586,
+      "measuredAfterPcm24": {
+        "integratedLufs": -21.999,
+        "truePeakDbtp": -13.4
+      },
+      "path": "work/lufs-stem-double-1.wav"
+    },
+    "synthetic-b": {
+      "input": {
+        "integratedLufs": -19.032,
+        "truePeakDbtp": -10.0
+      },
+      "constantGain": 0.7105587720870972,
+      "measuredAfterPcm24": {
+        "integratedLufs": -22.0,
+        "truePeakDbtp": -13.0
+      },
+      "path": "work/lufs-stem-synthetic-b.wav"
+    },
+    "synthetic-formant-control": {
+      "input": {
+        "integratedLufs": -19.037,
+        "truePeakDbtp": -10.3
+      },
+      "constantGain": 0.7109678983688354,
+      "measuredAfterPcm24": {
+        "integratedLufs": -22.002,
+        "truePeakDbtp": -13.2
+      },
+      "path": "work/lufs-stem-synthetic-formant-control.wav"
+    }
+  },
+  "pitch": {
+    "method": "Python/SciPy broad YIN 70–600 Hz, full 46.44 ms windows / 9.98 ms hop, central 0.50–1.85 s. No target/reference note enters selection. Pair pitch is not estimated.",
+    "soloCandidates": {
+      "a-alone": {
+        "windows": 136,
+        "hz": {
+          "p05": 249.2386194289527,
+          "median": 256.00178455467653,
+          "p95": 263.12078669526755
+        },
+        "confidence": {
+          "p05": 0.975064102449728,
+          "median": 0.9905333624771218,
+          "p95": 0.9987962246052842
+        }
+      },
+      "b-alone": {
+        "windows": 136,
+        "hz": {
+          "p05": 255.0025499152038,
+          "median": 261.06738497826973,
+          "p95": 268.3071695860275
+        },
+        "confidence": {
+          "p05": 0.9452548951273683,
+          "median": 0.9802191641405469,
+          "p95": 0.9963699787945307
+        }
+      },
+      "synthetic-b-alone": {
+        "windows": 136,
+        "hz": {
+          "p05": 259.18114503616476,
+          "median": 260.839606929848,
+          "p95": 262.309794106822
+        },
+        "confidence": {
+          "p05": 0.9729744345448413,
+          "median": 0.9896163621680272,
+          "p95": 0.9966218384914317
+        }
+      }
+    },
+    "generatedVsIndependentTarget": {
+      "correlation": 0.9690102725265314,
+      "medianErrorCents": 0.6950827369936208,
+      "p95AbsoluteErrorCents": 3.867637098984451
+    },
+    "generatedVsSourceAInputContourCorrelation": 0.07938675757310747,
+    "targetCurveCausalInputs": [
+      "elapsed output time",
+      "constant native B median Hz"
+    ],
+    "identitySuccessInferred": false
+  },
+  "spectral": {
+    "method": "Welch 4096 / 50 percent overlap on 0.60–1.80 s; log-power real-cepstrum raised-cosine lifter up to 1 ms removes fine harmonic structure, then gain-normalized envelope comparison 300–5000 Hz. Not a perceptual identity score.",
+    "aVsRealBEnvelopeRmsDb": 3.7783373461800807,
+    "aVsGeneratedEnvelopeRmsDb": 2.6210245269750367,
+    "generatedVsSameClockFormantScale1AblationEnvelopeRmsDb": 0.933970711037049,
+    "declaredFormantScale": 1.08,
+    "formantAblationOnlyDifference": "Scale 1.08 versus 1.00; same input epochs, output F0 curve, duration, envelope; each level-matched independently."
+  },
+  "clips": [
+    {
+      "id": "a-alone",
+      "path": "audio/a-alone.wav",
+      "title": "A alone",
+      "kind": "actual-singer",
+      "description": "One actual recorded singer: VocalSet male3, straight /a/, native pitch.",
+      "sha256": "697dec493d9dec1f8666883890524581330f8f716311de9621e61692ae1fc5ec",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "Raw source A retained separately. Mean removal and declared 60 ms entrance / 140 ms release shape this finite body crop; native pitch is retained.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -21.998,
+          "truePeakDbtp": -13.4
+        },
+        "finalConstantGain": 0.9997697472572327,
+        "measuredAfterPcm24": {
+          "integratedLufs": -21.999,
+          "truePeakDbtp": -13.4
+        }
+      },
+      "metrics": {
+        "rms": 0.07125248399186164,
+        "peak": 0.21377792954444885,
+        "dc": -1.0146382682384632e-05,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    },
+    {
+      "id": "b-alone",
+      "path": "audio/b-alone.wav",
+      "title": "B alone",
+      "kind": "actual-singer",
+      "description": "A different actual recorded singer: VocalSet female1, straight /a/, native pitch.",
+      "sha256": "e7541821c71e6b21ca34a00b0f35c5d3b2690fda05ec1fcbb4ab049e3be72a4f",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "Raw source B retained separately. Mean removal and declared 90 ms entrance / 180 ms release shape this finite body crop; native pitch is retained.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -22.001,
+          "truePeakDbtp": -11.7
+        },
+        "finalConstantGain": 1.000115156173706,
+        "measuredAfterPcm24": {
+          "integratedLufs": -21.999,
+          "truePeakDbtp": -11.7
+        }
+      },
+      "metrics": {
+        "rms": 0.06932661745278429,
+        "peak": 0.2569163143634796,
+        "dc": -9.338822241129809e-06,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    },
+    {
+      "id": "a-plus-a",
+      "path": "audio/a-plus-a.wav",
+      "title": "A + A · same-take doubling control",
+      "kind": "doubling-control",
+      "description": "Two copies of A with small timing and playback-speed differences.",
+      "sha256": "4181961b0c10e5716bbf239b2d706900f4a33e9ac0e75adcc765d3c55a9263c1",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "Same A recording twice. Stock ConfluenceVoice TEXTURE playback uses duration ratios 1.0066572428/1.0034866333 and 5.759637 ms relative onset difference from the published default pair.",
+        "This isolates the current doubling primitive in a new 3-second dry window; it is not a replay of the complete 30-second app arrangement.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -22.192,
+          "truePeakDbtp": -12.0
+        },
+        "finalConstantGain": 1.0223509073257446,
+        "measuredAfterPcm24": {
+          "integratedLufs": -22.001,
+          "truePeakDbtp": -11.9
+        }
+      },
+      "metrics": {
+        "rms": 0.07296706477394495,
+        "peak": 0.2551971971988678,
+        "dc": 3.382512638408336e-06,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    },
+    {
+      "id": "a-plus-b",
+      "path": "audio/a-plus-b.wav",
+      "title": "A + B · recorded reference",
+      "kind": "recorded-reference",
+      "description": "Two independent singers recorded separately, summed in mono; neither source is pitch-corrected.",
+      "sha256": "9303aac83bdff7ac558f98c35a19f63349b3060b553b2d5126830b2e9590c9ab",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "A enters at 0.200 s; actual independent B enters at 0.245 s. Both recordings retain native pitch, with about 30.25 cents median separation.",
+        "Components are first matched independently to −22 LUFS, then summed at equal-power gains; one final scalar sets the complete clip to −22 LUFS.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -21.963,
+          "truePeakDbtp": -10.3
+        },
+        "finalConstantGain": 0.995749294757843,
+        "measuredAfterPcm24": {
+          "integratedLufs": -22.001,
+          "truePeakDbtp": -10.3
+        }
+      },
+      "metrics": {
+        "rms": 0.0694505273301386,
+        "peak": 0.30466166138648987,
+        "dc": -1.3721150339981886e-05,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    },
+    {
+      "id": "synthetic-b-alone",
+      "path": "audio/synthetic-b-alone.wav",
+      "title": "Generated from A · alone",
+      "kind": "dsp-prototype",
+      "description": "A transformed with a vocal-color change and its own pitch movement. It is generated from A.",
+      "sha256": "e227dd42926ebdc33a86e849ea87402aae5e9d35ee846addb18270697130d7f6",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "Scratch extension, not unchanged production renderer: source A epochs/periods control input grains; an independent output pulse clock is centered at B’s measured native median.",
+        "Fixed formant/pulse-color scale 1.08; source chronology ratio 0.992. Independent target cents(t)=8.5(1−exp(−6max(0,t−.12)))sin(2π(5.23t+.31))+3.5sin(2π(.61t+.07))+2sin(2π(1.37t+.62)).",
+        "Enters at 0.245 s,90 ms entrance / 180 ms release. No generated breath or new articulation; this is a held-vowel body.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -22.0,
+          "truePeakDbtp": -13.0
+        },
+        "finalConstantGain": 1.0,
+        "measuredAfterPcm24": {
+          "integratedLufs": -22.0,
+          "truePeakDbtp": -13.0
+        }
+      },
+      "metrics": {
+        "rms": 0.071055878867805,
+        "peak": 0.22449126839637756,
+        "dc": -2.288871493867947e-05,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    },
+    {
+      "id": "a-plus-synthetic-b",
+      "path": "audio/a-plus-synthetic-b.wav",
+      "title": "A + generated voice",
+      "kind": "dsp-prototype",
+      "description": "Recorded A plus the same generated-from-A candidate heard in the preceding row. Not a new human recording.",
+      "sha256": "d5d7bd44888305cfe4bd4d5059e48b1e0d527faca94dcea1e6b9c375468126b1",
+      "bytes": 396944,
+      "seconds": 3.0,
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "processing": [
+        "Exactly the same A and generated component stems used for their solo rows, combined after independent component-level matching.",
+        "One final constant scalar matches the complete pair to −22 LUFS. No room, stereo placement, harmony, compressor or limiter.",
+        "Every staged body has its DC mean removed before its finite envelope. Dry mono, common 3-second window. Final EBU R128 matching uses constantgain only; raw source crops remain separately available."
+      ],
+      "level": {
+        "targetIntegratedLufs": -22.0,
+        "preFinal": {
+          "integratedLufs": -21.866,
+          "truePeakDbtp": -11.1
+        },
+        "finalConstantGain": 0.9846910834312439,
+        "measuredAfterPcm24": {
+          "integratedLufs": -22.001,
+          "truePeakDbtp": -11.2
+        }
+      },
+      "metrics": {
+        "rms": 0.07115408619839152,
+        "peak": 0.2750413715839386,
+        "dc": -2.300421787855789e-05,
+        "nonfiniteSamples": 0,
+        "railSamples": 0,
+        "last250msPeak": 0.0
+      }
+    }
+  ],
+  "risks": [
+    "Generated voice is transformed A, not a new real human or a learned copy ofB.",
+    "Short stable vowel bodies do not establish quality on words, consonants or full cultural gestures.",
+    "Local pulse dilation is a bounded formant-color hypothesis; it is not a vocal tract model or verified biological identity change.",
+    "Independent output clock and spectral changes are numeric properties; they do not prove the owner hears two people.",
+    "Both crops end inside a held vowel. The disclosed audition envelopes create finite releases; no new breath is generated.",
+    "No room/stereo/harmony or full gesture automaticF0 processing is used."
+  ],
+  "whyBuiltThisWay": [
+    "Actual independent B establishes the recorded positive reference before evaluating a synthetic identity.",
+    "Dry mono and constant gain matching remove room/width/loudness as alternative explanations.",
+    "The separate output clock avoids carrying A native pitch motion into every synthetic part.",
+    "Raw sourcecrops and complete processing recipes remain inspectable; no source preparation is hidden."
+  ]
+}

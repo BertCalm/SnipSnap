@@ -1,0 +1,45 @@
+{
+  "format": "two-singers-extracted-source-replay/v1",
+  "manifestSha256": "36f0577e01b6667de75f79cea9f158f324e651febef32ebb38437e51df707f83",
+  "generatorZipSha256": "268eaeb2b32eaa47da8bfb9391366b116b4f0f40398e114801af81889d58e592",
+  "method": "Fresh source compilation using cached Kotlin 2.0.21 compiler/JDK17; extracted public source metadata fallback, renderer and finalizer. No private sources.json provided. Same host, not cross-platform proof.",
+  "allSixWavsExact": true,
+  "clips": [
+    {
+      "id": "a-alone",
+      "expectedSha256": "697dec493d9dec1f8666883890524581330f8f716311de9621e61692ae1fc5ec",
+      "replayedSha256": "697dec493d9dec1f8666883890524581330f8f716311de9621e61692ae1fc5ec",
+      "exact": true
+    },
+    {
+      "id": "b-alone",
+      "expectedSha256": "e7541821c71e6b21ca34a00b0f35c5d3b2690fda05ec1fcbb4ab049e3be72a4f",
+      "replayedSha256": "e7541821c71e6b21ca34a00b0f35c5d3b2690fda05ec1fcbb4ab049e3be72a4f",
+      "exact": true
+    },
+    {
+      "id": "a-plus-a",
+      "expectedSha256": "4181961b0c10e5716bbf239b2d706900f4a33e9ac0e75adcc765d3c55a9263c1",
+      "replayedSha256": "4181961b0c10e5716bbf239b2d706900f4a33e9ac0e75adcc765d3c55a9263c1",
+      "exact": true
+    },
+    {
+      "id": "a-plus-b",
+      "expectedSha256": "9303aac83bdff7ac558f98c35a19f63349b3060b553b2d5126830b2e9590c9ab",
+      "replayedSha256": "9303aac83bdff7ac558f98c35a19f63349b3060b553b2d5126830b2e9590c9ab",
+      "exact": true
+    },
+    {
+      "id": "synthetic-b-alone",
+      "expectedSha256": "e227dd42926ebdc33a86e849ea87402aae5e9d35ee846addb18270697130d7f6",
+      "replayedSha256": "e227dd42926ebdc33a86e849ea87402aae5e9d35ee846addb18270697130d7f6",
+      "exact": true
+    },
+    {
+      "id": "a-plus-synthetic-b",
+      "expectedSha256": "d5d7bd44888305cfe4bd4d5059e48b1e0d527faca94dcea1e6b9c375468126b1",
+      "replayedSha256": "d5d7bd44888305cfe4bd4d5059e48b1e0d527faca94dcea1e6b9c375468126b1",
+      "exact": true
+    }
+  ]
+}

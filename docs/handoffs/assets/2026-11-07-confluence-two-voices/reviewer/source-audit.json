@@ -1,0 +1,53 @@
+{
+  "sourcesJsonSha256": "e85667310f274347fd175c95d81da2502d19f80a1edef71db1167e3c9c127e61",
+  "checks": [
+    {
+      "id": "a",
+      "singerId": "male3",
+      "sourceHashMatches": true,
+      "originalHashMatches": true,
+      "originalShape": [
+        1,
+        2,
+        44100,
+        518742
+      ],
+      "sourceShape": [
+        1,
+        3,
+        44100,
+        88200
+      ],
+      "exactPcm16CropExpandedTo24": true,
+      "canonicalPcmHashMatches": true,
+      "integratedLufs": -27.9,
+      "rmsDbfs": -27.39011587197008,
+      "lufsAtRmsMinus20": -20.509884128029917
+    },
+    {
+      "id": "b",
+      "singerId": "female1",
+      "sourceHashMatches": true,
+      "originalHashMatches": true,
+      "originalShape": [
+        1,
+        2,
+        44100,
+        521379
+      ],
+      "sourceShape": [
+        1,
+        3,
+        44100,
+        88200
+      ],
+      "exactPcm16CropExpandedTo24": true,
+      "canonicalPcmHashMatches": true,
+      "integratedLufs": -40.6,
+      "rmsDbfs": -40.56283487583249,
+      "lufsAtRmsMinus20": -20.037165124167508
+    }
+  ],
+  "licenseEvidence": "Cached Zenodo1193957 metadata applies CC-BY-4.0 to audio archive VocalSet.zip; archive-selection.json binds these two cached originals. No network fetch performed.",
+  "hearingClaim": null
+}

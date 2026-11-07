@@ -1,0 +1,64 @@
+{
+  "zipSha256": "268eaeb2b32eaa47da8bfb9391366b116b4f0f40398e114801af81889d58e592",
+  "bytes": 326023,
+  "entryCount": 13,
+  "expandedBytes": 618612,
+  "unsafeNames": [],
+  "symbolicLinks": [],
+  "missingRequiredFiles": [],
+  "frozenFileComparisons": [
+    {
+      "path": "README.txt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "render.sh",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "finalize.py",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "public-sources.json",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "reports/measurement.json",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "sources/a.wav",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "sources/b.wav",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "sources/LICENSE-CC-BY-4.0.txt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "sources/ATTRIBUTION.txt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "src/ConfluenceShim.kt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "src/ConfluenceVoice.kt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "src/IndependentSinger.kt",
+      "sameBytesAsFrozenScratch": true
+    },
+    {
+      "path": "src/TwoSingerAudition.java",
+      "sameBytesAsFrozenScratch": true
+    }
+  ],
+  "allPass": true
+}

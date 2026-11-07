@@ -1,0 +1,837 @@
+{
+  "renderJsonSha256": "ba15485ee0dcc5fd8dac203df5d5c06b8f39b20ec488d6eaa3eb66c9bcc9eab0",
+  "deliveredSoloHashes": {
+    "a-alone.wav": "697dec493d9dec1f8666883890524581330f8f716311de9621e61692ae1fc5ec",
+    "synthetic-b-alone.wav": "e227dd42926ebdc33a86e849ea87402aae5e9d35ee846addb18270697130d7f6"
+  },
+  "method": "Independent normalized broad autocorrelation, 100 ms windows / 10 ms hop; first high-confidence local peak within .02 of strongest, 120\u2013700 Hz. No production pitch-analysis values consumed.",
+  "pairedWindows": 135,
+  "outputMedianHz": 260.67647757575503,
+  "outputMinMaxHz": [
+    259.32725951763217,
+    262.2619869591947
+  ],
+  "nccMinimum": 0.9712031137178103,
+  "expectedClockCorrelation": 0.9877364273420214,
+  "sourceContourCorrelation": 0.06858326050029467,
+  "declaredClockErrorMedianCents": 0.03836523986415796,
+  "declaredClockErrorP95AbsCents": 1.8451692127177395,
+  "sourceContourP05P95Cents": 69.85188973949556,
+  "outputContourP05P95Cents": 16.00509994457134,
+  "observations": [
+    {
+      "secondsAfterSyntheticOnset": 0.30500000000000005,
+      "measuredHz": 260.9855645309238,
+      "expectedHz": 261.05640592929797,
+      "errorCents": -0.4698589333480019
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.31500000000000006,
+      "measuredHz": 261.1966888476952,
+      "expectedHz": 261.23275577690237,
+      "errorCents": -0.23903819599132767
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.32499999999999996,
+      "measuredHz": 261.4231976718671,
+      "expectedHz": 261.4262738956534,
+      "errorCents": -0.020371688797973346
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.33499999999999996,
+      "measuredHz": 261.5924878388226,
+      "expectedHz": 261.61851057750636,
+      "errorCents": -0.17221140776011437
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.345,
+      "measuredHz": 261.86195584110203,
+      "expectedHz": 261.7900388845117,
+      "errorCents": 0.4755260592579692
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.355,
+      "measuredHz": 261.8884106178697,
+      "expectedHz": 261.9227143011596,
+      "errorCents": -0.2267523608400345
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.365,
+      "measuredHz": 262.22211145515564,
+      "expectedHz": 262.00185044984175,
+      "errorCents": 1.4548109290344795
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.375,
+      "measuredHz": 262.2619869591947,
+      "expectedHz": 262.0180463412201,
+      "errorCents": 1.611041075150807
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.385,
+      "measuredHz": 262.13627810375107,
+      "expectedHz": 261.96844097207895,
+      "errorCents": 1.1088065281815729
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.395,
+      "measuredHz": 262.14744734028613,
+      "expectedHz": 261.85723721257483,
+      "errorCents": 1.917622955129109
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.405,
+      "measuredHz": 261.96603915852046,
+      "expectedHz": 261.69542071944863,
+      "errorCents": 1.7893388520219577
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.41500000000000004,
+      "measuredHz": 261.77385439469504,
+      "expectedHz": 261.4996916759657,
+      "errorCents": 1.814117608827153
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.42500000000000004,
+      "measuredHz": 261.5134560856421,
+      "expectedHz": 261.2907176696209,
+      "errorCents": 1.475169375227747
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.43500000000000005,
+      "measuredHz": 261.3077195943687,
+      "expectedHz": 261.0908953738353,
+      "errorCents": 1.437115199196757
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.44499999999999995,
+      "measuredHz": 261.05238258860646,
+      "expectedHz": 260.92186816144095,
+      "errorCents": 0.8657554451682404
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.45499999999999996,
+      "measuredHz": 260.85596776291237,
+      "expectedHz": 260.8020792563427,
+      "errorCents": 0.3576811219213893
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.46499999999999997,
+      "measuredHz": 260.6828287440415,
+      "expectedHz": 260.74464100661044,
+      "errorCents": -0.41045591311731255
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.475,
+      "measuredHz": 260.71175232545556,
+      "expectedHz": 260.75576924695315,
+      "errorCents": -0.2922659236107752
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.485,
+      "measuredHz": 260.8854212223537,
+      "expectedHz": 260.8339703574282,
+      "errorCents": 0.3414612948621716
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.495,
+      "measuredHz": 260.88671368766967,
+      "expectedHz": 260.9700842331259,
+      "errorCents": -0.5531553053866415
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.505,
+      "measuredHz": 261.1755806779346,
+      "expectedHz": 261.1481888216093,
+      "errorCents": 0.18157976776129214
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.515,
+      "measuredHz": 261.38760578441213,
+      "expectedHz": 261.34727290314476,
+      "errorCents": 0.2671551500865252
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.525,
+      "measuredHz": 261.6158580791545,
+      "expectedHz": 261.54349538653247,
+      "errorCents": 0.4789238969673784
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.535,
+      "measuredHz": 261.7747468996853,
+      "expectedHz": 261.7127821549005,
+      "errorCents": 0.4098492153499413
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.545,
+      "measuredHz": 261.93996897391014,
+      "expectedHz": 261.8334731400141,
+      "errorCents": 0.7040036834286939
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.555,
+      "measuredHz": 261.9686057734667,
+      "expectedHz": 261.88872674206226,
+      "errorCents": 0.5279655030561508
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.5650000000000001,
+      "measuredHz": 261.83670540468415,
+      "expectedHz": 261.8684157797498,
+      "errorCents": -0.20965264179679347
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.575,
+      "measuredHz": 261.8229853981724,
+      "expectedHz": 261.77030500654337,
+      "errorCents": 0.3483699645718107
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.585,
+      "measuredHz": 261.635714716129,
+      "expectedHz": 261.6003781923249,
+      "errorCents": 0.23383628961132896
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.595,
+      "measuredHz": 261.32999307615165,
+      "expectedHz": 261.372274359752,
+      "errorCents": -0.28007836402123965
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.605,
+      "measuredHz": 261.0516048436715,
+      "expectedHz": 261.1058885784749,
+      "errorCents": -0.3599597880892444
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.615,
+      "measuredHz": 260.801984447405,
+      "expectedHz": 260.82528313693905,
+      "errorCents": -0.15465251589923074
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.625,
+      "measuredHz": 260.57228489589994,
+      "expectedHz": 260.55613069319764,
+      "errorCents": 0.10733134070659534
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.635,
+      "measuredHz": 260.33841822673463,
+      "expectedHz": 260.32296398034254,
+      "errorCents": 0.1027728134979063
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.645,
+      "measuredHz": 260.15186888377457,
+      "expectedHz": 260.1465305497036,
+      "errorCents": 0.03552540511129948
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.655,
+      "measuredHz": 260.0859335539821,
+      "expectedHz": 260.04154244706075,
+      "errorCents": 0.295509849068152
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.665,
+      "measuredHz": 260.0840773905472,
+      "expectedHz": 260.0150697714171,
+      "errorCents": 0.4594060237786492
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.675,
+      "measuredHz": 260.03454961237526,
+      "expectedHz": 260.0657577568975,
+      "errorCents": -0.20776224010784103
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.685,
+      "measuredHz": 260.2207914302936,
+      "expectedHz": 260.18395689574817,
+      "errorCents": 0.24507539832496372
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.695,
+      "measuredHz": 260.39795165650065,
+      "expectedHz": 260.3527549174919,
+      "errorCents": 0.300512827682913
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.705,
+      "measuredHz": 260.51258546428363,
+      "expectedHz": 260.54979978230773,
+      "errorCents": -0.2472897542016789
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.715,
+      "measuredHz": 260.6908146716766,
+      "expectedHz": 260.7497157517529,
+      "errorCents": -0.391114805386317
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.725,
+      "measuredHz": 260.97218554487404,
+      "expectedHz": 260.9268499768637,
+      "errorCents": 0.3007726545890593
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.735,
+      "measuredHz": 261.04440020159063,
+      "expectedHz": 261.0580519333208,
+      "errorCents": -0.09053526835108897
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.745,
+      "measuredHz": 261.07394890754716,
+      "expectedHz": 261.1251857954702,
+      "errorCents": -0.3397288096835602
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.755,
+      "measuredHz": 261.12161344508587,
+      "expectedHz": 261.11710594269687,
+      "errorCents": 0.029884959971685755
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.765,
+      "measuredHz": 261.0791745561424,
+      "expectedHz": 261.03088419843044,
+      "errorCents": 0.3202463172242888
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.775,
+      "measuredHz": 260.8155653783288,
+      "expectedHz": 260.8721573937051,
+      "errorCents": -0.3756041019652447
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.785,
+      "measuredHz": 260.615865783253,
+      "expectedHz": 260.65455697341514,
+      "errorCents": -0.25700098454212517
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.795,
+      "measuredHz": 260.33652887010544,
+      "expectedHz": 260.3982792934763,
+      "errorCents": -0.4105907049388629
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.805,
+      "measuredHz": 260.10290295648946,
+      "expectedHz": 260.1279464461988,
+      "errorCents": -0.16668039650291452
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8150000000000001,
+      "measuredHz": 259.90809343771474,
+      "expectedHz": 259.869983729014,
+      "errorCents": 0.2538653641592744
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8250000000000001,
+      "measuredHz": 259.61240421597995,
+      "expectedHz": 259.6497931256814,
+      "errorCents": -0.2493112495995875
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8350000000000001,
+      "measuredHz": 259.5356066424093,
+      "expectedHz": 259.489026199394,
+      "errorCents": 0.3107430518031032
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8450000000000001,
+      "measuredHz": 259.4089998363186,
+      "expectedHz": 259.40325123275267,
+      "errorCents": 0.03836523986415796
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8550000000000001,
+      "measuredHz": 259.32725951763217,
+      "expectedHz": 259.4002684700528,
+      "errorCents": -0.4873293909897782
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8650000000000001,
+      "measuredHz": 259.39510273032323,
+      "expectedHz": 259.47925791995544,
+      "errorCents": -0.5615707463049271
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8750000000000001,
+      "measuredHz": 259.599730671238,
+      "expectedHz": 259.6308538562279,
+      "errorCents": -0.2075436973093334
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8849999999999999,
+      "measuredHz": 259.80921017948566,
+      "expectedHz": 259.83813903528835,
+      "errorCents": -0.19275618472249464
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.8949999999999999,
+      "measuredHz": 260.0048771708321,
+      "expectedHz": 260.07845122868275,
+      "errorCents": -0.48982118046617323
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.9049999999999999,
+      "measuredHz": 260.3293213675043,
+      "expectedHz": 260.32580636732126,
+      "errorCents": 0.02337550395761491
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.9149999999999999,
+      "measuredHz": 260.57784928444113,
+      "expectedHz": 260.5536763149093,
+      "errorCents": 0.16060846790044292
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.9249999999999999,
+      "measuredHz": 260.84496872130757,
+      "expectedHz": 260.7378221791838,
+      "errorCents": 0.7112801565153164
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.9349999999999999,
+      "measuredHz": 260.93018962374214,
+      "expectedHz": 260.85887970101066,
+      "errorCents": 0.473195681149162
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.945,
+      "measuredHz": 261.0353506727279,
+      "expectedHz": 260.90442136560233,
+      "errorCents": 0.8685648858897638
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.955,
+      "measuredHz": 261.00232574029843,
+      "expectedHz": 260.8702766844007,
+      "errorCents": 0.876105875395065
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.965,
+      "measuredHz": 260.86675817786397,
+      "expectedHz": 260.76097109208524,
+      "errorCents": 0.702195060139308
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.975,
+      "measuredHz": 260.6747125636968,
+      "expectedHz": 260.5892367801886,
+      "errorCents": 0.5677683572502424
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.985,
+      "measuredHz": 260.51219430900017,
+      "expectedHz": 260.3746462822126,
+      "errorCents": 0.9143169469252166
+    },
+    {
+      "secondsAfterSyntheticOnset": 0.995,
+      "measuredHz": 260.17553054981795,
+      "expectedHz": 260.141512186376,
+      "errorCents": 0.22637639873714802
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.005,
+      "measuredHz": 259.83735423621494,
+      "expectedHz": 259.91627473503166,
+      "errorCents": -0.5257485399046662
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.0150000000000001,
+      "measuredHz": 259.58276337881574,
+      "expectedHz": 259.72465500531877,
+      "errorCents": -0.9460585868650289
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.025,
+      "measuredHz": 259.35819723550287,
+      "expectedHz": 259.5888784130695,
+      "errorCents": -1.5391285706244144
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.0350000000000001,
+      "measuredHz": 259.38456819749655,
+      "expectedHz": 259.5252677585517,
+      "errorCents": -0.9388292912506435
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.045,
+      "measuredHz": 259.4247260246518,
+      "expectedHz": 259.5424667698412,
+      "errorCents": -0.7855478857309063
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.0550000000000002,
+      "measuredHz": 259.4107951140713,
+      "expectedHz": 259.64048775886204,
+      "errorCents": -1.5322252985793356
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.065,
+      "measuredHz": 259.57185536562116,
+      "expectedHz": 259.8106878074965,
+      "errorCents": -1.592178597353821
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.0750000000000002,
+      "measuredHz": 259.81789297665796,
+      "expectedHz": 260.0366768002934,
+      "errorCents": -1.457199952623135
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.085,
+      "measuredHz": 260.11218856365866,
+      "expectedHz": 260.29605907271537,
+      "errorCents": -1.22335839445246
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.0950000000000002,
+      "measuredHz": 260.5899889178059,
+      "expectedHz": 260.5628199731236,
+      "errorCents": 0.18050675867564997
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.105,
+      "measuredHz": 260.8730998157445,
+      "expectedHz": 260.81009938566035,
+      "errorCents": 0.41814070441523465
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.1150000000000002,
+      "measuredHz": 261.11743217644477,
+      "expectedHz": 261.0130537276267,
+      "errorCents": 0.6921776524000967
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.125,
+      "measuredHz": 261.1676439310822,
+      "expectedHz": 261.15150009412804,
+      "errorCents": 0.10701794313389712
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.1349999999999998,
+      "measuredHz": 261.345658229941,
+      "expectedHz": 261.2120612023602,
+      "errorCents": 0.8852140900051055
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.145,
+      "measuredHz": 261.3504249907622,
+      "expectedHz": 261.1895841394398,
+      "errorCents": 1.0657678348790878
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.1549999999999998,
+      "measuredHz": 261.15134375782,
+      "expectedHz": 261.08768335066117,
+      "errorCents": 0.4220713477003477
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.165,
+      "measuredHz": 261.0270473328523,
+      "expectedHz": 260.91835061848036,
+      "errorCents": 0.7210695080420494
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.1749999999999998,
+      "measuredHz": 260.77444232953576,
+      "expectedHz": 260.7006727326142,
+      "errorCents": 0.48981220825186117
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.185,
+      "measuredHz": 260.51497549627817,
+      "expectedHz": 260.4587915431197,
+      "errorCents": 0.37340679800071047
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.1949999999999998,
+      "measuredHz": 260.22862418344766,
+      "expectedHz": 260.219321766088,
+      "errorCents": 0.06188769424006986
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.205,
+      "measuredHz": 259.98566953099584,
+      "expectedHz": 260.00850082533515,
+      "errorCents": -0.1520259896099185
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.2149999999999999,
+      "measuredHz": 259.73656943457615,
+      "expectedHz": 259.849375458482,
+      "errorCents": -0.7517279268754058
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.225,
+      "measuredHz": 259.658005781662,
+      "expectedHz": 259.759327770681,
+      "errorCents": -0.6754186593433227
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.2349999999999999,
+      "measuredHz": 259.6286503053534,
+      "expectedHz": 259.7482083370768,
+      "errorCents": -0.797043362909806
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.245,
+      "measuredHz": 259.5993423800918,
+      "expectedHz": 259.8172791324197,
+      "errorCents": -1.4527819584026336
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.255,
+      "measuredHz": 259.7143907196133,
+      "expectedHz": 259.9590814277505,
+      "errorCents": -1.630319573453878
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.2650000000000001,
+      "measuredHz": 259.9431600373696,
+      "expectedHz": 260.158243106888,
+      "errorCents": -1.4318713708651478
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.275,
+      "measuredHz": 260.03793871627914,
+      "expectedHz": 260.39313752238166,
+      "errorCents": -2.3631654252438805
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.2850000000000001,
+      "measuredHz": 260.49220614148567,
+      "expectedHz": 260.6382136407933,
+      "errorCents": -0.9700955892773933
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.295,
+      "measuredHz": 260.81446538600204,
+      "expectedHz": 260.8667451800592,
+      "errorCents": -0.34698799964340604
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.3050000000000002,
+      "measuredHz": 260.99194488084487,
+      "expectedHz": 261.05370253749953,
+      "errorCents": -0.40960770008756164
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.315,
+      "measuredHz": 261.05483206713666,
+      "expectedHz": 261.17843990480446,
+      "errorCents": -0.8195345367028434
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.3250000000000002,
+      "measuredHz": 261.26341161922096,
+      "expectedHz": 261.2269115805679,
+      "errorCents": 0.24188049808944093
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.335,
+      "measuredHz": 261.26392352519537,
+      "expectedHz": 261.1931830066833,
+      "errorCents": 0.4688170321124183
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.3450000000000002,
+      "measuredHz": 261.0711656812295,
+      "expectedHz": 261.08007742670577,
+      "errorCents": -0.05909520435039268
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.355,
+      "measuredHz": 260.8706899371605,
+      "expectedHz": 260.89889024252375,
+      "errorCents": -0.18713750567709875
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.3650000000000002,
+      "measuredHz": 260.67647757575503,
+      "expectedHz": 260.6682009616999,
+      "errorCents": 0.05496845620311739
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.375,
+      "measuredHz": 260.47855919239424,
+      "expectedHz": 260.41190750365337,
+      "errorCents": 0.4430477460556235
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.3849999999999998,
+      "measuredHz": 259.9625093009589,
+      "expectedHz": 260.1566901744387,
+      "errorCents": -1.2926750475800173
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.395,
+      "measuredHz": 259.75489065924313,
+      "expectedHz": 259.92917426304723,
+      "errorCents": -1.1611890407163712
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.4049999999999998,
+      "measuredHz": 259.7655525878985,
+      "expectedHz": 259.75309403991605,
+      "errorCents": 0.08303325631658388
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.415,
+      "measuredHz": 259.8312782895367,
+      "expectedHz": 259.64676261209,
+      "errorCents": 1.229849239678042
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.4249999999999998,
+      "measuredHz": 259.523348151557,
+      "expectedHz": 259.62112066468734,
+      "errorCents": -0.6521001993195276
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.435,
+      "measuredHz": 259.6479657307822,
+      "expectedHz": 259.6785754655056,
+      "errorCents": -0.20408205952807487
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.4449999999999998,
+      "measuredHz": 259.9891071331567,
+      "expectedHz": 259.8127561628362,
+      "errorCents": 1.1746968900133425
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.455,
+      "measuredHz": 259.94713463933266,
+      "expectedHz": 260.00921183618703,
+      "errorCents": -0.41338146213247023
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.4649999999999999,
+      "measuredHz": 260.19044279024547,
+      "expectedHz": 260.2469762084231,
+      "errorCents": -0.3761166098799356
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.475,
+      "measuredHz": 260.4726411341492,
+      "expectedHz": 260.50082900698925,
+      "errorCents": -0.18734084584303617
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.4849999999999999,
+      "measuredHz": 260.7137094833043,
+      "expectedHz": 260.744009200695,
+      "errorCents": -0.20118947559307332
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.495,
+      "measuredHz": 260.9646983976027,
+      "expectedHz": 260.951087876989,
+      "errorCents": 0.0902942479878195
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.505,
+      "measuredHz": 261.09415256756165,
+      "expectedHz": 261.1006931456656,
+      "errorCents": -0.04336799417956985
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.5150000000000001,
+      "measuredHz": 261.48192655659676,
+      "expectedHz": 261.1777971335434,
+      "errorCents": 2.0147688757074573
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.525,
+      "measuredHz": 261.5610725543182,
+      "expectedHz": 261.17532318119845,
+      "errorCents": 2.5551026323097816
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.5350000000000001,
+      "measuredHz": 261.42120333096085,
+      "expectedHz": 261.0949040596544,
+      "errorCents": 2.162231839795628
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.545,
+      "measuredHz": 261.10097165469585,
+      "expectedHz": 260.94671157346295,
+      "errorCents": 1.0231261296423564
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.5550000000000002,
+      "measuredHz": 260.88666504003265,
+      "expectedHz": 260.7483752712402,
+      "errorCents": 0.9179289866608279
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.565,
+      "measuredHz": 260.63980884364435,
+      "expectedHz": 260.52310361856235,
+      "errorCents": 0.7753585602960813
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.5750000000000002,
+      "measuredHz": 260.4517580391667,
+      "expectedHz": 260.29720547747945,
+      "errorCents": 1.0276224582864835
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.585,
+      "measuredHz": 260.4592854256554,
+      "expectedHz": 260.0972743883998,
+      "errorCents": 2.407907164178185
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.5950000000000002,
+      "measuredHz": 260.2549053212389,
+      "expectedHz": 259.9473357932711,
+      "errorCents": 2.0471841881315402
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.605,
+      "measuredHz": 259.6951556357811,
+      "expectedHz": 259.86626325214166,
+      "errorCents": -1.1402976873903328
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.6150000000000002,
+      "measuredHz": 259.8431541267843,
+      "expectedHz": 259.8657424618345,
+      "errorCents": -0.15049076524132202
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.625,
+      "measuredHz": 259.9433739014901,
+      "expectedHz": 259.9490038410803,
+      "errorCents": -0.03749523374616035
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.6349999999999998,
+      "measuredHz": 259.9917302557823,
+      "expectedHz": 260.1104616690348,
+      "errorCents": -0.7904287737245723
+    },
+    {
+      "secondsAfterSyntheticOnset": 1.645,
+      "measuredHz": 260.2548140126066,
+      "expectedHz": 260.33629938249055,
+      "errorCents": -0.5419617982951245
+    }
+  ],
+  "limits": [
+    "Numerical pitch evidence does not establish a separate perceived singer.",
+    "FormantScale1.08 is a declared grain-processing parameter; no claim of measured human formant identity is made."
+  ]
+}
