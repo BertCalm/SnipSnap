@@ -2,6 +2,19 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFiredBronzeAudition") {
+    group = "distribution"
+    description = "Render the sixteen-pad Fired Bronze study, source/treatment comparisons, recipes and MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("firedBronzeReplay").orNull
+    if (replay != null) args("--replay", replay,
+        providers.gradleProperty("firedBronzeReplayOutput").orNull ?: "testkit/fired-bronze-replay.wav")
+    else args(providers.gradleProperty("firedBronzeOutput").orNull ?: "testkit/fired-bronze-audition")
+}
+
 tasks.register<JavaExec>("generateApsisAcceptance") {
     group = "distribution"
     description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."

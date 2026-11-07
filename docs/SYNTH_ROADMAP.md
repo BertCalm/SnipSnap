@@ -1,5 +1,14 @@
 # Synth roadmap — generate kits, not just capture them
 
+**Fired Bronze first-build study (2026-11-07).** Sixteen Indian and Southeast
+Asian inspired percussion roles retain kick, snare and paired hats. Authored
+modal articulations and a stored bayan pressure gesture feed an explicit
+compressor/saturation/delay/space treatment followed by a separate amp.
+`generateFiredBronzeAudition` writes dry/processor/amp comparisons, velocity
+layers, replayable study recipes and an MPC sample kit. Source calibration,
+listening, factory registration, phone timing and hardware loading remain open.
+See [FIRED_BRONZE.md](FIRED_BRONZE.md).
+
 **EROSION accepted contrast bank and handoff (2026-11-07).** Josh accepted the
 native eight-role audition. The implementation is merged in PR #891. Factory
 promotion of the exact recipes, SDK-verified picker/starter integration,

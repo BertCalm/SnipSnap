@@ -665,3 +665,8 @@ testkit/obbligato-performance-audition/
 /testkit/relay-pulse-musical-audition/
 
 testkit/dive-audition/
+
+# Fired Bronze's native comparisons, recipes and layered MPC kit regenerate.
+testkit/fired-bronze-audition/
+testkit/fired-bronze-audition.zip
+testkit/fired-bronze-replay.wav

@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `FIRED BRONZE study recipes reproduce every processed pad`() {
+        for (part in FiredBronze.Part.entries) {
+            val recipe = FiredBronze.Recipe(part, velocity = .65f, take = 2)
+            assertContentEquals(recipe.render().samples,
+                FiredBronze.Recipe.fromJsonText(recipe.toJsonText()).render().samples)
+        }
+    }
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
         val fx = BoomBapKits.coloration
