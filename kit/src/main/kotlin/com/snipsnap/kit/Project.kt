@@ -221,9 +221,24 @@ object ProjectStore {
      * Writes the project's patterns. [lanePads] (a kit's [GrooveStore.loadLanePads])
      * travels with the clips, so a pattern whose lanes play other pads draws and
      * plays the same from the project; null keeps what the file already holds.
+     * [names] (its [GrooveStore.loadNames]) and [nextProg] (its [GrooveStore.loadNextProg])
+     * travel the same way: a pattern keeps the name it was given, and a number a
+     * discarded pattern held is not handed to a new one in the project's copy either.
+     * Null names keep the file's; [nextProg] only raises the stored mark.
      */
-    fun saveBeat(projectDir: File, clips: List<Mpc3Clip>, lanePads: Map<String, List<Int>>? = null): File =
-        GrooveStore.save(beatDir(projectDir), clips, lanePads)
+    fun saveBeat(
+        projectDir: File,
+        clips: List<Mpc3Clip>,
+        lanePads: Map<String, List<Int>>? = null,
+        names: Map<String, String>? = null,
+        nextProg: Int? = null,
+    ): File = GrooveStore.save(beatDir(projectDir), clips, lanePads, names, nextProg)
+
+    /** The project's pattern display names, by clip name; empty when it has none. */
+    fun beatNames(projectDir: File): Map<String, String> = GrooveStore.loadNames(beatDir(projectDir))
+
+    /** The project's high-water mark for pattern numbers, 0 when it has none. */
+    fun beatNextProg(projectDir: File): Int = GrooveStore.loadNextProg(beatDir(projectDir))
 
     /** The project's per-pattern lane maps, by clip name; empty when it has none. */
     fun beatLanePads(projectDir: File): Map<String, List<Int>> = GrooveStore.loadLanePads(beatDir(projectDir))

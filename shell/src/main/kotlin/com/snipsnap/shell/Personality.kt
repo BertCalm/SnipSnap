@@ -1526,7 +1526,7 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
     /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
     fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
 
@@ -1557,7 +1557,7 @@ object Copy {
     fun stepDetailVelocity(percent: Int): String = "VELOCITY $percent"
 
     /** A step cell's long-press, as a screen reader names it. A label, not a toast. */
-    const val STEP_DETAIL_LONG_LABEL = "SET VELOCITY"
+    const val STEP_DETAIL_LONG_LABEL = "EDIT STEP"
 
     /** The pad choice could not be written; it holds until the editor is left. */
     const val STEP_PADS_NOT_SAVED = "COULDN'T SAVE THE PAD CHOICE. IT HOLDS UNTIL YOU LEAVE THIS SCREEN."
@@ -1589,9 +1589,40 @@ object Copy {
     fun stepDoubleFull(max: Int): String = "ALREADY $max BARS. NO ROOM TO DOUBLE."
     fun stepHalved(bars: Int): String = "NOW ${countOf(bars, "BAR", "BARS")}. THE REST IS GONE. UNDO STEP EDIT BRINGS IT BACK."
     const val STEP_CANT_HALVE = "AN ODD NUMBER OF BARS CAN'T BE HALVED."
-    fun stepSwingBaked(percent: Int): String =
-        if (percent == 50) "STRAIGHT. SWING TAKEN OUT OF THIS PATTERN. UNDO STEP EDIT BRINGS IT BACK."
-        else "$percent% SWING BAKED IN. APPLYING AGAIN REPLACES IT. UNDO STEP EDIT BRINGS IT BACK."
+    fun stepSwingBaked(percent: Int, rolls: Int = 0): String {
+        val folded = if (rolls > 0) " ${countOf(rolls, "ROLL", "ROLLS")} FOLDED INTO SINGLE HITS." else ""
+        return if (percent == 50) "STRAIGHT. SWING TAKEN OUT OF THIS PATTERN.$folded UNDO STEP EDIT BRINGS IT BACK."
+        else "$percent% SWING BAKED IN. APPLYING AGAIN REPLACES IT.$folded UNDO STEP EDIT BRINGS IT BACK."
+    }
+
+    /**
+     * The step-detail strip's three shaping rows (kit.StepShape): a caption for each, then the buttons.
+     * Labels, not toasts. The roll buttons say ×N, the length buttons are the five lengths in order.
+     */
+    const val STEP_ROLL = "ROLL"
+    const val STEP_NUDGE = "NUDGE"
+    const val STEP_LENGTH = "LENGTH"
+    const val STEP_EARLY = "EARLY"
+    const val STEP_LATE = "LATE"
+    const val STEP_CENTRE = "CENTRE"
+    const val STEP_LEN_SHORT = "SHORT"
+    const val STEP_LEN_HALF = "HALF"
+    const val STEP_LEN_STEP = "STEP"
+    const val STEP_LEN_TIE_2 = "TIE 2"
+    const val STEP_LEN_TIE_4 = "TIE 4"
+    fun stepRollName(n: Int): String = "×$n"
+    fun stepRollSpoken(n: Int): String = "ROLL ×$n"
+    fun stepLengthSpoken(name: String): String = "LENGTH $name"
+
+    /** The strip's reading of where the step's hits sit against its line, in pulses (240 to a step). A label, not a toast. */
+    fun stepNudgeReading(pulses: Int): String = when {
+        pulses == 0 -> "ON THE STEP"
+        pulses < 0 -> "${-pulses} PULSES EARLY"
+        else -> "$pulses PULSES LATE"
+    }
+
+    /** Under the shaping rows when the step has a nudge or a roll: what APPLY SWING will do to it. */
+    const val STEP_SWING_RESETS = "APPLY SWING PUTS NUDGES BACK ON THE STEP AND FOLDS A ROLL INTO ONE HIT."
 
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."

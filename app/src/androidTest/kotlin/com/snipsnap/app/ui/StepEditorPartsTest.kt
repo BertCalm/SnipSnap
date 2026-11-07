@@ -76,6 +76,22 @@ class StepEditorPartsTest : ComposeScreenTest() {
     }
 
     @Test
+    fun the_strip_offers_roll_nudge_and_length_and_a_roll_tap_writes_that_many_hits() {
+        val state = stateWith(clip)
+        state.select(GrooveEdit.Lane.SNARE, 4)
+        setPhoneContent {
+            StepDetailStrip(state, GrooveEdit.Lane.SNARE, clip, LocalScheme.current, "SNARE", 0) { edits += it }
+        }
+        for (n in 1..4) button(Copy.stepRollSpoken(n)).assertExists()
+        button(Copy.stepRollSpoken(1)).assertIsSelected()
+        for (name in listOf(Copy.STEP_EARLY, Copy.STEP_LATE, Copy.STEP_CENTRE)) button(name).assertExists()
+        button(Copy.stepLengthSpoken(Copy.STEP_LEN_TIE_2)).assertExists()
+        tap(Copy.stepRollSpoken(3))
+        val written = edits.last().change!!(clip)
+        assertEquals(3, com.snipsnap.kit.StepShape.rollOf(written, GrooveEdit.Lane.SNARE, 4))
+    }
+
+    @Test
     fun holding_an_empty_step_says_so_and_offers_no_levels() {
         val state = stateWith(clip)
         state.select(GrooveEdit.Lane.SNARE, 5)
