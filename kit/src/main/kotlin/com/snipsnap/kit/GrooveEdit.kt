@@ -195,14 +195,26 @@ object GrooveEdit {
     /**
      * How many user programs one kit can hold.
      *
-     * A cap rather than no limit because the screen reaches them by
-     * cycling one segment: the number of taps to get somewhere IS the
-     * count, so an unbounded list is a control that gets worse the more
-     * you use it. Eight is half a Pocket Operator's sixteen and well past
-     * what the ARRANGE grammar can place — it is a number to raise when
-     * something actually presses on it, not a law.
+     * A cap rather than no limit because every program is a sequence in
+     * the MPC project the kit exports (a project holds 32) and a SONG
+     * names them one by one. It was eight while nothing pressed on it;
+     * SONG does, and 32 is where the hardware stops anyway. A program's
+     * number is never reused ([nextProgramId]), so the numbers on disk
+     * can climb past this: the cap counts the programs held, not the
+     * highest number given out.
      */
-    const val MAX_USER_PROGRAMS = 8
+    const val MAX_USER_PROGRAMS = 32
+
+    /**
+     * How many programs YOURS still steps through with a tap on the live
+     * segment. Past this, the same tap opens the list: the number of taps
+     * to reach a program IS its place in the cycle, and nobody taps
+     * thirty times.
+     */
+    const val CYCLE_UP_TO = 4
+
+    /** The longest a display name can be, so it fits the sub-line and a SONG row. */
+    const val NAME_MAX = 12
 
     /**
      * The name of user program [index] (0-based), derived from the
@@ -223,7 +235,7 @@ object GrooveEdit {
      * YOURS without touching a stored clip.
      */
     fun progEName(baseName: String, index: Int = 0): String {
-        require(index in 0 until MAX_USER_PROGRAMS) { "user program index out of range: $index" }
+        require(index >= 0) { "user program index out of range: $index" }
         return if (index == 0) "$baseName$NAME_SUFFIX" else "$baseName$NAME_SUFFIX${index + 1}"
     }
 
@@ -244,11 +256,108 @@ object GrooveEdit {
      * program at all. `"<base> E"` is 0 — the bare suffix predates the
      * numbering and means slot one, not slot none.
      */
-    fun progIndexOf(clip: Mpc3Clip): Int? {
-        val match = E_SUFFIX.find(clip.name) ?: return null
+    fun progIndexOf(clip: Mpc3Clip): Int? = progIndexOfName(clip.name)
+
+    /** [progIndexOf] from the stored name alone. */
+    fun progIndexOfName(clipName: String): Int? {
+        val match = E_SUFFIX.find(clipName) ?: return null
         val digits = match.value.removePrefix(NAME_SUFFIX)
-        return if (digits.isEmpty()) 0 else digits.toInt() - 1
+        return if (digits.isEmpty()) 0 else (digits.toIntOrNull() ?: return null) - 1
     }
+
+    // ---- Display names -------------------------------------------------
+
+    /** What a program is called until its owner names it: the number in the hand, which is [progIndexOfName] + 1. */
+    fun defaultLabel(id: Int): String = "YOURS ${id + 1}"
+
+    /** The name [clipName] shows in the hand: its own if it was given one, else [defaultLabel]. Null for a clip that is not a program of yours. */
+    fun labelOf(clipName: String, names: Map<String, String>): String? =
+        progIndexOfName(clipName)?.let { names[clipName] ?: defaultLabel(it) }
+
+    /** Display names by program number — what SONG reads, because a section names `yours:<number>`. */
+    fun namesById(kitDir: File): Map<Int, String> =
+        GrooveStore.loadNames(kitDir).mapNotNull { (clipName, n) -> progIndexOfName(clipName)?.let { it to n } }.toMap()
+
+    private val NAME_PUNCT = "-'.&!#+/"
+
+    /**
+     * Tidies what was typed into something storable: upper case, letters,
+     * digits, spaces and a little punctuation, runs of space closed up,
+     * at most [NAME_MAX]. Empty means "no name": back to the default.
+     */
+    fun cleanName(raw: String): String {
+        val kept = raw.uppercase(java.util.Locale.ROOT).filter { it.isLetterOrDigit() || it == ' ' || it in NAME_PUNCT }
+        return kept.trim().replace(Regex(" +"), " ").take(NAME_MAX).trim()
+    }
+
+    /** The verdict on a typed name. [Ok] carries the tidied name to store. */
+    sealed interface NameCheck {
+        data class Ok(val name: String) : NameCheck
+
+        /** Blank: the program goes back to [defaultLabel]. */
+        data object Default : NameCheck
+
+        /** Another program of yours already shows it, or it is one of SONG's own clip words. */
+        data object Taken : NameCheck
+    }
+
+    private val DEFAULT_LABEL_SHAPE = Regex("""YOURS \d+""")
+
+    private val RESERVED_LABELS: Set<String> = ClipRef.DERIVED.mapTo(HashSet()) { it.uppercase(java.util.Locale.ROOT) }
+
+    /** Judges [raw] as the name of the program stored as [clipName]. Pure on the kit's names; reads nothing from disk. */
+    fun checkName(raw: String, clipName: String, programNames: List<String>, names: Map<String, String>): NameCheck {
+        val clean = cleanName(raw)
+        if (clean.isEmpty()) return NameCheck.Default
+        val own = progIndexOfName(clipName)?.let { defaultLabel(it) }
+        if (clean == own) return NameCheck.Default
+        // SONG's own words, and the default "YOURS n" of any program but this one:
+        // a name that reads as a number would point at the wrong pattern.
+        if (clean in RESERVED_LABELS || DEFAULT_LABEL_SHAPE.matches(clean)) return NameCheck.Taken
+        val taken = programNames.filter { it != clipName }.mapNotNull { labelOf(it, names) }
+        return if (clean in taken) NameCheck.Taken else NameCheck.Ok(clean)
+    }
+
+    /**
+     * Names (or un-names) [clip]. Only the `names` entry moves: the clip's
+     * disk name, its notes and its number are what they were, so nothing a
+     * SONG section or an export reads is touched. [NameCheck.Taken] writes nothing.
+     */
+    fun rename(kitDir: File, clip: Mpc3Clip, raw: String): NameCheck {
+        require(isProgE(clip)) { "only a program of yours can be named: ${clip.name}" }
+        val names = GrooveStore.loadNames(kitDir)
+        val verdict = checkName(raw, clip.name, loadAll(kitDir).map { it.name }, names)
+        when (verdict) {
+            is NameCheck.Ok -> GrooveStore.saveNames(kitDir, names + (clip.name to verdict.name))
+            NameCheck.Default -> if (clip.name in names) GrooveStore.saveNames(kitDir, names - clip.name)
+            NameCheck.Taken -> Unit
+        }
+        return verdict
+    }
+
+    /**
+     * The clips an `.xpj` can carry (it holds [com.snipsnap.mpc3.Mpc3ProjectWriter.MAX_SEQUENCES]
+     * sequences), in the order they should be cut: the captured base,
+     * then every program of yours in number order, then the derived
+     * variations. A plain `take` in stored order puts yours last, so with
+     * a full kit the cap would drop your own patterns before it dropped
+     * a derived SWING.
+     */
+    fun forSequences(stored: List<Mpc3Clip>, max: Int): List<Mpc3Clip> {
+        val yours = stored.filter { isProgE(it) }.sortedBy { progIndexOf(it) ?: 0 }
+        val rest = stored.filter { !isProgE(it) }
+        return (rest.take(1) + yours + rest.drop(1)).take(max)
+    }
+
+    /** What [forSequences] left behind: the labels of the stored clips that did not make [kept], programs of yours by their display name. */
+    fun leftOut(stored: List<Mpc3Clip>, kept: List<Mpc3Clip>, names: Map<String, String>): List<String> {
+        val keptNames = kept.mapTo(HashSet()) { it.name }
+        return stored.filter { it.name !in keptNames }.map { labelOf(it.name, names) ?: it.name }
+    }
+
+    /** The export line for [labels] left out of a project. */
+    fun leftOutMessage(labels: List<String>): String =
+        "a project holds ${com.snipsnap.mpc3.Mpc3ProjectWriter.MAX_SEQUENCES} sequences — left out: ${labels.joinToString(", ")}"
 
     /**
      * Clone [source]'s notes, snapped to the 16th grid — the fork's core
@@ -349,14 +458,21 @@ object GrooveEdit {
     }
 
     /**
-     * The lowest slot this kit has not filled, or null when it is full.
-     * Lowest rather than next-after-the-highest so a discarded program
-     * leaves a hole that the next fork reuses, instead of the numbering
-     * climbing past [MAX_USER_PROGRAMS] with slots standing empty.
+     * The program number a NEW program takes, or null when the kit already
+     * holds [MAX_USER_PROGRAMS].
+     *
+     * One past the highest number this kit has ever given out
+     * ([GrooveStore.NEXT_PROG_KEY], or the highest it holds, whichever is
+     * more), never the lowest hole. A discarded program's number stays
+     * retired: a SONG section points at `yours:<number>`, and a number
+     * handed to a different pattern would make that section quietly play
+     * something nobody chose.
      */
-    fun freeSlot(kitDir: File): Int? {
-        val taken = loadAll(kitDir).mapNotNull { progIndexOf(it) }.toSet()
-        return (0 until MAX_USER_PROGRAMS).firstOrNull { it !in taken }
+    fun nextProgramId(kitDir: File): Int? {
+        val held = loadAll(kitDir)
+        if (held.size >= MAX_USER_PROGRAMS) return null
+        val highest = (held.mapNotNull { progIndexOf(it) }.maxOrNull() ?: -1) + 1
+        return maxOf(GrooveStore.loadNextProg(kitDir), highest)
     }
 
     /**
@@ -377,7 +493,12 @@ object GrooveEdit {
         if (existing != null && !replace) return existing
 
         val baseName = baseNameFor(stored, source)
-        val e = quantized(source, progEName(baseName, index))
+        // A number this kit has already given out and since lost is not
+        // handed out again: asking for it makes a NEW program. Only a number
+        // past the high-water mark (or a kit that never kept one) is taken
+        // as asked.
+        val slot = if (existing != null || index >= GrooveStore.loadNextProg(kitDir)) index else nextProgramId(kitDir) ?: index
+        val e = quantized(source, progEName(baseName, slot))
         // REPLACE starts the program over, lanes included: a fresh take's
         // kick is on the default kick pad, and a lane map left over from
         // the program it replaced would draw it on a row nobody asked for.
@@ -398,7 +519,7 @@ object GrooveEdit {
      * where handing back an existing program would be the bug.
      */
     fun forkNew(kitDir: File, source: Mpc3Clip): Mpc3Clip? {
-        val slot = freeSlot(kitDir) ?: return null
+        val slot = nextProgramId(kitDir) ?: return null
         val stored = GrooveStore.load(kitDir)
         val e = quantized(source, progEName(baseNameFor(stored, source), slot))
         save(kitDir, e)
@@ -421,8 +542,9 @@ object GrooveEdit {
     /**
      * Discards the user programs [which] selects, by slot index. Every
      * other stored clip stays, and the numbering is not closed up behind
-     * the hole — [freeSlot] fills it on the next fork, so your remaining
-     * programs do not renumber themselves under you.
+     * the hole, and nothing fills it later ([nextProgramId]): your remaining
+     * programs do not renumber themselves under you, and a SONG section that
+     * named the deleted one cannot find a stranger under its number.
      */
     fun deleteProgE(kitDir: File, which: (Int) -> Boolean): Boolean {
         val stored = GrooveStore.load(kitDir)

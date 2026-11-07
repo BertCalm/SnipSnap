@@ -92,6 +92,9 @@ object Arranger {
         val totalBars: Int get() = sections.sumOf { it.bars }
     }
 
+    /** The sections every draft has whatever the kit holds: intro, theme, variation, the turn, reprise, outro. */
+    private const val FIXED_SECTIONS = 6
+
     /** Section target lengths in bars — the classic beat-tape proportions. */
     private const val INTRO_BARS = 2
     private const val BODY_BARS = 4
@@ -170,7 +173,11 @@ object Arranger {
                 Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed)
             } else {
                 if (s.clip !in refused) refused += s.clip
-                val draft = palette.draft(s.seed)
+                // A gone program of yours is not replaced by a different one of
+                // yours: the draft's own program sections are kept out of the
+                // search, so a pattern made since cannot slip into the song under
+                // the section name the old one had.
+                val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
                 again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed)
             }
@@ -222,6 +229,8 @@ object Arranger {
         /** The user's programs with notes, in slot order, each with its own number. */
         val yours: List<Pair<Int, Mpc3Clip>>,
         val dynamicRange: Float,
+        /** The names the person gave their programs, by program number; a program without one is "yours N". */
+        val names: Map<Int, String> = emptyMap(),
     ) {
         val preferGhosts: Boolean get() = dynamicRange >= VARIATION_GHOST_DYNAMIC_RANGE
 
@@ -256,7 +265,10 @@ object Arranger {
             ref == ClipRef.SPARSE -> "sparse — only the hits at or above the base groove's median velocity"
             ref == ClipRef.GHOSTED -> "ghosted — quiet hits added between the break's own"
             ref == ClipRef.FILL -> "fill — the last bar of every four rolls into the turn"
-            ClipRef.yoursId(ref) != null -> "yours — your program ${ClipRef.yoursId(ref)!! + 1}, exactly as you left it"
+            ClipRef.yoursId(ref) != null -> ClipRef.yoursId(ref)!!.let { id ->
+                names[id]?.let { "yours — your pattern $it, exactly as you left it" }
+                    ?: "yours — your program ${id + 1}, exactly as you left it"
+            }
             else -> ref
         }
 
@@ -306,11 +318,15 @@ object Arranger {
                 // through the structure because they are the part of the song
                 // somebody wrote, and a song reads better when that part is
                 // continuous than when the app interleaves itself into it.
-                for ((i, extra) in yours.drop(1).withIndex()) {
+                // At most the sections a song has room for once the six that are
+                // always there are placed: past that the rest are still one SWAP away.
+                for ((i, extra) in yours.drop(1).take(SongPlan.MAX_SECTIONS - FIXED_SECTIONS).withIndex()) {
                     add(
                         section(
-                            "yours ${i + 2}", ClipRef.yours(extra.first), extra.second, BODY_BARS,
-                            "yours — your program ${i + 2}, exactly as you left it",
+                            names[extra.first]?.lowercase(java.util.Locale.ROOT) ?: "yours ${i + 2}",
+                            ClipRef.yours(extra.first), extra.second, BODY_BARS,
+                            names[extra.first]?.let { "yours — your pattern $it, exactly as you left it" }
+                                ?: "yours — your program ${i + 2}, exactly as you left it",
                         ),
                     )
                 }
@@ -377,7 +393,7 @@ object Arranger {
                 val median = velocities[velocities.size / 2]
                 val loudest = velocities.last()
                 val dynamicRange = if (median > 0f) loudest / median else 0f
-                return Palette(kit, felt, std[0], std[1], std[2], std[3], yours, dynamicRange)
+                return Palette(kit, felt, std[0], std[1], std[2], std[3], yours, dynamicRange, GrooveEdit.namesById(kitDir))
             }
         }
     }
