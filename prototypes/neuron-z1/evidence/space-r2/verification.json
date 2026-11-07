@@ -1,0 +1,60 @@
+{
+  "renderer": "morph-space-r2",
+  "build_kind": "reconstructed-prototype-space-revision",
+  "repository_commit": "84471534aef0182f9098c38374a62a5aa0899244",
+  "tests": [
+    {
+      "name": "MorphSpaceRevisionTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "StringsTest",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "comparison_takes": 30,
+  "comparison_wavs": 60,
+  "corner_cases": 50,
+  "original_published_wavs_reproduced_byte_identical": 86,
+  "all_comparison_recipes_replayed_byte_identical": true,
+  "standalone_replay_verified": true,
+  "space_zero_byte_identical_across_variants": true,
+  "guide_diagnostics_unchanged": true,
+  "motion_window_s": [
+    0.0,
+    0.09
+  ],
+  "bright_turn_s": 0.045,
+  "settled_by_s": 0.18,
+  "source_off_s": 0.55,
+  "clip_duration_s": 1.4,
+  "motion_color_change_range_db": {
+    "0.25": 3.4760326318283696,
+    "0.5": 3.8610814846574346,
+    "1.0": 3.669085770457354
+  },
+  "gain_only_negative_control_passed": true,
+  "corner_pitch_max_abs_cents": 28.537636099039627,
+  "corner_pitch_min_confidence": 0.46549967,
+  "corner_output_max_peak": 0.98231643,
+  "corner_guide_max_peak": 0.7079118,
+  "corner_max_abs_dc": 4.845606691387475e-07,
+  "corner_release_max_energy_ratio": 7.067497662389584e-07,
+  "comparison_rms_min": 0.026803385291426347,
+  "comparison_rms_max": 0.026803388266905287,
+  "comparison_max_peak": 0.9,
+  "original_archive_sha256": "2b351c80a1e6f981642faafa10411ac4c1f3e00aee2756709dff69a233699087",
+  "not_verified": [
+    "subjective listening approval",
+    "HOLD",
+    "Android performance",
+    "higher-rate aliasing reference",
+    "full application test suite"
+  ]
+}

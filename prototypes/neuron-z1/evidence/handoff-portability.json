@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "MorphProofTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "MorphSpaceRevisionTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "StringsTest",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "published_wavs_byte_identical": 146,
+  "source_sha256": {
+    "src/MorphProof.kt": "51be3898eaee5aba9eded1eb1851bc5f91beff973a9bb3285356f2349d719b69",
+    "src/MorphSpaceRevision.kt": "2fd09355c76d4dfe9418e3fe153715a7b139cc2e3e3a5a17dae6f7250ed96487"
+  },
+  "listening_approval": false
+}

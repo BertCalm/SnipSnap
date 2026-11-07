@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Neuron-Z1 · SPACE comparison</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#eee;background:#171b20;--muted:#b1bbc5;--line:#424c58;--accent:#a8d9ff}
+*{box-sizing:border-box}body{max-width:980px;margin:0 auto;padding:40px 22px 60px;line-height:1.55}
+a{color:var(--accent);text-underline-offset:3px}h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.1;margin:14px 0 20px;letter-spacing:-.03em}
+h2{font-size:1.35rem;margin:0 0 10px}p{margin:10px 0 16px}.eyebrow{color:var(--accent);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
+.intro{max-width:740px;color:var(--muted);font-size:1.08rem}.controls{border:1px solid var(--line);border-radius:12px;padding:22px;margin:28px 0 20px;background:#1d232a}
+.control-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap}.space-control{flex:1;min-width:220px}label{display:block;font-weight:650;margin-bottom:8px}
+output{float:right;font-variant-numeric:tabular-nums;color:var(--accent)}input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;min-height:30px}
+.ticks{display:flex;justify-content:space-between;color:var(--muted);font-size:.78rem}.note{min-width:140px}select,button{font:inherit;color:inherit;background:#2a3440;border:1px solid #58697c;border-radius:7px;padding:10px 14px}
+select{width:100%}button{cursor:pointer;min-height:46px}button:hover{background:#354457}button.primary{background:var(--accent);color:#102330;border-color:var(--accent);font-weight:700}
+button:disabled{opacity:.55;cursor:wait}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #e8c78a;outline-offset:4px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}#status{min-height:1.6em;margin:14px 0 0;color:var(--accent)}.players{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+article{border:1px solid var(--line);border-radius:12px;padding:22px;background:#1c2229}article.revised{border-color:#76a8cf}article p{color:var(--muted);min-height:3em}
+audio{width:100%;margin:8px 0 15px}.links{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.9rem}.small{font-size:.9rem;color:var(--muted)}
+.listen{margin-top:24px;border-left:3px solid var(--accent);padding:0 18px}.listen strong{color:#fff}details{margin-top:28px;border-top:1px solid var(--line);padding-top:18px}summary{cursor:pointer;font-weight:650}details p{max-width:800px;color:var(--muted)}footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:620px){body{padding:26px 16px 40px}.players{grid-template-columns:1fr}.controls,article{padding:18px}.note{width:100%}.actions{display:grid;grid-template-columns:1fr auto}.actions button:first-child{grid-column:1/-1}article p{min-height:0}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Neuron-Z1 / second listen</div>
+<h1>Does SPACE move now?</h1>
+<p class="intro">The revised version brings the body-color movement into the beginning of the note. Start at 100% and compare the original with the revision, then try the smaller settings.</p>
+</header>
+<main>
+<section class="controls" aria-label="Comparison controls">
+<div class="control-row">
+<div class="space-control"><label for="space">SPACE <output id="space-value" for="space">100%</output></label>
+<input id="space" type="range" min="0" max="4" step="1" value="4" aria-valuetext="100 percent">
+<div class="ticks" aria-hidden="true"><span>0</span><span>25</span><span>50</span><span>75</span><span>100%</span></div></div>
+<div class="note"><label for="note">Note</label><select id="note"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select></div>
+</div>
+<div class="actions"><button class="primary" id="compare">Play original → revised</button><button id="sweep">Play revised 0 → 50 → 100%</button><button id="stop">Stop</button></div>
+<p id="status" role="status" aria-live="polite">Ready · C4 · SPACE 100%</p>
+</section>
+<section class="players" aria-label="Original and revised audio">
+<article><div class="eyebrow">A / original</div><h2>Slow body movement</h2><p>The previously published mapping, using the same note and SPACE setting.</p>
+<audio id="original" controls preload="metadata" aria-label="Original SPACE 100 percent, C4" src="space-r2/matched/original-60-1.0.wav"></audio>
+<div class="links"><a id="original-wav" href="space-r2/matched/original-60-1.0.wav" download>WAV</a><a id="original-recipe" href="space-r2/recipes/original-60-1.0.json" download>Recipe</a><a id="original-raw" href="space-r2/raw/original-60-1.0.wav" download>Raw WAV</a></div></article>
+<article class="revised"><div class="eyebrow">B / revised</div><h2>Earlier, deeper color change</h2><p>Listen for a darker start, a brighter turn, then the color closing again.</p>
+<audio id="revised" controls preload="metadata" aria-label="Revised SPACE 100 percent, C4" src="space-r2/matched/revised-60-1.0.wav"></audio>
+<div class="links"><a id="revised-wav" href="space-r2/matched/revised-60-1.0.wav" download>WAV</a><a id="revised-recipe" href="space-r2/recipes/revised-60-1.0.json" download>Recipe</a><a id="revised-raw" href="space-r2/raw/revised-60-1.0.wav" download>Raw WAV</a></div></article>
+</section>
+<p class="small">Both versions use the same excitation and one tuned guide. These comparisons have equal overall RMS level, with their natural dynamics intact. SPACE 0 is identical in both versions.</p>
+<div class="listen"><p><strong>Is the movement clear at 50% and 100%?</strong><br>And does it still feel like one played object, or has it become a filter effect?</p></div>
+<details><summary>What changed, and what was checked</summary>
+<p>SPACE controls body-color motion in a mono sound. The revision makes one dark–bright–dark excursion in the first 90 ms, with its bright turn at 45 ms. It returns to a steady body color by 180 ms. The amount of movement grows with SPACE; the original static sound remains at zero.</p>
+<p>The original loop tuning, source release and excitation remain in place. This is a finite physical-model prototype. There is no room simulation, stereo widening, HOLD or trained neural model.</p>
+<p>Fresh checks cover pitch, release, deterministic rendering, equal RMS comparisons and exact recipe replay. A frozen-motion control distinguishes moving color from a fixed color change. These are numerical checks; listening approval remains yours.</p>
+<div class="links"><a href="space-r2/verification.json">Fresh verification</a><a href="space-r2/motion-checks.csv">Motion measurements</a><a href="space-r2/metrics.csv">Comparison measurements</a><a href="space-r2/README.md">Design and replay notes</a></div>
+</details>
+</main>
+<footer class="links"><a href="original.html">Original full audition</a><a href="space-r2-comparison.zip" download>Download this comparison</a><a href="neuron-z1-audition-site.zip" download>Original archive</a></footer>
+<noscript><p>The default original and revised clips above work without JavaScript. Enable JavaScript to change SPACE and note or play the sequence.</p></noscript>
+<script>
+const space=document.querySelector('#space'), note=document.querySelector('#note');
+const players=[document.querySelector('#original'),document.querySelector('#revised')];
+const status=document.querySelector('#status'), values=['0.0','0.25','0.5','0.75','1.0'];
+let run=0;
+function label(){return `C${Number(note.value)/12-1} · SPACE ${Number(space.value)*25}%`;}
+function stop(){run++;players.forEach(a=>{a.pause();a.currentTime=0;});status.textContent=`Stopped · ${label()}`;}
+function update(){
+ document.querySelector('#space-value').value=`${Number(space.value)*25}%`;
+ space.setAttribute('aria-valuetext',`${Number(space.value)*25} percent`);
+ for(const variant of ['original','revised']){
+  const id=`${variant}-${note.value}-${values[Number(space.value)]}`;
+  const a=document.querySelector('#'+variant);a.src=`space-r2/matched/${id}.wav`;
+  a.setAttribute('aria-label',`${variant} ${label()}`);
+  document.querySelector('#'+variant+'-wav').href=a.getAttribute('src');
+  document.querySelector('#'+variant+'-recipe').href=`space-r2/recipes/${id}.json`;
+  document.querySelector('#'+variant+'-raw').href=`space-r2/raw/${id}.wav`;
+ }
+ status.textContent=`Ready · ${label()}`;
+}
+for(const control of [space,note])control.addEventListener('input',()=>{stop();update();});
+players.forEach(a=>a.addEventListener('play',()=>{players.filter(b=>b!==a).forEach(b=>b.pause());status.textContent=`Playing ${a.id} · ${label()}`;}));
+function playToEnd(a,token){return new Promise((resolve,reject)=>{
+ if(token!==run){resolve(false);return;}a.currentTime=0;
+ const done=()=>{cleanup();resolve(token===run&&a.ended);};
+ const fail=()=>{cleanup();reject(new Error('Audio could not be loaded. Please try the WAV link.'));};
+ const cleanup=()=>{a.removeEventListener('ended',done);a.removeEventListener('pause',done);a.removeEventListener('error',fail);};
+ a.addEventListener('ended',done);a.addEventListener('pause',done);a.addEventListener('error',fail);a.play().catch(fail);
+});}
+const gap=()=>new Promise(resolve=>setTimeout(resolve,250));
+document.querySelector('#compare').addEventListener('click',async()=>{
+ stop();const token=run;
+ try{if(!await playToEnd(players[0],token))return;await gap();if(token!==run)return;
+  if(await playToEnd(players[1],token))status.textContent=`Comparison finished · ${label()}`;
+ }catch(e){if(token===run)status.textContent=e.message;}
+});
+document.querySelector('#sweep').addEventListener('click',async()=>{
+ stop();const token=run;
+ try{for(const value of [0,2,4]){if(token!==run)return;space.value=value;update();
+  if(!await playToEnd(players[1],token))return;await gap();}
+  if(token===run)status.textContent=`Revised sweep finished · C${Number(note.value)/12-1}`;
+ }catch(e){if(token===run)status.textContent=e.message;}
+});
+document.querySelector('#stop').addEventListener('click',stop);
+// Fetch within the signed-in page before handing the bytes to the browser's
+// download manager. This also keeps private downloads on the same auth path
+// as the audio players. Plain links remain the fallback without JavaScript.
+document.addEventListener('click',async event=>{
+ const link=event.target.closest('a[download]');
+ if(!link||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+ const url=new URL(link.href,location.href);
+ if(!['http:','https:'].includes(url.protocol)||url.origin!==location.origin)return;
+ event.preventDefault();if(link.getAttribute('aria-busy')==='true')return;
+ link.setAttribute('aria-busy','true');status.textContent='Preparing download…';
+ try{
+  const response=await fetch(url.href,{credentials:'same-origin'});
+  if(!response.ok||(response.headers.get('content-type')||'').includes('text/html'))throw Error('Download unavailable');
+  const blob=await response.blob(),objectUrl=URL.createObjectURL(blob);
+  const save=document.createElement('a');save.href=objectUrl;
+  save.download=decodeURIComponent(url.pathname.split('/').pop());document.body.append(save);save.click();save.remove();
+  setTimeout(()=>URL.revokeObjectURL(objectUrl),10000);
+  status.textContent=`Download ready · ${save.download}`;
+ }catch(error){status.textContent='Could not download. Reload this private page and try again.';}
+ finally{link.removeAttribute('aria-busy');}
+});
+</script>
+</body>
+</html>

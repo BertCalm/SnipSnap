@@ -1,0 +1,44 @@
+{
+  "build_kind": "reconstructed-from-conversation",
+  "original_archive_recovered": false,
+  "repository_commit": "84471534aef0182f9098c38374a62a5aa0899244",
+  "clips": 43,
+  "wav_files": 86,
+  "tests": [
+    {
+      "name": "MorphProofTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "StringsTest",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "pitch_max_abs_cents": 19.76795094576315,
+  "pitch_min_confidence": 0.64166164,
+  "output_max_peak": 0.99000007,
+  "guide_max_peak": 0.53086907,
+  "output_max_abs_dc": 1.5859028108221443e-07,
+  "release_max_energy_ratio": 6.421359401854241e-07,
+  "warmed_uncached_median_ms": 37.877685,
+  "warmed_cached_median_ms": 36.961925,
+  "recipe_replay_bit_identical": true,
+  "pair_interaction_relative_rms": {
+    "model-space": 0.9110621793008783,
+    "model-stiff": 0.6515251947272124
+  },
+  "not_verified": [
+    "owner listening approval",
+    "HOLD",
+    "neural resynthesis",
+    "Android performance",
+    "five-cent pitch target",
+    "separate higher-rate alias reference"
+  ]
+}

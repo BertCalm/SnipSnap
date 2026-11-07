@@ -1,0 +1,115 @@
+{
+  "url": "https://neuron-z1-audition.bertcalm.chatgpt.site",
+  "playback_checks": [
+    {
+      "src": "space-r2/matched/original-60-1.0.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-60-1.0.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-60-0.0.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-60-0.5.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-60-1.0.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/original-48-0.25.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-48-0.25.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/original-72-0.75.wav",
+      "duration": 1.4
+    },
+    {
+      "src": "space-r2/matched/revised-72-0.75.wav",
+      "duration": 1.4
+    }
+  ],
+  "selector_combinations": 15,
+  "asset_integrity_checks": [
+    "matched/space-0.0.wav",
+    "matched/space-1.0.wav",
+    "original.html",
+    "space-r2/matched/original-48-0.0.wav",
+    "space-r2/matched/original-48-0.25.wav",
+    "space-r2/matched/original-48-0.5.wav",
+    "space-r2/matched/original-48-0.75.wav",
+    "space-r2/matched/original-48-1.0.wav",
+    "space-r2/matched/original-60-0.0.wav",
+    "space-r2/matched/original-60-0.25.wav",
+    "space-r2/matched/original-60-0.5.wav",
+    "space-r2/matched/original-60-0.75.wav",
+    "space-r2/matched/original-60-1.0.wav",
+    "space-r2/matched/original-72-0.0.wav",
+    "space-r2/matched/original-72-0.25.wav",
+    "space-r2/matched/original-72-0.5.wav",
+    "space-r2/matched/original-72-0.75.wav",
+    "space-r2/matched/original-72-1.0.wav",
+    "space-r2/matched/revised-48-0.0.wav",
+    "space-r2/matched/revised-48-0.25.wav",
+    "space-r2/matched/revised-48-0.5.wav",
+    "space-r2/matched/revised-48-0.75.wav",
+    "space-r2/matched/revised-48-1.0.wav",
+    "space-r2/matched/revised-60-0.0.wav",
+    "space-r2/matched/revised-60-0.25.wav",
+    "space-r2/matched/revised-60-0.5.wav",
+    "space-r2/matched/revised-60-0.75.wav",
+    "space-r2/matched/revised-60-1.0.wav",
+    "space-r2/matched/revised-72-0.0.wav",
+    "space-r2/matched/revised-72-0.25.wav",
+    "space-r2/matched/revised-72-0.5.wav",
+    "space-r2/matched/revised-72-0.75.wav",
+    "space-r2/matched/revised-72-1.0.wav",
+    "space-r2/raw/revised-60-1.0.wav",
+    "space-r2/recipes/original-48-0.0.json",
+    "space-r2/recipes/original-48-0.25.json",
+    "space-r2/recipes/original-48-0.5.json",
+    "space-r2/recipes/original-48-0.75.json",
+    "space-r2/recipes/original-48-1.0.json",
+    "space-r2/recipes/original-60-0.0.json",
+    "space-r2/recipes/original-60-0.25.json",
+    "space-r2/recipes/original-60-0.5.json",
+    "space-r2/recipes/original-60-0.75.json",
+    "space-r2/recipes/original-60-1.0.json",
+    "space-r2/recipes/original-72-0.0.json",
+    "space-r2/recipes/original-72-0.25.json",
+    "space-r2/recipes/original-72-0.5.json",
+    "space-r2/recipes/original-72-0.75.json",
+    "space-r2/recipes/original-72-1.0.json",
+    "space-r2/recipes/revised-48-0.0.json",
+    "space-r2/recipes/revised-48-0.25.json",
+    "space-r2/recipes/revised-48-0.5.json",
+    "space-r2/recipes/revised-48-0.75.json",
+    "space-r2/recipes/revised-48-1.0.json",
+    "space-r2/recipes/revised-60-0.0.json",
+    "space-r2/recipes/revised-60-0.25.json",
+    "space-r2/recipes/revised-60-0.5.json",
+    "space-r2/recipes/revised-60-0.75.json",
+    "space-r2/recipes/revised-60-1.0.json",
+    "space-r2/recipes/revised-72-0.0.json",
+    "space-r2/recipes/revised-72-0.25.json",
+    "space-r2/recipes/revised-72-0.5.json",
+    "space-r2/recipes/revised-72-0.75.json",
+    "space-r2/recipes/revised-72-1.0.json",
+    "space-r2/verification.json"
+  ],
+  "recipe_browser_download": true,
+  "zip_browser_download_sha256": "1fed4d4dec343d2bf0d9646848567a2224090365da969559ffc5d85ab5ce091f",
+  "sequence_stop_verified": true,
+  "mobile_no_horizontal_overflow": true,
+  "javascript_errors": [],
+  "subjective_listening_approval": false
+}

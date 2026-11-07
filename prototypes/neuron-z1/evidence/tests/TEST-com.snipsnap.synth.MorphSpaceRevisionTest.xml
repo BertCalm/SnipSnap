@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.snipsnap.synth.MorphSpaceRevisionTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-07T06:18:23.564Z" hostname="151177ef5ac7" time="11.445">
+  <properties/>
+  <testcase name="revised corners retain bounded pitch output and release()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="4.421"/>
+  <testcase name="original recipes still reproduce every published WAV()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="2.084"/>
+  <testcase name="zero space and guide state are unchanged while revised output is deterministic()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="0.469"/>
+  <testcase name="render focused RMS matched comparisons with strict recipe replay()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="4.035"/>
+  <testcase name="new recipe format refuses unsupported or ambiguous inputs()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="0.006"/>
+  <testcase name="early motion changes color beyond frozen readout and gain alone()" classname="com.snipsnap.synth.MorphSpaceRevisionTest" time="0.422"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

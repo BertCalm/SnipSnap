@@ -1,0 +1,29 @@
+// Opt-in only: production source sets and registration remain unchanged.
+allprojects { p ->
+    if (p.path == ':synth') {
+        p.afterEvaluate {
+            def prototype = p.rootProject.file('prototypes/neuron-z1')
+            def output = p.rootProject.file(
+                p.providers.gradleProperty('morphWorkspace').orElse('build/neuron-z1').get())
+            p.kotlin.sourceSets.getByName('test').kotlin.srcDir(new File(prototype, 'src'))
+            p.tasks.withType(Test).configureEach {
+                systemProperty 'morph.workspace', output.absolutePath
+                // These tests generate the audition as an explicit side effect.
+                outputs.upToDateWhen { false }
+            }
+            ['replayMorphProof': 'com.snipsnap.synth.MorphProofReplay',
+             'replayMorphSpace': 'com.snipsnap.synth.MorphSpaceReplay'].each { taskName, entry ->
+                p.tasks.register(taskName, JavaExec) {
+                    dependsOn p.tasks.named('testClasses')
+                    classpath = p.sourceSets.test.runtimeClasspath
+                    mainClass = entry
+                    systemProperty 'morph.workspace', output.absolutePath
+                    doFirst {
+                        args p.providers.gradleProperty('morphRecipe').get(),
+                             p.providers.gradleProperty('morphOutput').get()
+                    }
+                }
+            }
+        }
+    }
+}

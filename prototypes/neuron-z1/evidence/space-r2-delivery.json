@@ -1,0 +1,19 @@
+{
+  "url": "https://neuron-z1-audition.bertcalm.chatgpt.site",
+  "deployment_id": "appgdep_6aeec5350ea0819191fad56d5904678f",
+  "saved_version_id": "appgprj_6ae75de4e8888191a8bd48a755765e00~appgver_d3b72dbff5a88191b2e772e2c5d49593",
+  "source_commit": "f9d58e6e7542161ddc67099c8335394c78ad6156",
+  "status": "published and verified",
+  "tests_passed": 42,
+  "hosted_playback_checks": 9,
+  "hosted_asset_checks": 65,
+  "recipe_browser_download": true,
+  "zip_browser_download_sha256": "1fed4d4dec343d2bf0d9646848567a2224090365da969559ffc5d85ab5ce091f",
+  "archive": {
+    "archive": "space-r2-comparison.zip",
+    "bytes": 23316522,
+    "sha256": "1fed4d4dec343d2bf0d9646848567a2224090365da969559ffc5d85ab5ce091f"
+  },
+  "original_archive_preserved": "2b351c80a1e6f981642faafa10411ac4c1f3e00aee2756709dff69a233699087",
+  "subjective_listening_approval": false
+}

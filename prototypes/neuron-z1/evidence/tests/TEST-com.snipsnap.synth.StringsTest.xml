@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.snipsnap.synth.StringsTest" tests="36" skipped="0" failures="0" errors="0" timestamp="2026-11-07T06:18:35.015Z" hostname="151177ef5ac7" time="2.51">
+  <properties/>
+  <testcase name="course with one loop is exactly pluck, whatever spread is()" classname="com.snipsnap.synth.StringsTest" time="0.014"/>
+  <testcase name="a half-length loop that inverts its wave is a closed cylinder - f, then only the odd harmonics()" classname="com.snipsnap.synth.StringsTest" time="0.102"/>
+  <testcase name="tune keeps the allpass stable at every fraction()" classname="com.snipsnap.synth.StringsTest" time="0.004"/>
+  <testcase name="SANTUR's own sourced B does not yet produce the stretch its own physics predicts()" classname="com.snipsnap.synth.StringsTest" time="0.056"/>
+  <testcase name="the blocker's budgeted corner and its running corner are the same number()" classname="com.snipsnap.synth.StringsTest" time="0.047"/>
+  <testcase name="the DC blocker refuses a corner that is not a frequency under Nyquist, in the budget and in the loop()" classname="com.snipsnap.synth.StringsTest" time="0.008"/>
+  <testcase name="retune moves the loop's resonant frequency, carrying the allpass state through()" classname="com.snipsnap.synth.StringsTest" time="0.073"/>
+  <testcase name="retune refuses to grow the loop past what it was built for()" classname="com.snipsnap.synth.StringsTest" time="0.003"/>
+  <testcase name="mallet's zero-mean correction stays inside the active pulse, not the padding past it()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="a split string's two budgets sum to one period less every stage's own delay()" classname="com.snipsnap.synth.StringsTest" time="0.004"/>
+  <testcase name="the DC blocker is budgeted on its own, at the corner it is given, and jawari still implies it()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="a loop with the blocker on drains a steady offset, and one without it does not()" classname="com.snipsnap.synth.StringsTest" time="0.01"/>
+  <testcase name="course fails loudly below one loop()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="mallet's onset gets brighter as hardness rises, and is zero-mean()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="two bare loops closed by hand ring at the note, and retune moves them()" classname="com.snipsnap.synth.StringsTest" time="0.074"/>
+  <testcase name="the loop passes its input straight through until it has history()" classname="com.snipsnap.synth.StringsTest" time="0.0"/>
+  <testcase name="retune carries the round trip, so a closed cylinder stays one()" classname="com.snipsnap.synth.StringsTest" time="0.074"/>
+  <testcase name="reflected then inject is next, taken apart, with every stage on()" classname="com.snipsnap.synth.StringsTest" time="0.005"/>
+  <testcase name="tune refuses a round trip that is not a fraction of a period, and names it()" classname="com.snipsnap.synth.StringsTest" time="0.002"/>
+  <testcase name="course's detune is bounded by spread, zero at spread 0, and reproducible()" classname="com.snipsnap.synth.StringsTest" time="0.005"/>
+  <testcase name="dispersion makes partials progressively sharper, and the fundamental stays put()" classname="com.snipsnap.synth.StringsTest" time="0.609"/>
+  <testcase name="course at spread 0 is in tune across several seeds, real excitation included()" classname="com.snipsnap.synth.StringsTest" time="0.083"/>
+  <testcase name="Strings pluck is the frozen PLUCK loop, sample for sample()" classname="com.snipsnap.synth.StringsTest" time="0.694"/>
+  <testcase name="Dispersion forB reproduces the corrected Rauhala design, not the printed erratum()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="pluck's exciter parameter actually swaps the excitation()" classname="com.snipsnap.synth.StringsTest" time="0.003"/>
+  <testcase name="tune's roundTrip multiplies the period and nothing else()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="the exciter is zero-mean with the pick off, and the comb lengthens it()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="every non-null Dispersion coefficient is negative, in (-1, 0)()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <testcase name="Strings pluck reproduces PLUCK Phase 3a's stiffness and jawari, sample for sample()" classname="com.snipsnap.synth.StringsTest" time="0.53"/>
+  <testcase name="course's own feedback step, isolated from excitation, stays in tune()" classname="com.snipsnap.synth.StringsTest" time="0.032"/>
+  <testcase name="Dispersion is null when B is silent, and the D under 1 bypass rule is reachable()" classname="com.snipsnap.synth.StringsTest" time="0.002"/>
+  <testcase name="tune fails loudly below the KS minimum, and names the cause()" classname="com.snipsnap.synth.StringsTest" time="0.004"/>
+  <testcase name="SAWARI reused from jawari reads brighter, the biwa measurement's own signature()" classname="com.snipsnap.synth.StringsTest" time="0.009"/>
+  <testcase name="the same half-length loop with its sign kept plays an octave up()" classname="com.snipsnap.synth.StringsTest" time="0.026"/>
+  <testcase name="SAWARI 1 at PICK 1 - the loudest, brightest setting - never gains energy after its own attack()" classname="com.snipsnap.synth.StringsTest" time="0.006"/>
+  <testcase name="mallet is deterministic, and the comb lengthens it same as the pick burst()" classname="com.snipsnap.synth.StringsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,115 @@
+{
+  "url": "https://neuron-z1-audition.bertcalm.chatgpt.site",
+  "page_status": 200,
+  "audio_elements": 84,
+  "playback_checks": [
+    {
+      "asset": "matched/model-0.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/model-0.5.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/model-1.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/space-0.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/space-1.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/stiff-0.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "matched/stiff-1.0.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    },
+    {
+      "asset": "raw/model-0.5.wav",
+      "duration": 1.4,
+      "currentTime": 1.4,
+      "ended": true,
+      "error": null
+    }
+  ],
+  "asset_integrity_checks": [
+    {
+      "asset": "recipes/model-0.0.json",
+      "sha256": "9282f9be4f89c4082f2111bb545048bfcb37ae2346954ad2b8b93498277219f9"
+    },
+    {
+      "asset": "recipes/model-0.5.json",
+      "sha256": "938299a2d507665f53e79f2e687c4aeac67710fc389ac795c1d83373d364911e"
+    },
+    {
+      "asset": "recipes/model-1.0.json",
+      "sha256": "4548b83a9fdd592268a9d9853d02426674bf7355777ad31d1b3bcdf699235af1"
+    },
+    {
+      "asset": "verification.json",
+      "sha256": "e7328066b6177dc73b46398dedefd8300f012f0a175f741bab17f55328612bc7"
+    },
+    {
+      "asset": "matched/model-0.0.wav",
+      "sha256": "298fae4594a75f7efa782c05cecae5fdbd0fa65a518b6e5c2cae604adf5f1aee"
+    },
+    {
+      "asset": "matched/model-0.5.wav",
+      "sha256": "cfd57a01cb5378fc15ef1fcbb1d31614bb70c06bcc5eb20b93b18c6a906eef09"
+    },
+    {
+      "asset": "matched/model-1.0.wav",
+      "sha256": "4829c8e91c6056595a9bcef20af2e4e86bdc8cd7036ae564f71ddf3518f8d355"
+    },
+    {
+      "asset": "matched/space-0.0.wav",
+      "sha256": "0a373a22500bf753e7776f04e8bd90b9028f28294109553686a8511c6bf7a6f8"
+    },
+    {
+      "asset": "matched/space-1.0.wav",
+      "sha256": "9812608435803f9a814a2f90423434665957cc660e243b4b6ac587e410cd30a0"
+    },
+    {
+      "asset": "matched/stiff-0.0.wav",
+      "sha256": "8c300240303f70f07d039366aad8d46a7312d637eac1883698bd0cf0e5468fd9"
+    },
+    {
+      "asset": "matched/stiff-1.0.wav",
+      "sha256": "7e4e001e761951331f364a719e0a11f215099095b0186fdce51438c010f11726"
+    },
+    {
+      "asset": "raw/model-0.5.wav",
+      "sha256": "18de01f4c5d8581abc2c0dc9e9a79e4d707f6fce47abd5970e0f8fdb335ba0be"
+    }
+  ],
+  "mobile_overflow": false,
+  "subjective_listening_approval": false
+}

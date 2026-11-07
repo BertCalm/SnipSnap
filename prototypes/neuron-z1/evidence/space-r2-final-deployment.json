@@ -1,0 +1,15 @@
+{
+  "id": "appgdep_6aeec5350ea0819191fad56d5904678f",
+  "project_id": "appgprj_6ae75de4e8888191a8bd48a755765e00",
+  "title": "Neuron-Z1 · Physical morph audition",
+  "version_id": "appgprj_6ae75de4e8888191a8bd48a755765e00~appgver_d3b72dbff5a88191b2e772e2c5d49593",
+  "type": "publish",
+  "status": "succeeded",
+  "url": "https://neuron-z1-audition.bertcalm.chatgpt.site",
+  "has_mcp": false,
+  "screenshot_asset_pointer": null,
+  "provider_deployment_id": "site---6ae75de4e8888191a8bd48a755765e00",
+  "failure_message": null,
+  "env_set_revision": 0,
+  "updated_at": "2026-11-07T06:29:21.001373+00:00"
+}
