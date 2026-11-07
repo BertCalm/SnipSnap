@@ -32,6 +32,19 @@ tasks.register<JavaExec>("generateResonantBodyAudition") {
     else providers.gradleProperty("bodyCapture").orNull?.let { args("--capture", it) }
 }
 
+/** Explicit model-version comparison; preserves the original R1 pack and its implementation-hash gate. */
+tasks.register<JavaExec>("generateResonantBodyVersionAudition") {
+    group = "distribution"
+    description = "Render and replay-verify matched v1/v2 body comparisons and optional original-pack compatibility."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ResonantBodyVersionAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("bodyVersionOutput").orNull ?: "${rootDir}/testkit/resonant-body-version-audition")
+    if (project.hasProperty("bodyVersionVerify")) args("--verify")
+    else providers.gradleProperty("bodyVersionBaseline").orNull?.let { args("--baseline", it) }
+}
+
 /** Dry, finite OHM family encounters and their replayable listening evidence. */
 tasks.register<JavaExec>("generateOhmAudition") {
     group = "distribution"

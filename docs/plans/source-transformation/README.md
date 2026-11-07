@@ -1,6 +1,8 @@
 # Source transformation: Codex handoff
 
-Status: R0 review and R1 desktop implementation/validation complete. Listening, real-capture evaluation, and Nothing Phone (3) measurements remain pending. This document originally scoped the review; the owner subsequently authorized R1 in the conversation.
+**Current continuation:** start with [HANDOFF.md](HANDOFF.md) for the implemented state, owner feedback, reproduction commands and remaining decisions. The R0 assignment below is historical scope, not a request to restart the review.
+
+Status: R0 review and R1 desktop implementation/validation complete. The owner prefers model 2's timbres and finds them easier to distinguish; output-level calibration, real-capture evaluation, and Nothing Phone (3) measurements remain open. This document originally scoped the review; the owner subsequently authorized R1 in the conversation.
 
 Prepared 2026-10-21 from the owner's supplied Manipulator 1.4.3 and Supermodal 1.0.0 manuals. Repository baseline: `565551e7974a4c61954199fac56a7a8d3dd502ed`.
 
@@ -23,6 +25,10 @@ Luthier was added in [PR #617](https://github.com/BertCalm/SnipSnap/pull/617), w
 The R0 documents are [repository-review.md](repository-review.md) and [r1-implementation-plan.md](r1-implementation-plan.md). They record the inspected commit and distinguish code facts from proposed DSP. R1 is a standalone shared body processor with two four-mode families and a static crossfade; the conventional parallel filter, motion, rack integration, and source transformation follow later. The performance target is the owner's Nothing Phone (3); device measurements and listening remain pending. No DSP has been implemented by R0.
 
 R1's code, measured results, and disclosed pitch-detector limits are recorded in the implementation plan's As built section. Generate its standalone listening package with `./gradlew :synth:generateResonantBodyAudition` from the repository root. The default output is `testkit/resonant-body-audition/`; use a fresh `-PbodyOutput=/path/to/output` to preserve an existing pack, or add `-PbodyVerify` to replay-check one. Add `-PbodyCapture=/path/to/private.wav` only when including an owner-approved capture. No capture or commercial demo audio is bundled by default.
+
+The [initial listening review](r1-listening-review.md) records the owner's weak-distinction feedback, measurements of the saved clips, and the next diagnostic comparison. Numerical differences and passing activity tests do not close musical acceptance.
+
+The owner subsequently authorized the [model 2 candidate](r1-model2-candidate.md): family-specific overtone weights and decay profiles, with damping separated from injection gain. Model 1 remains the default and compatibility baseline. The new `:synth:generateResonantBodyVersionAudition` task renders explicit before/after cases. The owner now prefers v2's timbres; the [level review](r1-level-calibration.md) addresses quiet output and a separate louder listening master. Output-level acceptance and phone measurements remain open.
 
 ## Required R0 review outputs
 

@@ -304,5 +304,9 @@ These measurements do not decide musical usefulness. Raw files preserve the trad
 ### Pending acceptance
 
 - No Android SDK or physical Nothing Phone (3) is attached. The SDK-equipped instrumentation/build-variant step in section 8 remains deferred; no uncompiled app benchmark or product UI was added. The exact device workload and protocol remain in section 11. Desktop timings cannot close that gate.
-- No owner-approved dry capture or listening verdict is available. The generated fixture proof is implemented, but musical acceptance on real captures remains open.
+- Initial owner feedback on 2026-11-01 was "Not very much distinction" after delivery of the compact v1 audition. The [listening review](r1-listening-review.md) records this feedback and saved-PCM measurements. On 2026-11-05 the owner reported that model 2 is quiet but easier to distinguish and preferred. Preserve that timbre direction; output-level calibration remains open. The exact playback section and device route were not specified. No owner-approved dry capture is available, and acceptance on real captures remains open.
 - No R2 filter/motion/integration or R3 source transformer was implemented. Current standalone proof adds no pad-recipe migration or factory preset bank.
+
+### Authorized follow-up: separate model 2 candidate
+
+The owner requested a stronger body distinction after the endpoint audition. The [model 2 candidate](r1-model2-candidate.md) implements family-specific weights/decay profiles and damping-independent injection in the same shared processor. Version 1 remains the default and passes exact archival compatibility; version 2 is selected explicitly. Candidate musical acceptance remains open. This does not implement the later R2 filter/motion/rack or R3 source-transformer phases.

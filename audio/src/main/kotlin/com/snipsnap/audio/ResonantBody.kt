@@ -31,8 +31,10 @@ data class BodyRender(val audio: Snip, val diagnostics: BodyDiagnostics, val raw
  * The source's native 44.1/48 kHz clock and mono/stereo layout survive unchanged. No source
  * analysis, normalization, nonlinear drive, motion, or legacy BODY/rack integration occurs.
  *
- * Each mode is z[n]=exp(iθ)*(r*z[n-1]+(1-r)*x[n]); its imaginary part is the output.
- * Rotation has norm one and 0<r<1, so |z| cannot exceed the largest input magnitude.
+ * Each mode is z[n]=exp(iθ)*(r*z[n-1]+a*x[n]); its imaginary part is the output.
+ * Model 1 uses a=1-r. Candidate model 2 fixes a to the nominal root's 1-r, so damping
+ * cannot boost excitation. In both versions 0<a<=1-r and rotation has norm one, so
+ * |z| cannot exceed the largest input magnitude.
  * Convex mode/bank weights retain that bound. Fixed makeup is deliberately separate from
  * the one attenuation-only, stereo-linked delivery guard. Neither guard nor a test limiter
  * supplies the stability argument. See docs/plans/source-transformation/r1-implementation-plan.md.
@@ -56,7 +58,8 @@ class ResonantBody(cacheEnabled: Boolean = true) {
             inputPeak = max(inputPeak, abs(value.toDouble()))
         }
 
-        val key = BodyCoefficientKey(BodyModels.identity(settings), COEFFICIENT_VERSION, source.sampleRate,
+        val coefficientVersion = settings.coefficientVersion
+        val key = BodyCoefficientKey(BodyModels.identity(settings), coefficientVersion, source.sampleRate,
             settings.referenceHz, settings.rootT60, if (settings.damp == 0f) 0.0 else settings.damp.toDouble())
         val (coefficients, hit) = cache.get(key)
         val tailFrames = ceil(settings.rootT60 * source.sampleRate).toInt()
@@ -106,7 +109,7 @@ class ResonantBody(cacheEnabled: Boolean = true) {
         // Linked, attenuation only. Quiet input and numerical residue are never amplified.
         val attenuation = if (mixedPeak > CEILING) CEILING / mixedPeak else 1.0
         if (attenuation < 1.0) for (i in output.indices) output[i] = (output[i] * attenuation).toFloat()
-        val identity = "model${key.table.version}:${settings.from}:${settings.to}:4:$COEFFICIENT_VERSION"
+        val identity = "model${key.table.version}:${settings.from}:${settings.to}:4:$coefficientVersion"
         return BodyRender(Snip(output, source.channels, source.sampleRate),
             diagnostics(settings, identity, tailFrames, end - first, hit, inputPeak, sqrt(maxStateSquared), wetPeak, mixedPeak, attenuation),
             rawWet?.let { Snip(it, source.channels, source.sampleRate) })
@@ -114,12 +117,14 @@ class ResonantBody(cacheEnabled: Boolean = true) {
 
     private fun diagnostics(s: BodySettings, table: String, tail: Int, active: Int, hit: Boolean,
         input: Double, state: Double, wet: Double, mixed: Double, attenuation: Double) =
-        BodyDiagnostics(s.modelVersion, COEFFICIENT_VERSION, table, s.rootMidi, s.referenceHz, s.rootT60,
+        BodyDiagnostics(s.modelVersion, s.coefficientVersion, table, s.rootMidi, s.referenceHz, s.rootT60,
             tail, active, hit, input, state, wet, mixed, attenuation)
 
     companion object {
         const val MODEL_VERSION = 1
         const val COEFFICIENT_VERSION = 1
+        const val CANDIDATE_MODEL_VERSION = 2
+        const val CANDIDATE_COEFFICIENT_VERSION = 2
         const val MAKEUP = 4.0
         const val CEILING = 0.98
     }

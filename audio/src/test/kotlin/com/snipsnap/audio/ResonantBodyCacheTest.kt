@@ -17,6 +17,8 @@ class ResonantBodyCacheTest {
         val variants = listOf(base, base.copy(rate = 48_000), base.copy(referenceHz = 220.0),
             base.copy(rootT60 = 0.3), base.copy(damping = 0.2), base.copy(algorithmVersion = 2),
             base.copy(table = base.table.copy(version = 2)), base.copy(table = base.table.copy(modes = changedModes)),
+            base.copy(table = base.table.copy(dampingStrength = 1.25)),
+            base.copy(table = base.table.copy(modes = base.table.modes.map { it.copy(decayScale = 0.8) })),
             base.copy(table = base.table.copy(modes = base.table.modes.dropLast(1))),
             base.copy(table = BodyModels.identity(settings.copy(from = BodyFamily.BAR, to = BodyFamily.HARMONIC))))
         for (variant in variants) {

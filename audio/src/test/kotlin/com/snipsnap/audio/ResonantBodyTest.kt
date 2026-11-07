@@ -31,7 +31,8 @@ class ResonantBodyTest {
             assertFailsWith<IllegalArgumentException> { BodySettings(damp = v) }
             assertFailsWith<IllegalArgumentException> { BodySettings(mix = v) }
         }
-        assertFailsWith<IllegalArgumentException> { BodySettings(modelVersion = 2) }
+        assertFailsWith<IllegalArgumentException> { BodySettings(modelVersion = 0) }
+        assertFailsWith<IllegalArgumentException> { BodySettings(modelVersion = 3) }
         assertFailsWith<IllegalArgumentException> { BodySettings(to = BodyFamily.HARMONIC) }
         val processor = ResonantBody()
         for (source in listOf(Snip(floatArrayOf(), 1, 44_100), impulse(22_050),

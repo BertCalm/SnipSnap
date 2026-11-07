@@ -1,0 +1,94 @@
+{
+  "fullGate": {
+    "status": "BUILD SUCCESSFUL",
+    "duration": "58m 56s",
+    "logSha256": "4838f205892d5449e6eb1c11acc14fa4a5d1dd193d82b874bd25f726f2289118",
+    "command": "GRADLE_USER_HOME=/workspace/.cache/gradle ./gradlew --no-daemon --max-workers=4 -I /workspace/library-files/resonant-body-v2-test-workers.gradle --continue test"
+  },
+  "modules": {
+    "audio": {
+      "tests": 470,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "UP-TO-DATE"
+    },
+    "cli": {
+      "tests": 201,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "EXECUTED"
+    },
+    "json": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "UP-TO-DATE"
+    },
+    "kit": {
+      "tests": 396,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "EXECUTED"
+    },
+    "loop": {
+      "tests": 421,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "EXECUTED"
+    },
+    "mpc3": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "UP-TO-DATE"
+    },
+    "shell": {
+      "tests": 1234,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "EXECUTED"
+    },
+    "synth": {
+      "tests": 3077,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "EXECUTED"
+    },
+    "xpm": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "gradleOutcome": "UP-TO-DATE"
+    }
+  },
+  "totals": {
+    "tests": 5947,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "testsExecutedInFinalInvocation": 5329,
+  "validCompletedOutcomesReused": 618,
+  "implementationSha256": "8f9884d5cebb2c269e94ae42ed656bc2c3c1ae5f2e32b65655f85523765a293b",
+  "baselineVersion": 1,
+  "candidateVersion": 2,
+  "originalV1ExactReplayCases": 73,
+  "comparisonExactReplayCases": 24,
+  "freshJvmReplayExitCode": 0,
+  "candidateAccepted": false,
+  "phoneMeasured": false,
+  "browserChecked": true,
+  "artifactBytes": {
+    "directFlac": 339912,
+    "standaloneHtml": 811413
+  }
+}

@@ -42,6 +42,12 @@ class ResonantBodyAuditionTest {
                 assertFailsWith<IllegalArgumentException> { ResonantBodyAuditionGenerator.verify(root) }
             } finally { recipeFile.writeText(originalRecipe) }
         }
+        try {
+            // Version 2 is valid for the processor, but an archival v1 recipe cannot claim it.
+            recipeFile.writeText(Json.write(JsonValue.Obj(recipe + ("modelVersion" to JsonValue.Num(2.0)))))
+            val refusal = assertFailsWith<IllegalArgumentException> { ResonantBodyAuditionGenerator.verify(root) }
+            assertEquals("unsupported original audition recipe model", refusal.message)
+        } finally { recipeFile.writeText(originalRecipe) }
         val output = File(root, recipe.getValue("output").str())
         val bytes = output.readBytes()
         try {

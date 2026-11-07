@@ -161,6 +161,7 @@ object ResonantBodyAuditionGenerator {
             val entry = row.obj()
             val recipe = Json.parse(safeFile(root, entry.getValue("recipe").str()).readText()).obj()
             require(recipe.getValue("schema").int() == SCHEMA) { "unsupported recipe schema" }
+            require(recipe.getValue("modelVersion").int() == ResonantBody.MODEL_VERSION) { "unsupported original audition recipe model" }
             require(recipe.getValue("coefficientVersion").int() == ResonantBody.COEFFICIENT_VERSION) { "unsupported coefficients" }
             val sourceFile = safeFile(root, recipe.getValue("source").str())
             require(sha(sourceFile.readBytes()) == recipe.getValue("sourceSha256").str()) { "source hash mismatch" }
@@ -172,6 +173,8 @@ object ResonantBodyAuditionGenerator {
                 s.getValue("ring").num().toFloat(), s.getValue("damp").num().toFloat(), s.getValue("mix").num().toFloat(),
                 BodyFamily.valueOf(s.getValue("from").str()), BodyFamily.valueOf(s.getValue("to").str()), recipe.getValue("modelVersion").int())
             val result = processor.process(source, settings, captureWet = true)
+            require(result.diagnostics.modelVersion == ResonantBody.MODEL_VERSION &&
+                result.diagnostics.coefficientVersion == ResonantBody.COEFFICIENT_VERSION) { "original audition selected another model" }
             require(result.diagnostics.tableIdentity == recipe.getValue("tableIdentity").str()) { "table identity changed" }
             require(pcmHash(result.audio) == recipe.getValue("outputPcmSha256").str()) { "replayed PCM differs" }
             require(result.audio.frameCount == recipe.getValue("outputFrames").int()) { "replayed length differs" }
