@@ -180,5 +180,16 @@ Why: preserve the user's chosen sound exactly, let a small rhythmic variation
 carry the development, and keep snare attack shaping separate from the other
 five pads. More fills would risk burying the pocket.
 
-Validation for this integration is in progress. Factory registration remains
-absent pending ghost-velocity, hat-choke and kick/snare-balance checks on MPC.
+Integration validation passed: **9,038 JVM tests** across nine modules, zero
+failures/errors/skips, Gradle exit status 0 (1h 30m 41s). All ten Backroom
+checks passed on the merged base, including the twelve accepted PCM24 hashes.
+The generated audition has 42 native/matched pairs. Its 92 retained audio and
+recipe files and 20 MPC program/sample files match the accepted baseline
+exactly. Both four-bar renders last 12.409 seconds including decay; native
+peaks are 0.417 dry and 0.431 processed. The ZIP passes its integrity check.
+
+The XPM declares velocity zones 1–41, 42–84 and 85–127 on all six pads;
+both hats share mute group 1. The user has not yet tested it on MPC, so
+hardware loading, ghost-velocity feel, hat choking and kick/snare balance
+remain pending. Factory registration remains absent. The new phrase is
+published for listening; browser playback was not reverified in this pass.
