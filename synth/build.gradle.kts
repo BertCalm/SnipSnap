@@ -3130,3 +3130,13 @@ tasks.register<JavaExec>("generateChitinBank") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
 }
+
+tasks.register<JavaExec>("generateHydroformCandidateKit") {
+    group = "distribution"
+    description = "Render twelve HYDROFORM candidates and a three-zone sixteen-pad kit with both MPC read-backs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HydroformCandidateKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("hydroformCandidateOutput").orNull ?: "${rootDir}/testkit/hydroform-candidate-bank")
+}

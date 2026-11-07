@@ -6,7 +6,7 @@ inharmonic strike. Both are mono, dry and deterministic. No fluid or collision s
 
 The current implementation ports accepted Python R5. The native output stage uses
 SnipSnap's own filtering, DC removal and loudness algorithm; its audio is a fresh listening
-gate. No final presets or kit integration are included in this round.
+gate. No final presets or factory kit integration are included; R7 adds a separate candidate bank below.
 
 | Control | Default | Behavior |
 |---|---:|---|
@@ -55,3 +55,12 @@ No higher-rate claim or spectral repair is silently introduced in Kotlin.
 - Explicit stop/ramp timing implements ARREST independently from clipping.
 - The shared house output stage makes the port compatible; raw parity distinguishes a port
   error from an expected filtering or loudness difference.
+
+## R7 candidate bank
+
+A separate candidate generator now prepares twelve proposed recipes and a sixteen-pad,
+three-zone kit for listening and MPC import checks. It does not promote factory presets,
+change DSP or add an uncompiled Android picker entry. Run
+`./gradlew --no-daemon :synth:generateHydroformCandidateKit` and see
+[HYDROFORM_CANDIDATES.md](HYDROFORM_CANDIDATES.md) for layout, velocity normalization,
+verification and the remaining listening/hardware checks.
