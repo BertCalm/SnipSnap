@@ -2348,6 +2348,7 @@ fun GrooveScreen(
                     onBarSelect = { editorBar = it },
                     onEdit = ::applyStepEdit,
                     kitDir = kitDir,
+                    swingPercent = swingPercent,
                     onDone = ::closeEditor,
                     yoursCount = yoursAll.size,
                     kit = entry.kit,
@@ -2921,7 +2922,11 @@ private fun NeedleRoll(
 /** One BEAT lane's row label: the pad's name on one line, shrunk to the 46dp box [laneLabel] fills. */
 @Composable
 private fun LaneNameCell(label: String, color: Color) {
-    FitTapeText(label, TapeType.pixelSmall, color)
+    // The little ▾ says the name is a door: a tap opens the pad picker.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        FitTapeText(label, TapeType.pixelSmall, color, Modifier.weight(1f, fill = false))
+        TapeText("▾", TapeType.pixelSmall, color.copy(alpha = 0.7f))
+    }
 }
 
 /** Each lane's colour: the pad's own class ([laneClass]), else the lane's drum class, else LCD ink. */
@@ -2960,6 +2965,7 @@ private fun StepEditorOverlay(
     onBarSelect: (Int) -> Unit,
     onEdit: (StepEdit) -> Unit,
     kitDir: File,
+    swingPercent: Int,
     onDone: () -> Unit,
     /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
     yoursCount: Int,
@@ -3118,7 +3124,7 @@ private fun StepEditorOverlay(
                 OffLaneRow(otherSteps, barSteps, scheme)
             }
 
-            StepEditorPanel(state, clip, kit, scheme, laneNames, editorBar, onEdit)
+            StepEditorPanel(state, clip, kit, scheme, laneNames, editorBar, swingPercent, onEdit, onDone)
 
             TapeText(
                 Copy.stepEditFooter(totalSteps, sourceLabel),

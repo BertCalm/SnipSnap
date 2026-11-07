@@ -631,7 +631,7 @@ class PersonalityTest {
      */
     private val notASentence = setOf(
         // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
-        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_OTHER_ROW", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
+        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
         // The Bubble permission line's door: a label, not a toast.
         "BUBBLE_ALLOW",
         // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
