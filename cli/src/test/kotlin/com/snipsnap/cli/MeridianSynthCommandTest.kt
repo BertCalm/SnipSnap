@@ -168,7 +168,7 @@ class MeridianSynthCommandTest {
             val saved = assertIs<MeridianPatch>(Patches.fromJsonText(recipe.readText()))
             assertEquals(patch, saved)
             assertTrue(Meridian.isLoop(saved.macros, saved.model))
-            val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext)
+            val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
             val playedMidi = Meridian.midiFor(patch.voice, .75f, patch.midi)
             assertEquals(63, playedMidi, "fixture must distinguish saved native note from played TUNE")
             val smpl = assertNotNull(WavReader.readSmpl(wav), "held export omitted sampler metadata")
@@ -220,6 +220,79 @@ class MeridianSynthCommandTest {
         }
     }
 
+    @Test
+    fun `model three voices export exact finite and held recipes with native overrides and replayable sampler metadata`() {
+        val root = kotlin.io.path.createTempDirectory("meridian-cli-range").toFile()
+        try {
+            for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+                val factory = Presets.forVoice("MERIDIAN", voice.name).map { assertIs<MeridianPatch>(it) }
+                assertEquals(2, factory.size, voice.name)
+                assertEquals(listOf(false, true), factory.map { Meridian.isLoop(it.macros, it.model) })
+                for (original in factory) {
+                    assertEquals(3, original.model, original.name)
+                    val source = original.copy(macros = original.macros + ("TUNE" to .75f))
+                    val sourceFile = File(root, "${voice.name}-${original.name}.patch").also { it.writeText(source.toJsonText()) }
+                    val output = File(root, "${voice.name}-${if (Meridian.isLoop(source.macros, source.model)) "held" else "finite"}")
+                    assertEquals(0, SynthCommand.run(listOf("MERIDIAN", voice.name, "--patch", sourceFile.path,
+                        "--midi", "69", "--velocity", ".35", "--seed", "-29", "--macros", "MEMORY=.25",
+                        "--out", output.path), quiet()), original.name)
+                    val expected = source.copy(midi = 69, velocity = .35f, seedContext = -29,
+                        macros = source.macros + ("MEMORY" to .25f))
+                    val recipe = assertRenderedRecipe(expected, output)
+                    val wav = requireNotNull(output.listFiles { it.extension == "wav" }).single()
+                    val smpl = WavReader.readSmpl(wav)
+                    if (Meridian.isLoop(expected.macros, expected.model)) {
+                        val metadata = assertNotNull(smpl, original.name)
+                        assertEquals(75, metadata.rootNote, "saved TUNE must accompany the overridden native MIDI")
+                        val loop = assertNotNull(metadata.loop)
+                        val decoded = WavReader.read(wav)
+                        assertEquals(decoded.frameCount.toLong(), loop.endFrameExclusive)
+                        assertTrue(Keys.seamError(decoded.samples, loop.startFrame.toInt()) < Keys.MAX_SEAM_ERROR,
+                            "${original.name}: decoded model-three sustain does not close")
+                    } else {
+                        assertNull(smpl, "${original.name}: finite audio acquired held sampler metadata")
+                    }
+                    val replay = File(output, "replay")
+                    assertEquals(0, SynthCommand.run(listOf("MERIDIAN", voice.name, "--patch", recipe.path,
+                        "--out", replay.path), quiet()), original.name)
+                    assertEquals(expected, Patches.fromJsonText(requireNotNull(replay.listFiles { it.extension == "patch" }).single().readText()))
+                    assertContentEquals(wav.readBytes(), requireNotNull(replay.listFiles { it.extension == "wav" }).single().readBytes(),
+                        "${original.name}: saved model-three recipe changed its PCM or sampler metadata on replay")
+                }
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `new voices reject legacy models through CLI flags and saved recipes before creating output`() {
+        val root = kotlin.io.path.createTempDirectory("meridian-cli-range-refusals").toFile()
+        try {
+            for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+                val patch = MeridianPatch("New voice", voice, Meridian.defaults(voice), model = 3)
+                for (model in listOf(1, 2)) {
+                    val source = File(root, "${voice.name}-$model.patch").also {
+                        it.writeText(Json.write(JsonValue.Obj(LinkedHashMap(patch.toJsonValue().entries).apply {
+                            put("model", JsonValue.Num(model.toDouble()))
+                        })))
+                    }
+                    for (flags in listOf(listOf("--model", model.toString()), listOf("--patch", source.path))) {
+                        val destination = File(root, "not-created-${voice.name}-$model-${flags.first().removePrefix("--")}")
+                        val errors = ByteArrayOutputStream()
+                        assertEquals(2, Cli.run((listOf("synth", "MERIDIAN", voice.name) + flags +
+                            listOf("--out", destination.path)).toTypedArray(), quiet(), PrintStream(errors)), "$voice $flags: $errors")
+                        assertTrue(errors.size() > 0, "$voice $flags should explain its refusal")
+                        assertFalse("Exception" in errors.toString(), "$voice $flags leaked an exception: $errors")
+                        assertFalse(destination.exists(), "$voice $flags created output for an unsupported model")
+                    }
+                }
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     private fun quiet() = PrintStream(ByteArrayOutputStream())
 
     private fun assertRenderedRecipe(expected: MeridianPatch, directory: File): File {
@@ -229,7 +302,7 @@ class MeridianSynthCommandTest {
         assertEquals(wav.nameWithoutExtension, recipe.nameWithoutExtension)
         assertEquals(expected, saved, "note, velocity, model, seed context and all macros must survive CLI overrides")
         val held = if (Meridian.isLoop(expected.macros, expected.model)) {
-            Meridian.renderHeld(expected.voice, expected.macros, expected.midi, expected.velocity, expected.seedContext)
+            Meridian.renderHeld(expected.voice, expected.macros, expected.midi, expected.velocity, expected.seedContext, expected.model)
         } else null
         val metadata = held?.let { SmplChunk(
             Meridian.midiFor(expected.voice, expected.macros["TUNE"] ?: .5f, expected.midi),

@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** The five published model-2 encounters, retaining their complete auditioned recipes. */
+/** Published model-2 encounters followed by the five approved finite reply/ring choices. */
 object OhmPresets {
     /** Preserve the supplied macro map; saved model and performance fields can be copied afterward. */
     private fun p(voice: OhmVoice, name: String, vararg macros: Pair<String, Float>) = when (voice) {
@@ -17,6 +17,11 @@ object OhmPresets {
         encounter("Communion", .9f, 1f),
         encounter("Quiet Company", .25f, 1f),
         encounter("Gather", .9f, 1f, OhmGesture.GATHER),
+        Ohm.replyRingPatch("Natural Replies"),
+        Ohm.replyRingPatch("Tight Replies").copy(reply = 0f),
+        Ohm.replyRingPatch("Spaced Replies").copy(reply = 1f),
+        Ohm.replyRingPatch("Short Ring").copy(ring = 0f),
+        Ohm.replyRingPatch("Long Ring").copy(ring = 1f),
     )
 
     fun forVoice(voice: OhmVoice): List<OhmPatch> = presets.filter { it.voice == voice }

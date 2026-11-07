@@ -316,6 +316,19 @@ object MidiOut {
     }
 
     /**
+     * [drumOnGated], [delayNanos] from now: for a hit the beat has scheduled on the audio clock ahead of its time, so the
+     * MIDI note leaves when the sound does and not up to a lookahead earlier. Main thread, like [drumOnGated]; the timer
+     * is the main looper's, so the note is sent on the main thread a little after its time rather than from the out thread.
+     */
+    fun drumOnGatedAfter(note: Int, velocity: Float, gateNanos: Long, delayNanos: Long) {
+        if (delayNanos < 1_000_000L) {
+            drumOnGated(note, velocity, System.nanoTime(), gateNanos)
+            return
+        }
+        main.postDelayed({ drumOnGated(note, velocity, System.nanoTime(), gateNanos) }, delayNanos / 1_000_000L)
+    }
+
+    /**
      * CC 123, now, on each channel that still has a note outstanding, after
      * flushing every pending gate-off; nothing is sent when nothing is
      * sounding. A receiver must not keep a note the app let go, and an

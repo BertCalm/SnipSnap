@@ -27,7 +27,7 @@ enum class CairnVoice { KNOCK, ANSWER, TUMBLE, SING }
  * separately. No limiter participates in the mechanical stability argument.
  */
 object Cairn {
-    const val MODEL_VERSION = 4
+    const val MODEL_VERSION = 5
     const val DEFAULT_MIDI = 60
     // R1 proves the source audition's C3..C5 span. The short C2 KNOCK is
     // classified as a tom; lower registers need a separate voicing decision.
@@ -319,7 +319,7 @@ object Cairn {
         val internalRate = RATE * options.oversample
         val hz = frequencyFor(midiFor(voice, m.getValue("TUNE"), midi)).toDouble()
         if (voice == CairnVoice.SING) return CairnSing.inspect(m, hz, velocity, startAtContact,
-            options, motion, hit, (audioStart - start) / 1e6)
+            options, motion, hit, (audioStart - start) / 1e6, model)
         val held = isLoop(m)
         val period = (loopSeconds(voice) * RATE).roundToInt()
         // TUMBLE's short rings leave a nearly silent end. One real second

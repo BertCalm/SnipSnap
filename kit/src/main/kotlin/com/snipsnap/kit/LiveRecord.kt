@@ -230,7 +230,9 @@ object LiveRecord {
             return
         }
         val yours = GrooveEdit.loadAll(kitDir)
-        GrooveStore.delete(kitDir)
-        if (yours.isNotEmpty()) GrooveStore.save(kitDir, yours)
+        // Saved over the file rather than deleted first: the sidecar also
+        // carries the programs' names and the number the next one takes, and
+        // deleting it would hand those back to the default.
+        if (yours.isNotEmpty()) GrooveStore.save(kitDir, yours) else GrooveStore.delete(kitDir)
     }
 }

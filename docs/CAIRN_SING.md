@@ -1,5 +1,9 @@
 # CAIRN: SING
 
+The 2026-11-07 [held rim-motion revision](CAIRN_SING_MOTION.md) adds bowl-inspired
+beating and moving harmonic colour in model 5. The model-4 design and evidence
+below remain the reference for the original SING recipes.
+
 Status: production listening milestone, 2026-11-04. All 8,439 tests in the complete nine-module JVM gate pass,
 with no failures, errors or skips. The 35 focused tests also pass. No new sound has been heard.
 Repository read: `482c55a146b1569ba9ccad27e4ebd274ad398df4`.

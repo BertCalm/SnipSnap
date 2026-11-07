@@ -73,8 +73,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (68 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK and CHORD STABS,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (71 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN and CHORD STABS BORROWED,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -98,19 +98,31 @@ kit pad plays its buffer. FRESH TAPE → WICK supplies the dry named sixteen-pad
 kit with all three RATTLE bodies at C4. Physical phone timing and MPC loading
 remain separate acceptance checks.
 
+OBBLIGATO offers PHRASE and HELD playback. New phrases render native C3–C6;
+older saved finite recipes keep their original register and sound. HELD keeps
+the opening, then repeats a measured exchange while a key stays down. RELEASE
+controls its sampler note-off envelope. MAKE INSTRUMENT captures thirteen native
+roots and preserves their loops in phone, MPC 2 and MPC 3 packages. SEND TO PAD
+and SPREAD remain finite deliveries with a saved terminal fade. Mode, root,
+velocity, seed and controls survive saving and navigation; HOLD remains a phrase
+length control in PHRASE and is hidden while HELD.
+
 CHITIN provides SHELL bass and WING lead voices, with six candidate presets each.
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.
 
-MERIDIAN adds SWEEP, eight saved factory presets and seven macros. ROOT
+MERIDIAN provides SWEEP, CLACK, CHIME and RASP, fourteen saved factory presets
+and seven macros. The original eight SWEEP recipes retain model 2; each new
+material voice adds a finite/held pair using model 3. ROOT
 (MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
 context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
-finite even at HOLD 1. Model 2 selects fixed-alignment sustain at HOLD ≥ .975.
+finite even at HOLD 1. SWEEP still defaults to model 2; the added voices default
+to model 3. Both support fixed-alignment sustain at HOLD ≥ .975.
 Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
 and SPREAD always deliver finite TONAL one-shots with the authored root. Held
 captures save a terminal fade of at least 20 ms; reopened recipes retain the
-complete rack, board and pedal placement. MAKE INSTRUMENT accepts only actual
-model-2 held patches and samples thirteen native roots, MIDI 36–72 in minor
+complete rack, board and pedal placement. MAKE INSTRUMENT accepts supported
+held recipes from all four voices and samples thirteen native roots, MIDI 36–72 in minor
 thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
 the real second-cycle loops and note-off release, including explicit NoteOn
 playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
@@ -333,17 +345,21 @@ at that local checkpoint. The cache-copy guard is proven; physical
 phone listening and timing remain unmeasured. The
 [OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
 separate those checks and host cache timings from listening acceptance.
-RELAY exposes native VELOCITY and note names while preserving loaded phrase
-recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
-KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
-seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds an 88-clip page covering the
-bank, musical performances, velocity response, starter pads and six PULSE
-0-versus-1 pairs. The full-range diagnostic changes only PULSE in copies of the
-same six finite recipes; the production control and saved model stay unchanged.
-The earlier eased mapping was not adopted after the owner reported no audible
-difference on 2026-10-26. The owner approved the 36-preset bank's sound on
-2026-10-21; hands-on device verification remains open.
+RELAY exposes native VELOCITY and note names while preserving complete loaded
+recipes through preview, save and SEND TO PAD. New patches use a smooth repeating
+pulse with a 7 dB maximum depth; the explicit pulse behavior choice keeps original
+accents available. Existing saved patches, older navigation settings, the 36 dry
+factory presets and sixteen distinct starter pads retain model 1 until the user
+chooses the repeating pulse. Changing behavior copies the complete recipe while
+keeping its sources, phrase, other controls and native velocity.
+`:synth:generateRelayPulseMusicalAudition` renders a bassline, chords and a held
+texture at PULSE 0, 0.5 and 1 through the model-2 production path, with raw/matched
+WAVs and complete note recipes. The earlier 88-case model-1 performance pack
+remains reproducible with `:synth:generateRelayPerformanceAudition`. The owner
+approved the retained 36-preset bank on 2026-10-21, called the periodic candidate
+better on 2026-11-04 and authorized integration on 2026-11-07. Those verdicts do
+not establish listening approval for the new musical recordings or hands-on
+device behavior.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds

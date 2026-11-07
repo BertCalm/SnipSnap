@@ -492,6 +492,29 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cm"),
         ) { ChordStabs.kit(KeySpec.parse("Cm")) },
+        // The modal and borrowed layouts, heard and accepted 2026-11-07. A
+        // mode's kit carries the major key with the same notes (D dorian and
+        // G mixolydian are C major's notes), so anything the app snaps to the
+        // kit's key stays inside the mode. The borrowed kit carries its own
+        // major key; its borrowed pads leave that key on purpose.
+        Starter(
+            "chord-stabs-dorian", "CHORD STABS DORIAN",
+            "Every chord in D dorian, one per pad: minor at home, a major IV. Hit Dm then G.",
+            seeded = false,
+            key = KeySpec.parse("C"),
+        ) { ChordStabs.modalKit(2, ChordStabs.Mode.DORIAN) },
+        Starter(
+            "chord-stabs-mixolydian", "CHORD STABS MIXOLYDIAN",
+            "Every chord in G mixolydian, one per pad: major at home, a major flat seven. Hit G, F, C.",
+            seeded = false,
+            key = KeySpec.parse("C"),
+        ) { ChordStabs.modalKit(7, ChordStabs.Mode.MIXOLYDIAN) },
+        Starter(
+            "chord-stabs-borrowed", "CHORD STABS BORROWED",
+            "C major's own chords, then eight borrowed ones: Fm, Bb, Ab, Eb, Gm, Db, D and Abmaj7.",
+            seeded = false,
+            key = KeySpec.parse("C"),
+        ) { ChordStabs.borrowedKit(KeySpec.parse("C")) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

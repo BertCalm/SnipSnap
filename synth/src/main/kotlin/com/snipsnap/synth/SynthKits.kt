@@ -168,7 +168,7 @@ object SynthKits {
      * a long tail is not a held loop and must remain available to IN KEY.
      */
     fun ohm(): List<ArrangedPad?> {
-        val encounters = OhmPresets.all().associateBy { it.name }
+        val encounters = OhmPresets.all().filter { it.model == 2 }.associateBy { it.name }
         fun note(name: String, midi: Int): ArrangedPad {
             val original = encounters.getValue(name)
             val displayName = "$name ${Scales.nameOf(midi)}"
@@ -1660,6 +1660,7 @@ object SynthKits {
             RelayPatch(
                 "Handoff ${index + 1}", RelayVoice.KEY,
                 Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
+                model = RelayPatch.LEGACY_MODEL_VERSION,
             ).let(::arranged)
         }
         fun selected(name: String) = RelayPresets.all().single { it.name == name }.let(::arranged)

@@ -269,3 +269,50 @@ takes (`Velocity.variantsAt`) for the MPC's velocity zones. Heard
 progressions): "Yes, as is." The single pads and the soft takes had no
 question of their own.
 Tests: `ChordStabsTest`.
+
+### Modal and borrowed layouts (2026-11-07)
+
+Two more layouts on the same STOOP CHORD stab, from the 2026-11-06 gap scan's
+second gap ("modal and borrowed chord stabs"). Heard 2026-11-07 on the
+listening page:
+- D dorian and G mixolydian: "Yes, as it is".
+- The borrowed chords: "Yes, as it is", keeping "All eight".
+- Starter kits: "The modes and borrowed".
+
+They are FRESH TAPE starters under KEYS AND CHORDS:
+- CHORD STABS DORIAN (D dorian).
+- CHORD STABS MIXOLYDIAN (G mixolydian).
+- CHORD STABS BORROWED (C major).
+
+All three carry C major as their kit key. The modes share C major's notes, so
+anything snapped to the kit's key stays inside the mode.
+
+- `ChordStabs.modalStabs(root, mode)` and `modalKit`: the same sixteen pads
+  as the key layout, in `ChordStabs.Mode.DORIAN` (natural minor with a raised
+  sixth, so its IV is major) or `MIXOLYDIAN` (major with a lowered seventh,
+  so its bVII is major), stacked in the mode's own thirds and voiced around
+  the same centre. The modes live in `ChordStabs`, not in `Scale`, which every
+  scale picker in the app lists.
+- `ChordStabs.borrowedStabs(key)` and `borrowedKit`, major keys only: A01 to
+  A08 are the key's triads and wide tonic (as in `stabs`), and A09 to A16 the
+  eight `BORROWED` chords from modes on the same tonic: iv, bVII, bVI, bIII
+  and bVImaj7 from the parallel minor, minor v from Mixolydian, the
+  Neapolitan bII from Phrygian and major II from Lydian. Each borrowed pad's
+  `source` names its mode (`borrowedFrom`). A minor key is refused.
+
+Tests (`ChordStabsTest`):
+- D dorian and G mixolydian lay out their named chords.
+- Every modal chord stays in its mode, in all 24 mode-and-tonic pairs, and is
+  voiced within a fourth of the centre in close position.
+- C major borrows its eight named chords.
+- In every major key, each borrowed chord holds a tone outside the key and
+  sits near the centre.
+- The kits' recipes rebuild their pads.
+
+The C and C minor layouts are unchanged; their tests pass as before.
+
+Audition: `./gradlew :synth:generateChordStabsAudition` writes the three kits
+pad by pad and thirteen progressions to the gitignored
+`testkit/chord-stabs-audition/`. The listening page is
+https://claude.ai/artifact/7F2rcZpXgv8KMUHCW4Un4J (answers in its `verdicts`
+collection, ids `cs-*`).

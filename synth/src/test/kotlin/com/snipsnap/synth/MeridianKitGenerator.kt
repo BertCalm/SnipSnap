@@ -105,7 +105,7 @@ object MeridianKitGenerator {
                     "recipe" to recipe.toJsonValue(),
                 )
             }
-            val held = MeridianPresets.all().filter { Meridian.isLoop(it.macros, it.model) }
+            val held = MeridianPresets.forVoice(MeridianVoice.SWEEP).filter { Meridian.isLoop(it.macros, it.model) }
                 .map { exportHeld(it, destination, root) }
             require(held.size == 2) { "the starter release contains two sustained presets" }
             val archive = File(root, MeridianKits.ARCHIVE_NAME)
@@ -152,7 +152,8 @@ object MeridianKitGenerator {
             val layerRows = mutableListOf<Map<String, Any?>>()
             val layers = nativeVelocities.mapIndexed { layerIndex, velocity ->
                 val patch = preset.copy(midi = midi, velocity = velocity)
-                val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext)
+                val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext,
+                    model = patch.model)
                 require(held.loopStartFrame > 256 && held.loopEndFrameExclusive == held.snip.frameCount)
                 require(held.seamError < Keys.MAX_SEAM_ERROR && held.cycleError < Keys.MAX_SEAM_ERROR)
                 val stem = "${slug.replace('-', '_')}_${midi}_V${layerIndex + 1}"

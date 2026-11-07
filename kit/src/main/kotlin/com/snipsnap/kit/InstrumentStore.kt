@@ -22,7 +22,9 @@ import java.io.File
 object InstrumentStore {
 
     const val SUFFIX = ".instrument.json"
+    /** Ordinary instruments retain the v2 bytes; independent zone releases opt into v3. */
     const val VERSION = 2
+    const val STACK_VERSION = 3
 
     /**
      * The longest release a sidecar may ask for. Every writer in the shop
@@ -53,6 +55,7 @@ object InstrumentStore {
         val loopStartFrame: Long,
         /** Empty on a v1 sidecar or a legacy code-built zone: its headline sample covers all velocities. */
         val layers: List<Layer> = emptyList(),
+        val release: Float? = null,
     ) {
         val playableLayers: List<Layer>
             get() = layers.ifEmpty { listOf(Layer(sample, frameCount, loopStartFrame)) }
@@ -70,6 +73,7 @@ object InstrumentStore {
         val voiceMode: VoiceMode = VoiceMode.POLY,
         /** Whether the XPM declares an explicit NoteOn trigger. */
         val explicitNoteOn: Boolean = false,
+        val stackZones: Boolean = false,
     ) {
         /**
          * [release] as a player may use it: finite, not negative, at most
@@ -82,6 +86,10 @@ object InstrumentStore {
 
         /** The zone [note] falls in, or null when the instrument does not cover it. */
         fun zoneFor(note: Int): Zone? = zones.firstOrNull { note in it.lowNote..it.highNote }
+
+        fun releaseFor(zone: Zone): Float = zone.release?.let {
+            if (it.isFinite()) it.coerceIn(0f, MAX_RELEASE_SECONDS) else 0f
+        } ?: playableRelease
 
         /** The lowest root the instrument has — where the grid opens. */
         val rootNote: Int get() = zones.minOf { it.rootNote }
@@ -104,11 +112,13 @@ object InstrumentStore {
                             l.frameCount, l.velStart, l.velEnd, l.loopStartFrame,
                         )
                     },
+                    volumeRelease = zone.release,
                 )
             },
             volumeRelease = playableRelease,
             explicitNoteOn = explicitNoteOn,
             voiceMode = voiceMode,
+            stackZones = stackZones,
         )
     }
 
@@ -121,6 +131,7 @@ object InstrumentStore {
 
     /** The sidecar's JSON text for [program], without touching the disk. */
     fun render(program: KeygroupProgram, dataDirName: String): String {
+        val extended = program.stackZones || program.keygroups.any { it.volumeRelease != null }
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
             JsonValue.Obj(
@@ -140,24 +151,26 @@ object InstrumentStore {
                             "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
                         ))
                     }),
-                ),
+                ).apply {
+                    if (extended) put("release", kg.volumeRelease?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Num(program.volumeRelease.toDouble()))
+                },
             )
         }
         val obj = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
-                "version" to JsonValue.Num(VERSION.toDouble()),
+                "version" to JsonValue.Num((if (extended) STACK_VERSION else VERSION).toDouble()),
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
                 "explicitNoteOn" to JsonValue.Bool(program.explicitNoteOn),
                 "zones" to JsonValue.Arr(zones),
-            ),
+            ).apply { if (extended) put("stackZones", JsonValue.Bool(program.stackZones)) },
         )
         return Json.write(obj)
     }
 
     /**
-     * Read v1 single-sample or v2 velocity-layer sidecars. Every field in the selected
+     * Read v1 single-sample, v2 velocity-layer or v3 synchronized-stack sidecars. Every field in the selected
      * version is required, so an interrupted write cannot silently lose its soft layers.
      *
      * And on values no writer here produces, since a sidecar is also a file a
@@ -170,7 +183,7 @@ object InstrumentStore {
     fun read(file: File): Instrument {
         val obj = Json.parse(file.readText()).obj()
         val version = obj["version"]?.int() ?: throw JsonException("instrument has no version")
-        if (version != 1 && version != VERSION) throw JsonException("unsupported instrument version $version")
+        if (version !in 1..STACK_VERSION) throw JsonException("unsupported instrument version $version")
         val name = obj["name"]?.str() ?: throw JsonException("instrument has no name")
         val releaseRaw = obj["release"]?.num() ?: throw JsonException("instrument has no release")
         if (!releaseRaw.isFinite() || releaseRaw < 0.0 || !releaseRaw.toFloat().isFinite()) {
@@ -178,6 +191,8 @@ object InstrumentStore {
         }
         val release = releaseRaw.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)
         val voiceMode = VoiceMode.parse(obj["voiceMode"]?.str())
+        val stackZones = if (version == STACK_VERSION) obj["stackZones"]?.bool()
+            ?: throw JsonException("instrument has no stackZones") else false
         val folder = file.absoluteFile.parentFile
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
@@ -212,6 +227,11 @@ object InstrumentStore {
                 frameCount = o["frames"]?.long() ?: throw JsonException("zone has no frame count"),
                 loopStartFrame = o["loopStart"]?.long() ?: throw JsonException("zone has no loop start"),
                 layers = layers,
+                release = if (version == STACK_VERSION) {
+                    val r = o["release"]?.num() ?: throw JsonException("zone has no release")
+                    if (!r.isFinite() || r < 0 || !r.toFloat().isFinite()) throw JsonException("invalid zone release $r")
+                    r.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)
+                } else null,
             )
             if (zone.lowNote !in MIDI || zone.highNote !in MIDI || zone.rootNote !in MIDI || zone.lowNote > zone.highNote) {
                 throw JsonException("zone ${zone.lowNote}..${zone.highNote} (root ${zone.rootNote}) isn't a range of MIDI notes")
@@ -227,7 +247,7 @@ object InstrumentStore {
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")
         val explicitNoteOn = obj["explicitNoteOn"]?.bool() ?: legacyExplicitNoteOn(file, name, zones)
-        return Instrument(name, release, zones, voiceMode, explicitNoteOn)
+        return Instrument(name, release, zones, voiceMode, explicitNoteOn, stackZones)
     }
 
     private fun legacyExplicitNoteOn(file: File, name: String, zones: List<Zone>): Boolean {

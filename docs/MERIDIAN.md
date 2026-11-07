@@ -6,6 +6,10 @@ voice, with twelve independent four-mode surfaces and fixed pickups. This is an
 accelerated musical analogy, not an Earth-rate simulation or a collision solver.
 No support resonator, acoustic feedback, or effects have been added.
 
+CLACK, CHIME and RASP add three material voices to that shared gesture. Their
+model-3 integration is recorded in the November 7 section below; SWEEP retains
+its original models and default.
+
 The first published Kotlin audition received the owner's positive listening
 response on 2026-10-23: “That sounds incredible.” That supports retaining its
 character. It does not certify every register or the subsequent held adaptation.
@@ -14,8 +18,13 @@ character. It does not certify every register or the subsequent held adaptation.
 
 | Recipe | HOLD below .975 | HOLD at or above .975 |
 | --- | --- | --- |
-| Model 1, including JSON with no model field | Original finite gesture | Original finite gesture |
-| Model 2, the new recipe default | Same finite samples as model 1 | Fixed-alignment sustained swing |
+| SWEEP model 1, including JSON with no model field | Original finite gesture | Original finite gesture |
+| SWEEP model 2, still its default | Same finite samples as model 1 | Fixed-alignment sustained swing |
+| CLACK, CHIME and RASP model 3, their default | Finite material gesture | Fixed-alignment sustained material gesture |
+
+The new voices require model 3. Missing model metadata still decodes as model 1;
+it does not silently upgrade an old recipe. SWEEP also accepts an explicit
+model-3 recipe while retaining its own material path. Its default remains 2.
 
 Finite HOLD remains a two-to-four-second active gesture followed by its bounded
 natural tail and state-preserving release damper. Its macro ranges are retained.
@@ -24,6 +33,10 @@ recipe version. Native MIDI, relative TUNE, physical velocity, and seed context
 remain part of the saved recipe.
 
 ## Controls
+
+This table describes the original SWEEP mapping. The material voices retain the
+motion controls; their fixed-ratio SURFACE mapping is described in the November
+7 section below.
 
 | Control | Finite gesture | Model-2 sustained swing |
 | --- | --- | --- |
@@ -199,8 +212,8 @@ in the October 26 audition and MPC packages. The name avoids the separate
 FILAMENT engine added upstream. Its macros, note, velocity, model and seed are
 unchanged; saved recipes still retain their original names and sound.
 
-The Android picker adds MERIDIAN as engine 67 while retaining the other 66
-engines. SWEEP exposes the eight-preset bank and seven macros. ROOT selects the
+The Android picker has one MERIDIAN entry. SWEEP exposes its original
+eight-preset bank and seven macros. ROOT selects the
 native base MIDI note from 36 to 96; VELOCITY changes the physical excitation.
 TUNE remains a relative transposition with .5 at the center. Macro edits,
 SCRAMBLE, YOURS, navigation and reopened pad recipes preserve the saved model,
@@ -219,8 +232,9 @@ pedals and their placement; editing the source does not rebuild the processing
 chain from a reduced set of controls. The source's model and HOLD setting remain
 saved, so a finite pad capture does not silently convert its source recipe.
 
-MAKE INSTRUMENT is available only for an actual model-2 held patch. Original
-finite models and current patches below the HOLD threshold show the reason they
+MAKE INSTRUMENT accepts a supported held recipe: model 2 or later for SWEEP,
+and model 3 for the added material voices. Original finite models and current
+patches below the HOLD threshold show the reason they
 cannot make a sustained instrument. Generation renders thirteen native roots,
 MIDI 36–72 in steps of three, at physical velocities .30, .65 and 1.0. The 39
 layers are rendered serially with cancellation between layers and interruptible
@@ -368,3 +382,156 @@ The bank and package choices follow the same constraints:
   response; sampler gain alone would miss those differences.
 - Saved schedules, recipes and source hashes make the musical example replayable
   without treating a successful render as a listening verdict.
+
+## Model 3 material voices (2026-11-07)
+
+The November 5 range study placed three material candidates beside the existing
+engine at the same requested A3 root and matched listening level. On November 7 the owner
+responded “Sound great” and authorized their integration. That acceptance applies
+to the balanced study renders based on
+`7e39a8a6b407d0996dc4acbfd8c70a82f3fcca9a`. The integrated pitch refinements and
+new held versions have not yet received a listening verdict.
+
+CLACK, CHIME and RASP share SWEEP's twelve independently ringing surfaces,
+geometry, contact timing and fixed pickups. They change the material response
+rather than adding another motion system or an effects chain. CLACK explores
+short bar-like responses and a distinct upper-mode attack; CHIME explores hollow
+metallic ringing; RASP explores brighter contact roughness and widely spaced
+upper modes. These are designed identities, not measured real objects.
+
+Each new voice defaults to model 3. Its modal ratios stay fixed for that voice
+as SURFACE moves; SURFACE changes modal weights, damping, roughness color and
+catch-pulse width. The full material profile is at SURFACE 1, which is also the
+new voices' default and the value saved in their six factory recipes. TUNE,
+LATITUDE, LENGTH, REACH, MEMORY and HOLD keep the established gesture controls.
+The roughness performance retains the same seed identity for comparisons.
+
+The shared fixed-alignment solver supplies HOLD at .975 and above for all three
+voices. Periodic excitation, noise-filter state and modal state are solved by
+the existing analytical route; the second evolved cycle is the sampler sustain
+region. Finite captures, SEND TO PAD, SPREAD and MAKE INSTRUMENT follow the same
+saved-model and delivery rules described above. MAKE forwards model 3 into each
+of its thirteen native roots and three physical velocity layers.
+
+The factory now has fourteen recipes. The original eight SWEEP recipes remain
+model 2 with their saved macros, note, velocity and seed unchanged. Each new
+voice adds one finite recipe and one fixed-alignment held partner:
+
+| Voice | Finite recipe | Held recipe |
+| --- | --- | --- |
+| CLACK | HARD GRAIN | GRAIN THREAD |
+| CHIME | HOLLOW TONE | LANTERN TONE |
+| RASP | BRIGHT EDGE | EDGE THREAD |
+
+All six save native MIDI 57, physical velocity 1 and seed context 4810. Their
+finite settings are TUNE .50, LATITUDE .80, LENGTH .45, REACH .60, SURFACE 1,
+MEMORY .40 and HOLD 0. The held partners change LATITUDE to .50 and HOLD to 1.
+The original sixteen-pad starter and earlier audition generators remain pinned
+to the SWEEP bank, preserving their layouts and reference recipes.
+
+The ordinary CLI can render both saved factory recipes of each new voice:
+
+```sh
+./gradlew :cli:run --args='synth MERIDIAN CLACK --all --out testkit/meridian-clack'
+./gradlew :cli:run --args='synth MERIDIAN CHIME --all --out testkit/meridian-chime'
+./gradlew :cli:run --args='synth MERIDIAN RASP --all --out testkit/meridian-rasp'
+```
+
+These exports include complete recipes and the real held loop markers. The
+Android MAKE INSTRUMENT route supplies the thirteen-root keyboard packages.
+
+The new voices keep the requested modal root and an integer first upper mode.
+CLACK retains the studies' higher bar-like spacings. CHIME and RASP retain ten
+percent of their higher modes' deviation from the nearest harmonic. These are
+designed shapes. The root's T60 is at least the longest upper-mode T60 and at
+least forty root periods, preserving a low note's pitch support through its
+decay. MEMORY scales the material losses relative to its .40 setting. SURFACE
+keeps those ratios fixed while changing upper participation, loss, roughness
+cutoff and contact width.
+
+| Voice | Reference root T60 | Nominal catch width | Worst detected pitch error | Minimum confidence | A3 power above 880 Hz |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CLACK | .20 s | .23 ms | 29.15 cents | .577 | 10.98% |
+| CHIME | 2.80 s | .14 ms | 4.63 cents | .906 | 37.20% |
+| RASP | .26 s | .10 ms | 16.14 cents | .672 | 31.71% |
+
+Reference T60 values precede position variation and the root-support floor.
+Catch widths are before rounding to whole internal frames. Pitch results come
+from the actual integrated Kotlin diagnostic renderer at neutral TUNE, native
+MIDI 36, 48, 57 and 72, velocity 1 and seed 4810. Each note is measured in three
+.35-second windows beginning at .18, .90 and 2.05 seconds. All 36 windows stay
+within 50 cents, with confidence at least .3 and substantial root-band power.
+The independent finite pass and public renderer also match exactly at A3.
+Spectral columns use the health test's normalized 65,536-frame Hann analysis at
+the start of A3; they demonstrate added upper content without declaring a
+perceptual acceptance threshold. Other macro combinations and higher registers
+are not covered by that pitch matrix. Upper material modes fade above 14–18 kHz,
+so brightness contrast diminishes in the highest register.
+
+HOLD's three new default recipes close their real noise and modal states,
+consecutive cycles, and PCM24 sample loops. Three complete keyboards have also
+been rendered through the actual `MeridianPadMaker`: 117 mono 44.1 kHz PCM24
+samples with native recipes, roots, physical velocity windows and the two MPC
+program formats. Independent archive inspection confirms their loop markers,
+references and explicit Note On/sustain/release fields. Physical MPC loading
+and listening remain unmeasured.
+
+The actual 117 exported keyboard WAVs also pass the broad detector's steady
+second-cycle window: each confidence is at least .3 and each estimate stays
+within 50 cents of its authored native root. The largest observed errors are
+33.31 cents for CLACK, 4.49 for CHIME and 18.50 for RASP; minimum confidence is
+.541, .911 and .588 respectively. All native roots, three physical velocity
+layers and marked windows were checked. This is detector evidence, not a
+claim of exact tuning or a substitute for hearing the sampler.
+
+At full MEMORY, CHIME's longest configured T60 reaches about 26.63 seconds.
+Finite files retain the existing bounded tail and release damper; HOLD obtains
+its periodic state analytically. Six extreme held cases, including absolute
+MIDI 24 and 108, close their actual state and PCM24 seams with a maximum raw
+sample peak of 3.39513. The low CHIME case stores sampled modal energy 339.0615,
+above the 100-unit bar used for the default test fixture. That observation is
+retained; the fixture's bar is not a global energy ceiling. Direct checks of
+the production uncoupled `Modes.Bank` show unforced energy contraction of at
+most .672645 per loop, with a minimum measured periodic solve denominator
+of .179856. Positive loss and state-independent forcing therefore give an
+attracting periodic state. No range cap or limiter was added to reduce that
+diagnostic number. There is no pitch claim at MIDI 24 or 108.
+
+### Verified, measured, proposed and heard
+
+- **Verified by source inspection:** against base
+  `97a5d6309de1825dbd3940e578384b11368b6f16` plus this additive change,
+  voice-specific defaults preserve SWEEP model 2, added voices require model 3,
+  complete recipes retain their performance metadata, and held export forwards
+  the saved model. All eight original factory float hashes and held loop bounds
+  match independently captured pre-promotion goldens; model-1 fixtures also pass.
+- **Measured:** the focused synth, shell and CLI gate passed 69 tests with no
+  failures, errors or skips. Integrated pitch and extreme-state results are
+  scoped above. Fourteen saved-recipe candidates replay exact float samples
+  and PCM24 files. All 117 keyboard sample loops and both program formats were
+  inspected. Historical results belong to their named earlier rounds.
+- **Proposed:** the refined material characters and their musical usefulness.
+  Numerical pitch checks do not replace listening to the integrated versions.
+- **Heard:** the owner accepted the three balanced material prototypes on
+  November 7. This does not certify the later pitch refinements, added held
+  recipes, physical phone performance or MPC playback.
+
+**Full model-3 release gate passed (2026-11-07):** the complete nine-module
+repository JVM suite passed 8,861 tests, with 0 failures, 0 errors and
+0 skips. The combined `test -x :app:test :app:assembleDebug
+:app:assembleDebugAndroidTest` command returned exit 0. The app and matching
+instrumentation APKs were built; Android UI tests were not executed locally.
+Host audition timings are not phone latency measurements.
+
+### Why it is built this way
+
+- Voice-specific models protect old SWEEP recipes while allowing new material
+  choices to develop independently.
+- Shared motion and roughness identity make material differences traceable to
+  the response of the surfaces.
+- Fixed material ratios let SURFACE shape color and contact without also moving
+  the modal spacing.
+- The analytical held solver keeps the same excitation and ringing mechanism
+  through finite and sustained playing.
+- Keeping the original starter intact preserves its established layout while
+  the new voices receive a separate listening check.

@@ -29,7 +29,7 @@ object Trefoil {
     fun defaults(v: TrefoilVoice)=macrosFor(v).associate { it.name to it.default }
     internal fun settled(v: TrefoilVoice,m: Map<String,Float>)=defaults(v)+m
     fun drumClassFor(@Suppress("UNUSED_PARAMETER") v: TrefoilVoice,
-        @Suppress("UNUSED_PARAMETER") m: Map<String,Float> = emptyMap())=DrumClass.TONAL
+        m: Map<String,Float> = emptyMap())=if(m["HOLD"]==1f)DrumClass.LOOP else DrumClass.TONAL
 
     data class Options(val frozen: Boolean=false,val impulseOnly: Boolean=false,
         val excitedParticipant: Int?=null,val memoryEnabled: Boolean=true,val stems: Boolean=false) {

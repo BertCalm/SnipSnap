@@ -12,6 +12,16 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
+        val p = BoomBapKits.parts().single { it.id == "snare" }.patch
+        val fx = BoomBapKits.coloration
+        val ref = fx.process(p.render())
+        val first = Velocity.variantsAt(ref, p, fx)
+        val replay = PadRecipe.fromJsonText(PadRecipe(p, fx).toJsonText())
+        val second = Velocity.variantsAt(replay.render(), replay.patch, replay.fx)
+        for (i in first.indices) assertContentEquals(first[i].samples, second[i].samples)
+    }
+
     @Test fun `WICK factory voices and held saved bodies replay byte for byte`() {
         for (voice in WickVoice.entries) {
             val patch = assertIs<WickPatch>(Presets.forVoice(WickPatch.ENGINE, voice.name).first())
@@ -28,6 +38,14 @@ class DeterminismTest {
             val replay = Patches.fromJsonText(patch.toJsonText())
             assertContentEquals(patch.render().samples, replay.render().samples, "$source held recipe")
         }
+    }
+
+    @Test fun `TREFOIL ordered held playback repeats across cache resets and JSON`() {
+        val patch=TrefoilPatch("Canary",TrefoilVoice.WEAVE,
+            TrefoilHeld.defaults(TrefoilVoice.WEAVE)+("WEAVE" to 1f),playback=TrefoilPlayback.HELD)
+        val first=patch.render().samples
+        TrefoilHeld.clearCache()
+        assertContentEquals(first,Patches.fromJsonText(patch.toJsonText()).render().samples)
     }
 
     @Test fun `HYDROFORM replays both voices and the measured DOME loop`() {
@@ -230,14 +248,14 @@ class DeterminismTest {
 
     @Test
     fun `RELAY saved phrases stay byte identical through finite and held cache reuse`() {
-        for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
+        for (model in 1..RelayPatch.MODEL_VERSION) for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = RelayPresets.forVoice(voice).first().let { source ->
                 source.copy(macros = source.macros + mapOf(
                     "TUNE" to .25f, "ORDER" to .4f, "PULSE" to .3f, "HOLD" to hold,
-                ), velocity = .55f)
+                ), velocity = .55f, model = model)
             }
             val saved = RelayPatch.fromJsonText(patch.toJsonText())
-            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold")
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold model$model")
         }
     }
 
@@ -360,6 +378,17 @@ class DeterminismTest {
         val patch = MeridianPatch("Swing canary", MeridianVoice.SWEEP,
             mapOf("LATITUDE" to .8f, "MEMORY" to .6f), midi = 51, velocity = .7f, seedContext = 41)
         assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
+    fun `MERIDIAN material voices replay their saved native model and contact performance exactly`() {
+        for (voice in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP)) {
+            val patch = MeridianPatch("Material canary", voice,
+                Meridian.defaults(voice) + mapOf("LATITUDE" to .2f, "MEMORY" to .3f),
+                midi = 51, velocity = .65f, model = 3, seedContext = -41)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
     }
 
     @Test

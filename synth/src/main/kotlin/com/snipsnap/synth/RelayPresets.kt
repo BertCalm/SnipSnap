@@ -6,7 +6,7 @@ package com.snipsnap.synth
  * rather than using random macro offsets. Every patch retains its complete phrase.
  */
 object RelayPresets {
-    private fun seed(voice: RelayVoice, name: String) = RelayPatch(name, voice, Relay.defaults(voice))
+    private fun seed(voice: RelayVoice, name: String) = RelayPatch(name, voice, Relay.defaults(voice), model = RelayPatch.LEGACY_MODEL_VERSION)
 
     private fun patch(
         voice: RelayVoice, name: String, pulse: Float, blend: Float, color: Float, length: Float,
@@ -14,7 +14,7 @@ object RelayPresets {
     ) = RelayPatch(name, voice, Relay.defaults(voice) + mapOf(
         "ORDER" to order, "PULSE" to pulse, "BLEND" to blend,
         "COLOR" to color, "LENGTH" to length, "HOLD" to if (held) 1f else 0f,
-    ), phrase)
+    ), phrase, model = RelayPatch.LEGACY_MODEL_VERSION)
 
     /** Indices are PLUCK, ORGAN, BELL, SOFT. All alternatives keep one shared clock. */
     private fun score(

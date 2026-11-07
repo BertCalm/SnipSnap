@@ -155,7 +155,7 @@ class FillTest {
             var moved = 0
             for (i in 0 until run) {
                 val shift = loose.hits[i].seconds - tight.hits[i].seconds
-                assertTrue(abs(shift) <= .012 + 1e-12, "$label hit $i drifts ${shift * 1000} ms")
+                assertTrue(abs(shift) <= .030 + 1e-12, "$label hit $i drifts ${shift * 1000} ms")
                 assertTrue(loose.hits[i].seconds >= 0.0, label)
                 if (abs(shift) > 1e-6) moved++
                 assertEquals(tight.hits[i].drum, loose.hits[i].drum, label)

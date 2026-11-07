@@ -28,6 +28,7 @@ import kotlin.math.sqrt
 object MeridianPlayabilityAuditionGenerator {
     private const val SEED = 4810
     private const val LEGACY_MODEL = 1
+    private const val MODEL = 2
     private val voice = MeridianVoice.SWEEP
 
     private data class Case(
@@ -37,7 +38,7 @@ object MeridianPlayabilityAuditionGenerator {
     )
 
     private fun cases() = listOf(
-        Case("finite-default", "Finite gesture", "Same finite gesture, current renderer",
+        Case("finite-default", "Finite gesture", "Same finite gesture, model-2 renderer",
             "Model 2, HOLD 0. Compare with the unchanged accepted model-1 reference. The decoded PCM samples must match.", emptyMap(), held = false),
         Case("finite-long", "Finite gesture", "A longer finite journey",
             "HOLD .90 remains finite. The swing continues discovering materials and then releases.", mapOf("HOLD" to .9f), held = false),
@@ -88,10 +89,10 @@ object MeridianPlayabilityAuditionGenerator {
         for (case in cases()) {
             val macros = defaults + case.overrides + ("HOLD" to if (case.held) 1f else (case.overrides["HOLD"] ?: 0f))
             val patch = MeridianPatch(case.title, voice, macros, case.midi, case.velocity,
-                model = Meridian.MODEL_VERSION, seedContext = SEED)
+                model = MODEL, seedContext = SEED)
             MeridianMotion.clearCache()
             val firstStart = System.nanoTime()
-            val held = if (case.held) Meridian.renderHeld(voice, macros, case.midi, case.velocity, SEED) else null
+            val held = if (case.held) Meridian.renderHeld(voice, macros, case.midi, case.velocity, SEED, model = MODEL) else null
             val native = held?.snip ?: patch.render()
             val firstMillis = (System.nanoTime() - firstStart) / 1e6
             checkAudio(case.id, native)
@@ -168,12 +169,12 @@ object MeridianPlayabilityAuditionGenerator {
             }
             if (case.id == "finite-default") {
                 val copied = WavReader.read(File(root, "reference/model1-default-native.wav"))
-                check(sameBits(copied, decoded)) { "Current finite default PCM differs from the unchanged accepted reference" }
+                check(sameBits(copied, decoded)) { "Model-2 finite default PCM differs from the unchanged accepted reference" }
             }
             val classification = Classifier.classify(decoded)
             val clip = linkedMapOf<String, Any?>(
                 "id" to case.id, "group" to case.group, "title" to case.title, "detail" to case.detail,
-                "source" to "Current retained Kotlin source", "model" to Meridian.MODEL_VERSION,
+                "source" to "Retained Kotlin source, model 2", "model" to MODEL,
                 "voice" to voice.name, "midi" to case.midi, "actualMidi" to actualMidi,
                 "note" to noteName(actualMidi), "velocity" to case.velocity, "seedContext" to SEED,
                 "macros" to macros, "held" to case.held, "files" to files,
@@ -202,7 +203,7 @@ object MeridianPlayabilityAuditionGenerator {
         )
         for ((path, hash) in source) check(sha(File(repository, path).readBytes()) == hash) { "Source changed during render: $path" }
         val manifest = linkedMapOf<String, Any?>(
-            "engine" to "MERIDIAN", "round" to 2, "model" to Meridian.MODEL_VERSION,
+            "engine" to "MERIDIAN", "round" to 2, "model" to MODEL,
             "sampleRate" to Dsp.RATE, "channels" to 1, "clipCount" to clips.size,
             "clips" to clips, "warmPublicRenderBenchmark" to timing,
             "acceptedReferenceManifestSha256" to sha(originalManifestFile.readBytes()),
@@ -275,8 +276,8 @@ object MeridianPlayabilityAuditionGenerator {
 
     private fun benchmark(defaults: Map<String, Float>): List<Map<String, Any?>> = listOf(
         "current-model1-finite" to MeridianPatch("Timing model 1", voice, defaults, model = 1, seedContext = SEED),
-        "current-model2-finite" to MeridianPatch("Timing model 2", voice, defaults, model = Meridian.MODEL_VERSION, seedContext = SEED),
-        "current-model2-held" to MeridianPatch("Timing held", voice, defaults + ("HOLD" to 1f), model = Meridian.MODEL_VERSION, seedContext = SEED),
+        "current-model2-finite" to MeridianPatch("Timing model 2", voice, defaults, model = MODEL, seedContext = SEED),
+        "current-model2-held" to MeridianPatch("Timing held", voice, defaults + ("HOLD" to 1f), model = MODEL, seedContext = SEED),
     ).map { (name, patch) ->
         repeat(3) { patch.render() }
         var frames = 0
@@ -353,7 +354,7 @@ object MeridianPlayabilityAuditionGenerator {
     private fun escape(value: String) = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
     private fun page(clips: List<Map<String, Any?>>, timing: List<Map<String, Any?>>) = buildString {
-        append("""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Meridian · Round two</title><style>body{font:16px/1.55 system-ui;background:#121e29;color:#eee7da;max-width:1000px;margin:38px auto;padding:0 22px}h1{font-size:36px;margin-bottom:8px}h2{font-size:24px;margin-top:35px}h3{font-size:19px;margin-bottom:5px}p{color:#bdcbd4}a{color:#82d5d8}article{border-top:1px solid #3d5362;padding:18px 0}audio{width:min(100%,670px)}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.row span{width:78px}small{color:#afbfcb}pre{font-size:12px;overflow:auto;background:#1b2e3b;padding:13px}details{margin:14px 0}.badge{display:inline-block;padding:3px 9px;border:1px solid #506a77;border-radius:12px;font-size:12px;color:#d0e4e6}@media(max-width:600px){body{padding:0 15px;margin-top:22px}.row span{width:100%}h1{font-size:29px}}</style><h1>Meridian · Round two</h1><p>A quicker finite gesture and a fixed-alignment sustained adaptation, beside the unchanged model-1 reference.</p><p>Start with the accepted reference and the current finite default. Their exported PCM samples are checked for equality. Then play the held examples through eight returns: listen for clicks, level dips, a sudden material change, and whether the requested note remains clear.</p><p>At HOLD's top step, the swing keeps moving while its alignment stays fixed. LATITUDE selects the plane reached after two finite seconds, then that plane is held. The southern/equator comparisons show the different selected materials. Swing timing is slightly fitted to a bounded loop; the timing and root-grid errors are recorded beside each clip. The faster renderer and numerical seams do not establish a new listening verdict.</p><p>Matched playback uses the shared audition loudness rule. Native sampler downloads retain the engine's ordinary level and real forward-loop metadata. Browser playback repeats the decoded exported loop eight times; seam measurements use the independently evolved preceding cycle before repetition.</p><p><a href="audition.zip">Download audition.zip</a> · <a href="manifest.json">Recipes, source hashes and measurements</a> · <a href="diagnostics.json">Numerical and timing evidence</a></p>""")
+        append("""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Meridian · Round two</title><style>body{font:16px/1.55 system-ui;background:#121e29;color:#eee7da;max-width:1000px;margin:38px auto;padding:0 22px}h1{font-size:36px;margin-bottom:8px}h2{font-size:24px;margin-top:35px}h3{font-size:19px;margin-bottom:5px}p{color:#bdcbd4}a{color:#82d5d8}article{border-top:1px solid #3d5362;padding:18px 0}audio{width:min(100%,670px)}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.row span{width:78px}small{color:#afbfcb}pre{font-size:12px;overflow:auto;background:#1b2e3b;padding:13px}details{margin:14px 0}.badge{display:inline-block;padding:3px 9px;border:1px solid #506a77;border-radius:12px;font-size:12px;color:#d0e4e6}@media(max-width:600px){body{padding:0 15px;margin-top:22px}.row span{width:100%}h1{font-size:29px}}</style><h1>Meridian · Round two</h1><p>A quicker finite gesture and a fixed-alignment sustained adaptation, beside the unchanged model-1 reference.</p><p>Start with the accepted reference and the model-2 finite default. Their exported PCM samples are checked for equality. Then play the held examples through eight returns: listen for clicks, level dips, a sudden material change, and whether the requested note remains clear.</p><p>At HOLD's top step, the swing keeps moving while its alignment stays fixed. LATITUDE selects the plane reached after two finite seconds, then that plane is held. The southern/equator comparisons show the different selected materials. Swing timing is slightly fitted to a bounded loop; the timing and root-grid errors are recorded beside each clip. The faster renderer and numerical seams do not establish a new listening verdict.</p><p>Matched playback uses the shared audition loudness rule. Native sampler downloads retain the engine's ordinary level and real forward-loop metadata. Browser playback repeats the decoded exported loop eight times; seam measurements use the independently evolved preceding cycle before repetition.</p><p><a href="audition.zip">Download audition.zip</a> · <a href="manifest.json">Recipes, source hashes and measurements</a> · <a href="diagnostics.json">Numerical and timing evidence</a></p>""")
         var group = ""
         for (clip in clips) {
             val currentGroup = clip.getValue("group").toString()

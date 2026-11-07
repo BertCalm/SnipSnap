@@ -91,26 +91,14 @@ object Robin {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
 
-        // A synth pad's soft zones re-render at velocity (genuinely
-        // different onset, not the same take low-passed); a captured pad,
-        // or one whose recipe also carries an fx chain atVelocity can't
-        // replay, still softens the take it has - Velocity.layerAt makes
-        // that same call for KitBuilder's ghost layers and StarterKits'
-        // VELOCITY starter, so this door doesn't carry its own copy of the
-        // decision. Read off `pad` now - `replaceAudio` below overwrites
-        // the recipe with the robin's own {"robin": ...} bookkeeping, so
-        // this is the last moment the patch is reachable.
-        //
-        // The spec is resolved once here, not per zone (Velocity.atVelocity's
-        // KDoc: macroSpecsFor is an O(5×n) scan best paid once per patch).
-        // Skipped entirely for a patch+fx pad: layerAt's fx gate discards
-        // it regardless of what it resolves to (Task 5b), so there's no
-        // point paying for the scan.
+        // Re-render synth articulations through their saved rack; captured pads
+        // retain the filtered-audio fallback. Resolve the brightness control once
+        // before replaceAudio replaces the recipe with the grid bookkeeping.
         val padRecipe = Breed.recipeOf(pad)
         if (padRecipe == null) Breed.warnIfCorruptRecipe(pad, slot, "robin")
-        val patch = padRecipe?.patch
+        val patch = com.snipsnap.synth.Velocity.patchForLayers(padRecipe)
         val patchFx = padRecipe?.fx
-        val brightnessSpec = if (patch != null && patchFx == null) {
+        val brightnessSpec = if (patch != null) {
             com.snipsnap.synth.Velocity.brightnessSpec(patch)
         } else {
             null

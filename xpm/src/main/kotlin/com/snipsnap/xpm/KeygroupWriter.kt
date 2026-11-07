@@ -20,6 +20,8 @@ data class Keygroup(
     val rootNote: Int,
     /** 1..8 velocity zones, soft first. Keygroup instruments carry 8 layer slots. */
     val layers: List<VelocityLayer>,
+    /** Optional per-zone amp release, in the same units as the program release. */
+    val volumeRelease: Float? = null,
 ) {
     init {
         require(lowNote in 0..127 && highNote in 0..127 && lowNote <= highNote) {
@@ -27,6 +29,7 @@ data class Keygroup(
         }
         require(rootNote in 0..127) { "rootNote out of range: $rootNote" }
         require(layers.size in 1..8) { "a keygroup has 1..8 layers, got ${layers.size}" }
+        require(volumeRelease == null || (volumeRelease.isFinite() && volumeRelease in 0f..30f))
     }
 }
 
@@ -48,6 +51,8 @@ data class KeygroupProgram(
     val explicitNoteOn: Boolean = false,
     /** How the keys share voices; written to both the `.xty` and the `.xpm` program headers. */
     val voiceMode: VoiceMode = VoiceMode.POLY,
+    /** Phone opt-in: overlapping zones form one synchronized note, rather than first-match selection. */
+    val stackZones: Boolean = false,
 ) {
     init {
         require(name.isNotBlank()) { "program name must not be blank" }
@@ -115,7 +120,7 @@ class KeygroupWriter {
         sb.append("    <MonoRetrigger>").append(voice.retrigger.xmlBool()).append("</MonoRetrigger>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
-            appendInstrument(sb, index, kg, program.volumeRelease, program.explicitNoteOn)
+            appendInstrument(sb, index, kg, kg.volumeRelease ?: program.volumeRelease, program.explicitNoteOn)
         }
         sb.append("    </Instruments>\n")
         appendPadNoteMap(sb)

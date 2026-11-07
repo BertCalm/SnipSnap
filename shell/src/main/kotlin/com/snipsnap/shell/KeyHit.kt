@@ -54,6 +54,39 @@ object KeyHit {
     fun resolve(instrument: InstrumentStore.Instrument, note: Int, velocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
         val zone = instrument.zoneFor(note) ?: return null
+        return resolveZone(zone, note, velocity, framesOf)
+    }
+
+    data class Component(val hit: Hit, val zoneIndex: Int, val releaseSeconds: Float)
+
+    /**
+     * Opt-in stacks must share a clock: equal lengths, loop markers and roots for the
+     * selected touch. A missing or incompatible component silences the entire note.
+     * At most four components leave room for eight held keys in the native 32-voice bank.
+     */
+    fun resolveAll(instrument: InstrumentStore.Instrument, note: Int, velocity: Float,
+                   framesOf: (String) -> Long?): List<Component> =
+        resolveAllByZone(instrument, note, velocity) { file, _ -> framesOf(file) }
+
+    /** The reference player's legacy per-zone sample list may reuse a filename. */
+    internal fun resolveAllByZone(instrument: InstrumentStore.Instrument, note: Int, velocity: Float,
+                                 framesOf: (String, Int) -> Long?): List<Component> {
+        require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
+        val zones = instrument.zones.withIndex().filter { note in it.value.lowNote..it.value.highNote }
+            .let { if (instrument.stackZones) it else it.take(1) }
+        if (zones.size > 4) return emptyList()
+        val components = zones.map { (index, zone) ->
+            val hit = resolveZone(zone, note, velocity) { file -> framesOf(file, index) } ?: return emptyList()
+            Component(hit, index, instrument.releaseFor(zone))
+        }
+        val first = components.firstOrNull()?.hit ?: return emptyList()
+        if (components.any { it.hit.frames != first.frames || it.hit.loopStartFrame != first.loopStartFrame ||
+                it.hit.pitchRatio != first.pitchRatio }) return emptyList()
+        return components
+    }
+
+    private fun resolveZone(zone: InstrumentStore.Zone, note: Int, velocity: Float,
+                            framesOf: (String) -> Long?): Hit? {
         // MIDI velocity zero is note-off; a zero-gain touch still resolves the softest positive zone.
         val midiVelocity = (velocity * 127).roundToInt().coerceIn(1, 127)
         val layer = zone.layerFor(midiVelocity) ?: return null

@@ -378,24 +378,26 @@ export semantics. The original six sounds have dry sonic approval; the expanded
 bank adds 30 recipes while preserving those originals and the starter kit.
 
 RELAY makes a compact timbral phrase inside one pitched note: a rounded
-pluck hands off to harmonic body, bell detail and soft tone, with accents
-scheduled independently of the order. KEY, BASS, PLUCK, ORGAN, CHIME and FLOW
-share ORDER, PULSE, BLEND, COLOR, LENGTH and HOLD, plus the host's TUNE
-control. Thirty-six dry recipes retain the six earlier seeds unchanged:
-eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
-The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
-sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
-explicit kit selections keep the starter at sixteen pads as the bank grows.
-Run `./gradlew :synth:generateRelayPerformanceAudition` for the 88-clip page:
-the full bank, six musical performances, three velocities per voice and every
-starter pad, plus six PULSE 0-versus-1 pairs, with raw/matched WAVs
-under `testkit/relay-performance-audition/`.
-The page opens on the full-range PULSE diagnostic; each pair changes only PULSE.
-The earlier `generateRelayAudition` engineering matrix remains available.
-[Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
-The owner approved the 36-preset bank's sound on 2026-10-21. Hands-on device
-verification remains open. The earlier eased PULSE mapping was not adopted after
-the owner reported no audible difference on 2026-10-26.
+pluck hands off to harmonic body, bell detail and soft tone. KEY, BASS, PLUCK,
+ORGAN, CHIME and FLOW share ORDER, PULSE, BLEND, COLOR, LENGTH and HOLD, plus
+the host's TUNE control. New model-2 patches give PULSE a smooth repeating swell:
+3 Hz in finite notes, with 3.5 dB depth at the middle and 7 dB at the top.
+The tone continues through each dip. Saved model-1 sounds keep their original
+accent behavior, including files written before a model field existed.
+The 36 dry factory recipes and sixteen distinct starter pads remain model 1;
+the owner approved that bank's sound on 2026-10-21. The SYNTH panel preserves
+loaded recipes and exposes native VELOCITY, note names and an explicit pulse
+behavior choice.
+Run `./gradlew :synth:generateRelayPulseMusicalAudition` for a bassline, chords
+and a held texture at PULSE 0, 0.5 and 1, with raw/matched WAVs, full recipes,
+native velocities and real loop-seam evidence. The
+[published audition](https://snipsnap-relay-audition.bertcalm.chatgpt.site)
+retains the earlier bank and depth comparisons. `generateRelayPerformanceAudition`
+still reproduces the 88-case model-1 pack, and `generateRelayAudition` retains the
+engineering matrix. [Implementation notes](docs/RELAY.md) explain compatibility,
+clock behavior and the listening history. The owner described the periodic
+candidate as better on 2026-11-04 and authorized integration on 2026-11-07;
+the new musical recordings and hands-on device behavior still need listening.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
@@ -425,7 +427,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 68 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 71 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1380,6 +1382,15 @@ three provisional MPC 3/MPC 2
 keygroups with `:shell:generateOhmExpandedHandoff`. [Extension notes](docs/OHM_EXPANDED.md)
 separate the physical bow, captured-loop treatment, measured host costs and
 remaining listening/device checks.
+
+The owner accepted the **Reply and Ring** study. A new OHM bench now opens
+**Natural Replies**, with REPLY spacing the companions and RING changing their
+decay. Five added factory choices preserve the approved study WAVs; saved
+models 1–4, source/sustain controls and the original starter keep their paths.
+MAKE INSTRUMENT exports finite native C3–C5 notes with real note-off release
+and no sustain loop. Build the five MPC keygroups with
+`:shell:generateOhmReplyRingHandoff`. [Reply and Ring notes](docs/OHM_REPLY_RING.md)
+describe the saved controls, CLI and compatibility boundaries.
 
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,

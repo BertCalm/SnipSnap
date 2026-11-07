@@ -16,6 +16,8 @@ import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.Ohm
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.crossTable
@@ -275,7 +277,14 @@ object Breed {
                 val crossed = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
                 // TIDAL's playback switch is discrete, like its saved source model,
                 // note and seed: keep A's performance shape while crossing its timbre.
-                val macros = if (ap is TidalPatch) crossed + ("HOLD" to (ap.macros["HOLD"] ?: 0f)) else crossed
+                val macros = when (ap) {
+                    is TidalPatch -> crossed + ("HOLD" to (ap.macros["HOLD"] ?: 0f))
+                    // OHM's finite reply instrument and its older sustained/source
+                    // renderers share a voice name, but have different macro sets.
+                    // Keep A's renderer and performance fields through withMacros.
+                    is OhmPatch -> crossed.filterKeys { name -> Ohm.macrosFor(ap.model).any { it.name == name } }
+                    else -> crossed
+                }
                 // SNAP is the one engine whose "settings" are a drawn line,
                 // not knobs alone — two photos, one child means the line
                 // itself crosses too, not just the macros the photo set.

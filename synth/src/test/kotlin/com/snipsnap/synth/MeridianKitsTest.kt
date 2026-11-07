@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
 class MeridianKitsTest {
     @Test
     fun `the sixteen-pad bank walks native minor-pentatonic notes then retains the eight presets with held material last`() {
-        val presets = MeridianPresets.all()
+        val presets = MeridianPresets.forVoice(MeridianVoice.SWEEP)
         val patches = MeridianKits.patches()
         val notes = listOf(60, 63, 65, 67, 70, 72, 75, 77)
         assertEquals(8, presets.size)
@@ -213,7 +213,7 @@ class MeridianKitsTest {
                             assertNull(recipe.terminalFadeMs, "instrument recipes must retain their seamless held source")
                             assertEquals(midi, Meridian.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi))
                             assertEquals(savedLayer.getValue("nativeVelocity").num().toFloat(), patch.velocity)
-                            val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext)
+                            val held = Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
                             assertEquals(held.loopStartFrame.toLong(), loop.startFrame)
                             assertEquals(held.loopEndFrameExclusive.toLong(), loop.endFrameExclusive)
                             val encoded = ByteArrayOutputStream().also {

@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateApsisAcceptance") {
+    group = "distribution"
+    description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAcceptanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisAcceptanceOutput").orNull ?: "${rootDir}/testkit/apsis-acceptance")
+}
+
 tasks.register<JavaExec>("generateFerryReleaseAudition") {
     group = "distribution"
     description = "Render Ferry's revised short-note release with saved recipes and ending measurements."
@@ -10,6 +20,46 @@ tasks.register<JavaExec>("generateFerryReleaseAudition") {
     workingDir = rootProject.projectDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("ferryReleaseOutput").orNull ?: "${rootDir}/testkit/ferry-release-audition")
+}
+
+// A listening experiment has its own compilation. It uses the real DSP toolkit
+// without registering a renderer or compiling the entire engine-test library.
+val ohmReplyRingStudy by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output
+    runtimeClasspath += sourceSets["main"].output
+}
+configurations[ohmReplyRingStudy.implementationConfigurationName]
+    .extendsFrom(configurations["implementation"])
+configurations[ohmReplyRingStudy.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations["runtimeOnly"])
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileOhmReplyRingStudyKotlin") {
+    compilerOptions.freeCompilerArgs.add(
+        "-Xfriend-paths=" + sourceSets["main"].output.classesDirs.files.joinToString(",") { it.absolutePath }
+    )
+}
+tasks.register<JavaExec>("checkOhmReplyRingStudy") {
+    group = "verification"
+    description = "Check Reply/Ring study timing, decay, pitch, determinism and physical headroom."
+    classpath = ohmReplyRingStudy.runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmReplyRingStudyCheck")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+}
+tasks.register<JavaExec>("generateOhmReplyRingAudition") {
+    group = "distribution"
+    description = "Render the finite Reply/Ring listening study, complete recipes and diagnostics."
+    classpath = ohmReplyRingStudy.runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmReplyRingAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    val replay = project.findProperty("ohmReplyRingReplay")?.toString()
+    if (replay == null) {
+        args(project.findProperty("ohmReplyRingOutput")?.toString() ?: "testkit/ohm-reply-ring-audition")
+    } else {
+        args("--replay", replay,
+            project.findProperty("ohmReplyRingReplayOutput")?.toString() ?: "testkit/ohm-reply-ring-replay.wav",
+            project.findProperty("ohmReplyRingReplayMode")?.toString() ?: "matched")
+    }
 }
 
 tasks.register<JavaExec>("generateFerryLossAudition") {
@@ -311,6 +361,18 @@ tasks.register<JavaExec>("generateUprightKit") {
     maxHeapSize = "768m"
     workingDir = projectDir
     args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** The held singing-bowl motion beside its saved model-4 reference. */
+tasks.register<JavaExec>("generateCairnSingMotionAudition") {
+    group = "distribution"
+    description = "Compare held SING rim motion with model 4, including real continuations and source recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnSingMotionAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnSingMotionOutput").orNull ?: "${rootDir}/testkit/cairn-sing-motion")
+    providers.gradleProperty("cairnSingMotionLegacyRoots").orNull?.split(";")?.forEach { args("--legacy-root", it) }
 }
 
 /** SING's continuous traction beside the preserved three contact gestures. */
@@ -1946,6 +2008,15 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
+tasks.register<JavaExec>("generateChordStabsAudition") {
+    group = "distribution"
+    description = "Render CHORD STABS' modal (D dorian, G mixolydian) and borrowed (C major) kits pad by pad, with progressions, under testkit/chord-stabs-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChordStabsAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/chord-stabs-audition")
+}
+
 tasks.register<JavaExec>("generateFillAudition") {
     group = "distribution"
     description = "Render FILL's snare roll and tom run inside a beat at 120 and 90 BPM, each length alone and every control swept, with a listening page under testkit/fill-audition/."
@@ -2748,6 +2819,17 @@ tasks.register<JavaExec>("generateRelayPerformanceAudition") {
     if (project.hasProperty("relayPerformanceQuick")) args("--quick")
 }
 
+/** The periodic Relay pulse in a bassline, chord voicings and a real held texture. */
+tasks.register<JavaExec>("generateRelayPulseMusicalAudition") {
+    group = "distribution"
+    description = "Render RELAY model 2 in three musical performances at PULSE 0, 0.5 and 1, with exact note recipes and loop evidence."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RelayPulseMusicalAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("relayPulseMusicalOutput").orNull ?: "${rootDir}/testkit/relay-pulse-musical-audition")
+}
+
 /** OVEN's reproducible first dry listening gate, including actual velocity layers. */
 tasks.register<JavaExec>("generateOvenAudition") {
     group = "distribution"
@@ -3139,6 +3221,27 @@ tasks.register<JavaExec>("generateHydroformCandidateKit") {
     workingDir = rootDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("hydroformCandidateOutput").orNull ?: "${rootDir}/testkit/hydroform-candidate-bank")
+}
+
+// Backroom is a listening study until the owner approves its voicing.
+tasks.register<JavaExec>("generateBoomBapAudition") {
+    group = "distribution"
+    description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BoomBapAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("boomBapOutput").orNull ?: "${rootDir}/testkit/boom-bap-audition")
+}
+
+tasks.register<JavaExec>("generateTrefoilHeldAudition") {
+    group = "distribution"
+    description = "Render native Trefoil HOLD, independent Python bridge fixtures and labelled host benchmarks."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilHeldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("trefoilHeldOutput").orNull ?: "${rootDir}/testkit/trefoil-held-native")
 }
 
 /** Render DIVE's listening gate (the real section on a snare, a tom, a rim and the CHUG guitar, beside PITCH) under testkit/dive-audition/. See DiveAuditionGenerator. */

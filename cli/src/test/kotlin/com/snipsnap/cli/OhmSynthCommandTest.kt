@@ -18,7 +18,10 @@ class OhmSynthCommandTest {
             assertEquals(0, SynthCommand.run(listOf("OHM", "STRING", "--all", "--out", dir.path),
                 PrintStream(ByteArrayOutputStream())))
             val files = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
-            assertEquals(5, files.size)
+            assertEquals(10, files.size)
+            assertEquals(listOf("Solo", "Argument", "Communion", "Quiet Company", "Gather"),
+                OhmPresets.all().take(5).map { it.name })
+            assertEquals(List(5) { 2 }, OhmPresets.all().take(5).map { it.model })
             for ((index, patch) in OhmPresets.all().withIndex()) {
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, patch.render()) }.toByteArray()
                 assertContentEquals(expected, files[index].readBytes(), patch.name)

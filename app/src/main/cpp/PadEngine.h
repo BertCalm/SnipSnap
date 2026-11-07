@@ -47,7 +47,7 @@ struct PadCommand {
      * its own speed times `pitch`. SetMaster scales the whole mix by
      * `gainL`. Both glide over `fadeMs` from wherever they are.
      */
-    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3, SetPitch = 4, SetMaster = 5, SetVibrato = 6 };
+    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3, SetPitch = 4, SetMaster = 5, SetVibrato = 6, CancelPending = 7 };
     Type type = Type::NoteOn;
     int32_t voiceId = 0;
     int32_t sample = -1;
@@ -81,6 +81,16 @@ struct PadCommand {
      * apply in the order they were pushed.
      */
     int32_t frameOffset = 0;
+    /**
+     * An absolute target on the engine's own frame count ([PadEngine::framesRendered]),
+     * or -1 for none. The callback turns it into a [frameOffset] when it takes the
+     * command off the ring, against the count at the top of that very block, so the
+     * wait the UI thread spent between reading the count and pushing cannot move
+     * the note. A target already behind the count lands at the top of the block
+     * (late rather than lost); one further out than [PadEngine::kMaxAheadSeconds]
+     * is held to that, so a bad number cannot park a voice for ever.
+     */
+    int64_t atFrame = -1;
     /** Stamped by pushCommand: the bank the sample index belongs to. */
     uint32_t generation = 0;
 };
@@ -127,6 +137,8 @@ public:
     static constexpr double kMaxBend = 4.0;
     /** The deepest vibrato, in semitones either way of the note, and the rate it wobbles at. */
     static constexpr double kMaxVibratoSemitones = 2.0;
+    /** The furthest ahead an `atFrame` may name, in seconds of the stream: a scheduled note waits in the held set, which is small. */
+    static constexpr int32_t kMaxAheadSeconds = 5;
     static constexpr double kVibratoHz = 5.5;
 
     explicit PadEngine(int32_t preferredSampleRate);
@@ -251,6 +263,8 @@ private:
     };
 
     void adoptPendingBank();
+    /** Drop every held NoteOn still waiting on a later frame, reporting each one ended. Sounding voices are not touched. */
+    void dropPendingNoteOns();
     /** Ring to held set. Full means the command applies at the top of this block rather than never. */
     void takeCommands();
     /** Apply every held command due at or before `frame`, in push order; return the next frame something is due on, or `numFrames`. */
