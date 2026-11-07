@@ -49,6 +49,9 @@ jint Java_com_snipsnap_app_NativePads_addSample(JNIEnv*, jobject, jlong, jfloatA
 void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
+jboolean Java_com_snipsnap_app_NativePads_noteOnAt(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean, jlong);
+jboolean Java_com_snipsnap_app_NativePads_cancelPending(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_stopVoiceAt(JNIEnv*, jobject, jlong, jint, jfloat, jlong);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong, jdouble, jfloat);
 jboolean Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong, jfloat, jfloat);
@@ -291,6 +294,31 @@ TEST(jni_banks_a_sample_and_starts_it) {
     CHECK(Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 100, 200, -1, 1.0f, 1.0f, 1.0, JNI_FALSE) == JNI_TRUE);
     auto out = pull(pads, 4);
     CHECK_NEAR(out[0], 0.100f, 1e-4);  // frame 100, through the bridge
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_schedules_a_note_on_an_absolute_frame_and_cancels_one_that_has_not_begun) {
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 8);  // adopt; the engine has rendered 8 frames
+
+    CHECK(Java_com_snipsnap_app_NativePads_noteOnAt(e, nullptr, h, 1, 0, 100, 200, -1, 1.0f, 1.0f, 1.0, JNI_FALSE, 8 + 2) == JNI_TRUE);
+    auto out = pull(pads, 4);
+    CHECK_NEAR(out[2 * 1], 0.0f, 1e-7);   // frame 1 of the block: not yet
+    CHECK_NEAR(out[2 * 2], 0.100f, 1e-4);  // frame 2: the note's first
+
+    CHECK(Java_com_snipsnap_app_NativePads_noteOnAt(e, nullptr, h, 2, 0, 100, 200, -1, 1.0f, 1.0f, 1.0, JNI_FALSE, 12 + 1000) == JNI_TRUE);
+    pull(pads, 4);
+    CHECK(Java_com_snipsnap_app_NativePads_cancelPending(e, nullptr, h) == JNI_TRUE);
+    auto later = pull(pads, 2048);
+    float top = 0.0f;
+    for (size_t i = 0; i < later.size(); ++i) top = later[i] > top ? later[i] : top;
+    CHECK(top < 0.25f);  // voice 1's tail at most; voice 2 never started
 
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }

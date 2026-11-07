@@ -1109,6 +1109,9 @@ fun GrooveScreen(
             discardBounce()
         }
 
+        // The print is armed and stopped on the frame's own wrap, so the steps go over as crossed.
+        override fun needsImmediate() = bounceArmed || bouncing
+
         override fun swapFor(slot: Int, pos: Float, barSteps: Int): ((PadHit.Hit) -> PadHit.Hit?)? {
             // Resolved here, on the caller's side of `PadEngine.hit`'s own
             // monitor — `live`'s frame count is looked up BEFORE the swap
