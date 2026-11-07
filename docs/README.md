@@ -156,6 +156,8 @@ and stereo shelf storage for ORBIT and SURFACE. [SPLIT → FX](superpowers/specs
 adds the combined stems, saved opt-in and a fresh stereo PRINT with a bounded tail.
 Remaining routes and physical-device checks follow
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
+The [November 7 handoff](handoffs/2026-11-07-aquarium.md) records the merged stages,
+completed SPLIT CI, physical-device checks and the next integration direction.
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
 records the whole-app review of 2026-10-17: the six guards that landed with
