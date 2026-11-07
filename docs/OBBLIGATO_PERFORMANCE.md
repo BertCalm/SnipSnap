@@ -1,7 +1,8 @@
 # OBBLIGATO: sustain and native range
 
 Status: performance implementation, focused checks and published audition
-complete; broader verification is recorded separately below.
+complete. Final validation, landed commits and current follow-up work are in
+the [handoff](OBBLIGATO_HANDOFF.md).
 
 Listen and download the four instruments at the private [sustain and range
 audition](https://obbligato-sustain-range.bertcalm.chatgpt.site). Baseline: `22a6b40055192504f91a5a58f78e0ab01b53871e`.
@@ -145,8 +146,14 @@ a full-keyboard export default.
   thirteen roots and four relationships. Protect C3 and F-sharp3 use the longer
   source; the other fifty use the ordinary source. Together with the 52 exported
   main-strike sources, both tested playing levels cover every native zone.
-- Pending: full JVM suite, app compiler and device checks, MPC hardware envelope
-  confirmation, and the owner's listening verdict.
+- Verified: the full local JVM run passed on implementation `71306ad59` with
+  8,777 tests and no failures/errors/skips. Integrated `c2fa2467` passed all JVM
+  CI, Android assembly/device-test compilation, native and resource checks.
+- Device result: PR #942's run reported two pre-existing Onset REOPEN failures;
+  no OBBLIGATO failure was reported. Later main includes test-harness corrections.
+  See the [handoff](OBBLIGATO_HANDOFF.md) for exact runs, commits and scope.
+- Pending: MPC hardware envelope confirmation, phone timing and the owner's
+  listening verdict on the new articulation and register.
 - Heard: the owner approved renderer 10 and authorized both performance extensions;
   this new held articulation and extended register have no listening verdict yet.
 
