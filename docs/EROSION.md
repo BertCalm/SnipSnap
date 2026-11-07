@@ -16,13 +16,14 @@ to their named rounds. Current integration checks are tracked in the
 [completion programme](SYNTH_COMPLETION_PROGRAM.md).
 
 
-**Current status, 2026-11-07:** Josh accepted the native eight-role contrast
+**Historical handoff status, 2026-11-07, before the integration above:** Josh accepted the native eight-role contrast
 audition: “Sound really good, what's next”. The revision is merged in
 [PR #891](https://github.com/BertCalm/SnipSnap/pull/891). Factory integration
 and device playability are next; HOLD remains proposed. See the
 [handoff](handoffs/2026-11-07-erosion.md). Pending-listening statements below
-describe earlier publication dates. Full regression remains unverified; the
-incomplete run reported an ARCO render-cost failure detailed in the handoff.
+describe earlier publication dates. Full regression for that round remained
+unverified; its incomplete run reported an ARCO render-cost failure detailed in
+the handoff.
 
 Status: native first proof built; focused checks passed, full regression unverified. The owner accepted the original
 Python audition on 2026-10-31. That acceptance applies to the Python clips;

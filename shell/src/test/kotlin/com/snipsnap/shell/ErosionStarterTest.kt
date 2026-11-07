@@ -9,6 +9,8 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.synth.ErosionBank
+import com.snipsnap.synth.ErosionPatch
+import com.snipsnap.synth.ErosionVoice
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Velocity
 import java.io.ByteArrayOutputStream
@@ -22,6 +24,21 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ErosionStarterTest {
+    @Test fun `preset promotion preserves sparse controls native touch model and escaped names`() {
+        for (voice in ErosionVoice.entries) for (touch in ErosionBank.velocities) {
+            val patch = ErosionPatch("MY \"$\"\n\\", voice, mapOf("FEED" to .42f), velocity = touch)
+            val line = UserPresets.rosterLine(patch)
+            val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+            assertEquals("fromJsonText", call.name)
+            assertEquals("ErosionPatch", (call.receiver as KotlinLiteral.Call).name)
+            assertTrue(call.named.isEmpty())
+            val restored = ErosionPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+            assertEquals(patch, restored)
+            assertEquals(patch.velocity.toRawBits(), restored.velocity.toRawBits())
+            assertEquals("ErosionPresets.kt", UserPresets.rosterFile(patch))
+        }
+    }
+
     @Test fun `shelf bank preserves all accepted touches through storage and both MPC exports`() {
         val root = createTempDirectory("erosion-starter").toFile()
         try {

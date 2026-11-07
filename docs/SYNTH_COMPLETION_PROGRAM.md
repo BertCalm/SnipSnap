@@ -50,6 +50,10 @@ that cannot preserve an RR × velocity arrangement must not silently discard one
 dimension. Existing saved recipes and legacy export bytes need compatibility
 coverage as these paths change.
 
+The [delivery audit](SYNTH_COMPLETION_DELIVERY_AUDIT.md) records the current
+phone/preview take-order mismatch, slice-grid read-back gap and the concrete
+acceptance cases for the next shared implementation package.
+
 ## Execution packages
 
 | ID | Package | Exit evidence |
