@@ -277,7 +277,22 @@ class SynthScreenTest : ComposeScreenTest() {
         pump()
     }
 
-    /** Keep write failures visible: a refused pad must not look like an unexplained timeout. */
+    /**
+     * Keep write failures visible: a refused pad must not look like an
+     * unexplained timeout. Then give the screen one pump to draw the
+     * finished send.
+     *
+     * The pump is needed because the clock here is frozen. sendToSlot hands
+     * over the kit (onKitUpdated, which [condition] watches) and clears
+     * padChooser.sendBusy in its finally block, both in the same main-thread
+     * step. But waitFor returns the moment [condition] holds, with no frame
+     * drawn since. The semantics still show the send in flight, with REOPEN
+     * PAD RECIPE and UPDATE PAD disabled. [activate] rightly refuses a
+     * disabled control, so a test that reopens a pad straight after sending
+     * one failed on that stale frame, not on the screen. The pump runs on the
+     * main thread after that step, so the frame it draws shows the send
+     * done.
+     */
     private fun waitForPadWrite(
         what: String,
         timeoutMillis: Long = 30_000,
@@ -289,6 +304,7 @@ class SynthScreenTest : ComposeScreenTest() {
             val messages = recordedToasts.joinToString(" | ").ifBlank { "<none>" }
             throw AssertionError("$what did not complete within ${timeoutMillis}ms. Captured SYNTH toasts: $messages", failure)
         }
+        pump()
     }
 
     @Test
