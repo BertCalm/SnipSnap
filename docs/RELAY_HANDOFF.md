@@ -77,19 +77,19 @@ Paths are relative to the repository root.
 
 | Path | Purpose |
 | --- | --- |
-| [Relay.kt](../synth/src/main/kotlin/com/snipsnap/synth/Relay.kt) | Original source renderer; retained unchanged. |
-| [RelayModels.kt](../synth/src/main/kotlin/com/snipsnap/synth/RelayModels.kt) | Versioned dispatch and diagnostic report. |
-| [RelayPulse.kt](../synth/src/main/kotlin/com/snipsnap/synth/RelayPulse.kt) | Repeating gain contour, fitted held cycles and predecessor handling. |
-| [RelayPatch.kt](../synth/src/main/kotlin/com/snipsnap/synth/RelayPatch.kt) | Fresh defaults, legacy decoding and model-preserving recipe operations. |
-| [RelayPresets.kt](../synth/src/main/kotlin/com/snipsnap/synth/RelayPresets.kt) | Approved bank pinned to model 1. |
-| [SynthKits.kt](../synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt) | Sixteen-pad Relay starter retained as model 1. |
-| [SynthScreen.kt](../app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt) | Preview, legacy navigation, explicit behavior choice, restore and save/send integration. |
-| [RelayModelsTest.kt](../synth/src/test/kotlin/com/snipsnap/synth/RelayModelsTest.kt) | Seven model, reference-audio, velocity, pitch/classification and seam tests. |
-| [Reference hashes](../synth/src/test/resources/relay-model2-audition-reference.json) | Twelve immutable published depth-audition raw WAV hashes. |
-| [RelaySynthScreenTest.kt](../app/src/androidTest/kotlin/com/snipsnap/app/ui/RelaySynthScreenTest.kt) | Four instrumentation tests for fresh/legacy/edit/save/reopen flows. |
-| [Musical generator](../synth/src/test/kotlin/com/snipsnap/synth/RelayPulseMusicalAuditionGenerator.kt) | Nine actual production-rendered musical comparisons. |
-| [RELAY.md](RELAY.md) | Full engine behavior, compatibility, listening history and validation. |
-| [RELAY_SPEC.md](RELAY_SPEC.md) | Original engineering specification. |
+| [Relay.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/Relay.kt) | Original source renderer; retained unchanged. |
+| [RelayModels.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/RelayModels.kt) | Versioned dispatch and diagnostic report. |
+| [RelayPulse.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/RelayPulse.kt) | Repeating gain contour, fitted held cycles and predecessor handling. |
+| [RelayPatch.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/RelayPatch.kt) | Fresh defaults, legacy decoding and model-preserving recipe operations. |
+| [RelayPresets.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/RelayPresets.kt) | Approved bank pinned to model 1. |
+| [SynthKits.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt) | Sixteen-pad Relay starter retained as model 1. |
+| [SynthScreen.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt) | Preview, legacy navigation, explicit behavior choice, restore and save/send integration. |
+| [RelayModelsTest.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/test/kotlin/com/snipsnap/synth/RelayModelsTest.kt) | Seven model, reference-audio, velocity, pitch/classification and seam tests. |
+| [Reference hashes](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/test/resources/relay-model2-audition-reference.json) | Twelve immutable published depth-audition raw WAV hashes. |
+| [RelaySynthScreenTest.kt](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/app/src/androidTest/kotlin/com/snipsnap/app/ui/RelaySynthScreenTest.kt) | Four instrumentation tests for fresh/legacy/edit/save/reopen flows. |
+| [Musical generator](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/synth/src/test/kotlin/com/snipsnap/synth/RelayPulseMusicalAuditionGenerator.kt) | Nine actual production-rendered musical comparisons. |
+| [RELAY.md](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/docs/RELAY.md) | Full engine behavior, compatibility, listening history and validation. |
+| [RELAY_SPEC.md](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/docs/RELAY_SPEC.md) | Original engineering specification. |
 
 The shared screen merge preserved both `OnsetPatch` and `RelayPatch` in `currentDrafts()`, alongside upstream Lattice HOLD and Libration touch workflows.
 
@@ -193,7 +193,7 @@ Treat that as a separate UI-suite investigation. The absence of a Relay failure 
 
 ## Next maintainer actions
 
-1. Fetch the current default branch and read [AGENTS.md](../AGENTS.md), Luthier and [Steward](../.claude/skills/steward/SKILL.md). Preserve saved-sound compatibility.
+1. Fetch the current default branch and read [AGENTS.md](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/AGENTS.md), Luthier and [Steward](https://github.com/BertCalm/SnipSnap/blob/12e059bfb1b41b48b897f2596bbfc958676265a8/.claude/skills/steward/SKILL.md). Preserve saved-sound compatibility.
 2. Verify the corrected Relay instrumentation cases on the current merged branch. Inspect current CI rather than relying on the historical states above.
 3. Investigate the separate Contour selector failure and the cancelled JVM shard as needed for a complete green integration run. Do not disable or exclude failing tests to manufacture green.
 4. Obtain the owner's listening verdict on the bassline, chords and held texture at 0 / 0.5 / 1.
