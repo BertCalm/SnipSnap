@@ -14,6 +14,7 @@ import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.RimePadMaker
 import com.snipsnap.shell.OverlapPadMaker
+import com.snipsnap.shell.ObbligatoPadMaker
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.TidalPadMaker
@@ -95,6 +96,8 @@ import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.Obbligato
 import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoHeld
+import com.snipsnap.synth.ObbligatoPlayback
 import com.snipsnap.synth.Nacre
 import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
@@ -323,8 +326,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(ChitinPatch.ENGINE, LorentzPatch.ENGINE, RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
-            throw CliError("--patch is only supported by CHITIN, RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, LATTICE, OHM, FERRY, MERIDIAN, OTIS and LORENTZ, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(ChitinPatch.ENGINE, LorentzPatch.ENGINE, RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
+            throw CliError("--patch is only supported by CHITIN, RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, OBBLIGATO, LATTICE, OHM, FERRY, MERIDIAN, OTIS and LORENTZ, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -381,8 +384,9 @@ object SynthCommand {
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
+                ObbligatoPatch.ENGINE -> Obbligato.macrosFor()
                 OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.SOURCE_MODEL)
-                else -> throw CliError("--macros is only supported by MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
+                else -> throw CliError("--macros is only supported by OBBLIGATO, MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -422,8 +426,13 @@ object SynthCommand {
                 throw CliError("CONTOUR --instrument sets TUNE and HOLD for every zone; omit those --macros edits")
             }
         }
+        // Decide the duet renderer before validating or copying a widened note.
+        val obbligatoModel = if (engine == ObbligatoPatch.ENGINE) opts["--model"]?.let { raw ->
+            raw.toIntOrNull()?.takeIf { it in 1..Obbligato.MAX_MODEL }
+                ?: throw CliError("OBBLIGATO --model wants 1..${Obbligato.MAX_MODEL}, got '$raw'")
+        } ?: (savedPatch as? ObbligatoPatch)?.model ?: Obbligato.MODEL else null
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OtisPatch.ENGINE -> Otis.MIDI_MIN..Otis.MIDI_MAX
@@ -453,7 +462,7 @@ object SynthCommand {
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
                 ScannedChainPatch.ENGINE -> ScannedChain.MIDI_MIN..ScannedChain.MIDI_MAX
-                ObbligatoPatch.ENGINE -> Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
+                ObbligatoPatch.ENGINE -> Obbligato.midiRange(requireNotNull(obbligatoModel))
                 OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
                 OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
@@ -528,7 +537,8 @@ object SynthCommand {
                 CausticPatch.ENGINE -> CausticInstrument.MODEL_VERSION
                 OhmPatch.ENGINE -> Ohm.MODEL_VERSION
                 MeridianPatch.ENGINE -> Meridian.MODEL_VERSION
-                else -> throw CliError("--model is only supported by MERIDIAN, RIME, OSPREY, CREASE, TIDAL, CAUSTIC, OHM and FERRY, got $engine")
+                ObbligatoPatch.ENGINE -> Obbligato.MAX_MODEL
+                else -> throw CliError("--model is only supported by OBBLIGATO, MERIDIAN, RIME, OSPREY, CREASE, TIDAL, CAUSTIC, OHM and FERRY, got $engine")
             }
             raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
@@ -545,12 +555,18 @@ object SynthCommand {
             if (engine == RimePatch.ENGINE && opts["--attack"] != null) throw CliError("RIME retains its UNFOLD opening; use --release")
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
             if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
-            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM, TIDAL, CAUSTIC and LATTICE TRACE export a keys instrument here")
+            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OVERLAP HELD, OHM, TIDAL, OBBLIGATO HELD, CAUSTIC and LATTICE TRACE export a keys instrument here")
             if (engine == LatticePatch.ENGINE) {
                 if (voice != LatticeVoice.TRACE.name) throw CliError("LATTICE --instrument supports TRACE; $voice keeps its existing finite or loop render")
                 if (opts["--attack"] != null) throw CliError("LATTICE TRACE keeps its authored attack; use --release for the held instrument")
             }
             if (engine == CausticPatch.ENGINE && opts["--attack"] != null) throw CliError("CAUSTIC keeps its authored attack; use --release for the held instrument")
+            if (engine == ObbligatoPatch.ENGINE) {
+                if ((savedPatch as? ObbligatoPatch)?.playback != ObbligatoPlayback.HELD)
+                    throw CliError("OBBLIGATO --instrument requires a saved HELD --patch; select held mode in SYNTH first")
+                if (opts["--attack"] != null)
+                    throw CliError("OBBLIGATO keeps its opening; --instrument accepts --release")
+            }
             if (engine == OverlapPatch.ENGINE) {
                 if ((savedPatch as? OverlapPatch)?.playback != OverlapPlayback.HELD)
                     throw CliError("OVERLAP --instrument requires a saved HELD --patch; select held mode in SYNTH first")
@@ -678,7 +694,8 @@ object SynthCommand {
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ScannedChainPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
-                is ObbligatoPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ObbligatoPatch -> patch.copy(model = modelOverride ?: patch.model,
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrphicaPatch -> patch.copy(
                     config = patch.config.copy(
                         midi = midiOverride ?: patch.config.midi,
@@ -809,13 +826,25 @@ object SynthCommand {
                 withNote.copy(seed = longSeedOverride ?: withNote.seed, macros = controls, model = model)
             }
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
-            else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
+            else if (withNote is ObbligatoPatch) withNote.copy(model = modelOverride ?: withNote.model,
+                seed = seedOverride ?: withNote.seed, macros = withNote.macros + macroOverrides)
             else if (withNote is OhmPatch) {
                 editOhm(withNote, modelOverride, macroOverrides, seedOverride, instrument, ohmReplyOverride, ohmRingOverride)
             }
             else withNote
         }
 
+        val obbligatoInstrumentSpec = if (instrument && engine == ObbligatoPatch.ENGINE) try {
+            val patch = chosen.single() as ObbligatoPatch
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() &&
+                    it in ObbligatoPatch.MIN_RELEASE_SECONDS..ObbligatoPatch.MAX_RELEASE_SECONDS }
+                    ?: throw CliError("OBBLIGATO --release wants finite seconds in .1..1.5")
+            } ?: patch.releaseSeconds
+            ObbligatoPadMaker.Spec(patch.copy(releaseSeconds = release))
+        } catch (e: IllegalArgumentException) {
+            throw CliError("OBBLIGATO --instrument: ${e.message ?: "invalid held recipe"}")
+        } else null
         val causticInstrumentSpec = if (instrument && engine == CausticPatch.ENGINE) try {
             val release = opts["--release"]?.let { raw ->
                 raw.toFloatOrNull()?.takeIf { it.isFinite() &&
@@ -907,6 +936,7 @@ object SynthCommand {
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
+        if (obbligatoInstrumentSpec != null) return makeObbligatoInstrument(obbligatoInstrumentSpec, dir, out)
         if (rimeInstrumentSpec != null) return makeRimeInstrument(rimeInstrumentSpec, dir, out)
         if (causticInstrumentSpec != null) return makeCausticInstrument(causticInstrumentSpec, dir, out)
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
@@ -924,13 +954,15 @@ object SynthCommand {
         for ((i, patch) in chosen.withIndex()) {
             // What SEND TO PAD would make: the string machines take their ENSEMBLE, so the file you audition is the pad you would get.
             val landing = Presets.landingFor(engine, voice, patch.macros)
+            val heldObbligato = if (patch is ObbligatoPatch && patch.playback == ObbligatoPlayback.HELD)
+                ObbligatoHeld.render(patch) else null
             val heldRibbon = if (patch is FlockPatch && patch.playback == FlockPlayback.HELD) FlockHeld.render(patch) else null
             val heldOverlap = if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD) OverlapHeld.render(patch) else null
             val heldOhm = if (patch is OhmPatch && Ohm.isHeld(patch)) Ohm.renderHeld(patch) else null
             val meridianHeld = if (patch is MeridianPatch && Meridian.isLoop(patch.macros, patch.model)) {
                 Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
             } else null
-            val snip = if (heldOverlap != null) heldOverlap.snip else if (meridianHeld != null) meridianHeld.snip else if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
+            val snip = if (heldObbligato != null) heldObbligato.snip else if (heldOverlap != null) heldOverlap.snip else if (meridianHeld != null) meridianHeld.snip else if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
                 val dry = Velocity.atVelocity(patch, velocityOverride)
                 landing?.process(dry) ?: dry
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
@@ -949,6 +981,8 @@ object SynthCommand {
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
                 ?: heldOverlap?.let { SmplChunk((patch as OverlapPatch).midi,
+                    SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
+                ?: heldObbligato?.let { SmplChunk((patch as ObbligatoPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
                 ?: (patch as? CausticPatch)?.takeIf {
                     CausticInstrument.isLoop(it.voice, it.macros, it.model)
@@ -970,6 +1004,7 @@ object SynthCommand {
                 heldTidal -> "  (reconstructed aftermath, loop-enabled WAV)"
                 heldRibbon != null -> "  (captured RIBBON sustain, loop-enabled WAV)"
                 heldOverlap != null -> "  (steady OVERLAP sustain, loop-enabled WAV)"
+                heldObbligato != null -> "  (held OBBLIGATO conversation, loop-enabled WAV)"
                 heldOhm != null -> "  (OHM attack plus captured sustain, loop-enabled WAV)"
                 patch is LatticePatch && Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.LOOP -> "  (held loop, mono)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"
@@ -978,6 +1013,20 @@ object SynthCommand {
             out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s$mode")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
+        return 0
+    }
+
+    private fun makeObbligatoInstrument(spec: ObbligatoPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = ObbligatoPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { index, midi ->
+            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            ObbligatoPadMaker.renderZone(spec, midi)
+        }
+        ObbligatoPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} native reference zones, held OBBLIGATO conversation; sampler release ${spec.releaseSeconds} (MPC timing unmeasured)")
+        out.println("recipe: ${ObbligatoPadMaker.recipeFile(dir, name).path}")
         return 0
     }
 

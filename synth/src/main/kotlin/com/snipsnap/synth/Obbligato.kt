@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -24,8 +25,8 @@ enum class ObbligatoRelationship {
  * respond to the other pipe's measured activity. This is an invented duet, not a model of
  * two people sharing one lung or a claim of acoustic accuracy for their mutual influence.
  *
- * Dry mono, explicit C4–C5 notes, independently seeded players and one final loudness target.
- * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
+ * Dry mono, explicitly saved notes, independently seeded players and one final loudness target.
+ * Finite recipes keep their authored ending; held playback takes its own bounded source capture.
  * The accepted revision combines gentler voicing, remembered articulations and overlapping
  * phrase handoffs. Earlier explicitly saved revisions remain renderable; old recipes
  * without a renderer revision retain their original interpretation.
@@ -38,18 +39,23 @@ object Obbligato {
     const val CONVERSATION_MODEL = 8
     const val OVERLAP_MODEL = 9
     const val MORE_OVERLAP_MODEL = 10
-    const val MODEL = MORE_OVERLAP_MODEL
-    const val MAX_MODEL = MORE_OVERLAP_MODEL
+    const val PERFORMANCE_MODEL = 11
+    const val MODEL = PERFORMANCE_MODEL
+    const val MAX_MODEL = PERFORMANCE_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
     const val DEFAULT_MIDI = 60
     const val MIDI_MIN = 60
     const val MIDI_MAX = 72
+    const val WIDE_MIDI_MIN = 48
+    const val WIDE_MIDI_MAX = 84
     const val DEFAULT_VELOCITY = .8f
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val CONTROL_BLOCK = 64
     private const val RELEASE_SECONDS = .75
+    private const val HELD_SOURCE_SECONDS = 10.0
+    internal const val EXTENDED_HELD_SOURCE_SECONDS = 14.0
     private const val MAX_DETUNE_CENTS = 32f
     private val FIGHT_ENTRIES = doubleArrayOf(.19, .37, .62, .78, .91)
     private val FIGHT_CROSSOVERS = doubleArrayOf(.10, .13, .09, .14, .11)
@@ -84,8 +90,14 @@ object Obbligato {
         return result
     }
 
-    internal fun validateNote(midi: Int, velocity: Float) {
-        require(midi in MIDI_MIN..MIDI_MAX) { "OBBLIGATO MIDI must be in $MIDI_MIN..$MIDI_MAX: $midi" }
+    fun midiRange(model: Int = MODEL): IntRange {
+        require(model in 1..MAX_MODEL) { "unsupported OBBLIGATO model: $model" }
+        return if (model >= PERFORMANCE_MODEL) WIDE_MIDI_MIN..WIDE_MIDI_MAX else MIDI_MIN..MIDI_MAX
+    }
+
+    internal fun validateNote(midi: Int, velocity: Float, model: Int = MODEL) {
+        val range = midiRange(model)
+        require(midi in range) { "OBBLIGATO MIDI must be in ${range.first}..${range.last}: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "OBBLIGATO velocity must be finite and in 0..1: $velocity" }
     }
 
@@ -203,6 +215,33 @@ object Obbligato {
     ): Report = requireNotNull(synthesize(macros, midi, velocity, seed, responses, true, true, model,
         capture = true, weakening = weakening).report)
 
+    /**
+     * A held adapter receives the actual mixed source, stems and decisions from one
+     * longer finite simulation. The fixed capture budget bounds memory and render work;
+     * the adapter owns the sustain join and note-off behavior.
+     */
+    internal fun heldReport(
+        macros: Map<String, Float>, midi: Int, velocity: Float, seed: Int,
+        model: Int = PERFORMANCE_MODEL, cancelled: () -> Boolean = { false },
+    ): Report = heldReport(macros, midi, velocity, seed, model, HELD_SOURCE_SECONDS, cancelled)
+
+    /** One bounded extra source budget when the normal capture cannot close safely. */
+    internal fun heldReport(
+        macros: Map<String, Float>, midi: Int, velocity: Float, seed: Int,
+        model: Int, sourceSeconds: Double, cancelled: () -> Boolean = { false },
+    ): Report {
+        require(model == PERFORMANCE_MODEL) { "held OBBLIGATO requires the performance renderer" }
+        require(sourceSeconds == HELD_SOURCE_SECONDS || sourceSeconds == EXTENDED_HELD_SOURCE_SECONDS) {
+            "OBBLIGATO held source budget must be $HELD_SOURCE_SECONDS or $EXTENDED_HELD_SOURCE_SECONDS seconds"
+        }
+        if (Thread.currentThread().isInterrupted || cancelled()) {
+            throw CancellationException("OBBLIGATO held capture no longer wanted")
+        }
+        return requireNotNull(synthesize(macros, midi, velocity, seed, responses = true,
+            sourceA = true, sourceB = true, model = model, capture = true,
+            heldSecondsOverride = sourceSeconds, cancelled = cancelled).report)
+    }
+
     /** Production rendering keeps the same synthesis arithmetic without retaining an audition report. */
     private data class Synthesis(val samples: FloatArray, val report: Report? = null)
     private val EMPTY_TRACE = FloatArray(0)
@@ -211,13 +250,20 @@ object Obbligato {
         macros: Map<String, Float>, midi: Int, velocity: Float, seed: Int,
         responses: Boolean, sourceA: Boolean, sourceB: Boolean, model: Int, capture: Boolean,
         weakening: SourceWeakening? = null,
+        heldSecondsOverride: Double? = null,
+        cancelled: () -> Boolean = { false },
     ): Synthesis {
         require(model in 1..MAX_MODEL) { "unsupported OBBLIGATO model: $model" }
-        validateNote(midi, velocity)
+        validateNote(midi, velocity, model)
+        require(heldSecondsOverride == null ||
+            model == PERFORMANCE_MODEL && (heldSecondsOverride == HELD_SOURCE_SECONDS ||
+                heldSecondsOverride == EXTENDED_HELD_SOURCE_SECONDS)) {
+            "unsupported OBBLIGATO held capture duration"
+        }
         val m = settled(macros)
         val breath = m.getValue("BREATH")
         val mischief = m.getValue("MISCHIEF")
-        val heldSeconds = 2.0 + m.getValue("HOLD") * 3.0
+        val heldSeconds = heldSecondsOverride ?: (2.0 + m.getValue("HOLD") * 3.0)
         val seconds = heldSeconds + RELEASE_SECONDS
         val frames = (seconds * RATE).toInt()
         val traces = (frames + CONTROL_BLOCK - 1) / CONTROL_BLOCK
@@ -253,7 +299,7 @@ object Obbligato {
             null -> 0.0
         }.coerceIn(0.0, 1.0)
         val conversation = conversationMode?.let { ObbligatoConversation(it, heldSeconds, mischief, seed,
-            overlap = model >= OVERLAP_MODEL, moreOverlap = model == MORE_OVERLAP_MODEL) }
+            overlap = model >= OVERLAP_MODEL, moreOverlap = model >= MORE_OVERLAP_MODEL) }
         val interaction = if (conversation == null && model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
             ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.
@@ -304,6 +350,7 @@ object Obbligato {
         for (frame in 0 until frames) {
             if (frame % CONTROL_BLOCK == 0) {
                 if (Thread.currentThread().isInterrupted) throw InterruptedException("OBBLIGATO render cancelled")
+                if (cancelled()) throw CancellationException("OBBLIGATO render no longer wanted")
                 val t = frame.toDouble() / RATE
                 // Every decision reads the previous complete source-activity snapshot.
                 // The two bores retain stable mouth pressure throughout a prominence trade.

@@ -12,6 +12,7 @@ object SynthCaches {
         FlockHeld.clearCache()
         OverlapHeld.clearCache()
         TrefoilHeld.clearCache()
+        ObbligatoHeld.clearCache()
         Otis.clearCache()
         Ferry.clearCache()
         MeridianMotion.clearCache()

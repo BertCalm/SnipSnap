@@ -397,6 +397,8 @@ import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
 import com.snipsnap.synth.Obbligato
 import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoPlayback
+import com.snipsnap.shell.ObbligatoPadMaker
 import com.snipsnap.synth.ObbligatoRelationship
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
@@ -912,6 +914,7 @@ fun SynthScreen(
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
                             .firstOrNull { it.voice == v }
+                        else if (e == Engine.OBBLIGATO) seed.seededDrafts.filterIsInstance<ObbligatoPatch>().firstOrNull()
                         else if (e == Engine.OVERLAP) seed.seededDrafts.filterIsInstance<OverlapPatch>()
                             .firstOrNull { it.topology == v } else null
                     // The bag's value where it parses, the default where it
@@ -1085,7 +1088,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch ||
+            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1182,6 +1185,12 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: AccordPatch(name, voice as AccordVoice, controls)
+        }
+        if (engine == Engine.OBBLIGATO) {
+            val current = loadedPatchesByVoice[engine to voice] as? ObbligatoPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: ObbligatoPatch(name, controls)
         }
         if (engine == Engine.OVERLAP) {
             // Mode, note and release edits can share a frame with SAVE/SEND.
@@ -1410,6 +1419,9 @@ fun SynthScreen(
                 Engine.ACCORD -> loadedPatchesByVoice[pair] = AccordPatch(
                     engine.patchDisplayName(voice), voice as AccordVoice, macrosByVoice.getValue(pair),
                 )
+                Engine.OBBLIGATO -> loadedPatchesByVoice[pair] = ObbligatoPatch(
+                    engine.patchDisplayName(voice), macrosByVoice.getValue(pair),
+                )
                 Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
                 Engine.WICK -> loadedPatchesByVoice[pair] = WickPatch(
@@ -1487,6 +1499,7 @@ fun SynthScreen(
         }
         keepOhmMacros(values)
         keepMeridianMacros(values)
+        if (engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
     }
     fun updateOhmPerformance(edit: (OhmPatch) -> OhmPatch) {
         if (engine != Engine.OHM) return
@@ -1549,6 +1562,18 @@ fun SynthScreen(
         settings.remove(presetSettingsKey(engine, voice))
         loadedPatchesByVoice[engine to voice] = change(patch)
         // Navigation can dispose the screen before its composition effects.
+        SynthDrafts.write(settings, currentDrafts())
+    }
+    fun updateObbligatoPatch(change: (ObbligatoPatch) -> ObbligatoPatch) {
+        val name = loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)
+        val patch = buildCurrentPatch(name) as? ObbligatoPatch ?: return
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        val controls = Obbligato.defaults() + updated.macros
+        macrosByVoice[engine to voice] = controls
+        for ((key, value) in controls) settings[macroSettingsKey(engine, voice, key)] = value.toString()
         SynthDrafts.write(settings, currentDrafts())
     }
     fun updateOverlapPatch(change: (OverlapPatch) -> OverlapPatch) {
@@ -1863,6 +1888,8 @@ fun SynthScreen(
     var rendering by remember { mutableStateOf(false) }
     val sampleHeldPreview = if (engine == Engine.TREFOIL) rememberTrefoilHeldPreview(
         buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch,
+    ) { onToast(Copy.RENDER_FAILED) } else if (engine == Engine.OBBLIGATO) rememberObbligatoHeldPreview(
+        buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch,
     ) { onToast(Copy.RENDER_FAILED) } else if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
         buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
     ) { onToast(Copy.RENDER_FAILED) } else rememberFlockHeldPreview(
@@ -2105,6 +2132,7 @@ fun SynthScreen(
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is ObbligatoPatch -> patch.midi
                     is AccordPatch -> patch.midi
                     is OtisPatch -> Otis.midiFor(patch)
                     is WickPatch -> patch.midi
@@ -2137,6 +2165,7 @@ fun SynthScreen(
                         // gated pads and SURFACE keep the unfaded loop source.
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
+                                patch is ObbligatoPatch && patch.playback == ObbligatoPlayback.HELD -> ObbligatoPadMaker.ONE_SHOT_FADE_MS
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
                                 patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD -> TrefoilPadMaker.ONE_SHOT_FADE_MS
                                 patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> OverlapPadMaker.ONE_SHOT_FADE_MS
@@ -2304,6 +2333,7 @@ fun SynthScreen(
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
         (engine == Engine.TREFOIL && TrefoilPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch)) ||
+        (engine == Engine.OBBLIGATO && ObbligatoPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
@@ -2394,6 +2424,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
+        Engine.OBBLIGATO -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch
+            if (ObbligatoPadMaker.supports(patch)) ObbligatoHeldSpec(ObbligatoPadMaker.Spec(patch)) else null
+        }
         Engine.OVERLAP -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
             if (OverlapPadMaker.supports(patch)) HeldSpec.Overlap(OverlapPadMaker.Spec(patch)) else null
@@ -2448,7 +2482,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2487,7 +2521,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2504,7 +2538,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2739,6 +2773,8 @@ fun SynthScreen(
                         is OpenSkyPatch -> patch.render(cancelled)
                         is TrefoilPatch -> if (patch.playback == TrefoilPlayback.HELD)
                             TrefoilPadMaker.deliveryRecipe(patch).render() else patch.render()
+                        is ObbligatoPatch -> if (patch.playback == ObbligatoPlayback.HELD)
+                            ObbligatoPadMaker.deliveryRecipe(patch).render() else patch.render()
                         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD)
                             OverlapPadMaker.deliveryRecipe(patch).render() else patch.render()
                         else -> patch.render()
@@ -2780,8 +2816,10 @@ fun SynthScreen(
             recipe = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).recipe
                 else if (patch is TrefoilPatch && patch.playback == TrefoilPlayback.HELD)
                 TrefoilPadMaker.deliveryRecipe(patch)
+                else if (patch is ObbligatoPatch && patch.playback == ObbligatoPlayback.HELD)
+                    ObbligatoPadMaker.deliveryRecipe(patch)
                 else if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
-                OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
+                    OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
             source = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).source else emptyMap()) + (Spread.FROM_KEY to "SYNTH"),
         )
         appScope.launch {
@@ -2896,6 +2934,14 @@ fun SynthScreen(
                     ) {
                         presets.binOpen = true
                     }
+                }
+
+                if (engine == Engine.OBBLIGATO) {
+                    ObbligatoPerformanceControls(
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as ObbligatoPatch,
+                        settings = settings, fill = classColor, scheme = scheme,
+                        onEdit = ::updateObbligatoPatch,
+                    )
                 }
 
                 if (engine == Engine.OVERLAP) {
@@ -3115,13 +3161,15 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is TrefoilPatch && loadedPatch.playback == TrefoilPlayback.HELD)
                         TrefoilHeld.macrosFor(loadedPatch.voice).filter { it.name != "WEAVE" }
+                    else if (loadedPatch is ObbligatoPatch && loadedPatch.playback == ObbligatoPlayback.HELD)
+                        Obbligato.macrosFor().filterNot { it.name == "HOLD" }
                     else if (loadedPatch is OverlapPatch && loadedPatch.playback == OverlapPlayback.HELD)
                         OverlapHeld.macrosFor(loadedPatch.topology)
                     else if (loadedPatch is OverlapPatch) Overlap.macrosFor(loadedPatch.topology, loadedPatch.model)
@@ -3163,6 +3211,10 @@ fun SynthScreen(
                                 TrefoilHeld.defaults(voice as TrefoilVoice) +
                                     TrefoilHeld.macrosFor(voice as TrefoilVoice).associate { spec -> spec.name to
                                         if (spec.name == "WEAVE") TrefoilHeld.MIN_MOVING_WEAVE + random.nextFloat() * (1f - TrefoilHeld.MIN_MOVING_WEAVE) else random.nextFloat() }
+                            engine == Engine.OBBLIGATO &&
+                                (loadedPatchesByVoice[engine to voice] as? ObbligatoPatch)?.playback == ObbligatoPlayback.HELD ->
+                                Obbligato.defaults() + Obbligato.macrosFor().filterNot { it.name == "HOLD" }
+                                    .associate { it.name to random.nextFloat() } + ("HOLD" to 1f)
                             engine == Engine.OVERLAP &&
                                 (loadedPatchesByVoice[engine to voice] as? OverlapPatch)?.playback == OverlapPlayback.HELD ->
                                 OverlapHeld.defaults(voice as OverlapTopology) +
@@ -3217,7 +3269,7 @@ fun SynthScreen(
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
                         ensureNativeDraft()
-                        if (engine == Engine.WICK) SynthDrafts.write(settings, currentDrafts())
+                        if (engine == Engine.WICK || engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
                     }
                 }
 
@@ -3549,22 +3601,7 @@ fun SynthScreen(
                 }
 
                 if (engine == Engine.OBBLIGATO) {
-                    val duet = loadedPatch as? ObbligatoPatch
-                    val velocity = duet?.velocity ?: Obbligato.DEFAULT_VELOCITY
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = velocity,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
                     TapeText("BOND ${obbligatoBondLabel(macros.getValue("BOND"))}", TapeType.pixelSmall, scheme.ink2.tape)
-                    TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
                 if (engine == Engine.MERIDIAN) {
@@ -3827,7 +3864,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -3838,6 +3875,9 @@ fun SynthScreen(
                         } else if (engine == Engine.TREFOIL) updateTrefoilPatch {
                             it.copy(releaseSeconds = TrefoilPadMaker.RELEASE.value(fraction)
                                 .coerceIn(TrefoilPadMaker.RELEASE.lo, TrefoilPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.OBBLIGATO) updateObbligatoPatch {
+                            it.copy(releaseSeconds = ObbligatoPadMaker.RELEASE.value(fraction)
+                                .coerceIn(ObbligatoPadMaker.RELEASE.lo, ObbligatoPadMaker.RELEASE.hi))
                         } else if (engine == Engine.OVERLAP) updateOverlapPatch {
                             it.copy(releaseSeconds = OverlapPadMaker.RELEASE.value(fraction)
                                 .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi))

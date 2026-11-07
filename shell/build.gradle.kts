@@ -331,6 +331,17 @@ tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
 }
 
+/** The wide-register duet, actual held-note playback and four portable keygroup instruments. */
+tasks.register<JavaExec>("generateObbligatoPerformanceAudition") {
+    group = "distribution"
+    description = "Render OBBLIGATO phrase/held comparisons across C3-C6, actual taps and MPC instruments."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ObbligatoPerformanceAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("obbligatoPerformanceOutput").orElse("${rootDir}/testkit/obbligato-performance-audition").get())
+}
+
 /** The phone's nine approved cultural passages, all five playback modes and the complete portable bank. */
 tasks.register<JavaExec>("generateConfluenceSelectedAudition") {
     group = "distribution"

@@ -89,8 +89,9 @@ object Cli {
         |                        (LATTICE: WARM/PLUCK/HOLLOW; --midi 36..84 --velocity 0..1;
         |                        --patch recipe.patch --macros COLOR=.8,HOLD=1;
         |                        WAV + complete .patch; HOLD=1 exports a sustained loop)
-        |                        (OBBLIGATO AIR_REED: --seed N sets players;
-        |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
+        |                        (OBBLIGATO AIR_REED: --seed N sets players; --model 11 enables C3..C6;
+        |                        saved HELD --patch supports --instrument [--release .1..1.5];
+        |                        Harmony/Play/Fight/Protect; WAV + complete .patch recipe)
         |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
         |                         --macros HOLD=1 loops aftermath; --instrument [--release S] keeps encounter;
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)

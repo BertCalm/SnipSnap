@@ -44,7 +44,7 @@ class ObbligatoKitTest {
             assertTrue(patch.name.startsWith(relationship.first + " "), "pad ${row * 4 + column + 1} names the wrong player relationship")
             assertEquals(midi, patch.midi)
             assertEquals(relationship.second, patch.macros.getValue("BOND"))
-            assertEquals(10, patch.model, "new factory pads must use the approved longer-overlap renderer")
+            assertEquals(11, patch.model, "new factory pads must use the approved longer-overlap renderer")
             assertEquals(.8f, patch.velocity)
             assertEquals(0, patch.seed)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
@@ -112,7 +112,7 @@ class ObbligatoKitTest {
                 assertEquals(listOf(1 to 41, 42 to 84, 85 to 127), pad.velocityLayers.map { it.velStart to it.velEnd })
                 assertEquals(listOf("0.3", "0.6", "0.8"), listOf("velocitySoft", "velocityMid", "velocityMain").map { pad.source[it] })
                 assertEquals("peak-match-main", pad.source["velocityNormalization"])
-                assertEquals("10", pad.source["model"])
+                assertEquals("11", pad.source["model"])
                 assertEquals(patch.midi.toString(), pad.source["midi"])
                 assertEquals("0", pad.source["seed"])
 

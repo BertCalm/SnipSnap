@@ -594,7 +594,7 @@ class ObbligatoTest {
             assertTrue(!error.message.isNullOrBlank(), "invalid macro refusal needs a useful diagnostic")
             assertFailsWith<IllegalArgumentException> { ObbligatoPatch("Invalid", bad) }
         }
-        for (midi in listOf(59, 73)) assertFailsWith<IllegalArgumentException> { Obbligato.probe(midi = midi) }
+        for (midi in listOf(47, 85)) assertFailsWith<IllegalArgumentException> { Obbligato.probe(midi = midi) }
         for (velocity in listOf(-.1f, 1.1f, Float.NaN, Float.POSITIVE_INFINITY)) {
             assertFailsWith<IllegalArgumentException> { Obbligato.probe(velocity = velocity) }
             assertFailsWith<IllegalArgumentException> { ObbligatoPatch("Invalid", emptyMap(), velocity = velocity) }
