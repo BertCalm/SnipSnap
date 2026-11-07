@@ -83,7 +83,15 @@ Android compilation is separate evidence from executing device tests.
 ./gradlew --no-daemon :synth:generateTrefoilHeldAudition
 python3 experiments/trefoil-hold/native_reference_check.py testkit/trefoil-held-native
 ./gradlew --no-daemon :shell:generateTrefoilHeldMpc
+python3 experiments/trefoil-hold/render_mpc_preview.py testkit/trefoil-held-mpc
 ```
+
+The preview helper compiles a small score against the built production JVM jars,
+reads the actual exported PCM24 roots and plays them through `InstrumentEngine`.
+Its six-second excerpt crosses a real C4 repeat at 2.556 seconds and lifts the
+key at 5.35 seconds. The sample source and loop markers are unchanged; the
+excerpt has a 20 ms presentation fade at its start. Through the repeat, measured
+error energy against the source is below 8.2e-13 after a single gain fit.
 
 The trial has three native roots with complete loop metadata. Open its `.xty`
 on MPC 3 or the `.xpm` in its TrackData folder on MPC 2; retain the whole folder.
