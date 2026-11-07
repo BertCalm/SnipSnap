@@ -22,7 +22,7 @@ class MeridianPresetsTest {
         val matched: Snip by lazy { AuditionLevel.level(snip) }
         val held: Meridian.HeldResult? by lazy {
             if (Meridian.isLoop(patch.macros, patch.model))
-                Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext)
+                Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
             else null
         }
         val analysis: FloatArray by lazy {
@@ -41,7 +41,8 @@ class MeridianPresetsTest {
     private companion object {
         val names = listOf("FIRST ARC", "BACK ARC", "CLOSE GRAIN", "DEEP KNOCK",
             "STILL PAIR", "LONG TRAIL", "ROUND THREAD", "FINE STRAND")
-        val readings by lazy { MeridianPresets.all().map(::Reading) }
+        val sweep get() = MeridianPresets.forVoice(MeridianVoice.SWEEP)
+        val readings by lazy { sweep.map(::Reading) }
         val byName by lazy { readings.associateBy { it.patch.name } }
         val drums = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
             DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
@@ -84,11 +85,11 @@ class MeridianPresetsTest {
 
     @Test
     fun `eight complete model two recipes are registered with six finite and two held last`() {
-        val patches = MeridianPresets.all()
+        val patches = sweep
         assertEquals(names, patches.map { it.name })
         assertEquals(patches, MeridianPresets.forVoice(MeridianVoice.SWEEP))
         assertEquals(patches, Presets.forVoice(MeridianPatch.ENGINE, MeridianVoice.SWEEP.name))
-        assertEquals(patches, Presets.all().filterIsInstance<MeridianPatch>())
+        assertEquals(patches, Presets.all().filterIsInstance<MeridianPatch>().filter { it.voice == MeridianVoice.SWEEP })
         assertTrue(Presets.forVoice(MeridianPatch.ENGINE, "UNKNOWN").isEmpty())
         assertFalse(MeridianPatch.ENGINE in PatchTypes.ROSTERLESS)
         for ((index, patch) in patches.withIndex()) {
@@ -109,8 +110,8 @@ class MeridianPresetsTest {
 
     @Test
     fun `first arc keeps the accepted starting sound and back arc changes only its direction`() {
-        val first = MeridianPresets.all().first()
-        val reverse = MeridianPresets.all()[1]
+        val first = sweep.first()
+        val reverse = sweep[1]
         assertEquals(Meridian.defaults(MeridianVoice.SWEEP), first.macros)
         assertEquals(first.macros + ("LATITUDE" to .2f), reverse.macros)
         val original = Meridian.render(MeridianVoice.SWEEP, Meridian.defaults(MeridianVoice.SWEEP),
@@ -120,7 +121,65 @@ class MeridianPresetsTest {
     }
 
     @Test
-    fun `every preset renders finite unclipped pitched audio at the house level`() {
+    fun `new voice factories register complete model three finite and held recipes and replay their real loop regions`() {
+        val voices = listOf(
+            MeridianVoice.CLACK to listOf("HARD GRAIN", "GRAIN THREAD"),
+            MeridianVoice.CHIME to listOf("HOLLOW TONE", "LANTERN TONE"),
+            MeridianVoice.RASP to listOf("BRIGHT EDGE", "EDGE THREAD"),
+        )
+        val added = voices.flatMap { (voice, names) ->
+            val patches = MeridianPresets.forVoice(voice)
+            assertEquals(names, patches.map { it.name }, voice.name)
+            assertEquals(patches, Presets.forVoice(MeridianPatch.ENGINE, voice.name))
+            assertEquals(listOf(false, true), patches.map { Meridian.isLoop(it.macros, it.model) }, voice.name)
+            for (patch in patches) {
+                assertEquals(voice, patch.voice)
+                assertEquals(3, patch.model, patch.name)
+                assertEquals(57, patch.midi, patch.name)
+                assertEquals(1f, patch.velocity, patch.name)
+                assertEquals(4810, patch.seedContext, patch.name)
+                assertEquals(.5f, patch.macros.getValue("TUNE"))
+                assertEquals(Meridian.macrosFor(voice).map { it.name }.toSet(), patch.macros.keys)
+                assertTrue(patch.macros.values.all { it.isFinite() && it in 0f..1f })
+                assertEquals(patch, Presets.byName(patch.engine, patch.voiceName, patch.name))
+                assertTrue(MeridianPresets.roleDescription(patch.name)?.isNotBlank() == true, patch.name)
+
+                val json = patch.toJsonText()
+                val restored = MeridianPatch.fromJsonText(json)
+                assertEquals(patch, restored, patch.name)
+                assertEquals(json, restored.toJsonText(), patch.name)
+                val fields = restored.toJsonValue().entries
+                assertEquals(3, fields.getValue("model").int())
+                assertEquals(voice.name, fields.getValue("voice").str())
+                assertEquals(57, fields.getValue("midi").int())
+                assertEquals(1.0, fields.getValue("velocity").num())
+                assertEquals(4810, fields.getValue("seedContext").int())
+                assertEquals(patch.macros.keys, fields.getValue("macros").obj().keys)
+                val reading = Reading(patch)
+                assertContentEquals(reading.snip.samples, restored.render().samples, "${patch.name}: JSON replay")
+                val held = reading.held
+                if (held != null) {
+                    assertContentEquals(reading.snip.samples, held.snip.samples, patch.name)
+                    assertTrue(held.loopStartFrame >= 256, patch.name)
+                    assertEquals(held.loopStartFrame * 2, held.loopEndFrameExclusive, patch.name)
+                    assertEquals(reading.snip.frameCount, held.loopEndFrameExclusive, patch.name)
+                    assertTrue(held.seamError.isFinite() && held.seamError < Keys.MAX_SEAM_ERROR, patch.name)
+                    assertTrue(held.cycleError.isFinite() && held.cycleError < 1e-3, patch.name)
+                    assertTrue(held.stateError.isFinite() && held.stateError < 1e-3, patch.name)
+                    assertTrue(held.noiseStateError.isFinite() && held.noiseStateError < 1e-9, patch.name)
+                    assertEquals(held.seamError, Keys.seamError(held.snip.samples, held.loopStartFrame), 1e-12,
+                        "${patch.name}: held metadata must describe the actual retained preceding cycle")
+                }
+            }
+            patches
+        }
+        assertEquals(14, MeridianPresets.all().size)
+        assertEquals(sweep + added, MeridianPresets.all(), "the original eight keep their ordering before the new profiles")
+        assertEquals(MeridianPresets.all(), Presets.all().filterIsInstance<MeridianPatch>())
+    }
+
+    @Test
+    fun `the original SWEEP presets render finite unclipped pitched audio at the house level`() {
         for (r in readings) {
             val label = r.patch.name
             assertEquals(1, r.snip.channels, label)
@@ -140,7 +199,7 @@ class MeridianPresetsTest {
     }
 
     @Test
-    fun `every recipe saves all model note velocity seed and macro fields and replays exactly`() {
+    fun `the original SWEEP recipes save model two note velocity seed and macro fields and replay exactly`() {
         for (r in readings) {
             val original = r.patch
             val json = original.toJsonText()
@@ -164,10 +223,11 @@ class MeridianPresetsTest {
 
     @Test
     fun `preset names are short uppercase unique and avoid reserved or maker names`() {
-        assertEquals(names.size, names.map { it.trim().uppercase(Locale.ROOT) }.toSet().size)
+        val patches = MeridianPresets.all()
+        assertEquals(patches.size, patches.map { it.name.trim().uppercase(Locale.ROOT) }.toSet().size)
         val reserved = PatchTypes.engines + MeridianVoice.entries.map { it.name } +
             FxChain.SECTION_NAMES.map { it.uppercase(Locale.ROOT) }
-        for (patch in MeridianPresets.all()) {
+        for (patch in patches) {
             assertTrue(patch.name.isNotBlank() && patch.name.length <= 14, patch.name)
             assertEquals(patch.name.uppercase(Locale.ROOT), patch.name)
             val words = patch.name.split(Regex("[^A-Z0-9]+")).filter { it.isNotBlank() }
@@ -177,11 +237,13 @@ class MeridianPresetsTest {
     }
 
     @Test
-    fun `every macro vector is separated and chosen roles differ beyond level and phase`() {
-        val presets = MeridianPresets.all()
-        for ((index, a) in presets.withIndex()) for (b in presets.drop(index + 1)) {
-            val spread = PresetTestSupport.rmsDistance(a.macros, b.macros)
-            assertTrue(spread > .05f, "${a.name} and ${b.name} collapse to the same macro neighborhood: $spread")
+    fun `macro vectors are separated within each voice and the original SWEEP roles differ beyond level and phase`() {
+        for (voice in MeridianVoice.entries) {
+            val presets = MeridianPresets.forVoice(voice)
+            for ((index, a) in presets.withIndex()) for (b in presets.drop(index + 1)) {
+                val spread = PresetTestSupport.rmsDistance(a.macros, b.macros)
+                assertTrue(spread > .05f, "${a.name} and ${b.name} collapse to the same macro neighborhood: $spread")
+            }
         }
         val pairs = listOf("FIRST ARC" to "BACK ARC", "CLOSE GRAIN" to "DEEP KNOCK",
             "STILL PAIR" to "LONG TRAIL", "ROUND THREAD" to "FINE STRAND")
@@ -201,8 +263,8 @@ class MeridianPresetsTest {
     }
 
     @Test
-    fun `both held factory recipes retain independently measured closed sampler regions`() {
-        for (patch in MeridianPresets.all().takeLast(2)) {
+    fun `both original SWEEP held factory recipes retain independently measured closed sampler regions`() {
+        for (patch in sweep.takeLast(2)) {
             val held = requireNotNull(byName.getValue(patch.name).held)
             assertContentEquals(byName.getValue(patch.name).snip.samples, held.snip.samples, patch.name)
             assertTrue(held.loopStartFrame >= 256 && held.loopEndFrameExclusive <= held.snip.frameCount, patch.name)

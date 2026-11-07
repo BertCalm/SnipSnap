@@ -131,7 +131,8 @@ class ArcoBuzzTest {
     @Test
     fun `at BUZZ 0 every preset, each default note and each default loop is the code before BUZZ, sample for sample`() {
         val checked = mutableListOf<String>()
-        for (p in ArcoPresets.all()) {
+        // The hashes were taken before BUZZ, when ARCO was CELLO and ERHU: SARANGI (R2, after BUZZ) has none, and its BUZZ 0 is held by the same buffer rule below.
+        for (p in ArcoPresets.all().filter { it.voice in ArcoMeasure.BODY_VOICES }) {
             val key = "${p.voice} ${p.name}"
             assertEquals(0f, p.macros.getValue("BUZZ"), "$key: a factory preset is written at BUZZ 0")
             assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros)), "$key changed")
@@ -139,7 +140,7 @@ class ArcoBuzzTest {
             if (!Arco.isLoop(p.macros.getValue("HOLD"))) assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
             checked += key
         }
-        for (v in ArcoVoice.entries) {
+        for (v in ArcoMeasure.BODY_VOICES) {
             val note = "$v DEFAULT NOTE"
             val loop = "$v DEFAULT LOOP"
             assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v)).samples), "$note changed")
@@ -205,7 +206,8 @@ class ArcoBuzzTest {
     fun `SCRAMBLE draws the five knobs it drew before BUZZ, never rolls BUZZ, and leaves the dice where it found them`() {
         val near = ArcoPatch("Near", ArcoVoice.CELLO, Arco.defaults(ArcoVoice.CELLO) + mapOf("GRIP" to 0.2f, "BUZZ" to 0.7f))
         var rolls = 0
-        for (voice in ArcoVoice.entries) for (temperature in listOf(0.35f, 1f)) for (n in listOf(null, near)) for (seed in 0 until 100) {
+        // The frozen copy is the five knobs CELLO and ERHU had before BUZZ (BODY among them); SARANGI's scramble is held by ArcoSarangiTest.
+        for (voice in ArcoMeasure.BODY_VOICES) for (temperature in listOf(0.35f, 1f)) for (n in listOf(null, near)) for (seed in 0 until 100) {
             val a = Random(seed)
             val b = Random(seed)
             val now = Arco.scramble(voice, a, temperature, n)
@@ -239,15 +241,9 @@ class ArcoBuzzTest {
     @Test
     fun `at BUZZ 1 every loop of R1b's grid closes under the Organ's bar`() {
         val cases = ArcoVoice.entries.flatMap { voice ->
-            (0..Arco.tuneSemitones(voice)).flatMap { step ->
+            ArcoMeasure.loopGridSteps(voice).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
-                listOf(
-                    "defaults" to emptyMap(),
-                    "GRIP 0" to mapOf("GRIP" to 0f),
-                    "GRIP 1" to mapOf("GRIP" to 1f),
-                    "BODY 0" to mapOf("BODY" to 0f),
-                    "BODY 1" to mapOf("BODY" to 1f),
-                ).map { (corner, knobs) -> LoopCase(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f, "BUZZ" to 1f)) }
+                ArcoMeasure.loopGridCorners(voice).map { (corner, knobs) -> LoopCase(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f, "BUZZ" to 1f)) }
             }
         }
         val outcomes = cases.parallelStream().map { c ->
@@ -255,8 +251,9 @@ class ArcoBuzzTest {
             val r = Arco.renderLoopMeasured(c.voice, c.macros)
             LoopOutcome(c, r.seam, r.loop.all { it.isFinite() && it in -1f..1f }, r.loop.maxOf { abs(it) }, r.loop.size, (System.nanoTime() - started) / 1_000_000L)
         }.toList()
-        assertEquals(225, outcomes.size)
-        for (voice in ArcoVoice.entries) for (corner in listOf("defaults", "GRIP 0", "GRIP 1", "BODY 0", "BODY 1")) {
+        assertEquals(225, outcomes.count { it.case.voice in ArcoMeasure.BODY_VOICES }, "R1b's grid is 225 loops")
+        assertEquals(ArcoMeasure.SARANGI_LOOP_GRID, outcomes.count { it.case.voice == ArcoVoice.SARANGI })
+        for (voice in ArcoVoice.entries) for (corner in ArcoMeasure.loopGridCorners(voice).map { it.first }) {
             val row = outcomes.filter { it.case.voice == voice && it.case.corner == corner }
             val worst = row.maxBy { it.seam }
             println(
@@ -342,8 +339,10 @@ class ArcoBuzzTest {
             "fixed 1.0, gain 0.45 (TERRA's)" to Arco.BuzzLaw(1f, 1f, 0.45f),
         )
         val levels = listOf(0.25f, 0.4f, 0.5f, 0.75f, 0.9f, 1f)
+        // SARANGI (R2): the law is held on its string at WASH 0, where nothing but BUZZ moves it. Its tarab rings at fixed pitches after the box and, at the
+        // default WASH, takes a share of the note BUZZ's noise would have had: that reading is printed below and not held (the design record's "R2: SARANGI").
         for (voice in ArcoVoice.entries) for (tune in TUNES) {
-            val base = Arco.defaults(voice) + ("TUNE" to tune)
+            val base = Arco.defaults(voice) + ("TUNE" to tune) + if (Arco.hasBody(voice)) emptyMap() else mapOf("WASH" to 0f)
             val plain = Arco.render(voice, base).samples
             for ((name, law) in laws) {
                 val moves = levels.map { b -> relativeDifference(plain, Arco.render(voice, base + ("BUZZ" to b), law).samples) }
@@ -353,6 +352,14 @@ class ArcoBuzzTest {
                     for (i in 1 until moves.size) assertTrue(moves[i] > moves[i - 1], "$voice tune $tune: BUZZ ${levels[i]} moves the note less than ${levels[i - 1]}")
                 }
             }
+        }
+        for (tune in TUNES) {
+            val voice = ArcoVoice.SARANGI
+            val base = Arco.defaults(voice) + ("TUNE" to tune)
+            val plain = Arco.render(voice, base).samples
+            val moves = levels.map { b -> relativeDifference(plain, Arco.render(voice, base + ("BUZZ" to b)).samples) }
+            println("ARCO BUZZ law SARANGI midi ${Arco.midiFor(voice, tune)} at its default WASH ${Arco.DEFAULT_WASH} (printed, not held): " + levels.zip(moves).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d)}" })
+            for (i in 1 until moves.size) assertTrue(moves[i] > moves[i - 1], "SARANGI tune $tune at the default WASH: BUZZ ${levels[i]} moves the note less than ${levels[i - 1]}")
         }
     }
 
@@ -393,7 +400,7 @@ class ArcoBuzzTest {
         val corners = ArcoVoice.entries.flatMap { voice ->
             val out = mutableListOf<Corner>()
             for (t in listOf(0f, 1f)) for (bow in listOf(0f, 1f)) for (grip in listOf(0f, 1f)) for (body in listOf(0f, 1f)) for (hold in listOf(0f, Arco.SCRAMBLE_HOLD_CEILING)) for (buzz in listOf(0.5f, 1f)) {
-                out += Corner(voice, mapOf("TUNE" to t, "BOW" to bow, "GRIP" to grip, "BODY" to body, "HOLD" to hold, "BUZZ" to buzz))
+                out += Corner(voice, mapOf("TUNE" to t, "BOW" to bow, "GRIP" to grip, Arco.boxKnob(voice) to body, "HOLD" to hold, "BUZZ" to buzz))
             }
             out
         }

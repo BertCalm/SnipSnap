@@ -485,13 +485,18 @@ Each with this file's default; none is built.
 5. **BUZZ's threshold law.** Fixed at 1.0 times the render's RMS with Terra's 0.45 (default) or
    falling from 1.5 to 0.5 times as BUZZ rises.
 6. **SARANGI's register.** ERHU's D4 to A5 (default for R2, no new window) or a sarangi's C3 or D3
-   for 24 semitones (one window map first).
+   for 24 semitones (one window map first). **Answered (the owner, 2026-11-07): D3, 24 semitones, D3
+   to D5.** The window map was drawn first and every step speaks along GRIP (the design record's "R2:
+   SARANGI, as built").
 7. **SARANGI's knobs.** WASH in BODY's slot, six macros (default); seven under the conventions'
-   reading; or WASH baked.
+   reading; or WASH baked. **Answered (2026-11-07): WASH in BODY's slot.** TUNE, BOW, GRIP, WASH, HOLD
+   and BUZZ; BODY held at its default with no lift, the box ERHU's skin.
 8. **The tarab's tuning.** CHROMATIC, 37 modes (default, S4/S5) or a raga row, which would need a
-   sourced table SilkScales does not have.
+   sourced table SilkScales does not have. **Answered (2026-11-07): CHROMATIC, 37 strings, D3 to D6,**
+   driven by the string after the box and cut where the string ends, t60 at most about 2 s.
 9. **SANTUR's bank or PLUCK's strings for the tarab.** The bank (default, decision 11's); the strings
-   only if the gate hears "resonators, not strings".
+   only if the gate hears "resonators, not strings". **Answered (2026-11-07): the bank.** PLUCK's
+   sympathetic strings stay the fallback for a "resonators, not strings" verdict, unbuilt.
 10. **A stab keygroup.** Build the one-shot only with it (default) or not at all.
 11. **ERHU's box.** Unchanged (default, decision 12 and the owner's "B, unsure"); S10's measured
     120 / 820 / 1,570 Hz skin is on record for whoever reopens it.

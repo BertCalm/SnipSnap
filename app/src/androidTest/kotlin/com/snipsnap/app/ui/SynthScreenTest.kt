@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
@@ -24,6 +25,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Eq
@@ -108,6 +110,118 @@ class SynthScreenTest : ComposeScreenTest() {
         button(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
 
     @Test
+    fun freshEncounterStartsAtApprovedRepliesAndKeepsThemThroughScrambleAndNavigation() {
+        show()
+        val initial = SynthDrafts.read(settings).filterIsInstance<OhmPatch>().single()
+        assertEquals(Ohm.replyRingPatch(), initial)
+        assertEquals(.5f, progress("REPLY"), 0f)
+        assertEquals(.5f, progress("RING"), 0f)
+        for ((macro, value) in initial.macros) assertEquals(value, progress(macro), 0f)
+        button("OHM GATHER").assertDoesNotExist()
+        button("HOLD").assertDoesNotExist()
+        button("MAKE INSTRUMENT").assertExists()
+
+        adjust("REPLY", .25f)
+        adjust("RING", .75f)
+        adjust("VELOCITY", .6f)
+        activate("MAKE INSTRUMENT")
+        adjust("RELEASE", .7f)
+        // The sheet's scrim and its visible button both expose CANCEL.
+        val cancel = compose.onAllNodesWithContentDescription("CANCEL", useUnmergedTree = true)
+            .fetchSemanticsNodes().last()
+        compose.runOnIdle { assertTrue(requireNotNull(cancel.config[SemanticsActions.OnClick].action).invoke()) }
+        pump()
+        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+        assertEquals(initial.copy(reply = .25f, ring = .75f, velocity = .6f,
+            releaseSeconds = OhmPadMaker.RELEASE.value(.7f), macros = expected.macros), expected)
+        button("NEXT ENGINE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        button("PREVIOUS ENGINE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.25f, progress("REPLY"), 0f)
+        assertEquals(.75f, progress("RING"), 0f)
+        compose.runOnIdle { generation++ }
+        pump()
+        compose.runOnIdle { assertEquals(expected, SynthDrafts.read(settings).filterIsInstance<OhmPatch>().single()) }
+        assertEquals(.25f, progress("REPLY"), 0f)
+        assertEquals(.75f, progress("RING"), 0f)
+    }
+
+    @Test
+    fun macroOnlyEncounterKeepsItsModelTwoControls() {
+        settings["macro.OHM.STRING.COMMUNE"] = ".73"
+        show()
+        button("OHM STEADY").assertIsSelected()
+        button("REPLY").assertDoesNotExist()
+        assertEquals(.73f, progress("COMMUNE"), 0f)
+        adjust("VELOCITY", .4f)
+        val saved = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+        assertEquals(2, saved.model)
+        assertEquals(.73f, saved.macros.getValue("COMMUNE"), 0f)
+    }
+
+    @Test
+    fun naturalRepliesCanBeSelectedFromAnOldEncounter() {
+        val original = OhmPatch("KEPT FINITE NOTE", Ohm.defaults(), model = 2)
+        settings["patch.OHM.STRING"] = original.toJsonText()
+        show()
+        button("OHM STEADY").assertIsSelected()
+        activate("PRESET Natural Replies")
+        val expected = Ohm.replyRingPatch()
+        assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+        button("OHM GATHER").assertDoesNotExist()
+    }
+
+    @Test
+    fun namedNaturalRepliesRestoreTheirApprovedMacrosAndRenderer() {
+        settings["preset.OHM.STRING"] = "Natural Replies"
+        show()
+        val expected = Ohm.replyRingPatch()
+        for ((macro, value) in expected.macros) assertEquals(value, progress(macro), 0f)
+        assertEquals(.5f, progress("REPLY"), 0f)
+        assertEquals(.5f, progress("RING"), 0f)
+        adjust("VELOCITY", .4f)
+        assertEquals(expected.copy(velocity = .4f), OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+    }
+
+    @Test
+    fun replyRingPadKeepsItsCompleteFiniteRecipeWhenSentAndReopened() {
+        val root = shelfRoot()
+        val dir = File(root, "REPLY KIT").apply { check(mkdirs()) }
+        val kit = Kit("REPLY KIT", emptyList())
+        KitStore.save(kit, dir)
+        settings["engine"] = "OHM"
+        settings["voice"] = "STRING"
+        show(root, KitShelf.Entry(dir, kit))
+        adjust("REPLY", .25f)
+        adjust("RING", .75f)
+        adjust("VELOCITY", .6f)
+        val expected = Ohm.replyRingPatch().copy(reply = .25f, ring = .75f, velocity = .6f)
+        activate("SEND TO PAD")
+        activate("${PadBanks.tag(1)}, EMPTY")
+        waitForPadWrite("the finite Reply/Ring pad", timeoutMillis = 60_000) { updatedKit.get()?.pad(1)?.recipe != null }
+        val pad = checkNotNull(KitStore.load(dir).pad(1))
+        val saved = PadRecipe.fromJsonValue(checkNotNull(pad.recipe)).patch as OhmPatch
+        assertEquals(expected.copy(name = saved.name), saved)
+        assertEquals(DrumClass.TONAL, pad.drumClass)
+        assertTrue(pad.oneShot && !pad.loop)
+        assertTrue(File(dir, pad.sampleFile).length() > 44)
+
+        activate("REOPEN PAD RECIPE")
+        activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
+        adjust("REPLY", .7f)
+        activate("NEXT ENGINE")
+        activate("PREVIOUS ENGINE")
+        assertEquals(.7f, progress("REPLY"), 0f)
+        assertEquals(.75f, progress("RING"), 0f)
+        button("UPDATE PAD ${PadBanks.tag(pad.slot)}").assertExists()
+        val reopened = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+        assertEquals(saved.copy(reply = .7f), reopened)
+    }
+
+    @Test
     fun legacyEncounterRetainsItsIdentityThroughEditsAndNavigation() {
         val source = OhmPatch("MY FAMILY", Ohm.defaults() + ("LENGTH" to .1f), midi = 57,
             velocity = .65f, seed = -905, gesture = OhmGesture.GATHER, model = 1)
@@ -190,14 +304,14 @@ class SynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun foreignRecipeInTheMakeBagFallsBackToANewModelTwoEncounter() {
+    fun foreignRecipeInTheMakeBagFallsBackToANewReplyRingEncounter() {
         settings["patch.OHM.STRING"] = """{"engine":"THUMP","version":1,"name":"OTHER","voice":"KICK","macros":{}}"""
         show()
-        button("OHM STEADY").assertIsSelected()
+        assertEquals(.5f, progress("REPLY"), 0f)
         adjust("VELOCITY", .4f)
         compose.runOnIdle {
             val patch = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
-            assertEquals(2, patch.model)
+            assertEquals(5, patch.model)
             assertEquals(60, patch.midi)
             assertEquals(.4f, patch.velocity)
             assertEquals(OhmGesture.STEADY, patch.gesture)
@@ -221,8 +335,11 @@ class SynthScreenTest : ComposeScreenTest() {
                     shelfRoot = root,
                     onToast = { recordedToasts += it },
                     onKitUpdated = { kit ->
-                        updatedKit.set(kit)
+                        // The entry first, then the signal: a test that sees
+                        // updatedKit must find the state write already made,
+                        // so waitForPadWrite's pump always draws the new kit.
                         currentEntry = currentEntry?.copy(kit = kit)
+                        updatedKit.set(kit)
                     },
                     onShelfAssetWritten = {},
                     onDroneToLoop = { _, _, _ -> },
@@ -277,7 +394,22 @@ class SynthScreenTest : ComposeScreenTest() {
         pump()
     }
 
-    /** Keep write failures visible: a refused pad must not look like an unexplained timeout. */
+    /**
+     * Keep write failures visible: a refused pad must not look like an
+     * unexplained timeout. Then give the screen one pump to draw the
+     * finished send.
+     *
+     * The pump is needed because the clock here is frozen. sendToSlot hands
+     * over the kit (onKitUpdated, which [condition] watches) and clears
+     * padChooser.sendBusy in its finally block, both in the same main-thread
+     * step. But waitFor returns the moment [condition] holds, with no frame
+     * drawn since. The semantics still show the send in flight: REOPEN PAD
+     * RECIPE disabled, and UPDATE PAD, where it is shown, disabled and named
+     * "…". [activate] rightly refuses a disabled control, so a test that
+     * reopens a pad straight after sending or updating one failed on that
+     * stale frame, not on the screen. The frames the pump advances run on
+     * the main thread, queued behind that step, so they show the send done.
+     */
     private fun waitForPadWrite(
         what: String,
         timeoutMillis: Long = 30_000,
@@ -289,6 +421,7 @@ class SynthScreenTest : ComposeScreenTest() {
             val messages = recordedToasts.joinToString(" | ").ifBlank { "<none>" }
             throw AssertionError("$what did not complete within ${timeoutMillis}ms. Captured SYNTH toasts: $messages", failure)
         }
+        pump()
     }
 
     @Test

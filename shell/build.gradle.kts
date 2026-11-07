@@ -1,5 +1,6 @@
 import java.util.Locale
 
+
 plugins {
     kotlin("jvm")
 }
@@ -184,6 +185,17 @@ tasks.register<JavaExec>("generateOhmExpandedHandoff") {
     args(providers.gradleProperty("ohmExpandedHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-handoff")
 }
 
+/** The five approved finite OHM Reply/Ring factories through the production keygroup exporter. */
+tasks.register<JavaExec>("generateOhmReplyRingHandoff") {
+    group = "distribution"
+    description = "Export five OHM Reply/Ring keygroups, 45 finite native zones, replay recipes and a verified MPC 2/3 ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OhmReplyRingHandoffGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("ohmReplyRingHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-reply-ring-handoff")
+}
+
 /** Package and play the approved CREASE sounds as continuous-onset held keys. */
 tasks.register<JavaExec>("generateCreaseKeysAudition") {
     group = "distribution"
@@ -319,6 +331,17 @@ tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
 }
 
+/** The wide-register duet, actual held-note playback and four portable keygroup instruments. */
+tasks.register<JavaExec>("generateObbligatoPerformanceAudition") {
+    group = "distribution"
+    description = "Render OBBLIGATO phrase/held comparisons across C3-C6, actual taps and MPC instruments."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ObbligatoPerformanceAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("obbligatoPerformanceOutput").orElse("${rootDir}/testkit/obbligato-performance-audition").get())
+}
+
 /** The phone's nine approved cultural passages, all five playback modes and the complete portable bank. */
 tasks.register<JavaExec>("generateConfluenceSelectedAudition") {
     group = "distribution"
@@ -397,6 +420,17 @@ tasks.register<JavaExec>("generateLatticeKeysAudition") {
     }
 }
 
+/** SARANGI's first listen (R2): its presets, WASH at three notes, a LOOP, its held keys and ERHU beside it, under testkit/arco-sarangi-audition/. See ArcoSarangiAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoSarangiAudition") {
+    group = "distribution"
+    description = "Render SARANGI's presets, WASH at D3, D4 and D5, a LOOP, its held keys and ERHU beside it, levelled, with a manifest, under testkit/arco-sarangi-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ArcoSarangiAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("arcoSarangiOutput").orElse("${rootDir}/testkit/arco-sarangi-audition").get())
+}
+
 /** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */
 tasks.register<JavaExec>("generateArcoHeldAudition") {
     group = "distribution"
@@ -448,4 +482,24 @@ tasks.register<JavaExec>("splitInstrumentPack") {
     mainClass.set("com.snipsnap.shell.InstrumentPackGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/loop-instruments-pack", "--split")
+}
+
+tasks.register<JavaExec>("generateFilamentHaloAudition") {
+    group = "distribution"
+    description = "Capture CURL body/halo once and compare independent release from exported PCM24."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FilamentHaloAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("filamentHaloOutput").orElse("${rootDir}/testkit/filament-halo-release").get())
+}
+
+tasks.register<JavaExec>("generateTrefoilHeldMpc") {
+    group = "distribution"
+    description = "Export the native three-root Trefoil HOLD sampler trial and render its note-off demonstration."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TrefoilHeldMpcGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }

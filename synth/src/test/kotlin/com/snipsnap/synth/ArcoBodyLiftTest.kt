@@ -176,7 +176,7 @@ class ArcoBodyLiftTest {
         assertTrue(Arco.plainGain(FloatArray(1000)) == 1f, "a silent buffer takes a gain of 1")
         assertTrue(Arco.plainGain(FloatArray(0)) == 1f, "an empty buffer takes a gain of 1")
 
-        for (body in listOf(0.5f, 0.75f, 1f)) for (voice in ArcoVoice.entries) {
+        for (body in listOf(0.5f, 0.75f, 1f)) for (voice in ArcoMeasure.BODY_VOICES) {
             val out = Arco.finished(FloatArray(ArcoLiftRig.RAW_RATE), voice, body, ArcoLiftRig.RAW_RATE)
             assertTrue(out.isNotEmpty() && out.all { it == 0f }, "$voice BODY $body: a silent string is not exact zeros")
         }
@@ -336,7 +336,7 @@ class ArcoBodyLiftTest {
     fun `the knob never goes backwards, finished rms is non-decreasing in BODY from 0 point 5 to 1 on all 45 TUNE steps`() {
         val tolerance = 0.01
         class Sweep(val voice: ArcoVoice, val step: Int, val rmsDb: DoubleArray)
-        val cells = ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }
+        val cells = ArcoMeasure.BODY_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }
         // The raw bowed string does not depend on BODY ([Arco.bow] never reads it), so each note is bowed once and finished at every BODY of the sweep: 45 bowings and 495 finishes, not 495 bowings.
         // Copilot's review of #445 asked for this; the end-to-end route, [Arco.render], is checked against the same finish on a few cells just below, so the sweep still reads the engine's own pipeline.
         val sweeps = with(ArcoLiftRig) {
@@ -369,7 +369,7 @@ class ArcoBodyLiftTest {
             if (s.rmsDb[s.rmsDb.size - 1] - s.rmsDb[s.rmsDb.size - 2] > 2 * tolerance && falls(swapped, tolerance).isEmpty()) problems += "control: $tag with its last two values swapped does not fall"
         }
         println("ARCO lift knob sweep: finished rms rise over the plain (BODY 0.5), dB, min / median / max over the TUNE steps of each voice, BODY 0.5 to 1.0 in steps of 0.05; worst fall from one BODY to the next: ${f(worstFall, 4)} dB ${worstWhere}")
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val mine = sweeps.filter { it.voice == voice }
             val idle = mine.filter { ArcoLiftRig.measured(voice, it.step, 1f).lift.let { l -> l.delivered >= l.asked } }
             for (i in sweepBodies.indices) {
@@ -398,7 +398,7 @@ class ArcoBodyLiftTest {
     @Test
     fun `the knee is continuous, the render at BODY 0 point 5000001 is within 1e-5 of the peak of the render at 0 point 5`() {
         class Knee(val voice: ArcoVoice, val step: Int, val above: Double, val control: Double)
-        val cells = ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }
+        val cells = ArcoMeasure.BODY_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }
         val knees = with(ArcoLiftRig) {
             cells.pmap { (voice, step) ->
                 val plain = render(voice, step, 0.5f)
@@ -406,8 +406,8 @@ class ArcoBodyLiftTest {
             }
         }
         println("ARCO lift knee: largest difference over the peak, BODY 0.5000001 against 0.5 (bar 1e-5) and BODY 0.55 against 0.5 (control, bar over 1e-2): " +
-            ArcoVoice.entries.joinToString("; ") { v -> "$v ${"%.2e".format(java.util.Locale.ROOT, knees.filter { it.voice == v }.maxOf { it.above })} (worst step ${knees.filter { it.voice == v }.maxBy { it.above }.step}) / ${"%.2e".format(java.util.Locale.ROOT, knees.filter { it.voice == v }.minOf { it.control })}" })
-        for (v in ArcoVoice.entries) {
+            ArcoMeasure.BODY_VOICES.joinToString("; ") { v -> "$v ${"%.2e".format(java.util.Locale.ROOT, knees.filter { it.voice == v }.maxOf { it.above })} (worst step ${knees.filter { it.voice == v }.maxBy { it.above }.step}) / ${"%.2e".format(java.util.Locale.ROOT, knees.filter { it.voice == v }.minOf { it.control })}" })
+        for (v in ArcoMeasure.BODY_VOICES) {
             val worst = knees.filter { it.voice == v }.maxBy { it.above }
             val plain = ArcoLiftRig.render(v, worst.step, 0.5f)
             println(

@@ -270,7 +270,7 @@ object SynthRoot {
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
         is MurmurPatch -> Field(patch.midi, Murmur.MIN_MIDI..Murmur.MAX_MIDI) { patch.copy(midi = it) }
         is NacrePatch -> Field(patch.midi, Nacre.MIN_MIDI..Nacre.MAX_MIDI) { patch.copy(midi = it) }
-        is ObbligatoPatch -> Field(patch.midi, Obbligato.MIDI_MIN..Obbligato.MIDI_MAX) { patch.copy(midi = it) }
+        is ObbligatoPatch -> Field(patch.midi, Obbligato.midiRange(patch.model)) { patch.copy(midi = it) }
         is OhmPatch -> Field(patch.midi, Ohm.MIDI_MIN..Ohm.MIDI_MAX) { patch.copy(midi = it) }
         is OpenSkyPatch -> Field(patch.midi, OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX) { patch.copy(midi = it) }
         is OrphicaPatch -> Field(patch.config.midi, Orphica.MIDI_MIN..Orphica.MIDI_MAX) { patch.copy(config = patch.config.copy(midi = it)) }

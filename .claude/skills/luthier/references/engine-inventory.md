@@ -24,7 +24,7 @@ from the audio.
 | PLUCK | Karplus-Strong string: nylon, harp, koto, banjo, sitar (jawari fold-back) | TUNE DAMP PICK BODY DOUBLE (+STRIKE) | T |
 | SILK† | KS strings on scale rows: oud, guzheng, santur, shamisen (courses, dispersion, sawari) | TUNE SCALE INFLECT DAMP PICK STRIKE BODY + per voice | T |
 | MAGNET† | electric guitar: KS plus pickup comb and coil resonance, dry for VALVE | TUNE MUTE PICK BLEND | T |
-| ARCO† | bowed string: stick-slip on a waveguide (cello, erhu) | TUNE BOW GRIP BODY HOLD | P/L |
+| ARCO† | bowed string: stick-slip on a waveguide (cello, erhu, sarangi with a 37-string chromatic tarab bank) | TUNE BOW GRIP BODY (WASH on SARANGI) HOLD BUZZ | P/L |
 | GYRE† | 4 strings 1:2:3:4 on one bridge and membrane, 8 sympathetics, internal rotor | TUNE TOUCH SYMPATHY SPIN BODY HOLD | P/L (rosterless) |
 | NACRE | two octave-paired 4-string harps, separate bodies, 8 sympathetics (prototype, HOLD refused) | TOUCH DUET CURRENT VENUE BLOOM HOLD | T |
 | OHM (from Omnibus) | plucked string plus octave and third-harmonic companions coupled through a bridge membrane | TOUCH BODY LENGTH MEDDLING COMMUNE | T |
@@ -152,6 +152,11 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
   overlap and were not de-duplicated. Held wind and bowed engines without a path (2026-11-04
   grep): ARCO, BORE, EMBOUCHURE, MURMUR, ALLOY, LACQUER, STOOP, TANGLE. A non-periodic held note
   can now loop with its attack in front through `HeldLoop` (OBBLIGATO is the first user).
+  OBBLIGATO follow-up (2026-11-07): `ObbligatoHeld` and the shared PadMaker now
+  supply thirteen native C3–C6 roots, explicit PHRASE/HELD recipes and sampler
+  note-off release through the phone and CLI. Both tested playing levels cover
+  every root; the new held articulation awaits the owner's listening verdict.
+  Design and build evidence: `docs/OBBLIGATO_PERFORMANCE.md` in SnipSnap.
 - **Velocity layers in kits**: `softVariants` is used by the kit assembler (`KitAssembler.kt`),
   by the THUMP classic starter kit (`StarterKits.kt`, two soft variants from `Velocity.variantsAt`),
   by `SkinKits.classic()`, `TerraKits.classic()` and `ChordStabs.kit()` (2026-11-04), and by
@@ -177,16 +182,19 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02) and VIBRATO (2026-11-04). The rack has 25 sections in a fixed order (`FxChain.SECTIONS`): speed,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04) and DIVE (2026-11-07). The rack has 26 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
 swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
 vinyl, tape, vibrato, ensemble, phase, echo, spring, room, motion. The pedal library (`Pedals.kt`) has
-ten pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO) and one board (RIG). Rack
+eleven pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
 the pedal brainstorm (`docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`) specs both
 as new sections, not chips over an existing one. FADE IN (the VOLUME section, character `eased`) passed
 its gate on 2026-11-02, and VIBRATO (the VIBRATO section, character `vibratoed`) on 2026-11-04. Both are for held sounds only:
-a choir and a snare are too short for a vibrato to read (loud for 0.48 s and 0.09 s). A pedal needs its own listening gate, and its
+a choir and a snare are too short for a vibrato to read (loud for 0.48 s and 0.09 s). DIVE (the DIVE section, character `dived`,
+right after PITCH in the transport) passed on 2026-11-07 on the guitar only: the drums were too short for a dive, so the
+brainstorm's 808-envelope use did not survive. Three pedals in a row heard the same way is a pattern: a move that unfolds
+over time needs a held sound, so a gate for one should lead with a held source. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 

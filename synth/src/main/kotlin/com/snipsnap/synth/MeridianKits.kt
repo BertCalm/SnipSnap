@@ -20,12 +20,12 @@ object MeridianKits {
 
     /** A01-A08 use native notes, not sampler retuning, so swing timing stays fixed. */
     fun patches(): List<MeridianPatch> {
-        val presets = MeridianPresets.all()
+        val presets = MeridianPresets.forVoice(MeridianVoice.SWEEP)
         require(presets.size == 8) { "the Meridian starter kit requires eight saved presets" }
         val finite = presets.filterNot { Meridian.isLoop(it.macros, it.model) }
         val held = presets.filter { Meridian.isLoop(it.macros, it.model) }
         require(finite.isNotEmpty()) { "the Meridian scale walk requires a finite preset" }
-        require(presets.all { it.model == Meridian.MODEL_VERSION }) { "the kit preserves the current saved renderer model" }
+        require(presets.all { it.model == MeridianPresets.MODEL }) { "the kit preserves its original saved renderer model" }
         val first = finite.first()
         val walk = walkMidis.mapIndexed { index, midi ->
             first.copy(name = "${first.name} ${Scales.nameOf(midi)}", midi = midi, velocity = walkVelocities[index])

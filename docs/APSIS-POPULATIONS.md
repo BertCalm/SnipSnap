@@ -1,5 +1,8 @@
 # GRAIN and ANCHOR in SnipSnap
 
+The download-only [MPC acceptance bank](APSIS-ACCEPTANCE.md) adds native touch
+layers and exported-sample performances for these six presets.
+
 The characteristic gestures remain the ones selected in the voice study:
 GRAIN approaches, scatters short surface contacts around a stable root, then
 leaves a dry residue. ANCHOR accumulates pressure away from the encounter,

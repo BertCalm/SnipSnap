@@ -201,17 +201,18 @@ object ApsisKitGenerator {
         val document = xmlFactory().newDocumentBuilder().parse(File(data, "${kit.name}.xpm"))
         val xmlInstruments = document.getElementsByTagName("Instrument")
         for (pad in kit.pads) {
-            val entry = ApsisKitBank.pad(pad.slot)
+            val held = pad.loop
+            val muteGroup = pad.muteGroup
             val instrument = instruments[pad.slot - 1].obj()
-            check(instrument.getValue("triggerMode").int() == if (entry.held) 2 else 0)
-            check(instrument.getValue("whichMuteGroup").int() == entry.muteGroup)
+            check(instrument.getValue("triggerMode").int() == if (held) 2 else 0)
+            check(instrument.getValue("whichMuteGroup").int() == muteGroup)
             val mixable = instrument.getValue("mixable").obj()
             check(mixable.getValue("volume").num() == 1.0 && mixable.getValue("pan").num() == .5)
             val layers = instrument.getValue("layersv").arr().filter { it.obj().getValue("sampleFile").str().isNotEmpty() }
             check(layers.size == pad.velocityLayers.size)
             val xmlInstrument = xmlInstruments.item(pad.slot - 1) as Element
-            check(text(xmlInstrument, "OneShot") == if (entry.held) "False" else "True")
-            check(text(xmlInstrument, "MuteGroup").toInt() == entry.muteGroup)
+            check(text(xmlInstrument, "OneShot") == if (held) "False" else "True")
+            check(text(xmlInstrument, "MuteGroup").toInt() == muteGroup)
             check(text(xmlInstrument, "Volume").toDouble() == 1.0 && text(xmlInstrument, "Pan").toDouble() == .5)
             val xmlLayers = xmlInstrument.getElementsByTagName("Layer")
             val filledXml = (0 until xmlLayers.length).map { xmlLayers.item(it) as Element }
@@ -223,15 +224,15 @@ object ApsisKitGenerator {
                 val slice = native.getValue("sliceInfo").obj()
                 check(native.getValue("velocityStart").int() == layer.velStart && native.getValue("velocityEnd").int() == layer.velEnd)
                 check(slice.getValue("Start").long() == 0L && slice.getValue("End").long() == info.frameCount)
-                check(slice.getValue("LoopMode").int() == if (entry.held) 1 else 0)
+                check(slice.getValue("LoopMode").int() == if (held) 1 else 0)
                 check(slice.getValue("LoopStart").long() == 0L)
                 val xml = filledXml.single { text(it, "SampleName") == layer.sampleStem }
                 check(text(xml, "VelStart").toInt() == layer.velStart && text(xml, "VelEnd").toInt() == layer.velEnd)
                 check(text(xml, "SliceStart").toLong() == 0L && text(xml, "SliceEnd").toLong() == info.frameCount)
-                check(text(xml, "SliceLoop").toInt() == if (entry.held) 1 else 0)
+                check(text(xml, "SliceLoop").toInt() == if (held) 1 else 0)
                 check(text(xml, "SliceLoopStart").toLong() == 0L)
             }
-            if (entry.held) {
+            if (held) {
                 val envelope = instrument.getValue("synthSection").obj().getValue("ampEnvelope").obj()
                 check(envelope.getValue("Attack").obj().getValue("value0").num() == 0.0)
                 check(envelope.getValue("Decay").obj().getValue("value0").num() == 1.0)

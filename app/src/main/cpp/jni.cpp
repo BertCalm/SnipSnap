@@ -493,11 +493,10 @@ Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong handle) {
     pads(handle)->commitBank();
 }
 
-JNIEXPORT jboolean JNICALL
-Java_com_snipsnap_app_NativePads_noteOn(
-    JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
-    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch,
-    jboolean reverse) {
+namespace {
+jboolean pushNoteOn(
+    jlong handle, jint voiceId, jint sample, jlong startFrame, jlong endFrame, jlong loopStart,
+    jfloat gainL, jfloat gainR, jdouble pitch, jboolean reverse, jlong atFrame) {
     PadCommand c;
     c.type = PadCommand::Type::NoteOn;
     c.voiceId = voiceId;
@@ -509,7 +508,26 @@ Java_com_snipsnap_app_NativePads_noteOn(
     c.gainR = gainR;
     c.pitch = pitch;
     c.reverse = reverse == JNI_TRUE;
+    c.atFrame = atFrame;
     return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+}  // namespace
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOn(
+    JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
+    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch,
+    jboolean reverse) {
+    return pushNoteOn(handle, voiceId, sample, startFrame, endFrame, loopStart, gainL, gainR, pitch, reverse, -1);
+}
+
+/** [noteOn], starting on the engine's own frame [atFrame] (see PadCommand::atFrame) rather than at the next callback. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOnAt(
+    JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
+    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch,
+    jboolean reverse, jlong atFrame) {
+    return pushNoteOn(handle, voiceId, sample, startFrame, endFrame, loopStart, gainL, gainR, pitch, reverse, atFrame);
 }
 
 /**
@@ -519,12 +537,12 @@ Java_com_snipsnap_app_NativePads_noteOn(
  * means nothing was queued at all: a group is published whole or not at
  * all, so a caller that sees false knows no layer is sounding.
  */
-JNIEXPORT jboolean JNICALL
-Java_com_snipsnap_app_NativePads_noteOnLayers(
-    JNIEnv* env, jobject, jlong handle,
+namespace {
+jboolean pushLayers(
+    JNIEnv* env, jlong handle,
     jintArray voiceIds, jintArray samples,
     jlong startFrame, jlong endFrame, jlong loopStart,
-    jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses) {
+    jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses, jlong atFrame) {
     const jsize n = env->GetArrayLength(voiceIds);
     if (n <= 0 || n > PadEngine::kMaxVoices) return JNI_FALSE;
     // Arrays that disagree are not a group; refusing beats reading past one.
@@ -556,8 +574,29 @@ Java_com_snipsnap_app_NativePads_noteOnLayers(
         c.gainR = gr[i];
         c.pitch = pitch;
         c.reverse = rev[i] == JNI_TRUE;
+        c.atFrame = atFrame;
     }
     return pads(handle)->pushCommands(cs, static_cast<size_t>(n)) ? JNI_TRUE : JNI_FALSE;
+}
+}  // namespace
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOnLayers(
+    JNIEnv* env, jobject, jlong handle,
+    jintArray voiceIds, jintArray samples,
+    jlong startFrame, jlong endFrame, jlong loopStart,
+    jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses) {
+    return pushLayers(env, handle, voiceIds, samples, startFrame, endFrame, loopStart, gainsL, gainsR, pitch, reverses, -1);
+}
+
+/** [noteOnLayers] on the engine's own frame [atFrame]: the group still reaches the callback whole, and starts together. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOnLayersAt(
+    JNIEnv* env, jobject, jlong handle,
+    jintArray voiceIds, jintArray samples,
+    jlong startFrame, jlong endFrame, jlong loopStart,
+    jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses, jlong atFrame) {
+    return pushLayers(env, handle, voiceIds, samples, startFrame, endFrame, loopStart, gainsL, gainsR, pitch, reverses, atFrame);
 }
 
 /** A fader on a voice already sounding: glide its gains, never retrigger it. */
@@ -614,6 +653,28 @@ Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint 
     c.type = PadCommand::Type::Stop;
     c.voiceId = voiceId;
     c.fadeMs = fadeMs;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+/** [stopVoice] on the engine's own frame [atFrame], so a choke by a scheduled note lands with the note. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_stopVoiceAt(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs, jlong atFrame) {
+    PadCommand c;
+    c.type = PadCommand::Type::Stop;
+    c.voiceId = voiceId;
+    c.fadeMs = fadeMs;
+    c.atFrame = atFrame;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+/**
+ * Drop every note scheduled for a later frame that has not begun, reporting each ended. Sounding voices ring on.
+ * False when the ring was full; the caller may ask again.
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_cancelPending(JNIEnv*, jobject, jlong handle) {
+    PadCommand c;
+    c.type = PadCommand::Type::CancelPending;
     return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 

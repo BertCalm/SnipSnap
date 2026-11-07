@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
+ *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -42,6 +42,11 @@ import com.snipsnap.json.JsonValue
  * room after spring and before motion: a spring tank is a device, and the
  * room is where everything, the tank included, is heard. ROOM is the last
  * space, and the tape still stops with the room on it.
+ *
+ * dive right after pitch, in the same TRANSPORT stage: it is the sampler's variable-speed
+ * read again, pitch that moves over time instead of sitting still, so it grows the pad the
+ * way PITCH does and the rack's tail cap is measured from the dived pad, and SWELL's head,
+ * REVERSE and everything after it hear the pad that fell.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -85,6 +90,7 @@ data class FxChain(
     val ghost: Map<String, Float>? = null,
     val spike: Map<String, Float>? = null,
     val volume: Map<String, Float>? = null,
+    val dive: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
     val dub: Map<String, Float>? = null,
     val vinyl: Map<String, Float>? = null,
@@ -232,6 +238,7 @@ data class FxChain(
 
         internal val SECTIONS: List<Section> = listOf(
             Section("speed", Speed.MACROS, { it.speed }, { c, m -> c.copy(speed = m) }, Speed::process, Stage.TRANSPORT),
+            Section("dive", Dive.MACROS, { it.dive }, { c, m -> c.copy(dive = m) }, Dive::process, Stage.TRANSPORT),
             Section("swell", Swell.MACROS, { it.swell }, { c, m -> c.copy(swell = m) }, Swell::process, Stage.ARRIVAL),
             Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),

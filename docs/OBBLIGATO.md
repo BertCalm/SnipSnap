@@ -3,9 +3,10 @@
 ## Accepted sound
 
 On 2026-11-01 the owner approved the longer-overlap revision with “It's better,
-let's proceed.” Model 10 is the factory default for new patches, presets and the
-sixteen-pad kit. It combines gentler voicing, remembered articulations and
-290 ms player handoffs. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
+let's proceed.” Renderer 10 established the accepted finite sound: gentler
+voicing, remembered articulations and 290 ms player handoffs. Renderer 11
+extends the native range to C3–C6 and preserves that audio exactly within C4–C5.
+It is the default for new finite patches, presets and the sixteen-pad kit. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
 for the design, measured limits and earlier listening comparisons.
 
 Legacy JSON recipes with no `model` field continue to decode as model 5.
@@ -42,6 +43,14 @@ layout pass. The new kit ZIP is 24,582,424 bytes.
 The acceptance change merged in [PR #789](https://github.com/BertCalm/SnipSnap/pull/789),
 and its complete JVM, Android and native CI checks passed in
 [run 41268192337](https://github.com/BertCalm/SnipSnap/actions/runs/41268192337).
+
+## Sustain and wider register
+
+The [performance extension](OBBLIGATO_PERFORMANCE.md) adds an explicit HELD
+playback choice, preserving the original opening and repeating a captured duet
+phrase until note-off. PHRASE retains the finite gesture. The saved recipe records
+playback, capture revision and sampler release; older recipes retain their original
+interpretation. The extension is awaiting the owner's listening verdict.
 
 ## Earlier listening history
 

@@ -157,6 +157,8 @@ object TrefoilPlayableBankGenerator {
         File(root,"REPLAY.txt").writeText("Replay base: $base\nSource revision: $revision\nCheck out the recorded replay base, then apply source/trefoil-playable.patch with git apply --allow-empty.\nAn empty patch means the base already contains the committed source and there are no local edits.\nRun ./gradlew --no-daemon :synth:generateTrefoilPlayableBank\nThe engine remains acoustic model 2. Full recipes include note, duration, contact time, seed and velocity.\n")
         val files=root.walkTopDown().filter { it.isFile && !it.relativeTo(root).path.startsWith(".kit-work") && it.name !in setOf("manifest.json","source-provenance.json") }.associate { it.relativeTo(root).invariantSeparatorsPath to sha(it) }
         val sourcePaths=listOf("synth/src/main/kotlin/com/snipsnap/synth/Trefoil.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilModelTwo.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/TrefoilHeld.kt","shell/src/main/kotlin/com/snipsnap/shell/TrefoilPadMaker.kt",
+            "app/src/main/kotlin/com/snipsnap/app/ui/TrefoilHeldPreview.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/TrefoilPatch.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilTrajectory.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/TrefoilPresets.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilKits.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/TrefoilPlayableBankGenerator.kt",

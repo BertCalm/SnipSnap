@@ -29,7 +29,7 @@ class RelayPresetsTest {
         assertEquals(expected, RelayVoice.entries.map { RelayPresets.forVoice(it).size })
         for ((voice, name) in seeds) {
             val first = RelayPresets.forVoice(voice).first()
-            assertEquals(RelayPatch(name, voice, Relay.defaults(voice)), first,
+            assertEquals(RelayPatch(name, voice, Relay.defaults(voice), model = RelayPatch.LEGACY_MODEL_VERSION), first,
                 "$voice keeps the original macros and complete phrase as its first recipe")
             assertContentEquals(Relay.render(voice).samples, first.render().samples,
                 "$name must retain the earlier dry sound")

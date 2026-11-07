@@ -49,7 +49,7 @@ internal object ArcoLiftReads {
 
     /** Every TUNE step of both voices at default knobs (25 CELLO then 20 ERHU), each with the engine's own route ([Arco.render] at BODY 1) checked against the measured finish. */
     val steps: List<Read> by lazy {
-        ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }.pmap { (voice, step) ->
+        ArcoMeasure.BODY_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }.pmap { (voice, step) ->
             val raw = ArcoLiftRig.rawOf(voice, ArcoLiftRig.macros(voice, step, Arco.DEFAULT_BODY))
             readOf(voice, "$voice ${ArcoLiftRig.name(voice, step)}", raw, Arco.render(voice, ArcoLiftRig.macros(voice, step, 1f)).samples)
         }
@@ -62,7 +62,7 @@ internal object ArcoLiftReads {
 
     /** ArcoTest's knob grid at BODY 0.75, 0.9 and 1, 54 cells a voice. */
     val grid: Map<ArcoVoice, List<Read>> by lazy {
-        ArcoVoice.entries.associateWith { voice ->
+        ArcoMeasure.BODY_VOICES.associateWith { voice ->
             cellsOf(voice).pmap { c ->
                 val core = ArcoMeasure.core(voice, c.step, bow = c.bow, grip = c.grip, body = Arco.DEFAULT_BODY, hold = c.hold, vibrato = true)
                 readOf(voice, c.label, core.out)
@@ -125,7 +125,7 @@ class ArcoBodyLiftPeakTest {
     fun `the finished peak is under the 0 point 95 bar at BODY 0 point 75, 0 point 9 and 1 on all 45 TUNE steps, never halved, and the cap-off build is not`() {
         val reads = ArcoLiftReads.steps
         assertEquals(45, reads.size, "every TUNE step of both voices")
-        for (voice in ArcoVoice.entries) summary("steps", voice, reads.filter { it.voice == voice })
+        for (voice in ArcoMeasure.BODY_VOICES) summary("steps", voice, reads.filter { it.voice == voice })
         for (r in reads) {
             val lift = r.lifts.last()
             println(
@@ -151,7 +151,7 @@ class ArcoBodyLiftPeakTest {
     @Test
     fun `the finished peak is under the 0 point 95 bar on ArcoTest's 54-cell knob grid at BODY 0 point 75, 0 point 9 and 1, and the cap-off control reports the cells the cap saved`() {
         val problems = ArrayList<String>()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val reads = ArcoLiftReads.grid.getValue(voice)
             assertEquals(54, reads.size, "$voice: the grid is 3 x 3 x 3 x 2")
             summary("grid", voice, reads)
@@ -159,7 +159,7 @@ class ArcoBodyLiftPeakTest {
             if (reads.none { it.offPeak >= bar }) problems += "control: $voice with the cap off has no cell over the bar, so this test cannot see the cap"
         }
         // the cells are read from one bowing each: BODY is not read by the bow, so a bowing at BODY 0 and at BODY 1 is the same string.
-        for ((t, g) in listOf(0f to 0f, 1f to 1f)) for (voice in ArcoVoice.entries) {
+        for ((t, g) in listOf(0f to 0f, 1f to 1f)) for (voice in ArcoMeasure.BODY_VOICES) {
             val step = Arco.semitoneFor(voice, t)
             val a = ArcoMeasure.core(voice, step, bow = 0f, grip = g, body = 0f, hold = 0f, vibrato = true).out
             val b = ArcoMeasure.core(voice, step, bow = 0f, grip = g, body = 1f, hold = 0f, vibrato = true).out
@@ -239,7 +239,7 @@ class ArcoBodyLiftPeakTest {
         println("ARCO lift pin steps: CELLO C2 with the cap off peaks at ${f3(c2.offPeak)} at BODY 1 (pin 1.20 to 1.50); ${cello.count { it.offPeak >= bar }} of ${cello.size} CELLO steps over the bar (pin at least 5)")
         if (c2.offPeak !in 1.20f..1.50f) problems += "CELLO C2 with the cap off peaks at ${f3(c2.offPeak)} at BODY 1, expected 1.20 to 1.50"
         if (cello.count { it.offPeak >= bar } < 5) problems += "only ${cello.count { it.offPeak >= bar }} CELLO steps are over the bar with the cap off, expected at least five"
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val reads = ArcoLiftReads.grid.getValue(voice)
             val over = reads.count { it.offPeak >= bar }
             val worst = reads.maxOf { it.offPeak }
@@ -301,7 +301,7 @@ class ArcoBodyLiftTableTest {
             }
         }
 
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val reads = ArcoLiftReads.grid.getValue(voice)
             for (i in ArcoLiftReads.bodies.indices) {
                 val worst = reads.maxBy { it.peaks[i] }

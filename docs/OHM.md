@@ -1,5 +1,11 @@
 # OHM — family strings
 
+The accepted [Reply and Ring instrument](OHM_REPLY_RING.md) is now renderer 5.
+Choose **Natural Replies** to open its finite pluck with entry-spacing and
+companion-decay controls. A new OHM bench starts there; saved sounds and the
+original starter retain their selected renderer. The model-2 base is described
+below, and source/sustain studies remain available on renderers 3 and 4.
+
 OHM is a dry family-string instrument inspired by the [OHM synthesis guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/ohm_synthesis_guide.md).
 One warm plucked string shares a body with two companions: a wavering,
 sine-excited octave resonator and a struck third-harmonic resonator with

@@ -563,7 +563,10 @@ none) and `eased` (a fade-in, the VOLUME section: the pad rises from silence on 
 curve, 448 ms at AMT 70, the pad sheet's tap, 640 ms at AMT 100, shorter below and none at
 AMT 0; for held sounds, a snare keeps only about 16 percent of its peak under it) and `vibratoed` (a pitch vibrato, the
 VIBRATO section at 5.5 Hz: the pitch swings 42 cents at AMT 70, the pad sheet's tap, and 60 at AMT 100, less below and
-none at AMT 0; for held sounds, a choir and a snare are too short for it to read).
+none at AMT 0; for held sounds, a choir and a snare are too short for it to read) and `dived` (a whammy dive, the
+DIVE section: the pitch falls 12 semitones over about 170 ms at AMT 70, the pad sheet's tap, and about 17 at AMT 100,
+less below and none at AMT 0, and holds there; the pad grows as a lower pitch does; for held sounds, a snare, a tom
+and a rim are too short for a dive).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -579,7 +582,7 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), `eased` (in front of the amp, fixed
-there), `vibratoed` (after the amp, fixed there), and
+there), `vibratoed` (after the amp, fixed there), `dived` (in front of the amp, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -600,8 +603,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY · ROOM · FADE IN · VIBRATO — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
-`delayed`, `roomed`, `eased` and `vibratoed`), of which the row draws five, the user's choice and the same
+DELAY · ROOM · FADE IN · VIBRATO · DIVE — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed`, `roomed`, `eased`, `vibratoed` and `dived`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);
@@ -1491,3 +1494,31 @@ number in that table is the classifier being auditable in public.
 ### LORENTZ finite collisions
 
 `snipsnap synth LORENTZ FUSE --preset 1 --out <dir>` renders the rounded voice; use `LORENTZ LORENTZ` for the tearing voice. `--all` renders all six anchors for that voice. `--macros` accepts TUNE, CAPACITOR, GAP, IMPACT, WELD and HOLD. `--midi` sets TUNE over MIDI 24..48; it cannot be combined with a TUNE macro override. `--velocity` changes contact and level, and `.patch` sidecars retain every setting for `--patch` replay. HOLD extends a finite decay and does not export a held instrument. Only engine model 3 is currently supported by saved LORENTZ patches.
+
+### OBBLIGATO: extended notes and held instruments
+
+OBBLIGATO's expanded renderer accepts native C3–C6 notes (MIDI 48–84), explicit
+velocity and seed, and the same four duet controls. Saved renderer versions 1–10
+retain their C4–C5 bounds and finite HOLD meaning. Select an expanded finite
+recipe explicitly when overriding an older saved patch's note range:
+
+```sh
+snipsnap synth OBBLIGATO AIR_REED --model 11 --midi 48 --velocity .7 --seed 17 --out duet
+```
+
+HELD is a saved playback choice, independent of a finite recipe's HOLD length.
+After selecting HELD in SYNTH and saving its complete patch, export the thirteen
+native minor-third zones with sampler release:
+
+```sh
+snipsnap synth OBBLIGATO AIR_REED --patch duet-held.patch --instrument --release .6 --out duet-keys
+```
+
+The instrument includes MPC 3 and MPC 2 programs, a phone sidecar, all native
+samples, and the complete `.patch.json` recipe. Keyboard coverage stays within
+MIDI 48–84. `--midi`, `--velocity` and `--seed` preserve the saved articulation;
+`--attack` is refused because each sample retains the duet's opening. The release
+value is the phone sampler's seconds field; MPC hardware timing is unmeasured.
+Without `--instrument`, a HELD patch writes a loop-enabled WAV and a complete
+`.patch` receipt. Unsupported held versions, altered HOLD, invalid release and
+out-of-range notes are refused before an output folder is created.

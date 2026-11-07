@@ -61,7 +61,7 @@ object ArcoPadMaker {
 
     fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
 
-    /** CELLO's nine zones, C2 to C4 every minor third; ERHU's eight, D4 to G#5 and A5 ([ArcoKeys.zoneMidis]). The patch's TUNE plays no part. */
+    /** CELLO's nine zones, C2 to C4 every minor third; ERHU's eight, D4 to G#5 and A5; SARANGI's nine, D3 to D5 ([ArcoKeys.zoneMidis]). The patch's TUNE plays no part. */
     fun zoneMidis(spec: Spec): List<Int> = ArcoKeys.zoneMidis(spec.patch.voice)
 
     /**

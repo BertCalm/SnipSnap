@@ -217,7 +217,16 @@ object ProjectStore {
     /** The project's patterns, oldest first; empty when it has none. */
     fun beat(projectDir: File): List<Mpc3Clip> = GrooveStore.load(beatDir(projectDir))
 
-    fun saveBeat(projectDir: File, clips: List<Mpc3Clip>): File = GrooveStore.save(beatDir(projectDir), clips)
+    /**
+     * Writes the project's patterns. [lanePads] (a kit's [GrooveStore.loadLanePads])
+     * travels with the clips, so a pattern whose lanes play other pads draws and
+     * plays the same from the project; null keeps what the file already holds.
+     */
+    fun saveBeat(projectDir: File, clips: List<Mpc3Clip>, lanePads: Map<String, List<Int>>? = null): File =
+        GrooveStore.save(beatDir(projectDir), clips, lanePads)
+
+    /** The project's per-pattern lane maps, by clip name; empty when it has none. */
+    fun beatLanePads(projectDir: File): Map<String, List<Int>> = GrooveStore.loadLanePads(beatDir(projectDir))
 
     fun clearBeat(projectDir: File): Boolean = GrooveStore.delete(beatDir(projectDir))
 

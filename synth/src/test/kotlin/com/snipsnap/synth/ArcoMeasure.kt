@@ -68,6 +68,35 @@ internal object ArcoMeasure {
 
     // ---- the cells: one note's macros, and the raw core played at them ---------------------------------------
 
+    /**
+     * The voices with a BODY knob: CELLO and ERHU, R1's two. SARANGI (R2) has WASH in BODY's place and its box fixed at the knee, so a test of BODY
+     * (the box's amount, the lift above the knee, the BODY listening pages) walks these, and SARANGI's tarab has its own tests (ArcoSarangiTest).
+     */
+    val BODY_VOICES: List<ArcoVoice> = ArcoVoice.entries.filter { Arco.hasBody(it) }
+
+    /**
+     * The TUNE steps of R1b's loop grid (every step at the defaults and four corners, 225 loops for CELLO and ERHU), for a voice. CELLO and ERHU walk
+     * every step, as R1b did. SARANGI walks every third step and its top (D3 F3 G#3 B3 D4 F4 G#4 B4 D5, nine): each of its loops costs what CELLO's
+     * do, the grid runs in BUZZ's and the loop vibrato's tests, and ArcoSarangiTest closes all 25 of its steps at WASH 0, 0.5 and 1 on its own.
+     */
+    fun loopGridSteps(voice: ArcoVoice): List<Int> =
+        if (Arco.hasBody(voice)) steps(voice).toList() else ((0..Arco.tuneSemitones(voice) step 3) + Arco.tuneSemitones(voice)).distinct()
+
+    /** The corners of R1b's loop grid for a voice: the defaults, GRIP 0 and 1, and the fourth knob at 0 and 1 (BODY, or SARANGI's WASH). */
+    fun loopGridCorners(voice: ArcoVoice): List<Pair<String, Map<String, Float>>> {
+        val knob = Arco.boxKnob(voice)
+        return listOf(
+            "defaults" to emptyMap(),
+            "GRIP 0" to mapOf("GRIP" to 0f),
+            "GRIP 1" to mapOf("GRIP" to 1f),
+            "$knob 0" to mapOf(knob to 0f),
+            "$knob 1" to mapOf(knob to 1f),
+        )
+    }
+
+    /** SARANGI's share of the loop grid: nine steps by five corners. */
+    val SARANGI_LOOP_GRID: Int get() = loopGridSteps(ArcoVoice.SARANGI).size * loopGridCorners(ArcoVoice.SARANGI).size
+
     /** GRIP's path as the speaks test walks it: 0 to 1 in tenths. */
     val GRIP_POINTS: List<Float> = (0..10).map { it / 10f }
 
@@ -138,6 +167,13 @@ internal object ArcoMeasure {
     /** What [Arco.render] does to a raw wave after the core, as the engine's one function, [Arco.finished]: the box, the band limit, the decimator, the DC, the level (with the lift above the knee) and the fade. The raw wave is not touched. */
     fun finished(raw: FloatArray, voice: ArcoVoice, body: Float): FloatArray =
         Arco.finished(raw.copyOf(), voice, body, RATE)
+
+    /**
+     * [finished] at the voice's own fourth knob at [box] ([Arco.boxKnob]): BODY [box] on CELLO and ERHU (which is [finished] exactly), and on SARANGI
+     * its box at BODY's default and the tarab at WASH [box], as [Arco.render] finishes a SARANGI note.
+     */
+    fun finishedAt(raw: FloatArray, voice: ArcoVoice, box: Float): FloatArray =
+        if (Arco.hasBody(voice)) finished(raw, voice, box) else Arco.finished(raw.copyOf(), voice, Arco.DEFAULT_BODY, RATE, wash = box)
 
     // ---- speaking: the judgement the speaks test and its negative control share ---------------------------------
 

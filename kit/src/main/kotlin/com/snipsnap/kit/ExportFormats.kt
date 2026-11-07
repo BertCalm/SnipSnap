@@ -191,8 +191,13 @@ object Exporters {
             val writer = Mpc3ProjectWriter()
             // The call-site clip wins; otherwise every stored groove becomes
             // its own sequence — the pattern flip on the hardware's switcher.
+            val stored = GrooveStore.load(kitDir)
             val effectiveClips = clip?.let { listOf(it) }
-                ?: GrooveStore.load(kitDir).take(Mpc3ProjectWriter.MAX_SEQUENCES)
+                ?: GrooveEdit.forSequences(stored, Mpc3ProjectWriter.MAX_SEQUENCES)
+            // A project holds 32 sequences. A kit with the base and 32 patterns
+            // is one over, so say which one stayed behind rather than drop it.
+            val leftOut = if (clip == null) GrooveEdit.leftOut(stored, effectiveClips, GrooveStore.loadNames(kitDir)) else emptyList()
+            val capNote = if (leftOut.isEmpty()) emptyList() else listOf(Finding(Severity.WARN, GrooveEdit.leftOutMessage(leftOut)))
             val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
@@ -204,7 +209,7 @@ object Exporters {
             } else {
                 writer.writeTo(destRoot, kit.name, tracks, song = song)
             }
-            ExportOutcome(format, file, dataDir, findings(kit, kitDir))
+            ExportOutcome(format, file, dataDir, findings(kit, kitDir) + capNote)
         }
     }
 

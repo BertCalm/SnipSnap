@@ -348,6 +348,10 @@ class PadEngine(preferredSampleRate: Int) {
      * engine - `Audition.Live.swapInto` is pure arithmetic over the hit it
      * is given, which is the shape to keep. Anything that reads a file or
      * takes a lock of its own belongs on the caller's side of this call.
+     *
+     * [atFrame] is the engine's own frame ([framesRendered]'s count) the voice
+     * starts on, for a hit the caller knows the time of before it is due; the
+     * default [NOW] is the next callback, as ever.
      */
     @Synchronized
     fun hit(
@@ -356,6 +360,7 @@ class PadEngine(preferredSampleRate: Int) {
         voiceId: Int,
         gainVelocity: Float = velocity,
         swap: ((PadHit.Hit) -> PadHit.Hit?)? = null,
+        atFrame: Long = NOW,
     ): Boolean {
         if (!isUp()) return false
         flushPending()
@@ -371,6 +376,13 @@ class PadEngine(preferredSampleRate: Int) {
         val resolved = PadHit.resolve(pad, velocity, n, gainVelocity) { framesOf[it] } ?: return false
         val hit = swap?.invoke(resolved) ?: resolved
         val sample = sampleIndex[hit.sampleFile] ?: return false
+        if (atFrame >= 0L) {
+            return NativePads.noteOnAt(
+                handle, voiceId, sample,
+                hit.startFrame, hit.endFrameExclusive, hit.loopStartFrame, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+                reverse = false, atFrame = atFrame,
+            )
+        }
         return NativePads.noteOn(
             handle, voiceId, sample,
             hit.startFrame, hit.endFrameExclusive, hit.loopStartFrame, hit.gainLeft, hit.gainRight, hit.pitchRatio,
@@ -389,23 +401,22 @@ class PadEngine(preferredSampleRate: Int) {
      * was given, and none of them is sounding.
      */
     @Synchronized
-    fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
+    fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double, atFrame: Long = NOW): Boolean {
         if (!isUp()) return false
         flushPending()
         if (layers.isEmpty()) return false
         // The native side refuses a group larger than the engine has voices;
         // saying so here means four arrays are never built for it.
         if (layers.size > MAX_VOICES) return false
-        return NativePads.noteOnLayers(
-            handle,
-            IntArray(layers.size) { layers[it].voiceId },
-            IntArray(layers.size) { layers[it].sample },
-            startFrame, endFrame, loopStart,
-            FloatArray(layers.size) { layers[it].gainLeft },
-            FloatArray(layers.size) { layers[it].gainRight },
-            pitch,
-            BooleanArray(layers.size) { layers[it].reverse },
-        )
+        val voiceIds = IntArray(layers.size) { layers[it].voiceId }
+        val samples = IntArray(layers.size) { layers[it].sample }
+        val gainsL = FloatArray(layers.size) { layers[it].gainLeft }
+        val gainsR = FloatArray(layers.size) { layers[it].gainRight }
+        val reverses = BooleanArray(layers.size) { layers[it].reverse }
+        if (atFrame >= 0L) {
+            return NativePads.noteOnLayersAt(handle, voiceIds, samples, startFrame, endFrame, loopStart, gainsL, gainsR, pitch, reverses, atFrame)
+        }
+        return NativePads.noteOnLayers(handle, voiceIds, samples, startFrame, endFrame, loopStart, gainsL, gainsR, pitch, reverses)
     }
 
     /** One voice of a group: which bank sample, at what level, which way round. */
@@ -444,7 +455,7 @@ class PadEngine(preferredSampleRate: Int) {
      * click that is still sounding is never stamped twice.
      */
     @Synchronized
-    fun clickHit(accent: Boolean): Boolean {
+    fun clickHit(accent: Boolean, atFrame: Long = NOW): Boolean {
         val voiceId = nextClickVoiceId--
         val sample = if (accent) clickAccentIndex else clickSampleIndex
         val frames = if (accent) clickAccentFrames else clickFrames
@@ -455,6 +466,7 @@ class PadEngine(preferredSampleRate: Int) {
             endFrame = frames,
             loopStart = -1L,
             pitch = 1.0,
+            atFrame = atFrame,
         )
     }
 
@@ -499,9 +511,12 @@ class PadEngine(preferredSampleRate: Int) {
      * is needed here. Returns true when queued now, false when kept to retry.
      */
     @Synchronized
-    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS): Boolean {
+    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS, atFrame: Long = NOW): Boolean {
         if (!open) return true
-        if (NativePads.stopVoice(handle, voiceId, fadeMs)) return true
+        // A stop for a voice a scheduled note replaces lands on that note's frame. If the ring refuses it
+        // it falls back to the kept, immediate stop below: early, never stuck.
+        if (atFrame >= 0L && NativePads.stopVoiceAt(handle, voiceId, fadeMs, atFrame)) return true
+        if (atFrame < 0L && NativePads.stopVoice(handle, voiceId, fadeMs)) return true
         noteKept()
         // A kept all-off already covers this voice; a stop behind it must never replay after it.
         if (pendingAllOff == null) pendingStops.add(Pair(voiceId, fadeMs))
@@ -520,6 +535,8 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun allOff(fadeMs: Float = PANIC_FADE_MS): Boolean {
         if (!open) return true
+        // A panic silences notes the beat has scheduled but not started, too.
+        NativePads.cancelPending(handle)
         if (NativePads.allOff(handle, fadeMs)) {
             // This all-off covers whatever was kept; replaying it later would cut notes started since.
             pendingAllOff = null
@@ -531,6 +548,13 @@ class PadEngine(preferredSampleRate: Int) {
         pendingStops.clear()
         return false
     }
+
+    /**
+     * Drop every note scheduled with an `atFrame` that has not begun; sounding voices ring on and a
+     * dropped note is reported ended like any other. Returns false when the ring refused the request.
+     */
+    @Synchronized
+    fun cancelPending(): Boolean = open && NativePads.cancelPending(handle)
 
     /** Retries what the ring refused, then returns the ids of voices that ended since the last call; drain at screen rate. */
     @Synchronized
@@ -691,6 +715,9 @@ class PadEngine(preferredSampleRate: Int) {
 
     companion object {
         private const val TAG = "PadEngine"
+
+        /** `atFrame` for "the next callback": what every hit that is not scheduled uses. */
+        const val NOW = -1L
 
         /** The engine's polyphony; the VoiceAllocator in PLAY is built at the same number. */
         const val MAX_VOICES = 32

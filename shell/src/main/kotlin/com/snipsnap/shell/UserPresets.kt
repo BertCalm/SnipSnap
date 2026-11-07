@@ -593,8 +593,8 @@ object UserPresets {
         }
         if (patch is OhmPatch && patch.model >= 3) {
             // The legacy factory helper constructs model 2 before a following copy/let.
-            // Decode the complete expanded recipe directly so HOLD and embedded capture
-            // never pass through that helper or lose source/release fields.
+            // Decode the complete recipe directly so HOLD, embedded capture and
+            // Reply/Ring never pass through that helper or lose performance fields.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OhmPatch.fromJsonText($recipe),"
         }

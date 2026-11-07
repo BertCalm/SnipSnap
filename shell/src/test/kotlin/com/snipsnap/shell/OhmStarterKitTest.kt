@@ -41,7 +41,7 @@ class OhmStarterKitTest {
                     assertEquals(.8f, patch.velocity)
                 }
             }
-            assertTrue(patches.containsAll(OhmPresets.all()))
+            assertTrue(patches.containsAll(OhmPresets.all().filter { it.model == 2 }))
             assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
         } finally {
             dir.deleteRecursively()

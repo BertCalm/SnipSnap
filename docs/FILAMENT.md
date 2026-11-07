@@ -85,7 +85,9 @@ The captured velocity still changes source articulation and routing; exported
 layers remove its separate native gain law once. Ordinary synth and single-layer
 previews retain native gain. Touch previews use the instrument player's gain.
 The program release fades the whole note, including its halo;
-an independent post-release halo tail remains outside the held-instrument path.
+an independent post-release halo tail remains outside the standard held-instrument path.
+The separate [CURL release prototype](FILAMENT_HALO_RELEASE.md) compares synchronized
+body/halo captures with independent host envelopes without changing these defaults.
 
 `FilamentKeys`, `FilamentPadMaker` and the phone's existing instrument sheet
 use the established `KeyNote`, `OneNote` and MPC 2/MPC 3 package paths. WAV

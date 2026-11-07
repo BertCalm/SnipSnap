@@ -27,7 +27,8 @@ class ObbligatoAcceptedTest {
             val approved = ObbligatoPatch.fromJsonValue(case.getValue("recipe"))
             assertEquals(10, approved.model)
             val current = ObbligatoPatch(approved.name, approved.macros, approved.midi, approved.velocity, approved.seed)
-            assertEquals(approved, current, "a new patch does not select the approved renderer")
+            assertEquals(11, current.model)
+            assertEquals(approved, current.copy(model = approved.model), "a new patch changes approved note settings")
             val raw = Obbligato.probe(current.macros, current.midi, current.velocity, current.seed)
             assertEquals(case.getValue("rawFloat32LittleEndianSha256").str(),
                 ObbligatoCompatibilityFixtureGenerator.floatHash(raw.snip.samples), "${current.name}: approved sum changed")
@@ -67,16 +68,16 @@ class ObbligatoAcceptedTest {
 
     @Test
     fun `new instruments presets and kit rows select the accepted renderer explicitly`() {
-        assertEquals(10, Obbligato.MODEL)
-        assertEquals(Obbligato.MORE_OVERLAP_MODEL, Obbligato.MODEL)
+        assertEquals(11, Obbligato.MODEL)
+        assertEquals(Obbligato.PERFORMANCE_MODEL, Obbligato.MODEL)
         assertEquals(Obbligato.MODEL, ObbligatoKits.MODEL)
-        assertEquals(10, ObbligatoPatch("New duet", Obbligato.defaults()).model)
+        assertEquals(11, ObbligatoPatch("New duet", Obbligato.defaults()).model)
         val presets = ObbligatoPresets.all()
         assertEquals(4, presets.size)
-        assertTrue(presets.all { it.model == 10 })
+        assertTrue(presets.all { it.model == 11 })
         val patches = ObbligatoKits.patches()
         assertEquals(16, patches.size)
-        assertTrue(patches.all { it.model == 10 })
+        assertTrue(patches.all { it.model == 11 })
         for (preset in presets) {
             val recalled = assertIs<ObbligatoPatch>(Patches.fromJsonText(preset.toJsonText()))
             assertEquals(preset, recalled)
@@ -85,7 +86,7 @@ class ObbligatoAcceptedTest {
             assertContentEquals(preset.render().samples,
                 Obbligato.render(preset.macros, preset.midi, preset.velocity, preset.seed).samples,
                 "${preset.name}: direct default rendering differs from the factory instrument")
-            assertEquals(10, assertIs<ObbligatoPatch>(Patches.edited(preset, "Edited new duet", preset.macros)).model)
+            assertEquals(11, assertIs<ObbligatoPatch>(Patches.edited(preset, "Edited new duet", preset.macros)).model)
         }
     }
 }

@@ -73,6 +73,8 @@ object Cli {
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |  bellows-keys         four model-2 BELLOWS keygroups + fixed C3 bed
         |                        (--out DIR, --release .1..1.5, --overwrite)
+        |  scanned-chain-keys   Short Pluck C2-C5 instrument, 39 finite touch samples
+        |                        (--out DIR, --patch FILE, --overwrite; MPC 2/3 + recipes)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        (TRIO: TRES/BERIMBAU/CHARANGO/ENSEMBLE; --midi 48..84
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
@@ -89,8 +91,9 @@ object Cli {
         |                        (LATTICE: WARM/PLUCK/HOLLOW; --midi 36..84 --velocity 0..1;
         |                        --patch recipe.patch --macros COLOR=.8,HOLD=1;
         |                        WAV + complete .patch; HOLD=1 exports a sustained loop)
-        |                        (OBBLIGATO AIR_REED: --seed N sets players;
-        |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
+        |                        (OBBLIGATO AIR_REED: --seed N sets players; --model 11 enables C3..C6;
+        |                        saved HELD --patch supports --instrument [--release .1..1.5];
+        |                        Harmony/Play/Fight/Protect; WAV + complete .patch recipe)
         |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
         |                         --macros HOLD=1 loops aftermath; --instrument [--release S] keeps encounter;
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
@@ -100,11 +103,13 @@ object Cli {
         |                         MATCH requires model 2+; LOSS requires model 3+; model 4 adds a dry release;
         |                         finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
-        |                        (OHM STRING: five finite family encounters; --midi 48..72
+        |                        (OHM STRING: five original encounters plus five Reply/Ring choices; --midi 48..72
         |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
         |                        --instrument [--release .02..3] exports C3..C5 held keys;
-        |                        new instruments use model 4; saved model 3|4 recipes retain their renderer)
+        |                        source instruments use model 4; saved model 3|4 recipes retain their renderer;
+        |                        --model 5 or --ohm-reply 0..1 / --ohm-ring 0..1 select seven-second finite replies;
+        |                        model 5 --instrument has note-off release and no sustain loop)
         |                        (WICK: PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; six factory recipes per voice;
         |                         --midi 24..84 --velocity 0..1; saved RATTLE patches retain their body)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
@@ -417,6 +422,7 @@ object Cli {
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
                 "bellows-keys" -> BellowsKeysCommand.run(args.drop(1), out)
+                "scanned-chain-keys" -> ScannedChainKeysCommand.run(args.drop(1), out)
                 "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)

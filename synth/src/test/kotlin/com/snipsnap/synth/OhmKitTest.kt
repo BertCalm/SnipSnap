@@ -57,7 +57,7 @@ class OhmKitTest {
             val names = List(8) { "Solo" } + listOf("Argument", "Communion", "Quiet Company", "Gather",
                 "Argument", "Communion", "Quiet Company", "Gather")
             val midis = listOf(48, 51, 53, 55, 58, 60, 63, 65, 60, 60, 60, 60, 48, 48, 48, 72)
-            val presets = OhmPresets.all().associateBy { it.name }
+            val presets = OhmPresets.all().filter { it.model == 2 }.associateBy { it.name }
             val patches = kit.pads.mapIndexed { index, pad ->
                 val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
                 val patch = assertIs<OhmPatch>(recipe.patch)
@@ -115,7 +115,7 @@ class OhmKitTest {
                 patch
             }
             // All five exact native factory patches are present, not merely re-authored approximations.
-            assertTrue(patches.containsAll(OhmPresets.all()))
+            assertTrue(patches.containsAll(OhmPresets.all().filter { it.model == 2 }))
             assertEquals(16, kit.pads.map { it.displayName }.distinct().size)
             val manifest = Json.parse(File(destination, "manifest.json").readText()).obj()
             assertEquals(16, manifest.getValue("padCount").int())

@@ -45,16 +45,16 @@ class ArcoLoopFuzzTest {
     @Test
     fun `every note of both voices closes as a loop, at the defaults, at a random corner, at BODY 0 point 75 and at BODY 1`() {
         val random = Random(20261001)
+        // SARANGI (R2) comes after ERHU, so the dice CELLO and ERHU roll are the ones they rolled before it: its random corner rolls GRIP, BOW and WASH
+        // (its fourth knob), and it has no BODY above the knee to lift, so its rows are the defaults and the random corner (ArcoSarangiTest closes WASH 0,
+        // 0.5 and 1 at every step).
         val cases = ArcoVoice.entries.flatMap { voice ->
             (0..Arco.tuneSemitones(voice)).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
-                val random1 = Arco.defaults(voice) + mapOf("GRIP" to knob(random), "BOW" to knob(random), "BODY" to knob(random))
-                listOf(
-                    "defaults" to Arco.defaults(voice),
-                    "random" to random1,
-                    "BODY 0.75" to Arco.defaults(voice) + mapOf("BODY" to 0.75f),
-                    "BODY 1" to Arco.defaults(voice) + mapOf("BODY" to 1f),
-                ).map { (corner, base) ->
+                val random1 = Arco.defaults(voice) + mapOf("GRIP" to knob(random), "BOW" to knob(random), Arco.boxKnob(voice) to knob(random))
+                val corners = listOf("defaults" to Arco.defaults(voice), "random" to random1) +
+                    if (Arco.hasBody(voice)) listOf("BODY 0.75" to Arco.defaults(voice) + mapOf("BODY" to 0.75f), "BODY 1" to Arco.defaults(voice) + mapOf("BODY" to 1f)) else emptyList()
+                corners.map { (corner, base) ->
                     Case(voice, step, corner, base + mapOf("TUNE" to tune, "HOLD" to 1f))
                 }
             }
@@ -73,7 +73,7 @@ class ArcoLoopFuzzTest {
                     "shortest loop ${"%.3f".format(java.util.Locale.ROOT, mine.minOf { it.frames }.toDouble() / Dsp.RATE)} s, highest peak ${"%.3f".format(java.util.Locale.ROOT, mine.maxOf { it.peak })}",
             )
         }
-        for (voice in ArcoVoice.entries) for (corner in listOf("defaults", "random", "BODY 0.75", "BODY 1")) {
+        for (voice in ArcoVoice.entries) for (corner in listOf("defaults", "random") + if (Arco.hasBody(voice)) listOf("BODY 0.75", "BODY 1") else emptyList()) {
             val row = outcomes.filter { it.case.voice == voice && it.case.corner == corner }
             val worst = row.maxBy { it.seam }
             println(
@@ -112,7 +112,7 @@ class ArcoLoopFuzzTest {
     @Test
     fun `a loop above the knee is louder than the plain's loop, so the BODY 0 point 75 and BODY 1 rows are rows of the lift`() {
         fun rms(x: FloatArray): Double = kotlin.math.sqrt(x.sumOf { it.toDouble() * it } / x.size)
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val top = Arco.tuneSemitones(voice)
             for (step in listOf(0, top / 2, top)) {
                 val base = Arco.defaults(voice) + mapOf("TUNE" to step / top.toFloat(), "HOLD" to 1f)
