@@ -405,6 +405,14 @@ class UserPresetsTest {
                 assertEquals(preset, promoted, "${preset.name}: complete note, velocity, seed and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is OhmPatch && preset.model >= 3) {
+                val literal = line.removePrefix("OhmPatch.fromJsonText(").removeSuffix("),")
+                val promoted = OhmPatch.fromJsonText(Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete saved renderer and Reply/Ring performance promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+                assertEquals(preset.reply.toRawBits(), promoted.reply.toRawBits(), "${preset.name}: REPLY is exact")
+                assertEquals(preset.ring.toRawBits(), promoted.ring.toRawBits(), "${preset.name}: RING is exact")
             } else if (preset is TrioPatch) {
                 val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
