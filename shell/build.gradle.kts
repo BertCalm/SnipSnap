@@ -4,6 +4,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateLibrationTouchAudition") {
+    group = "distribution"
+    description = "Render two-touch Libration instruments and performances of their exported PCM24 samples."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationTouchAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("librationTouchOutput").orNull ?: "${rootDir}/testkit/libration-touch")
+}
+
 repositories {
     mavenCentral()
 }

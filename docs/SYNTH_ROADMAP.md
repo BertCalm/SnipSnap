@@ -369,7 +369,10 @@ unmeasured. An independently versioned HOLD path periodically traverses the same
 physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
 exports its real onset, verified sustain loop and player amplitude release.
 Generation is serial and cancellable, and fresh renders take seconds on the cloud
-JVM. The new held transport awaits owner listening and phone/MPC checks.
+JVM. Optional [two-touch captures](LIBRATION_TOUCH.md) add soft/hard samples at
+each root, selected at MIDI velocity 63/64; the phone maker opens with layers on.
+Version-one single-layer delivery and the three-voice roster remain unchanged.
+New held/layered transport awaits owner listening and phone/MPC checks.
 [LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
 [held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
