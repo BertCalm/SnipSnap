@@ -16,6 +16,8 @@ the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
 
+RIVET is the 88th registered saved-patch engine, including prototypes. Its first two industrial drum voices, KICK and SNARE, share strike, metal, drive and workshop-to-warehouse controls. [Specification and native audition](docs/RIVET.md). Listening and phone/kit integration remain open.
+
 ## The loop
 
 ```

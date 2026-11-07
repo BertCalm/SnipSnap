@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateRivetAudition") {
+    group = "distribution"
+    description = "Render RIVET kick/snare, room-size grooves, macro sweeps and saved prototype recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RivetAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rivetOutput").orNull ?: "${rootDir}/testkit/rivet-audition")
+}
+
 tasks.register<JavaExec>("generateApsisAcceptance") {
     group = "distribution"
     description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."

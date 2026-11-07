@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
+        for (voice in RivetVoice.entries) {
+            val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))
+            assertContentEquals(p.render().samples, Patches.fromJsonText(p.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
         val fx = BoomBapKits.coloration

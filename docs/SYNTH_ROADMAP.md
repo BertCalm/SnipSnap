@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIVET industrial drum prototype (2026-11-07).** A registered KICK/SNARE engine owns
+the source, metal bank, oversampled drive and parallel ROOM response. Six shared macros
+include SIZE from workshop to warehouse, with an independent close branch. Complete
+versioned patches and native velocity replay are wired in. HOLD is explicitly refused.
+`generateRivetAudition` supplies size-comparison grooves, native/matched hits and replay
+recipes. Listening, phone timing, further voices, presets, a sixteen-pad kit and Android
+integration remain open. See [RIVET.md](RIVET.md) and its engineering specification.
+
 **EROSION accepted contrast bank and handoff (2026-11-07).** Josh accepted the
 native eight-role audition. The implementation is merged in PR #891. Factory
 promotion of the exact recipes, SDK-verified picker/starter integration,
