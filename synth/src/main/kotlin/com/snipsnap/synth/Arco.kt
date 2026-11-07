@@ -30,10 +30,12 @@ import kotlin.random.Random
  * [Strings.Bow] is the string and the friction junction (R1a). This file is the player: the
  * stroke, the grip, the box, the lift that BODY adds above the middle of the knob, and the stop.
  *
- * Two voices, one string each:
+ * Three voices, one string each:
  *  - [ArcoVoice.CELLO]: C2 to C4, the bottom string up two octaves, into a two-mode box (an air
  *    resonance and a plate resonance).
  *  - [ArcoVoice.ERHU]: D4 to A5, a two-stringed fiddle's inner string into a membrane box.
+ *  - [ArcoVoice.SARANGI] (R2): D3 to D5, the same bow in a sarangi's register, into ERHU's skin at its default, then a bank of
+ *    sympathetic strings (the tarab) that WASH sets in BODY's place ([Arco.withTarab]). Nobody has heard it.
  *
  * BODY is two things, split at [Arco.BODY_KNEE] (R1g). Up to the middle of the knob it is how loud
  * the box rings against the string. Above it the box stays at its middle size and BODY adds a low
@@ -75,7 +77,7 @@ import kotlin.random.Random
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
-enum class ArcoVoice { CELLO, ERHU }
+enum class ArcoVoice { CELLO, ERHU, SARANGI }
 
 object Arco {
 
@@ -99,14 +101,25 @@ object Arco {
      */
     const val ERHU_TUNE_SEMITONES = 19
 
+    /**
+     * SARANGI's root, D3 (146.83 Hz): the owner's pick of 2026-11-07. A solo sarangi's Sa sits near D#3 (the research pass's S7, a
+     * survey of recordings, secondary), and D3 is the nearest natural root, so the knob's centre is D4, ERHU's own root.
+     */
+    const val SARANGI_ROOT_MIDI = 50
+
+    /** SARANGI's TUNE travel: two octaves, D3 to D5, the register the research pass puts a sarangi's playing range in. Every step speaks (the window, [gripFor]). */
+    const val SARANGI_TUNE_SEMITONES = 24
+
     fun tuneSemitones(voice: ArcoVoice): Int = when (voice) {
         ArcoVoice.CELLO -> CELLO_TUNE_SEMITONES
         ArcoVoice.ERHU -> ERHU_TUNE_SEMITONES
+        ArcoVoice.SARANGI -> SARANGI_TUNE_SEMITONES
     }
 
     fun rootMidi(voice: ArcoVoice): Int = when (voice) {
         ArcoVoice.CELLO -> CELLO_ROOT_MIDI
         ArcoVoice.ERHU -> ERHU_ROOT_MIDI
+        ArcoVoice.SARANGI -> SARANGI_ROOT_MIDI
     }
 
     /** The snapped semitone above the voice's root that TUNE lands on. */
@@ -130,18 +143,40 @@ object Arco {
 
     /**
      * The six knobs. BUZZ (R2) is last and off by default, so a patch saved before it existed loads at 0 ([settled] fills it) and
-     * renders as it always did: see [DEFAULT_BUZZ].
+     * renders as it always did: see [DEFAULT_BUZZ]. SARANGI has WASH in BODY's place (the owner's decision of 2026-11-07), so it keeps six:
+     * its box is ERHU's skin held at BODY's default ([bodyOf]) and the knob in that slot is the tarab ([withTarab]).
      */
     fun macrosFor(voice: ArcoVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
         MacroSpec("BOW", DEFAULT_BOW),
         MacroSpec("GRIP", DEFAULT_GRIP, neutral = 0.5f),
-        MacroSpec("BODY", DEFAULT_BODY),
+        when (voice) {
+            ArcoVoice.CELLO, ArcoVoice.ERHU -> MacroSpec("BODY", DEFAULT_BODY)
+            ArcoVoice.SARANGI -> MacroSpec("WASH", DEFAULT_WASH)
+        },
         MacroSpec("HOLD", DEFAULT_HOLD),
         MacroSpec("BUZZ", DEFAULT_BUZZ),
     )
 
     fun defaults(voice: ArcoVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
+
+    /** Whether [voice] has a BODY knob: CELLO and ERHU do; SARANGI has WASH in its place. */
+    fun hasBody(voice: ArcoVoice): Boolean = when (voice) {
+        ArcoVoice.CELLO, ArcoVoice.ERHU -> true
+        ArcoVoice.SARANGI -> false
+    }
+
+    /** The name of the fourth knob, the box's or the tarab's: BODY on CELLO and ERHU, WASH on SARANGI. */
+    fun boxKnob(voice: ArcoVoice): String = if (hasBody(voice)) "BODY" else "WASH"
+
+    /**
+     * The BODY a render plays at, from [settled] macros: the knob's own value where [voice] has one, and [DEFAULT_BODY] on SARANGI, whose
+     * box is fixed there (the box at half the string and no lift: [BODY_KNEE] is the default, so nothing above the knee is ever reached).
+     */
+    internal fun bodyOf(voice: ArcoVoice, m: Map<String, Float>): Float = if (hasBody(voice)) m.getValue("BODY") else DEFAULT_BODY
+
+    /** The WASH a render plays at, from [settled] macros: SARANGI's knob, and 0 (no tarab, [withTarab] hands the buffer back) on the others. */
+    internal fun washOf(voice: ArcoVoice, m: Map<String, Float>): Float = if (hasBody(voice)) 0f else m.getValue("WASH")
 
     /** [macros] with every missing key at its default and every value in 0..1; a key the engine does not have is dropped. */
     internal fun settled(macros: Map<String, Float>, voice: ArcoVoice): Map<String, Float> {
@@ -243,6 +278,28 @@ object Arco {
     const val ERHU_CORNER_LOW_ROOT_HZ = 1500f
     const val ERHU_CORNER_RISE_SEMITONES = 21
 
+    /**
+     * SARANGI's pressure floor: ERHU's 0.94 at every step from D3 to D5, one law across the span with no seam at D4, where CELLO's 0.85 and ERHU's 0.94
+     * would otherwise meet. R2 drew the window first (ArcoSarangiWindowMap, on the bare bow at BOW 0.5, every semitone): every cell of pressure 0.85 to 1.0
+     * by corner 1000 to 3024 Hz speaks from D3 to E4, and above that the dark corners stop locking as the note rises (1000 Hz at no pressure from G4, 1150 Hz
+     * from A4, 1300 Hz from C5, 1500 Hz at D5), so the floor is set by pitch and the corner by the lock. Walked along GRIP (0 to 1 in tenths), this floor with [SARANGI_CORNER_LOW_ROOT_HZ]'s
+     * corner speaks at all 275 points (the slowest lock 0.65 s, D#3 at GRIP 0) and GRIP moves the note by at most 3.98 cents (D5); a floor of 0.85 on the
+     * same corner also speaks everywhere but moves B4 by 5.02 cents and D5 by 6.34, over the record's 5 cent bar (ArcoTest's pitch-knob test holds both),
+     * and CELLO's flat 1000 Hz corner never locks at GRIP 0 from F4 up (26 of 275 points fail). So GRIP is a brightness and a grip on SARANGI as on the
+     * others, and not a tuning knob. See [SARANGI_CORNER_LOW_ROOT_HZ] for the corner.
+     */
+    const val SARANGI_PRESSURE_LOW = ERHU_PRESSURE_LOW
+
+    /**
+     * SARANGI's corner at GRIP 0: ERHU's corner floor in absolute pitch carried an octave further down. ERHU's floor is 1500 Hz at D4 and reaches
+     * the full corner [ERHU_CORNER_RISE_SEMITONES] semitones up; the same line, one octave below D4, is at D3 [SARANGI_CORNER_LOW_ROOT_HZ], and it
+     * reaches the full corner [SARANGI_CORNER_RISE_SEMITONES] semitones above D3, so at every note from D4 to D5 SARANGI's corner floor is ERHU's
+     * own, and below D4 it falls toward CELLO's 1000 Hz. GRIP 1 is the full corner everywhere.
+     */
+    val SARANGI_CORNER_LOW_ROOT_HZ: Float =
+        (ERHU_CORNER_LOW_ROOT_HZ * Math.pow((Strings.Bow.BRIDGE_HZ / ERHU_CORNER_LOW_ROOT_HZ).toDouble(), -12.0 / ERHU_CORNER_RISE_SEMITONES)).toFloat()
+    const val SARANGI_CORNER_RISE_SEMITONES = ERHU_CORNER_RISE_SEMITONES + 12
+
     internal fun gripFor(voice: ArcoVoice, semitone: Int): Grip = when (voice) {
         ArcoVoice.CELLO -> Grip(
             max(PRESSURE_LOW, CELLO_PRESSURE_LOW_ROOT - CELLO_PRESSURE_LOW_FALL * semitone), PRESSURE_HIGH,
@@ -252,6 +309,11 @@ object Arco {
         ArcoVoice.ERHU -> Grip(
             ERHU_PRESSURE_LOW, PRESSURE_HIGH,
             Dsp.expMap(min(semitone.toFloat() / ERHU_CORNER_RISE_SEMITONES, 1f), ERHU_CORNER_LOW_ROOT_HZ, Strings.Bow.BRIDGE_HZ),
+            Strings.Bow.BRIDGE_HZ,
+        )
+        ArcoVoice.SARANGI -> Grip(
+            SARANGI_PRESSURE_LOW, PRESSURE_HIGH,
+            Dsp.expMap(min(semitone.toFloat() / SARANGI_CORNER_RISE_SEMITONES, 1f), SARANGI_CORNER_LOW_ROOT_HZ, Strings.Bow.BRIDGE_HZ),
             Strings.Bow.BRIDGE_HZ,
         )
     }
@@ -265,6 +327,7 @@ object Arco {
     internal fun shareFor(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> Strings.Bow.SHARE
         ArcoVoice.ERHU -> Strings.Bow.SHARE
+        ArcoVoice.SARANGI -> Strings.Bow.SHARE
     }
 
     /** GRIP -> the bow's pressure at this TUNE step. */
@@ -327,24 +390,32 @@ object Arco {
     const val BITE_PRESSURE_ERHU = 1f
     const val BITE_PRESSURE_CELLO = 0.5f
 
+    /** SARANGI's bite: ERHU's three numbers, the bite the owner heard as a yes, on the same skin. */
+    const val OVERSHOOT_MAX_SARANGI = OVERSHOOT_MAX_ERHU
+    const val BITE_SECONDS_SARANGI = BITE_SECONDS_ERHU
+    const val BITE_PRESSURE_SARANGI = BITE_PRESSURE_ERHU
+
     fun attackSeconds(bow: Float): Float = Dsp.expMap(bow, ATTACK_SLOW_SECONDS, ATTACK_FAST_SECONDS)
 
     /** BOW 1's bite, as a multiple of the sustain velocity, for [voice]. */
     internal fun overshootMax(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> OVERSHOOT_MAX_CELLO
         ArcoVoice.ERHU -> OVERSHOOT_MAX_ERHU
+        ArcoVoice.SARANGI -> OVERSHOOT_MAX_SARANGI
     }
 
     /** The least time constant the bite relaxes with, for [voice]: its time constant is the longer of this and the stroke's attack. */
     internal fun biteSeconds(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> BITE_SECONDS_CELLO
         ArcoVoice.ERHU -> BITE_SECONDS_ERHU
+        ArcoVoice.SARANGI -> BITE_SECONDS_SARANGI
     }
 
     /** How much of the bite's share goes into the pressure's climb toward the window's top, for [voice]: ERHU's is all of it (as it was). */
     internal fun bitePressure(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> BITE_PRESSURE_CELLO
         ArcoVoice.ERHU -> BITE_PRESSURE_ERHU
+        ArcoVoice.SARANGI -> BITE_PRESSURE_SARANGI
     }
 
     internal fun overshootFor(voice: ArcoVoice, bow: Float, max: Float = overshootMax(voice)): Float =
@@ -510,9 +581,14 @@ object Arco {
     internal val VIBRATO_PLAIN = VibratoShape(VIBRATO_RISE_SECONDS, 0.0, 0.0, 0.0)
     internal val VIBRATO_HUMAN = VibratoShape(HUMAN_RISE_SECONDS, 0.07, 0.18, 0.06)
 
+    /**
+     * Each voice's finger. SARANGI's is the human one: a sarangi's left hand slides on its nails rather than pressing a board (the research
+     * pass's S2), and the owner has picked the human shape twice over the plain one (CELLO's vibrato in R1c, and "Humanized is best" for the loop).
+     */
     internal fun vibratoShapeFor(voice: ArcoVoice): VibratoShape = when (voice) {
         ArcoVoice.CELLO -> VIBRATO_HUMAN
         ArcoVoice.ERHU -> VIBRATO_PLAIN
+        ArcoVoice.SARANGI -> VIBRATO_HUMAN
     }
 
     /** A cellist's vibrato swells in over about half a second, against [VIBRATO_RISE_SECONDS]'s fifth. */
@@ -580,9 +656,11 @@ object Arco {
         }
     }
 
+    /** Each voice's box. SARANGI's is ERHU's skin (a goat-skin belly, as the erhu's is a python skin; no measured sarangi body mode was found), played at [DEFAULT_BODY]. */
     internal fun bodyFor(voice: ArcoVoice): List<Modes.Mode> = when (voice) {
         ArcoVoice.CELLO -> CELLO_BODY
         ArcoVoice.ERHU -> ERHU_BODY
+        ArcoVoice.SARANGI -> ERHU_BODY
     }
 
     /**
@@ -649,22 +727,22 @@ object Arco {
     const val ERHU_LIFT_BELL_HZ = 800f
     const val ERHU_LIFT_BELL_Q = 1.0f
 
-    /** The low shelf's corner for [voice]. */
+    /** The low shelf's corner for [voice]. SARANGI has no BODY knob, so its BODY never passes the knee and its lift is never played; its arms are its skin's, ERHU's. */
     internal fun liftShelfHz(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_SHELF_HZ
-        ArcoVoice.ERHU -> ERHU_LIFT_SHELF_HZ
+        ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_SHELF_HZ
     }
 
     /** The bell's centre for [voice]. */
     internal fun liftBellHz(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_BELL_HZ
-        ArcoVoice.ERHU -> ERHU_LIFT_BELL_HZ
+        ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_BELL_HZ
     }
 
     /** The bell's Q for [voice]. */
     internal fun liftBellQ(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_BELL_Q
-        ArcoVoice.ERHU -> ERHU_LIFT_BELL_Q
+        ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_BELL_Q
     }
 
     /**
@@ -857,6 +935,102 @@ object Arco {
         condition(withBody(raw, voice, body, rate), rate)
 
     /**
+     * [conditionedWithBody], then the tarab at [wash] ([withTarab]): the stage a LOOP and a held key finish from (a one-shot's finish,
+     * [finishedMeasured], makes the same two calls and fades the tarab out at the note's end). At [wash] 0 (every CELLO and ERHU render, and
+     * SARANGI at WASH 0) it is [conditionedWithBody]'s own buffer, handed on untouched.
+     */
+    internal fun conditionedFor(raw: FloatArray, voice: ArcoVoice, body: Float, wash: Float, rate: Int): FloatArray =
+        withTarab(conditionedWithBody(raw, voice, body, rate), wash)
+
+    // ---- WASH: the tarab (SARANGI) ----------------------------------------------
+
+    /**
+     * WASH's default on SARANGI: the bank in the middle of its range, so a default note carries the tarab that names the voice. A listening
+     * value nobody has heard; SANTUR's WASH was heard as "too quiet/absent" twice before its default went to 0.85, which is why this one is not low.
+     */
+    const val DEFAULT_WASH = 0.5f
+
+    /**
+     * The tarab's tuning: SANTUR's bank ([Silk.washModesFor]) on [SilkScales.CHROMATIC] from SARANGI's root, three octaves: D3 to D6 every
+     * semitone, 37 strings (a sarangi carries up to about 35 to 37, and the one row every sarangi has is chromatic: the research pass's S4 and
+     * S5). Fixed: a sarangi's tarab do not follow the note, so TUNE never moves it, and a note rings the strings its harmonics land on.
+     */
+    val TARAB_ROOT_HZ: Float = Keys.midiHz(SARANGI_ROOT_MIDI)
+
+    /**
+     * How long the tarab rings, from WASH's first step to its top: the bank's t60 is `lin(WASH, low, high)`. Short on purpose (the owner's
+     * decision: at most about 2 s, so a LOOP still closes): the bank must settle inside the LOOP's 2.0 s warm-up, and the research pass's Python
+     * stand-in measured 1.1 s closing to 3e-12 and 5 s failing at 1.2e-3. A longer ring is also a narrower one, so the bow's few cents decide how
+     * loud a tarab is (at 3 s, 4 cents cost 7.4 dB; at 1.1 s, 2.1 dB). Listening values; ArcoSarangiTest measures the LOOP's seam at the top.
+     */
+    const val WASH_T60_LOW_SECONDS = 0.5f
+    const val WASH_T60_HIGH_SECONDS = 1.5f
+
+    /**
+     * How loud the tarab is against the string at WASH 1: [Strings.bodyRing]'s `amount`, the bank's RMS over the string's own, so `lin(WASH, 0,
+     * this)`: at the default WASH 0.5 the bank is half the string's RMS (6 dB under it), at WASH 1 as loud as the string. SANTUR's goes to 8 on a
+     * plucked note; a bowed note drives the bank for as long as it is held, so its steady ring is a far larger share of the note. The first build
+     * here went to 3 (the default bank 1.5 times the string, 3.5 dB over it), and three tests read what that does to a bowed note: the bank rings
+     * at fixed pitches, so it held the 3 s note's measured vibrato to 4.7 cents against the voice's own 6 to 15 at WASH 0, and it diluted BUZZ so
+     * that BUZZ 0.9 moved the default note by 0.027 (the house's bar is 0.04; 0.062 to 0.070 with no tarab). At 1 the bank is a halo on the
+     * string, not a second instrument over it. A listening value: SANTUR's own WASH was heard "too quiet/absent" twice before it was raised, so
+     * this is the number the owner's ear is most likely to move.
+     */
+    const val WASH_AMOUNT_HIGH = 1f
+
+    /**
+     * How long a one-shot's tarab takes to fade at the end of the note: a raised cosine over the last this-many seconds on the bank alone, ending
+     * where the string ends. The bank is cut where the string ends (the owner's decision, as the box is), but the box rings for 0.3 s and the
+     * bank for up to [WASH_T60_HIGH_SECONDS], so where the stopped string has fallen 60 dB the bank is still ringing: measured at WASH 1 with the
+     * first build's bank, a stab's last 20 ms sat only 2.4 dB under the note's RMS, and the house's 4 ms [Dsp.fadeTail] would cut that off as a
+     * click. Over 50 ms the bank's lowest string (D3) makes seven cycles of fade, not half of one. The note's length is the string's either way.
+     * A LOOP and a held key never end inside their kept window, so they carry no such fade. A listening value.
+     */
+    const val TARAB_END_FADE_SECONDS = 0.05f
+
+    internal fun washT60(wash: Float): Float = Dsp.lin(wash, WASH_T60_LOW_SECONDS, WASH_T60_HIGH_SECONDS)
+
+    internal fun washAmount(wash: Float): Float = Dsp.lin(wash, 0f, WASH_AMOUNT_HIGH)
+
+    /** The bank at [wash]'s t60: [TARAB_ROOT_HZ] up three octaves, every semitone, each mode at gain 1 ([Silk.washModesFor]'s uniform gain). */
+    internal fun tarabModes(wash: Float): List<Modes.Mode> = Silk.washModesFor(TARAB_ROOT_HZ, SilkScales.CHROMATIC, gain = 1f, t60 = washT60(wash))
+
+    /**
+     * The tarab: [conditioned] (the string after the box, at [RATE]) rung through the sympathetic bank ([tarabModes]) by [Strings.bodyRing], the
+     * call [withBody] makes for the box and SANTUR's `withWash` makes for its own bank, and **cut where the string ends**, as the box is: the
+     * bank's ring past the end of the note is not kept, so WASH never moves a note's length and [renderFrames] and [drumClassFor] stay closed form.
+     * The 4 ms fade at the end of the render finishes it.
+     *
+     * Run after the band limit and the decimator, at [RATE], not at the oversampled rate the box runs at: the bank's top string is D6
+     * (1174.66 Hz), far under any fold, and a two-pole resonator in Float tunes itself to within about `3e-8 rate^2 / (4 pi^2 f)` Hz, which at
+     * 176.4 kHz is 0.16 Hz at D3 (1.9 cents) and at 44.1 kHz 0.01 Hz (0.12 cents). The tarab's whole effect is how close a harmonic lands to
+     * it, so the bank runs where it is in tune; it also costs a quarter.
+     *
+     * With [endFadeFrames] over 0 (a one-shot: [TARAB_END_FADE_SECONDS]) the bank alone is faded out over that many frames at the end, by a
+     * raised cosine, so the cut does not click; the string under it is not touched.
+     *
+     * At [wash] 0 or under (and for a NaN) it returns [conditioned] itself, the same array: WASH 0 is exactly no tarab, and every CELLO and ERHU
+     * render passes through here at 0 untouched. [conditioned] is never changed.
+     */
+    internal fun withTarab(conditioned: FloatArray, wash: Float, endFadeFrames: Int = 0): FloatArray {
+        if (!(wash > 0f)) return conditioned
+        val ceiling = (conditioned.size + RATE).toFloat() / RATE
+        val rung = Strings.bodyRing(conditioned, tarabModes(wash), washAmount(wash), RATE, ceiling)
+        val out = if (rung.size == conditioned.size) rung else rung.copyOf(conditioned.size)
+        val fade = min(endFadeFrames, out.size)
+        val from = out.size - fade
+        for (k in 0 until fade) {
+            val i = from + k
+            val w = (0.5 * (1.0 + cos(PI * (k + 1) / fade))).toFloat()
+            out[i] = conditioned[i] + (out[i] - conditioned[i]) * w
+        }
+        return out
+    }
+
+    /** [TARAB_END_FADE_SECONDS] in frames at [RATE]. */
+    internal val TARAB_END_FADE_FRAMES: Int get() = Math.round(TARAB_END_FADE_SECONDS * RATE)
+
+    /**
      * [Dsp.levelTo]'s own numbers, copied because its defaults cannot be read from here: a signal [Loudness.of] puts at or under [LEVEL_SILENCE] is left alone, and no sample is left past [LEVEL_CEILING]. A test holds [plainGain]
      * equal to [Dsp.levelTo] on a normal and a hot buffer, so a change to either number there fails here. Not listening values.
      */
@@ -898,12 +1072,15 @@ object Arco {
      * [liftPlan]). [Dsp.levelTo] and [Dsp.limitPeak] never run after the lift: the level is not matched back to the plain and the top of the note is never turned down. The last step is the 4 ms [Dsp.fadeTail], which only lowers
      * a peak. If nothing can be lifted the result is the plain's finish exactly.
      */
-    internal fun finished(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int): FloatArray =
-        finishedMeasured(raw, voice, body, rate).samples
+    internal fun finished(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int, wash: Float = 0f): FloatArray =
+        finishedMeasured(raw, voice, body, rate, wash).samples
 
-    /** [finished] and what the lift did ([Lift]): the same function, so a test reads the engine's own numbers. */
-    internal fun finishedMeasured(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int): Finished {
-        val conditioned = conditionedWithBody(raw, voice, body, rate)
+    /**
+     * [finished] and what the lift did ([Lift]): the same function, so a test reads the engine's own numbers. [wash] is SARANGI's tarab
+     * ([withTarab]), after the box and before the level; at 0, the default and every CELLO and ERHU note, it is not there at all.
+     */
+    internal fun finishedMeasured(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int, wash: Float = 0f): Finished {
+        val conditioned = withTarab(conditionedWithBody(raw, voice, body, rate), wash, TARAB_END_FADE_FRAMES)
         if (body <= BODY_KNEE) return Finished(levelled(conditioned), Lift.NONE)
         val gain = plainGain(conditioned)
         val limit = max(PEAK_CAP, peakOf(conditioned, gain))
@@ -1434,6 +1611,9 @@ object Arco {
      * The vibrato (R2, [loopVibrato]) goes on the converged stretch too, before BUZZ (the order a one-shot has: the string, its vibrato, the
      * buzz, the box), and also never into the estimator: the retune measures the bare string's periods and the vibrato, fitted to the loop,
      * keeps them. [loopVibrato] [LoopVibrato.OFF] is R1's loop exactly, the frozen tests' reference.
+     *
+     * SARANGI's tarab ([withTarab]) rings on the conditioned stretch after the box, as in a one-shot. It is linear and fixed, so it settles in the
+     * warm-up as the box does and the stretch stays as periodic as the string under it.
      */
     internal fun renderLoopMeasured(
         voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO,
@@ -1452,8 +1632,8 @@ object Arco {
             sung, voice, buzz, rmsOf(sung, warm * over, warm * over + loopRaw),
             period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
         )
-        val body = m.getValue("BODY")
-        return loopFrom(conditionedWithBody(strung, voice, body, rate), voice, body, warm, plan.frames)
+        val body = bodyOf(voice, m)
+        return loopFrom(conditionedFor(strung, voice, body, washOf(voice, m), rate), voice, body, warm, plan.frames)
     }
 
     /** The loop, refused by name if its corner cannot close: a click shipped silently is the worse failure. */
@@ -1551,8 +1731,8 @@ object Arco {
             sung, voice, buzz, rmsOf(sung, warm * over, warm * over + loopRaw),
             period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
         )
-        val body = m.getValue("BODY")
-        val conditioned = conditionedWithBody(strung, voice, body, rate)
+        val body = bodyOf(voice, m)
+        val conditioned = conditionedFor(strung, voice, body, washOf(voice, m), rate)
         stopIfCancelled()
         return heldFrom(conditioned, voice, body, warm, plan.frames, r)
     }
@@ -1616,6 +1796,10 @@ object Arco {
         val raw = bow(voice, hz, m, rate)
         val buzz = m.getValue("BUZZ")
         val strung = if (!(buzz > 0f)) raw else buzzed(raw, voice, buzz, bowOnLevel(raw, voice, hz, m, rate), law = law)
-        return Snip(finished(strung, voice, m.getValue("BODY"), rate), channels = 1, sampleRate = RATE)
+        return Snip(finishedFor(strung, voice, m, rate), channels = 1, sampleRate = RATE)
     }
+
+    /** [finished] at the BODY and the WASH [m] (settled) plays at ([bodyOf], [washOf]): a one-shot's finish for any voice, what [render] calls. */
+    internal fun finishedFor(raw: FloatArray, voice: ArcoVoice, m: Map<String, Float>, rate: Int): FloatArray =
+        finished(raw, voice, bodyOf(voice, m), rate, washOf(voice, m))
 }

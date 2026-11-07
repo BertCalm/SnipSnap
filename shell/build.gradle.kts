@@ -420,6 +420,17 @@ tasks.register<JavaExec>("generateLatticeKeysAudition") {
     }
 }
 
+/** SARANGI's first listen (R2): its presets, WASH at three notes, a LOOP, its held keys and ERHU beside it, under testkit/arco-sarangi-audition/. See ArcoSarangiAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoSarangiAudition") {
+    group = "distribution"
+    description = "Render SARANGI's presets, WASH at D3, D4 and D5, a LOOP, its held keys and ERHU beside it, levelled, with a manifest, under testkit/arco-sarangi-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ArcoSarangiAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("arcoSarangiOutput").orElse("${rootDir}/testkit/arco-sarangi-audition").get())
+}
+
 /** ARCO's held keys (hard and soft layers) beside the loop-only zone they replace, at three notes per voice, under testkit/arco-held-audition/. See ArcoHeldAuditionGenerator. */
 tasks.register<JavaExec>("generateArcoHeldAudition") {
     group = "distribution"

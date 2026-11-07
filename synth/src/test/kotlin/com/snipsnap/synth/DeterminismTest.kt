@@ -592,7 +592,8 @@ class DeterminismTest {
     // beside each row: the render differs from the same note at BODY 0.5, so the row is a row of the lift and not of the plain it would equal if BODY were ignored above the knee. Loops also close, under the Organ's bar at both BODYs.
     @Test
     fun `ARCO above the knee is byte-identical across renders, BODY 0 point 75 and 1, both voices, one-shot and loop`() {
-        for (voice in ArcoVoice.entries) for ((noteName, base) in listOf("default note" to Arco.defaults(voice), "root" to Arco.defaults(voice) + ("TUNE" to 0f))) for (body in listOf(0.75f, 1f)) {
+        // CELLO and ERHU: SARANGI has no BODY knob (its box is held at the knee, where nothing is lifted); its WASH has the canary below.
+        for (voice in ArcoMeasure.BODY_VOICES) for ((noteName, base) in listOf("default note" to Arco.defaults(voice), "root" to Arco.defaults(voice) + ("TUNE" to 0f))) for (body in listOf(0.75f, 1f)) {
             val where = "$voice $noteName at BODY $body"
             val plainShot = ArcoPatch("Canary", voice, base + ("BODY" to 0.5f))
             val shot = ArcoPatch("Canary", voice, base + ("BODY" to body))
@@ -608,6 +609,29 @@ class DeterminismTest {
             assertTrue(!plainLoop.loop.contentEquals(first.loop), "$where, loop: the render equals the plain's, so the row is not above the knee")
             println("ARCO determinism $where: one-shot and loop repeat to the sample, loop seam ${"%.2e".format(java.util.Locale.ROOT, first.seam)} (bar ${"%.0e".format(java.util.Locale.ROOT, Keys.MAX_SEAM_ERROR)})")
         }
+    }
+
+    // R2: SARANGI's tarab (WASH) is a bank of 37 fixed resonators rung after the box, none of it seeded, so the same canary again at WASH 0.5 and 1 (the
+    // default is 0.5, so the first rows above already ring it once), one-shot, LOOP and a held key, with BUZZ on in one row so the two run together.
+    // The control beside each row: it differs from the same render at WASH 0, so the row is a row of the tarab.
+    @Test
+    fun `ARCO SARANGI with its tarab is byte-identical across renders, one-shot, loop and held key`() {
+        val voice = ArcoVoice.SARANGI
+        for (wash in listOf(0.5f, 1f)) {
+            val shot = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("WASH" to wash))
+            assertContentEquals(shot.render().samples, shot.render().samples, "SARANGI one-shot at WASH $wash")
+            assertTrue(!shot.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice) + ("WASH" to 0f)).samples), "SARANGI one-shot at WASH $wash equals WASH 0")
+            val loop = ArcoPatch("Canary", voice, Arco.defaults(voice) + mapOf("WASH" to wash, "HOLD" to 1f))
+            assertContentEquals(loop.render().samples, loop.render().samples, "SARANGI loop at WASH $wash")
+            assertTrue(!loop.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice) + mapOf("WASH" to 0f, "HOLD" to 1f)).samples), "SARANGI loop at WASH $wash equals WASH 0")
+        }
+        val buzzing = ArcoPatch("Canary", voice, Arco.defaults(voice) + mapOf("WASH" to 1f, "BUZZ" to 0.5f, "BOW" to 1f))
+        assertContentEquals(buzzing.render().samples, buzzing.render().samples, "SARANGI one-shot at WASH 1, BUZZ 0.5 and BOW 1")
+        val held = Arco.defaults(voice) + ("WASH" to 1f)
+        val a = ArcoKeys.pad(voice, held, 62, ArcoKeys.Layer.HARD)
+        val b = ArcoKeys.pad(voice, held, 62, ArcoKeys.Layer.HARD)
+        assertContentEquals(a.snip.samples, b.snip.samples, "SARANGI held D4 at WASH 1")
+        assertEquals(a.loopStartFrame, b.loopStartFrame, "SARANGI held D4 at WASH 1: the loop start moved")
     }
 
     // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29),

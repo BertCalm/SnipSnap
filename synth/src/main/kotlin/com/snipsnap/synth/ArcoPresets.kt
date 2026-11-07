@@ -1,13 +1,13 @@
 package com.snipsnap.synth
 
 /**
- * ARCO's factory roster: eight per voice, authored from the measurements in [Arco]'s KDoc and from what the
+ * ARCO's factory roster: eight for CELLO and for ERHU, six for SARANGI (R2), authored from the measurements in [Arco]'s KDoc and from what the
  * real classifier says of each render - and **provisional**: nothing here was listened to. The audition gate is
  * where a human decides which of these is a bowed string and which is only a tone that measures like one; a name
  * that does not survive it is renamed or dropped, not defended.
  *
  * What the roster leans on:
- *  - TUNE is a fraction of the voice's own span: CELLO's is 24 semitones from C2, ERHU's is 19 from D4, so a
+ *  - TUNE is a fraction of the voice's own span: CELLO's is 24 semitones from C2, ERHU's is 19 from D4, SARANGI's 24 from D3, so a
  *    note is k over 24 or k over 19 and the comment above each preset says which note it lands on.
  *  - A CELLO note below about G#2 starts in a scratch that takes 0.5 to 0.9 s to lock into one slip a period,
  *    so a short stab down there is a scrape, not a clean cello: DRY SCRAPE and GRIT BOW sit there on purpose, and
@@ -39,6 +39,7 @@ object ArcoPresets {
     fun forVoice(voice: ArcoVoice): List<ArcoPatch> = when (voice) {
         ArcoVoice.CELLO -> celloPresets
         ArcoVoice.ERHU -> erhuPresets
+        ArcoVoice.SARANGI -> sarangiPresets
     }
 
     fun all(): List<ArcoPatch> = ArcoVoice.entries.flatMap { forVoice(it) }
@@ -83,5 +84,26 @@ object ArcoPresets {
         p(ArcoVoice.ERHU, "TWO STRING", "TUNE" to 0.368f, "BOW" to 0.85f, "GRIP" to 0.45f, "BODY" to 0.55f, "HOLD" to 0.2f, "BUZZ" to 0.0f),
         // E5 (14 of 19), HOLD 1: the endless cry, a bright steady line that closes on itself.
         p(ArcoVoice.ERHU, "ENDLESS CRY", "TUNE" to 0.737f, "BOW" to 0.5f, "GRIP" to 0.75f, "BODY" to 0.5f, "HOLD" to 1.0f, "BUZZ" to 0.0f),
+    )
+
+    /**
+     * SARANGI's six (R2, 2026-11-07): four one-shots and two LOOPs, WASH in BODY's place, every one provisional and unheard. The notes are k over
+     * 24 from D3. The classifier rules above hold here too, and one bit hardest: a slow bow at D3 reads as a KICK (its head is a low swell and its
+     * ring past the peak is under 500 ms: 0.82 to 0.87 of the head under 200 Hz and 366 to 464 ms at BOW 0.2 and 0.25, with the tarab or without),
+     * so LOW SA is a 63 ms stroke, and the one slow swell, HIGH LAMENT, sits at C5, where it reads TONAL with room.
+     */
+    private val sarangiPresets = listOf(
+        // D3 (0 of 24), the low Sa: a medium stroke (63 ms, no bite) under a firm grip into the longest one-shot, the tarab well up.
+        p(ArcoVoice.SARANGI, "LOW SA", "TUNE" to 0.0f, "BOW" to 0.5f, "GRIP" to 0.7f, "WASH" to 0.8f, "HOLD" to 0.43f, "BUZZ" to 0.0f),
+        // A3 (7 of 24): the tarab at its top, a bank as loud as the string, under a medium stroke.
+        p(ArcoVoice.SARANGI, "SILVER HALO", "TUNE" to 0.292f, "BOW" to 0.5f, "GRIP" to 0.5f, "WASH" to 1.0f, "HOLD" to 0.4f, "BUZZ" to 0.0f),
+        // G3 (5 of 24): a hard bite, a short note, a little tarab: an accent that locks at 0.18 s of its 0.44 s.
+        p(ArcoVoice.SARANGI, "GUT ACCENT", "TUNE" to 0.208f, "BOW" to 0.85f, "GRIP" to 0.7f, "WASH" to 0.3f, "HOLD" to 0.15f, "BUZZ" to 0.0f),
+        // C5 (22 of 24): a slow swell (0.19 s to full speed) under a firm grip, near the top of the span.
+        p(ArcoVoice.SARANGI, "HIGH LAMENT", "TUNE" to 0.917f, "BOW" to 0.2f, "GRIP" to 0.8f, "WASH" to 0.6f, "HOLD" to 0.44f, "BUZZ" to 0.0f),
+        // D4 (12 of 24), HOLD 1: the drone on Sa an octave up, the tarab up.
+        p(ArcoVoice.SARANGI, "ENDLESS SA", "TUNE" to 0.5f, "BOW" to 0.5f, "GRIP" to 0.6f, "WASH" to 0.8f, "HOLD" to 1.0f, "BUZZ" to 0.0f),
+        // A3 (7 of 24), HOLD 1: the drone on Pa, a darker grip and less tarab.
+        p(ArcoVoice.SARANGI, "ENDLESS PA", "TUNE" to 0.292f, "BOW" to 0.4f, "GRIP" to 0.35f, "WASH" to 0.4f, "HOLD" to 1.0f, "BUZZ" to 0.0f),
     )
 }

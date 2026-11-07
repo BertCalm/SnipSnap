@@ -135,7 +135,7 @@ class ArcoProductTest {
     private fun finishedCore(voice: ArcoVoice, m: Map<String, Float>, vibrato: Boolean = true, bowPoint: FloatArray? = null): FloatArray {
         val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
         val raw = Arco.bow(voice, hz, m, rawRate, vibrato = vibrato, bowPointOut = bowPoint)
-        return Arco.finished(raw, voice, m.getValue("BODY"), rawRate)
+        return Arco.finishedFor(raw, voice, Arco.settled(m, voice), rawRate)
     }
 
     // ---- TUNE ---------------------------------------------------------------
@@ -270,7 +270,8 @@ class ArcoProductTest {
      */
     @Test
     fun `BODY does not change the length of a note`() {
-        val cases = ArcoVoice.entries.flatMap { v -> threeTunes.flatMap { t -> listOf(0f, Arco.DEFAULT_HOLD, 0.6f).map { h -> Triple(v, t, h) } } }
+        // CELLO and ERHU: SARANGI has no BODY knob (its WASH, which takes the slot, is held to the string's length by ArcoSarangiTest).
+        val cases = ArcoMeasure.BODY_VOICES.flatMap { v -> threeTunes.flatMap { t -> listOf(0f, Arco.DEFAULT_HOLD, 0.6f).map { h -> Triple(v, t, h) } } }
         val rows = cases.parMap { (voice, tune, hold) ->
             val renders = listOf(0f, 0.5f, 0.75f, 1f).map { body -> Arco.render(voice, macros(voice, tune, body = body, hold = hold)) }
             Triple("${label(voice, tune)} HOLD $hold", renders.map { it.frameCount }, relativeDifference(renders[0].samples, renders[3].samples))
@@ -363,7 +364,7 @@ class ArcoProductTest {
      */
     @Test
     fun `the box rings at the curve's amount, exactly as it did up to the knee and frozen at the knee's size above it`() {
-        val rows = ArcoVoice.entries.flatMap { v -> threeTunes.map { v to it } }.parMap { (voice, tune) ->
+        val rows = ArcoMeasure.BODY_VOICES.flatMap { v -> threeTunes.map { v to it } }.parMap { (voice, tune) ->
             val raw = rawString(voice, tune)
             val before = raw.copyOf()
             fun r1b(body: Float): FloatArray {
@@ -412,7 +413,7 @@ class ArcoProductTest {
      */
     @Test
     fun `at BODY 1 nothing clips or goes non-finite, at any TUNE step of either voice`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
             val rows = steps.parMap { step ->
                 val snip = Arco.render(voice, macros(voice, tuneOf(voice, step), body = 1f))
@@ -682,10 +683,13 @@ class ArcoProductTest {
         for (voice in ArcoVoice.entries) {
             val base = Arco.renderLoopMeasured(voice, macros(voice, hold = 1f, bow = 0f)).loop
             assertContentEquals(base, Arco.renderLoopMeasured(voice, macros(voice, hold = 0.99f, bow = 1f)).loop, "$voice: BOW or HOLD changed the loop")
-            val dry = Arco.renderLoopMeasured(voice, macros(voice, hold = 1f, body = 0f)).loop
-            val diff = relativeDifference(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f, body = 1f)).loop, dry)
-            println("ARCO loop BODY $voice: BODY 0 against 1 differ by ${f(diff, 3)} of the loop")
-            assertTrue(diff > 0.3, "$voice: BODY does nothing to a loop ($diff)")
+            // the control is the voice's fourth knob: BODY on CELLO and ERHU (the same macros as before, to the key), WASH on SARANGI
+            val knob = Arco.boxKnob(voice)
+            val dry = Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + (knob to 0f)).loop
+            val diff = relativeDifference(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + (knob to 1f)).loop, dry)
+            println("ARCO loop $knob $voice: $knob 0 against 1 differ by ${f(diff, 3)} of the loop")
+            val bar = if (knob == "BODY") 0.3 else KNOB_ENDS_BAR_WASH
+            assertTrue(diff > bar, "$voice: $knob does nothing to a loop ($diff, bar $bar)")
         }
     }
 
@@ -830,18 +834,21 @@ class ArcoProductTest {
         for (voice in ArcoVoice.entries) {
             val tune = 0.5f
             val hz = Arco.frequencyFor(voice, tune)
+            // SARANGI (R2) is read on its string, at WASH 0: its tarab rings at fixed pitches and holds the pitch a window reads toward the note
+            // (the default WASH's reading is printed after the bars).
+            val noTarab = stringOnly(voice)
             for (hold in listOf(0f, 0.2f, 0.26f)) {
-                val m = macros(voice, tune, hold = hold)
+                val m = macros(voice, tune, hold = hold) + noTarab
                 assertTrue(Arco.holdSeconds(hold) <= Arco.VIBRATO_HOLD_FROM_SECONDS, "$voice: HOLD $hold is not a short note")
                 val vib = finishedCore(voice, m)
                 assertContentEquals(vib, finishedCore(voice, m, vibrato = false), "$voice HOLD $hold: a short note carries vibrato")
                 assertContentEquals(Arco.render(voice, m).samples, vib, "$voice HOLD $hold: finishedCore is not what render makes")
             }
-            val control = macros(voice, tune)
+            val control = macros(voice, tune) + noTarab
             assertTrue(!finishedCore(voice, control).contentEquals(finishedCore(voice, control, vibrato = false)), "$voice: the default HOLD carries no vibrato, so the equality above proves nothing")
 
-            fun excursion(seconds: Float): Pair<Double, Double> {
-                val m = macros(voice, tune, hold = Arco.holdFor(seconds))
+            fun excursion(seconds: Float, extra: Map<String, Float> = noTarab): Pair<Double, Double> {
+                val m = macros(voice, tune, hold = Arco.holdFor(seconds)) + extra
                 val bowOn = Arco.holdSeconds(m.getValue("HOLD"))
                 val withVibrato = centsOver(finishedCore(voice, m), hz, 0.6f, bowOn)
                 val without = centsOver(finishedCore(voice, m, vibrato = false), hz, 0.6f, bowOn)
@@ -859,9 +866,21 @@ class ArcoProductTest {
             if (oneAndAHalf.first < one.first + 2.0) problems += "$voice: vibrato did not grow from 1 s to 1.5 s: ${one.first} -> ${oneAndAHalf.first} c"
             if (three.first !in 6.0..10.0) problems += "$voice: a 3 s note's vibrato differs from the plain note by ${three.first} c, not 6 to 10"
             if (three.second !in 6.0..15.0) problems += "$voice: a 3 s note's vibrato peaks at ${three.second} c about its mean, not 6 to 15"
+            if (noTarab.isNotEmpty()) {
+                // ...and as it ships, at its default WASH, held to the same bars: R2 saw 2.54, 6.40 and 6.46 c (and 6.40 about its mean at 3 s), against
+                // 3.09, 7.79 and 7.80 at WASH 0, so the default tarab takes about a fifth off the swing a window reads, and the 1.5 s bar's room is 0.40 c.
+                val atDefault = listOf(1.0f, 1.5f, 3.0f).map { excursion(it, emptyMap()) }
+                println("ARCO vibrato $voice at its default WASH ${Arco.DEFAULT_WASH}: against the plain note ${atDefault.joinToString(" / ") { f(it.first, 2) }} c at 1, 1.5 and 3 s, about its mean ${f(atDefault[2].second, 2)} c at 3 s")
+                if (atDefault[0].first !in 2.0..5.5) problems += "$voice at its default WASH: a 1 s note's vibrato is ${atDefault[0].first} c, not 2 to 5.5"
+                if (atDefault[1].first !in 6.0..10.0) problems += "$voice at its default WASH: a 1.5 s note's vibrato is ${atDefault[1].first} c, not 6 to 10"
+                if (atDefault[2].second !in 6.0..15.0) problems += "$voice at its default WASH: a 3 s note's vibrato peaks at ${atDefault[2].second} c about its mean, not 6 to 15"
+            }
         }
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }
+
+    /** No knob of [voice]'s moves the string's pitch reading but its vibrato: nothing for CELLO and ERHU, and WASH 0 for SARANGI, whose tarab rings at fixed pitches. */
+    private fun stringOnly(voice: ArcoVoice): Map<String, Float> = if (Arco.hasBody(voice)) emptyMap() else mapOf("WASH" to 0f)
 
     /**
      * The vibrato never touches the string: it is a read-back delay of the finished wave ([Arco.vibrato]), so the string's own
@@ -953,15 +972,16 @@ class ArcoProductTest {
     fun `a LOOP carries the loop vibrato, R1's loop is flat to the measure's floor`() {
         for (voice in ArcoVoice.entries) {
             val hz = Arco.frequencyFor(voice, 0.5f)
+            val noTarab = stringOnly(voice)
             fun spreadAndMean(loop: FloatArray): Pair<Double, Double> {
                 val three = loop + loop + loop
                 val cents = centsOver(three, hz, 0.3f, three.size.toFloat() / rate - 0.3f)
                 val mean = cents.average()
                 return cents.maxOf { abs(it - mean) } to mean
             }
-            val (flat, flatMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f), loopVibrato = Arco.LoopVibrato.OFF).loop)
-            val (sung, sungMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f)).loop)
-            val held = finishedCore(voice, macros(voice, hold = Arco.holdFor(3f)))
+            val (flat, flatMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + noTarab, loopVibrato = Arco.LoopVibrato.OFF).loop)
+            val (sung, sungMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + noTarab).loop)
+            val held = finishedCore(voice, macros(voice, hold = Arco.holdFor(3f)) + noTarab)
             val heldCents = centsOver(held, hz, 0.6f, 3f)
             val heldSpread = heldCents.maxOf { abs(it - heldCents.average()) }
             println(
@@ -973,6 +993,12 @@ class ArcoProductTest {
             assertTrue(sung < 15.0, "$voice: the shipped loop's vibrato swings $sung cents, over the 15 cent ceiling")
             assertTrue(abs(sungMean - flatMean) < 1.0, "$voice: the vibrato moved the loop's mean pitch by ${sungMean - flatMean} cents")
             assertTrue(heldSpread > 2.5 * 2.0, "$voice: the 3 s note's vibrato ($heldSpread c) is not far over the loop's bar: the check cannot fail")
+            if (noTarab.isNotEmpty()) {
+                val (atDefault, atDefaultMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f)).loop)
+                println("ARCO loop vibrato $voice at its default WASH ${Arco.DEFAULT_WASH}: the shipped loop's spread ${f(atDefault, 2)} c (mean ${f(atDefaultMean, 2)})")
+                assertTrue(atDefault > 2.5 * 2.0 && atDefault < 15.0, "$voice at its default WASH: the shipped loop's vibrato is $atDefault c (R2 saw 7.43 against 8.26 at WASH 0)")
+                assertTrue(abs(atDefaultMean - flatMean) < 1.0, "$voice at its default WASH: the vibrato moved the loop's mean by ${atDefaultMean - flatMean} c")
+            }
         }
     }
 
@@ -1041,6 +1067,7 @@ class ArcoProductTest {
     fun `each voice's engine vibrato is its own shape's`() {
         assertTrue(Arco.vibratoShapeFor(ArcoVoice.CELLO) === Arco.VIBRATO_HUMAN, "CELLO's shape is not the human one")
         assertTrue(Arco.vibratoShapeFor(ArcoVoice.ERHU) === Arco.VIBRATO_PLAIN, "ERHU's shape is not the plain one")
+        assertTrue(Arco.vibratoShapeFor(ArcoVoice.SARANGI) === Arco.VIBRATO_HUMAN, "SARANGI's shape is not the human one")
         val cents = Arco.vibratoCentsFor(3f)
         assertEquals(Arco.VIBRATO_MAX_CENTS, cents, "a 3 s hold is not full depth")
         for (voice in ArcoVoice.entries) {
@@ -1049,7 +1076,7 @@ class ArcoProductTest {
             val on = Arco.bow(voice, hz, m, rawRate, gateSeconds = 3f, vibrato = true)
             val dry = Arco.bow(voice, hz, m, rawRate, gateSeconds = 3f, vibrato = false)
             val own = Arco.vibrato(dry, cents, rawRate, Arco.vibratoShapeFor(voice))
-            val other = Arco.vibrato(dry, cents, rawRate, if (voice == ArcoVoice.CELLO) Arco.VIBRATO_PLAIN else Arco.VIBRATO_HUMAN)
+            val other = Arco.vibrato(dry, cents, rawRate, if (Arco.vibratoShapeFor(voice) === Arco.VIBRATO_HUMAN) Arco.VIBRATO_PLAIN else Arco.VIBRATO_HUMAN)
             println("ARCO vibrato wiring $voice: equals its own shape's ${on.contentEquals(own)}, equals the other shape's ${on.contentEquals(other)}, the two shapes differ by ${f(relativeDifference(own, other), 4)} of the note's RMS")
             assertContentEquals(own, on, "$voice: the engine's vibrato is not its shape's")
             assertTrue(!on.contentEquals(other), "$voice: the engine's vibrato is the other voice's shape: the wiring cannot be told")
@@ -1263,8 +1290,9 @@ class ArcoProductTest {
     @Test
     fun `an out of range macro is clamped and an unknown key is dropped`() {
         for (voice in ArcoVoice.entries) {
-            val settled = Arco.settled(mapOf("TUNE" to 9f, "SPARKLE" to 0.7f, "BODY" to -1f), voice)
-            assertEquals(Arco.defaults(voice) + mapOf("TUNE" to 1f, "BODY" to 0f), settled, "$voice: settled")
+            val knob = Arco.boxKnob(voice)
+            val settled = Arco.settled(mapOf("TUNE" to 9f, "SPARKLE" to 0.7f, knob to -1f), voice)
+            assertEquals(Arco.defaults(voice) + mapOf("TUNE" to 1f, knob to 0f), settled, "$voice: settled")
             assertEquals(Arco.defaults(voice), Arco.settled(emptyMap(), voice), "$voice: a missing key is not its default")
             val wild = Arco.render(voice, mapOf("TUNE" to 9f, "SPARKLE" to 0.7f))
             val clamped = Arco.render(voice, mapOf("TUNE" to 1f))
@@ -1290,7 +1318,7 @@ class ArcoProductTest {
             assertFailsWith<IllegalArgumentException> { ArcoPatch("X", voice, mapOf("HOLD" to Float.NaN)) }
             val blank = assertFailsWith<IllegalArgumentException> { ArcoPatch("   ", voice, mapOf("GRIP" to 0.5f)) }
             assertTrue("name" in blank.message.orEmpty(), "the refusal does not say it is the name: ${blank.message}")
-            val ends = ArcoPatch("Ends", voice, mapOf("TUNE" to 0f, "BOW" to 1f, "GRIP" to 0f, "BODY" to 1f, "HOLD" to 1f))
+            val ends = ArcoPatch("Ends", voice, mapOf("TUNE" to 0f, "BOW" to 1f, "GRIP" to 0f, Arco.boxKnob(voice) to 1f, "HOLD" to 1f))
             assertEquals(voice.name, ends.voiceName)
             assertEquals("ARCO", ends.engine)
         }
@@ -1340,6 +1368,13 @@ class ArcoProductTest {
      */
     private val BUZZ_MOVES_AT_LEAST = 0.04
 
+    /**
+     * The bar for SARANGI's WASH from 0 to 1, on a one-shot and on a LOOP (R2): the house's own "a macro changes the sound" bar, 0.1, where BODY's two
+     * ends are held to 0.3. The tarab at WASH 1 is a bank as loud as the string ([Arco.WASH_AMOUNT_HIGH]), and it rings on the note's own in-tune
+     * harmonics, so it moves the note less than BODY's box and lift do. The measured numbers are on the printed lines and in the design record.
+     */
+    private val KNOB_ENDS_BAR_WASH = 0.1
+
     @Test
     fun `every macro changes the sound, BODY too, and an unknown key does not`() {
         for (voice in ArcoVoice.entries) {
@@ -1350,16 +1385,19 @@ class ArcoProductTest {
                 val moved = Arco.defaults(voice) + (spec.name to if (spec.default > 0.5f) 0.1f else 0.9f)
                 spec.name to relativeDifference(base, Arco.render(voice, moved).samples)
             }
+            // the fourth knob's two ends: BODY on CELLO and ERHU, WASH on SARANGI (the tarab, in BODY's place)
+            val knob = Arco.boxKnob(voice)
             val bodyEnds = relativeDifference(
-                Arco.render(voice, Arco.defaults(voice) + ("BODY" to 0f)).samples,
-                Arco.render(voice, Arco.defaults(voice) + ("BODY" to 1f)).samples,
+                Arco.render(voice, Arco.defaults(voice) + (knob to 0f)).samples,
+                Arco.render(voice, Arco.defaults(voice) + (knob to 1f)).samples,
             )
-            println("ARCO macros $voice: " + diffs.entries.joinToString(" ") { "${it.key} ${f(it.value, 3)}" } + ", BODY 0 against 1 ${f(bodyEnds, 3)}")
+            println("ARCO macros $voice: " + diffs.entries.joinToString(" ") { "${it.key} ${f(it.value, 3)}" } + ", $knob 0 against 1 ${f(bodyEnds, 3)}")
             for ((name, diff) in diffs) {
                 val bar = if (name == "BUZZ") BUZZ_MOVES_AT_LEAST else 0.1
                 assertTrue(diff > bar, "$voice $name did nothing (${f(diff, 4)}, bar $bar)")
             }
-            assertTrue(bodyEnds > 0.3, "$voice: BODY from 0 to 1 moves the note by only ${f(bodyEnds, 4)}: a dead knob")
+            val endsBar = if (knob == "BODY") 0.3 else KNOB_ENDS_BAR_WASH
+            assertTrue(bodyEnds > endsBar, "$voice: $knob from 0 to 1 moves the note by only ${f(bodyEnds, 4)} (bar $endsBar): a dead knob")
         }
     }
 

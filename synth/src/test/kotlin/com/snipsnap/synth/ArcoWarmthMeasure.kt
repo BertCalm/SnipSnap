@@ -329,7 +329,7 @@ internal object ArcoWarmthMeasure {
                 "${ArcoBodyMeasure.f(ArcoBodyMeasure.WINDOW_FROM)}-${ArcoBodyMeasure.f(ArcoBodyMeasure.WINDOW_TO)} s; a dot is a band with no harmonic. F0 the fundamental alone; RMS the whole clip; LOUD the engine's Loudness.of; " +
                 "A the A-weighted rise (steady window; AW the whole clip); PRED the shaping's own response at the partials (plain's energies); ALL all the spectrum in the band.",
         )
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.BODY_VOICES) {
             println("ARCO warmth ${voice.name}: kind | note f0 | BANDS ${BAND_LABELS.joinToString(" ")} | PRED same | ALL same | F0 | RMS LOUD A AW | PEAK (plain) ceiling")
             for (kind in listOf(ArcoWarmthCandidates.Kind.REPEAT, ArcoWarmthCandidates.Kind.LOUD) + ArcoWarmthCandidates.SHAPED) {
                 for (r in readings.filter { it.voice == voice && it.kind == kind }) {
@@ -349,7 +349,7 @@ internal object ArcoWarmthMeasure {
     /** Per voice and shaped candidate, min / median / max of each band's delta over the five notes, and of RMS, LOUD and the peak ratio. */
     fun printSummary(readings: List<Reading>) {
         println("ARCO warmth SUMMARY per voice and candidate over its five grid notes: min / median / max, dB (bands and F0, RMS, LOUD, A) and the peak (the string at the plain's level, before any ceiling) as a ratio to the plain's")
-        for (voice in ArcoVoice.entries) for (kind in ArcoWarmthCandidates.SHAPED + ArcoWarmthCandidates.Kind.LOUD) {
+        for (voice in ArcoMeasure.BODY_VOICES) for (kind in ArcoWarmthCandidates.SHAPED + ArcoWarmthCandidates.Kind.LOUD) {
             val rs = readings.filter { it.voice == voice && it.kind == kind }
             fun trio(values: List<Double>): String = if (values.isEmpty()) "  .  " else "${s1(values.min())}/${s1(ArcoBodyMeasure.median(values))}/${s1(values.max())}"
             val bands = BAND_LABELS.indices.joinToString("  ") { b -> "${BAND_LABELS[b]} ${trio(rs.mapNotNull { it.numbers.bands[b] })}" }

@@ -24,6 +24,13 @@ private const val ABOVE_KNEE_DIFFERS = true
 private val R1_LOOP = Arco.LoopVibrato.OFF
 
 /**
+ * R2's second edit (2026-11-07): SARANGI joined [ArcoVoice] after R1c, so R1c's pipeline has no SARANGI to freeze. Every walk of the voices in this file
+ * walks these two, the voices R1c rendered, where it walked `ArcoVoice.entries`; the frozen box's `when` gained the arm the compiler asks for, which refuses
+ * SARANGI by name. Not one CELLO or ERHU comparison, cell or bound changed. SARANGI's own guards are ArcoSarangiTest's.
+ */
+private val R1_VOICES = listOf(ArcoVoice.CELLO, ArcoVoice.ERHU)
+
+/**
  * A frozen, never-edited, self-contained copy of how ARCO renders TODAY (R1c's box, the tree at 316bfe9 plus PR 437), compared sample for sample, bit for bit,
  * with the engine ([Arco.render] for one-shots, [Arco.renderLoopMeasured] for loops). Nothing here may be "fixed" or re-pointed: the frozen pipeline (the `Frozen` object), its comparison helpers and the four tests that first stood on it are never edited; the only
  * edits they were given are [ABOVE_KNEE_DIFFERS], and, since R1g's review, new test methods at the end of the class that call the frozen copy for every macro and not only TUNE and BODY.
@@ -75,6 +82,7 @@ class ArcoFrozenR1cTest {
         private fun bodyFor(voice: ArcoVoice): List<Modes.Mode> = when (voice) {
             ArcoVoice.CELLO -> CELLO_BODY
             ArcoVoice.ERHU -> ERHU_BODY
+            ArcoVoice.SARANGI -> error("SARANGI did not exist in R1c: this frozen copy is CELLO's and ERHU's")
         }
 
         // R1c's knob: the box is the knob's own value up to the knee and climbs to BODY_TOP times the string at BODY 1.
@@ -210,20 +218,20 @@ class ArcoFrozenR1cTest {
 
     /** All 45 TUNE steps: 25 of CELLO and 20 of ERHU. */
     private fun oneShotCells(bodies: List<Float>): List<Cell> =
-        ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).flatMap { s -> bodies.map { Cell(v, s, it) } } }
+        R1_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).flatMap { s -> bodies.map { Cell(v, s, it) } } }
 
     /** Every third TUNE step and the top one: 9 of CELLO and 8 of ERHU (at least four a voice), from the lowest note, where a loop is hardest to close, to the highest. */
     private fun loopSteps(v: ArcoVoice): List<Int> = ((0..Arco.tuneSemitones(v) step 3) + Arco.tuneSemitones(v)).distinct()
 
     private fun loopCells(bodies: List<Float>): List<Cell> =
-        ArcoVoice.entries.flatMap { v -> loopSteps(v).flatMap { s -> bodies.map { Cell(v, s, it) } } }
+        R1_VOICES.flatMap { v -> loopSteps(v).flatMap { s -> bodies.map { Cell(v, s, it) } } }
 
     private fun List<Cell>.parRows(row: (Cell) -> Row): List<Row> = parallelStream().map { row(it) }.toList()
 
     private fun f(x: Float): String = "%.3e".format(Locale.ROOT, x)
 
     private fun print(kind: String, rows: List<Row>) {
-        for (voice in ArcoVoice.entries) for (body in rows.map { it.cell.body }.distinct()) {
+        for (voice in R1_VOICES) for (body in rows.map { it.cell.body }.distinct()) {
             val mine = rows.filter { it.cell.voice == voice && it.cell.body == body }
             if (mine.isEmpty()) continue
             println(
@@ -266,7 +274,7 @@ class ArcoFrozenR1cTest {
         print("loop", rows)
         assertEquals(3 * (9 + 8), rows.size, "the grid is nine CELLO steps and eight ERHU steps at three BODY values")
         assertAllExact("loop", rows)
-        for (voice in ArcoVoice.entries) for (body in listOf(0f, 0.25f, 0.5f)) {
+        for (voice in R1_VOICES) for (body in listOf(0f, 0.25f, 0.5f)) {
             val c = Cell(voice, loopSteps(voice).first(), body)
             val macros = macrosFor(c, loop = true)
             val (samples, differing, _) = diff(Arco.render(voice, macros, Arco.BUZZ_LAW, R1_LOOP).samples, Frozen.renderLoopMeasured(voice, macros).loop)
@@ -317,7 +325,7 @@ class ArcoFrozenR1cTest {
         val negZero = floatArrayOf(0f)
         assertEquals(1, diff(negZero, floatArrayOf(-0f)).second, "a signed zero is a different bit pattern")
 
-        for (voice in ArcoVoice.entries) {
+        for (voice in R1_VOICES) {
             val step = Arco.tuneSemitones(voice) / 2
             val half = Cell(voice, step, 0.5f)
             val frozenHalf = Frozen.render(voice, macrosFor(half, loop = false))
@@ -368,7 +376,7 @@ class ArcoFrozenR1cTest {
     }
 
     private fun printMacroRows(kind: String, rows: List<MacroRow>) {
-        for (voice in ArcoVoice.entries) for (loop in listOf(false, true)) for (body in rows.map { it.case.body }.distinct().sorted()) {
+        for (voice in R1_VOICES) for (loop in listOf(false, true)) for (body in rows.map { it.case.body }.distinct().sorted()) {
             val mine = rows.filter { it.case.voice == voice && it.case.loop == loop && it.case.body == body }
             if (mine.isEmpty()) continue
             println(
@@ -393,7 +401,7 @@ class ArcoFrozenR1cTest {
      */
     @Test
     fun `at the corners of TUNE, BOW, GRIP and HOLD, at BODY 0 and 0 point 5, both voices are the frozen copy's, one-shots and loops`() {
-        val cases = ArcoVoice.entries.flatMap { v ->
+        val cases = R1_VOICES.flatMap { v ->
             val tunes = listOf("lowest" to 0f, "default" to Arco.defaults(v).getValue("TUNE"), "highest" to 1f)
             tunes.flatMap { (tuneName, t) ->
                 listOf(0f, 1f).flatMap { bow ->
@@ -423,7 +431,7 @@ class ArcoFrozenR1cTest {
     @Test
     fun `the seven presets at or under BODY 0 point 5 are the frozen copy's, ENDLESS CRY as a loop`() {
         val named = setOf("SLOW BOW", "SHORT STAB", "GRIT BOW", "DRY SCRAPE", "HORSEHAIR", "THIN SCRAPE", "ENDLESS CRY")
-        val presets = ArcoPresets.all().filter { it.macros.getValue("BODY") <= Arco.DEFAULT_BODY }
+        val presets = ArcoPresets.all().filter { it.voice in R1_VOICES && it.macros.getValue("BODY") <= Arco.DEFAULT_BODY }
         assertEquals(named, presets.map { it.name }.toSet(), "the presets at or under BODY 0.5 are not the seven the roster names: the comparison would skip one")
         val rows = presets.map { MacroCase(it.voice, "${it.voice} ${it.name}", it.macros) }.parallelStream().map { macroRow(it, publicRoute = true) }.toList()
         printMacroRows("presets", rows)
@@ -440,7 +448,7 @@ class ArcoFrozenR1cTest {
      */
     @Test
     fun `the macro comparisons can fail, each of TUNE, BOW, GRIP and HOLD is seen by them`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in R1_VOICES) {
             val tune = Arco.defaults(voice).getValue("TUNE")
             val one = macroCase(voice, "one-shot", "TUNE" to tune, "BOW" to 0f, "GRIP" to 0f, "HOLD" to 0f, "BODY" to 0.5f)
             val frozenOne = Frozen.render(voice, one.macros)
@@ -467,7 +475,7 @@ class ArcoFrozenR1cTest {
      */
     @Test
     fun `R2 - the loop as shipped carries its vibrato and differs from the frozen loop, and with it off it is the frozen loop`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in R1_VOICES) {
             val macros = Arco.defaults(voice) + mapOf("HOLD" to 1f, "BODY" to 0.5f)
             val frozen = Frozen.renderLoopMeasured(voice, macros).loop
             val shipped = diff(Arco.render(voice, macros).samples, frozen)
