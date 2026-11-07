@@ -3240,3 +3240,233 @@ ARCO clips (MEASURED). Not heard yet; the pick decides what ships.
 - Against the clips the owner heard, the shipped Short's 20 ms level differs by at most 1.44 dB in its first 0.6 s (SAX
   C3). The loop is the same loop, entered at a better-matched turn.
 - Not heard: the shipped Short itself, and the soft layers' handover.
+
+## R2: SARANGI, as built (2026-11-07)
+
+The owner's decisions of 2026-11-07 on the research pass's items 6 to 9
+([`2026-11-04-arco-research.md`](2026-11-04-arco-research.md), section 11): a sarangi's own register, D3
+for 24 semitones; WASH in BODY's slot, so six knobs; the tarab as SANTUR's bank on the chromatic row, 37
+strings, driven by the string after the box and cut where the string ends, its t60 at most about 2 s;
+PLUCK's sympathetic strings only if the bank is later heard as "resonators, not strings". This section is
+what shipped. Nothing in it has been heard.
+
+**What shipped.**
+
+* **The voice.** `ArcoVoice.SARANGI`, the third entry (so every `ArcoVoice.entries` walk that draws dice
+  in order, ArcoLoopFuzzTest's, draws CELLO's and ERHU's as before). Root D3 (MIDI 50,
+  `SARANGI_ROOT_MIDI`), 24 semitones (`SARANGI_TUNE_SEMITONES`), so TUNE 0.5 is D4. The knobs are TUNE,
+  BOW, GRIP, WASH, HOLD and BUZZ (`Arco.macrosFor`); `Arco.hasBody` and `Arco.boxKnob` name the fourth.
+  The box is ERHU's skin (`bodyFor` hands back ERHU's own table) held at BODY's default 0.5
+  (`Arco.bodyOf`), the knee, so no lift is ever asked; the lift's three arms are ERHU's and never run.
+  The bow, the share (0.85), the bite (ERHU's three numbers, `OVERSHOOT_MAX_SARANGI` and its two
+  siblings) and the stop are the shared ones. The finger is `VIBRATO_HUMAN`, CELLO's drifting shape: a
+  sarangi's left hand slides on its nails (the research's S2), and the owner has picked the human shape
+  over the plain one twice.
+* **The grip window** (below): ERHU's pressure floor, 0.94, and ERHU's corner floor carried an octave
+  down (1005.3 Hz at D3, 1500 Hz at D4, 2238.6 Hz at D5, `SARANGI_CORNER_LOW_ROOT_HZ`,
+  `SARANGI_CORNER_RISE_SEMITONES` 33), GRIP 1 the full 3023.6 Hz everywhere. From D4 to D5 it is ERHU's
+  window to the note.
+* **WASH, the tarab** (`Arco.withTarab`). `Silk.washModesFor(D3, SilkScales.CHROMATIC, 1, t60)`: 37
+  fixed modes, D3 to D6 every semitone, the same whatever TUNE says. Rung by `Strings.bodyRing` (the call
+  the box and SANTUR's WASH make) on the string after the box and the output chain's cleaning, at 44.1 kHz,
+  and cut to the string's length. The t60 is `lin(WASH, 0.5, 1.5)` s (`WASH_T60_*_SECONDS`) and the bank's
+  RMS against the string's `lin(WASH, 0, 1)` (`WASH_AMOUNT_HIGH`), so the default WASH 0.5 is a bank 6 dB
+  under the string ringing 1.0 s. WASH 0 hands back the very buffer, so every CELLO and ERHU render, and
+  SARANGI at WASH 0, never meets the bank. A one-shot fades the bank alone over its last 50 ms
+  (`TARAB_END_FADE_SECONDS`); a LOOP and a held key, which never end inside their kept window, do not. It
+  rings in the one-shot (`finishedMeasured`), the LOOP (`renderLoopMeasured`) and the held key
+  (`renderHeldMeasured`), the last two through one stage, `conditionedFor`.
+* **Six presets** (`ArcoPresets`, below), two of them LOOPs.
+* **The held key.** `ArcoKeys.zoneMidis(SARANGI)` is nine zones, D3 F3 G#3 B3 D4 F4 G#4 B4 D5;
+  `ArcoPadMaker` offers it (its zones reach F2 to B5), and `HeldStart.SHORT` shapes its starts as it does
+  the others'. The factory pack (`InstrumentPackGenerator`) walks `ArcoVoice.entries`, so it makes an "ARCO
+  SARANGI" instrument with no edit.
+* **Registration.** `ArcoPresets.forVoice` has its arm; `Presets`, `Patches`, `Velocity` and `ArcoPatch`
+  needed none (they go through `ArcoVoice.entries` and `Arco.macrosFor`). A DeterminismTest canary at WASH
+  0.5 and 1, one-shot, LOOP and held key. The SYNTH screen reads ARCO through `ArcoVoice.entries`,
+  `macrosFor`, `defaults`, `scramble`, `render`, `drumClassFor` and `ArcoPadMaker`, so SARANGI and its WASH
+  slider reach the phone with no `:app` edit (not checked on a device). EngineCatalog's ARCO line names the
+  sarangi.
+* **The window map** (`ArcoSarangiWindowMap`, `./gradlew :synth:mapArcoSarangiWindow`) and **the owner's
+  clips** (`ArcoSarangiAuditionGenerator`, `./gradlew :shell:generateArcoSarangiAudition`).
+* **Not changed:** `SynthKits.arco()`. The kit's sixteen pads stay CELLO and ERHU and its committed WAVs
+  are untouched; a SARANGI pad there waits for the owner's listen.
+
+**The window, drawn first.** R1b's dense map (3,330 cells) was never committed; ArcoTest's speaks table
+(every TUNE step by GRIP in tenths) is what stayed. `ArcoSarangiWindowMap` draws three tables on the bare
+bow (BOW 0.5, BODY 0, no vibrato, a 3.5 s bow-on, ArcoTest's judgement: locked into one slip a period
+inside the bar, the last slip within 1.5 periods of the end, autocorrelation over 0.9), at every semitone
+from D3 to D5. MEASURED (Kotlin):
+
+* *The island*, pressure 0.85 to 1.0 by corner 1000 to 3024 Hz, 60 cells a semitone, 1,500 cells: 1,374
+  speak. From D3 to E4 every cell speaks. Above that the dark corners stop locking as the note rises, first
+  at the lowest pressures: 1000 Hz at no pressure from G4 (at 0.85 from F4), 1150 Hz at none from A4, 1300 Hz
+  at none from C5, 1500 Hz at none at D5, so at D5 the lowest corner that speaks at every pressure is 1750
+  Hz. The pitch, not the lock, sets the pressure floor; the lock sets the corner floor.
+* *Three laws along GRIP*, 275 points each. ERHU's floor 0.94 with ERHU's corner line carried down: **0 of
+  275 fail**, the slowest lock 0.649 s (D#3 at GRIP 0). CELLO's floor 0.85 on the same corner: 0 fail as
+  well. CELLO's floor with CELLO's flat 1000 Hz dark corner: 26 fail, all at GRIP 0 to 0.4 from F4 up.
+* *GRIP as a pitch knob*, GRIP 1 minus GRIP 0 by FFT on the finished render: with the 0.94 floor -1.26
+  cents (G3) to **+3.98 cents (D5)**, every step under the record's 5 cent bar; with the 0.85 floor +5.02
+  (B4), +5.57 (C5), +5.93 (C#5) and +6.34 (D5), over it. ArcoTest's pitch-knob test now holds all 25
+  SARANGI steps (worst 3.98 at D5, the autocorrelation within 0.17 c of the FFT) and the 0.85 floor at C5,
+  C#5 and D5 as its control (5.57, 5.93, 6.34).
+
+**The law, and why.** One law across the span, so GRIP does not change its travel at D4 where CELLO's and
+ERHU's laws would meet. Its floor is ERHU's because a high string's pitch rises with pressure and from B4 up
+the lower floor makes GRIP a tuning knob; at the bottom the higher floor costs nothing in the lock (every
+cell speaks there) and GRIP still travels mostly in the corner, threefold from 1005 to 3024 Hz, as CELLO's
+does from 1000. Its corner floor is ERHU's own line carried one octave down: it lands on CELLO's 1000 Hz at
+D3 within half a percent, so the dark end is a cello's at the bottom and an erhu's at the top, with no seam.
+No note inside D3 to D5 fails to speak, so the range was not shrunk. C3 was not tried: nothing in the map
+argues for it.
+
+**Measured** (Kotlin: ArcoSarangiTest, ArcoTest, ArcoProductTest, ArcoBuzzTest, ArcoLoopVibratoTest,
+ArcoLoopFuzzTest, ArcoKeysTest, HeldStartTest, ArcoPresetsTest, DeterminismTest; in `:shell`,
+ArcoPadMakerTest and ArcoBuzzLoopPadTest):
+
+* *In tune.* All 25 steps at GRIP 0 / 0.6 / 1 by BOW 0 / 0.5 / 1 (225 cells): worst 3.01 cents by FFT,
+  3.11 by autocorrelation, the two within 0.28 of each other, the longest lock 0.65 s.
+* *The stroke.* BOW 1's overshoot row (every step at GRIP 0.6 and 1): raw peak at most 0.630, every cell
+  locked by 0.28 s against a 1.1 s bar. The lock across BOW (0 to 1, GRIP 0, 0.6, 1): latest 0.61 s (D#3,
+  BOW 0.3). BOW 1 reaches 90 percent of the note sooner than BOW 0 at D3 (187 against 406 ms), D4 (161
+  against 358) and D5 (71 against 359). The default note locks by 0.11 to 0.29 s against its 0.85 s of bow.
+* *Bounded.* The 162-cell grid (TUNE, BOW, GRIP, WASH at 0, 0.5, 1, HOLD 0 and 0.5): raw peak at most 0.676,
+  raw mean at most 0.0336, finished peak at most 0.809. BUZZ's 64 corners: finished peaks 0.328 to 0.983,
+  the buzzed raw string at most 1.100. 400 scramble rolls: every one locks (0.071 to 0.648 s), raw peak at
+  most 0.723, none on the LOOP step, BUZZ never rolled, WASH rolled to 248 values.
+* *WASH 0 is no tarab:* the same array back at 0, under 0 and for a NaN, and a one-shot at WASH 0 at D3, D4
+  and D5 is the string, the box and the finish with no tarab call, to the bit.
+* *WASH rises* (D3, A3, D4, A4, D5, a 1.4 s note): the bank's share of the note is exactly WASH's amount
+  (0.1 to 1.0, `bodyRing` matches RMS); the house's "a macro changes the sound" measure is 0.037 to 0.061 at
+  WASH 0.1, 0.156 to 0.265 at the default 0.5 and 0.255 to 0.454 at 1; the ring left after the bow lifts
+  rises 7.0 dB (D5) to 12.4 dB (D4) over the knob. The default note moves 0.121 when WASH goes to 0.9
+  (ArcoProductTest's every-macro line), 0.311 from WASH 0 to 1.
+* *The tarab settles and every LOOP closes.* 75 loops (every step at WASH 0, 0.5 and 1): worst seams 6.12e-6,
+  4.09e-6 and 3.14e-6 (all at A3), against 1e-3. On SARANGI's own loop at WASH 0 tiled into an exactly
+  periodic stretch (so nothing but the bank is unsettled), rung at WASH 1's amount, the seam read where the
+  engine reads it after the 2.0 s warm-up: **t60 1.5 s (the shipped top) 3.6e-9 to 7.0e-9, 2 s 2.7e-7 to
+  4.4e-7, 3 s 2.6e-5 to 2.9e-5, 5 s 1.08e-3 to 1.19e-3 (over the bar)**, the research pass's Python stand-in
+  re-read in Kotlin (it had 1.1 s at 3e-12, 3 s at 2.9e-5 and 5 s at 1.2e-3). The loop grids with SARANGI in
+  them: BUZZ 1 at nine steps by five corners, worst 3.18e-6; the loop vibrato, both variants, worst 3.43e-6;
+  the fuzz's defaults and random rows, 4.09e-6; the loop's mean pitch 0.005 to 0.29 cents from its plan.
+* *The cut.* WASH never moves a note's length (D3, D4, D5 at HOLD 0, 0.4, 0.95, WASH 0, 0.5, 1). The last 5
+  ms before the house's 4 ms fade sit 28.6 to 57.3 dB under the note's RMS with the 50 ms end fade, and 5.5
+  to 32.2 dB without it (the control), so without it a stab's bank is still ringing hard when the 4 ms fade
+  takes it.
+* *The held key.* All 18 zone-layers at the defaults close (worst 5.27e-6, D5 soft), no retry, no peak
+  guard, 268 to 459 ms of CPU a zone-layer, 72.4 s of audio, 9.6 MB as 24-bit mono before the Short start
+  (5.8 MB after it, ArcoPadMakerTest's package). The corners (GRIP, WASH, BUZZ and BOW at their ends, three
+  zones, both layers, 42 zone-layers) worst 7.44e-6. Shaped by `HeldStart.SHORT`: the loop starts at 0.31 to
+  0.67 s (SARANGI D3 soft is now the latest of all 88 ARCO and BORE zone-layers); the handover dips at most
+  1.21 dB (B4 soft). The soft layer's loop is darker at every zone, by 2.3 (D4) to 4.6 percent (F3, B4),
+  and strokes slower everywhere.
+* *The vibrato.* At WASH 0 a held note's swing reads 3.09, 7.79 and 7.80 cents at 1, 1.5 and 3 s of bow; at
+  the default WASH 2.54, 6.40 and 6.46, both inside the house's bars. The shipped LOOP's swing reads 8.26
+  cents at WASH 0 and 7.43 at the default.
+* *The classifier.* SARANGI's default note files PERC and reads PERC at every one of its 25 steps; the 1.5 s
+  line is crossed at HOLD 0.447 (D3), 0.480 (D4) and 0.558 (D5), to the frame.
+
+**What changed against the plan.**
+
+* *The tarab's level.* The first build put the bank's top at 3 times the string (the default 1.5 times, 3.5
+  dB over it) and three tests read what that does to a bowed note: BUZZ 0.9 moved the default note by 0.027
+  (the house's bar is 0.04; 0.062 to 0.070 with no tarab), a held note's vibrato read 4.7 cents at 3 s
+  against 6 to 15, and the cut chopped (below). A bank that rings at fixed pitches and is louder than the
+  string anchors the note's pitch and buries what is added before it. At 1 it is a halo on the string.
+* *The end fade.* The owner's decision was to cut the bank where the string ends, as the box is. The box
+  rings 0.3 s and the bank up to 1.5 s, so where the stopped string is 60 dB down the bank is not, and the 4
+  ms fade cut it hard. The bank alone now fades over the note's last 50 ms: the cut is still where the string
+  ends, and the note's length is unchanged.
+* *BUZZ on SARANGI's default.* BUZZ's law is held on SARANGI's string at WASH 0 (0.039 at D3 and 0.035 at D4
+  at BUZZ 0.25; ERHU's is 0.035 at D4). At the default WASH the same BUZZ 0.25 moves the note 0.027 and
+  0.024, under the 0.03 proxy bar, and is printed, not held: the tarab takes a share of the note BUZZ's noise
+  had. BUZZ 0.9 at the default moves the note 0.043 (D4), over the house's 0.04.
+* *One stopped-tail cell.* ArcoTest's stopped-tail test reads root, middle and top; SARANGI's top there is
+  C5, not D5. At C#5 and D5 the string's free ring (0.171 and 0.157 s) is just over the stop's 0.15 s floor,
+  so the release is the free ring and -60 dB falls in the render's last 20 ms, where the test's windows run
+  off the end. A probe found ERHU's C#5 and D5 the same to the sample (ERHU's three test notes never visit
+  them); the last 5 ms of the tail sit 69.5 to 73.1 dB under the note. Both notes are printed for both voices.
+* *LOW SA.* A slow bow at D3 reads as a KICK (0.82 to 0.87 of its head under 200 Hz, 366 to 464 ms of ring
+  past its peak), so the low preset is a 63 ms stroke.
+
+**The macro table.**
+
+| Knob | Default | What it moves |
+|---|---|---|
+| TUNE | 0.5 (D4) | the note, D3 to D5 in semitones |
+| BOW | 0.5 | the stroke: 400 ms to full speed at 0, 10 ms at 1, ERHU's bite above 0.5 |
+| GRIP | 0.6 | pressure 0.94 to 1.0 and the bridge corner from ERHU's line (1005 Hz at D3, 2239 Hz at D5) to 3024 Hz |
+| WASH | 0.5 | the tarab: 37 strings D3 to D6, t60 0.5 to 1.5 s, the bank 0 to 1 times the string's RMS |
+| HOLD | 0.4 | the bow-on time, 0.3 to 4 s; the top step is the LOOP |
+| BUZZ | 0 | the chien by analogy, as on CELLO and ERHU |
+
+**The presets** (provisional, unheard; ArcoPresetsTest holds them to the real classifier):
+
+| Name | Note | Macros | Reading |
+|---|---|---|---|
+| LOW SA | D3 | BOW 0.5, GRIP 0.7, WASH 0.8, HOLD 0.43 | PERC, locks at 0.27 s of 0.92, 0.17 c |
+| SILVER HALO | A3 | BOW 0.5, GRIP 0.5, WASH 1, HOLD 0.4 | PERC, locks at 0.23 s, 0.72 c |
+| GUT ACCENT | G3 | BOW 0.85, GRIP 0.7, WASH 0.3, HOLD 0.15 | PERC, locks at 0.18 s of 0.44, 0.54 c |
+| HIGH LAMENT | C5 | BOW 0.2, GRIP 0.8, WASH 0.6, HOLD 0.44 | TONAL, locks at 0.16 s, 2.40 c |
+| ENDLESS SA | D4 | BOW 0.5, GRIP 0.6, WASH 0.8, HOLD 1 | LOOP, seam 1.7e-8, -0.02 c |
+| ENDLESS PA | A3 | BOW 0.4, GRIP 0.35, WASH 0.4, HOLD 1 | LOOP, seam 7.1e-8, -0.04 c |
+
+**Disclosed, not fixed.**
+
+* *Resonators, not strings.* Each of the 37 is one fixed mode, not a string with its own harmonics: a tarab
+  on Pa answers the note's third harmonic and would ring its own octave too, and these do not. That is the
+  research's gate question, and PLUCK's strings are the named fallback.
+* *The halo is short in a one-shot.* The bank rings on after the bow lifts only for the stop's 0.15 s to the
+  free ring, then fades over 50 ms; the sarangi's lingering halo is a release effect a cut note cannot keep.
+  In a LOOP and a held key the bank is a fixed colouring of the harmonics that land on it, with the vibrato
+  sweeping them across its narrow strings.
+* *The soft layer* is only 2.3 to 4.6 percent darker than the hard (the tarab colours both alike); it differs
+  mostly in its slower stroke.
+* *BUZZ is quieter on SARANGI's default* than on the others (above).
+* *ERHU's bite at D3.* R1c found R1b's bite (ERHU's) hardly showed on CELLO's notes from C3 up; SARANGI's low
+  octave is that register. Not measured as a bite gain here.
+* *The phone*: render time not measured; not checked on a device.
+
+**For the owner.** `./gradlew :shell:generateArcoSarangiAudition` (or `-ParcoSarangiOutput=<dir>`) writes,
+each levelled to one loudness with a `manifest.json`: the six presets (a LOOP three times end to end); a
+three-second held note at D3, D4 and D5 at WASH 0, 0.5 and 1; the default LOOP at D4 three times; the held
+key, hard and soft, at D3, D4 and D5, held 6 s then released; and ERHU at D4 and D5 and ERHU's held D4 beside
+SARANGI's. What it lets him judge: whether the tarab reads as sympathetic strings or as resonators, whether
+WASH 0.5 is enough of it (SANTUR's was "too quiet/absent" twice), whether D3 to D5 is a sarangi's register,
+and whether the held key still reads as cheap.
+
+**Why it is built this way.**
+
+1. **The window before the voice.** A bowed string only speaks where the friction can hold one slip a
+   period, and that place moves with the pitch. Drawing it at every semitone first is what proved D3 to D5
+   needs no shrinking, and it showed that the low notes care about nothing but the corner while the high
+   ones care about the pressure too.
+2. **One law, no seam.** If GRIP followed CELLO's law up to C4 and ERHU's from D4, the same knob position
+   would jump in brightness and pressure between two neighbouring notes. ERHU's line, carried down an
+   octave, happens to land on CELLO's dark corner at D3, so one smooth law covers both ends.
+3. **The tarab after the box, at the output rate.** Sympathetic strings answer the sound the instrument
+   makes, so they hear the boxed string. Run at 44.1 kHz the resonators are in tune to about a tenth of a
+   cent (at the oversampled rate a Float resonator at D3 is off by about two cents), and the tarab's whole
+   effect is how close a harmonic lands to it.
+4. **A halo, not a second instrument.** The bank is at most as loud as the string. Louder, and it pinned the
+   pitch (the vibrato read smaller) and swallowed the buzz.
+5. **The risky decision** is WASH's level and length, set by measurement and not by ear: the owner's ear on
+   the clips is the only test of whether this reads as a sarangi.
+
+**Ledger.**
+
+* *Verified* (read at `eb505b0d`): `Silk.washModesFor` (internal) and SANTUR's `withWash` (private, its
+  ranges 0.3 to 1.1 s and 0 to 8); `Strings.bodyRing`; `Arco.play`, `gripFor`, `renderLoopMeasured`,
+  `renderHeldMeasured`, `finishedMeasured`, `conditionedWithBody`; `ArcoKeys.zoneMidis`; `HeldStart.SHORT`;
+  `ArcoPadMaker`; SynthScreen's ARCO arms, every one through `ArcoVoice.entries`, `Arco.macrosFor`,
+  `defaults`, `scramble`, `render`, `drumClassFor` or `ArcoPadMaker`; `InstrumentPackGenerator` walks
+  `ArcoVoice.entries`; R1b's dense map was not committed.
+* *Measured* (Kotlin, the tests named above, 2026-11-07): the window map; the laws and their pitch travel;
+  everything under "Measured"; the probe at ERHU's and SARANGI's C#5 and D5; the BUZZ moves against the
+  tarab's amount (0.039, 0.027 and 0.017 at BUZZ 0.25 and D3 for amounts 0, 0.5 and 1.5).
+* *Proposed:* WASH's t60 range and level, the 50 ms end fade, the human finger, ERHU's bite, the six presets
+  and their names, the default WASH of 0.5.
+* *Heard:* nothing. CELLO and ERHU did not move: ArcoFrozenR1cTest, ArcoBuzzTest's twenty hashes,
+  ArcoLoopVibratoTest's 450 loops and the rest of the ARCO tests pass with their CELLO and ERHU numbers as
+  they were.
