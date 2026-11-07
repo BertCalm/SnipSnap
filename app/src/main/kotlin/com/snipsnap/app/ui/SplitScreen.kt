@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.SplitAquariumRenderer
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -64,9 +66,16 @@ import com.snipsnap.shell.Layers
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.SplitAquarium
+import com.snipsnap.shell.SplitStore
+import com.snipsnap.shell.SplitSettingsWrites
 import java.io.File
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -97,13 +106,25 @@ import kotlinx.coroutines.withContext
  *    (`hitLayers`, so the layers cannot start a buffer apart) and looping.
  *    A fader glides through `setGain` on the sounding voice rather than
  *    retriggering it.
- *  - **PRINT** needs no capture at all. The mix is completely determined
- *    by the three buffers and the desk, so it is `Layers.render` —
- *    the same every time, and provably the sound itself when nothing is
- *    touched.
+ *  - **PRINT** renders a fresh finite mix from the buffers and desk. Dry
+ *    printing remains `Layers.render`; an explicit KIT FX route adds the
+ *    selected shared bus and a bounded zero-input tail. Neither captures
+ *    a running loop's effect history.
  */
 @Composable
 fun SplitScreen(
+    entry: KitShelf.Entry?, backLabel: String, onToast: (String) -> Unit,
+    onPrinted: () -> Unit, onKitUpdated: (Kit) -> Unit, onExit: () -> Unit,
+    appScope: CoroutineScope,
+) {
+    // A different kit owns a different player, jobs and pending print.
+    // Disposal cancels delivery from an outgoing split/render and closes
+    // its native bank instead of keeping old stems in the incoming kit.
+    key(entry?.dir) { SplitDesk(entry, backLabel, onToast, onPrinted, onKitUpdated, onExit, appScope) }
+}
+
+@Composable
+private fun SplitDesk(
     entry: KitShelf.Entry?,
     /** The back button's words: `Navigation.backChip`, so they name where [onExit] lands. */
     backLabel: String,
@@ -114,6 +135,7 @@ fun SplitScreen(
     onKitUpdated: (Kit) -> Unit,
     /** SPLIT is reached from the kit's action row and leaves the same way. */
     onExit: () -> Unit,
+    appScope: CoroutineScope,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -145,6 +167,52 @@ fun SplitScreen(
     var printToPad by remember { mutableStateOf(false) }
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
+    var fxOpen by remember { mutableStateOf(false) }
+    var fxSettings by remember { mutableStateOf(SplitAquarium.Settings()) }
+    var fxReady by remember { mutableStateOf(false) }
+    var fxRefused by remember { mutableStateOf(false) }
+    var fxFaulted by remember { mutableStateOf(false) }
+    var fxPending by remember { mutableStateOf(false) }
+    var fxLimited by remember { mutableStateOf(0L) }
+    val fxWrites = remember { entry?.dir?.let(::SplitSettingsWrites) }
+    val fxRoute = remember(entry?.kit?.aquariumPerformance, entry?.kit?.tempoBpm, fxSettings.fromKit, fxReady) {
+        SplitAquarium.route(entry?.kit, if (fxReady) fxSettings else SplitAquarium.Settings())
+    }
+    var fxWasOn by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        entry?.dir?.let { dir ->
+            val read = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { runCatching { SplitStore.load(dir) } } }
+            read.onSuccess { fxSettings = it }.onFailure {
+                fxRefused = true
+                Log.e("SplitScreen", "SPLIT FX settings unreadable", it)
+            }
+        }
+        fxReady = true
+    }
+    LaunchedEffect(engine, fxRoute.sound, fxRoute.bpm, fxReady, fxSettings.fromKit) {
+        engine.setAquariumTempo(fxRoute.bpm)
+        engine.configureAquarium(fxRoute.sound, reset = fxSettings.fromKit && !fxWasOn)
+        fxWasOn = fxReady && fxSettings.fromKit
+        fxPending = engine.hasPendingAquariumControls()
+    }
+    fun saveFx(next: SplitAquarium.Settings) {
+        val writes = fxWrites ?: return
+        if (!fxReady || fxRefused || working || landing || pendingPrint != null) return
+        fxSettings = next
+        writes.stage(next)
+        // An accepted sidecar save outlives a kit switch or leaving SPLIT.
+        // Audio/FFT/print delivery still belongs to the kit-scoped scope.
+        appScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { writes.persist() } }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                Log.e("SplitScreen", "SPLIT FX settings not saved", e)
+                onToast("SPLIT FX SETTINGS NOT SAVED")
+            }
+        }
+    }
 
     // Mirrors the back button below (`enabled = !working`) exactly: always
     // registered so Back can't fall through to a broader "go to shelf"
@@ -185,6 +253,17 @@ fun SplitScreen(
         engine.allOff()
     }
 
+    LaunchedEffect(engine) {
+        while (isActive) {
+            delay(100)
+            engine.drainEnded() // Flush retained controls/stops on this independent host.
+            fxPending = engine.hasPendingAquariumControls()
+            fxFaulted = engine.aquariumFaulted()
+            fxLimited = engine.aquariumLimitedFrames()
+            if (engine.needsRestart()) { stopAll(); engineUp = false }
+        }
+    }
+
     // Audit correction: SPLIT holds a looping three-voice group (the desk's
     // PLAY ▸) exactly like PLAY/KIT/GROOVE do, but had no ON_STOP handler —
     // backgrounding the app left it playing. Same lesson, same shape: ON_STOP
@@ -220,7 +299,9 @@ fun SplitScreen(
      * says.
      */
     fun startAll() {
-        if (!engineUp || banked.size < Layers.Part.entries.size || splitFrames <= 1) return
+        if (!fxReady || banked.size < Layers.Part.entries.size || splitFrames <= 1) return
+        if (!engineUp || engine.needsRestart()) engineUp = engine.start()
+        if (!engineUp) { onToast(Copy.noLowLatencyStream("SPLIT")); return }
         if (desk.silent) {
             onToast(Copy.SPLIT_ALL_FADERS_DOWN)
             return
@@ -341,19 +422,23 @@ fun SplitScreen(
      * landing's toast arrives a beat later and would wipe a separate
      * warning off the screen before it had been read.
      */
+    suspend fun keepOnTape(snip: Snip, hot: Float = 0f) {
+        val landed = try {
+            withContext(Dispatchers.IO) { SnipStore.import(snip, context.filesDir, System.currentTimeMillis(), preserveStereo = true) }
+        } catch (e: CancellationException) {
+            throw e  // leaving the screen is not a lost print to report
+        } catch (e: Exception) {
+            Log.e("SplitScreen", "landOnTape: print lost", e)
+            onToast(Copy.PRINT_LOST)
+            return
+        }
+        onToast(Copy.splitPrinted(landed.seconds, hot.takeIf { it > 1f }))
+        onPrinted()
+    }
     fun landOnTape(snip: Snip, hot: Float = 0f) {
+        working = true
         scope.launch {
-            val landed = try {
-                withContext(Dispatchers.IO) { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
-            } catch (e: CancellationException) {
-                throw e  // leaving the screen is not a lost print to report
-            } catch (e: Exception) {
-                Log.e("SplitScreen", "landOnTape: print lost", e)
-                onToast(Copy.PRINT_LOST)
-                return@launch
-            }
-            onToast(Copy.splitPrinted(landed.seconds, hot.takeIf { it > 1f }))
-            onPrinted()
+            try { keepOnTape(snip, hot) } finally { working = false }
         }
     }
 
@@ -398,10 +483,9 @@ fun SplitScreen(
     }
 
     /**
-     * PRINT: the desk rendered exactly, with no capture and no waiting.
-     * A mix that came out over full scale is said aloud rather than
-     * quietly turned down — the faders are yours, and the number is a
-     * fact about what you asked for.
+     * PRINT freezes the desk and route for one finite pass. Dry overs are
+     * reported; the explicit KIT FX route uses the accepted post-sum clamp
+     * and protected wet bus, then clocks zeros for the selected tail.
      */
     fun printMix() {
         val parts = split ?: return
@@ -410,18 +494,26 @@ fun SplitScreen(
             return
         }
         working = true
+        val frozenDesk = desk
+        val frozenSettings = fxSettings
+        val frozenRoute = fxRoute
+        val toPad = printToPad
         scope.launch {
             try {
-                val mixed = withContext(Dispatchers.Default) { Layers.render(parts, desk) }
+                val mixed = withContext(Dispatchers.Default) { SplitAquariumRenderer.render(parts, frozenDesk, frozenSettings, frozenRoute) }
                 val peak = mixed.peak()
-                if (printToPad && entry != null) {
+                if (toPad && entry != null) {
                     // The chooser is about to take over and says nothing of
                     // its own, so a warning here survives to be read.
                     if (peak > 1f) onToast(Copy.splitMixHot(peak))
                     pendingPrint = mixed
                 } else {
-                    landOnTape(mixed, peak)
+                    keepOnTape(mixed, peak)
                 }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                Log.e("SplitScreen", "SPLIT PRINT refused", e)
+                onToast(e.message ?: "SPLIT PRINT FAILED")
             } finally {
                 working = false
             }
@@ -532,7 +624,7 @@ fun SplitScreen(
                 // never carried one.
                 if (playing) "STOP" else "PLAY",
                 scheme,
-                enabled = split != null && !working && engineUp,
+                enabled = split != null && !working && fxReady,
                 lit = playing,
                 modifier = Modifier.weight(1f),
             ) { if (playing) stopAll() else startAll() }
@@ -545,11 +637,20 @@ fun SplitScreen(
             ActionButton(
                 "PRINT",
                 scheme,
-                enabled = split != null && !working,
+                enabled = split != null && !working && fxReady,
                 modifier = Modifier.weight(1f),
             ) { printMix() }
+            ActionButton("FX", scheme, enabled = entry != null && !working && !landing && pendingPrint == null,
+                modifier = Modifier.weight(1f), lit = fxSettings.fromKit) { fxOpen = true }
         }
     }
+
+    if (fxOpen) SplitAquariumPanel(fxSettings, fxRoute, scheme,
+        ready = fxReady, refused = fxRefused, busy = working || landing || pendingPrint != null,
+        streamUp = engineUp, faulted = fxFaulted, pending = fxPending, limitedFrames = fxLimited,
+        onChange = ::saveFx,
+        onReset = { engine.configureAquarium(fxRoute.sound, reset = true) },
+        onClose = { fxOpen = false })
 
     if (pendingPrint != null) {
         val cancelChooser = {
