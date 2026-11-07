@@ -875,7 +875,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.WICK) {
+                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -884,6 +884,7 @@ fun SynthScreen(
                         origami != null -> origamiEditingMacros(origami)
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
                         nativeFactory is RimePatch -> Rime.defaults(nativeFactory.voice, nativeFactory.model) + nativeFactory.macros
+                        nativeFactory is OhmPatch -> Ohm.defaults(nativeFactory.model) + nativeFactory.macros
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
@@ -920,7 +921,7 @@ fun SynthScreen(
                     val restoredScanned = if (e == Engine.SCANNED_CHAIN) seed.restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
                     put(e to v, when {
                         workingPatch != null -> editableDefaults(e.defaults(v), workingPatch) + editableMacros(workingPatch)
-                        e == Engine.OHM && seed.restoredOhm != null -> Ohm.defaults(seed.restoredOhm.model) + seed.restoredOhm.macros
+                        e == Engine.OHM && seed.initialOhm != null -> Ohm.defaults(seed.initialOhm.model) + seed.initialOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
                         recipe is CausticPatch -> CausticEditing.controls(recipe,
                             CausticInstrument.defaults(recipe.voice, 2).mapValues { (name, fallback) ->
@@ -1043,8 +1044,8 @@ fun SynthScreen(
                 if (pair !in seed.seededWork) put(pair, patch)
             }
             // Likewise OHM: the bag's complete recipe never replaces a reopened pad's.
-            if (seed.restoredOhm != null && (Engine.OHM to OhmVoice.STRING) !in seed.seededWork) {
-                put(Engine.OHM to OhmVoice.STRING, seed.restoredOhm)
+            if (seed.initialOhm != null && (Engine.OHM to OhmVoice.STRING) !in seed.seededWork) {
+                put(Engine.OHM to OhmVoice.STRING, seed.initialOhm)
             }
         }
     }
@@ -1142,6 +1143,13 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.OHM) {
+            // Reply, Ring and native performance edits can share a frame with SAVE or SEND.
+            val current = loadedPatchesByVoice[engine to voice] as? OhmPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OhmPatch(name, controls)
+        }
         if (engine == Engine.WICK) {
             // Body, note and velocity edits can share a frame with SAVE/SEND.
             // Read the live typed recipe rather than the previous composition.
@@ -4264,6 +4272,13 @@ private class SynthSeed(settings: Map<String, String>) {
             Tremor.LEGACY_MODEL else Tremor.MODEL
     }
     val restoredOhm = restoredOhmPatch(settings)
+    // Existing recipes, named presets and macro-only benches retain their saved renderer.
+    // Only an untouched OHM bench starts at the approved Reply/Ring performance.
+    val initialOhm = restoredOhm ?: seededDrafts.filterIsInstance<OhmPatch>().firstOrNull()
+        ?: if ((Engine.OHM to OhmVoice.STRING) in seededWork ||
+            (Engine.OHM to OhmVoice.STRING) in seededPresets ||
+            Ohm.MACROS.any { settings.containsKey(macroSettingsKey(Engine.OHM, OhmVoice.STRING, it.name)) })
+            null else Ohm.replyRingPatch()
     val restoredScannedRecipes = run {
         ScannedChainVoice.entries.mapNotNull { v ->
             settings[scannedRecipeSettingsKey(v)]?.let { stored ->
@@ -5034,8 +5049,9 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val releaseFraction get() = OhmPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() =
-            "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
+        override val instrumentNote get() = if (spec.patch.model == 5)
+            "FINITE NOTES; RELEASE STOPS RINGING."
+        else "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OhmPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OhmPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =

@@ -1375,6 +1375,15 @@ keygroups with `:shell:generateOhmExpandedHandoff`. [Extension notes](docs/OHM_E
 separate the physical bow, captured-loop treatment, measured host costs and
 remaining listening/device checks.
 
+The owner accepted the **Reply and Ring** study. A new OHM bench now opens
+**Natural Replies**, with REPLY spacing the companions and RING changing their
+decay. Five added factory choices preserve the approved study WAVs; saved
+models 1–4, source/sustain controls and the original starter keep their paths.
+MAKE INSTRUMENT exports finite native C3–C5 notes with real note-off release
+and no sustain loop. Build the five MPC keygroups with
+`:shell:generateOhmReplyRingHandoff`. [Reply and Ring notes](docs/OHM_REPLY_RING.md)
+describe the saved controls, CLI and compatibility boundaries.
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones

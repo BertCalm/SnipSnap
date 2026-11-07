@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.performSemanticsAction
@@ -59,6 +60,58 @@ class OhmControlsTest : ComposeScreenTest() {
     private fun click(label: String) {
         button(label).performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
+    }
+
+    @Test
+    fun replyAndRingKeepTheCompleteFinitePerformanceThroughEditsAndReopening() {
+        val original = Ohm.replyRingPatch("My replies").copy(midi = 57, velocity = .65f,
+            seed = -905, releaseSeconds = .8f)
+        patch = original
+        show()
+        for (label in listOf("REPLY", "RING")) {
+            val progress = button(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
+            assertEquals(.5f, progress.current)
+            assertEquals(0f..1f, progress.range)
+        }
+        for (label in listOf("OHM STEADY", "OHM GATHER", "OHM EXTEND", "OHM UPDATE SOURCES",
+            "OHM EXCITER PLUCK", "OHM EXCITER BOW", "OHM EXCITER CAPTURED", "OHM EXCITER FROM PAD",
+            "HOLD", "ELDER", "GRAINS", "FREEZE", "FM RATIO", "FM INDEX", "GRAIN SIZE")) {
+            button(label).assertDoesNotExist()
+        }
+        adjust("REPLY", .25f)
+        adjust("RING", .75f)
+        adjust("VELOCITY", .4f)
+        val expected = original.copy(reply = .25f, ring = .75f, velocity = .4f)
+        compose.runOnIdle {
+            assertEquals(expected, patch)
+            patch = OhmPatch.fromJsonText(patch.toJsonText())
+            generation++
+        }
+        pump()
+        assertEquals(.25f, button("REPLY").fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current)
+        assertEquals(.75f, button("RING").fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current)
+        compose.runOnIdle { assertEquals(expected, patch) }
+    }
+
+    @Test
+    fun savedModelsKeepTheirOwnControlsWithoutConvertingToReplyAndRing() {
+        show()
+        for (model in 1..4) {
+            val saved = OhmPatch("Saved $model", Ohm.defaults(model), model = model, gesture = OhmGesture.GATHER)
+            compose.runOnIdle { patch = saved }
+            pump()
+            button("OHM GATHER").assertIsSelected()
+            button("REPLY").assertDoesNotExist()
+            button("RING").assertDoesNotExist()
+            if (model < 3) {
+                button("OHM EXTEND").assertExists()
+                button("HOLD").assertDoesNotExist()
+            } else {
+                button("OHM EXCITER PLUCK").assertIsSelected()
+                button("HOLD").assertExists()
+            }
+            compose.runOnIdle { assertEquals(saved, patch) }
+        }
     }
 
     @Test

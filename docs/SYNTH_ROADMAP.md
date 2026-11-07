@@ -759,6 +759,13 @@ records the measured proof and replay commands.
 
 ### OHM — finite coupled family strings
 
+The owner-approved Reply/Ring study is integrated as finite renderer 5.
+Fresh OHM work uses Natural Replies; the five approved factory points append
+to the original bank. Native finite keygroups retain real note-off release
+without a sustain loop. Saved renderers 1–4 and the original starter remain
+unchanged. [Reply/Ring integration](OHM_REPLY_RING.md) records the control,
+compatibility and export contract.
+
 One plucked foreground and two answering companions exchange waves through a
 shared bridge and membrane. TOUCH, BODY, LENGTH, MEDDLING and COMMUNE shape
 the note; native MIDI 48–72, velocity, seed, STEADY/GATHER gesture and renderer

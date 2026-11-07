@@ -5,6 +5,9 @@ testkit/cairn-tumble/
 __pycache__/
 
 build/
+# Regenerated listening-only study; its source and complete replay task are tracked.
+testkit/ohm-reply-ring-audition/
+testkit/ohm-reply-ring-handoff/
 testkit/crease-playable-release/
 # Libration's generated listening audio, MPC packs and source snapshots.
 testkit/libration-audition/

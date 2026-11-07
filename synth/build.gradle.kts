@@ -12,6 +12,46 @@ tasks.register<JavaExec>("generateFerryReleaseAudition") {
     args(providers.gradleProperty("ferryReleaseOutput").orNull ?: "${rootDir}/testkit/ferry-release-audition")
 }
 
+// A listening experiment has its own compilation. It uses the real DSP toolkit
+// without registering a renderer or compiling the entire engine-test library.
+val ohmReplyRingStudy by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output
+    runtimeClasspath += sourceSets["main"].output
+}
+configurations[ohmReplyRingStudy.implementationConfigurationName]
+    .extendsFrom(configurations["implementation"])
+configurations[ohmReplyRingStudy.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations["runtimeOnly"])
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileOhmReplyRingStudyKotlin") {
+    compilerOptions.freeCompilerArgs.add(
+        "-Xfriend-paths=" + sourceSets["main"].output.classesDirs.files.joinToString(",") { it.absolutePath }
+    )
+}
+tasks.register<JavaExec>("checkOhmReplyRingStudy") {
+    group = "verification"
+    description = "Check Reply/Ring study timing, decay, pitch, determinism and physical headroom."
+    classpath = ohmReplyRingStudy.runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmReplyRingStudyCheck")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+}
+tasks.register<JavaExec>("generateOhmReplyRingAudition") {
+    group = "distribution"
+    description = "Render the finite Reply/Ring listening study, complete recipes and diagnostics."
+    classpath = ohmReplyRingStudy.runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmReplyRingAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    val replay = project.findProperty("ohmReplyRingReplay")?.toString()
+    if (replay == null) {
+        args(project.findProperty("ohmReplyRingOutput")?.toString() ?: "testkit/ohm-reply-ring-audition")
+    } else {
+        args("--replay", replay,
+            project.findProperty("ohmReplyRingReplayOutput")?.toString() ?: "testkit/ohm-reply-ring-replay.wav",
+            project.findProperty("ohmReplyRingReplayMode")?.toString() ?: "matched")
+    }
+}
+
 tasks.register<JavaExec>("generateFerryLossAudition") {
     group = "distribution"
     description = "Render Ferry LOSS comparisons with complete recipes, physical decay and timing evidence."

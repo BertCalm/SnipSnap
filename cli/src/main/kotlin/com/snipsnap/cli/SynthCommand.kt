@@ -161,6 +161,8 @@ import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Ohm
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmOptions
 import com.snipsnap.shell.OhmPadMaker
 import java.io.File
 import java.io.FileOutputStream
@@ -273,7 +275,8 @@ import kotlin.random.Random
  * OTIS offers the sixteen auditioned note, chord and phrase recipes. --patch, --midi,
  * --velocity, signed32-bit --seed and six --macros controls retain the complete score.
  * LENGTH scales finite timing; there is no held-keyboard mode.
- * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
+ * OHM STRING keeps its five original encounters and appends five approved Reply/Ring choices.
+ * --ohm-reply/--ohm-ring select the finite reply family; source/HOLD upgrades retain their own model.
  * OVERLAP replays complete --patch recipes with note/velocity overrides. A saved HELD
  * recipe also exports three native reference zones with --instrument [--release S].
  * Finite OVERLAP recipes keep their original playback; select held mode in SYNTH first.
@@ -284,9 +287,12 @@ object SynthCommand {
         if (args.count { it.substringBefore('=') == "--macros" } > 1) {
             throw CliError("--macros supplies one comma-separated list; supply it only once")
         }
+        for (flag in listOf("--ohm-reply", "--ohm-ring")) {
+            if (args.count { it.substringBefore('=') == flag } > 1) throw CliError("$flag must be supplied only once")
+        }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--expression", "--tempo", "--beats"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--expression", "--tempo", "--beats", "--ohm-reply", "--ohm-ring"),
             boolean = setOf("--all", "--instrument", "--touch", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -294,6 +300,14 @@ object SynthCommand {
         val voice = opts.positional.getOrNull(1)?.uppercase()
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
+
+        fun ohmControl(flag: String): Float? = opts[flag]?.let { raw ->
+            if (engine != OhmPatch.ENGINE) throw CliError("$flag is only supported by OHM")
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
+                ?: throw CliError("$flag wants a finite value in 0..1, got '$raw'")
+        }
+        val ohmReplyOverride = ohmControl("--ohm-reply")
+        val ohmRingOverride = ohmControl("--ohm-ring")
 
         val gestureOverride = opts["--gesture"]?.let { raw ->
             if (engine != OrigamiPatch.ENGINE) throw CliError("--gesture is only supported by ORIGAMI, got $engine")
@@ -367,7 +381,7 @@ object SynthCommand {
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
-                OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
+                OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.SOURCE_MODEL)
                 else -> throw CliError("--macros is only supported by MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
@@ -519,6 +533,10 @@ object SynthCommand {
             raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
         }
+        val wantsOhmReplyRing = engine == OhmPatch.ENGINE &&
+            (modelOverride == 5 || ohmReplyOverride != null || ohmRingOverride != null)
+        if (wantsOhmReplyRing && modelOverride != null && modelOverride != 5)
+            throw CliError("OHM REPLY and RING require --model 5")
         val scrambleRandom = seedFlag("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
@@ -582,13 +600,21 @@ object SynthCommand {
 
         val chosen: List<Patch> = (when {
             savedPatch != null -> listOf(savedPatch)
-            opts.has("--all") -> presets
+            opts.has("--all") -> when {
+                wantsOhmReplyRing -> presets.filter { it is OhmPatch && it.model == 5 }
+                engine == OhmPatch.ENGINE && modelOverride != null -> presets.filter { it is OhmPatch && it.model < 5 }
+                else -> presets
+            }
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
                     ?: throw CliError("--preset wants a number, got '${opts["--preset"]}'")
                 if (n !in 1..presets.size) throw CliError("--preset is 1..${presets.size} for $engine $voice, got $n")
-                listOf(presets[n - 1])
+                val selected = presets[n - 1]
+                if (wantsOhmReplyRing && selected is OhmPatch && selected.model != 5)
+                    throw CliError("OHM Reply/Ring uses presets 6..10; choose one of those or omit --preset")
+                listOf(selected)
             }
+            wantsOhmReplyRing -> listOf(Ohm.replyRingPatch())
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
@@ -781,12 +807,7 @@ object SynthCommand {
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is OhmPatch) {
-                val model = modelOverride ?: if (withNote.model < 3 && (instrument || "HOLD" in macroOverrides))
-                    Ohm.MODEL_VERSION else withNote.model
-                if (withNote.model >= 3 && model < withNote.model)
-                    throw CliError("OHM expanded recipes cannot be downgraded; choose a recipe saved with model $model")
-                withNote.copy(model = model, seed = seedOverride ?: withNote.seed,
-                    macros = Ohm.defaults(model) + withNote.macros + macroOverrides)
+                editOhm(withNote, modelOverride, macroOverrides, seedOverride, instrument, ohmReplyOverride, ohmRingOverride)
             }
             else withNote
         }
@@ -868,7 +889,8 @@ object SynthCommand {
                 raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .02f..3f }
                     ?: throw CliError("OHM --release wants finite seconds in 0.02..3")
             } ?: patch.releaseSeconds
-            OhmPadMaker.Spec(patch.copy(macros = Ohm.defaults(patch.model) + patch.macros + ("HOLD" to 1f),
+            val controls = if (Ohm.supportsHeld(patch.model)) Ohm.defaults(patch.model) + patch.macros + ("HOLD" to 1f) else patch.macros
+            OhmPadMaker.Spec(patch.copy(macros = controls,
                 releaseSeconds = release))
         } catch (e: IllegalArgumentException) {
             throw CliError("OHM --instrument: ${e.message ?: "invalid held recipe"}")
@@ -978,8 +1000,32 @@ object SynthCommand {
         }
         OhmPadMaker.export(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
-        out.println("${midis.size} OHM zones, authored attack and sustain, RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
+        if (spec.patch.model == 5) out.println("${midis.size} OHM zones, finite encounters without loops; note-off RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
+        else out.println("${midis.size} OHM zones, authored attack and sustain, RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
+    }
+
+    private fun editOhm(patch: OhmPatch, modelOverride: Int?, macros: Map<String, Float>, seed: Int?,
+                        instrument: Boolean, reply: Float?, ring: Float?): OhmPatch {
+        val model = modelOverride ?: when {
+            reply != null || ring != null -> 5
+            patch.model < 3 && (instrument || "HOLD" in macros) -> Ohm.SOURCE_MODEL
+            else -> patch.model
+        }
+        if (patch.model >= 3 && model < patch.model)
+            throw CliError("OHM recipes cannot be downgraded; choose a recipe saved with model $model")
+        val controls = Ohm.defaults(model) + patch.macros + macros
+        if (model == 5) {
+            if (patch.options != OhmOptions()) throw CliError("OHM Reply/Ring cannot discard saved source settings; choose a Reply/Ring recipe")
+            if (patch.gesture != OhmGesture.STEADY) throw CliError("OHM Reply/Ring requires STEADY; choose a Reply/Ring recipe")
+            if ("HOLD" in controls) throw CliError("OHM Reply/Ring is finite and does not support HOLD; choose a source recipe for sustain")
+        }
+        return try {
+            patch.copy(model = model, seed = seed ?: patch.seed, macros = controls,
+                reply = reply ?: patch.reply, ring = ring ?: patch.ring)
+        } catch (failure: IllegalArgumentException) {
+            throw CliError("OHM: ${failure.message ?: "incompatible performance settings"}")
+        }
     }
 
     private fun makeLatticeInstrument(spec: LatticePadMaker.Spec, dir: File, out: PrintStream): Int {

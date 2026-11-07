@@ -15,6 +15,23 @@ import kotlin.test.assertTrue
 
 class OhmExpandedPresetsTest {
     @Test
+    fun `reply ring shelf and roster promotion retain all finite performance controls`() {
+        val root = createTempDirectory("ohm-reply-preset").toFile()
+        try {
+            val base = Ohm.replyRingPatch("MY REPLIES")
+            val patch = base.copy(macros = base.macros + mapOf("BODY" to .29f, "MEDDLING" to .72f),
+                midi = 65, velocity = .41f, seed = Int.MIN_VALUE, reply = .18f, ring = .92f, releaseSeconds = 1.7f)
+            UserPresets.save(root, patch, nowMillis = 100)
+            val restored = UserPresets.read(root).single().patch
+            assertEquals(patch, restored)
+            val line = UserPresets.rosterLine(restored)
+            assertTrue(line.startsWith("OhmPatch.fromJsonText("))
+            val jsonLiteral = line.removePrefix("OhmPatch.fromJsonText(").removeSuffix("),")
+            assertEquals(patch, OhmPatch.fromJsonText(Json.parse(jsonLiteral).str()))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `captured held presets retain their source and release through shelf and promotion`() {
         val root = createTempDirectory("ohm-source-preset").toFile()
         try {
