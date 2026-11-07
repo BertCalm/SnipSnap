@@ -289,6 +289,9 @@ class SynthScreenTest : ComposeScreenTest() {
             val messages = recordedToasts.joinToString(" | ").ifBlank { "<none>" }
             throw AssertionError("$what did not complete within ${timeoutMillis}ms. Captured SYNTH toasts: $messages", failure)
         }
+        // The callback arrives before busy clears and the new entry recomposes.
+        // Advance the frozen clock before another action inspects enabled state.
+        pump()
     }
 
     @Test
