@@ -64,6 +64,11 @@ envelope interactions and reproducible native/RMS-matched control comparisons.
 There is no held-note or seamless-loop mode. Every pad plays an ordinary
 rendered sample; MPC export uses the existing one-shot workflow.
 
+[Short Pluck Keys](SCANNED_CHAIN_KEYS.md) also packages this finite sound as
+a sampled keyboard instrument: thirteen native roots from C2 to C5, with
+three physical touch layers at each root. The existing presets and render
+models keep their sound.
+
 ## Shapes and recall
 
 FROM PAD offers an explicit 20 ms timbral window or a confidently detected

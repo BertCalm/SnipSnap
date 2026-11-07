@@ -73,6 +73,8 @@ object Cli {
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |  bellows-keys         four model-2 BELLOWS keygroups + fixed C3 bed
         |                        (--out DIR, --release .1..1.5, --overwrite)
+        |  scanned-chain-keys   Short Pluck C2-C5 instrument, 39 finite touch samples
+        |                        (--out DIR, --patch FILE, --overwrite; MPC 2/3 + recipes)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        (TRIO: TRES/BERIMBAU/CHARANGO/ENSEMBLE; --midi 48..84
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
@@ -417,6 +419,7 @@ object Cli {
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
                 "bellows-keys" -> BellowsKeysCommand.run(args.drop(1), out)
+                "scanned-chain-keys" -> ScannedChainKeysCommand.run(args.drop(1), out)
                 "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)

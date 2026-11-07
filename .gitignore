@@ -637,3 +637,6 @@ testkit/cairn-sing-prototype/
 testkit/fill-audition/
 
 /testkit/hydroform-candidate-bank/
+
+# Short Pluck Keys is regenerated with :cli:generateScannedChainKeys.
+/testkit/scanned-chain-keys/
