@@ -270,11 +270,22 @@ progressions): "Yes, as is." The single pads and the soft takes had no
 question of their own.
 Tests: `ChordStabsTest`.
 
-### Modal and borrowed layouts (2026-11-07, not yet heard)
+### Modal and borrowed layouts (2026-11-07)
 
 Two more layouts on the same STOOP CHORD stab, from the 2026-11-06 gap scan's
-second gap ("modal and borrowed chord stabs"). Neither is a starter yet: they
-reach FRESH TAPE after the owner's listen.
+second gap ("modal and borrowed chord stabs"). Heard 2026-11-07 on the
+listening page:
+- D dorian and G mixolydian: "Yes, as it is".
+- The borrowed chords: "Yes, as it is", keeping "All eight".
+- Starter kits: "The modes and borrowed".
+
+They are FRESH TAPE starters under KEYS AND CHORDS:
+- CHORD STABS DORIAN (D dorian).
+- CHORD STABS MIXOLYDIAN (G mixolydian).
+- CHORD STABS BORROWED (C major).
+
+All three carry C major as their kit key. The modes share C major's notes, so
+anything snapped to the kit's key stays inside the mode.
 
 - `ChordStabs.modalStabs(root, mode)` and `modalKit`: the same sixteen pads
   as the key layout, in `ChordStabs.Mode.DORIAN` (natural minor with a raised
