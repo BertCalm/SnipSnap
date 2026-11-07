@@ -1660,6 +1660,7 @@ object SynthKits {
             RelayPatch(
                 "Handoff ${index + 1}", RelayVoice.KEY,
                 Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
+                model = RelayPatch.LEGACY_MODEL_VERSION,
             ).let(::arranged)
         }
         fun selected(name: String) = RelayPresets.all().single { it.name == name }.let(::arranged)

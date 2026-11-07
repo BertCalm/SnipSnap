@@ -655,3 +655,6 @@ testkit/boom-bap-audition.zip
 
 # Regenerable wide-register and held OBBLIGATO performances and keygroups.
 testkit/obbligato-performance-audition/
+
+# Model-2 Relay musical listening exports.
+/testkit/relay-pulse-musical-audition/

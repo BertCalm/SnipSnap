@@ -248,14 +248,14 @@ class DeterminismTest {
 
     @Test
     fun `RELAY saved phrases stay byte identical through finite and held cache reuse`() {
-        for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
+        for (model in 1..RelayPatch.MODEL_VERSION) for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = RelayPresets.forVoice(voice).first().let { source ->
                 source.copy(macros = source.macros + mapOf(
                     "TUNE" to .25f, "ORDER" to .4f, "PULSE" to .3f, "HOLD" to hold,
-                ), velocity = .55f)
+                ), velocity = .55f, model = model)
             }
             val saved = RelayPatch.fromJsonText(patch.toJsonText())
-            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold")
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold model$model")
         }
     }
 
