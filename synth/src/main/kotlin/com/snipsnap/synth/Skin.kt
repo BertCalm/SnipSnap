@@ -238,10 +238,10 @@ object Skin {
     // ---------- voices ----------
 
     /** Unfinished ONSET source; beater is suppressed in favor of its shared transient. */
-    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, body: Float, edge: Float, rate: Int): FloatArray =
+    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, body: Float, edge: Float, rate: Int, velocity: Float = 1f): FloatArray =
         kick(defaults(SkinVoice.KICK) + mapOf("CLICK" to 0f, "DROP" to snap,
             "TONE" to ((1f - body) * (0.35f + 0.65f * edge))), rate, rootHz, t60Seconds,
-            dropDepth = snap * 1.5f, dropSpeed = 90.0)
+            dropDepth = snap * 1.5f, dropSpeed = 90.0, velocity = velocity)
 
     internal fun onsetHat(baseHz: Float, t60Seconds: Float, body: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
         hat(defaults(SkinVoice.HAT_CLOSED) + mapOf("TONE" to edge, "RING" to (0.35f + 0.6f * body)),

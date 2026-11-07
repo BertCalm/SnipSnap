@@ -462,6 +462,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            "wick", "WICK",
+            "Six pitched voices with recovering motion and three RATTLE bodies.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.wick() },
+        Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
             seeded = false,
@@ -471,8 +477,9 @@ object StarterKits {
             // Velocity.kt's SNARE_TONE_EXCLUDED) rather than low-passing
             // the same take - Velocity.variantsAt makes the same
             // patch-vs-captured call Robin and KitBuilder's velocity doors
-            // do (KICK/TOM/COWBELL/RIM still fall back inside it, same as
-            // everywhere else atVelocity has no macro to move).
+            // do. KICK is struck softer (StrikeVelocity, since 2026-11-07);
+            // TOM/COWBELL/RIM still fall back inside it, same as everywhere
+            // else atVelocity has no macro to move.
             ThumpKits.classic().map { pad ->
                 if (pad == null) return@map null
                 val recipe = Breed.recipeOf(pad.recipe)

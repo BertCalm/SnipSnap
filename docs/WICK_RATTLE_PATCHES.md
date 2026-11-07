@@ -1,12 +1,15 @@
 # WICK RATTLE: accepted bodies and saved patches
 
-Status: implementation of the owner's accepted direction, 2026-11-01.
-Repository baseline: `46a046e8dd24ed50149c0fc1cf96b2a694d59af3`.
+Status: accepted bodies integrated into the completed factory bank and Android
+workflow, 2026-11-06. The body-acceptance evidence below dates from 2026-11-01.
+Body-integration baseline: `46a046e8dd24ed50149c0fc1cf96b2a694d59af3`.
+Factory/UI completion baseline: `e634076db9fdf5a0ca9a8aacbbbcb5193c7bd3d4`.
 
 The owner liked the alternate source audition and authorized Warm wire as the
 default, with Hollow reed and Rubbed glass retained as normal saved variants.
-This is an integration and REVIEW round. The accepted default spectra, gate
-timing, reserve, release events and output stage retain their arithmetic.
+The accepted default spectra, gate timing, reserve, release events and output
+stage retain their arithmetic. The later performance change only hoists fixed
+gate coefficients; its exactness and timing evidence are recorded below.
 
 The characteristic gesture remains **one pitched body opens → recovering gates
 move inside it → answering openings soften → the body decays**.
@@ -33,6 +36,15 @@ them. Unknown selections and invalid types are refused. Copying, macro edits,
 native velocity rendering, pad recipes and CLI note/velocity overrides preserve
 the body. The existing CLI `--preset` route selects each named variant.
 
+The Android synth picker now includes WICK and its shared factory presets.
+RATTLE's BODY buttons select Warm wire, Hollow reed or Rubbed glass; a loaded
+compatibility patch also identifies its Previous body. The shared ROOT control
+and native VELOCITY control edit the saved note and strike strength. Complete
+typed drafts preserve those fields through macro edits, navigation, save and
+send. Sent pads retain authored roots, and SPREAD reads the saved MIDI note.
+`UserPresets` roster export uses `WickPatch.fromJsonText(...)` with the full
+saved JSON rather than reconstructing only voice and macros.
+
 `Wick.Options.rattleSource` is now a nullable diagnostic override. Null keeps the
 normal patch's body; an explicit source selects that body for a comparison.
 The public `render` and `inspect` calls append a normal source parameter, with
@@ -41,14 +53,18 @@ resolved once before either finite or held engine construction.
 
 ## Recipes and playable kit
 
-The provisional library contains 27 recipes. RATTLE's six are **Warm Wire**,
+The shared factory bank contains **36 recipes, six per voice**, routed through
+`Presets.forVoice`. RATTLE's six are **Warm Wire**,
 **Hollow Reed**, **Rubbed Glass**, **Depleted Rattle**, **Small Rattle** and
 **Held Rattle**. The first three share the accepted default controls and differ
 only in their source. The latter three use Warm wire with their existing
-controls. The other five voices' recipe definitions remain unchanged.
+controls. All 27 established recipes retain their definitions. Nine newly
+authored recipes complete PLUCK, WOOD, BUBBLE, BREATH and FLICKER's six-per-voice
+sets; these settings await owner listening. No new RATTLE recipe or body is
+implied by completion of the bank.
 
-The sixteen-pad kit is dry. Pads carry their patch names so the bodies can be
-identified on the MPC.
+The sixteen-pad kit is dry and is available from Android's FRESH TAPE menu.
+Pads carry their patch names so the bodies can be identified on the MPC.
 
 | Pads | Recipes |
 |---|---|
@@ -71,14 +87,17 @@ Kit reload checks compare the actual saved patches, body choices and pad names.
 `generateWickAudition` renders normal default RATTLE as Warm wire, and renders
 the two alternate preset cases using their actual saved source. Its preset
 filter includes body selection so equal macro settings cannot hide the new
-variants. The full base pack has 359 clips, 70 held examples and seven phrases.
+variants. The earlier 27-recipe base export contained 359 clips, 70 held
+examples and seven phrases. The completion generator adds the nine new recipes
+as a separately identified listening group and exports all 36 editable patches;
+the generated manifest records the current export's actual counts and status.
 
 The earlier six cohesion clips explicitly retain folded FM for both sides of
 that historical envelope comparison. The twenty source-study clips retain
 their accepted audio. Their twelve accepted single-note/held cards now provide
 normal patch downloads. The previous body retains explicit comparison recipes.
-All four phrase recipes record the body used by each scored note. The page has
-379 cards including this retained comparison section.
+All four phrase recipes record the body used by each scored note. The earlier
+page had 379 cards including this retained comparison section.
 
 Hosted source-study aliases must be rebuilt against the new base audio. A
 previous-body alias must never silently start pointing at a newly rendered
@@ -91,7 +110,7 @@ recipes and labels, pitch, bounds, causal ancestry and real held boundaries.
 Independent artifact checks compare all 960 accepted five-voice WAVs and all
 96 retained source-study WAVs, including stems and genuine contexts.
 
-## Evidence ledger and limits
+## Body-acceptance evidence and limits
 
 The final playability probe found an octave ambiguity at Glass TIMBRE one:
 the autocorrelation detector selected an octave below the requested note at
@@ -128,13 +147,53 @@ in both native MPC formats, and exact audio for its twelve retained accepted
 finite/held pads.
 
 - Heard: the owner liked the three alternate bodies and approved this landing.
-- Verified: the patch, engine, copy/velocity/CLI, kit and generator integration
-  described above exists against the named baseline.
+- Verified in the earlier body round: the patch, engine, copy/velocity/CLI,
+  kit and generator integration against the body-integration baseline.
 - Measured: the focused command, export manifests and independent artifact
   reports record their actual outcomes; a full JVM run requires exit code zero.
-- Not established: phone rendering speed, MPC hardware loading and behavior,
-  or the proposed full 36-recipe bank. The engine remains outside the Android
-  picker and global factory routing pending their separate integration work.
+- Implemented in the completion round: the 36-recipe shared factory route,
+  Android picker/body/root/native velocity editing, full saved drafts and
+  `UserPresets` JSON, authored-root SPREAD handling and FRESH TAPE starter.
+  Completion build/export checks are tracked separately in their generated
+  reports; the earlier checks above do not certify later changes.
+- Awaiting listening: the nine newly authored factory recipes. The accepted
+  voices and three RATTLE bodies retain their earlier heard status.
+- Not established: physical-phone rendering speed or MPC hardware loading and
+  playback behavior.
+
+## Bit-exact performance change
+
+The fixed low/high cutoff law, tone/VCA exponents and stage weight now compute
+once per engine instead of inside each sample's three-gate loop. The exact
+original expressions and sample arithmetic order remain. Against the completion
+baseline, 50 actual-Kotlin cases retained identical raw and levelled float
+hashes, genuine held-context hashes and diagnostics. Cases cover all six voice
+defaults finite/held, every RATTLE body, low/high registers, macro edges and
+legacy envelope options.
+
+Separate Temurin 21.0.13 cloud JVMs on x86_64 with two active processors and JFR
+profiling ran the same 50-case sweep before seven timed renders per case. Across
+18 cases, median time reductions ranged from 3.25% to 14.40% (median 8.79%). Warm
+wire's finite median changed from 251.4 to 228.0 ms and held from 963.3 to
+867.3 ms. The tens-of-ms interaction target remains unmet in these cloud
+measurements. This is not a physical-phone benchmark.
+
+Run the portable current-build profile from the checkout root:
+
+```sh
+./gradlew --no-daemon :synth:benchmarkWick \
+  -PwickWarmups=1 -PwickRepetitions=7 \
+  -PwickSourceRevision="$(git rev-parse HEAD)"
+```
+
+It writes `testkit/wick-audition/render-profile.json`; an absolute
+`-PwickProfileOutput=/path/to/render-profile.json` overrides the destination.
+It records initial and warmed finite/held renders for all six voices and all
+three accepted RATTLE bodies, with runtime, frame, hash and held-strategy
+metadata. This single-JVM task uses its own warm-up protocol, so its values are
+fresh timing evidence rather than an exact rerun of the isolated before/after
+study. The [engine overview](WICK.md#render-cost) gives the full method and
+default-voice timing table.
 
 No new solver, source model or cross-render cache is introduced. The accepted
 4096-point tables and cubic reads remain. Cloud render times are not device

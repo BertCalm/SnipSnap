@@ -947,6 +947,20 @@ tasks.register<JavaExec>("generateWickKit") {
     args("${rootDir}/testkit")
 }
 
+/** Reproducible wall-time evidence; machine speed is not a unit-test assertion. */
+tasks.register<JavaExec>("benchmarkWick") {
+    group = "verification"
+    description = "Measure finite and held WICK render times for all six voices and three RATTLE bodies."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickRenderProfile")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickProfileOutput").orNull ?: "${rootDir}/testkit/wick-audition/render-profile.json")
+    args("--warmups=${providers.gradleProperty("wickWarmups").orNull ?: "1"}")
+    args("--repetitions=${providers.gradleProperty("wickRepetitions").orNull ?: "5"}")
+    providers.gradleProperty("wickSourceRevision").orNull?.let { args("--source-revision=$it") }
+}
+
 /** First recorded-voice Confluence proof; no synthetic vocal placeholders. */
 tasks.register<JavaExec>("generateConfluenceAudition") {
     group = "distribution"
@@ -3124,4 +3138,14 @@ tasks.register<JavaExec>("generateChitinBank") {
     workingDir = rootDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("chitinBankOutput").orNull ?: "${rootDir}/testkit/chitin-bank")
+}
+
+tasks.register<JavaExec>("generateHydroformCandidateKit") {
+    group = "distribution"
+    description = "Render twelve HYDROFORM candidates and a three-zone sixteen-pad kit with both MPC read-backs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HydroformCandidateKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("hydroformCandidateOutput").orNull ?: "${rootDir}/testkit/hydroform-candidate-bank")
 }

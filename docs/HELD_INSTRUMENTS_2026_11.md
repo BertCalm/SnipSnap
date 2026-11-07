@@ -65,7 +65,8 @@ the owner's ear decides.
 | COROLLA BLOSSOM and HUSK, MURMUR LEAD and CHOIR, PITCHWHEEL CLUNK and RECOIL, STOOP BASS and CHORD, TANGLE BASS and KNOT, FLOTILLA RIPPLE, HOLLOW, CROSSWAVE and GATHER | that voice's pitch, octave or steadiness failed; the engine's other voices passed |
 | OVEN | no HOLD control |
 | SHOAL | its factory voices are WOOD, which refuses HOLD loops by design |
-| CAIRN, WICK | prototypes with no factory presets |
+| CAIRN | prototype with no factory presets |
+| WICK | excluded from the November 4 scan before factory integration; it now has 36 presets, but its rhythmic HOLD has not been qualified as a continuous keyboard instrument |
 
 ARCO and BORE qualified here on 2026-11-04 and left the shared maker on 2026-11-06 for
 makers of their own, each in a soft and a hard touch layer:

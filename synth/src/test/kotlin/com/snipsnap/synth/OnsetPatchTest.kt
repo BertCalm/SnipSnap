@@ -187,8 +187,14 @@ class OnsetPatchTest {
         }
     }
 
+    /**
+     * A velocity layer keeps the saved blend and model. The KICK is struck
+     * again at that velocity on its own model ([StrikeVelocity], since
+     * 2026-11-07); the other voices, which have no measured monotonic
+     * brightness macro, still take the soften fallback.
+     */
     @Test
-    fun `velocity layers leave saved blend and renderer intact through the soften fallback`() {
+    fun `velocity layers leave saved blend and renderer intact, the kick struck softer and the rest softened`() {
         for (voice in OnsetVoice.entries) {
             val model = when {
                 voice == OnsetVoice.KICK -> 1
@@ -197,7 +203,9 @@ class OnsetPatchTest {
             }
             val patch = OnsetPatch("Velocity", voice, modelVersion = model)
             assertNull(Velocity.brightnessSpec(patch), "$voice has no measured monotonic brightness macro")
-            assertContentEquals(Velocity.soften(patch.render(), .75f).samples, Velocity.atVelocity(patch, .25f).samples)
+            val expected = if (voice == OnsetVoice.KICK) Onset.render(voice, patch.macros, 1, velocity = .25f)
+                else Velocity.soften(patch.render(), .75f)
+            assertContentEquals(expected.samples, Velocity.atVelocity(patch, .25f).samples, "$voice")
             assertEquals(.5f, patch.macros.getValue("BLEND"))
             assertEquals(model, patch.modelVersion)
         }

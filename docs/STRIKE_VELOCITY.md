@@ -18,7 +18,7 @@ modes and a deeper pitch drop → the same drum body.**
 | Contact | each mode weighted by `H(r) = 1 / (1 + (r / (R v^a))^2)` against the root, `R = 2.5`, `a = 0.8`; the set rescaled so the modes' summed gain holds | `modeFactors` |
 | Tension | the pitch drop (SKIN DROP, TERRA DROOP) by `v^2` | `droopFactor` |
 | Strike | the contact pulse's grit by `v` (TERRA); a beater click by `sqrt(v)` in level and `v^0.8` in its low-pass corner (SKIN) | `gritFactor`, `pulseLevel`, `cornerFactor` |
-| Level-reactive stages | TERRA's buzz gate and cavity soft clip see the hit's level `v` | `levelSeen` |
+| Level-reactive stages | TERRA's buzz gate and cavity soft clip, and THUMP KICK's DRIVE, see the hit's level `v` | `levelSeen` |
 
 Every factor is exactly 1 at full velocity, so `v = 1` is each engine's
 existing render, bit for bit: `TerraFrozenTest` still passes against its
@@ -26,8 +26,9 @@ frozen copy, and `StrikeVelocityTest` pins every SKIN voice and preset (168
 renders) against hashes taken before the change. The factory sound is the
 hard hit; the softer layers are new.
 
-Which voices read it: SKIN's KICK and TOM (`Skin.STRUCK`) and all four
-TERRA topologies. TERRA's BOX (2026-11-06, [TERRA_BOX.md](TERRA_BOX.md))
+Which voices read it: SKIN's KICK and TOM (`Skin.STRUCK`), all four
+TERRA topologies, and THUMP's and ONSET's kicks (2026-11-07, below).
+TERRA's BOX (2026-11-06, [TERRA_BOX.md](TERRA_BOX.md))
 takes the velocity through its slap's own pulse width instead of the mode
 tilt. SKIN's snare, hats, ride and shaker are noise through
 filters or wires, which a contact law does not describe; they keep the
@@ -36,6 +37,50 @@ every factory STICK is one partial, so there is no balance to move.
 
 `R` and `a` are design shapes, first tried in a Python prototype (the
 Luthier harness), not measurements of any drum.
+
+## THUMP's and ONSET's kicks (2026-11-07)
+
+The same law, on the two kicks that still took `soften()`:
+
+- **THUMP KICK:** the sweep's depth above the base by `v^2`; the click by
+  `sqrt(v)` in level and `v^0.8` in its 1 kHz low-pass corner; DRIVE's
+  saturator sees the hit's level (a soft hit is driven less and scaled
+  back after). The DRIVE macro itself never moves: it was measured
+  non-monotone in brightness and kept out of `Velocity`'s brightness
+  macros.
+- **ONSET KICK:** its THUMP source as above. Its membrane's six modes tilt
+  toward the root (`modeFactors`, summed level held), and its shared pitch
+  bend by `v^2`. Its 4 ms strike click by `sqrt(v)` and `v^0.8`. A model-1
+  pad's SKIN source takes SKIN's own kick law.
+- PUNCH and ONSET's fixed saturator stay out of it, as on SKIN. ONSET's
+  other voices and THUMP's keep their brightness macro or `soften()`.
+
+`StrikeVelocityTest` pins THUMP's 21 kicks (default and twenty presets)
+and ONSET's 8 (default, three presets, four kit blends) at each of its
+three models, against hashes taken before the change (`22a6b4005`).
+
+Measured, magnitude centroid over 30 ms, v = 0.25 to 1:
+
+| Cases | Rise |
+|---|---|
+| ONSET kicks, from 0 ms, every model | +22% to +37%, at every step |
+| THUMP kicks, from 2.5 ms | +52% or more, at every step |
+| THUMP kicks, from 0 ms | not monotone: 18 of 21 read brighter at 0.25 than 0.5 |
+
+**Disclosed, not fixed: PUNCH's onset click.** The THUMP reading from
+0 ms is PUNCH, not the law. PUNCH saturates the first 2 ms of every hit
+(`Punch.saturate`, a window of 4 x 0.5 ms), tapering its drive amount to
+exactly 0 at the window's end. But `Dsp.drive(x, a)` is
+`tanh(x (1 + 6a)) / tanh(1 + 6a)`, which at an amount just above 0 is
+`tanh(x) / tanh(1)`, about 1.31x for a small sample, not `x`. So for any
+PUNCH above 0 the first 2 ms sit about 2.4 dB above the rest, and that
+step is a fixed click on every hit. On a soft kick, with the sweep and the
+beater click softened, it is the brightest thing left (default kick,
+from 0 ms: 86 / 80 / 81 / 103 Hz at v = 0.25 / 0.5 / 0.75 / 1, against
+56 / 65 / 77 / 103 with PUNCH 0). Any PUNCH above 0, even 0.001, gives the
+same 86 Hz. It predates velocity, and every THUMP, SKIN and TERRA render
+runs through `Punch.saturate`, so fixing it moves the whole factory set;
+it waits on the owner's call.
 
 ## What was tried and dropped, measured
 
@@ -180,5 +225,9 @@ start jitter. Both spreads are shapes.
   listening artifact at https://claude.ai/artifact/KSRzJCMRVCYTdQ9uKFgtf3,
   whose answers save to its `answers` collection.
 - **Disclosed, not fixed:** TERRA's FORCE is not monotone in onset
-  brightness on the rim pads (above). THUMP's and ONSET's kicks still take
-  `soften()`.
+  brightness on the rim pads (above). PUNCH's onset click (THUMP's and
+  ONSET's kicks, above).
+- **Not yet heard:** THUMP's and ONSET's soft kicks. The listening page
+  https://claude.ai/artifact/SuVE4Hed1heDrm4Fa1Gs7s plays four THUMP and
+  three ONSET kicks, each as the old filtered soft hit, then the new soft,
+  medium and hard.

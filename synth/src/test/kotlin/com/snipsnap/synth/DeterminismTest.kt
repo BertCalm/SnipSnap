@@ -12,6 +12,24 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `WICK factory voices and held saved bodies replay byte for byte`() {
+        for (voice in WickVoice.entries) {
+            val patch = assertIs<WickPatch>(Presets.forVoice(WickPatch.ENGINE, voice.name).first())
+            val replay = Patches.fromJsonText(patch.toJsonText())
+            assertEquals(patch, replay)
+            assertContentEquals(patch.render().samples, replay.render().samples, "$voice factory recipe")
+        }
+        // CURRENT is the compatibility source of older saved RATTLE patches. It stays
+        // reproducible alongside all three editable bodies after the factory promotion.
+        for (source in Wick.RattleSource.entries) {
+            val patch = WickPatch("Held canary", WickVoice.RATTLE,
+                Wick.defaults(WickVoice.RATTLE) + ("HOLD" to 1f), midi = 57, velocity = .6f,
+                rattleSource = source)
+            val replay = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, replay.render().samples, "$source held recipe")
+        }
+    }
+
     @Test fun `HYDROFORM replays both voices and the measured DOME loop`() {
         for (voice in HydroformVoice.entries) {
             val patch = HydroformPatch("Canary", voice, emptyMap(), velocity = .6f)
