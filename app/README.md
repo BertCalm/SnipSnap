@@ -93,15 +93,18 @@ CHITIN provides SHELL bass and WING lead voices, with six candidate presets each
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.
 
-MERIDIAN adds SWEEP, eight saved factory presets and seven macros. ROOT
+MERIDIAN provides SWEEP, CLACK, CHIME and RASP, fourteen saved factory presets
+and seven macros. The original eight SWEEP recipes retain model 2; each new
+material voice adds a finite/held pair using model 3. ROOT
 (MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
 context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
-finite even at HOLD 1. Model 2 selects fixed-alignment sustain at HOLD ≥ .975.
+finite even at HOLD 1. SWEEP still defaults to model 2; the added voices default
+to model 3. Both support fixed-alignment sustain at HOLD ≥ .975.
 Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
 and SPREAD always deliver finite TONAL one-shots with the authored root. Held
 captures save a terminal fade of at least 20 ms; reopened recipes retain the
-complete rack, board and pedal placement. MAKE INSTRUMENT accepts only actual
-model-2 held patches and samples thirteen native roots, MIDI 36–72 in minor
+complete rack, board and pedal placement. MAKE INSTRUMENT accepts supported
+held recipes from all four voices and samples thirteen native roots, MIDI 36–72 in minor
 thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
 the real second-cycle loops and note-off release, including explicit NoteOn
 playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,

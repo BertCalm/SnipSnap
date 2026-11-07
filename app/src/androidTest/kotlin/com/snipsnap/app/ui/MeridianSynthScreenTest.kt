@@ -28,8 +28,10 @@ import com.snipsnap.shell.MeridianPadMaker
 import com.snipsnap.shell.MeridianSynth
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
+import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.MeridianPresets
+import com.snipsnap.synth.MeridianVoice
 import com.snipsnap.synth.PadRecipe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,10 +69,10 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
         KitStore.save(kit, directory)
         entry = KitShelf.Entry(directory, kit)
         settings["engine"] = if (fromPreviousEngine) "OHM" else "MERIDIAN"
-        settings["voice"] = if (fromPreviousEngine) "STRING" else "SWEEP"
+        settings["voice"] = if (fromPreviousEngine) "STRING" else (saved?.voice ?: MeridianVoice.SWEEP).name
         if (saved != null) {
             UserPresets.save(root, saved, 1L)
-            settings["preset.MERIDIAN.SWEEP"] = saved.name
+            settings["preset.MERIDIAN.${saved.voice.name}"] = saved.name
         }
         setPhoneContent {
             key(generation) {
@@ -110,7 +112,8 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
     private fun progress(label: String): Float = slider(label).fetchSemanticsNode().config
         .getOrNull(SemanticsProperties.ProgressBarRangeInfo)?.current ?: error("No progress for $label")
 
-    private fun draft(): MeridianPatch? = SynthDrafts.read(settings).filterIsInstance<MeridianPatch>().singleOrNull()
+    private fun draft(): MeridianPatch? = SynthDrafts.read(settings).filterIsInstance<MeridianPatch>()
+        .singleOrNull { it.voiceName == settings["voice"] }
 
     private fun loadFactory(name: String): MeridianPatch {
         press("PRESET $name")
@@ -149,7 +152,7 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
             slider(name).assertExists()
         }
         assertTrue("ROOT stepper row", currentRootOrNull() != null)
-        for (factory in MeridianPresets.all()) {
+        for (factory in MeridianPresets.forVoice(MeridianVoice.SWEEP)) {
             loadFactory(factory.name)
             assertEquals(factory, draft())
             for ((name, value) in factory.macros) assertEquals(value, progress(name), 1e-6f)
@@ -161,6 +164,63 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
         dial("HOLD", .975f)
         compose.onNodeWithText("FIXED LOOP").assertExists()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+    }
+
+    @Test
+    fun new_voices_keep_model_three_native_edits_and_the_actual_hold_readiness_after_restore() {
+        val initial = MeridianPatch("SAVED CLACK", MeridianVoice.CLACK,
+            Meridian.defaults(MeridianVoice.CLACK) + mapOf("TUNE" to .75f, "HOLD" to .974f),
+            midi = 51, velocity = .61f, model = 3, seedContext = 93)
+        val root = show(saved = initial)
+        waitFor("the saved model-three CLACK recipe", timeoutMillis = 30_000) { draft() == initial }
+        assertRoot(initial.midi)
+        assertEquals(initial.velocity, progress("VELOCITY"), 1e-6f)
+        assertEquals(initial.macros.getValue("TUNE"), progress("TUNE"), 1e-6f)
+
+        for ((index, voice) in listOf(MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP).withIndex()) {
+            press(voice.name)
+            waitFor("the ${voice.name} voice") { settings["voice"] == voice.name }
+            val factory = MeridianPresets.forVoice(voice)
+            assertEquals("${voice.name} factory choices", 2, factory.size)
+            for (preset in factory) {
+                compose.onNodeWithContentDescription("PRESET ${preset.name}").assertExists()
+            }
+            val selected = loadFactory(factory.first().name)
+            assertEquals(voice, selected.voice)
+            assertEquals(3, selected.model)
+            assertEquals(selected, draft())
+            assertRoot(selected.midi)
+            for (name in listOf("TUNE", "LATITUDE", "LENGTH", "REACH", "SURFACE", "MEMORY", "HOLD", "VELOCITY")) {
+                slider(name).assertExists()
+            }
+            dial("HOLD", .974f)
+            compose.onNodeWithText("FINITE").assertExists()
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsNotEnabled()
+            compose.onNodeWithText("SET HOLD TO 97.5% OR ABOVE TO MAKE A SUSTAINED INSTRUMENT.").assertExists()
+            dial("HOLD", .975f)
+            compose.onNodeWithText("FIXED LOOP").assertExists()
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+
+            val midi = 60 + index * 3
+            val velocity = .35f + index * .1f
+            rootTo(midi)
+            dial("VELOCITY", velocity)
+            dial("TUNE", .75f)
+            dial("MEMORY", .70f)
+            val saved = saveAs("MY ${voice.name}", root)
+            assertEquals(selected.copy(name = saved.name, midi = midi, velocity = velocity,
+                macros = selected.macros + mapOf("TUNE" to .75f, "MEMORY" to .70f, "HOLD" to .975f)), saved)
+            compose.runOnIdle { generation++ }
+            pump()
+            waitFor("restored ${voice.name} native root") { rootIs(midi) }
+            assertEquals(saved, draft())
+            assertEquals(voice.name, settings["voice"])
+            assertEquals(.75f, progress("TUNE"), 1e-6f)
+            assertEquals(.70f, progress("MEMORY"), 1e-6f)
+            assertEquals(.975f, progress("HOLD"), 1e-6f)
+            assertEquals(velocity, progress("VELOCITY"), 1e-6f)
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+        }
     }
 
     @Test

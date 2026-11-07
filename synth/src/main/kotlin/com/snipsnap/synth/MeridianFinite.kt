@@ -61,7 +61,7 @@ internal object MeridianFinite {
             val forcedUntil = minOf(activeFrames, maxOf(pressureEnd, catchEnd))
             val bank = config.newBank()
             val noise = Dsp.Noise(Dsp.seedFor("MERIDIAN", Meridian.LEGACY_MODEL_VERSION,
-                voice.name, seedContext, surface))
+                Meridian.noiseIdentity(voice), seedContext, surface))
             val alpha = config.noiseAlpha
             val noiseScale = config.noiseScale
             val participation = config.participation
