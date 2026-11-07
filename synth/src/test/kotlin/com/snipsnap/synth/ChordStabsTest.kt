@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Fft
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Scale
+import com.snipsnap.audio.Scales
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.pow
@@ -140,5 +141,87 @@ class ChordStabsTest {
         assertTrue(kit.max() < 0.04, "the kit's worst stab: ${kit.max()}")
         val worn = shares(1f)
         assertTrue(worn.average() > 2 * kit.average(), "WEAR 1 (${worn.average()}) against the kit (${kit.average()})")
+    }
+
+    // ---- modal and borrowed layouts (2026-11-07) ----
+
+    @Test
+    fun `D dorian and G mixolydian stack their own thirds`() {
+        assertEquals(
+            listOf("Dm", "Em", "F", "G", "Am", "Bdim", "C", "Dm", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7b5", "Cmaj7", "Dmadd9"),
+            ChordStabs.modalStabs(2, ChordStabs.Mode.DORIAN).map { it.name },
+        )
+        assertEquals(
+            listOf("G", "Am", "Bdim", "C", "Dm", "Em", "F", "G", "G7", "Am7", "Bm7b5", "Cmaj7", "Dm7", "Em7", "Fmaj7", "Gadd9"),
+            ChordStabs.modalStabs(7, ChordStabs.Mode.MIXOLYDIAN).map { it.name },
+        )
+        // Each mode's mark: Dorian's IV is major, Mixolydian's bVII is major.
+        assertEquals("A#", ChordStabs.modalStabs(0, ChordStabs.Mode.MIXOLYDIAN)[6].name)
+        assertEquals("F", ChordStabs.modalStabs(0, ChordStabs.Mode.DORIAN)[3].name)
+    }
+
+    @Test
+    fun `every modal chord is in its mode, voiced near the centre, and playable`() {
+        for (mode in ChordStabs.Mode.entries) for (root in 0..11) {
+            val label = "${Scales.NOTE_NAMES[root]} ${mode.label}"
+            val inMode = mode.intervals.map { (it + root) % 12 }.toSet()
+            val stabs = ChordStabs.modalStabs(root, mode)
+            assertEquals(16, stabs.size, label)
+            val centre = ChordStabs.centreMidi(root)
+            for (s in stabs) {
+                for (n in s.notes) assertTrue(n % 12 in inMode, "$label ${s.name}: ${n % 12} is in the mode")
+                assertEquals(s.intervals.size, s.intervals.distinct().size, "$label ${s.name}")
+                StoopPresets.forVoice(StoopVoice.CHORD).first().copy(midi = s.rootMidi, chordIntervals = s.intervals)
+            }
+            for (s in stabs.take(7) + stabs.drop(8).take(7)) {
+                assertTrue(abs(s.notes.average() - centre) <= 5.0, "$label ${s.name}: mean ${s.notes.average()} against $centre")
+                assertTrue(s.notes.max() - s.notes.min() <= 12, "$label ${s.name}: ${s.notes}")
+            }
+        }
+        assertFailsWith<IllegalArgumentException> { ChordStabs.modalStabs(12, ChordStabs.Mode.DORIAN) }
+    }
+
+    @Test
+    fun `C major borrows iv, bVII, bVI, bIII, v, bII, II and bVImaj7`() {
+        val stabs = ChordStabs.borrowedStabs(KeySpec.parse("C"))
+        assertEquals(
+            listOf("C", "Dm", "Em", "F", "G", "Am", "Bdim", "C", "Fm", "A#", "G#", "D#", "Gm", "C#", "D", "G#maj7"),
+            stabs.map { it.name },
+        )
+        assertEquals(ChordStabs.stabs(KeySpec.parse("C")).take(8), stabs.take(8))
+        assertTrue(stabs.take(8).all { it.from == null })
+        assertEquals(listOf("minor", "minor", "minor", "minor", "mixolydian", "phrygian", "lydian", "minor"), stabs.drop(8).map { it.from })
+    }
+
+    @Test
+    fun `every borrowed chord holds a tone outside its major key, in every key`() {
+        for (root in 0..11) {
+            val key = KeySpec(root, Scale.MAJOR)
+            val inKey = Scale.MAJOR.intervals.map { (it + root) % 12 }.toSet()
+            val stabs = ChordStabs.borrowedStabs(key)
+            val centre = ChordStabs.centreMidi(key)
+            for (s in stabs.drop(8)) {
+                assertTrue(s.notes.any { it % 12 !in inKey }, "${key.label} ${s.name}: a borrowed chord must colour outside the key")
+                assertTrue(abs(s.notes.average() - centre) <= 5.0, "${key.label} ${s.name}: mean ${s.notes.average()} against $centre")
+                assertTrue(s.notes.max() - s.notes.min() <= 12, "${key.label} ${s.name}: ${s.notes}")
+                StoopPresets.forVoice(StoopVoice.CHORD).first().copy(midi = s.rootMidi, chordIntervals = s.intervals)
+            }
+        }
+        assertFailsWith<IllegalArgumentException> { ChordStabs.borrowedStabs(KeySpec.parse("Cm")) }
+    }
+
+    @Test
+    fun `the modal and borrowed kits are sixteen pads whose recipes rebuild them, and name their source`() {
+        val modal = ChordStabs.modalKit(2, ChordStabs.Mode.DORIAN).map { requireNotNull(it) }
+        val borrowed = ChordStabs.borrowedKit(KeySpec.parse("C")).map { requireNotNull(it) }
+        for ((label, kit) in listOf("D dorian" to modal, "C major" to borrowed)) {
+            assertEquals(16, kit.size, label)
+            for (pad in kit) {
+                assertEquals(label, pad.source["key"], pad.displayName)
+                assertTrue(PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).render().samples.contentEquals(pad.snip.samples), "$label ${pad.displayName}")
+                assertEquals(2, pad.softVariants.size)
+            }
+        }
+        assertEquals(listOf(null, "minor"), listOf(borrowed[0].source["borrowedFrom"], borrowed[8].source["borrowedFrom"]))
     }
 }
