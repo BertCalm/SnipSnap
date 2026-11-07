@@ -1149,6 +1149,12 @@ object Copy {
     /** SETUP's PAD VELOCITY: the curve, under its chips. */
     const val SETUP_PAD_VELOCITY_CURVE_NOTE = "SOFT LIFTS LIGHT TAPS. HARD NEEDS A FIRM ONE. THE SOFTEST AND LOUDEST STAY WHERE THEY ARE."
 
+    /** The dock's line on KIT and BEAT while the sound is going out over Bluetooth. */
+    const val BLUETOOTH_ADDS_DELAY = "BLUETOOTH ADDS ABOUT 200 MS. USE WIRED OR THE SPEAKER TO PLAY AND RECORD."
+    /** SETUP's RECORD OFFSET, under its chips: what the number moves and what AUTO means. */
+    const val SETUP_RECORD_OFFSET_NOTE =
+        "HOW LATE YOUR EARS HEAR A BEAT. A TAKE IS MOVED BACK BY THIS MUCH. AUTO READS THE PHONE, AND ASSUMES 200 MS ON BLUETOOTH. PADS PLAY AS FAST AS EVER."
+
     // ---- Settings: LISTEN FROM, the source the dock's LISTEN remembers (UAT E2-CHOOSER) ----
     /** The heading of SETUP's source group: what the dock's LISTEN listens to. */
     const val SETUP_LISTEN_HEADING = "LISTEN FROM"

@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.BeatPlayer
+import com.snipsnap.app.RecordLatency
 import com.snipsnap.app.BeatTap
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
@@ -1513,7 +1514,9 @@ fun GrooveScreen(
         flash(slot)
         val t = take
         if (!recording || t == null) return
-        val hitNanos = uptimeMillis * 1_000_000L
+        // When the touch was HEARD to land, not issued: on Bluetooth the sound
+        // reaches the ear a codec's delay after the beat's anchor (RecordLatency).
+        val hitNanos = RecordLatency.hitNanos(uptimeMillis)
         // Narrows the early-open gate to "a few ms early against the
         // downbeat," per this fn's own KDoc — a tap on an earlier
         // count-in beat is more than the clamp window away and is simply

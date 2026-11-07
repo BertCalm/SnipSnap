@@ -3,7 +3,6 @@ package com.snipsnap.app.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +44,7 @@ import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiEndpoint
 import com.snipsnap.shell.MidiMonitor
 import com.snipsnap.shell.MidiReport
+import com.snipsnap.shell.OutputRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -370,12 +370,5 @@ private suspend fun runClockCheck(context: Context, hold: ClockHold): ClockOutco
 /** The first of Bluetooth, wired, USB that is plugged in, else the speaker: what the report calls the route. */
 private fun outputRoute(context: Context): MidiReport.Route {
     val am = context.getSystemService(AudioManager::class.java) ?: return MidiReport.Route.SPEAKER
-    val types = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type }.toSet()
-    return when {
-        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP in types ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && AudioDeviceInfo.TYPE_BLE_HEADSET in types) -> MidiReport.Route.BLUETOOTH
-        AudioDeviceInfo.TYPE_WIRED_HEADPHONES in types || AudioDeviceInfo.TYPE_WIRED_HEADSET in types -> MidiReport.Route.WIRED
-        AudioDeviceInfo.TYPE_USB_HEADSET in types || AudioDeviceInfo.TYPE_USB_DEVICE in types -> MidiReport.Route.USB
-        else -> MidiReport.Route.SPEAKER
-    }
+    return OutputRoute.classify(am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type }, Build.VERSION.SDK_INT)
 }
