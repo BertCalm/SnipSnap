@@ -553,11 +553,11 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
     }
     // What is still waiting is due in a later block: count this one off.
     for (int32_t i = 0; i < heldCount_; ++i) held_[i].frameOffset -= numFrames;
-    framesRendered_.fetch_add(numFrames, std::memory_order_release);
+    const int64_t blockStart = framesRendered_.fetch_add(numFrames, std::memory_order_release);
     // The print tap takes the bus after the mix, so what it captures is
     // what the speaker got: the clamp, stolen voices, fades and this
     // instance's Aquarium bus are already in these frames.
-    print_.record(out, static_cast<size_t>(numFrames));
+    print_.recordAt(out, static_cast<size_t>(numFrames), blockStart);
     return oboe::DataCallbackResult::Continue;
 }
 

@@ -47,6 +47,37 @@ object BeatSchedule {
         nowNanos + ((stepPos - np) / stepsPerSecond * 1_000_000_000.0).roundToLong()
 
     /**
+     * A BOUNCE's edges on the engine's frame counter: it prints exactly `[startFrame, stopFrame)`.
+     * [startFrame] is the downbeat's own frame, the one the pass's first note is handed over on.
+     */
+    data class BouncePlan(val startFrame: Long, val stopFrame: Long) {
+        val frames: Long get() = stopFrame - startFrame
+    }
+
+    /**
+     * The length of [passes] passes over a loop of [totalSteps] steps at [stepsPerSecond], in frames at
+     * [sampleRate]. Rounded once, over the whole print, never per pass: a loop is rarely a whole number of
+     * frames (93 BPM, 32 steps, 44.1 kHz is 227612.9...), and rounding each pass would let the print drift
+     * from the music by up to half a frame per pass. Rounded once it is within half a frame of the true
+     * length however many passes there are, and one pass is the nearest whole frame to the loop.
+     */
+    fun bounceFrames(passes: Int, totalSteps: Float, stepsPerSecond: Double, sampleRate: Int): Long =
+        (passes.toDouble() * totalSteps.toDouble() / stepsPerSecond * sampleRate).roundToLong()
+
+    /** The print for a bounce whose first pass starts on [downbeatFrame]: it ends [bounceFrames] later. */
+    fun bouncePlan(downbeatFrame: Long, passes: Int, totalSteps: Float, stepsPerSecond: Double, sampleRate: Int): BouncePlan =
+        BouncePlan(downbeatFrame, downbeatFrame + bounceFrames(passes, totalSteps, stepsPerSecond, sampleRate))
+
+    /**
+     * True when the loop's downbeat, the step position [totalSteps] unwrapped, falls in the window `(from, to]`:
+     * the one window it is handed over in, as the step-0 note's own `p + total` is by [forEachNoteDue].
+     */
+    fun downbeatInWindow(from: Double, to: Double, totalSteps: Float): Boolean {
+        val total = totalSteps.toDouble()
+        return from < total && total <= to
+    }
+
+    /**
      * Where the engine's frame counter stands against the frame clock's nanoseconds, learned from samples of the
      * two read together, and what it says a moment in the future will be.
      *

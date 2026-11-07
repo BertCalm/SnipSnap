@@ -4,6 +4,7 @@ import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.util.Random
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -152,5 +153,79 @@ class BeatScheduleTest {
         val wrap = ArrayList<Pair<Boolean, Double>>()
         BeatSchedule.forEachBeatDue(32f, 31.0, 32.3, 16) { accent, pos -> wrap += accent to pos }
         assertEquals(listOf(true to 32.0), wrap, "the top of the loop is the next pass's downbeat")
+    }
+
+    // ---- BOUNCE's frames -----------------------------------------------------------
+
+    @Test
+    fun aBouncePrintsExactlyPassesTimesTheLoopStartingOnTheDownbeatFrame() {
+        // 120 BPM, 32 steps: 4 s exactly, a whole number of frames at either rate.
+        for ((rate, loop) in listOf(44_100 to 176_400L, 48_000 to 192_000L)) {
+            val s = BeatClock.stepsPerSecond(120f)
+            for (passes in 1..4) {
+                val plan = BeatSchedule.bouncePlan(1_234_567L, passes, 32f, s, rate)
+                assertEquals(1_234_567L, plan.startFrame)
+                assertEquals(1_234_567L + passes * loop, plan.stopFrame)
+                assertEquals(passes * loop, plan.frames)
+            }
+        }
+        // A slower tempo, 90 BPM: 32 steps at 6 steps/s is 5.333 s, 235200 frames at 44.1 kHz and 256000 at 48 kHz.
+        val s90 = BeatClock.stepsPerSecond(90f)
+        assertEquals(235_200L, BeatSchedule.bounceFrames(1, 32f, s90, 44_100))
+        assertEquals(256_000L, BeatSchedule.bounceFrames(1, 32f, s90, 48_000))
+        // The rate is the engine's, not a constant: 96 kHz is double 48 kHz, and a clip of 48 steps scales with its length.
+        assertEquals(512_000L, BeatSchedule.bounceFrames(1, 32f, s90, 96_000))
+        assertEquals(384_000L, BeatSchedule.bounceFrames(1, 48f, s90, 48_000))
+    }
+
+    @Test
+    fun aLoopThatIsNotAWholeNumberOfFramesIsRoundedOnceOverThePrintNotPerPass() {
+        // 97 BPM, 32 steps, 44.1 kHz: one loop is 218226.80... frames. Rounding each pass would put eight passes
+        // at 8 * 218227 = 1745816, two frames past the music (1745814.43); rounding the whole print does not drift.
+        val s = BeatClock.stepsPerSecond(97f)
+        val exactPerPass = 32.0 / s * 44_100
+        for (passes in 1..16) {
+            val frames = BeatSchedule.bounceFrames(passes, 32f, s, 44_100)
+            assertTrue(abs(frames - passes * exactPerPass) <= 0.5 + 1e-6, "passes=$passes frames=$frames exact=${passes * exactPerPass}")
+        }
+        assertEquals(218_227L, BeatSchedule.bounceFrames(1, 32f, s, 44_100)) // one pass: the nearest whole frame
+        assertEquals(1_745_814L, BeatSchedule.bounceFrames(8, 32f, s, 44_100))
+        assertTrue(8 * BeatSchedule.bounceFrames(1, 32f, s, 44_100) != BeatSchedule.bounceFrames(8, 32f, s, 44_100))
+    }
+
+    @Test
+    fun theStopFrameIsTheNextPassesDownbeatNotAFrameDriftedFromIt() {
+        // Two tempos, two rates, a print of several passes: the stop frame is the start plus the true length of the
+        // passes, to the nearest frame, so a following bounce started on the next downbeat abuts this one.
+        for (bpm in listOf(93f, 101f)) for (rate in listOf(44_100, 48_000)) {
+            val s = BeatClock.stepsPerSecond(bpm)
+            val trueLoop = 32.0 / s * rate
+            val plan = BeatSchedule.bouncePlan(500L, 8, 32f, s, rate)
+            assertEquals(500L, plan.startFrame)
+            assertTrue(abs((plan.stopFrame - 500L) - 8 * trueLoop) <= 0.5 + 1e-6)
+        }
+    }
+
+    @Test
+    fun theDownbeatIsInExactlyOneWindowAndItsFrameIsTheFirstNotesOwn() {
+        // The loop's downbeat is the step position `total` unwrapped, in the window that reaches it and in no other.
+        val total = 32f
+        assertTrue(BeatSchedule.downbeatInWindow(31.0, 32.0, total)) // (from, to]: the end is in
+        assertTrue(BeatSchedule.downbeatInWindow(31.5, 33.0, total))
+        assertTrue(!BeatSchedule.downbeatInWindow(30.0, 31.9, total))
+        assertTrue(!BeatSchedule.downbeatInWindow(32.0, 33.0, total)) // open at the start
+        assertTrue(!BeatSchedule.downbeatInWindow(0.0, 1.0, total)) // the next pass's windows, wrapped, start low
+        // And it is the note at step 0's own due time: both come from dueNanos at `total`.
+        val clip = clip(0)
+        val from = 31.0
+        val to = 32.5
+        var noteDue = -1.0
+        BeatSchedule.forEachNoteDue(clip, from, to, total) { _, pos -> noteDue = pos }
+        assertEquals(total.toDouble(), noteDue)
+        val sps2 = BeatClock.stepsPerSecond(97f)
+        assertEquals(
+            BeatSchedule.dueNanos(1_000L, 30.25f, noteDue, sps2),
+            BeatSchedule.dueNanos(1_000L, 30.25f, total.toDouble(), sps2),
+        )
     }
 }
