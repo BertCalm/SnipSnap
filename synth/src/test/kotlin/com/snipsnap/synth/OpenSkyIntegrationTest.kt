@@ -71,7 +71,13 @@ class OpenSkyIntegrationTest {
         assertEquals(reference.frameCount, soft.frameCount)
         assertEquals(original, source, "building a velocity layer edited the saved patch")
         assertTrue(Velocity.canUseAtVelocity(reference, source, null))
-        assertFalse(Velocity.canUseAtVelocity(reference, source, FxChain(reverse = true)))
+        val rack = FxChain(reverse = true)
+        val wetReference = rack.process(reference)
+        assertTrue(Velocity.canUseAtVelocity(wetReference, source, rack))
+        val wet = Velocity.layerAt(wetReference, source, rack, .24f, Velocity.brightnessSpec(source))
+        assertContentEquals(Velocity.peakMatch(wetReference,
+            rack.process(soft.copy(samples = FloatArray(soft.samples.size) { soft.samples[it] * .24f }))).samples,
+            wet.samples)
         val mono = Snip(FloatArray(reference.frameCount) {
             (reference.samples[it * 2] + reference.samples[it * 2 + 1]) * .5f
         }, channels = 1, sampleRate = reference.sampleRate)

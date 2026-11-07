@@ -123,14 +123,13 @@ object Skin {
     /**
      * The voices a strike velocity reshapes ([StrikeVelocity]): the modal
      * drums, where a harder beater or stick changes the mode balance, the
-     * pitch drop and the click. The snare, hats, ride and shaker keep the
-     * velocity response [Velocity] already gives them (a brightness macro,
-     * or [Velocity.soften] for the snare): their sound is noise through
-     * filters or wires, which this contact law does not describe. STICK
+     * pitch drop and the click. SNARE also changes the wire excitation's
+     * bandwidth, level and decay; its full-strength wire sound is unchanged.
+     * Hats, ride and shaker keep their brightness-macro response. STICK
      * keeps [Velocity.soften] too: every factory STICK is one partial (BODY
      * and CLICK at 0), so there is no balance for a contact law to move.
      */
-    val STRUCK: Set<SkinVoice> = setOf(SkinVoice.KICK, SkinVoice.TOM)
+    val STRUCK: Set<SkinVoice> = setOf(SkinVoice.KICK, SkinVoice.TOM, SkinVoice.SNARE)
 
     /**
      * Render [voice] with [macros]; missing macros fall back to defaults.
@@ -141,7 +140,7 @@ object Skin {
      *
      * [take] is which hit of a re-struck run this is ([Restrike]): take 0
      * is today's render, and any other take re-seeds the beater or stick
-     * click's noise, so two hits do not share one click. The [STRUCK]
+     * click's or snare wires' noise, so two hits do not share one texture. The [STRUCK]
      * voices read it; nothing else in the hit is random.
      */
     fun render(voice: SkinVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
@@ -152,7 +151,7 @@ object Skin {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = when (voice) {
             SkinVoice.KICK -> kick(m, renderRate, velocity = velocity, take = take)
-            SkinVoice.SNARE -> snare(m, renderRate)
+            SkinVoice.SNARE -> snare(m, renderRate, velocity, take)
             SkinVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
             SkinVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
             SkinVoice.TOM -> tom(m, renderRate, velocity, take)
@@ -320,15 +319,15 @@ object Skin {
         return out
     }
 
-    private fun snare(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun snare(m: Map<String, Float>, rate: Int, velocity: Float = 1f, take: Int = 0): FloatArray {
         val fundamental = Dsp.expMap(m.getValue("TUNE"), 170f, 260f)
         val bodyT60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.3f)
         val snap = m.getValue("SNAP")
         val body = modalBody(
-            listOf(
+            struck(listOf(
                 Partial(fundamental, 1f, bodyT60),
                 Partial(fundamental * 1.8f, 0.35f, bodyT60 * 0.5f),
-            ),
+            ), fundamental, velocity),
             seconds = bodyT60 * 1.4f,
             rate = rate,
         )
@@ -352,15 +351,30 @@ object Skin {
         // the wires are scaled by the square root of today's cutoff's share
         // over this one's - x/x, so exactly 1 at the default.
         val sizzleGain = kotlin.math.sqrt(wireBandPower(3200f) / wireBandPower(sizzleHz))
-        val wireEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = wireT60)
+        // Shape laws, not a wire-contact simulation: a ghost stroke excites
+        // fewer bright wire motions and they settle sooner. Keep the body and
+        // SIZZLE setting intact, rather than low-passing the finished drum.
+        // The hard-hit branch preserves existing preset WAVs bit for bit.
+        val full = StrikeVelocity.isFull(velocity)
+        val touch = StrikeVelocity.pulseLevel(velocity)
+        val wireLife = if (full) wireT60 else wireT60 * (0.55f + 0.45f * touch)
+        val wireEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = wireLife)
         val out = FloatArray(maxOf(body.size, frames(wireT60 * 1.4f, rate)))
-        val wireNoise = Dsp.Noise(17)
+        val wireNoise = Dsp.Noise(if (take == 0) 17 else Dsp.seedFor("SKIN", "SNARE", "WIRES", take))
         val hp = Dsp.OnePole(rate)
+        val contact = Dsp.OnePole(rate)
+        val contactHz = 14000f * StrikeVelocity.cornerFactor(velocity)
+        val contactMix = 1f - StrikeVelocity.settled(velocity)
         for (i in out.indices) {
             val t = i.toFloat() / rate
             val bodyS = if (i < body.size) body[i] else 0f
             val n = wireNoise.next()
-            val wire = (n - hp.lp(n, sizzleHz)) * wireEnv.at(t)
+            val excited = n - hp.lp(n, sizzleHz)
+            // Fade the contact loss out toward the hard hit; a filter switched
+            // off only at v=1 would leave a sudden brightness jump at that edge.
+            val driven = if (full) excited else
+                (excited + (contact.lp(excited, contactHz) - excited) * contactMix) * touch
+            val wire = driven * wireEnv.at(t)
             out[i] = (1f - snap) * bodyS + snap * wire * 1.4f * sizzleGain
         }
         return out

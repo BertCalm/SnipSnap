@@ -257,7 +257,12 @@ class MurmurIntegrationTest {
             assertFalse(Velocity.soften(reference, .75f).samples.contentEquals(soft.samples),
                 "velocity uses a finished-sample filter instead of the saved excitation")
             assertTrue(Velocity.canUseAtVelocity(reference, source, null))
-            assertFalse(Velocity.canUseAtVelocity(reference, source, rack))
+            val wetReference = rack.process(reference)
+            assertTrue(Velocity.canUseAtVelocity(wetReference, source, rack))
+            val wet = Velocity.layerAt(wetReference, source, rack, .25f, Velocity.brightnessSpec(source))
+            assertContentEquals(Velocity.peakMatch(wetReference,
+                rack.process(soft.copy(samples = FloatArray(soft.samples.size) { soft.samples[it] * .25f }))).samples,
+                wet.samples)
         }
     }
 

@@ -3201,3 +3201,14 @@ tasks.register<JavaExec>("generateHydroformCandidateKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("hydroformCandidateOutput").orNull ?: "${rootDir}/testkit/hydroform-candidate-bank")
 }
+
+// Backroom is a listening study until the owner approves its voicing.
+tasks.register<JavaExec>("generateBoomBapAudition") {
+    group = "distribution"
+    description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BoomBapAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("boomBapOutput").orNull ?: "${rootDir}/testkit/boom-bap-audition")
+}

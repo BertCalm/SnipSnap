@@ -240,9 +240,9 @@ class RobinTest {
     }
 
     @Test
-    fun `the grid on a patch+fx pad falls back to soften - atVelocity can't replay the rack`() {
+    fun `the grid on a patch+fx pad replays the rack after the softer strike`() {
         val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
-        val fx = com.snipsnap.synth.FxChain(reverse = false)
+        val fx = com.snipsnap.synth.FxChain(tape = mapOf("AGE" to .6f, "DRIVE" to .3f))
         val dir = File(temp, "SynthGridFx")
         val m = KitBuilderModel.create("SynthGridFx", dir)
         val recipe = com.snipsnap.synth.PadRecipe(patch = patch, fx = fx)
@@ -259,18 +259,15 @@ class RobinTest {
             return chained.samples.copyOfRange(w.first.toInt(), (w.last + 1).toInt())
         }
 
-        // Zone 0 must be exactly what soften() gives a captured pad - a
-        // patch carrying its own fx chain has no way for atVelocity to
-        // replay the rack on top of its re-render, so it takes the same
-        // path a captured pad does.
+        // The first soft zone follows the shared source-then-rack path.
         fun gain(x: FloatArray, level: Float) = FloatArray(x.size) { (x[it] * level).coerceIn(-1f, 1f) }
-        val expected = gain(com.snipsnap.synth.Velocity.soften(original, 0.7f).samples, 0.55f)
+        val expected = gain(com.snipsnap.synth.Velocity.layerAt(original, patch, fx, .3f, com.snipsnap.synth.Velocity.brightnessSpec(patch)).samples, .55f)
         val anchor0 = slice(0)
         assertEquals(expected.size, anchor0.size)
         for (i in anchor0.indices) {
             assertTrue(
                 abs(anchor0[i] - expected[i]) <= 2f / 32767f,
-                "sample $i: chained ${anchor0[i]} vs soften() ${expected[i]} - should fall back exactly",
+                "sample $i: chained ${anchor0[i]} vs source-then-rack ${expected[i]}",
             )
         }
     }

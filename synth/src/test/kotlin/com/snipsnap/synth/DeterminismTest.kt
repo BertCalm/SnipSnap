@@ -12,6 +12,16 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
+        val p = BoomBapKits.parts().single { it.id == "snare" }.patch
+        val fx = BoomBapKits.coloration
+        val ref = fx.process(p.render())
+        val first = Velocity.variantsAt(ref, p, fx)
+        val replay = PadRecipe.fromJsonText(PadRecipe(p, fx).toJsonText())
+        val second = Velocity.variantsAt(replay.render(), replay.patch, replay.fx)
+        for (i in first.indices) assertContentEquals(first[i].samples, second[i].samples)
+    }
+
     @Test fun `WICK factory voices and held saved bodies replay byte for byte`() {
         for (voice in WickVoice.entries) {
             val patch = assertIs<WickPatch>(Presets.forVoice(WickPatch.ENGINE, voice.name).first())
