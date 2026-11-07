@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import com.snipsnap.shell.OutputRoute
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
 import com.snipsnap.shell.AquariumPerformance
@@ -181,10 +182,23 @@ class PadHost(preferredSampleRate: Int) {
         if (nowNanos - lastLatencyAt >= StreamFacts.POLL_NANOS) {
             lastLatencyAt = nowNanos
             latency = StreamFacts.latency(engine.latencyMillis(), engine.isShared())
+            RecordLatency.measuredMs = measureOutputMs()
             performanceFaulted = engine.aquariumFaulted()
             performancePending = engine.hasPendingAquariumControls()
             performanceLimitedFrames = engine.aquariumLimitedFrames()
         }
+    }
+
+    private val presented = LongArray(2)
+
+    /**
+     * What the stream shows of its own output latency, for RECORD to move a take back by: the frames it
+     * has rendered against the frame the hardware last presented. Null when the stream is down or has no
+     * timestamp yet, which [OutputRoute.compensationMs] reads as unknown. Main thread, about once a second.
+     */
+    private fun measureOutputMs(): Double? {
+        if (!up || !engine.hardwarePosition(presented)) return null
+        return OutputRoute.measuredMs(engine.framesRendered(), presented[0], presented[1], System.nanoTime(), engine.sampleRate())
     }
 
     /** [pump] at screen rate, for a holder to run from its own composition - the frame clock is the composition's. */

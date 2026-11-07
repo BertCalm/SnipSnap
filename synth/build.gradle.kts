@@ -2620,6 +2620,17 @@ tasks.register<JavaExec>("generateOnsetAudition") {
     providers.gradleProperty("onsetReferenceDir").orNull?.let { args("--reference-dir=$it") }
 }
 
+/** The seven native model-4 extension presets, separate from the accepted model-3 kit. */
+tasks.register<JavaExec>("generateOnsetExtensionKit") {
+    group = "distribution"
+    description = "Render seven editable ONSET extension pads and a dry full-window XTD/XPM kit ZIP."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnsetExtensionKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("onsetExtensionKitOutput").orNull ?: "${rootDir}/testkit/onset-extension-native")
+}
+
 /** CREASE's reproducible dry prototype matrix and standalone audition assets. */
 tasks.register<JavaExec>("generateCreaseAudition") {
     group = "distribution"

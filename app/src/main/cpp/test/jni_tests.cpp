@@ -37,6 +37,7 @@ using namespace snipsnap;
 // jni.cpp's entry points, as the JVM would see them.
 extern "C" {
 jlong Java_com_snipsnap_app_NativeAquariumBus_create(JNIEnv*, jobject, jint);
+jlong Java_com_snipsnap_app_NativeAquariumBus_createConfigured(JNIEnv*, jobject, jint, jfloatArray, jlong, jint, jdouble, jfloat, jboolean);
 void Java_com_snipsnap_app_NativeAquariumBus_destroy(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativeAquariumBus_configure(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
 jboolean Java_com_snipsnap_app_NativeAquariumBus_process(JNIEnv*, jobject, jlong, jfloatArray, jdouble, jboolean);
@@ -1214,4 +1215,39 @@ TEST(jni_array_aquarium_keeps_dry_overs_and_rejects_bad_buffers_and_pending_copy
     CHECK(Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, floats({}), 0, false));
     Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, h);
     Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, 0);
+}
+
+TEST(jni_configured_aquarium_starts_in_the_selected_wet_mute_without_a_dry_attack_and_refuses_bad_context) {
+    using namespace snipsnap::aquarium;
+    auto* e = env();
+    PerformanceSettings s;
+    CHECK(setParameter(s.parameters, "aqua_tide_mix", 1));
+    const auto values = floats(std::vector<float>(s.parameters.values.begin(), s.parameters.values.end()));
+    auto create = [&](int rate, jfloatArray p, jlong seed, int model, double bpm, float gain, jboolean enabled) {
+        return Java_com_snipsnap_app_NativeAquariumBus_createConfigured(e, nullptr, rate, p, seed, model, bpm, gain, enabled);
+    };
+    CHECK_EQ(create(0, values, 0, 1, 123.5, 0, true), 0);
+    CHECK_EQ(create(48000, nullptr, 0, 1, 123.5, 0, true), 0);
+    CHECK_EQ(create(48000, values, -1, 1, 123.5, 0, true), 0);
+    CHECK_EQ(create(48000, values, 0, 2, 123.5, 0, true), 0);
+    CHECK_EQ(create(48000, values, 0, 1, -1, 0, true), 0);
+    CHECK_EQ(create(48000, values, 0, 1, 123.5, 0, 2), 0);
+    CHECK_EQ(create(48000, values, 0, 1, 123.5, std::numeric_limits<float>::quiet_NaN(), true), 0);
+    pendingJniException = true;
+    CHECK_EQ(create(48000, values, 0, 1, 123.5, 0, true), 0);
+    CHECK(pendingJniException); pendingJniException = false;
+    CHECK_EQ(create(48000, floatsClaiming(52, {}), 0, 1, 123.5, 0, true), 0);
+    CHECK(pendingJniException); pendingJniException = false;
+    const auto h = create(48000, values, 0xffff'ffffLL, 1, 123.5, 0, true);
+    CHECK(h != 0);
+    const auto audio = floats(std::vector<float>(4097 * 2, .5f));
+    performance_allocation::allocations.store(0); performance_allocation::frees.store(0);
+    performance_allocation::enabled = true;
+    const bool ok = Java_com_snipsnap_app_NativeAquariumBus_process(e, nullptr, h, audio, 123.5, false);
+    performance_allocation::enabled = false;
+    CHECK(ok);
+    CHECK(std::all_of(impl(audio)->f.begin(), impl(audio)->f.end(), [](float x) { return x == 0; }));
+    CHECK_EQ(performance_allocation::allocations.load(), 0u); CHECK_EQ(performance_allocation::frees.load(), 0u);
+    CHECK(!Java_com_snipsnap_app_NativeAquariumBus_faulted(e, nullptr, h));
+    Java_com_snipsnap_app_NativeAquariumBus_destroy(e, nullptr, h);
 }

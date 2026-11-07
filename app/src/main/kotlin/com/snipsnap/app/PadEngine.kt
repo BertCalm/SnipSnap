@@ -494,9 +494,9 @@ class PadEngine(preferredSampleRate: Int) {
      * The command ring drops on full by design, which is right for a fader
      * (the next value supersedes the lost one) and wrong for a stop: a dropped
      * stop is a stuck pad until PANIC. So a refused stop is kept and retried
-     * from [drainEnded], which PadHost and BeatPlayer pump at screen rate (SPLIT
-     * and ORBIT own engines that do not; a later hit flushes it there); no
-     * new loop. Returns true when queued now, false when kept to retry.
+     * from [drainEnded], pumped by PadHost, BeatPlayer and SPLIT. ORBIT's
+     * independent audition also flushes on a later hit. No extra retry loop
+     * is needed here. Returns true when queued now, false when kept to retry.
      */
     @Synchronized
     fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS): Boolean {

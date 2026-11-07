@@ -38,6 +38,7 @@ class OnsetIntegrationTest {
         val patches = OnsetKits.patches()
         val kit = KitAssembler.assembleArranged("ONSET Acceptance", OnsetKits.acceptance(), source)
         assertEquals(16, kit.pads.size)
+        assertTrue(patches.all { it.modelVersion == 3 }, "legacy acceptance kit must retain model3 recipes")
         assertEquals(kit, KitStore.load(source))
         assertEquals(listOf("KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN"), patches.take(4).map { it.voiceName })
         assertEquals(listOf(0f, .25f, .5f, 1f), patches.chunked(4).map { it.first().macros.getValue("BLEND") })

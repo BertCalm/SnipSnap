@@ -9,8 +9,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** The four voices in the accepted ONSET listening experiment. */
-enum class OnsetVoice { KICK, HAT_CLOSED, SNARE, HAT_OPEN }
+/** Persisted ordinals: append voices; never reorder the four original drum lanes. */
+enum class OnsetVoice { KICK, HAT_CLOSED, SNARE, HAT_OPEN, TOM, PERC_PLUCK, PERC_WOOD, PERC_METAL }
 
 /** Resolved physical settings accompany every audition render for reproducibility. */
 data class OnsetSettings(
@@ -42,20 +42,23 @@ data class OnsetSettings(
  * correlated fundamentals can reinforce and different spectra can sound unequally loud.
  */
 object Onset {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     // A model revision must not recolor the electronic endpoint or either hat source.
     private const val TRANSIENT_SEED_VERSION = 1
     const val RATE = Dsp.RATE
     private const val RENDER_RATE = RATE * Dsp.OVERSAMPLE
 
-    fun macrosFor(voice: OnsetVoice): List<MacroSpec> = listOf(
+    fun macrosFor(voice: OnsetVoice): List<MacroSpec> {
+        if (OnsetExtensions.supports(voice)) return OnsetExtensions.macrosFor(voice)
+        return listOf(
         MacroSpec("TUNE", when (voice) { OnsetVoice.KICK -> 0.35f; OnsetVoice.SNARE -> 0.4f; else -> 0.5f }, 0.5f),
-        MacroSpec("DECAY", when (voice) { OnsetVoice.KICK -> 0.45f; OnsetVoice.HAT_CLOSED -> 0.3f; OnsetVoice.SNARE -> 0.5f; OnsetVoice.HAT_OPEN -> 0.55f }),
+        MacroSpec("DECAY", when (voice) { OnsetVoice.KICK -> 0.45f; OnsetVoice.HAT_CLOSED -> 0.3f; OnsetVoice.SNARE -> 0.5f; OnsetVoice.HAT_OPEN -> 0.55f; else -> error("extension defaults dispatched above") }),
         MacroSpec("BLEND", 0.5f),
         MacroSpec("SNAP", when (voice) { OnsetVoice.KICK -> 0.5f; OnsetVoice.SNARE -> 0.6f; else -> 0.35f }),
         MacroSpec("BODY", if (voice == OnsetVoice.KICK || voice == OnsetVoice.SNARE) 0.6f else 0.45f),
         MacroSpec("EDGE", 0.5f),
-    )
+        )
+    }
 
     fun defaults(voice: OnsetVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
@@ -71,13 +74,24 @@ object Onset {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
-    fun settingsFor(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): OnsetSettings {
+    private fun minimumModelVersion(voice: OnsetVoice): Int = when (voice) {
+        OnsetVoice.KICK, OnsetVoice.HAT_CLOSED -> 1
+        OnsetVoice.SNARE, OnsetVoice.HAT_OPEN -> 3
+        OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL -> 4
+    }
+
+    internal fun requireModelVersion(voice: OnsetVoice, modelVersion: Int) {
         require(modelVersion in 1..MODEL_VERSION) { "unsupported ONSET model version: $modelVersion" }
-        require(modelVersion >= 3 || voice == OnsetVoice.KICK || voice == OnsetVoice.HAT_CLOSED) {
-            "$voice was introduced in ONSET model 3"
+        require(modelVersion >= minimumModelVersion(voice)) {
+            "$voice was introduced in ONSET model ${minimumModelVersion(voice)}"
         }
+    }
+
+    fun settingsFor(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): OnsetSettings {
+        requireModelVersion(voice, modelVersion)
         val m = defaults(voice).toMutableMap()
         for ((name, value) in macros) if (name in m && value.isFinite()) m[name] = value.coerceIn(0f, 1f)
+        if (OnsetExtensions.supports(voice)) return OnsetExtensions.settingsFor(voice, m.toMap(), modelVersion)
         val tune = m.getValue("TUNE")
         val kick = voice == OnsetVoice.KICK
         val snare = voice == OnsetVoice.SNARE
@@ -96,6 +110,7 @@ object Onset {
                 OnsetVoice.SNARE -> Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.32f)
                 OnsetVoice.HAT_CLOSED -> Dsp.expMap(m.getValue("DECAY"), 0.04f, 0.16f)
                 OnsetVoice.HAT_OPEN -> Dsp.expMap(m.getValue("DECAY"), 0.25f, 1f)
+                else -> error("extension settings dispatched above")
             },
             // V1 calibration for X and hats stays frozen: at 44.1 kHz, hat source RMS
             // X=.01136/O=.05670. V2's stronger membrane gets its own fixed gain, checked
@@ -106,6 +121,7 @@ object Onset {
             outputGain = when (voice) {
                 OnsetVoice.KICK -> 0.32f; OnsetVoice.HAT_CLOSED -> 0.52f
                 OnsetVoice.SNARE -> 0.28f; OnsetVoice.HAT_OPEN -> 0.40f
+                else -> error("extension settings dispatched above")
             },
             physicalSource = when { kick && modelVersion >= 2 -> "ONSET"; snare -> "TINES"; else -> "SKIN" },
             physicalModel = when {
@@ -127,11 +143,15 @@ object Onset {
         val physicalFundamental: FloatArray? = null,
         /** Shared wire/noise body, separate from either paradigm and the short strike. */
         val sharedWires: FloatArray? = null,
+        /** Optional per-sample source weights for model-four handoff/AM diagnostics. */
+        val electronicWeight: FloatArray? = null,
+        val physicalWeight: FloatArray? = null,
     )
 
     /** Calibrated source taps are deliberately before shelf, PUNCH and decimation. */
     internal fun probe(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): Probe {
         val s = settingsFor(voice, macros, modelVersion)
+        if (OnsetExtensions.supports(voice)) return OnsetExtensions.probe(s)
         val m = s.macros
         val snareFrames = (s.t60Seconds * 1.8f * RENDER_RATE).toInt().coerceAtLeast(64)
         val electronic = when (voice) {
@@ -146,6 +166,7 @@ object Onset {
                     val gain = Dsp.lin(m.getValue("BODY"), 0.5f, 1f)
                     for (i in body.indices) body[i] *= gain
                 }
+            else -> error("extension probe dispatched above")
         }
         val material = if (voice == OnsetVoice.KICK) kickMaterial(s) else null
         val physical = when (voice) {
@@ -161,6 +182,7 @@ object Onset {
                     index = Dsp.lin(m.getValue("EDGE"), 1.1f, 2.1f), t60 = s.t60Seconds,
                     bite = 0.2f, gain = Dsp.lin(m.getValue("BODY"), 0.5f, 1f), rate = RENDER_RATE)
             }
+            else -> error("extension probe dispatched above")
         }
         for (i in electronic.indices) electronic[i] *= s.electronicGain
         for (i in physical.indices) physical[i] *= s.physicalGain
@@ -280,6 +302,7 @@ object Onset {
     }
 
     fun render(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): Snip {
+        if (OnsetExtensions.supports(voice)) return OnsetExtensions.render(settingsFor(voice, macros, modelVersion))
         val p = probe(voice, macros, modelVersion)
         val raw = p.mixed
         val body = p.settings.macros.getValue("BODY")

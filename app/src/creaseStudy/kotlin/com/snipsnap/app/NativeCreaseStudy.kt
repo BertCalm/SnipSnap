@@ -4,6 +4,7 @@ package com.snipsnap.app
 internal object NativeCreaseStudy {
     init { System.loadLibrary("snipsnap_surface") }
     external fun create(layout: IntArray, pcm: ShortArray): Long
+    external fun createShared(layout: IntArray, pcm: ShortArray, coefficients: FloatArray): Long
     external fun destroy(handle: Long)
     external fun start(handle: Long): Boolean
     external fun stop(handle: Long)

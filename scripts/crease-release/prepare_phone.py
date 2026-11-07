@@ -21,6 +21,11 @@ def stage(source, target):
     require(v['result']=='passed', 'Independent reader verification has not passed')
     c=m['container']
     require(0<c['pcmBytes']<=32*1024**2 and 0<c['compressedBytes']<=12*1024**2, 'Study exceeds its byte limits')
+    if m['format']=='crease-shared-pcm-v1':
+        manifest_hash=hashlib.sha256((source/'manifest.json').read_bytes()).hexdigest()
+        require(v.get('manifestSha256')==manifest_hash and n.get('manifestSha256')==manifest_hash, 'Shared manifest changed after verification')
+        require(0<m['shared']['residentBytes']<=8*1024**2 and r['residentBytes']==m['shared']['residentBytes'], 'Shared study exceeds 8 MiB')
+        require(n.get('sharedCoefficientsSha256')==m['shared']['coefficientsSha256'], 'Native reader receipt belongs to other coefficients')
     require(Path(c['file']).name==c['file'] and c['file'].endswith('.cpcb'), 'Invalid study payload name')
     payload=(source/c['file']).read_bytes()
     require(len(payload)==c['compressedBytes'] and hashlib.sha256(payload).hexdigest()==c['compressedSha256'], 'Study payload hash differs')
@@ -36,7 +41,7 @@ def stage(source, target):
         previous=target/'manifest.json'
         require(previous.is_file(), 'Destination is not a study output')
         prior=json.loads(previous.read_text())
-        require(prior.get('format')=='crease-playable-pcm-v1' and prior.get('phoneStudy')==1, 'Destination is not a study output')
+        require(prior.get('format') in ('crease-playable-pcm-v1','crease-shared-pcm-v1') and prior.get('phoneStudy')==1, 'Destination is not a study output')
         allowed={'manifest.json',prior['container']['file']}
         old_files=list(target.iterdir())
         require(all(p.is_file() and p.name in allowed for p in old_files), 'Destination contains unrelated files')

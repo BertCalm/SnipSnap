@@ -48,12 +48,62 @@ object GrooveStore {
     /** The oldest sidecar this build understands. */
     const val MIN_VERSION = 1
 
-    fun save(kitDir: File, clips: List<Mpc3Clip>): File {
+    /**
+     * Key of the additive per-pattern lane map: `{"<clip name>": [slot x7]}`.
+     * No version bump: [fromJson] reads only the keys it knows, so an older
+     * build ignores this one and plays the default lanes, and a file
+     * without it loads with the default lanes ([GrooveEdit.DEFAULT_LANE_PADS]).
+     */
+    const val LANE_PADS_KEY = "lanePads"
+
+    /**
+     * Writes [clips]. [lanePads] null (every older caller) keeps whatever
+     * lane maps the file already holds for the clips that are still in it;
+     * non-null replaces them. Either way an entry for a clip that is no
+     * longer in the list is dropped, so a slot's lane map never outlives
+     * the program it was made for.
+     */
+    @Synchronized
+    fun save(kitDir: File, clips: List<Mpc3Clip>, lanePads: Map<String, List<Int>>? = null): File {
         require(clips.isNotEmpty()) { "no clips - use delete() to clear the grooves" }
         kitDir.mkdirs()
         val file = File(kitDir, FILE_NAME)
-        AtomicFile.writeText(file, Json.write(toJson(clips)) + "\n")
+        val names = clips.mapTo(HashSet()) { it.name }
+        val kept = (lanePads ?: loadLanePads(kitDir)).filterKeys { it in names }
+        AtomicFile.writeText(file, Json.write(toJson(clips, kept)) + "\n")
         return file
+    }
+
+    /**
+     * The per-pattern lane maps, by clip name. An entry that is not seven
+     * distinct pad slots in 1..16 is skipped (that pattern plays the
+     * default lanes) rather than refusing the whole file: the lane map is
+     * a convenience and the notes are the music.
+     */
+    @Synchronized
+    fun loadLanePads(kitDir: File): Map<String, List<Int>> {
+        val file = File(kitDir, FILE_NAME)
+        if (!file.isFile) return emptyMap()
+        val root = try {
+            Json.parse(file.readText(Charsets.UTF_8)).obj()
+        } catch (e: JsonException) {
+            return emptyMap()
+        }
+        val raw = (root[LANE_PADS_KEY] as? JsonValue.Obj)?.entries ?: return emptyMap()
+        val out = LinkedHashMap<String, List<Int>>()
+        for ((name, v) in raw) {
+            val slots = (v as? JsonValue.Arr)?.items?.map { (it as? JsonValue.Num)?.value?.toInt() ?: return@map -1 }
+            if (slots != null && GrooveEdit.isValidLanePads(slots)) out[name] = slots
+        }
+        return out
+    }
+
+    /** Replaces only the lane maps, leaving every clip as stored. No-op when there is no file. */
+    @Synchronized
+    fun saveLanePads(kitDir: File, lanePads: Map<String, List<Int>>) {
+        val clips = load(kitDir)
+        if (clips.isEmpty()) return
+        save(kitDir, clips, lanePads)
     }
 
     /** The kit's grooves, oldest promise first; empty when none saved. */
@@ -65,11 +115,19 @@ object GrooveStore {
 
     fun delete(kitDir: File): Boolean = File(kitDir, FILE_NAME).delete()
 
-    private fun toJson(clips: List<Mpc3Clip>): JsonValue = JsonValue.Obj(
-        linkedMapOf(
+    private fun toJson(clips: List<Mpc3Clip>, lanePads: Map<String, List<Int>> = emptyMap()): JsonValue = JsonValue.Obj(
+        linkedMapOf<String, JsonValue>(
             "version" to JsonValue.Num(VERSION.toDouble()),
             "clips" to JsonValue.Arr(clips.map { clipToJson(it) }),
-        ),
+        ).also { root ->
+            if (lanePads.isNotEmpty()) {
+                root[LANE_PADS_KEY] = JsonValue.Obj(
+                    LinkedHashMap<String, JsonValue>().also { m ->
+                        for ((name, slots) in lanePads) m[name] = JsonValue.Arr(slots.map { JsonValue.Num(it.toDouble()) })
+                    },
+                )
+            }
+        },
     )
 
     private fun fromJson(root: JsonValue): List<Mpc3Clip> {

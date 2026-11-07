@@ -13,8 +13,13 @@ namespace snipsnap::crease {
 struct Layout {
     int held, loopStart, loopFrames, rootCycles, lead, tail, blend, release;
     std::vector<int> cuts;
-    std::size_t samples() const { return std::size_t(held) + cuts.size() * std::size_t(tail); }
+    int components=0, pad=0;
+    std::vector<int> offsets;
+    std::vector<float> coefficients;
+    std::size_t samples() const { return std::size_t(held) + (components ? std::size_t(components)*(tail+2*pad) : cuts.size()*std::size_t(tail)); }
+    std::size_t residentBytes() const { return samples()*2+(cuts.size()+offsets.size())*4+coefficients.size()*4+8192; }
     bool valid() const {
+        if(components<0 || components>64 || (components && pad!=89)) return false;
         if (held < 2 || held > 44100 * 64 || loopStart < 0 || loopFrames < 2 ||
             int64_t(loopStart) + loopFrames != held || rootCycles < 8 || rootCycles > loopFrames ||
             lead < 4 || lead > 512 || tail < 44100 || tail > 60000 || blend != 221 ||
@@ -25,6 +30,12 @@ struct Layout {
             tail < lead + release + std::ceil(period / 2) + 3 || samples() * 2 > 32 * 1024 * 1024) return false;
         for (std::size_t i=0; i<cuts.size(); ++i)
             if (cuts[i] < 0 || cuts[i] >= held || (i && cuts[i] <= cuts[i-1])) return false;
+        if (components) {
+            if (components<1 || components>64 || pad!=89 || offsets.size()!=cuts.size() ||
+                coefficients.size()!=cuts.size()*std::size_t(components) || residentBytes()>8*1024*1024) return false;
+            for(int offset:offsets) if(offset < -85 || offset > 85) return false;
+            for(float c:coefficients) if(!std::isfinite(c) || std::abs(c)>8) return false;
+        } else if(pad || !offsets.empty() || !coefficients.empty()) return false;
         return true;
     }
 };
@@ -114,7 +125,19 @@ private:
         int left=0, right=0;
     };
     void retire(Voice& v) { if (v.active && !v.forced) { v.forced=true; v.stopLevel=v.level; } }
-    double tail(int index,double pos) const { return sample(m_.held+std::size_t(index)*m_.tail,m_.tail,pos); }
+    double tail(int index,double pos) const {
+        if(!m_.components) return sample(m_.held+std::size_t(index)*m_.tail,m_.tail,pos);
+        const auto i=int64_t(std::floor(pos));const double t=pos-i,t2=t*t,t3=t2*t;
+        const double a=.5*(2*t2-t3-t),b=1-2.5*t2+1.5*t3,c=.5*t+2*t2-1.5*t3,d=.5*(t3-t2);
+        const auto rank=std::size_t(m_.components);
+        const int offset=m_.pad+m_.offsets[index];
+        auto frame=[&](int64_t k) { return std::size_t(m_.held)+(offset+std::clamp<int64_t>(k,0,m_.tail-1))*rank; };
+        const auto k0=frame(i-1),k1=frame(i),k2=frame(i+1),k3=frame(i+2);
+        double sum=0;
+        for(std::size_t j=0;j<rank;++j) sum+=double(m_.coefficients[index*rank+j])*
+            (a*pcm_[k0+j]+b*pcm_[k1+j]+c*pcm_[k2+j]+d*pcm_[k3+j]);
+        return sum/32767.0;
+    }
     void keyUp(Voice& v) {
         v.releasing=true;
         const double position = v.pos<m_.loopStart ? v.pos : m_.loopStart+std::fmod(v.pos-m_.loopStart,m_.loopFrames);

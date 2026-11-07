@@ -75,6 +75,16 @@ object BeatClock {
     }
 
     /**
+     * Calls [action] with the pad slot and the stored velocity of each note of [clip] this tick passed:
+     * the one place the roll decides what a note sounds like, so a quiet hat or a ghost plays as quiet
+     * as it was written. The velocity is the note's own (a ghost is stored low, so it is not scaled
+     * again) and [Mpc3Note] already holds it in 0..1.
+     */
+    inline fun forEachHitCrossed(clip: Mpc3Clip, lastPos: Float, np: Float, totalSteps: Float, action: (slot: Int, velocity: Float) -> Unit) {
+        forEachNoteCrossed(clip, lastPos, np, totalSteps) { n -> action(Mpc3Note.slotFor(n.note), n.velocity) }
+    }
+
+    /**
      * Calls [action] for each beat (every fourth step) this tick passed,
      * with whether it is a bar's downbeat. A beat is four steps whatever the
      * meter, so a 3/4 clip's bar is twelve steps and its downbeat falls on
