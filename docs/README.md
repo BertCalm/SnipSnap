@@ -77,10 +77,12 @@ reflection prototype, portable recipes and dry position/mechanism audition.
 Its singing-body identity awaits listening; moving geometry, HOLD and phone
 integration remain later work.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE listening prototype,
-recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
-[`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
-RATTLE and the full preset library await listening.
+**Wick.** [`WICK.md`](WICK.md) records the six accepted voice directions,
+36-recipe factory bank, synth-picker and starter integration, saved body
+contracts, dry MPC kit, musical phrases, held-loop strategy and private audition.
+The original 27 recipes are preserved; the nine additions await listening.
+Physical-phone performance and MPC hardware acceptance remain separate checks.
+The supplied [`engineering specification`](WICK_SPEC.md) is preserved as the proposal.
 
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved

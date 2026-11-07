@@ -310,7 +310,14 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.LorentzPatch) {
+            if (preset is com.snipsnap.synth.WickPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("WickPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.WickPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete body, root and native touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.LorentzPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("LorentzPatch", (call.receiver as KotlinLiteral.Call).name)
@@ -1198,6 +1205,10 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.WickPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.WickPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.WickPatch::class.java, decoder.returnType,
+                    "WICK promotion names its public constructor retaining the selected body")
             } else if (engine != TrioPatch.ENGINE) {
                 // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"

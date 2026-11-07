@@ -41,6 +41,7 @@ import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.TidalPatch
+import com.snipsnap.synth.WickPatch
 import kotlin.math.roundToInt
 
 /**
@@ -141,6 +142,7 @@ object Spread {
         is CreasePatch -> patch.midi.toFloat()
         is CausticPatch -> patch.midi.toFloat()
         is ChamberPatch -> patch.midi.toFloat()
+        is WickPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

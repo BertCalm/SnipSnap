@@ -107,7 +107,8 @@ object Cli {
         |                        source instruments use model 4; saved model 3|4 recipes retain their renderer;
         |                        --model 5 or --ohm-reply 0..1 / --ohm-ring 0..1 select seven-second finite replies;
         |                        model 5 --instrument has note-off release and no sustain loop)
-        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; six factory recipes per voice;
+        |                         --midi 24..84 --velocity 0..1; saved RATTLE patches retain their body)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;

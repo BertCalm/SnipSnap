@@ -400,7 +400,7 @@ object UserPresets {
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
      * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE,
-     * WICK, SHOAL, CREASE and LATTICE also copy the saved
+     * SHOAL, CREASE and LATTICE also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL, SHOAL, CREASE and LATTICE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; OHM also
@@ -433,11 +433,17 @@ object UserPresets {
      * the complete JSON constructor. ACCORD retains its acoustic profile, initializer,
      * passage, root, velocity, exact seed and render model through that constructor.
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
-     * controls through the complete JSON constructor.
+     * controls through the complete JSON constructor. WICK retains its selected
+     * RATTLE body, root, velocity and controls through that constructor as well.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is WickPatch) {
+            // Save the selected body as well as note, velocity and controls.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "WickPatch.fromJsonText($recipe),"
+        }
         if (patch is AccordPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "AccordPatch.fromJsonText($recipe),"
@@ -602,7 +608,6 @@ object UserPresets {
             is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is LatticePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is CausticPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
-            is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

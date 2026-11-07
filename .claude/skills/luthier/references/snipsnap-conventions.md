@@ -75,7 +75,7 @@ Enforced by the compiler or the registry tests:
 
 Expected by convention:
 7. `DeterminismTest` canary (render twice, `assertContentEquals`).
-8. `SynthKits.xxx()`: 16 pads, A01 to A08 a minor-pentatonic walk of the first voice over TUNE, A09 to A16 named presets, loops last, every pad's class from `drumClassFor`, dry (`fx = null`) unless a landing chain is part of the identity (Bore lands with TAPE).
+8. `SynthKits.xxx()`: 16 pads, A01 to A08 a minor-pentatonic walk of the first voice over TUNE, A09 to A16 named presets, loops last, every pad's class from `drumClassFor`, dry (`fx = null`) unless a landing chain is part of the identity (Bore lands with TAPE). For a FRESH TAPE entry, register it in `StarterKits.ALL` and place its id in exactly one `StarterShelf.GROUPS` display group. `StarterShelfTest` checks menu coverage separately from starter rendering (verified 2026-11-06).
 9. `XxxKitGenerator.kt` + a `generateXxxKit` Gradle task → `testkit/SnipSnap Xxx Kit/`.
 10. `XxxTest.kt` with the probe set (section 5) and `XxxPresetsTest.kt` with the six preset contracts plus blocklist terms for any maker the brief named.
 11. `XxxAuditionGenerator.kt` + `generateXxxAudition` task + `synth/src/test/resources/audition/xxx-audition.html`. Output goes to `testkit/xxx-audition/` (gitignored): section folders of levelled WAVs, `manifest.json`, `index.html`. Sections: voices at three notes, each macro swept, macro pairs at their corners, edges, the kit as it lands, the LOOP played eight times end to end. Newer generators (Murk, Nacre) also write `recipes/*.json`, `diagnostics/*.json`, `metrics.csv`, raw and matched levels.

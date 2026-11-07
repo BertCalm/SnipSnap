@@ -1292,7 +1292,14 @@ class ConventionTest {
 
     /**
      * Where the picker's engines and the catalogue's keys part company, as sentences naming each
-     * engine; empty when they agree exactly. The law and its positive control both ask this.
+     * engine; empty when they agree exactly, order included. The law and its positive control both
+     * ask this.
+     *
+     * The order is compared only once the two hold the same engines, so a missing or extra engine
+     * is reported as itself and not as every position after it. It is held here because the arrows
+     * step in the enum's order while `SynthEngineHeaderTest` expects the catalogue's, and that test
+     * runs only on a device: #931 put WICK third in the enum and second in the catalogue, and only
+     * the emulator job saw it.
      */
     private fun catalogueProblems(pickerEngines: List<String>, catalogued: Set<String>): List<String> {
         val problems = mutableListOf<String>()
@@ -1304,6 +1311,15 @@ class ConventionTest {
         if (orphaned.isNotEmpty()) {
             problems += "EngineCatalog has entries for engines the picker does not have: ${orphaned.joinToString()}"
         }
+        if (problems.isEmpty()) {
+            val listed = catalogued.toList()
+            val at = pickerEngines.indices.firstOrNull { pickerEngines[it] != listed.getOrNull(it) }
+            if (at != null) {
+                problems += "the picker's order and EngineCatalog's part at position ${at + 1}: the arrows step from " +
+                    "${pickerEngines.getOrNull(at - 1) ?: "the start"} to ${pickerEngines[at]}, where the catalogue lists " +
+                    (listed.getOrNull(at) ?: "nothing")
+            }
+        }
         return problems
     }
 
@@ -1312,7 +1328,7 @@ class ConventionTest {
      * both come from `EngineCatalog`. An engine added to `Engine` without an entry would show a
      * bare row and appear under no chip, the quiet way a filter goes stale; this is what makes the
      * filters safe to grow. The other direction is held too, so a retired engine does not leave
-     * its tags behind to be found by a search for nothing.
+     * its tags behind to be found by a search for nothing. So is the order (see [catalogueProblems]).
      */
     @Test
     fun `law - every engine in the picker is catalogued`() {
@@ -1327,7 +1343,8 @@ class ConventionTest {
             problems.isEmpty(),
             problems.joinToString("\n  ", prefix = "`Engine` in SynthScreen.kt and `EngineCatalog` disagree:\n  ") +
                 "\nGive every new engine an entry in EngineCatalog.kt: one or two categories and a description " +
-                "of at most 60 characters. Remove the entry of an engine that is gone.",
+                "of at most 60 characters. Remove the entry of an engine that is gone. Keep the entries in the " +
+                "enum's order; a new engine goes last in both.",
         )
     }
 
@@ -1356,6 +1373,16 @@ class ConventionTest {
         val orphan = catalogueProblems(pickerEngineConstants(enumOf(*without), "synthetic"), catalogued)
         assertEquals(1, orphan.size, "only the orphaned entry should be reported: $orphan")
         assertTrue("OHM" in orphan.single() && "does not have" in orphan.single(), "the report must name the entry: $orphan")
+
+        // The same engines in another order: the arrows would step one way and the device test expect the other.
+        val keys = catalogued.toList()
+        val swapped = listOf(keys[0], keys[2], keys[1]) + keys.drop(3)
+        val order = catalogueProblems(pickerEngineConstants(enumOf(*swapped.toTypedArray()), "synthetic"), catalogued)
+        assertEquals(1, order.size, "only the order should be reported: $order")
+        assertTrue(
+            "position 2" in order.single() && "to ${keys[2]}," in order.single() && order.single().endsWith("lists ${keys[1]}"),
+            "the report must name where the orders part and both engines: $order",
+        )
 
         // The parse refuses what it cannot read, rather than dropping it and letting an engine through.
         val unreadable = runCatching { pickerEngineConstants("private enum class Engine { THUMP(1), SKIN; }", "synthetic") }.exceptionOrNull()

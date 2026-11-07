@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -177,6 +178,9 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Otis
 import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.OtisVoice
+import com.snipsnap.synth.Wick
+import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.WickVoice
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.ScannedChain
 import com.snipsnap.synth.ScannedChainPatch
@@ -871,7 +875,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM) {
+                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -891,6 +895,7 @@ fun SynthScreen(
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
+                        else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.LIBRATION) seed.seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seed.seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
@@ -1075,7 +1080,7 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
-        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1144,6 +1149,14 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: OhmPatch(name, controls)
+        }
+        if (engine == Engine.WICK) {
+            // Body, note and velocity edits can share a frame with SAVE/SEND.
+            // Read the live typed recipe rather than the previous composition.
+            val current = loadedPatchesByVoice[engine to voice] as? WickPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: WickPatch(name, voice as WickVoice, controls)
         }
         if (engine == Engine.CAUSTIC) {
             val current = loadedPatchesByVoice[engine to voice] as? CausticPatch
@@ -1395,6 +1408,8 @@ fun SynthScreen(
                 )
                 Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
+                Engine.WICK -> loadedPatchesByVoice[pair] = WickPatch(
+                    engine.patchDisplayName(voice), voice as WickVoice, macrosByVoice.getValue(pair))
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
                     engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
                 )
@@ -1459,6 +1474,7 @@ fun SynthScreen(
             if (old != null) loadedPatchesByVoice[engine to voice] = old.copy(model = Rime.MODEL_VERSION, macros = values)
         }
         ensureNativeDraft()
+        if (engine == Engine.WICK) SynthDrafts.write(settings, currentDrafts())
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
         val origami = loadedPatchesByVoice[engine to voice] as? OrigamiPatch
@@ -1563,6 +1579,16 @@ fun SynthScreen(
             ?: FilamentPatch(engine.patchDisplayName(voice), voice as FilamentVoice, controls)
         currentPresetByVoice.remove(pair)
         loadedPatchesByVoice[pair] = change(patch)
+    }
+    fun updateWickPatch(expectedVoice: WickVoice, change: (WickPatch) -> WickPatch) {
+        if (engine != Engine.WICK || voice != expectedVoice) return
+        val pair = engine to voice
+        val current = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)) as WickPatch
+        currentPresetByVoice.remove(pair)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[pair] = change(current)
+        // Preserve a body choice even when navigation arrives in this frame.
+        SynthDrafts.write(settings, currentDrafts())
     }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
@@ -1915,7 +1941,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2057,6 +2083,7 @@ fun SynthScreen(
                     is AccordPatch -> Accord.drumClassFor(patch)
                     is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                     is OtisPatch -> Otis.drumClassFor(patch)
+                    is WickPatch -> Wick.drumClassFor(patch.voice, patch.macros)
                     is OhmPatch -> Ohm.drumClassFor(patch)
                     else -> engine.drumClass(voice, macros)
                 }
@@ -2065,6 +2092,7 @@ fun SynthScreen(
                 val authoredMidi = when (patch) {
                     is AccordPatch -> patch.midi
                     is OtisPatch -> Otis.midiFor(patch)
+                    is WickPatch -> patch.midi
                     is LibrationPatch -> patch.midi
                     is MeridianPatch -> requireNotNull(meridianLanding).knownRootMidi
                     is TrefoilPatch -> patch.midi
@@ -3157,11 +3185,18 @@ fun SynthScreen(
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
                         ensureNativeDraft()
+                        if (engine == Engine.WICK) SynthDrafts.write(settings, currentDrafts())
                     }
                 }
 
                 if (hasPlayingExtras(engine, voice, loadedPatch)) {
                     SynthSectionHeading(Copy.SYNTH_HEADING_PLAYING, scheme)
+                }
+                if (engine == Engine.WICK) {
+                    WickPerformanceControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as WickPatch,
+                        fill = classColor, scheme = scheme, onEdit = ::updateWickPatch,
+                    )
                 }
                 if (engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT) {
                     UprightVelocityControl(
@@ -3877,7 +3912,7 @@ private fun hasPlayingExtras(engine: Engine, voice: Enum<*>, loadedPatch: Patch?
         Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD,
         Engine.APSIS, Engine.OVEN, Engine.FILAMENT, Engine.RELAY, Engine.VENT, Engine.OSPREY,
         Engine.OPENSKY, Engine.REGISTERS, Engine.TRIO, Engine.TREFOIL, Engine.OBBLIGATO,
-        Engine.MERIDIAN -> true
+        Engine.MERIDIAN, Engine.WICK -> true
         else -> loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL
     }
 
@@ -4354,6 +4389,7 @@ private fun macroReadout(
     engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.WICK && name == "HOLD" && Wick.isLoop(macros.getValue(name)) -> "LOOP"
     else -> null
 }
 
@@ -5363,6 +5399,41 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
 
 /** Copy the current typed performance rather than a stale composition snapshot. */
 @Composable
+private fun WickPerformanceControls(
+    patch: WickPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (WickVoice, (WickPatch) -> WickPatch) -> Unit,
+) {
+    MacroSlider("VELOCITY", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    if (patch.voice == WickVoice.RATTLE) {
+        TapeText("BODY", TapeType.pixelSmall, scheme.ink2.tape)
+        val bodies = listOf(
+            Wick.RattleSource.WARM_WIRE to "WARM WIRE",
+            Wick.RattleSource.HOLLOW_REED to "HOLLOW REED",
+            Wick.RattleSource.RUBBED_GLASS to "RUBBED GLASS",
+        ) + if (patch.rattleSource == Wick.RattleSource.CURRENT)
+            listOf(Wick.RattleSource.CURRENT to "PREVIOUS BODY") else emptyList()
+        for (row in bodies.chunked(2)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for ((body, title) in row) {
+                    ActionButton(title, scheme, enabled = true, lit = patch.rattleSource == body,
+                        modifier = Modifier.weight(1f).semantics { selected = patch.rattleSource == body },
+                        accessibilityLabel = "WICK BODY $title",
+                    ) { onEdit(patch.voice) { it.copy(rattleSource = body) } }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+    TapeText(if (Wick.isLoop(patch.macros["HOLD"] ?: 0f))
+        "HOLD REPEATS THE MOVEMENT" else "PLAYS ONCE · LET THE TAIL RING.",
+        TapeType.lcdSmall, scheme.ink2.tape)
+}
+
+/** Copy the current typed performance rather than a stale composition snapshot. */
+@Composable
 internal fun AccordPerformanceControls(
     patch: AccordPatch,
     fill: Color,
@@ -5517,7 +5588,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5541,6 +5612,7 @@ private enum class Engine {
         PLUCK -> PluckVoice.entries
         ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
+        WICK -> WickVoice.entries
         OTIS -> OtisVoice.entries
         REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
@@ -5621,6 +5693,7 @@ private enum class Engine {
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
         ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+        WICK -> Wick.macrosFor(voice as WickVoice)
         OTIS -> Otis.macrosFor(voice as OtisVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
@@ -5699,6 +5772,7 @@ private enum class Engine {
         PLUCK -> Pluck.defaults(voice as PluckVoice)
         ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+        WICK -> Wick.defaults(voice as WickVoice)
         OTIS -> Otis.defaults(voice as OtisVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
@@ -5779,6 +5853,7 @@ private enum class Engine {
             it.name to if (it.name == "HOLD") random.nextFloat() * .95f else random.nextFloat()
         }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+        WICK -> Wick.scramble(voice as WickVoice, random)
         OTIS -> Otis.scramble(voice as OtisVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
@@ -5869,6 +5944,7 @@ private enum class Engine {
         PLUCK -> Pluck.render(voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+        WICK -> Wick.render(voice as WickVoice, macros)
         OTIS -> Otis.render(voice as OtisVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
@@ -5951,6 +6027,7 @@ private enum class Engine {
         PLUCK -> (voice as PluckVoice).drumClass
         ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> Tonewheel.drumClassFor(voice as TonewheelVoice, macros)
+        WICK -> Wick.drumClassFor(voice as WickVoice, macros)
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> Fathom.drumClassFor(voice as FathomVoice, macros)
@@ -6032,6 +6109,7 @@ private enum class Engine {
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+        WICK -> WickPatch(name, voice as WickVoice, macros)
         OTIS -> OtisPatch(name, voice as OtisVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)

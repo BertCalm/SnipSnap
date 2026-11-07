@@ -164,8 +164,6 @@ import com.snipsnap.synth.Ohm
 import com.snipsnap.synth.OhmGesture
 import com.snipsnap.synth.OhmOptions
 import com.snipsnap.shell.OhmPadMaker
-import com.snipsnap.synth.WickPresets
-import com.snipsnap.synth.WickVoice
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -207,7 +205,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (APSIS, ORIGAMI, FILAMENT, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (APSIS, ORIGAMI, FILAMENT, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO VENT and WICK) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -261,7 +259,7 @@ import kotlin.random.Random
  * (excitation gate), --seed and all six --macros. Models 1–4 remain finite;
  * explicitly choose --model 5 for HOLD or --instrument [--release S]. Held keys
  * retain the unfolding opening before periodic sustain across nine native roots.
- * WICK offers twenty-five provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE recipes without adding a phone engine.
+ * WICK offers 36 shared factory recipes across PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; saved RATTLE body choices survive note and velocity overrides.
  * NACRE offers three playable finite PEARL starting points with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
@@ -357,7 +355,6 @@ object SynthCommand {
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
             } ?: emptyList()
-            WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
             ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)

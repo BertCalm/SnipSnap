@@ -7,12 +7,13 @@ import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Dry provisional MPC 3 pads, with an MPC 2 program twin and exact kit recipes. */
+/** Dry sixteen-pad WICK kit, with an MPC 2 program twin and exact factory recipes. */
 object WickKitGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit").absoluteFile
         val work = File(root, ".wick-work")
+        // Keep the published archive/program names stable for existing kit download links.
         val destination = File(root, "SnipSnap Wick Prototype Kit")
         check(root.isDirectory || root.mkdirs())
         work.deleteRecursively()
@@ -36,6 +37,9 @@ object WickKitGenerator {
             val arrangedPatches = arrangement.map { pad ->
                 PadRecipe.fromJsonValue(requireNotNull(requireNotNull(pad).recipe)).patch as WickPatch
             }
+            check(WickPresets.all().size == 36 && WickVoice.entries.all { voice ->
+                Presets.forVoice(WickPatch.ENGINE, voice.name) == WickPresets.forVoice(voice)
+            }) { "The WICK kit must accompany the complete registered factory bank" }
             check(restoredPatches == arrangedPatches) { "Source kit changed a saved WICK patch" }
             check(restored.pads.map { it.displayName } == restoredPatches.map { it.name }) {
                 "Source kit must identify each WICK pad by its saved patch name"

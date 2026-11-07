@@ -1,5 +1,9 @@
 # WICK BREATH listening round
 
+Current integration (2026-11-06): WICK now has a shared 36-recipe factory bank,
+Android picker and FRESH TAPE starter. This document preserves the earlier
+voice-design round; see [WICK](WICK.md) for current build and acceptance status.
+
 The characteristic gesture is a soft swell → a stable note → overlapping gate
 answers → a gradual release. This is a new voice inside WICK, keeping the
 accepted PLUCK, WOOD and revised BUBBLE render paths intact.
