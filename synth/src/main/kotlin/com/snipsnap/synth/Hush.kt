@@ -28,8 +28,12 @@ import kotlin.math.pow
  *    FADE IN) does not gate its own quiet head.
  *
  * FLOOR is the threshold, in dB under the pad's own peak, so it means the same on a loud and a quiet pad:
- * [FLOOR_DEEP_DB] at the bottom (a trim of a tail nobody hears) to [FLOOR_SHALLOW_DB] at the top (only
- * the loudest part of the hit survives). FLOOR 0 is an exact bypass. CLOSE is the release, [CLOSE_SLOW_SEC]
+ * [FLOOR_TOP_DB] + [FLOOR_SPAN_DB] x (1 - FLOOR) / FLOOR, which is infinitely deep as FLOOR reaches 0 (so
+ * the gate fades out into FLOOR 0's exact bypass, with no jump), 12 dB at FLOOR 0.7 (a tap, the owner's
+ * pick) and [FLOOR_TOP_DB] at the top (only the loudest part of the hit survives). A straight line in dB
+ * could not do both: a tap is 70 percent of the knob, so the 12 dB the owner chose would have needed a
+ * bottom only 26 dB deep, and the first notch of AMT would have jumped from no gate to a 26 dB one.
+ * CLOSE is the release, [CLOSE_SLOW_SEC]
  * to [CLOSE_FAST_SEC] on a log scale; its neutral is its default, so AMT, which walks a character toward its
  * neutral, moves FLOOR alone.
  *
@@ -44,18 +48,27 @@ import kotlin.math.pow
  * which is where a gate is a sound. Pad-sheet taps bake in tap order, so a tap still gates whatever came first.
  *
  * Hazards, not hidden: a hat at the top of FLOOR is a stub (that is the pedal); a pad that is all hit and no
- * tail has nothing to shut. No chip until the owner has heard it.
+ * tail has nothing to shut.
+ *
+ * For tails. At its gate (2026-11-07) the owner heard it on a snare and a tom through ROOM, a dry snare and an
+ * open hat, at 36, 24 and 12 dB under the peak and with a 300 ms and a 25 ms close: the snare through ROOM is
+ * the gated 80s snare ("yes, that is it"), best at 12 dB; the dry snare is only a shorter snare and the open hat
+ * a stub. The CHUG was left out of the listen because the gate measured as changing nothing on it. The owner
+ * chose 12 dB at the default close (about 87 ms) for a tap, and the chip word HUSH, since a choke is already a
+ * choke group here. So the pedal sits after ROOM, where the rack puts it, and nothing tries to rescue a dry hit.
  */
 object Hush {
 
     val MACROS: List<MacroSpec> = listOf(
-        MacroSpec("FLOOR", 0.5f),                  // the threshold: off .. FLOOR_DEEP_DB .. FLOOR_SHALLOW_DB under the peak
+        MacroSpec("FLOOR", 0.5f),                  // the threshold: off, then from far under the peak up to FLOOR_TOP_DB under it
         MacroSpec("CLOSE", 0.5f, neutral = 0.5f),  // how fast it shuts: CLOSE_SLOW_SEC .. CLOSE_FAST_SEC; its own neutral, so AMT never moves it
     )
 
-    /** FLOOR's ends, in dB under the pad's peak. */
-    const val FLOOR_DEEP_DB = 48f
-    const val FLOOR_SHALLOW_DB = 6f
+    /** The threshold at the top of FLOOR, in dB under the pad's peak. */
+    const val FLOOR_TOP_DB = 6f
+
+    /** How fast the threshold deepens as FLOOR falls: set so FLOOR 0.7, a tap, is 12 dB (6 + 14 x 0.3 / 0.7). */
+    const val FLOOR_SPAN_DB = 14f
 
     /** CLOSE's ends: the release time of the raised cosine that shuts the gate. */
     const val CLOSE_SLOW_SEC = 0.3f
@@ -78,11 +91,15 @@ object Hush {
     fun scramble(random: kotlin.random.Random): Map<String, Float> =
         MACROS.associate { it.name to random.nextFloat() }
 
-    /** The threshold in dB under the pad's peak for a FLOOR macro above 0. */
-    fun floorDb(floor: Float): Float = FLOOR_DEEP_DB - (FLOOR_DEEP_DB - FLOOR_SHALLOW_DB) * floor.coerceIn(0f, 1f)
+    /** The threshold in dB under the pad's peak for a FLOOR macro above 0 (infinite at 0, where the gate is off). */
+    fun floorDb(floor: Float): Float {
+        val f = floor.coerceIn(0f, 1f)
+        return if (f <= 0f) Float.POSITIVE_INFINITY else FLOOR_TOP_DB + FLOOR_SPAN_DB * (1f - f) / f
+    }
 
     /** The FLOOR macro whose threshold is [db] under the peak (the inverse of [floorDb]). */
-    fun floorFor(db: Float): Float = ((FLOOR_DEEP_DB - db) / (FLOOR_DEEP_DB - FLOOR_SHALLOW_DB)).coerceIn(0f, 1f)
+    fun floorFor(db: Float): Float =
+        if (db <= FLOOR_TOP_DB) 1f else (FLOOR_SPAN_DB / (db - FLOOR_TOP_DB + FLOOR_SPAN_DB)).coerceIn(0f, 1f)
 
     /** The release in seconds for a CLOSE macro (log scale). */
     fun closeSec(close: Float): Float = CLOSE_SLOW_SEC * (CLOSE_FAST_SEC / CLOSE_SLOW_SEC).pow(close.coerceIn(0f, 1f))

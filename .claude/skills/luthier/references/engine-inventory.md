@@ -182,10 +182,10 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07) and HUSH (built 2026-11-07, chip-less until its gate). The rack has 27 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07) and HUSH (2026-11-07). The rack has 27 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
 swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
 vinyl, tape, vibrato, ensemble, phase, echo, spring, room, hush, motion. The pedal library (`Pedals.kt`) has
-eleven pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE) and one board (RIG). Rack
+twelve pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE, HUSH) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
 the pedal brainstorm (`docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`) specs both
@@ -194,7 +194,10 @@ its gate on 2026-11-02, and VIBRATO (the VIBRATO section, character `vibratoed`)
 a choir and a snare are too short for a vibrato to read (loud for 0.48 s and 0.09 s). DIVE (the DIVE section, character `dived`,
 right after PITCH in the transport) passed on 2026-11-07 on the guitar only: the drums were too short for a dive, so the
 brainstorm's 808-envelope use did not survive. Three pedals in a row heard the same way is a pattern: a move that unfolds
-over time needs a held sound, so a gate for one should lead with a held source. A pedal needs its own listening gate, and its
+over time needs a held sound, so a gate for one should lead with a held source. HUSH (the HUSH section, character `hushed`,
+after ROOM) passed on 2026-11-07 the other way round: a gate needs a tail to cut, and the one it cut well was a snare's
+room (the gated 80s snare), not the dry snare (only shorter), an open hat (a stub) or the CHUG (one held note, measured
+as unchanged, so left out of the listen). Measure the sources' decay before a level-driven gate. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 

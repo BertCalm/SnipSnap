@@ -10,8 +10,8 @@ import java.util.Locale
  * the pedal brainstorm's gate names, a snare, a snare through ROOM (the gated reverb), a tom through ROOM
  * and the CHUG guitar through DRIVE, plus an open hat (where a gate is a closed hat and the top of FLOOR a stub). Each is
  * heard dry and gated at 36, 24 and 12 dB under its peak at the default close (about 87 ms), and at 18 dB
- * with a slow (300 ms) and a fast (25 ms) close. Clips are named in dB, so a later change of FLOOR's range
- * leaves them as heard. The ROOM is baked first, as tapping ROOM and then the gate on the pad sheet would.
+ * with a slow (300 ms) and a fast (25 ms) close. Clips are named in dB, so reshaping FLOOR's law after the
+ * gate (2026-11-07) left them as heard. The ROOM is baked first, as tapping ROOM and then the gate on the pad sheet would.
  * Every clip shares one loudness ([AuditionLevel]). Run via `./gradlew :synth:generateHushAudition`.
  */
 object HushAuditionGenerator {

@@ -139,6 +139,44 @@ class HushTest {
     }
 
     @Test
+    fun `FLOOR's law fades the gate out into its bypass and puts a tap on the 12 dB the owner chose`() {
+        assertEquals(Hush.FLOOR_TOP_DB, Hush.floorDb(1f), 1e-6f, "the top of FLOOR is not FLOOR_TOP_DB")
+        assertEquals(12f, Hush.floorDb(0.7f), 1e-4f, "FLOOR 0.7, a tap, is not 12 dB")
+        assertEquals(Float.POSITIVE_INFINITY, Hush.floorDb(0f), "FLOOR 0 is not an infinitely deep gate")
+        assertTrue(Hush.floorDb(0.01f) > 1000f, "the first notch above the bypass is already a gate: ${Hush.floorDb(0.01f)} dB")
+        var last = Float.POSITIVE_INFINITY
+        for (i in 1..100) { val db = Hush.floorDb(i / 100f); assertTrue(db < last, "FLOOR's threshold does not rise with FLOOR at ${i / 100f}"); last = db }
+        // The first notch of AMT above 0 gates nothing that is not already silence.
+        val roomed = Treatments.apply("roomed", snare, 1f).snip
+        assertContentEquals(roomed.samples, Hush.process(roomed, mapOf("FLOOR" to 0.01f)).samples, "FLOOR 0.01 gated a roomed snare")
+    }
+
+    @Test
+    fun `a tap of the HUSH chip shuts the pad 12 dB under its peak, the gate the owner heard, and AMT walks the depth alone`() {
+        val tap = 0.7f
+        assertEquals(setOf("FLOOR"), Treatments.chain("hushed").hush!!.keys, "the hushed character set more than FLOOR")
+        assertEquals(12f, Hush.floorDb(Treatments.chain("hushed", tap).hush!!.getValue("FLOOR")), 1e-4f, "a tap is not 12 dB")
+        assertEquals(Hush.FLOOR_TOP_DB, Hush.floorDb(Treatments.chain("hushed", 1f).hush!!.getValue("FLOOR")), 1e-6f, "AMT 1 is not the top of FLOOR")
+        val roomed = Treatments.apply("roomed", snare, 1f).snip
+        fun sounding(amount: Float): Int {
+            val x = Treatments.apply("hushed", roomed, amount).snip.samples
+            var i = x.size
+            while (i > 0 && x[i - 1] == 0f) i--
+            return i
+        }
+        println("HUSH chip on the roomed snare: AMT 0.35 sounds ${sounding(0.35f)} frames, tap ${sounding(tap)}, AMT 1 ${sounding(1f)}, of ${roomed.frameCount}")
+        assertTrue(sounding(1f) < sounding(tap) && sounding(tap) < sounding(0.35f), "AMT does not move the gate earlier as it rises")
+        // The tap is the 12 dB clip the owner heard: HUSH at 12 dB and the default close on the snare through ROOM.
+        val heard = Hush.process(roomed, mapOf("FLOOR" to Hush.floorFor(12f))).samples
+        val tapped = Treatments.apply("hushed", roomed, tap).snip.samples
+        assertTrue(abs(heard.size - tapped.size) <= 2, "the tap's length differs from the heard clip: ${tapped.size} vs ${heard.size}")
+        var worst = 0f
+        for (i in 0 until minOf(heard.size, tapped.size)) worst = maxOf(worst, abs(heard[i] - tapped[i]))
+        assertTrue(worst < 1e-3f, "the tap is not the heard gate: worst sample difference $worst")
+        assertContentEquals(roomed.samples, Treatments.apply("hushed", roomed, 0f).snip.samples, "AMT 0 is not a copy")
+    }
+
+    @Test
     fun `the section is deterministic, links its channels, and ignores unknown keys`() {
         val a = Hush.process(tom, mapOf("FLOOR" to 0.8f))
         assertContentEquals(a.samples, Hush.process(tom, mapOf("FLOOR" to 0.8f)).samples, "HUSH is not deterministic")
