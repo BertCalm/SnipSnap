@@ -592,6 +592,7 @@ scripts/__pycache__/
 
 # Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
 testkit/apsis-populations/
+testkit/apsis-acceptance/
 testkit/obliterate-board/
 
 # Accord's regenerable native audio, numerical sweeps and MPC exports.
