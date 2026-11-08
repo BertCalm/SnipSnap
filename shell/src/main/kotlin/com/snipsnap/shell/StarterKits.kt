@@ -515,6 +515,11 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("C"),
         ) { ChordStabs.borrowedKit(KeySpec.parse("C")) },
+        Starter(
+            "erosion", "EROSION",
+            "Eight dry percussion roles, from low thuds to bright crackle, with soft, medium and hard touch.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionKits.contrast() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
