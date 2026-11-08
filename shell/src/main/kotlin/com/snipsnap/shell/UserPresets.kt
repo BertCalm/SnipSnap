@@ -43,6 +43,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
@@ -52,6 +53,7 @@ import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
@@ -441,6 +443,16 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is RivetPatch) {
+            // Preserve native strike and renderer version, including old model-1 hits.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "RivetPatch.fromJsonText($recipe),"
+        }
+        if (patch is ErosionPatch) {
+            // Native touch is outside the macro map; promotion must retain it.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ErosionPatch.fromJsonText($recipe),"
+        }
         if (patch is WickPatch) {
             // Save the selected body as well as note, velocity and controls.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

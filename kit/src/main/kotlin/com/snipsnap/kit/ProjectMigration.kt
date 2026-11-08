@@ -13,7 +13,9 @@ import java.io.File
  * project of a different name — so this never manufactures a second
  * project for a kit a person has already placed. A kit nothing holds gets
  * one, named after its folder, or `<folder> 2` when a project of that
- * name exists and holds something else.
+ * name exists and holds something else. The one exception is a kit in
+ * [ProjectStore.released]: a person deleted its project or took it out of
+ * its last one, and the shelf does not undo that on the next open.
  *
  * **The beat is copied, not moved, in this step.** The kit's `groove.json`
  * is still what every exporter embeds (`SessionBuilder`, the native
@@ -37,6 +39,7 @@ object ProjectMigration {
         val projects = ProjectStore.list(shelfRoot).map { ProjectStore.load(it) }
         val held = projects.flatMap { it.kits }.toSet()
         val taken = projects.map { it.name }.toMutableSet()
+        val released = ProjectStore.released(shelfRoot)
         val created = mutableListOf<String>()
         val alreadyHeld = mutableListOf<String>()
 
@@ -46,6 +49,9 @@ object ProjectMigration {
                 alreadyHeld += folder
                 continue
             }
+            // Taken out of its last project on purpose: stays unheld until a
+            // person opens it or adds it to a project (`ProjectStore.released`).
+            if (folder in released) continue
             val kit = KitStore.load(kitDir)
             val name = freshName(folder, taken)
             val project = Project(

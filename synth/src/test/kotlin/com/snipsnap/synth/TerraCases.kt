@@ -11,10 +11,12 @@ package com.snipsnap.synth
  * order, rather than read back through PadRecipe and TerraPatch: the HIT
  * work rewrites that decoder, and a guard must not lean on what it guards.
  *
- * Since 2026-11-06 A07 is a BOX pad, which came after the freeze, so [KIT]
- * (the shipped kit) and [all] (the frozen grid) part at that one pad: the
- * grid keeps the cavity slap A07 shipped as before it ([RETIRED_A07]), so it
- * still holds RESONANT_CAVITY at a hard, buzzy edge strike, and stays forty.
+ * Since 2026-11-06 A07 is a BOX pad, and since 2026-11-07 A09, A11 and A12
+ * are hand drums (SLAP, DAYAN, DARBUKA), all voices that came after the
+ * freeze, so [KIT] (the shipped kit) and [all] (the frozen grid) part at
+ * those pads: the grid keeps what each shipped as before ([RETIRED_A07],
+ * [RETIRED_HANDS]), so it still holds the frozen voices there, and stays
+ * forty.
  */
 internal object TerraCases {
 
@@ -28,6 +30,16 @@ internal object TerraCases {
 
     /** A07 as it shipped from PR #890 until BOX replaced it (2026-11-06): the cavity slap, kept in the frozen grid. */
     val RETIRED_A07 = KitPad("A07", "Cajon Slap (cavity)", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f))
+
+    /** A09, A11 and A12 as they shipped until the hand drums replaced them (2026-11-07), kept in the frozen grid. */
+    val RETIRED_HANDS = listOf(
+        KitPad("A09", "Tabla Tin (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
+        KitPad("A11", "Dumbek Tek (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 1.0f, "FORCE" to 0.92f, "POS" to 0.95f)),
+        KitPad("A12", "Djembe Slap (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.9167f, "FORCE" to 0.95f, "POS" to 0.9f, "DROOP" to 0.3077f, "DECAY" to 0f)),
+    )
+
+    /** The frozen grid's pad for [slot]: today's, or the retired one where a post-freeze voice took it. */
+    private fun frozenPad(pad: KitPad): KitPad = if (pad.slot == "A07") RETIRED_A07 else RETIRED_HANDS.firstOrNull { it.slot == pad.slot } ?: pad
 
     val PROBES: List<Map<String, Float>> = listOf(
         mapOf("TUNE" to 0.30f, "DECAY" to 0.55f),
@@ -46,10 +58,10 @@ internal object TerraCases {
         KitPad("A06", "Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
         KitPad("A07", "Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)),
         KitPad("A08", "Djembe Open", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
-        KitPad("A09", "Tabla Tin", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
+        KitPad("A09", "Tabla Tin", TerraVoice.DAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.9f, "OPEN" to 1f, "CLICK" to 0.65f)),
         KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
-        KitPad("A11", "Dumbek Tek", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 1.0f, "FORCE" to 0.92f, "POS" to 0.95f)),
-        KitPad("A12", "Djembe Slap", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.9167f, "FORCE" to 0.95f, "POS" to 0.9f, "DROOP" to 0.3077f, "DECAY" to 0f)),
+        KitPad("A11", "Dumbek Tek", TerraVoice.DARBUKA, mapOf("TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f)),
+        KitPad("A12", "Djembe Slap", TerraVoice.SLAP, mapOf("TUNE" to 0.53f, "DECAY" to 0.5f, "FORCE" to 0.95f, "POS" to 0.875f, "BOWL" to 0.5f, "SMACK" to 0.5f)),
         KitPad("A13", "Agogo Low", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.2508f, "FORCE" to 0.85f)),
         KitPad("A14", "Agogo High", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.8807f, "FORCE" to 0.90f)),
         KitPad("A15", "Agogo Clack", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.6108f, "FORCE" to 0.95f, "CLACK" to 0.6667f)),
@@ -59,5 +71,5 @@ internal object TerraCases {
     val all: List<Case> =
         FROZEN_VOICES.map { Case("default ${it.name}", it, emptyMap()) } +
             FROZEN_VOICES.flatMap { v -> PROBES.mapIndexed { i, m -> Case("probe ${i + 1} ${v.name}", v, m) } } +
-            KIT.map { if (it.slot == "A07") RETIRED_A07 else it }.map { Case("pad ${it.slot} ${it.name}", it.voice, it.macros) }
+            KIT.map { frozenPad(it) }.map { Case("pad ${it.slot} ${it.name}", it.voice, it.macros) }
 }

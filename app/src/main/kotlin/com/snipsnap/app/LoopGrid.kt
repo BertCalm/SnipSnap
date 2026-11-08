@@ -511,6 +511,7 @@ private fun BlockCell(
             .pointerInput(filled) {
                 detectTapGestures(
                     onTap = { currentOnSelect() },
+                    // twin: the CLEAR TRACK button (Copy.LOOP_CLEAR_BUTTON), which calls the same onClear
                     onLongPress = if (filled) ({ currentOnClear() }) else null,
                 )
             }
@@ -519,6 +520,7 @@ private fun BlockCell(
                 // every recomposition — no restart to key, so these already
                 // saw the latest callback and stay as they were.
                 onClick(label = "WHAT IS THIS BLOCK") { onSelect(); true }
+                // twin: the CLEAR TRACK button (Copy.LOOP_CLEAR_BUTTON), which calls the same onClear
                 if (filled) onLongClick(label = "CLEAR THIS TRACK") { onClear(); true }
             }
             .padding(4.dp),

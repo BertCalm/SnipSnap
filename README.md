@@ -16,6 +16,13 @@ the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
 
+EROSION's accepted eight-role percussion bank is available in factory presets,
+the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
+renderer and original audition recipes are preserved. The broader
+[instrument completion programme](docs/SYNTH_COMPLETION_PROGRAM.md) tracks
+remaining voice, articulation, kit, round-robin and chord requirements;
+[Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
+
 ## The loop
 
 ```
@@ -427,7 +434,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 72 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 76 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -477,6 +484,14 @@ for the complete bank, dry samples, source comparisons and MPC 2/3 kit. The
 [implementation notes](docs/WICK.md) retain the accepted sounds and identify the
 nine additional recipes for listening. Hardware performance and MPC acceptance
 are recorded separately from software validation.
+
+RIVET makes industrial drums whose room grows from workshop to warehouse. Six
+voices and sixteen accepted factory sounds share TUNE, STRIKE, METAL, DRIVE,
+SIZE and WALLS, with saved strike velocity and finite playback. SYNTH → RIVET
+edits individual hits; FRESH TAPE supplies WORKSHOP, FACTORY and WAREHOUSE kits,
+each with sixteen pads, three strike layers and choking hats. The
+[audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
+[implementation notes](docs/RIVET.md) include the pending hardware check.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1080,8 +1095,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, FIRED BRONZE and GRAINS round out the lineup —
-77 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE and GRAINS round out the lineup —
+79 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1263,7 +1278,12 @@ ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-l
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
 close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
 the `roomed` character, gives its default room at a tap (AMT 70), AMT moving only the mic; see
-[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
+[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), HUSH
+(a gate, right after the room: the pad is shut to silence once it falls FLOOR under its own
+peak, over CLOSE, 300 ms to 25 ms, without chatter, and never before it has first arrived; the
+HUSH pedal, the `hushed` character, shuts it 12 dB under the peak over about 87 ms at a tap
+(AMT 70), so a snare with ROOM on it is the gated 80s snare; for tails: a dry snare is only
+shorter and a hat a stub), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
@@ -1286,7 +1306,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → motion — owns
+dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1311,7 +1331,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, FIRED BRONZE, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 

@@ -79,7 +79,9 @@ object GrooveStore {
      * lane maps the file already holds for the clips that are still in it;
      * non-null replaces them. Either way an entry for a clip that is no
      * longer in the list is dropped, so a slot's lane map never outlives
-     * the program it was made for.
+     * the program it was made for. [names] work the same way (null keeps
+     * the file's, non-null replaces); [nextProg] can only raise the stored
+     * high-water mark, never lower it.
      */
     @Synchronized
     fun save(
@@ -87,6 +89,7 @@ object GrooveStore {
         clips: List<Mpc3Clip>,
         lanePads: Map<String, List<Int>>? = null,
         names: Map<String, String>? = null,
+        nextProg: Int? = null,
     ): File {
         require(clips.isNotEmpty()) { "no clips - use delete() to clear the grooves" }
         kitDir.mkdirs()
@@ -94,9 +97,10 @@ object GrooveStore {
         val inList = clips.mapTo(HashSet()) { it.name }
         val kept = (lanePads ?: loadLanePads(kitDir)).filterKeys { it in inList }
         val keptNames = (names ?: loadNames(kitDir)).filterKeys { it in inList }
-        // Never lowered: whatever the file already remembers, or one past the
-        // highest program in this list, whichever is more.
-        val next = maxOf(loadNextProg(kitDir), (clips.mapNotNull { GrooveEdit.progIndexOfName(it.name) }.maxOrNull() ?: -1) + 1)
+        // Never lowered: whatever the file already remembers, what a caller carries over from another
+        // file ([nextProg], a kit's mark copied into a project), or one past the highest program in
+        // this list, whichever is more.
+        val next = maxOf(loadNextProg(kitDir), nextProg ?: 0, (clips.mapNotNull { GrooveEdit.progIndexOfName(it.name) }.maxOrNull() ?: -1) + 1)
         AtomicFile.writeText(file, Json.write(toJson(clips, kept, keptNames, next)) + "\n")
         return file
     }

@@ -137,6 +137,8 @@ class ReversalTest {
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
         // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
         "CARD_FORGET" to "a button label, not a landing",
+        // The YOURS preset FORGET door: it opens the same PresetForgetDialog a hold on the chip opens, which names the bin.
+        "PRESET_FORGET_DOOR" to "a button label that opens the forget dialog; nothing has happened yet",
     )
 
     /**

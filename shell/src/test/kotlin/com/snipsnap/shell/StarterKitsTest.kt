@@ -211,7 +211,7 @@ class StarterKitsTest {
                 val slots = when (starter.id) {
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
-                    StarterKits.CONFLUENCE_ID -> 8
+                    StarterKits.CONFLUENCE_ID, "erosion" -> 8
                     "vent" -> 12
                     "strike-fx" -> 4
                     else -> 16
@@ -570,7 +570,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "fired-bronze"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "rivet-workshop", "rivet-factory", "rivet-warehouse", "fired-bronze"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

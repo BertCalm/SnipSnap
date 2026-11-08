@@ -35,6 +35,19 @@ layers, replayable study recipes and an MPC sample kit. Source calibration,
 listening, factory registration, phone timing and hardware loading remain open.
 See [FIRED_BRONZE.md](FIRED_BRONZE.md).
 
+**RIVET accepted industrial drum bank (2026-11-08).** Six finite voices share
+TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS, with an independent close strike as the
+room grows from workshop to warehouse. The accepted sixteen roles are factory
+presets and three FRESH TAPE starters, each with three native strike layers and
+shared hat choking. SYNTH exposes all six voices, complete saved recipes and
+velocity; HOLD remains refused. Model 2 retains the original kick/snare PCM.
+`generateRivetKit` exports both MPC formats and sample-based grooves. The Android
+app and UI-test APKs compile; 176 focused JVM checks passed and all 147 exported
+WAVs match the accepted audition byte for byte. Phone timing and physical MPC
+results remain unrecorded. See [RIVET.md](RIVET.md), the
+[engineering specification](superpowers/specs/2026-11-07-rivet-industrial-drum-engine-design.md)
+and the [expansion specification](superpowers/specs/2026-11-07-rivet-kit-expansion.md).
+
 **EROSION accepted contrast bank and handoff (2026-11-07).** Josh accepted the
 native eight-role audition. The implementation is merged in PR #891. Factory
 promotion of the exact recipes, SDK-verified picker/starter integration,
@@ -3339,3 +3352,5 @@ record. The pre-existing saved-pad device callback failure above is not claimed
 fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
 is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
 See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
+
+Backroom update: the user-accepted More Snap recipes now feed the six-pad candidate and its velocity layers. A separate four-bar phrase adds a second-bar variation and turnaround; the accepted two-bar render is retained. Factory promotion awaits MPC checks. See `docs/BOOM_BAP.md`.

@@ -2330,6 +2330,7 @@ private fun OrbitRingRail(
         refitting = refitting,
         scheme = scheme,
         onTapRing = { index -> onSelectRing(index) },
+        // twin: the SOLO chip in the ring's controls (SmallChip "SOLO"), which calls the same onToggleSolo
         onLongPressRing = { index -> onToggleSolo(index) },
         modifier = Modifier.fillMaxWidth().height(ringsHeight),
     )
@@ -2541,6 +2542,7 @@ private fun RingsCanvas(
                 .padding(10.dp)
                 .pointerInput(set, selected) {
                     detectTapGestures(
+                        // twin: the SOLO chip in the ring's controls (SmallChip "SOLO"), which calls the same onToggleSolo
                         onLongPress = { pos ->
                             val geometry = RingGeometry(size.width.toFloat(), size.height.toFloat(), set.orbits.size, screenDensity)
                             geometry.ringAt(pos)?.let { onLongPressRing(order[it]) }
@@ -2745,6 +2747,9 @@ private fun StripEditor(
     }
     val playheadStep = if (playing) OrbitClock.stepAt(set, ring, frame) else -1
     val inkColor = scheme.lcdInk.tape
+    // The visible twin of the hold: with this on, a plain tap on a square
+    // does what holding it does (moves the brush's property one rung).
+    var tapWrites by remember { mutableStateOf(false) }
 
     BoxWithConstraints(Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp)) {
         val railW = 40.dp
@@ -2768,6 +2773,7 @@ private fun StripEditor(
                 // pair that isn't either of those (`PROG A · THE BREAK`,
                 // GrooveScreen.kt).
                 SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+                TapWritesChip(tapWrites, brush, scheme) { tapWrites = !tapWrites }
                 TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 1)
             }
             for (slot in rows) {
@@ -2819,7 +2825,8 @@ private fun StripEditor(
                                     else -> "HIT"
                                 }.let { if (mark.isEmpty()) it else "$it $mark" },
                                 longPressLabel = brush.action,
-                                onTap = { onToggle(slot, step) },
+                                onTap = { if (tapWrites) onCycle(slot, step) else onToggle(slot, step) },
+                                // twin: the TAP chip above the strip (TapWritesChip), which turns a tap into the same onCycle
                                 onLongPress = { onCycle(slot, step) },
                             )
                         }
@@ -2828,6 +2835,22 @@ private fun StripEditor(
             }
         }
     }
+}
+
+/**
+ * The strip's tap switch: a hold on a square moves the brush's property, and
+ * this is the same move without the hold. Off, a tap places or lifts a hit;
+ * on, a tap moves whatever the HOLD chip's brush names, as holding does.
+ */
+@Composable
+private fun TapWritesChip(tapWrites: Boolean, brush: OrbitBrush, scheme: Scheme, onClick: () -> Unit) {
+    SmallChip(
+        if (tapWrites) Copy.orbitTapWrites(brush.label) else Copy.ORBIT_TAP_PLACES,
+        scheme,
+        accent = tapWrites,
+        description = if (tapWrites) "A TAP CHANGES ${brush.label}. TAP HERE TO PLACE AND LIFT HITS INSTEAD" else "A TAP PLACES OR LIFTS A HIT. TAP HERE TO MAKE A TAP CHANGE ${brush.label}",
+        onClick = onClick,
+    )
 }
 
 /**
@@ -2863,6 +2886,7 @@ private fun StripCell(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = label,
+                // twin: the TAP chip above the strip (TapWritesChip); StripCell's caller wires onTap to the same move
                 onLongClickLabel = longPressLabel,
                 onLongClick = onLongPress,
                 onClick = onTap,
@@ -3036,7 +3060,7 @@ private fun HeaderChip(
 }
 
 @Composable
-private fun SmallChip(
+internal fun SmallChip(
     label: String,
     scheme: Scheme,
     accent: Boolean = false,
@@ -3077,6 +3101,7 @@ private fun SpanChip(span: OrbitSpan, scheme: Scheme, onNext: () -> Unit, onPick
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = "NEXT SPAN",
+                // twin: the tap on this same SPAN chip, which steps through all five spans, so the picker opens nothing a tap cannot reach
                 onLongClickLabel = "PICK A SPAN",
                 onLongClick = onPick,
                 onClick = onNext,

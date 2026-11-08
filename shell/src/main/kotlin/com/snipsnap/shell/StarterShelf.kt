@@ -47,10 +47,10 @@ object StarterShelf {
             Copy.STARTER_HEADING_METAL,
             listOf(
                 "libration", "meridian", "accord", "thaw", "scour", "nimbus", "suture",
-                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament",
+                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
             ),
         ),
-        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "fired-bronze")),
+        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "rivet-workshop", "rivet-factory", "rivet-warehouse", "fired-bronze")),
         Group(
             Copy.STARTER_HEADING_MOVING,
             listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),

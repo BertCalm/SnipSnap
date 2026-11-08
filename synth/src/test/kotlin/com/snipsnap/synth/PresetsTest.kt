@@ -14,6 +14,7 @@ class PresetsTest {
 
     @Test
     fun `forVoice forwards every registered engine by name`() {
+        for (voice in RivetVoice.entries) assertEquals(RivetPresets.forVoice(voice), Presets.forVoice("RIVET", voice.name))
         for (voice in NacreVoice.entries) assertEquals(NacrePresets.forVoice(voice), Presets.forVoice("NACRE", voice.name))
         for (voice in AccordVoice.entries) assertEquals(AccordPresets.forVoice(voice), Presets.forVoice("ACCORD", voice.name))
         for (voice in TidalVoice.entries) assertEquals(TidalPresets.forVoice(voice), Presets.forVoice("TIDAL", voice.name))
@@ -162,7 +163,7 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = FiredBronzePresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + MeridianPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +

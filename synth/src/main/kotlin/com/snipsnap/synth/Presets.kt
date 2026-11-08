@@ -19,6 +19,8 @@ object Presets {
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
         FiredBronzePatch.ENGINE -> FiredBronzeDryKit.Pad.entries.firstOrNull { it.name == voice }
             ?.let(FiredBronzePresets::forVoice) ?: emptyList()
+        RivetPatch.ENGINE -> RivetVoice.entries.firstOrNull { it.name == voice }
+            ?.let(RivetPresets::forVoice) ?: emptyList()
         WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
             ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
@@ -170,6 +172,10 @@ object Presets {
         ThawPatch.ENGINE -> {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
+        }
+        ErosionPatch.ENGINE -> {
+            val v = ErosionVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ErosionPresets.forVoice(v)
         }
         ScourPatch.ENGINE -> {
             val v = ScourVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
@@ -338,8 +344,8 @@ object Presets {
         else -> null
     }
 
-    fun all(): List<Patch> = FiredBronzePresets.all() +
-        WickPresets.all() +
+    fun all(): List<Patch> =
+        FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +
