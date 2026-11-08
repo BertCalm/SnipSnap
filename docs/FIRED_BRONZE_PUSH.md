@@ -115,6 +115,12 @@ Repository-wide `test --fail-fast` reached its 180-second limit (exit 124);
 no complete-suite pass is claimed. Hardware loading and browser interaction
 are unverified.
 
+For hosting, standalone audition audio is encoded as lossless FLAC. The
+site-packaging script decodes every conversion and checks SHA-256 against the
+original PCM before removing the duplicate WAV. All 618 current Site clips
+passed; MPC ZIPs retain their WAV files. This reduces expanded assets below
+the hosting limit without changing samples.
+
 ## Why it is built this way
 
 - Drive now reaches a more nonlinear part of the model, so the change survives level matching.
