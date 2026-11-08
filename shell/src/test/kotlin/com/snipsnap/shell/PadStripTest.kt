@@ -38,9 +38,9 @@ class PadStripTest {
         )
         val strip = PadStrip.line(pad, 2)
         val shape = PadSheetBoxes.shape(pad)
-        assertTrue(shape != PadSheetBoxes.UNTOUCHED)
+        assertTrue(shape != PadSheetBoxes.SHAPE_HOLDS)
         assertEquals("$shape · CHOKE 1 · 2 LAYERS · HOLDS", strip.facts, "the sheet's SHAPE strip, verbatim, then the everyday facts")
-        assertTrue(PadSheetBoxes.UNTOUCHED !in strip.facts, "untouched benches are left out")
+        assertTrue(PadSheetBoxes.TREATMENT_HOLDS !in strip.facts && PadSheetBoxes.OUTSIDE_HOLDS !in strip.facts && PadSheetBoxes.MUTATE_OFFERS !in strip.facts, "untouched benches are left out")
     }
 
     @Test
