@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,7 +106,11 @@ internal class StepEditorState(
     private val clipName: String,
     private val scope: CoroutineScope,
     private val onEdit: (StepEdit) -> Unit,
+    /** The TAP chip: held by the screen's saved state, so a rotation keeps it and nothing reaches disk. */
+    private val tapEditsHolder: MutableState<Boolean> = mutableStateOf(false),
 ) {
+    /** True when a tap on a step opens its detail instead of flipping it (the chip's on state). */
+    var tapEdits: Boolean by tapEditsHolder
     var lanePads: List<Int> by mutableStateOf(GrooveEdit.DEFAULT_LANE_PADS)
         private set
     var pickLane: GrooveEdit.Lane? by mutableStateOf(null)
@@ -272,6 +278,17 @@ internal class StepEditorState(
         return false
     }
 
+    /**
+     * A tap on a step cell. Chip off: flips it. Chip on: opens its detail as a hold does, and an unlit step is
+     * turned on first (a dead tap would be the only other answer), so the strip opens on a hit that exists.
+     */
+    fun tap(clip: Mpc3Clip, lane: GrooveEdit.Lane, step: Int) {
+        val note = GrooveEdit.noteFor(lane, lanePads)
+        val lit = clip.notes.any { it.note == note && GrooveEdit.cellOf(it.timePulses) == step }
+        if (!tapEdits || !lit) onEdit(toggledStep(clip, lane, step, this))
+        if (tapEdits) select(lane, step)
+    }
+
     fun select(lane: GrooveEdit.Lane, step: Int) {
         pickLane = null
         selLane = lane
@@ -288,7 +305,8 @@ internal class StepEditorState(
 internal fun rememberStepEditorState(kitDir: File, clipName: String, onEdit: (StepEdit) -> Unit): StepEditorState {
     val scope = rememberCoroutineScope()
     val latest by rememberUpdatedState(onEdit)
-    val state = remember(kitDir, clipName) { StepEditorState(kitDir, clipName, scope) { latest(it) } }
+    val tapEdits = rememberSaveable { mutableStateOf(false) }
+    val state = remember(kitDir, clipName) { StepEditorState(kitDir, clipName, scope, { latest(it) }, tapEdits) }
     LaunchedEffect(state) { state.load() }
     return state
 }
@@ -302,6 +320,7 @@ internal fun Modifier.stepCellClick(label: String, onLongClick: () -> Unit, onCl
         indication = null,
         role = Role.Button,
         onLongClickLabel = Copy.STEP_DETAIL_LONG_LABEL,
+        // twin: the TAP · EDIT chip above the tools (StepTapChip), which makes a tap open the same detail
         onLongClick = onLongClick,
         onClick = onClick,
     ).semantics { contentDescription = label }
@@ -357,12 +376,31 @@ internal fun StepEditorPanel(
     val pick = state.pickLane
     val sel = state.selLane
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        StepTapChip(state, scheme)
         if (pick != null) {
             LanePadPicker(state, pick, clip, kit, scheme, laneNames.getValue(pick))
         } else if (sel != null && state.selStep >= 0) {
             StepDetailStrip(state, sel, clip, scheme, laneNames.getValue(sel), editorBar, onEdit)
         }
         StepTools(state, clip, scheme, editorBar, swingPercent)
+    }
+}
+
+/**
+ * The grid's tap switch: holding a step opens its detail, and this is the same move without the hold. Off, a tap
+ * flips the step; on, a tap opens it (turning an unlit step on first).
+ */
+@Composable
+private fun StepTapChip(state: StepEditorState, scheme: Scheme) {
+    val edits = state.tapEdits
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        SmallChip(
+            if (edits) Copy.STEP_TAP_EDITS else Copy.STEP_TAP_TOGGLES,
+            scheme,
+            accent = edits,
+            description = if (edits) "A TAP OPENS A STEP TO EDIT. TAP HERE TO FLIP STEPS ON AND OFF INSTEAD" else "A TAP FLIPS A STEP ON OR OFF. TAP HERE TO MAKE A TAP OPEN A STEP TO EDIT",
+            onClick = { state.tapEdits = !edits },
+        )
     }
 }
 

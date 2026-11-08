@@ -3060,7 +3060,7 @@ private fun HeaderChip(
 }
 
 @Composable
-private fun SmallChip(
+internal fun SmallChip(
     label: String,
     scheme: Scheme,
     accent: Boolean = false,

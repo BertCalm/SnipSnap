@@ -5625,16 +5625,11 @@ class ConventionTest {
     /**
      * Why a hold is waived, named so the list reads as owners and not as excuses.
      *
-     * [PENCIL] and [BEAT_STEP_DETAIL] are the only two. A new hold takes a
+     * [PENCIL] is the only owner left, with two lines of one gesture. A new hold takes a
      * visible twin and a `// twin:` tag, not a waiver.
      */
     private enum class HoldWaiverOwner(val why: String) {
         PENCIL("TapeScreen's pencil rewind is being removed (the UI-clarity spec's D9), so it gets no twin."),
-        BEAT_STEP_DETAIL(
-            "BEAT's step editor opens its detail strip on a hold, by an owner ruling (the footer reads HOLD FOR VELOCITY, " +
-                "ROLL, NUDGE, LENGTH) and a tap already flips the step. It has no tap path today; a twin is a design " +
-                "question for that screen, not for the PR that added this law.",
-        ),
     }
 
     private data class HoldWaiver(val owner: HoldWaiverOwner, val lineText: String)
@@ -5651,14 +5646,8 @@ class ConventionTest {
             HoldWaiver(HoldWaiverOwner.PENCIL, """onLongClick(label = "SPIN BACK BY EAR") {"""),
             HoldWaiver(HoldWaiverOwner.PENCIL, "val releasedEarly = withTimeoutOrNull(PENCIL_LONG_PRESS_MS) { tryAwaitRelease() }"),
         ),
-        "ui/GrooveScreen.kt" to listOf(
-            HoldWaiver(HoldWaiverOwner.BEAT_STEP_DETAIL, "onLongClick = { state.select(lane, step) },"),
-        ),
-        "ui/StepEditorParts.kt" to listOf(
-            HoldWaiver(HoldWaiverOwner.BEAT_STEP_DETAIL, "onLongClick = onLongClick,"),
-        ),
     )
-    private val HOLD_WAIVER_CEILING = 4
+    private val HOLD_WAIVER_CEILING = 2
 
     /** How many lines above a hold site its `// twin:` tag may sit; a hold's modifier chain and its labels sit between. */
     private val TWIN_TAG_WINDOW = 8
