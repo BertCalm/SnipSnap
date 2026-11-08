@@ -222,6 +222,10 @@ import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Skin
+import com.snipsnap.synth.FiredBronzePatch
+import com.snipsnap.synth.FiredBronzeInstrument
+import com.snipsnap.synth.FiredBronzeDryKit
+import com.snipsnap.shell.FiredBronzePads
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
@@ -2104,7 +2108,7 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
+        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) && !(pad.chain != null && !pad.isRobinChain) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -2240,7 +2244,9 @@ fun SynthScreen(
                             // pad's identity would still say (and choke-group
                             // with) whatever it was before, while sounding like
                             // the new voice.
-                            model.replaceAudio(slot, recipe) { _ -> rendered }
+                            if (patch is FiredBronzePatch && FiredBronzePads.canEdit(model.pad(slot)))
+                                model.replaceFiredBronze(slot, padRecipe)
+                            else model.replaceAudio(slot, recipe) { _ -> rendered }
                             // FILAMENT and CHAMBER keep deliberate pad tuning
                             // when reopened. ROOT changes the native pitch
                             // and source tags; the player's tune offsets stay put.
@@ -3672,7 +3678,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
+                        enabled = !padChooser.sendBusy && target != null && (target.velocityLayers.isEmpty() || (engine == Engine.FIRED_BRONZE && FiredBronzePads.canEdit(target))) && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3819,6 +3825,7 @@ fun SynthScreen(
                 previewColor = classColor,
                 scheme = scheme,
                 busy = padChooser.sendBusy,
+                firedBronze = engine == Engine.FIRED_BRONZE,
                 onPick = ::sendToSlot,
                 onCancel = cancelChooser,
             )
@@ -5735,7 +5742,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, FIRED_BRONZE;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5748,6 +5755,7 @@ private enum class Engine {
         CHITIN -> ChitinVoice.entries
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
+        FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
@@ -5832,6 +5840,7 @@ private enum class Engine {
         CHITIN -> Chitin.macrosFor(voice as ChitinVoice)
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.macrosFor(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
@@ -5911,6 +5920,7 @@ private enum class Engine {
         CHITIN -> Chitin.defaults(voice as ChitinVoice)
         THUMP -> Thump.defaults(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.defaults(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
@@ -5990,6 +6000,7 @@ private enum class Engine {
         CHITIN -> Chitin.scramble(voice as ChitinVoice, random)
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
         SCANNED_CHAIN -> ScannedChain.scramble(voice as ScannedChainVoice, random)
+        FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
@@ -6083,6 +6094,7 @@ private enum class Engine {
         CHITIN -> Chitin.render(voice as ChitinVoice, macros)
         THUMP -> Thump.render(voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
@@ -6166,6 +6178,7 @@ private enum class Engine {
         CHITIN -> Chitin.drumClassFor(voice as ChitinVoice, macros)
         THUMP -> (voice as ThumpVoice).drumClass
         SCANNED_CHAIN -> ScannedChain.drumClassFor(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
@@ -6248,6 +6261,7 @@ private enum class Engine {
         CHITIN -> ChitinPatch(name, voice as ChitinVoice, macros)
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChainPatch(name, voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
@@ -7140,6 +7154,7 @@ internal fun SlotChooserOverlay(
     busy: Boolean,
     onPick: (Int) -> Unit,
     onCancel: () -> Unit,
+    firedBronze: Boolean = false,
 ) {
     // A plain `background` doesn't hit-test — without a consuming gesture
     // here, a tap in any gap this overlay doesn't fully cover (the grid's
@@ -7184,6 +7199,7 @@ internal fun SlotChooserOverlay(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
                         for (slot in row) {
                             SlotCell(
+                                firedBronze = firedBronze,
                                 slot = slot,
                                 pad = kit?.pad(slot),
                                 previewColor = previewColor,
@@ -7212,6 +7228,7 @@ internal fun SlotChooserOverlay(
  */
 @Composable
 private fun SlotCell(
+    firedBronze: Boolean = false,
     slot: Int,
     pad: KitPad?,
     previewColor: Color,
@@ -7246,7 +7263,7 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
+    val locked = (pad.velocityLayers.isNotEmpty() && !(firedBronze && FiredBronzePads.canEdit(pad))) || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     // Locked (foreign-chained/layered, refused by replaceAudio) and explicitly

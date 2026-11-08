@@ -235,6 +235,7 @@ object Velocity {
         is TidePatch -> Tide.macrosFor(patch.voice)
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
+        is FiredBronzePatch -> FiredBronzeInstrument.macros
         is SkinPatch -> Skin.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
@@ -483,6 +484,7 @@ object Velocity {
         // A harder stick or beater: more upper modes, a deeper bend, a
         // brighter click (StrikeVelocity). SKIN SNARE additionally changes
         // its wire excitation; hats, ride and shaker retain their macro response.
+        is FiredBronzePatch -> FiredBronzeInstrument.render(patch.voice, patch.macros, v)
         is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower

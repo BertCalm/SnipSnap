@@ -12,9 +12,8 @@ import com.snipsnap.synth.FiredBronzeDryKit.Pad as P
 object FiredBronzePerformance {
     const val VERSION=1
     val layerVelocities=listOf(.2f,.45f,.7f,1f)
-    fun settings(velocity:Float):FiredBronzePush.Settings {
+    fun settings(velocity:Float, base:FiredBronzePush.Settings = FiredBronzePush.Settings()):FiredBronzePush.Settings {
         require(velocity.isFinite() && velocity in 0f..1f)
-        val base=FiredBronzePush.Settings()
         if(velocity==1f)return base
         // Preserve space and timing. Pull back nonlinear excitation, not merely
         // the already-applied source gain, to give quiet strokes a different edge.

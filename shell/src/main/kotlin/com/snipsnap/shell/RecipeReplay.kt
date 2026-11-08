@@ -217,7 +217,9 @@ object RecipeReplay {
                 Done(model.dustPad(slot, p.amount, p.tape, print), Copy.replayed(word, padName))
             }
             is Plan.Patch -> Done(
-                model.replaceAudio(slot, p.recipe.toJsonValue()) { p.recipe.render() },
+                if (p.recipe.patch is com.snipsnap.synth.FiredBronzePatch && FiredBronzePads.canEdit(model.pad(slot)))
+                    model.replaceFiredBronze(slot, p.recipe)
+                else model.replaceAudio(slot, p.recipe.toJsonValue()) { p.recipe.render() },
                 Copy.replayedPatch(padName),
             )
             is Plan.StrikeFx -> Done(model.strikeFxLayers(slot, p.room, p.slap), Copy.STRIKE_FX_ON)

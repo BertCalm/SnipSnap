@@ -6,8 +6,9 @@ full-strike impact at the accepted pushed sound**.
 Baseline: `de13d78d063f639990f861d47f9b4da950ce538f`. Job: CONCEIVE, a playing
 recipe over the accepted kit. Josh called the pushed direction “a big improvement”
 and asked to continue. Both pushed is the working baseline; this new velocity
-response remains a candidate for listening, not a claim that Josh approved every
-soft-layer setting.
+response was subsequently accepted by Josh: “Sounds great”, then “Good on MPC,
+we can proceed” (2026-11-08). The sixteen-pad, four-layer performance is now the
+hardware-approved baseline.
 
 ## Scope and mechanism
 
@@ -44,7 +45,7 @@ The new program has 16 pads, each with four timbre layers rendered at .20, .45,
 Layer names are LIGHT, MEDIUM, FIRM and FULL. Soft layer WAVs are peak-matched
 to the hard layer; MPC then applies velocity gain. Native listening sequences
 retain source velocity, so the light hits are actually quieter. No interpolation
-between timbre zones is promised; hardware zone boundaries need a listening check.
+between timbre zones is promised; Josh has now accepted the kit on MPC; no separate automated hardware measurement is claimed.
 
 A03, A04 and A15 retain choke group 1. Long kettle/gong sources retain their tails.
 The shared-bus sound from the previous round remains available, but this round
@@ -59,7 +60,7 @@ levels. Matched mode scales an entire four-hit sequence together, preserving
 relative hit levels inside the clip. All 64 source recipes ship in the download.
 The accepted three-layer Push kit remains available for comparison.
 
-No new source macros, HOLD, factory registry or Android picker is introduced.
+The initial performance study introduced no new source macros, HOLD, factory registry or Android picker. The integration below adds an editable adapter.
 No new nonlinear processing path is added: the existing 4× stages, DC cleanup,
 finite tail cap and peak guard remain those of Push. Rendering adds only a few
 parameter operations to its cost; no solver/cache is needed. Prior long-render

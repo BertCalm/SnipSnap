@@ -1,3 +1,7 @@
+> Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
+> FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
+> See [integration and verification](FIRED_BRONZE_INTEGRATION.md).
+
 > Fired Bronze performance round: accepted Both pushed remains exact at full strength.
 > Velocity-linked processor/amp drive and a four-layer kit are ready for listening.
 > See [performance notes](FIRED_BRONZE_PERFORMANCE.md).
