@@ -3318,3 +3318,11 @@ tasks.register<JavaExec>("generateFiredBronzePushAudition") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
 }
+
+tasks.register<JavaExec>("generateFiredBronzePerformanceAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzePerformanceAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}

@@ -1,3 +1,7 @@
+> Fired Bronze performance round: accepted Both pushed remains exact at full strength.
+> Velocity-linked processor/amp drive and a four-layer kit are ready for listening.
+> See [performance notes](FIRED_BRONZE_PERFORMANCE.md).
+
 > Fired Bronze push round: owner requested stronger processor and amp. Separate drive
 > controls, 75% compressor blend, and stage-isolated auditions retain prior recipes.
 > See [push notes](FIRED_BRONZE_PUSH.md).
