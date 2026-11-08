@@ -30,10 +30,21 @@ import kotlin.math.pow
  * headroom from the hit. So a kick gains little: this section is for snares and toms, where the octave
  * lands at 41 to 165 Hz.
  *
- * DEPTH sets the copy's peak against the pad's own (0 off, 1 as loud as the hit), so it means the same on a
- * loud and a quiet pad. The mix is then matched to the pad's peak, both ways: a louder sum pulls the hit
- * down (the brainstorm's "more AMT reads as quieter" hazard, measured in the test as the hit's drop in dB).
- * TONE and HANG are their own neutrals, so AMT, which walks a character toward its neutrals, moves DEPTH alone.
+ * DRIVE is the owner's pick from the thicker round (2026-11-08: "Fuzz and grit are good"). A clean octave
+ * of a tom or a kick lands mostly under 60 Hz, which phones and earbuds hardly play, so it read as thin.
+ * DRIVE puts the copy through a soft clipper, whose harmonics land where a drum's thickness is heard:
+ * 0 is the clean copy, [GRIT] is the round's Grit (a symmetric clipper at gain 10, odd harmonics only) and
+ * 1 its Fuzz (gain 25 and lopsided, so even harmonics too, the octave's second being the hit's own pitch).
+ * Past Grit the clipper also leans, its top is closed toward [FUZZ_TOP_HZ], and it follows the clean copy's
+ * envelope, because a hard clipper holds a decaying tail at full level and the copy would stop decaying.
+ *
+ * DEPTH sets the copy's peak against the pad's own, 0 off up to [MAX_LEVEL] times the hit, so it means the
+ * same on a loud and a quiet pad. The mix is then squashed into the pad's peak (a tanh, the round's Glue)
+ * rather than scaled down to it: scaling a louder sum pulls the whole hit down (the brainstorm's "more AMT
+ * reads as quieter" hazard), while the squash keeps the hit's level and brings the octave's body up under
+ * it. The squash's hardness grows with DEPTH from linear at 0, so a little copy never squashes the hit.
+ * TONE, HANG and DRIVE are their own neutrals, so AMT, which walks a character toward its neutrals, moves
+ * DEPTH alone: AMT is how much octave, the other three are which octave.
  *
  * Linked across channels: one onset and one envelope for every channel, so the image never moves.
  *
@@ -46,10 +57,30 @@ import kotlin.math.pow
 object Octaver {
 
     val MACROS: List<MacroSpec> = listOf(
-        MacroSpec("DEPTH", 0.5f),                 // the copy's peak against the pad's: 0 off .. 1 as loud as the hit
-        MacroSpec("TONE", 0.5f, neutral = 0.5f),  // the copy's low-pass, TONE_DARK_HZ .. TONE_OPEN_HZ; its own neutral
-        MacroSpec("HANG", 0.5f, neutral = 0.5f),  // 0 the copy follows the hit's envelope, 1 its own (twice as long); its own neutral
+        MacroSpec("DEPTH", 0.5f),                   // the copy's peak against the pad's: 0 off .. MAX_LEVEL times the hit
+        MacroSpec("TONE", 0.5f, neutral = 0.5f),    // the copy's low-pass, TONE_DARK_HZ .. TONE_OPEN_HZ; its own neutral
+        MacroSpec("HANG", 1f, neutral = 1f),        // 0 the copy follows the hit's envelope, 1 its own (twice as long); its own neutral
+        MacroSpec("DRIVE", GRIT, neutral = GRIT),   // 0 clean, GRIT the owner's Grit, 1 the owner's Fuzz; its own neutral
     )
+
+    /** DEPTH 1: the copy's peak against the hit's. The thicker round's loudest Grit and Fuzz were 1.4. */
+    const val MAX_LEVEL = 1.5f
+
+    /** Where DRIVE gives the round's Grit (clipper gain 10), and so the section's default. */
+    const val GRIT = 0.375f
+
+    /** The clipper's gain at DRIVE 1 (the round's Fuzz); gain is 1 + (FUZZ_GAIN - 1) * DRIVE. */
+    const val FUZZ_GAIN = 25f
+
+    /** The clipper's lean at DRIVE 1, as an input offset; it grows from 0 at GRIT. */
+    const val FUZZ_BIAS = 0.35f
+
+    /** The low-pass after the clipper at DRIVE 1; at GRIT it is open ([GRIT_TOP_HZ]). */
+    const val FUZZ_TOP_HZ = 1800f
+    const val GRIT_TOP_HZ = 12000f
+
+    /** The mix squash's tanh hardness at DEPTH 1; it scales with the copy's level, so DEPTH 0 is linear. */
+    const val GLUE = 4f
 
     /** TONE's ends: the cutoff of the copy's four-pole low-pass. */
     const val TONE_DARK_HZ = 150f
@@ -88,10 +119,10 @@ object Octaver {
 
     /**
      * The octave copy alone, interleaved like [snip], before DEPTH and the mix: read at half speed from the
-     * onset, held toward the hit's envelope by HANG, band-limited by TONE and [FLOOR_HZ], faded and cut at
-     * the pad's end, at the pad's own peak. All zeros for a silent pad.
+     * onset, held toward the hit's envelope by HANG, band-limited by TONE and [FLOOR_HZ], driven by DRIVE,
+     * faded and cut at the pad's end, at the pad's own peak. All zeros for a silent pad.
      */
-    internal fun copy(snip: Snip, tone: Float, hang: Float): FloatArray {
+    internal fun copy(snip: Snip, tone: Float, hang: Float, drive: Float = 0f): FloatArray {
         val frames = snip.frameCount
         val ch = snip.channels
         val rate = snip.sampleRate
@@ -146,6 +177,8 @@ object Octaver {
             }
         }
 
+        drive(out, ch, rate, drive.coerceIn(0f, 1f))
+
         // The end: a raised-cosine fade, so the copy is cut at the pad's end without a click.
         val fade = minOf((END_FADE_SEC * rate).toInt(), frames / 4).coerceAtLeast(1)
         for (j in 0 until fade) {
@@ -162,6 +195,53 @@ object Octaver {
         return out
     }
 
+    /**
+     * DRIVE, in place on the band-limited copy: a tanh clipper on the copy normalised to its peak, blended in
+     * over the first tenth of the knob so DRIVE 0 is the clean copy exactly. Past [GRIT] the clipper leans,
+     * closes its top and follows the clean copy's envelope; the floor high-pass runs again after it, because a
+     * leaning clipper makes DC. Linked: each frame's clipper gain comes from its loudest channel and is
+     * applied to every channel, so the clipper never moves the image.
+     */
+    private fun drive(out: FloatArray, ch: Int, rate: Int, drive: Float) {
+        if (drive <= 0f) return
+        var p = 0f
+        for (v in out) { val a = abs(v); if (a > p) p = a }
+        if (p <= 1e-9f) return
+        val frames = out.size / ch
+        val gain = 1f + (FUZZ_GAIN - 1f) * drive
+        val fuzz = ((drive - GRIT) / (1f - GRIT)).coerceIn(0f, 1f)
+        val bias = FUZZ_BIAS * fuzz
+        val wet = (drive / 0.1f).coerceAtMost(1f)
+        val top = Dsp.expMap(fuzz, GRIT_TOP_HZ, FUZZ_TOP_HZ)
+        val env = if (fuzz > 0f) {
+            val level = FloatArray(frames) { f -> var a = 0f; for (c in 0 until ch) a = maxOf(a, abs(out[f * ch + c])); a / p }
+            Hush.slidingMax(level, (WINDOW_SEC * rate).toInt().coerceAtLeast(1))
+        } else null
+        val k = kotlin.math.sqrt(2f)
+        val tb = kotlin.math.tanh(bias)
+        val norm = kotlin.math.tanh(gain + bias) - tb
+        val slope0 = gain * (1f - tb * tb) / norm
+        val clip = FloatArray(frames) { f ->
+            var v = 0f
+            for (c in 0 until ch) { val x = out[f * ch + c] / p; if (abs(x) > abs(v)) v = x }
+            if (abs(v) < 1e-7f) slope0 else (kotlin.math.tanh(gain * v + bias) - tb) / norm / v
+        }
+        for (c in 0 until ch) {
+            val lp = Dsp.TptSvf(rate)
+            val hp = Dsp.TptSvf(rate)
+            for (n in 0 until frames) {
+                val i = n * ch + c
+                val x = out[i] / p
+                var y = x * clip[n]
+                lp.process(y, top, k)
+                hp.process(lp.low, FLOOR_HZ, k)
+                y = hp.high
+                if (env != null) y *= 1f - fuzz + fuzz * env[n]
+                out[i] = p * ((1f - wet) * x + wet * y)
+            }
+        }
+    }
+
     fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults().toMutableMap()
         // A value that is not a number is left at the default: a NaN would otherwise ride through the clamp into the mix.
@@ -169,16 +249,26 @@ object Octaver {
         val depth = m.getValue("DEPTH")
         if (depth <= 0f || snip.frameCount < 2) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
 
-        val sub = copy(snip, m.getValue("TONE"), m.getValue("HANG"))
-        val out = FloatArray(snip.samples.size) { i -> snip.samples[i] + depth * sub[i] }
+        val level = depth * MAX_LEVEL
+        val sub = copy(snip, m.getValue("TONE"), m.getValue("HANG"), m.getValue("DRIVE"))
+        val out = FloatArray(snip.samples.size) { i -> snip.samples[i] + level * sub[i] }
 
-        // Shape, not loudness: matched both ways, so a louder sum brings the hit down rather than clipping.
+        // Shape, not loudness: the sum is squashed into the pad's peak, so the hit keeps its level and the
+        // octave's body comes up under it. Hardness grows with the copy's level; near 0 the squash is linear.
+        // Linked like the clipper: one gain per frame, from its loudest channel.
         var outPeak = 0f
         for (v in out) { val a = abs(v); if (a > outPeak) outPeak = a }
         val inPeak = snip.peak()
         if (inPeak > 0f && outPeak > 0f) {
-            val s = inPeak / outPeak
-            for (i in out.indices) out[i] = (out[i] * s).coerceIn(-1f, 1f)
+            val hard = (GLUE * depth).coerceAtLeast(1e-3f)
+            val scale = inPeak / kotlin.math.tanh(hard)
+            val ch = snip.channels
+            for (f in 0 until snip.frameCount) {
+                var m = 0f
+                for (c in 0 until ch) m = maxOf(m, abs(out[f * ch + c]))
+                val g = if (m < 1e-9f) scale * hard / outPeak else scale * kotlin.math.tanh(hard * m / outPeak) / m
+                for (c in 0 until ch) out[f * ch + c] = (out[f * ch + c] * g).coerceIn(-1f, 1f)
+            }
         }
         return Snip(out, snip.channels, snip.sampleRate)
     }

@@ -199,7 +199,7 @@ after ROOM) passed on 2026-11-07 the other way round: a gate needs a tail to cut
 room (the gated 80s snare), not the dry snare (only shorter), an open hat (a stub) or the CHUG (one held note, measured
 as unchanged, so left out of the listen). Measure the sources' decay before a level-driven gate. OCTAVER (SUB, after VOLUME, chip-less until its gate) is the first
 pedal aimed at short hits: an offline half-speed copy from the onset, so it cannot flam; measured before its listen, a
-kick's octave (29 Hz) is mostly under 40 Hz while a snare's and a tom's land at 56 to 89 Hz. Check where a pitch move lands in Hz. A pedal needs its own listening gate, and its
+kick's octave (29 Hz) is mostly under 40 Hz while a snare's and a tom's land at 56 to 89 Hz. Check where a pitch move lands in Hz. Its first listen came back "could be thicker": a clean octave under 60 Hz is weight a phone does not play. The owner picked Grit and Fuzz from a five-way round, so SUB grew DRIVE (a linked tanh clipper on the copy, Grit at 0.375, Fuzz at 1) and a tanh squash in place of the peak match; on the low tom and kick DRIVE lifts the copy's 150 to 400 Hz share by 3 to 8 dB. A sub effect needs harmonics where small speakers play, not only the sub. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 

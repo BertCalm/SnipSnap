@@ -10,10 +10,12 @@ import java.util.Locale
  * drums, where the pedal brainstorm said SUB is worth most, a snare, a low and a mid tom, plus the short set
  * (a rim and a closed hat) and the kick, whose octave (29 Hz here) is mostly under 40 Hz and is heard to
  * show the hazard. Every source is heard dry, pitched down an octave by PITCH (the whole pad, twice as long,
- * which is what the rack already does), and with the octave under it at DEPTH 0.35, 0.7 and 1. The snare and
- * the low tom are also heard with the copy held to the hit (HANG 0) and ringing on (HANG 1), and the snare
- * and the mid tom with the copy dark (TONE 0, 150 Hz) and open (TONE 1, 2.4 kHz), all at DEPTH 0.7. Every
- * clip shares one loudness ([AuditionLevel]). Run via `./gradlew :synth:generateOctaverAudition`.
+ * which is what the rack already does), and with the octave under it at DEPTH 0.35, 0.7 and 1 at the
+ * section's defaults (DRIVE at Grit, the owner's pick). At DEPTH 0.7 each is also heard clean (DRIVE 0),
+ * halfway to Fuzz and at Fuzz (DRIVE 1), and Fuzz at DEPTH 1. The snare and the low tom are also heard with
+ * the copy held to the hit (HANG 0), and the snare and the mid tom with the copy dark (TONE 0, 150 Hz) and
+ * open (TONE 1, 2.4 kHz), at DEPTH 0.7. Every clip shares one loudness ([AuditionLevel]). Run via
+ * `./gradlew :synth:generateOctaverAudition`.
  */
 object OctaverAuditionGenerator {
 
@@ -36,9 +38,12 @@ object OctaverAuditionGenerator {
             val clips = linkedMapOf<String, Snip>("dry" to dry)
             clips["pitch_down_12"] = Speed.process(dry, mapOf("SEMITONES" to 0f))
             for (d in listOf(35, 70, 100)) clips["sub_$d"] = Octaver.process(dry, mapOf("DEPTH" to d / 100f))
+            clips["sub_70_clean"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to 0f))
+            clips["sub_70_between"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to (Octaver.GRIT + 1f) / 2f))
+            clips["sub_70_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to 1f))
+            clips["sub_100_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 1f, "DRIVE" to 1f))
             if (name == "SNARE" || name == "LOW_TOM") {
                 clips["sub_70_hang0"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "HANG" to 0f))
-                clips["sub_70_hang1"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "HANG" to 1f))
             }
             if (name == "SNARE" || name == "MID_TOM") {
                 clips["sub_70_dark"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "TONE" to 0f))

@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
@@ -128,15 +129,73 @@ class OctaverTest {
         assertEquals(Octaver.TONE_OPEN_HZ, Octaver.toneHz(1f), 0.1f)
     }
 
+    /** The share of [x]'s energy between [lo] and [hi] Hz (two 2-pole filters), so loudness does not count. */
+    private fun share(x: FloatArray, lo: Float, hi: Float): Double {
+        val k = kotlin.math.sqrt(2f)
+        val a = Dsp.TptSvf(rate)
+        val b = Dsp.TptSvf(rate)
+        var e = 0.0
+        var t = 0.0
+        for (v in x) { a.process(v, hi, k); b.process(a.low, lo, k); e += b.high.toDouble() * b.high; t += v.toDouble() * v }
+        return e / t
+    }
+
     @Test
-    fun `the hit gives up at most 6 dB to the peak match on the kit's drums`() {
-        // The brainstorm's hazard, pinned: the sum is louder than the hit, and matching it back pulls the hit down.
+    fun `the squash keeps the hit's level where scaling the sum down would lose it`() {
+        // The brainstorm's hazard: a sum louder than the hit, scaled back to the hit's peak, pulls the whole hit
+        // down. The squash keeps the peak and is louder than that scaling on every kit drum.
         for (voice in listOf(ThumpVoice.KICK, ThumpVoice.SNARE, ThumpVoice.TOM, ThumpVoice.RIM, ThumpVoice.CLAP, ThumpVoice.HAT_CLOSED)) {
             val pad = Thump.render(voice)
-            val copy = Octaver.copy(pad, 0.5f, 0.5f)
-            val sum = FloatArray(pad.samples.size) { pad.samples[it] + copy[it] }
-            val drop = 20 * log10(sum.maxOf { abs(it) } / pad.peak())
-            assertTrue(drop in 0f..6f, "$voice: the hit drops ${"%.1f".format(drop)} dB at DEPTH 1")
+            val out = Octaver.process(pad, mapOf("DEPTH" to 1f))
+            assertEquals(pad.peak(), out.peak(), 1e-5f)
+            val copy = Octaver.copy(pad, 0.5f, 1f, Octaver.GRIT)
+            val sum = FloatArray(pad.samples.size) { pad.samples[it] + Octaver.MAX_LEVEL * copy[it] }
+            val sp = sum.maxOf { abs(it) }
+            val scaled = Snip(FloatArray(sum.size) { sum[it] * pad.peak() / sp }, 1, rate)
+            val gain = 20 * log10(Loudness.of(out) / Loudness.of(scaled))
+            assertTrue(gain > 1f, "$voice: the squash is only ${"%.1f".format(gain)} dB louder than scaling the sum down")
+        }
+    }
+
+    @Test
+    fun `DRIVE 0 is the clean copy, and a touch of DRIVE stays close to it`() {
+        for (pad in listOf(snare, lowTom)) {
+            assertContentEquals(Octaver.copy(pad, 0.5f, 1f), Octaver.copy(pad, 0.5f, 1f, 0f))
+            val clean = Octaver.copy(pad, 0.5f, 1f)
+            val touch = Octaver.copy(pad, 0.5f, 1f, 0.002f)
+            val diff = clean.indices.maxOf { abs(clean[it] - touch[it]) }
+            assertTrue(diff < 0.05f * pad.peak(), "DRIVE 0.002 moves the copy by $diff")
+        }
+    }
+
+    @Test
+    fun `DRIVE puts the octave where small speakers play, on the low tom and the kick`() {
+        // The thicker round's finding: a clean octave of a low tom (56 Hz) or a kick (29 Hz) lands mostly under
+        // 60 Hz, which a phone barely plays. Grit and Fuzz move the copy's energy up into 150 to 400 Hz, where a
+        // drum's thickness is heard. Measured: low tom +3.7 / +6.3 dB, kick +3.4 / +7.8 dB. The snare's and mid
+        // tom's octaves (89 and 78 Hz) already reach that band, so DRIVE adds edge there, not weight (+0.3 to
+        // +2.7 dB); for them the test pins only that DRIVE takes nothing from it.
+        val low = listOf("low tom" to lowTom, "kick" to Thump.render(ThumpVoice.KICK))
+        val high = listOf("mid tom" to Thump.render(ThumpVoice.TOM), "snare" to snare)
+        for ((name, pad) in low + high) {
+            val clean = share(Octaver.copy(pad, 0.5f, 1f, 0f), 150f, 400f)
+            for (d in listOf(Octaver.GRIT, 1f)) {
+                val up = 10 * log10(share(Octaver.copy(pad, 0.5f, 1f, d), 150f, 400f) / clean)
+                val floor = if (low.any { it.first == name }) 3.0 else 0.0
+                assertTrue(up > floor, "$name: DRIVE $d lifts the copy's 150-400 Hz share by ${"%.1f".format(up)} dB, not over $floor")
+            }
+        }
+    }
+
+    @Test
+    fun `Fuzz follows the clean copy's envelope, has no DC and ends at zero`() {
+        for (pad in listOf(snare, lowTom)) {
+            val clean = within20(Octaver.copy(pad, 0.5f, 1f, 0f))
+            val fuzz = Octaver.copy(pad, 0.5f, 1f, 1f)
+            assertTrue(within20(fuzz) <= 1.25f * clean + 0.01f, "Fuzz rings ${within20(fuzz)} s against the clean copy's $clean s")
+            assertTrue(abs(fuzz.average()) < 0.01 * pad.peak(), "Fuzz carries DC: ${fuzz.average()}")
+            assertTrue(fuzz.last() == 0f)
+            assertTrue(fuzz.all { it.isFinite() })
         }
     }
 
@@ -144,7 +203,7 @@ class OctaverTest {
     fun `stereo is linked, the result is deterministic and unknown keys are ignored`() {
         val l = lowTom.samples
         val stereo = Snip(FloatArray(l.size * 2) { i -> if (i % 2 == 0) l[i / 2] else 0.1f * l[i / 2] }, 2, rate)
-        val out = Octaver.process(stereo, mapOf("DEPTH" to 1f, "HANG" to 0f))
+        val out = Octaver.process(stereo, mapOf("DEPTH" to 1f, "HANG" to 0f, "DRIVE" to 1f))
         for (f in 0 until stereo.frameCount) {
             assertEquals(0.1f * out.samples[f * 2], out.samples[f * 2 + 1], 1e-5f, "frame $f: the image moved")
         }
