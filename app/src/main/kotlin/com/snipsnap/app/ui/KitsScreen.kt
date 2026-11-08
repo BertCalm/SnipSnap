@@ -201,6 +201,12 @@ fun KitsScreen(
     onEmptyRoomsBin: () -> Unit = {},
     /** DELETE (Task 4): a held kit row's DELETE, confirmed — into the 30-day bin, `KitShelf.deleteKit`'s promise. */
     onDeleteKit: (KitShelf.Entry) -> Unit = {},
+    /** The project row's ⋮ → RENAME, confirmed with the typed name (project folder name, new name). */
+    onRenameProject: (String, String) -> Unit = { _, _ -> },
+    /** The project row's ⋮ → DELETE, confirmed: the project goes to the bin. */
+    onDeleteProject: (String) -> Unit = {},
+    /** The project row's ⋮ → REMOVE A KIT: (project folder name, kit folder name); the kit stays on the shelf. */
+    onDropProjectKit: (String, String) -> Unit = { _, _ -> },
     /** RENAME (Task 4): a held kit row's RENAME, confirmed with the typed name — `KitShelf.renameKit`'s collision fallback may freshen it. */
     onRenameKit: (KitShelf.Entry, String) -> Unit = { _, _ -> },
     /**
@@ -329,6 +335,8 @@ fun KitsScreen(
     // up regardless of how many rows are armed at once.
     var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // The project row's ⋮ (PR 6b): which project's RENAME / DELETE / REMOVE A KIT sheet is up.
+    var opsTarget by remember { mutableStateOf<ShelfModel.ProjectRow?>(null) }
     var expansionTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // The EXPANSIONS group: read off the main thread, again after any change to it.
     var expansionsRevision by remember { mutableIntStateOf(0) }
@@ -574,7 +582,7 @@ fun KitsScreen(
                             TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
-                            ProjectRow(row, row.name == openProjectName, busy, onOpenProject)
+                            ProjectRow(row, row.name == openProjectName, busy, onOpenProject, onMore = { opsTarget = it })
                         }
                         // The shelf never shows two: with projects to open the
                         // button is the pinned primary below the list.
@@ -837,6 +845,16 @@ fun KitsScreen(
             BackHandler(onBack = dismissTools)
         }
 
+        opsTarget?.let { target ->
+            ProjectOpsHost(
+                target,
+                taken = projects.map { it.name }.toSet(),
+                onRename = { onRenameProject(target.name, it) },
+                onDelete = { onDeleteProject(target.name) },
+                onDropKit = { onDropProjectKit(target.name, it) },
+                onDismiss = { opsTarget = null },
+            )
+        }
         confirmDeleteKit?.let { target ->
             // Cancel, dismiss-by-tapping-outside (KitDeleteConfirmDialog's
             // scrim is a tapeClick(onCancel)), and now system Back all route
@@ -901,38 +919,6 @@ fun KitsScreen(
                 BackHandler(onBack = cancel)
             }
         }
-    }
-}
-
-/**
- * One project on the shelf (plan §3.1): its name, then `2 KITS · 94 BPM ·
- * EDITED 2 HR AGO` — the model's own subtitle plus the age the kit rows
- * already show, so the two lists read the same way. Tapping opens it;
- * `App` decides what opening means (the active kit onto PADS). The row of
- * the project that is [isOpen] wears the selected convention - the
- * accent border, and OPEN NOW where the rest say OPEN ▸ - so a list of
- * sixteen that all read the same names the one you are in.
- */
-@Composable
-private fun ProjectRow(row: ShelfModel.ProjectRow, isOpen: Boolean, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
-    val scheme = LocalScheme.current
-    val age = Ages.agoOrNull(row.editedAtMillis, System.currentTimeMillis())
-    val facts = listOfNotNull(row.subtitle, age?.let { "EDITED $it" }).joinToString("  ·  ")
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .let { if (isOpen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-            .semantics { this.selected = isOpen }
-            .tapeClick(label = "OPEN PROJECT ${row.name.uppercase(Locale.ROOT)}", enabled = !busy) { onOpen(row) }
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(row.name, TapeType.markerBig, scheme.ink.tape)
-            TapeText(facts, TapeType.pixelSmall, scheme.ink2.tape)
-        }
-        TapeText(if (isOpen) "OPEN NOW" else "OPEN ▸", TapeType.pixelSmall, if (isOpen) scheme.ink.tape else scheme.ink2.tape)
     }
 }
 
@@ -1354,7 +1340,13 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
  * commits, so a roll can be taken back by CANCEL or rolled again.
  */
 @Composable
-private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+internal fun KitRenameDialog(
+    initialName: String,
+    taken: Set<String>,
+    onCancel: () -> Unit,
+    onConfirm: (String) -> Unit,
+    title: String = "RENAME KIT",
+) {
     val scheme = LocalScheme.current
     val haptics = LocalHaptics.current
     var name by remember { mutableStateOf(initialName) }
@@ -1386,7 +1378,7 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("RENAME KIT", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText(title, TapeType.lcdSmall, scheme.ink.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier

@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.ProjectStore
 import com.snipsnap.kit.Names
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.WavReader
@@ -65,6 +66,26 @@ class KitShelf(val root: File) {
         val binnedAtMillis: Long,
         val daysLeft: Int,
     )
+
+    /** A project asleep in the bin ([ProjectStore.binned]): the kits-bin's row shape, for projects. */
+    data class BinnedProject(
+        val dir: File,
+        val name: String,
+        val kitCount: Int,
+        val binnedAtMillis: Long,
+        val daysLeft: Int,
+    )
+
+    /**
+     * Every project asleep in the bin, the most recently binned first,
+     * with the days left counted [binnedKits]'s way (rounded up, so the
+     * readout agrees with [sweepDeletedKits], which sweeps both).
+     */
+    fun binnedProjects(nowMillis: Long = System.currentTimeMillis()): List<BinnedProject> =
+        ProjectStore.binned(root).map { b ->
+            val left = (b.binnedAtMillis + (BIN_DAYS * DAY_MS).toLong() - nowMillis).coerceAtLeast(0L)
+            BinnedProject(b.dir, b.project.name, b.project.kits.size, b.binnedAtMillis, ((left + DAY_MS - 1) / DAY_MS).toInt())
+        }
 
     /** An instrument the shop made: its sidecar and what it says. */
     data class InstrumentEntry(val sidecar: File, val instrument: com.snipsnap.kit.InstrumentStore.Instrument)

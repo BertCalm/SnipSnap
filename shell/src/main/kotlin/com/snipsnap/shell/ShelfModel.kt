@@ -97,6 +97,7 @@ class ShelfModel(val root: File) {
         heldBy(kitFolder).firstOrNull()?.let { return openProject(it) }
         val project = Project(ProjectStore.freshName(root, kitFolder), listOf(kitFolder))
         ProjectStore.save(root, project)
+        ProjectStore.unrelease(root, listOf(kitFolder))
         return project
     }
 
@@ -105,15 +106,35 @@ class ShelfModel(val root: File) {
         require(File(File(root, kitFolder), KitStore.FILE_NAME).isFile) { "no kit on the shelf at '$kitFolder'" }
         val updated = openProject(projectName).withKit(kitFolder)
         ProjectStore.save(root, updated)
+        ProjectStore.unrelease(root, listOf(kitFolder))
         return updated
     }
 
-    /** Dropping a kit from a project. The kit stays on the shelf. */
+    /**
+     * Dropping a kit from a project. The kit stays on the shelf. When no
+     * project holds it any more it is released ([ProjectStore.released]),
+     * so opening the shelf does not make a project of its own name for it
+     * the moment the person takes it out.
+     */
     fun dropKit(projectName: String, kitFolder: String): Project {
         val updated = openProject(projectName).withoutKit(kitFolder)
         ProjectStore.save(root, updated)
+        ProjectStore.releaseIfUnheld(root, kitFolder)
         return updated
     }
+
+    /** RENAME on a project row: [ProjectStore.rename], refusing a name in use. */
+    fun renameProject(projectName: String, newName: String): Project =
+        ProjectStore.rename(root, projectName, newName)
+
+    /** DELETE on a project row: the project into the bin ([ProjectStore.trash]); its kits are untouched. */
+    fun trashProject(projectName: String): File = ProjectStore.trash(root, projectName)
+
+    /** The projects asleep in the bin ([ProjectStore.binned]). */
+    fun binnedProjects(): List<ProjectStore.Binned> = ProjectStore.binned(root)
+
+    /** RESTORE on a binned project ([ProjectStore.restore]); the project that landed, under the name it landed with. */
+    fun restoreProject(binned: File): Project = ProjectStore.restore(root, binned)
 
     /** The kit switcher: [kitFolder] becomes the project's active kit. */
     fun activate(projectName: String, kitFolder: String): Project {

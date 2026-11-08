@@ -2346,6 +2346,30 @@ object Copy {
     const val KIT_RENAME_BUSY = "RENAMING…"
     const val KIT_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
 
+    // ---- PROJECT ROWS (PR 6b): RENAME, DELETE, REMOVE A KIT from the row's ⋮ ----
+    /**
+     * DELETE on a project row, confirmed: the project goes to the bin,
+     * and the kits it held stay on the shelf (`ProjectStore.trash` touches
+     * nothing outside the project's own folder).
+     */
+    fun projectDeleted(name: String): String = "$name IS IN THE BIN. ITS KITS STAY ON THE SHELF. ${Reversal.MIND}"
+    /** The confirm over DELETE: says what is lost, what is not, and how to get it back. */
+    val PROJECT_DELETE_CONFIRM: String = "DELETE THIS PROJECT? ITS KITS STAY ON THE SHELF. " + Reversal.BIN
+    /** The move to the bin threw or the project was already gone; nothing moved. */
+    const val PROJECT_DELETE_FAILED = "COULDN'T MOVE THAT PROJECT TO THE BIN. IT IS STILL ON THE SHELF."
+    /** RENAME refused: another project already answers to [name], compared without case. */
+    fun projectNameTaken(name: String): String = "THERE IS ALREADY A PROJECT CALLED $name. PICK ANOTHER NAME."
+    /** RENAME failed for any other reason; the project keeps its name. */
+    const val PROJECT_RENAME_FAILED = "COULDN'T RENAME THAT PROJECT. IT KEEPS ITS NAME."
+    /** REMOVE A KIT done: [kit] is out of [project] and still on the shelf. */
+    fun projectKitDropped(kit: String, project: String): String = "$kit IS OUT OF $project. IT STAYS ON THE SHELF."
+    /** REMOVE A KIT failed; the project holds what it held. */
+    const val PROJECT_KIT_DROP_FAILED = "COULDN'T TAKE THAT KIT OUT OF THE PROJECT. IT HOLDS WHAT IT HELD."
+    /** The REMOVE A KIT sheet's question. */
+    const val PROJECT_DROP_SHEET = "TAKE WHICH KIT OUT? IT STAYS ON THE SHELF."
+    /** RESTORE on a binned project; [name] is the name it landed under, which a clash may have changed. */
+    fun projectRestored(name: String): String = "$name IS BACK ON THE SHELF."
+
     // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
     /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */
     fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF."
