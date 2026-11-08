@@ -92,6 +92,22 @@ class StepEditorPartsTest : ComposeScreenTest() {
     }
 
     @Test
+    fun tapping_a_chance_sets_every_hit_of_a_rolled_step() {
+        val rolled = com.snipsnap.kit.StepShape.setRoll(clip, GrooveEdit.Lane.SNARE, 4, 3)
+        val state = stateWith(rolled)
+        state.select(GrooveEdit.Lane.SNARE, 4)
+        setPhoneContent {
+            StepDetailStrip(state, GrooveEdit.Lane.SNARE, rolled, LocalScheme.current, "SNARE", 0) { edits += it }
+        }
+        for (c in com.snipsnap.kit.StepShape.CHANCES) button(Copy.stepChanceSpoken(c)).assertExists()
+        button(Copy.stepChanceSpoken(100)).assertIsSelected()
+        tap(Copy.stepChanceSpoken(50))
+        val written = edits.last().change!!(rolled)
+        assertEquals(3, written.notes.size)
+        assertEquals(listOf(50, 50, 50), written.notes.map { it.chance })
+    }
+
+    @Test
     fun holding_an_empty_step_says_so_and_offers_no_levels() {
         val state = stateWith(clip)
         state.select(GrooveEdit.Lane.SNARE, 5)

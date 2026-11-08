@@ -31,7 +31,7 @@ class BeatScheduleTest {
             val wrapped = BeatClock.wrapped(np, total)
             val from = cursor.start(lastPos)
             val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(schedulingAt(i), sps))
-            BeatSchedule.forEachNoteDue(clip, from, to, total) { _, pos -> out += passes * total + pos }
+            BeatSchedule.forEachNoteDue(clip, from, to, total, passes.toLong()) { _, pos -> out += passes * total + pos }
             cursor.advance(to, if (wrapped) total else 0f)
             if (wrapped) passes++
             np = BeatClock.wrap(np, total)
@@ -113,7 +113,7 @@ class BeatScheduleTest {
         val from = cursor.start(lastPos)
         val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(true, sps))
         val seen = ArrayList<Double>()
-        BeatSchedule.forEachNoteDue(c, from, to, total) { _, pos -> seen += pos }
+        BeatSchedule.forEachNoteDue(c, from, to, total, 0L) { _, pos -> seen += pos }
         assertEquals(listOf(32.0), seen, "the downbeat is reported unwrapped, one loop on")
         assertEquals(0f, BeatSchedule.wrapPos(32.0, total))
         cursor.advance(to, 0f)
@@ -121,7 +121,7 @@ class BeatScheduleTest {
         val np2 = total + 0.1f
         val to2 = cursor.end(np, np2, BeatSchedule.aheadSteps(true, sps))
         val again = ArrayList<Double>()
-        BeatSchedule.forEachNoteDue(c, cursor.start(np), to2, total) { _, pos -> again += pos }
+        BeatSchedule.forEachNoteDue(c, cursor.start(np), to2, total, 0L) { _, pos -> again += pos }
         assertTrue(again.isEmpty(), "already handed over: $again")
     }
 
@@ -180,7 +180,7 @@ class BeatScheduleTest {
             val wrapped = BeatClock.wrapped(np, total)
             val from = cursor.start(lastPos)
             val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(true, sps))
-            BeatSchedule.forEachNoteDue(rolled, from, to, total) { _, pos ->
+            BeatSchedule.forEachNoteDue(rolled, from, to, total, 0L) { _, pos ->
                 positions += pos
                 frames += audio.frameAt(BeatSchedule.dueNanos(now, np, pos, sps))
             }

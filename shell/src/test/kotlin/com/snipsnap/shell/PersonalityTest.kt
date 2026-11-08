@@ -633,7 +633,7 @@ class PersonalityTest {
         // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
         "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
         // The step-detail strip's roll, nudge and length rows: captions and buttons, not toasts.
-        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
+        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_CHANCE", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
         // The Bubble permission line's door: a label, not a toast.
         "BUBBLE_ALLOW",
         // Pattern names: the rename hint and button, the slip's title and buttons, the list's heading and close chip. Labels, not toasts.

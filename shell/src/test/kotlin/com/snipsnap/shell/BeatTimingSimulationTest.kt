@@ -160,7 +160,7 @@ class BeatTimingSimulationTest {
 
             val hits = ArrayList<DoubleArray>() // [stepPos unwrapped, noteIndex]
             if (scheduled) {
-                BeatSchedule.forEachNoteDue(clip, from, to, totalSteps) { n, pos ->
+                BeatSchedule.forEachNoteDue(clip, from, to, totalSteps, 0L) { n, pos ->
                     hits += doubleArrayOf(pos, clip.notes.indexOf(n).toDouble())
                 }
             } else {

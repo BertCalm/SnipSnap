@@ -52,6 +52,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.StepHistory
 import com.snipsnap.kit.StepShape
 import com.snipsnap.mpc3.Mpc3Clip
+import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
@@ -525,7 +526,7 @@ private fun shapeEdit(state: StepEditorState, change: (Mpc3Clip, Int) -> Mpc3Cli
 }
 
 /**
- * ROLL, NUDGE and LENGTH for the held step: three rows of buttons under the
+ * ROLL, NUDGE, LENGTH and CHANCE for the held step: four rows of buttons under the
  * velocity levels, plus a line saying where the hits sit and what APPLY SWING
  * will do to them when there is something for it to do. Private and not
  * inline, like everything new here, to stay under the dex register ceiling.
@@ -537,6 +538,7 @@ private fun StepShapeRows(state: StepEditorState, lane: GrooveEdit.Lane, clip: M
     val roll = StepShape.rollOf(clip, lane, step, pads)
     val offset = StepShape.offsetOf(clip, lane, step, pads) ?: 0
     val length = StepShape.lengthOf(clip, lane, step, pads)
+    val chance = StepShape.chanceOf(clip, lane, step, pads)
     val early = StepShape.nudge(clip, lane, step, -StepShape.NUDGE_PULSES, pads) != clip
     val late = StepShape.nudge(clip, lane, step, StepShape.NUDGE_PULSES, pads) != clip
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -563,6 +565,13 @@ private fun StepShapeRows(state: StepEditorState, lane: GrooveEdit.Lane, clip: M
                 val name = lengthName(choice)
                 ShapeButton(name, Copy.stepLengthSpoken(name), length == choice, true, scheme, Modifier.weight(1f)) {
                     onEdit(shapeEdit(state) { c, st -> StepShape.setLength(c, lane, st, choice, state.lanePads) })
+                }
+            }
+        }
+        ShapeRow(Copy.STEP_CHANCE, scheme) {
+            for (c in StepShape.CHANCES) {
+                ShapeButton(Copy.stepChanceName(c), Copy.stepChanceSpoken(c), chance == c, true, scheme, Modifier.weight(1f)) {
+                    onEdit(shapeEdit(state) { cl, st -> StepShape.setChance(cl, lane, st, c, state.lanePads) })
                 }
             }
         }
@@ -634,9 +643,23 @@ internal fun OffLaneRow(cells: Map<Int, Float>?, barSteps: Int, scheme: Scheme) 
  * so a roll draws a tick per hit and a nudged step draws its tick off-centre. [shaped] is false for the plain
  * case, which draws nothing extra.
  */
-internal class StepCell(val velocity: Float, val hits: List<Int>) {
+internal class StepCell(val velocity: Float, val hits: List<Int>, val chance: Int = Mpc3Note.ALWAYS) {
     val shaped: Boolean get() = hits.size > 1 || hits.firstOrNull() != 0
+
+    /** The step does not always sound: its edge turns amber, as an ORBIT hit with a condition does. */
+    val chancy: Boolean get() = chance < Mpc3Note.ALWAYS
 }
+
+/** What the grid says of a cell to a screen reader: lane, step, on or off, and the chance when it is under 100. */
+internal fun stepCellLabel(laneWord: String, col: Int, cell: StepCell?): String =
+    "$laneWord STEP ${col + 1}: ${if (cell != null) "ON" else "OFF"}" + (if (cell?.chancy == true) " ${Copy.stepChanceName(cell.chance)}" else "")
+
+/** The grid cell's edge: amber when selected or chancy, the playhead's ink, else gray. */
+internal fun stepEdgeColor(selected: Boolean, playhead: Boolean, cell: StepCell?, scheme: Scheme): Color =
+    if (selected || cell?.chancy == true) scheme.amber.tape else if (playhead) scheme.lcdInk.tape else scheme.grayEdge.tape
+
+internal fun stepEdgeWidth(selected: Boolean, cell: StepCell?): androidx.compose.ui.unit.Dp =
+    if (selected || cell?.chancy == true) 2.dp else 1.dp
 
 /** Per lane, the [StepCell] of each lit step of the bar on screen, by column. */
 internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: List<Int>): Map<GrooveEdit.Lane, Map<Int, StepCell>> =
@@ -644,16 +667,18 @@ internal fun velocitiesByLane(clip: Mpc3Clip, bar: Int, barSteps: Int, pads: Lis
         val note = GrooveEdit.noteFor(lane, pads)
         val vel = HashMap<Int, Float>()
         val hits = HashMap<Int, MutableSet<Int>>()
+        val chance = HashMap<Int, Int>()
         for (n in clip.notes) {
             if (n.note != note) continue
             val cell = GrooveEdit.cellOf(n.timePulses)
             val col = cell - bar * barSteps
             if (col in 0 until barSteps) {
                 vel[col] = maxOf(vel[col] ?: 0f, n.velocity)
+                chance[col] = minOf(chance[col] ?: Mpc3Note.ALWAYS, n.chance)
                 hits.getOrPut(col) { sortedSetOf() }.add((n.timePulses - cell * GrooveEdit.STEP_PULSES).toInt())
             }
         }
-        vel.mapValues { (col, v) -> StepCell(v, hits.getValue(col).toList()) }
+        vel.mapValues { (col, v) -> StepCell(v, hits.getValue(col).toList(), chance.getValue(col)) }
     }
 
 /** The same for hits on pads no lane plays, one row for all of them. */

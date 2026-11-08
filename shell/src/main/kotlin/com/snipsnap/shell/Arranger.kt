@@ -5,6 +5,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.SongBus
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
+import com.snipsnap.kit.StepChance
 import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
@@ -452,7 +453,10 @@ object Arranger {
         fun frameAt(pulse: Long) = (pulse * framesPerPulse).roundToInt()
         val bed = answerBed(kitDir)
 
+        // Rolled per repeat here (the WAV is what the song sounds like); the .xpj under WRITE keeps the chances for the MPC to roll.
         val clips = plan.sections.map { tiled(it.clip, it.repeats) }
+        // A stretch whose every hit rolled silent is a stretch of silence, not a kit that cannot play the clip.
+        val chancy = plan.sections.any { StepChance.hasChance(it.clip) }
         // Counted in pulses and turned into a frame once per boundary, so
         // rounding never accumulates across the song.
         val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
@@ -472,7 +476,7 @@ object Arranger {
                 val offset = startPulses[i] - startPulses[first]
                 clips[i].notes.map { it.copy(timePulses = it.timePulses + offset) }
             }
-            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm)
+            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm, allowSilence = chancy)
             var audio = drums
             if (bed != null) {
                 for (i in range) {
@@ -500,7 +504,7 @@ object Arranger {
         // own length is no guide: a long pad struck earlier in it rings on
         // inside the take, and would hold the tape stop back.
         val last = plan.sections.lastIndex
-        val songEnd = starts[last] + KitPreview.render(kit, kitDir, clip = clips[last], tempoBpm = bpm).frameCount
+        val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, clips[last].notes, clips[last].lengthPulses, bpm, allowSilence = chancy).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
         return Mix(song, starts)
@@ -514,14 +518,21 @@ object Arranger {
      * clip-length later, in the clip's own meter: a three-four bar is
      * three beats, and tiling it by a four-four bar put every repeat a
      * beat per bar late.
+     *
+     * With [roll] each repeat rolls its own step chances ([StepChance], pass
+     * = the repeat, keyed on [clip]'s own name), so a half-likely step can
+     * sound in the first lap and not the second. Do it here, before the
+     * caller renames the clip. [roll] false keeps every hit and its chance,
+     * for an MPC file that rolls them itself.
      */
-    internal fun tiled(clip: Mpc3Clip, repeats: Int): Mpc3Clip {
-        if (repeats == 1) return clip
+    internal fun tiled(clip: Mpc3Clip, repeats: Int, roll: Boolean = true): Mpc3Clip {
         val length = clip.lengthPulses
+        fun lap(r: Int) = if (roll) StepChance.resolve(clip, r.toLong()) else clip
+        if (repeats == 1) return lap(0)
         return clip.copy(
             bars = clip.bars * repeats,
             notes = (0 until repeats).flatMap { r ->
-                clip.notes.map { it.copy(timePulses = it.timePulses + r * length) }
+                lap(r).notes.map { it.copy(timePulses = it.timePulses + r * length) }
             },
         )
     }
@@ -598,7 +609,7 @@ object Arranger {
         val loop = clip.lengthPulses
         val laps = ((sectionPulses + loop - 1) / loop).toInt()
         return (0 until laps)
-            .flatMap { r -> clip.notes.map { it.copy(timePulses = it.timePulses + r * loop) } }
+            .flatMap { r -> StepChance.resolve(clip, r.toLong()).notes.map { it.copy(timePulses = it.timePulses + r * loop) } }
             .filter { it.timePulses < sectionPulses }
     }
 
