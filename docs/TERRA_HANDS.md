@@ -1,4 +1,4 @@
-# TERRA's hand drums: SLAP, DAYAN and DARBUKA
+# TERRA's hand drums: SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK and BAYAN
 
 Three TERRA voices built on 2026-11-07, one per pad, to replace the TERRA kit's
 djembe slap (A12), tabla tin (A09) and dumbek tek (A11). The code is
@@ -148,6 +148,190 @@ hand's smack is noise).
 Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 437 / 580 / 840 Hz, DAYAN
 458 / 579 / 867, DARBUKA 1058 / 1182 / 1593. Each is brighter at every step.
 
+## Every stroke: DOUM, DJEMBE, DHOLAK and BAYAN (2026-11-08)
+
+Five more pads left COMPOUND_MEMBRANE: Bayan Drag (A02), Djembe Bass (A03),
+Dholak Bass (A05), Dumbek Doum (A06) and Djembe Open (A08). Tabla Tun (A10)
+stays until there is a reference for it.
+
+### Rounds 5 to 7, designed blind, heard as a drum machine
+
+Round 5 (https://claude.ai/artifact/J9CToZGzLndCmiD6mhmsjB) put the six on
+the hand model above.
+- **Heard:** the doum's A; the djembe bass and the dholak "Too soft"; the
+  djembe open "Too weak"; the tabla tun "Missing a sharp k"; the djembe's
+  three strokes "Different drums".
+
+Round 6 (https://claude.ai/artifact/42b8e42uNWis6HKjb4JE7n) gave each a
+harder hand.
+- **Heard:** A, B and C alike, the same as last round, and the drums alike.
+- **Measured:** the bass drums put 70 to 97% of their energy below 200 Hz in
+  near-pure tones, so the differences lived 6 to 16 dB under a hum.
+
+Round 7 (https://claude.ai/artifact/K3SzdXTXGDfANuD37MUMTz) moved the
+character above 200 Hz and spread the directions.
+- **Heard:** "Why are this all so drum machine rimshot".
+
+A drum machine's rimshot is a few ringing tones with a click of noise laid on
+them. The model was that, and each round answered "too soft" or "similar"
+with a louder, shorter, brighter click: the measures rose (brightness,
+distance between directions) while the sound moved towards what the owner
+disliked.
+
+### The owner's references
+
+The owner sent three phone screen recordings: a dholak, a bayan and a djembe.
+They are measured only, never shipped. Per stroke, against the model:
+
+| | The references | The model, rounds 5 to 7 |
+|---|---|---|
+| The head's notes' T60 | 0.2 to 0.6 s (djembe tone); 1 to 4 s (bayan); 1.6 to 2.2 s (djembe bass, 71 Hz) | 0.05 s at 560 Hz |
+| Split pairs | about 4% apart (560/582, 768/807 Hz), fast beating | 0.2 to 0.5% |
+| Between and above the notes | full: 20 to 50 dB under the strongest | holes 80 to 100 dB deep |
+| The attack's noise | flatness 0.004 to 0.03, the notes themselves | separate bursts |
+| Bends | dholak 124 to 96 Hz over 200 ms; bayan 198 to 124 Hz in 150 ms, or holding about 91 Hz | dholak a 12% sag in 60 ms; bayan 65 Hz |
+
+### The method: measured partials plus a fitted residual
+
+Each stroke is resynthesised from the reference's partial table: frequency,
+level, T60, the bend, and a build-up time for an air (low) note. It is
+struck by the house half-sine contact.
+
+The residual fills the spectrum, as in spectral modelling's deterministic
+plus stochastic split:
+- **Per band.** Third-octave bands from 60 Hz to 9 kHz, each band-limited
+  noise with its own level and decay.
+- **Fitted.** Each band is solved so its energy in an attack window (0 to
+  30 ms) and a body window (30 to 300 ms) makes up what the partials lack
+  against the reference.
+- **Bounded.** No band may exceed the reference in either window.
+
+Against the references, the third-octave levels went from 23 to 49 dB rms off
+(partials only) to 1 to 8 dB.
+
+Three traps, measured and fixed:
+- **A 300 ms Hann window under-weights a short partial,** so its level must be
+  set as an amplitude.
+- **A residual fitted to the reference cancels any change made against it.**
+  "More ring" refitted the wash down until nothing moved. Fit once, then change
+  on top.
+- **In the djembe bass, the reference's thump is the palm's broadband thud** in
+  the residual's 80 to 260 Hz bands, not a partial.
+
+### Rounds 8 to 10, heard
+
+- **Round 8** (https://claude.ai/artifact/YQ9NuMTMyiYC4PgDCpwAzR), fitted:
+  - the djembe bass "Closer, not there - a bit more bass";
+  - the open tone "Closer, not there - a little more ring";
+  - the dholak "a bit more pitch drop";
+  - the bayan "Both work" (the fall and the held ghe).
+- **Round 9** (https://claude.ai/artifact/MsYNJMhoM3VsMNzpDEoa5m):
+  - the open tone's B (its notes ringing 1.8x longer);
+  - the dholak's B (falling from 1.55x, 7.6 semitones, against the
+    reference's 4.6);
+  - the djembe bass "None yet" after +3 and +6 dB on its 71 Hz. Asked, "more
+    bass" was a deeper note, a bigger boom and more thump, on earbuds.
+- **Round 10** (https://claude.ai/artifact/5r6TREqDHQi7s8yed9Sw9q): the
+  djembe bass's B:
+  - the bowl at 58 Hz, +6 dB, T60 x1.8;
+  - the head-air thump at 2.1x;
+  - the palm's thud +9 dB.
+
+### In the app
+
+- **`TerraFitted.kt`** (DJEMBE, DHOLAK, BAYAN) runs the picked strokes from
+  their exported tables:
+  - **The partials.** Each is convolved with the contact analytically: the
+    contact's sum at the partial's pole, updated every 64 samples while a
+    bend moves.
+  - **The residual.** Built at 44.1 kHz through 8-pole Butterworth band-passes
+    (the fit's design, checked against scipy's), then upsampled.
+  - **The skin.** The head's own Bessel modes above 1.3 kHz.
+- **DOUM** is in `TerraHands.kt`. It is round 5's A:
+  - DARBUKA's head struck near its centre;
+  - the goblet's air at 110 Hz, driven by the head's net volume (`HeadMode.volume`: an (0, n) mode moves `2 J1(j0n) / j0n` of its peak, every m > 0 mode nets zero);
+  - the ceramic shell;
+  - the fingers' thud.
+
+| Voice | Controls | Pads |
+|---|---|---|
+| DJEMBE | TUNE, DECAY, FORCE, STROKE (0 bass, 1 open), THUMP | A03 (STROKE 0), A08 (STROKE 1) |
+| DHOLAK | TUNE, DECAY, FORCE, DROP (none, 1.55x at 0.5, 2.1x), TREBLE | A05 |
+| BAYAN | TUNE, DECAY, FORCE, BEND (0 held, 1 the fall) | A02 (BEND 1) |
+| DOUM | TUNE, DECAY, FORCE, AIR, SHELL | A06 |
+
+Measured against the picked prototypes, attack and body, third-octave rms:
+
+| Pad | Attack | Body |
+|---|---|---|
+| Djembe bass | 4.7 dB | 4.0 dB |
+| Djembe open | 3.5 dB | 2.0 dB |
+| Dholak | 2.9 dB | 1.1 dB |
+| Bayan, held | 4.2 dB | 2.6 dB |
+| Bayan, falling | 3.9 dB | 2.3 dB |
+| Doum | 0.3 dB | 0.7 dB |
+
+The residual is noise, so a 30 ms window differs between realisations by that
+much. A re-struck take draws new noise.
+
+Render cost, warm: 80 to 125 ms for the fitted drums and 138 ms for DOUM.
+That sits between DAYAN (75 ms) and DARBUKA (170 ms).
+
+**Length.** The fitted voices are 1.45 s, their last 0.3 s a raised-cosine
+fade. The house classifier hears anything over 1.5 s as a LOOP, and the
+djembe bass's boom is still at -27 dB there.
+
+**Velocity.** The full hit is the stroke as picked, sample for sample. Below
+it:
+- **The contact:** 1.2 ms longer at the softest.
+- **The head's notes:** fall as v.
+- **The skin:** falls as v^2.
+- **Each residual band** falls by its own exponent:
+  - under 250 Hz, v^0.5 (a soft palm still thuds);
+  - above that, climbing with log frequency from v^0.75 to v^3 at 8 kHz.
+
+The first exponents tried scaled the notes as v^1.5, past the residual's mid
+bands. A soft open tone then kept more bright wash than a hard one, and rose
+only 19%. As shipped, the first 30 ms centroid rises at every step, v = 0.25
+to 1:
+
+| | v = 0.25 / 0.5 / 0.75 / 1 | Rise |
+|---|---|---|
+| Djembe bass | 156 / 183 / 215 / 254 Hz | +63% |
+| Djembe open | 746 / 934 / 1080 / 1209 Hz | +62% |
+| Dholak | 299 / 398 / 489 / 581 Hz | +94% |
+| Bayan | 163 / 203 / 251 / 289 Hz | +77% |
+| Doum | 232 / 276 / 307 / 360 Hz | +55% |
+
+**Tried and dropped: an immediate thud.** The picked bass strokes start
+softer than the references. Their first 10 ms against the next 90 reads:
+
+| | The picks | The references |
+|---|---|---|
+| Djembe bass | 0.39 | 1.12 to 1.43 |
+| Dholak | 0.40 | 0.82 to 1.21 |
+| Bayan | 0.72 | 0.42 to 1.97 |
+
+The cause is that the residual's narrow low bands ring up over ~16 ms. Two
+fixes were tried:
+- **Running each band's filter on noise first, refitted.** This overshot to
+  7x.
+- **A time-domain refit**, the reference and the synthesis through the same
+  band-passes in 0 to 10, 10 to 40 and 40 to 300 ms windows, two decays per
+  band. This brought the onsets into the references' range. But it moved the
+  bodies 5 to 25 dB from the picks.
+
+The owner picked these strokes as they were, so they ship as picked.
+
+**Tests.**
+- **TerraTest.** Its "real attack" check (the first 10 ms 1.5x the next 90)
+  fails on the references' own bass strokes. For the fitted voices it asks for
+  a hit's shape instead: the loudest 10 ms within the first 80 ms, and the last
+  100 ms 20 dB under it.
+- **RestrikeTest.** The root check skips BOX and the hand drums, as
+  StrikeVelocityTest's does: the fitted open tone's fixed 559/582 Hz pair read
+  39 cents apart between takes.
+
 ## Ledger
 
 - **Heard:** the three rounds above, each for the Python clips it played; the
@@ -159,8 +343,14 @@ Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 437 / 580 / 840 Hz, DAYAN
   split range, each drum's T60 and tilt, the bowl's 72 Hz and the shells'
   modes, the noise bursts' bands and lengths, and the mix levels.
 - **Frozen guards:** `TerraFrozenTest` holds the four original voices to
-  `LegacyTerraBank`. The frozen grid keeps the three pads as they shipped
+  `LegacyTerraBank`. The frozen grid keeps the eight pads as they shipped
   before (`TerraCases.RETIRED_HANDS`), so it stays forty cases.
-- **Still open:** the other COMPOUND_MEMBRANE pads (Djembe Bass and Open,
-  Tabla Tun, Dholak, Dumbek Doum, Bayan) keep the old palm pulse and its
-  FORCE. Moving them changes saved pads, which is the owner's call.
+- **Heard (every stroke):** rounds 5 to 10 above, for the Python clips each
+  played; the app's four new voices not yet.
+- **Measured:** the references' partial tables, bends and residual bands;
+  the app against the picks (above).
+- **Not yet heard clearly:** soft and medium hits, asked twice at one
+  loudness ("Can't tell" both times). The velocity laws stand as measured.
+- **Still open:** Tabla Tun (A10) keeps COMPOUND_MEMBRANE until there is a
+  reference for it. Saved pads on COMPOUND_MEMBRANE are untouched; the kit's
+  pads moved to new voices.

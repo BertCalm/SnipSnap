@@ -59,7 +59,7 @@ import kotlin.math.tanh
  * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
  * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA }
+enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN }
 
 object Terra {
 
@@ -119,11 +119,16 @@ object Terra {
             MacroSpec("BUZZ", 0f),
         )
         TerraVoice.BOX -> TerraBox.macros()
-        TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> TerraHands.macros(voice)
+        TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraHands.macros(voice)
     }
 
-    /** The hand drums ([TerraHands]): their own render and output stage, like BOX. */
-    internal val HAND_DRUMS = setOf(TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA)
+    /** The hand drums ([TerraHands], and [TerraFitted]'s): their own render and output stage, like BOX. */
+    internal val HAND_DRUMS = setOf(TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN)
+
+    /** The hand drums fitted to the owner's reference recordings ([TerraFitted]). */
+    internal val FITTED_HANDS = setOf(TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN)
 
     /** The factory macro settings for [voice]. */
     fun defaults(voice: TerraVoice): Map<String, Float> =
@@ -204,7 +209,8 @@ object Terra {
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity, take)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
-            TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> error("$voice returned above")
+            TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
+            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> error("$voice returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -260,7 +266,8 @@ object Terra {
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity).first
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, bankOnly = true, velocity = velocity)
             TerraVoice.BOX -> box(m, renderRate, inputsFor, velocity, plateOnly = true)
-            TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
+            TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
+            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
         }
     }
 
@@ -268,6 +275,10 @@ object Terra {
     private fun handSeeds(voice: TerraVoice): Pair<Int, Int> = when (voice) {
         TerraVoice.SLAP -> 47 to 53
         TerraVoice.DAYAN -> 59 to 61
+        TerraVoice.DOUM -> 73 to 79
+        TerraVoice.DJEMBE -> 83 to 89
+        TerraVoice.DHOLAK -> 97 to 101
+        TerraVoice.BAYAN -> 103 to 107
         else -> 67 to 71
     }
 
@@ -278,11 +289,13 @@ object Terra {
      */
     private fun hand(voice: TerraVoice, m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)?, velocity: Float, take: Int = 0, headOnly: Boolean = false): FloatArray {
         val (structure, noise) = handSeeds(voice)
+        val fitted = voice in FITTED_HANDS
         val inputs = inputsFor?.let { f ->
             val (modes, fundamental) = TerraHands.bodyModes(voice, m, structure)
-            f(Body(modes, fundamental, 0f, TerraHands.frames(rate), rate, onsetSamples = 0))
+            f(Body(modes, fundamental, 0f, if (fitted) TerraFitted.frames(rate) else TerraHands.frames(rate), rate, onsetSamples = 0))
         }
         require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
+        if (fitted) return TerraFitted.render(voice, m, rate, velocity, seedOf(noise, take), inputs?.level, headOnly)
         return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
     }
 
