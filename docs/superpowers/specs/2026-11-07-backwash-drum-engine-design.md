@@ -1,6 +1,11 @@
 # BACKWASH drum engine: engineering specification
 
-Version 1, 2026-11-07. Status: first build and listening candidate.
+Original design: 2026-11-07. Current status: owner-approved source and stronger
+processing, implemented as five voices and 36 factory presets. Source model 3
+is retained; processing model 4 adds the accepted treatments, and saved model-3
+recipes use a frozen renderer. The original brief below is historical; the
+appended as-built records and [current build](../../BACKWASH.md) describe the
+implementation and remaining device checks.
 Repository baseline: `cc47036c43e36d3eca78bd6e70cb15994b08d469`.
 The conversational name UNDERTOW is retired for this work: `Undertow.kt` already
 implements a pressure-reservoir instrument. Its patches must remain compatible.

@@ -29,6 +29,7 @@ object BackwashKitGenerator {
         val k = BackwashVoice.KICK; val s = BackwashVoice.SNARE; val c = BackwashVoice.HAT_CLOSED
         val o = BackwashVoice.HAT_OPEN; val t = BackwashVoice.TOM
         val pads = (if (pushed) BackwashPresets.processingKitOrder() else BackwashPresets.kitOrder()).map { Pad(it.name, it.voice, it.macros, it.model) }
+        val model = pads.map { it.model }.distinct().single()
         val recipeDir = File(root, "recipes").apply { mkdirs() }
         val arranged = pads.mapIndexed { index, p ->
             val patch = BackwashPatch(p.name,p.voice,Backwash.defaults(p.voice)+p.macros,p.model)
@@ -102,7 +103,7 @@ object BackwashKitGenerator {
         File(root,"groove-events.csv").writeText("pad,timePulses,velocity\n"+clip.notes.joinToString("\n"){"${PadNoteMap.labelForPad(Mpc3Note.slotFor(it.note))},${it.timePulses},${(it.velocity*127).roundToInt()}"})
         File(root,"read-back.txt").writeText("PASS: 48 source wrappers replay exactly; 48 exported WAVs match PCM24 renders.\nPASS: both MPC formats read back; all 16 pads have gap-free zones 1–41 / 42–84 / 85–127, no velocity-zero layer, full sample ends, one-shot playback, no loops, correct mute groups and note maps.\n"+findings.joinToString("\n"){"${it.severity}: ${it.message}"})
         File(root,"README.txt").writeText("""
-            BACKWASH / Model ${Backwash.MODEL_VERSION} / MPC playing trial
+            BACKWASH / Model $model / MPC playing trial
             MPC 3: copy $NAME intact; load $NAME.xtd.
             MPC 2: enter its _[TrackData] folder and load $NAME.xpm.
             Set session tempo to 94 BPM for the included four-bar MPC 3 pattern.
@@ -110,7 +111,7 @@ object BackwashKitGenerator {
             All hats share mute group 1. Drums are one-shots; no held loops.
             Samples include BACKWASH's chorus/compression/amp. No extra playback effects.
             No extra attenuation is baked into soft samples; hardware velocity controls level.
-            kit.json stores each hard-layer PadRecipe; source model 3 with processing model ${Backwash.MODEL_VERSION}.
+            kit.json stores each hard-layer PadRecipe; source model 3 with processing model $model.
             recipes/Axx-1..3.json additionally records source velocity and model for every layer.
             These strike wrappers are not ordinary PadRecipe JSON: reconstruct with Backwash.render
             using their nested recipe patch, velocity, and the current BACKWASH renderer. Generator checks exact replay.

@@ -11,7 +11,30 @@ pressure-reservoir engine. BACKWASH leaves that instrument and its saves alone.
 [Engineering specification](superpowers/specs/2026-11-07-backwash-drum-engine-design.md).
 Baseline inspected: `cc47036c43e36d3eca78bd6e70cb15994b08d469`.
 
-## Build and audition
+## Current build
+
+The owner-approved sound is a dedicated model-3 acoustic-style drum source,
+followed by model-4 chorus, parallel compression and amp processing. Five voices
+supply 36 factory presets: the sixteen original recipes plus Seasick, Clamped,
+Overloaded and Pushed for every voice. Select BACKWASH → SNARE → Pushed Snare
+to start with all three stages pushed. TUNE and DAMP shape the drum; SWAY,
+TRAIL, PRESS and DRIVE shape its processing.
+
+Old recipes without a version remain on the frozen model-3 renderer. New
+recipes explicitly save their renderer version. The approved stronger presets
+are pinned against twenty published WAV checksums, and the original 48 kit
+strikes remain pinned separately. Both MPC formats have a 16-pad, three-layer
+export; the isolated Android preview includes the same factory presets.
+
+Use `:synth:generateBackwashPushedKit` for the stronger kit or
+`:synth:generateBackwashKit` for the original kit. The portable preview build
+commands are at the end of this document. Device timing, on-device UI execution
+and MPC hardware loading remain separate from the automated checks.
+
+The records below describe the successive listening and validation rounds;
+their candidate status and measurements apply to the revision named there.
+
+## Historical first build and audition
 
 ```
 ./gradlew --no-daemon :synth:generateBackwashAudition
