@@ -54,6 +54,7 @@ import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
@@ -444,6 +445,11 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is HalobarPatch) {
+            // Keep the selected audio version instead of relying on future defaults.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "HalobarPatch.fromJsonText($recipe),"
+        }
         if (patch is SkinPatch && patch.model == 2) {
             // The original SKIN helper validates original controls before a copy can
             // change its model. Decode Backroom directly with its own control set.

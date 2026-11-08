@@ -310,7 +310,15 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.RivetPatch) {
+            if (preset is com.snipsnap.synth.HalobarPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("HalobarPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.HalobarPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "HALOBAR promotion preserves the complete saved recipe")
+                assertEquals(preset.model, promoted.model)
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.RivetPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("RivetPatch", (call.receiver as KotlinLiteral.Call).name)
@@ -1219,6 +1227,13 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.HalobarPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.HalobarPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.HalobarPatch::class.java, decoder.returnType,
+                    "HALOBAR promotion retains the complete saved audio version and controls")
+                assertTrue("private val promoted:" in text, "HALOBAR promotions need a voice-filtered destination beside the accepted bank")
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine })
+                    .startsWith("HalobarPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.RivetPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.RivetPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.RivetPatch::class.java, decoder.returnType,

@@ -37,6 +37,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
         RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),

@@ -451,6 +451,22 @@ object SynthKits {
         )
     }
 
+    /** Eight vibraphone notes followed by eight native listening references. All tails are finite. */
+    fun halobar(): List<ArrangedPad?> {
+        fun landed(patch: HalobarPatch) = pad(patch, Halobar.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName=patch.name,oneShot=true)
+        val walk = listOf(60, 63, 65, 67, 70, 72, 75, 77).map { midi ->
+            landed(HalobarPatch("Vibraphone ${com.snipsnap.audio.Scales.nameOf(midi)}", HalobarVoice.VIBRAPHONE,
+                Halobar.defaults(HalobarVoice.VIBRAPHONE) + ("TUNE" to Halobar.tuneForMidi(HalobarVoice.VIBRAPHONE,midi))))
+        }
+        val references = HalobarPresets.forVoice(HalobarVoice.MARIMBA) +
+            HalobarPresets.forVoice(HalobarVoice.XYLOPHONE)
+        return walk + references.map { patch ->
+            val family=patch.voice.name.lowercase().replaceFirstChar { it.uppercase() }
+            landed(patch.copy(name="$family ${patch.name}"))
+        }
+    }
+
     /**
      * The BORE acceptance kit: FLUTE and SAX each across a major triad and its octave
      * (A01-A08, so the pads play a chord and a scale step apart, the way [tide]'s bongos
