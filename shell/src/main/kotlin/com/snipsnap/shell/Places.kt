@@ -23,11 +23,6 @@ object Places {
     val TAPE_STAGES: List<String> = Stage.of(Place.TAPE).map { it.label }
     val PROJECT_STAGES: List<String> = Stage.of(Place.PROJECT).map { it.label }
 
-    /** Behind the gear in the title bar. */
-    const val GEAR_SETUP = "SETUP"
-    const val GEAR_HELP = "HELP"
-    const val GEAR_MIDI = "MIDI"
-
     // ---- the dock ----
 
     /** Doors the dock can hold. Each carries its own arrow, as every door label does. */
