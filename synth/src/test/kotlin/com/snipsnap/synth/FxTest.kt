@@ -749,10 +749,11 @@ class FxTest {
     }
 
     @Test
-    fun `VOLUME sits after SPIKE and before EQ, and an absent section keeps old recipes byte-stable`() {
+    fun `VOLUME sits after SPIKE and before OCTAVER, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("spike") + 1, names.indexOf("volume"), "VOLUME is not right after SPIKE: $names")
-        assertEquals(names.indexOf("volume") + 1, names.indexOf("eq"), "VOLUME is not right before EQ: $names")
+        // SUB's octaver arrived between VOLUME and EQ (2026-11-08); VOLUME is still ahead of the tone.
+        assertEquals(names.indexOf("volume") + 1, names.indexOf("octaver"), "VOLUME is not right before OCTAVER: $names")
 
         val without = FxChain(spike = Spike.defaults())
         assertTrue(!without.toJsonText().contains("volume"), "no volume key unless the section is set")
@@ -763,6 +764,23 @@ class FxTest {
         val chained = with.process(snare)
         assertTrue(!chained.samples.contentEquals(snare.samples), "the volume section is a no-op in the chain")
         assertContentEquals(Volume.process(snare, Volume.defaults()).samples, chained.samples, "the chain's volume row does not run Volume.process")
+    }
+
+    @Test
+    fun `OCTAVER sits after VOLUME and before EQ, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("volume") + 1, names.indexOf("octaver"), "OCTAVER is not right after VOLUME: $names")
+        assertEquals(names.indexOf("octaver") + 1, names.indexOf("eq"), "OCTAVER is not right before EQ: $names")
+
+        val without = FxChain(volume = Volume.defaults())
+        assertTrue(!without.toJsonText().contains("octaver"), "no octaver key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(octaver = Octaver.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the octaver section is a no-op in the chain")
+        assertContentEquals(Octaver.process(snare, Octaver.defaults()).samples, chained.samples, "the chain's octaver row does not run Octaver.process")
     }
 
     @Test

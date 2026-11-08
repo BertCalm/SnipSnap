@@ -1305,8 +1305,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
-spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
+spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
+ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 

@@ -3306,3 +3306,12 @@ tasks.register<JavaExec>("generateHushAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/hush-audition")
 }
+
+tasks.register<JavaExec>("generateOctaverAudition") {
+    group = "distribution"
+    description = "Render SUB's listening gate clips under testkit/octaver-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OctaverAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/octaver-audition")
+}

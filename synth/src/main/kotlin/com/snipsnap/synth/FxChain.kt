@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → HUSH → MOTION
+ *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → OCTAVER → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → HUSH → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -21,6 +21,10 @@ import com.snipsnap.json.JsonValue
  * volume after spike and before eq: a fade-in is a level move on the finished
  * anatomy, ahead of the tone and, on purpose, ahead of the amp, so a swell into
  * DRIVE blooms and WAH's envelope follower rides it.
+ *
+ * octaver (SUB) after volume and before eq: an octave pedal sits in front of
+ * the amp, so DRIVE and VALVE colour the hit and its octave as one sound, EQ
+ * and CONTOUR then shape both, and a FADE IN ahead of it fades the copy too.
  *
  * wah after contour and before squash: a wah is the first pedal on the
  * board, a filter in front of the compressor and the amp, and the
@@ -107,6 +111,7 @@ data class FxChain(
     val forge: Map<String, Float>? = null,
     val room: Map<String, Float>? = null,
     val hush: Map<String, Float>? = null,
+    val octaver: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -249,6 +254,7 @@ data class FxChain(
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
             Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
             Section("volume", Volume.MACROS, { it.volume }, { c, m -> c.copy(volume = m) }, Volume::process),
+            Section("octaver", Octaver.MACROS, { it.octaver }, { c, m -> c.copy(octaver = m) }, Octaver::process),
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
