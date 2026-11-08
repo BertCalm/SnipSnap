@@ -53,7 +53,7 @@ class KeelPresetsTest {
         val names = mapOf(
             KeelVoice.REDUCE to listOf("ROUND FLOOR", "QUICK SINK", "LOW HULL", "GROWL LINE", "SCOOP UP", "SETTLED HUM"),
             KeelVoice.UPRIGHT to listOf("WARM GUT", "MUTED THUMB", "LONG NECK", "BRIGHT PICK", "HOT WOOD", "BOWED NOTE"),
-            KeelVoice.BELLY to listOf("SOFT PILLOW", "DEEP CUSHION", "TOOTH MARK", "SLOW MELT", "CLIMB IN", "WARM HUSH"),
+            KeelVoice.BELLY to listOf("SOFT PILLOW", "DEEP CUSHION", "TOOTH MARK", "SLOW MELT", "CLIMB IN", "WARM CALM"),
         )
 
         /** The note each preset's comment in [KeelPresets] names. */
@@ -63,11 +63,11 @@ class KeelPresetsTest {
             "WARM GUT" to "C2", "MUTED THUMB" to "A#1", "LONG NECK" to "D#1", "BRIGHT PICK" to "G2",
             "HOT WOOD" to "C2", "BOWED NOTE" to "C2",
             "SOFT PILLOW" to "C2", "DEEP CUSHION" to "C1", "TOOTH MARK" to "G1", "SLOW MELT" to "D#2",
-            "CLIMB IN" to "A#1", "WARM HUSH" to "C2",
+            "CLIMB IN" to "A#1", "WARM CALM" to "C2",
         )
 
         /** The three held loops; every other preset is a one-shot. */
-        val loops = setOf("SETTLED HUM", "BOWED NOTE", "WARM HUSH")
+        val loops = setOf("SETTLED HUM", "BOWED NOTE", "WARM CALM")
 
         /** C2, the only pitch where the held bow was heard. */
         const val LOOP_MIDI = 36

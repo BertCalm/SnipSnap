@@ -3277,3 +3277,12 @@ tasks.register<JavaExec>("generateDiveAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/dive-audition")
 }
+
+tasks.register<JavaExec>("generateHushAudition") {
+    group = "distribution"
+    description = "Render HUSH's listening gate clips under testkit/hush-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HushAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/hush-audition")
+}

@@ -717,7 +717,7 @@ class FxTest {
     fun `ROOM sits after SPRING and before MOTION, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("spring") + 1, names.indexOf("room"), "ROOM is not right after SPRING: $names")
-        assertEquals(names.indexOf("room") + 1, names.indexOf("motion"), "ROOM is not right before MOTION: $names")
+        assertEquals(names.indexOf("room") + 1, names.indexOf("hush"), "ROOM is not right before HUSH: $names")
 
         val without = FxChain(spring = Spring.defaults())
         assertTrue(!without.toJsonText().contains("room"), "no room key unless the section is set")
@@ -729,6 +729,23 @@ class FxTest {
         assertTrue(!chained.samples.contentEquals(snare.samples), "the room section is a no-op in the chain")
         // ROOM bounds its own tail to the rack's budget, so capTail leaves its output as it is.
         assertContentEquals(Room.process(snare, Room.defaults()).samples, chained.samples, "the chain's room row does not run Room.process")
+    }
+
+    @Test
+    fun `HUSH sits after ROOM and before MOTION, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("room") + 1, names.indexOf("hush"), "HUSH is not right after ROOM: $names")
+        assertEquals(names.indexOf("hush") + 1, names.indexOf("motion"), "HUSH is not right before MOTION: $names")
+
+        val without = FxChain(room = Room.defaults())
+        assertTrue(!without.toJsonText().contains("hush"), "no hush key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(hush = Hush.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the hush section is a no-op in the chain")
+        assertContentEquals(Hush.process(snare, Hush.defaults()).samples, chained.samples, "the chain's hush row does not run Hush.process")
     }
 
     @Test

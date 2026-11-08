@@ -663,7 +663,7 @@ object SynthKits {
             preset(KeelVoice.UPRIGHT, "WARM GUT"), preset(KeelVoice.UPRIGHT, "BRIGHT PICK"),                // A09 A10
             preset(KeelVoice.BELLY, "SOFT PILLOW"), preset(KeelVoice.BELLY, "TOOTH MARK"),                   // A11 A12
             preset(KeelVoice.REDUCE, "QUICK SINK"), preset(KeelVoice.REDUCE, "LOW HULL"),                     // A13 A14
-            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM HUSH"),                    // A15 A16 (loops)
+            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM CALM"),                    // A15 A16 (loops)
         )
     }
 

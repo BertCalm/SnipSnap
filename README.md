@@ -1270,7 +1270,12 @@ ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-l
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
 close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
 the `roomed` character, gives its default room at a tap (AMT 70), AMT moving only the mic; see
-[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
+[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), HUSH
+(a gate, right after the room: the pad is shut to silence once it falls FLOOR under its own
+peak, over CLOSE, 300 ms to 25 ms, without chatter, and never before it has first arrived; the
+HUSH pedal, the `hushed` character, shuts it 12 dB under the peak over about 87 ms at a tap
+(AMT 70), so a snare with ROOM on it is the gated 80s snare; for tails: a dry snare is only
+shorter and a hat a stub), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
@@ -1293,7 +1298,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → motion — owns
+dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
