@@ -1,3 +1,7 @@
+> Fired Bronze dry kit round: Josh preferred the R2 source study. A separate 16-pad
+> recipe family adds bass-skin kick, rim-driven rattle snare and shared bronze hats.
+> New kit listening is pending; no processor or amp is added. See [dry kit notes](FIRED_BRONZE_DRY_KIT.md).
+
 # Synth roadmap — generate kits, not just capture them
 
 **Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner

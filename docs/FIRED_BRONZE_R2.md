@@ -1,3 +1,6 @@
+> Listening update: Josh described this dry revision as “Way better.” Its renderer is
+> retained unchanged in the [new dry kit round](FIRED_BRONZE_DRY_KIT.md); new kit drums still await listening.
+
 # Fired Bronze R2: dry reference study
 
 Status: replaces the *approach*, not the saved R1 renderer. R1 was rejected by

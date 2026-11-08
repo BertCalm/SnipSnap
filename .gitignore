@@ -672,3 +672,5 @@ testkit/fired-bronze-audition.zip
 testkit/fired-bronze-replay.wav
 # Reference-informed dry comparisons; reconstruct via the checked-in scripts/task.
 testkit/fired-bronze-r2/
+
+testkit/fired-bronze-dry-kit/

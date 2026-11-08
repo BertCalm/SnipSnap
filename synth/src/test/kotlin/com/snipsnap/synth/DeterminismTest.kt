@@ -12,6 +12,11 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `FIRED BRONZE dry kit rattle replays`() {
+        val r = FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.SNARE, velocity = .65f, take = 3)
+        assertContentEquals(r.render().samples, FiredBronzeDryKit.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
     @Test fun `FIRED BRONZE R2 reference profile reproduces its spectral render`() {
         val r = FiredBronzeR2.Recipe(FiredBronzeR2.Voice.NA, velocity = .65f, take = 3)
         assertContentEquals(r.render().samples, FiredBronzeR2.Recipe.fromJsonText(r.toJsonText()).render().samples)

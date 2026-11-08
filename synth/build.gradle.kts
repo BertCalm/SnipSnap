@@ -3291,3 +3291,13 @@ tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     args(providers.gradleProperty("firedBronzeR2Output").orNull ?: "testkit/fired-bronze-r2")
     if (providers.gradleProperty("firedBronzeR2ReferencesOnly").isPresent) args("--references-only")
 }
+
+tasks.register<JavaExec>("generateFiredBronzeDryKitAudition") {
+    group = "distribution"
+    description = "Render the dry kit built around the accepted R2 source study."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeDryKitAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/fired-bronze-dry-kit")
+}
