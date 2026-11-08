@@ -187,7 +187,7 @@ private class LoadedTape(
  * The TAPE screen: drag-under-a-fixed-needle scrubbing over the newest snip,
  * else the last COMMIT's source, else (only with a kit open) the open kit's
  * longest sample — see [loadLongestTape]'s KDoc for the full priority order
- * — with the coast/snap/pencil-rewind physics driven entirely by `:shell`'s
+ * — with the coast/snap physics driven entirely by `:shell`'s
  * tested [TapeDeckModel]. This file only renders it and forwards gestures,
  * plus a minimal unity-speed [TapeVoice] for playback.
  */
@@ -748,7 +748,6 @@ private fun TapeDeckContent(
                             is TapeDeckModel.Event.SnappingToOnset ->
                                 onToast(Copy.SNAPPED)
                             TapeDeckModel.Event.HitEnd -> voice.stop()
-                            TapeDeckModel.Event.PencilDone -> onToast(Copy.PENCIL_DONE)
                             // The voice loops the same range on its own
                             // (TapeVoice.start's `loop`), gaplessly; the
                             // model's wrap needs no restart, only counting.
@@ -1395,8 +1394,7 @@ private fun WindButton(
             .raisedBevel(scheme)
             // A screen-reader double-tap has no hold duration, so this
             // gives the wind a real one: WIND_A11Y_NUDGE_MS of elapsed
-            // time on a coroutine, the same shape the pencil-rewind
-            // action above uses, rather than a synchronous start/stop
+            // time on a coroutine, rather than a synchronous start/stop
             // pair. That pair looked like "a brief nudge" but was not
             // one — `windStart` only sets a target speed and the tape is
             // moved by the step loop's per-frame `step()`, so stopping

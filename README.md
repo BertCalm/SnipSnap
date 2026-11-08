@@ -1562,8 +1562,7 @@ UI layer. What lives here:
 - **`TapeDeckModel`** — the trim screen's transport physics, ported
   coefficient-for-coefficient from the prototype that already feels right:
   drag/flick/coast/glide, spin-up, onset snap, IN/OUT swap semantics, loop
-  preview, the odometer. (The pencil rewind is still in the model; the
-  reel no longer reaches it, D9.)
+  preview, the odometer. (The pencil rewind is gone, model and all, D9.)
 - **`VoiceAllocator`** — play mode's choke/steal/note-off decisions behind
   an interface, so the Oboe layer stays thin and dumb.
 - **`ChopReviewModel` / `KitBuilderModel` / `ExportWizardModel`** — chop

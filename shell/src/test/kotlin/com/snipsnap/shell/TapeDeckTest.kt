@@ -230,28 +230,6 @@ class TapeDeckTest {
     }
 
     @Test
-    fun `pencil rewind winds to the top and reports done`() {
-        val d = deck()
-        d.seekTo(rate * 6)
-        d.step(rate * 30)
-        assertTrue(d.pencilRewind())
-        assertTrue(d.pencilActive)
-        assertEquals(TapeDeckModel.PENCIL_SPEED, d.targetSpeed)
-
-        val events = mutableListOf<TapeDeckModel.Event>()
-        repeat(20) { events += d.step(rate) }
-        assertTrue(TapeDeckModel.Event.PencilDone in events)
-        assertFalse(d.pencilActive)
-        assertEquals(0.0, d.position)
-    }
-
-    @Test
-    fun `pencil refuses at the top of the tape`() {
-        val d = deck()
-        assertFalse(d.pencilRewind())
-    }
-
-    @Test
     fun `wind buttons ease to seven times speed and release stops`() {
         val d = deck()
         d.windStart(1)

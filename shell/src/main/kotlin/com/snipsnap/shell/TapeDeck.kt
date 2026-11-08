@@ -20,7 +20,7 @@ import kotlin.math.floor
  *
  * Modes:
  * - **IDLE** — transport: speed eases toward [targetSpeed] (tape spin-up /
- *   wind-down; 1.0 = play, ±7 = wind, −11 = pencil rewind).
+ *   wind-down; 1.0 = play, ±7 = wind).
  * - **DRAG** — finger on the tape: position eases toward the drag target.
  * - **COAST** — flicked: speed decays by friction, then snaps to the
  *   nearest onset when it dies.
@@ -44,8 +44,6 @@ class TapeDeckModel(
         object Looped : Event
         /** Play ran off the end of the tape and stopped. */
         data object HitEnd : Event
-        /** Pencil rewind reached the top of the tape. */
-        data object PencilDone : Event
     }
 
     val lengthFrames: Int = tape.size
@@ -66,9 +64,6 @@ class TapeDeckModel(
         private set
 
     var playing: Boolean = false
-        private set
-
-    var pencilActive: Boolean = false
         private set
 
     // Toggles, exactly the prototype's defaults.
@@ -235,13 +230,7 @@ class TapeDeckModel(
                     mode = Mode.IDLE
                     speed = 0.0
                 }
-                if (targetSpeed < 0) {
-                    targetSpeed = 0.0
-                    if (pencilActive) {
-                        pencilActive = false
-                        events += Event.PencilDone
-                    }
-                }
+                if (targetSpeed < 0) targetSpeed = 0.0
             }
             val end = (lengthFrames - 2).toDouble()
             if (position > end) {
@@ -265,7 +254,6 @@ class TapeDeckModel(
     // ---------- transport ----------
 
     fun play() {
-        pencilOff()
         playing = true
         mode = Mode.IDLE
         targetSpeed = PLAY_SPEED
@@ -276,7 +264,6 @@ class TapeDeckModel(
     }
 
     fun stop() {
-        pencilOff()
         playing = false
         mode = Mode.IDLE
         targetSpeed = 0.0
@@ -294,7 +281,6 @@ class TapeDeckModel(
     /** Hold-down wind: [direction] −1 rewind / +1 fast-forward. */
     fun windStart(direction: Int) {
         require(direction == -1 || direction == 1) { "direction is -1 or 1" }
-        pencilOff()
         playing = false
         mode = Mode.IDLE
         targetSpeed = direction * WIND_SPEED
@@ -305,33 +291,10 @@ class TapeDeckModel(
         if (targetSpeed == direction * WIND_SPEED) targetSpeed = 0.0
     }
 
-    // ---------- pencil rewind (the gag that's also the rewind) ----------
-
-    /**
-     * Tap the cassette: a pencil winds the tape back to zero at 11×.
-     * Refuses within [PENCIL_MIN_POS_SEC] of the top — nothing to wind.
-     * Returns true if the pencil started.
-     */
-    fun pencilRewind(): Boolean {
-        if (pencilActive || position < sampleRate * PENCIL_MIN_POS_SEC) return false
-        pencilActive = true
-        playing = false
-        mode = Mode.IDLE
-        targetSpeed = PENCIL_SPEED
-        return true
-    }
-
-    fun pencilOff() {
-        if (!pencilActive) return
-        pencilActive = false
-        if (targetSpeed < 0) targetSpeed = 0.0
-    }
-
     // ---------- gestures ----------
 
     /** Finger down on the waveform: the tape sticks to the finger. */
     fun dragStart() {
-        pencilOff()
         playing = false
         dragTarget = position
         mode = Mode.DRAG
@@ -367,7 +330,6 @@ class TapeDeckModel(
 
     /** Overview tap: glide to a frame. */
     fun seekTo(frame: Int) {
-        pencilOff()
         playing = false
         glideTarget = frame.toDouble().coerceIn(0.0, (lengthFrames - 2).toDouble())
         mode = Mode.GLIDE
@@ -516,7 +478,6 @@ class TapeDeckModel(
         const val SPEED_EPSILON = 0.004
         const val PLAY_SPEED = 1.0
         const val WIND_SPEED = 7.0
-        const val PENCIL_SPEED = -11.0
         const val COAST_MAX = 14.0
 
         /** Below this flick speed (tape-seconds per second) a release stops dead. */
@@ -525,7 +486,6 @@ class TapeDeckModel(
         const val SNAP_AFTER_STOP_SEC = 0.30
         const val SNAP_POINT_SEC = 0.12
         const val ZERO_SPAN_FRAMES = 2400
-        const val PENCIL_MIN_POS_SEC = 0.05
 
         /** The zoom ladder: ×1 / ×2 / ×4, as pixels per tape-second. */
         val ZOOM_PX_PER_SEC = intArrayOf(90, 180, 360)

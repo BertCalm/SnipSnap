@@ -454,7 +454,6 @@ object Copy {
     const val DECK_NEXT = "NEXT"
     /** The deck glided onto an onset after a coast. */
     const val SNAPPED = "SNAPPED TO THE HIT."
-    const val PENCIL_DONE = "REWOUND."
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
