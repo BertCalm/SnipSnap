@@ -647,19 +647,6 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
     }
 }
 
-/** Behind the gear in the title bar: SETUP ▸, HELP ▸ and MIDI ▸, one tap from every screen. */
-@Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onMidi: () -> Unit, onDismiss: () -> Unit) {
-    ChoiceSheet(
-        listOf(
-            SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup),
-            SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp),
-            SheetRow("${Places.GEAR_MIDI} ▸", onClick = onMidi),
-        ),
-        onDismiss,
-    )
-}
-
 /**
  * Behind the dock's idle capture chip: the two sources the shelf's
  * ArmControl offered as two buttons — the room through the mic, or

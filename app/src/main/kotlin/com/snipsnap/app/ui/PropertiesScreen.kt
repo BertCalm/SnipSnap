@@ -88,6 +88,8 @@ fun PropertiesScreen(
     filesWhere: String?,
     cardName: String?,
     onHelp: () -> Unit,
+    /** The MIDI devices screen, which used to sit behind the title bar's gear. */
+    onMidiDevices: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -215,6 +217,18 @@ fun PropertiesScreen(
                     }
                 }
             }
+        }
+
+        // MIDI DEVICES: the door to the MIDI screen, a row like HELP's below.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = Copy.SETUP_MIDI_DEVICES, onClick = onMidiDevices),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(Copy.SETUP_MIDI_DEVICES, TapeType.pixel, scheme.amber.tape)
         }
 
         // ---- What the app already knew and never said (finding 23) ----

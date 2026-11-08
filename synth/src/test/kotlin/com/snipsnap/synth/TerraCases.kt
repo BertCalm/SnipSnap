@@ -33,7 +33,7 @@ internal object TerraCases {
 
     /**
      * The hand-drum pads as they shipped on COMPOUND_MEMBRANE until the hand drums replaced them
-     * (A09, A11, A12 on 2026-11-07; A02, A03, A05, A06, A08 on 2026-11-08), kept in the frozen grid.
+     * (A09, A11, A12 on 2026-11-07; A02, A03, A05, A06, A08, then A10, on 2026-11-08), kept in the frozen grid.
      */
     val RETIRED_HANDS = listOf(
         KitPad("A09", "Tabla Tin (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
@@ -44,6 +44,7 @@ internal object TerraCases {
         KitPad("A05", "Dholak Bass (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f)),
         KitPad("A06", "Dumbek Doum (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
         KitPad("A08", "Djembe Open (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
+        KitPad("A10", "Tabla Tun (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
     )
 
     /** The frozen grid's pad for [slot]: today's, or the retired one where a post-freeze voice took it. */
@@ -67,7 +68,7 @@ internal object TerraCases {
         KitPad("A07", "Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)),
         KitPad("A08", "Djembe Open", TerraVoice.DJEMBE, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "STROKE" to 1f, "THUMP" to 0.5f)),
         KitPad("A09", "Tabla Tin", TerraVoice.DAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.9f, "OPEN" to 1f, "CLICK" to 0.65f)),
-        KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
+        KitPad("A10", "Tabla Tun", TerraVoice.TUN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "KNOCK" to 0.5f, "LAG" to 0.5f)),
         KitPad("A11", "Dumbek Tek", TerraVoice.DARBUKA, mapOf("TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f)),
         KitPad("A12", "Djembe Slap", TerraVoice.SLAP, mapOf("TUNE" to 0.53f, "DECAY" to 0.5f, "FORCE" to 0.95f, "POS" to 0.875f, "BOWL" to 0.5f, "SMACK" to 0.5f)),
         KitPad("A13", "Agogo Low", TerraVoice.CONICAL_BELL, mapOf("TUNE" to 0.2508f, "FORCE" to 0.85f)),

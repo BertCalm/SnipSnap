@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.*
@@ -19,7 +20,7 @@ import kotlin.math.*
  */
 object Velour {
     const val MODEL_VERSION = 1
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
     const val TAIL_SECONDS = 3.15f
     private const val MAX_FRAMES = RATE * 16
     enum class Treatment(val space: Double, val scatter: Double, val drive: Double) {
