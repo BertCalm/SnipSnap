@@ -329,6 +329,11 @@ fun KitsScreen(
     // way in, a kit someone already composed) steps down to the outline row.
     // Once the first SNIP lands the shelf has both, and this is gone for good.
     val coldShelf = !holding && projects.isEmpty() && kits.isEmpty() && !picking
+    // On the cold shelf the two ways in are INSIDE the empty panel, not in the
+    // footer. The panel is drawn only when nothing at all is on the shelf; a
+    // cold shelf that still lists a binned kit or a room draws a list, not the
+    // panel, and keeps the footer pair.
+    val startsInPanel = coldShelf && rooms.isEmpty() && binnedRooms.isEmpty()
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -508,60 +513,18 @@ fun KitsScreen(
                     Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme))
                 }
             } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .lcdPanel(scheme)
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        // A user mid SNIPS → PAD hand-off just made the very
-                        // snip they're trying to place — EMPTY_SHELF's "NOTHING
-                        // TAPED YET" would flatly contradict that. This names
-                        // the real blocker (no kit yet) and the real fix.
-                        TapeText(
-                            if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
-                            TapeType.lcdSmall,
-                            scheme.lcdInk.tape,
-                            maxLines = 3,
-                        )
-                        // September UAT, finding 3: the app never stated its
-                        // own loop anywhere. It does now, on the one screen a
-                        // new user is guaranteed to meet, in the words of the
-                        // places themselves (plan §3.1): the row above, then
-                        // the four verbs and the two places they start in.
-                        //
-                        // NOT shown mid-hand-off: a user placing a snip has a
-                        // blocker to clear, and the tour of an app they are
-                        // already using would be in the way of it.
-                        //
-                        // There is no dismiss and no "seen it" flag. This IS
-                        // the empty state - it leaves when the shelf has
-                        // something on it and comes back if the shelf empties.
-                        // The hint that taught PAD SHEET could be dismissed
-                        // and lost, which is how finding 5 happened; a thing
-                        // that cannot be dismissed cannot be lost.
-                        if (!assigningSnip) {
-                            TapeText(
-                                Places.PLACES.joinToString(" · "),
-                                TapeType.lcdSmall,
-                                scheme.amber.tape,
-                                maxLines = 1,
-                            )
-                            TapeText(
-                                Copy.FIRST_RUN_PLACES_NOTE,
-                                TapeType.pixelSmall,
-                                scheme.lcdInk.tape,
-                                maxLines = 3,
-                            )
-                        }
-                    }
-                }
+                // The cold shelf's two ways in live in the panel (startsInPanel);
+                // mid-hand-off, or with projects but no kits, the footer below
+                // still carries them. See [EmptyShelfPanel].
+                EmptyShelfPanel(
+                    assigningSnip = assigningSnip,
+                    withStarts = startsInPanel,
+                    busy = busy,
+                    startingKit = startingKit,
+                    onCatchFirst = onCatchFirst,
+                    onStarters = { menuOpen = true },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
             } else {
                 LazyColumn(
                     Modifier
@@ -705,7 +668,7 @@ fun KitsScreen(
             // button is the primary one (CATCH YOUR FIRST SOUND, NEW PROJECT, or
             // NEW KIT alone) is decided by what the lists hold, and they do not
             // hold anything yet.
-            if (!holding) {
+            if (!holding && !startsInPanel) {
                 if (coldShelf || projectFirst) {
                     if (coldShelf) {
                         PrimaryAction(
@@ -1411,6 +1374,90 @@ internal fun KitRenameDialog(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
+            }
+        }
+    }
+}
+
+/**
+ * The shelf with nothing on it: the lit panel, the note, and (on the cold
+ * shelf) the two ways in under the note, then the amber line saying what the
+ * loop ends as. Its own composable so none of this layout counts against
+ * [KitsScreen]'s method, which sits close to the 256-register dex limit.
+ *
+ * September UAT, finding 3: the app never stated its own loop anywhere, so the
+ * panel says it, in the words of the places themselves. NOT shown mid-hand-off:
+ * a user placing a snip has a blocker to clear (no kit yet), and the tour of an
+ * app they are already using would be in the way of it - that case says
+ * [Copy.EMPTY_SHELF_FOR_ASSIGN] alone.
+ *
+ * There is no dismiss and no "seen it" flag. This IS the empty state - it
+ * leaves when the shelf has something on it and comes back if the shelf
+ * empties. A thing that cannot be dismissed cannot be lost.
+ *
+ * [withStarts] draws CATCH YOUR FIRST SOUND ▸ (filled) and START FROM A KIT ▸
+ * (outline); `false` leaves them to the footer, which is where a shelf that
+ * has projects but no kits keeps its NEW KIT row. [startingKit] is the spinner
+ * on the starters button, as it was on the row it replaces.
+ */
+@Composable
+private fun EmptyShelfPanel(
+    assigningSnip: Boolean,
+    withStarts: Boolean,
+    busy: Boolean,
+    startingKit: Boolean,
+    onCatchFirst: () -> Unit,
+    onStarters: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = LocalScheme.current
+    Box(
+        modifier
+            .lcdPanel(scheme)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // A user mid SNIPS -> PAD just made the very snip they are trying
+            // to place: EMPTY_SHELF's "NOTHING TAPED YET" would flatly
+            // contradict that. This names the real blocker and the real fix.
+            TapeText(
+                if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
+                TapeType.lcdSmall,
+                scheme.lcdInk.tape,
+                maxLines = 3,
+            )
+            if (!assigningSnip) {
+                TapeText(
+                    Copy.FIRST_RUN_PLACES_NOTE,
+                    TapeType.pixelSmall,
+                    scheme.lcdInk.tape,
+                    maxLines = 3,
+                )
+                if (withStarts) {
+                    PrimaryAction(
+                        label = Places.CATCH_FIRST,
+                        enabled = !busy,
+                        onClick = onCatchFirst,
+                    )
+                    ActionButton(
+                        Copy.START_FROM_KIT,
+                        scheme,
+                        enabled = !busy,
+                        working = startingKit,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onStarters,
+                    )
+                }
+                TapeText(
+                    Copy.EMPTY_SHELF_ENDS,
+                    TapeType.pixelSmall,
+                    scheme.amber.tape,
+                    maxLines = 2,
+                )
             }
         }
     }

@@ -1518,9 +1518,9 @@ class ConventionTest {
      *    and the model are one roster; a place renamed in one and not the
      *    other is the defect shape this repo keeps finding.
      * 2. Every place the first-run note names is a real one, and it names
-     *    the two the plan says it does (TAPE, then PROJECT). A note that
-     *    said "THEN KIT" would be J13 again: a word that reads as a place
-     *    and lands nowhere.
+     *    none (the tab row above the panel says them). A note that said
+     *    "THEN KIT" would be J13 again: a word that reads as a place and
+     *    lands nowhere.
      */
     @Test
     fun `the first-run note names real places`() {
@@ -1529,13 +1529,15 @@ class ConventionTest {
         assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
 
         val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
-        for (expected in listOf("TAPE", "PROJECT")) {
-            assertTrue(
-                expected in words,
-                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
-                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
-            )
-        }
+        // The note no longer names places at all: the panel's row of places
+        // went with the amber line, and the buttons under the note are the
+        // way in. Held as absence, so a place sneaking back in is a failure
+        // here and not a drift.
+        assertTrue(
+            "TAPE" !in words && "PROJECT" !in words,
+            "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") names a place again. The tab row says the places; " +
+                "the note says the four verbs and that a kit is a way in too.",
+        )
         // The old tab names that are no longer anywhere on the row. A note
         // that still said one of them would point a new user at a screen
         // that does not exist as a destination any more.

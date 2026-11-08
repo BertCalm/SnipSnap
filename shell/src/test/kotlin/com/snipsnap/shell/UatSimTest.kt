@@ -223,9 +223,9 @@ class UatSimTest {
 
         step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
-        note("the one filled button reads: ${Places.CATCH_FIRST}; NEW KIT ▸ STARTERS is the outline row beneath it")
+        note("the empty panel holds the filled ${Places.CATCH_FIRST} and the outline ${Copy.START_FROM_KIT} under the note: \"${Copy.FIRST_RUN_PLACES_NOTE}\"; then the amber \"${Copy.EMPTY_SHELF_ENDS}\"")
 
-        step(++taps, "Tap the outline row, NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
+        step(++taps, "Tap the outline button, ${Copy.START_FROM_KIT}. Menu heading: PICK A STARTER")
         StarterKits.ALL.forEachIndexed { i, s ->
             note("${i + 1}. ${s.displayName.padEnd(14)} ${if (s.seeded) "(TAPS REROLL) " else ""}— ${s.blurb}")
         }
