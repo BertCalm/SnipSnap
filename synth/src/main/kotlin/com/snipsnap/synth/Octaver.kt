@@ -33,16 +33,20 @@ import kotlin.math.pow
  * DRIVE is the owner's pick from the thicker round (2026-11-08: "Fuzz and grit are good"). A clean octave
  * of a tom or a kick lands mostly under 60 Hz, which phones and earbuds hardly play, so it read as thin.
  * DRIVE puts the copy through a soft clipper, whose harmonics land where a drum's thickness is heard:
- * 0 is the clean copy, [GRIT] is the round's Grit (a symmetric clipper at gain 10, odd harmonics only) and
- * 1 its Fuzz (gain 25 and lopsided, so even harmonics too, the octave's second being the hit's own pitch).
- * Past Grit the clipper also leans, its top is closed toward [FUZZ_TOP_HZ], and it follows the clean copy's
- * envelope, because a hard clipper holds a decaying tail at full level and the copy would stop decaying.
+ * 0 is the clean copy, [FUZZ] is the round's Fuzz (gain 25 and lopsided, so even harmonics too, the
+ * octave's second being the hit's own pitch, with its top closed to [FUZZ_TOP_HZ]) and 1 its Grit (a
+ * symmetric clipper at gain 10, odd harmonics only, open to [GRIT_TOP_HZ]). Toward Fuzz the clipper leans
+ * and follows the clean copy's envelope, because a hard clipper holds a decaying tail at full level and the
+ * copy would stop decaying. Grit is the top and the default because the owner heard it as the more open and
+ * powerful of the two (2026-11-08: "Grit sounds more open and powerful it should be on the high end"); the
+ * first DRIVE had Grit at 0.35 and Fuzz at 1.
  * The owner's next note was that the knob did not move smoothly, and measured it did not: its first version
  * raised the clipper's gain in a straight line, so 0 to 0.1 changed the snare 9 times as much as any later
  * step, and the clipper raised the copy's energy up to Grit and the envelope follow lowered it after, so the
- * amount of octave on the low tom rose 3 dB and fell 6. DRIVE now keeps the clean copy's energy (it is
+ * amount of octave on the low tom rose 3 dB and fell 6. DRIVE keeps the clean copy's energy (it is
  * colour, DEPTH is amount) and is laid out so every 5 percent step moves the sound by a similar amount; the
- * test pins that on the snare, low tom and kick.
+ * test pins that on the snare, low tom and kick. Swapping Grit and Fuzz kept both sounds exactly and made
+ * the knob more even still, because the closing and reopening of the top is spread over the whole knob.
  *
  * DEPTH sets the clean copy's peak against the pad's own, 0 off up to [MAX_LEVEL] times the hit, so it
  * means the same on a loud and a quiet pad (a driven copy has the clean copy's energy, so a lower peak). The mix is then squashed into the pad's peak (a tanh, the round's Glue)
@@ -66,7 +70,7 @@ object Octaver {
         MacroSpec("DEPTH", 0.5f),                   // the clean copy's peak against the pad's: 0 off .. MAX_LEVEL times the hit
         MacroSpec("TONE", 0.5f, neutral = 0.5f),    // the copy's low-pass, TONE_DARK_HZ .. TONE_OPEN_HZ; its own neutral
         MacroSpec("HANG", 1f, neutral = 1f),        // 0 the copy follows the hit's envelope, 1 its own (twice as long); its own neutral
-        MacroSpec("DRIVE", GRIT, neutral = GRIT),   // 0 clean, GRIT the owner's Grit, 1 the owner's Fuzz; its own neutral
+        MacroSpec("DRIVE", 1f, neutral = 1f),       // 0 clean, FUZZ the owner's Fuzz, 1 the owner's Grit; its own neutral
     )
 
     /**
@@ -77,18 +81,18 @@ object Octaver {
      */
     const val MAX_LEVEL = 2f
 
-    /** The clipper's gain as DRIVE leaves 0 (blended in from nothing, so no step), at [GRIT] (the round's Grit) and at 1 (its Fuzz). */
+    /** The clipper's gain as DRIVE leaves 0 (blended in from nothing, so no step), at [FUZZ] (the round's Fuzz) and at 1 (its Grit). */
     const val START_GAIN = 3f
-    const val GRIT_GAIN = 10f
     const val FUZZ_GAIN = 25f
+    const val GRIT_GAIN = 10f
 
-    /** Where DRIVE is the round's Grit, and so the section's default; placed so both halves of the knob move evenly. */
-    const val GRIT = 0.35f
+    /** Where DRIVE is the round's Fuzz (Grit is 1, and the default); placed so both halves of the knob move evenly. */
+    const val FUZZ = 0.65f
 
-    /** The clipper's lean at DRIVE 1, as an input offset; it eases in from 0 at GRIT. */
+    /** The clipper's lean at [FUZZ], as an input offset; it rises from 0 at DRIVE 0 and falls back to 0 at Grit. */
     const val FUZZ_BIAS = 0.35f
 
-    /** The low-pass after the clipper at DRIVE 1; at GRIT it is open ([GRIT_TOP_HZ]). */
+    /** The low-pass after the clipper at [FUZZ]; at Grit it is open ([GRIT_TOP_HZ]). */
     const val FUZZ_TOP_HZ = 1800f
     const val GRIT_TOP_HZ = 12000f
 
@@ -220,16 +224,19 @@ object Octaver {
 
     /**
      * DRIVE, in place on the clean copy, in two halves that change the sound at about the same rate per step
-     * (measured across a 5 percent sweep on the snare, low tom and kick; see the test). From 0 to [GRIT] a
-     * symmetric tanh clipper is blended in under the clean copy (fast at first, eased into GRIT) while its gain
-     * rises by equal ratios from [START_GAIN] to [GRIT_GAIN], so DRIVE 0 is the clean copy and a touch of DRIVE
-     * is a touch of grit. From GRIT to 1 the gain rises on to [FUZZ_GAIN] while the clipper eases into leaning
-     * ([FUZZ_BIAS]), closing its top to [FUZZ_TOP_HZ] and following the clean copy's envelope, so the tail still
-     * decays. The clipper's rumble is cut again at [FLOOR_HZ] by GRIT, as in the round's Grit, the cutoff rising
-     * in a straight line from 2 Hz at 0 so the kick's 29 Hz octave is not cut at the first touch or all at once
-     * just before GRIT. The result is set to the clean copy's energy, so DRIVE changes which octave, never how much: a clipper raises the energy of a copy at a
-     * fixed peak and the envelope follow lowers it, which made the amount of octave rise and then fall. Linked:
-     * each frame's clipper gain comes from its loudest channel and is applied to every channel.
+     * (measured across a 5 percent sweep on the snare, low tom and kick; see the test). From 0 to [FUZZ] a tanh
+     * clipper is blended in under the clean copy (fast at first, eased into FUZZ) while its gain rises by equal
+     * ratios from [START_GAIN] to [FUZZ_GAIN], a little faster at first (the 0.7 power: at an even rise the
+     * kick barely changed over the first fifth of the knob), so DRIVE 0 is the clean copy and a touch of DRIVE
+     * is a touch of drive; over the same half the clipper leans toward [FUZZ_BIAS], its top closes to [FUZZ_TOP_HZ] and it
+     * follows the clean copy's envelope, in straight lines, so the tail still decays. From FUZZ to 1 the gain
+     * falls by equal ratios to [GRIT_GAIN] while the lean, the closed top and the envelope follow come back out
+     * in straight lines, so 1 is Grit: symmetric, open and free. The clipper's rumble is cut at [FLOOR_HZ] from
+     * FUZZ on, the cutoff rising in a straight line from 2 Hz at 0 so the kick's 29 Hz octave is not cut at the
+     * first touch. The result is set to the clean copy's energy, so DRIVE changes which octave, never how
+     * much: a clipper raises the energy of a copy at a fixed peak and the envelope follow lowers it, which in
+     * the first DRIVE made the amount of octave rise and then fall. Linked: each frame's clipper gain comes
+     * from its loudest channel and is applied to every channel.
      */
     private fun drive(out: FloatArray, ch: Int, rate: Int, drive: Float) {
         if (drive <= 0f) return
@@ -238,15 +245,15 @@ object Octaver {
         for (v in out) { val a = abs(v); if (a > p) p = a; e0 += v.toDouble() * v }
         if (p <= 1e-9f) return
         val frames = out.size / ch
-        val grit = (drive / GRIT).coerceAtMost(1f)
-        val fuzz = ((drive - GRIT) / (1f - GRIT)).coerceIn(0f, 1f)
-        val wet = 1f - (1f - grit) * (1f - grit)
-        val gain = if (fuzz > 0f) Dsp.expMap(fuzz, GRIT_GAIN, FUZZ_GAIN) else Dsp.expMap(grit, START_GAIN, GRIT_GAIN)
-        val lean = 1f - (1f - fuzz) * (1f - fuzz)
+        val toFuzz = (drive / FUZZ).coerceAtMost(1f)
+        val toGrit = ((drive - FUZZ) / (1f - FUZZ)).coerceIn(0f, 1f)
+        val wet = 1f - (1f - toFuzz) * (1f - toFuzz)
+        val gain = if (toGrit > 0f) Dsp.expMap(toGrit, FUZZ_GAIN, GRIT_GAIN) else Dsp.expMap(toFuzz.pow(0.7f), START_GAIN, FUZZ_GAIN)
+        val lean = if (toGrit > 0f) 1f - toGrit else toFuzz
         val bias = FUZZ_BIAS * lean
         val top = Dsp.expMap(lean, GRIT_TOP_HZ, FUZZ_TOP_HZ)
-        val dcHz = if (fuzz > 0f) FLOOR_HZ else 2f + (FLOOR_HZ - 2f) * grit
-        val env = if (fuzz > 0f) {
+        val dcHz = if (toGrit > 0f) FLOOR_HZ else 2f + (FLOOR_HZ - 2f) * toFuzz
+        val env = if (lean > 0f) {
             val level = FloatArray(frames) { f -> var a = 0f; for (c in 0 until ch) a = maxOf(a, abs(out[f * ch + c])); a / p }
             Hush.slidingMax(level, (WINDOW_SEC * rate).toInt().coerceAtLeast(1))
         } else null

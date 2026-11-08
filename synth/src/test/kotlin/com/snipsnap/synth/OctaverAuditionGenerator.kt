@@ -11,8 +11,8 @@ import java.util.Locale
  * (a rim and a closed hat) and the kick, whose octave (29 Hz here) is mostly under 40 Hz and is heard to
  * show the hazard. Every source is heard dry, pitched down an octave by PITCH (the whole pad, twice as long,
  * which is what the rack already does), and with the octave under it at DEPTH 0.35, 0.7 and 1 at the
- * section's defaults (DRIVE at Grit, the owner's pick). At DEPTH 0.7 each is also heard clean (DRIVE 0),
- * halfway to Fuzz and at Fuzz (DRIVE 1), and Fuzz at DEPTH 1. The snare and the low tom are also heard with
+ * section's defaults (DRIVE 1, Grit, the owner's pick). At DEPTH 0.7 each is also heard clean (DRIVE 0),
+ * at Fuzz ([Octaver.FUZZ]) and halfway from Fuzz to Grit, and Fuzz at DEPTH 1. The snare and the low tom are also heard with
  * the copy held to the hit (HANG 0), and the snare and the mid tom with the copy dark (TONE 0, 150 Hz) and
  * open (TONE 1, 2.4 kHz), at DEPTH 0.7. The snare, the low tom and the kick are also heard across DRIVE in
  * eight steps at DEPTH 0.5, to judge that the knob moves evenly. Every clip shares one loudness
@@ -41,11 +41,11 @@ object OctaverAuditionGenerator {
             clips["pitch_down_12"] = Speed.process(dry, mapOf("SEMITONES" to 0f))
             for (d in listOf(35, 70, 100)) clips["sub_$d"] = Octaver.process(dry, mapOf("DEPTH" to d / 100f))
             clips["sub_70_clean"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to 0f))
-            clips["sub_70_between"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to (Octaver.GRIT + 1f) / 2f))
-            clips["sub_70_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to 1f))
-            clips["sub_100_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 1f, "DRIVE" to 1f))
+            clips["sub_70_between"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to (Octaver.FUZZ + 1f) / 2f))
+            clips["sub_70_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to Octaver.FUZZ))
+            clips["sub_100_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 1f, "DRIVE" to Octaver.FUZZ))
             if (name == "SNARE" || name == "LOW_TOM" || name == "KICK") {
-                for (d in listOf(0f, 0.12f, 0.24f, Octaver.GRIT, 0.5f, 0.67f, 0.83f, 1f)) {
+                for (d in listOf(0f, 0.16f, 0.33f, 0.49f, Octaver.FUZZ, 0.77f, 0.88f, 1f)) {
                     clips[String.format(Locale.ROOT, "drive_%03d", (d * 100).toInt())] = Octaver.process(dry, mapOf("DEPTH" to 0.5f, "DRIVE" to d))
                 }
             }

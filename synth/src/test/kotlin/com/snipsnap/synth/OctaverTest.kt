@@ -148,7 +148,7 @@ class OctaverTest {
             val pad = Thump.render(voice)
             val out = Octaver.process(pad, mapOf("DEPTH" to 1f))
             assertEquals(pad.peak(), out.peak(), 1e-5f)
-            val copy = Octaver.copy(pad, 0.5f, 1f, Octaver.GRIT)
+            val copy = Octaver.copy(pad, 0.5f, 1f, 1f)
             val sum = FloatArray(pad.samples.size) { pad.samples[it] + Octaver.MAX_LEVEL * copy[it] }
             val sp = sum.maxOf { abs(it) }
             val scaled = Snip(FloatArray(sum.size) { sum[it] * pad.peak() / sp }, 1, rate)
@@ -171,15 +171,15 @@ class OctaverTest {
     @Test
     fun `DRIVE puts the octave where small speakers play, on the low tom and the kick`() {
         // The thicker round's finding: a clean octave of a low tom (56 Hz) or a kick (29 Hz) lands mostly under
-        // 60 Hz, which a phone barely plays. Grit and Fuzz move the copy's energy up into 150 to 400 Hz, where a
-        // drum's thickness is heard. Measured: low tom +3.7 / +6.3 dB, kick +3.4 / +7.8 dB. The snare's and mid
+        // 60 Hz, which a phone barely plays. Fuzz and Grit move the copy's energy up into 150 to 400 Hz, where a
+        // drum's thickness is heard. Measured (Fuzz / Grit): low tom +6.3 / +3.7 dB, kick +7.8 / +3.4 dB. The snare's and mid
         // tom's octaves (89 and 78 Hz) already reach that band, so DRIVE adds edge there, not weight (+0.3 to
         // +2.7 dB); for them the test pins only that DRIVE takes nothing from it.
         val low = listOf("low tom" to lowTom, "kick" to Thump.render(ThumpVoice.KICK))
         val high = listOf("mid tom" to Thump.render(ThumpVoice.TOM), "snare" to snare)
         for ((name, pad) in low + high) {
             val clean = share(Octaver.copy(pad, 0.5f, 1f, 0f), 150f, 400f)
-            for (d in listOf(Octaver.GRIT, 1f)) {
+            for (d in listOf(Octaver.FUZZ, 1f)) {
                 val up = 10 * log10(share(Octaver.copy(pad, 0.5f, 1f, d), 150f, 400f) / clean)
                 val floor = if (low.any { it.first == name }) 3.0 else 0.0
                 assertTrue(up > floor, "$name: DRIVE $d lifts the copy's 150-400 Hz share by ${"%.1f".format(up)} dB, not over $floor")
@@ -208,9 +208,10 @@ class OctaverTest {
     fun `DRIVE moves the sound evenly from 0 to 1 and never changes how much octave there is`() {
         // The owner's note: the knob did not move smoothly. Measured on the first version, DRIVE 0 to 0.05
         // changed the snare's spectrum by 1.84 dB and later steps by about 0.2 (9 times less), and the low
-        // tom's copy energy rose 3 dB and fell 6 across the knob. Now (measured at the commit): every 5 percent
-        // step is within 3.5 times the median step (about snare 2.6, low tom 1.2, kick 1.6; the first version
-        // was 8.8 on the snare), and the copy's energy is the clean copy's at every setting.
+        // tom's copy energy rose 3 dB and fell 6 across the knob. The second version (Grit at 0.35, Fuzz at 1)
+        // brought the biggest step to 2.6 times the median on the snare. With Fuzz at FUZZ and Grit at 1
+        // (measured at the commit): snare 1.24, low tom 1.21, kick 1.40, so the bound is 2, and the copy's
+        // energy is the clean copy's at every setting.
         for ((name, pad) in listOf("snare" to snare, "low tom" to lowTom, "kick" to Thump.render(ThumpVoice.KICK))) {
             val clean = Octaver.copy(pad, 0.5f, 1f, 0f).sumOf { it.toDouble() * it }
             val steps = ArrayList<Double>()
@@ -226,7 +227,7 @@ class OctaverTest {
             }
             val median = steps.sorted()[steps.size / 2]
             val worst = steps.max()
-            assertTrue(worst <= 3.5 * median, "$name: the biggest 5 percent step (${"%.2f".format(worst)} dB) is ${"%.1f".format(worst / median)} times the median (${"%.2f".format(median)} dB)")
+            assertTrue(worst <= 2 * median, "$name: the biggest 5 percent step (${"%.2f".format(worst)} dB) is ${"%.1f".format(worst / median)} times the median (${"%.2f".format(median)} dB)")
         }
     }
 
@@ -234,7 +235,7 @@ class OctaverTest {
     fun `Fuzz follows the clean copy's envelope, has no DC and ends at zero`() {
         for (pad in listOf(snare, lowTom)) {
             val clean = within20(Octaver.copy(pad, 0.5f, 1f, 0f))
-            val fuzz = Octaver.copy(pad, 0.5f, 1f, 1f)
+            val fuzz = Octaver.copy(pad, 0.5f, 1f, Octaver.FUZZ)
             assertTrue(within20(fuzz) <= 1.25f * clean + 0.01f, "Fuzz rings ${within20(fuzz)} s against the clean copy's $clean s")
             assertTrue(abs(fuzz.average()) < 0.01 * pad.peak(), "Fuzz carries DC: ${fuzz.average()}")
             assertTrue(fuzz.last() == 0f)
