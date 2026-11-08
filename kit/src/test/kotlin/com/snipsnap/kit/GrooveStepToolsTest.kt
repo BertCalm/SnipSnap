@@ -96,12 +96,14 @@ class GrooveStepToolsTest {
     }
 
     @Test
-    fun `cells own a window from just before the step to half a step after`() {
+    fun `cells own a window from a quarter step before the step to three quarters after`() {
         assertEquals(0, GrooveEdit.cellOf(0))
-        assertEquals(0, GrooveEdit.cellOf(120))
-        assertEquals(1, GrooveEdit.cellOf(121))
-        assertEquals(1, GrooveEdit.cellOf(240 + 120))
-        assertEquals(2, GrooveEdit.cellOf(480 - 119))
+        assertEquals(0, GrooveEdit.cellOf(180))
+        assertEquals(1, GrooveEdit.cellOf(181))
+        assertEquals(1, GrooveEdit.cellOf(240 + 180))
+        assertEquals(1, GrooveEdit.cellOf(240 - 59))
+        assertEquals(0, GrooveEdit.cellOf(240 - 60))
+        assertEquals(2, GrooveEdit.cellOf(480 - 59))
     }
 
     @Test

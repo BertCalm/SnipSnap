@@ -50,7 +50,7 @@ object BeatTape {
             val kit = KitStore.load(dir)
             val clips = GrooveStore.load(dir).ifEmpty { listOf(KitPreview.defaultPattern(kit)) }
             val arranged = arrange(clips, barsPerKit, "${kit.name} Side A")
-            var segment = KitPreview.render(kit, dir, clip = arranged)
+            var segment = KitPreview.render(kit, dir, clip = arranged, allowSilence = clips.any { StepChance.hasChance(it) })
             val transition = when {
                 index == kitDirs.lastIndex -> null // the last track rings out
                 index % 2 == 0 -> "tape stop"
@@ -94,7 +94,8 @@ object BeatTape {
             val c = clips[i % clips.size]
             val take = minOf(c.bars, bars - bar)
             val offset = bar * Mpc3Clip.PULSES_PER_BAR
-            notes += c.notes
+            // This clip's lap through the rotation is its pass; rolled before the notes move (StepChance).
+            notes += StepChance.resolve(c, (i / clips.size).toLong()).notes
                 .filter { it.timePulses < take * Mpc3Clip.PULSES_PER_BAR }
                 .map { it.copy(timePulses = it.timePulses + offset) }
             bar += take

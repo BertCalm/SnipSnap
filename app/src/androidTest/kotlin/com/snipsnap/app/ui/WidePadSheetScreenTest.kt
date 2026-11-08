@@ -126,7 +126,6 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
                 onKitUpdated = { lastUpdatedKit = it },
                 onShelfAssetWritten = {},
                 appScope = appScope,
-                workshopOpen = false,
                 openBox = openBoxState,
                 onOpenBox = { openBoxState = it },
                 pedalRow = PedalSlate.DEFAULT,

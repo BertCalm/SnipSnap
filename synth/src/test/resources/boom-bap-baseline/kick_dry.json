@@ -1,0 +1,18 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Pushed Knock",
+    "voice": "KICK",
+    "macros": {
+      "TUNE": 0.3799999952316284,
+      "DECAY": 0.3199999928474426,
+      "TONE": 0.30000001192092896,
+      "PUNCH": 0.699999988079071,
+      "CLICK": 0.4000000059604645,
+      "DROP": 0.20000000298023224
+    }
+  },
+  "alias": false
+}

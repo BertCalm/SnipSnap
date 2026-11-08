@@ -167,15 +167,29 @@ object GrooveEdit {
         )
 
     /**
-     * The editor cell a note at [pulses] is drawn in and answers to: the
-     * step whose straight position it is nearest, a tie going to the
-     * earlier one. A hand-placed note is on a step's own pulse; a baked
-     * swing ([bakeSwing]) pushes an "and" step late by at most half a step
-     * ([Mpc3Clip.swingPush] at 75%), which is the tie, so it stays in the
-     * cell it was baked from. The cell for step `s` therefore owns pulses
-     * `s*240 - 119 .. s*240 + 120`.
+     * How far before its step line a step's cell begins, in pulses: a quarter
+     * step. The one constant [cellOf] and `StepShape.cellRange` both read, so
+     * the two cannot drift apart.
      */
-    fun cellOf(pulses: Long): Int = ((pulses + STEP_PULSES / 2 - 1) / STEP_PULSES).toInt()
+    val CELL_EARLY: Long = STEP_PULSES / 4
+
+    /**
+     * How far after its step line a step's cell ends, in pulses: three
+     * quarters of a step, so the whole cell is one step wide.
+     */
+    val CELL_LATE: Long = STEP_PULSES - CELL_EARLY
+
+    /**
+     * The editor cell a note at [pulses] is drawn in and answers to. The cell
+     * for step `s` owns pulses `s*240 - 59 .. s*240 + 180`: a quarter step
+     * early and three quarters late. A hand-placed note is on a step's own
+     * pulse. A baked swing ([bakeSwing]) pushes an "and" step late by at
+     * most half a step ([Mpc3Clip.swingPush] at 75%, +120), which is inside
+     * the window, so it stays in the cell it was baked from. A roll
+     * ([StepShape]) spreads its hits over the whole step, up to +180 for the
+     * last hit of a x4, which is why the window leans late.
+     */
+    fun cellOf(pulses: Long): Int = ((pulses + CELL_EARLY - 1) / STEP_PULSES).toInt()
 
     /** The velocity of the note at ([lane], [step]) in [pads], or null when there is none. */
     fun velocityAt(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = DEFAULT_LANE_PADS): Float? {

@@ -138,6 +138,9 @@ import kotlinx.coroutines.sync.withLock
  * it plays on when this screen is not up.
  */
 
+/** How many passes over the loop a BOUNCE prints: one, downbeat to downbeat. */
+private const val BOUNCE_PASSES = 1
+
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
 private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 
@@ -1065,43 +1068,26 @@ fun GrooveScreen(
                 discardBounce()
                 onToast(Copy.GROOVE_BOUNCE_PATTERN_CHANGED)
             }
+        }
 
-            // BOUNCE start/stop, ahead of the note dispatch on purpose
-            // (review's own finding): `hit()` only queues a command onto a
-            // ring the audio thread drains on its own next callback, so
-            // arming or requesting a stop AFTER this frame's notes are
-            // already queued risks the very downbeat that started the bounce
-            // (or the next pass's first note) landing on the wrong side of
-            // the boundary. Arming here, before any queueing, closes that gap
-            // as far as this frame can; `finishBounce`'s own native stop
-            // still runs on its own dispatcher a moment later regardless of
-            // where in the frame it is requested from, so this narrows the
-            // window rather than closing it outright.
-            if (bounceArmed && tick.wrapped) {
-                bounceArmed = false
-                val seconds = (tick.totalSteps / tick.stepsPerSecond).toFloat().coerceAtMost(player.maxPrintSeconds())
-                if (player.armPrint(seconds)) {
-                    bouncing = true
-                } else {
-                    onToast(Copy.GROOVE_BOUNCE_FAILED)
-                }
-            } else if (bouncing && tick.wrapped) {
-                // The ordinary end: one full pass, the same wrap that
-                // started it.
-                finishBounce()
+        // BOUNCE's start and stop are the audio thread's: the beat addresses the print to the next downbeat's
+        // frame and to the end of the last pass, so neither waits on this frame loop.
+        override fun bouncePasses() = if (bounceArmed) BOUNCE_PASSES else 0
+
+        override fun bounceStarted(armed: Boolean) {
+            bounceArmed = false
+            if (armed) {
+                bouncing = true
+            } else {
+                onToast(Copy.GROOVE_BOUNCE_FAILED)
             }
         }
 
         override fun afterNotes(tick: BeatPlayer.Tick) {
-            // The rare early-DONE case (PadEngine's own byte budget
-            // filled before the loop naturally wrapped) is checked
-            // after dispatch, not before — nothing about it is tied
-            // to a note or wrap boundary, so there is no ordering
-            // risk to close here the way there is above. Landing the
-            // shorter, already-complete take beats refusing the
-            // whole bounce over a ceiling that exists for memory,
-            // not for musical correctness.
-            if (bouncing && !tick.wrapped && player.printState() == PadEngine.PrintState.DONE) finishBounce()
+            // The print finishes itself on its stop frame (or, rarely, when PadEngine's byte budget fills
+            // first: landing the shorter, already-complete take beats refusing the whole bounce over a
+            // ceiling that exists for memory). Either way it is DONE, and this is where the screen notices.
+            if (bouncing && player.printState() == PadEngine.PrintState.DONE) finishBounce()
         }
 
         // A bounce armed or in flight when the loop ends — STOP, a kit or
@@ -1112,9 +1098,6 @@ fun GrooveScreen(
         override fun loopEnded() {
             discardBounce()
         }
-
-        // The print is armed and stopped on the frame's own wrap, so the steps go over as crossed.
-        override fun needsImmediate() = bounceArmed || bouncing
 
         override fun swapFor(slot: Int, pos: Float, barSteps: Int): ((PadHit.Hit) -> PadHit.Hit?)? {
             // Resolved here, on the caller's side of `PadEngine.hit`'s own
@@ -3144,16 +3127,16 @@ private fun StepEditorOverlay(
                                         // read as identical unlabelled
                                         // squares to a screen reader.
                                         .stepCellClick(
-                                            label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}",
+                                            label = stepCellLabel(LANE_DRUM_WORD.getValue(lane), col, vel),
+                                            // twin: the TAP · EDIT chip in StepEditorPanel, which makes a tap open the same detail
                                             onLongClick = { state.select(lane, step) },
-                                        ) { onEdit(toggledStep(clip, lane, step, state)) }
+                                        ) { state.tap(clip, lane, step) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .velocityFill(vel, laneColor)
                                         .border(
-                                            if (state.selLane == lane && state.selStep == step) 2.dp else 1.dp,
-                                            if (state.selLane == lane && state.selStep == step) scheme.amber.tape
-                                            else if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            stepEdgeWidth(state.selLane == lane && state.selStep == step, vel),
+                                            stepEdgeColor(state.selLane == lane && state.selStep == step, isPlayhead, vel, scheme),
                                             RoundedCornerShape(3.dp),
                                         ),
                                 )

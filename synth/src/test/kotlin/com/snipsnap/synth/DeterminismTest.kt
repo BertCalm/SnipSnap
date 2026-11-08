@@ -19,9 +19,16 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
+        for (voice in RivetVoice.entries) {
+            val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))
+            assertContentEquals(p.render().samples, Patches.fromJsonText(p.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
-        val fx = BoomBapKits.coloration
+        val fx = BoomBapKits.colorationFor("snare")
         val ref = fx.process(p.render())
         val first = Velocity.variantsAt(ref, p, fx)
         val replay = PadRecipe.fromJsonText(PadRecipe(p, fx).toJsonText())
@@ -650,6 +657,13 @@ class DeterminismTest {
         for (voice in TerraVoice.entries) {
             val loud = when (voice) {
                 TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR, TerraVoice.BOX -> mapOf("BUZZ" to 1f)
+                TerraVoice.SLAP -> mapOf("SMACK" to 1f)
+                TerraVoice.DAYAN -> mapOf("CLICK" to 1f)
+                TerraVoice.DARBUKA -> mapOf("SNAP" to 1f)
+                TerraVoice.DOUM -> mapOf("AIR" to 1f)
+                TerraVoice.DJEMBE -> mapOf("THUMP" to 1f)
+                TerraVoice.DHOLAK -> mapOf("DROP" to 1f)
+                TerraVoice.BAYAN -> mapOf("BEND" to 0f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }

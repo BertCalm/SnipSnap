@@ -78,9 +78,42 @@ step is a fixed click on every hit. On a soft kick, with the sweep and the
 beater click softened, it is the brightest thing left (default kick,
 from 0 ms: 86 / 80 / 81 / 103 Hz at v = 0.25 / 0.5 / 0.75 / 1, against
 56 / 65 / 77 / 103 with PUNCH 0). Any PUNCH above 0, even 0.001, gives the
-same 86 Hz. It predates velocity, and every THUMP, SKIN and TERRA render
-runs through `Punch.saturate`, so fixing it moves the whole factory set;
-it waits on the owner's call.
+same 86 Hz. It predates velocity, and every THUMP, SKIN, ONSET, TERRA and
+VOX render runs through `Punch.saturate`, so fixing it moves the whole
+factory set.
+
+**Tried and heard, 2026-11-08: left as it is.** A fix was built and
+measured, then played to the owner beside the app as it is. It ran the
+drive at its full onset amount and let the taper mix it out
+(`x + wet * (drive(x, onsetAmount) - x)`, with `wet` falling from 1 to
+exactly 0), so the window meets the untouched signal at gain 1. A new
+`PunchTest` case failed on the old code (gain 1.313 one sample before the
+window's end at PUNCH 0.001) and passed on the fix. Measured on the app's
+renders, the first 2 ms came down 0.3 to 1.6 dB and nothing after 6 ms
+moved by more than 2% of the peak. The one exception was the SKIN snare,
+whose body rose 1.0 dB as PUNCH's loudness match made up for the quieter
+start. The default kick's centroid from 0 ms became 56 / 65 / 77 / 103 Hz,
+the PUNCH 0 law.
+
+The owner heard four kicks, two snares, a clap and the udu, each before
+and after at one loudness
+(https://claude.ai/artifact/RoAw2pXmXXU4vKK1uPvVzS): "No difference" on
+both. The full suite then showed what the fix would cost (6,033 tests, 10
+failing):
+
+- **Exact-render pins (five tests).** THUMP, ONSET and SKIN at full
+  velocity, ECHO's kick, and ONSET's frozen legacy models, which exist so
+  saved pads never change.
+- **Behaviour (five tests).**
+  - THUMP's longest kick (DECAY 0.8, HOLD 1) classified as TONAL.
+  - FELT BOOM brightened with velocity: arguably right, but against its
+    pinned exception.
+  - The VALVE and FORGE neutral points moved the kick 0.17 dB, against a
+    0.12 dB bound.
+  - The driven treatment left DC on the snare.
+
+A change nobody hears does not pay for moving every saved pad, so the click
+stays. Velocity's brightness is still read from 2.5 ms on (above).
 
 ## What was tried and dropped, measured
 

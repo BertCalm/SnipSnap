@@ -199,13 +199,7 @@ fun spokenBack(label: String): String? =
     if (label.startsWith("◄ ")) "BACK TO " + label.removePrefix("◄ ") else null
 
 /**
- * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
- * WS4): non-null only while the workshop is open, so a phone that never
- * knocked draws the bar exactly as before. It lives here, on the one row
- * every screen shares, because a bench note is about whatever screen is
- * under it - PLAY, CHOP, a pad sheet - and a chip per screen would be one
- * more thing per screen to keep in step. A raised bevel at the bar's right
- * end: the Win9x button-on-a-title-bar, which is what this is.
+ * The title bar.
  *
  * [projectName] is the open project, at the bar's right (plan §1): the
  * one word of state the title carries, since the status bar that carried
@@ -220,7 +214,6 @@ fun spokenBack(label: String): String? =
 fun TitleBar(
     modifier: Modifier = Modifier,
     projectName: String? = null,
-    onNote: (() -> Unit)? = null,
     onGear: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -261,9 +254,6 @@ fun TitleBar(
                     scheme.titleInk.tape,
                     Modifier.weight(1f, fill = false).widthIn(max = 140.dp).semantics { contentDescription = fullName },
                 )
-            }
-            if (onNote != null) {
-                TitleChip("NOTE", label = "NOTE", onClick = onNote)
             }
             // The gear's accessible name says what is behind it; the glyph
             // alone would be read as a symbol name or not at all.

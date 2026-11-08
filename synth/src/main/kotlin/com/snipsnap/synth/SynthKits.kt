@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Candidate RIVET bank; not a factory starter until the expanded kit is heard. */
+    fun rivet(size: Float? = null) = RivetKits.build(size)
+
     /** Candidate finite CHITIN kit, with complete pad recipes. */
     fun chitin(): List<ArrangedPad?> = ChitinKits.build()
 
@@ -663,7 +666,7 @@ object SynthKits {
             preset(KeelVoice.UPRIGHT, "WARM GUT"), preset(KeelVoice.UPRIGHT, "BRIGHT PICK"),                // A09 A10
             preset(KeelVoice.BELLY, "SOFT PILLOW"), preset(KeelVoice.BELLY, "TOOTH MARK"),                   // A11 A12
             preset(KeelVoice.REDUCE, "QUICK SINK"), preset(KeelVoice.REDUCE, "LOW HULL"),                     // A13 A14
-            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM HUSH"),                    // A15 A16 (loops)
+            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM CALM"),                    // A15 A16 (loops)
         )
     }
 

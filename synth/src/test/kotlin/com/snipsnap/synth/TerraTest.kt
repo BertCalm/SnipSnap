@@ -95,6 +95,19 @@ class TerraTest {
                 for (i in range) sumSq += (samples[i] * samples[i]).toDouble()
                 return Math.sqrt(sumSq / range.count())
             }
+            if (voice in Terra.FITTED_HANDS) {
+                // The fitted bass strokes build their boom over ~30 ms, as the owner's references do: the
+                // first 10 ms against the next 90 reads 1.12-1.43 on the reference djembe bass, 0.82-1.21
+                // on its dholak and 0.42-1.97 on its bayan (docs/TERRA_HANDS.md), under this test's 1.5.
+                // For them a real attack is a hit's shape instead: the loudest 10 ms early, the tail far under it.
+                val win = 441
+                val loudest = (0..samples.size - win step win / 2).maxByOrNull { rms(it until it + win) }!!
+                val peak = rms(loudest until loudest + win)
+                val tail = rms(samples.size - 4410 until samples.size)
+                assertTrue(loudest <= 3528, "$voice's loudest 10 ms should land in its first 80 ms, not at ${loudest * 1000 / 44100} ms")
+                assertTrue(tail < peak * 0.1, "$voice should decay: its last 100 ms at ${"%.1f".format(20 * Math.log10(tail / peak))} dB from its loudest 10 ms")
+                continue
+            }
             val onset = rms(0 until minOf(441, samples.size))
             val restEnd = minOf(4410, samples.size)
             val rest = if (restEnd > 441) rms(441 until restEnd) else onset
@@ -453,8 +466,9 @@ class TerraTest {
     /**
      * The controller's ruling for R1b: phi = 0 must reproduce R1's HIT bit for
      * bit. Compared with LegacyTerraHit, R1's colouring frozen at 58757f10,
-     * not with the floored code itself: every level curve on the five voices
-     * (BOX's plate included), the ten strikers and four strengths, then the
+     * not with the floored code itself: every level curve on every voice
+     * (BOX's plate and the hand drums' heads included), the ten strikers and
+     * four strengths, then the
      * forty cases rendered at HIT 1 with a dark and a bright head.
      */
     @Test
@@ -473,7 +487,7 @@ class TerraTest {
                 }
             }
         }
-        assertEquals(200, curves)
+        assertEquals(TerraVoice.entries.size * 40, curves)
         var renders = 0
         for (id in listOf("kick01", "tsnare")) {
             val x = Terra.upsample(TerraStrikers.head(id))

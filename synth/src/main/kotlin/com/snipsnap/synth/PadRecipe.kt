@@ -168,7 +168,8 @@ data class PadRecipe(
          * it never reaches this shape at all.
          */
         private fun impliesAlias(patch: Patch?, fx: FxChain?): Boolean =
-            (patch is VelvetPatch && patch.voice == VelvetVoice.CHIP) || fx?.crunch != null
+            (patch is VelvetPatch && patch.voice == VelvetVoice.CHIP) ||
+                (patch is SkinPatch && patch.model == 2) || fx?.crunch != null
 
         fun fromJsonValue(value: JsonValue): PadRecipe {
             val obj = value.obj()

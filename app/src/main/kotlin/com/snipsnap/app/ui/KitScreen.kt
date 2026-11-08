@@ -818,6 +818,7 @@ fun KitScreen(
                                     haptics.pad(touch.velocity)
                                     onSelectSlot(s)
                                 },
+                                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
                                 onLongPress = onLongPress,
                                 onEmptyLongPress = onEmptyLongPress,
                                 // An empty pad is selectable too: its strip is
@@ -1578,6 +1579,7 @@ private fun PadCell(
                     contentDescription = "PAD $tag: EMPTY"
                     this.selected = selected
                     onClick(label = "HINT") { onEmptyTapHint(slot); true }
+                    // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE), which opens the same capture
                     onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
                 }
                 // Same long-press timing as the filled path below, but a
@@ -1587,6 +1589,7 @@ private fun PadCell(
                 .pointerInput(slot) {
                     while (true) {
                         val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                        // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE)
                         val longPress = scope.launch {
                             delay(LONG_PRESS_MS)
                             onEmptyLongPress(slot)
@@ -1685,6 +1688,7 @@ private fun PadCell(
                 // this used at first, was a third disagreement with the
                 // rest of the app.
                 onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
+                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
                 onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
@@ -1702,6 +1706,7 @@ private fun PadCell(
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
                     }
+                    // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN)
                     val longPressJob = scope.launch {
                         delay(LONG_PRESS_MS)
                         onLongPress(slot)

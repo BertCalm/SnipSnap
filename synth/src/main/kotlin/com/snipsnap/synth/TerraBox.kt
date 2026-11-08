@@ -270,7 +270,7 @@ internal object TerraBox {
     }
 
     /** A second-order Butterworth low-pass at [hz], bilinear and pre-warped (scipy's butter(2)). */
-    private fun lowpass(x: FloatArray, hz: Float, rate: Int): FloatArray {
+    internal fun lowpass(x: FloatArray, hz: Float, rate: Int): FloatArray {
         val k = tan(PI * hz / rate)
         val norm = 1.0 / (1.0 + sqrt(2.0) * k + k * k)
         val b0 = k * k * norm
@@ -278,7 +278,7 @@ internal object TerraBox {
     }
 
     /** A second-order Butterworth high-pass at [hz], bilinear and pre-warped. */
-    private fun highpass(x: FloatArray, hz: Float, rate: Int): FloatArray {
+    internal fun highpass(x: FloatArray, hz: Float, rate: Int): FloatArray {
         val k = tan(PI * hz / rate)
         val norm = 1.0 / (1.0 + sqrt(2.0) * k + k * k)
         return biquad(x, norm, -2 * norm, norm, 2 * (k * k - 1) * norm, (1 - sqrt(2.0) * k + k * k) * norm)

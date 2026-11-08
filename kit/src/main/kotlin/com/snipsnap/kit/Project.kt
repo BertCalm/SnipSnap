@@ -8,6 +8,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
 import java.io.IOException
+import java.util.Locale
 
 /**
  * The unit of work (`docs/DIRECTION_2026_10.md` §2): what a person opens,
@@ -165,6 +166,176 @@ object ProjectStore {
         return "$base $n"
     }
 
+    // ---- Rename, bin, restore (the project row's ⋮ menu) ----
+
+    /**
+     * The bin beside the kits' own: a project sleeps at
+     * `.bin/<name>-<millis>/project.json`, the folder moved whole, so its
+     * beat, its kept song and everything else in it come back with it.
+     * Same folder name as `KitShelf.BIN_DIR` (a test in `:app` pins the
+     * two), so the one sweep that empties kits past their days empties
+     * projects with them, and `KitStore.list` never sees a project there
+     * (it has no `kit.json`).
+     */
+    const val BIN_DIR = ".bin"
+
+    /** A hidden file in [DIR] naming kits a person took out of every project; see [release]. */
+    private const val RELEASED_FILE = ".released"
+
+    /** One project asleep in the bin: where it lies, what it holds, when it went. */
+    data class Binned(val dir: File, val project: Project, val binnedAtMillis: Long)
+
+    /** A rename refused because a project already answers to that name. */
+    class NameTakenException(val name: String) : IOException("a project called '$name' already exists")
+
+    /**
+     * Kits no project holds *on purpose*. [ProjectMigration.adopt] gives every
+     * unheld kit a project of its own name each time the shelf opens, which
+     * is right for a kit that just arrived and wrong for one a person has
+     * just deleted a project over, or taken out of its last project: the
+     * shelf would answer by making the project again. [trash] and
+     * [releaseKit] write a kit here when no project holds it any more;
+     * `adopt` skips what is here; holding the kit again (`unrelease`) puts
+     * it back under the old rule. A kit named here that has since left the
+     * shelf costs nothing.
+     */
+    fun released(shelfRoot: File): Set<String> {
+        val file = File(projectsDir(shelfRoot), RELEASED_FILE)
+        if (!file.isFile) return emptySet()
+        return file.readLines(Charsets.UTF_8).map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    }
+
+    /** Adds [kits] to [released]. */
+    fun release(shelfRoot: File, kits: Collection<String>) = writeReleased(shelfRoot, released(shelfRoot) + kits)
+
+    /** Takes [kits] out of [released]: a project holds them again, or a person opened them. */
+    fun unrelease(shelfRoot: File, kits: Collection<String>) {
+        val now = released(shelfRoot)
+        if (now.any { it in kits }) writeReleased(shelfRoot, now - kits.toSet())
+    }
+
+    private fun writeReleased(shelfRoot: File, kits: Set<String>) {
+        projectsDir(shelfRoot).mkdirs()
+        val file = File(projectsDir(shelfRoot), RELEASED_FILE)
+        if (kits.isEmpty()) file.delete() else AtomicFile.writeText(file, kits.sorted().joinToString("\n") + "\n")
+    }
+
+    /** Call after a kit is taken out of a project: if no project holds it now, [release] it so the shelf leaves it unheld. */
+    fun releaseIfUnheld(shelfRoot: File, kitFolder: String) {
+        val held = list(shelfRoot).mapNotNull { runCatching { load(it) }.getOrNull() }.any { it.holds(kitFolder) }
+        if (!held) release(shelfRoot, listOf(kitFolder))
+    }
+
+    /** Every name under `Projects/`, lower-cased: a card's FAT folders do not tell `Late` from `late`. */
+    private fun occupied(shelfRoot: File): Set<String> =
+        projectsDir(shelfRoot).list()?.map { it.lowercase(Locale.ROOT) }?.toSet() ?: emptySet()
+
+    /**
+     * RENAME: the folder `Projects/<oldName>/` becomes `Projects/<newName>/`
+     * and `name` in its `project.json` follows. Everything keyed by the
+     * folder rides along because it lives inside it (the beat, the kept
+     * song). [newName] is trimmed, and must be a card-safe name
+     * ([Names.isMpcSafe], no leading dot); it is refused when any other
+     * project already answers to it, ignoring case ([NameTakenException]).
+     * Changing only the case of the project's own name is allowed.
+     * Renaming to the name it has is a no-op. Throws [IllegalArgumentException]
+     * for a name that cannot be one and [IOException] when the project
+     * cannot be read or moved; on a failed write the folder moves back, so
+     * a refused rename leaves the project as it was.
+     */
+    fun rename(shelfRoot: File, oldName: String, newName: String): Project {
+        val target = newName.trim()
+        require(Names.isMpcSafe(target) && SafePath.isSafe(target) && !target.startsWith(".")) {
+            "project name cannot be a folder name: '$newName'"
+        }
+        val oldDir = dir(shelfRoot, oldName)
+        val project = load(oldDir)
+        if (target == oldName) return project
+        if (target.lowercase(Locale.ROOT) in occupied(shelfRoot) - oldName.lowercase(Locale.ROOT)) {
+            throw NameTakenException(target)
+        }
+        val newDir = dir(shelfRoot, target)
+        if (!moveDir(oldDir, newDir)) throw IOException("could not move $oldDir to $newDir")
+        val renamed = project.copy(name = target)
+        try {
+            save(shelfRoot, renamed)
+        } catch (e: Exception) {
+            moveDir(newDir, oldDir)
+            throw e
+        }
+        return renamed
+    }
+
+    /**
+     * DELETE: the project's folder moves, whole, to `.bin/<name>-<millis>/`
+     * (a counter goes in before the stamp when that exact name is taken) and
+     * the bin keeps it as long as it keeps a kit. The kits it held are not
+     * touched; any that no other project holds are [release]d first, so the
+     * shelf does not re-adopt them into projects of their own the next time
+     * it opens. Returns where the project now lies. Throws [IOException]
+     * when it cannot be read or moved, having changed nothing that matters
+     * (a kit released for a project that stayed is still held by it).
+     */
+    fun trash(shelfRoot: File, name: String, nowMillis: Long = System.currentTimeMillis()): File {
+        val projectDir = dir(shelfRoot, name)
+        val project = load(projectDir)
+        val bin = File(shelfRoot, BIN_DIR).apply { mkdirs() }
+        var binName = "$name-$nowMillis"
+        var n = 2
+        while (File(bin, binName).exists()) binName = "$name-${n++}-$nowMillis"
+        val dest = File(bin, binName)
+        val others = list(shelfRoot).filter { it.name != projectDir.name }
+            .mapNotNull { runCatching { load(it) }.getOrNull() }.flatMap { it.kits }.toSet()
+        release(shelfRoot, project.kits.filter { it !in others })
+        if (!moveDir(projectDir, dest)) throw IOException("could not move $projectDir to $dest")
+        return dest
+    }
+
+    /** The projects asleep in the bin, most recently binned first; a folder with no readable `project.json` is skipped. */
+    fun binned(shelfRoot: File): List<Binned> =
+        File(shelfRoot, BIN_DIR).listFiles { f: File -> f.isDirectory && File(f, FILE_NAME).isFile }
+            ?.mapNotNull { d -> runCatching { Binned(d, load(d), binnedAt(d)) }.getOrNull() }
+            ?.sortedByDescending { it.binnedAtMillis }
+            ?: emptyList()
+
+    /** The wall-clock millis [trash] stamped last in a bin folder's name; the folder's mtime when it does not parse. */
+    fun binnedAt(binDir: File): Long = binDir.name.substringAfterLast('-').toLongOrNull() ?: binDir.lastModified()
+
+    /**
+     * RESTORE: [binned] back under `Projects/`, under its own name when no
+     * project answers to it (ignoring case), else `<name> 2`, `<name> 3`…
+     * — the kits' own rule (`KitShelf.restoreKit`): a restore never
+     * overwrites and never refuses over a name, and the name in
+     * `project.json` is rewritten to the one that landed. The kits it holds
+     * are [unrelease]d, being held again. Throws [IOException] when the bin
+     * folder is gone or unreadable or the move fails.
+     */
+    fun restore(shelfRoot: File, binned: File): Project {
+        if (!binned.isDirectory) throw IOException("not in the bin any more: $binned")
+        val project = load(binned)
+        val taken = occupied(shelfRoot)
+        var name = project.name
+        var n = 2
+        while (name.lowercase(Locale.ROOT) in taken || name.startsWith(".")) name = "${project.name.trimStart('.')} ${n++}"
+        projectsDir(shelfRoot).mkdirs()
+        val dest = dir(shelfRoot, name)
+        if (!moveDir(binned, dest)) throw IOException("could not move $binned to $dest")
+        val restored = project.copy(name = name)
+        save(shelfRoot, restored)
+        unrelease(shelfRoot, project.kits)
+        return restored
+    }
+
+    /** [from] to [to]: a rename, else copy-then-delete where the rename cannot cross filesystems. */
+    private fun moveDir(from: File, to: File): Boolean {
+        if (from.renameTo(to)) return true
+        if (!from.copyRecursively(to, overwrite = false)) {
+            to.deleteRecursively()
+            return false
+        }
+        return from.deleteRecursively()
+    }
+
     /** Writes `project.json` into the project's folder, creating it. */
     fun save(shelfRoot: File, project: Project): File {
         val dir = dir(shelfRoot, project.name)
@@ -221,9 +392,24 @@ object ProjectStore {
      * Writes the project's patterns. [lanePads] (a kit's [GrooveStore.loadLanePads])
      * travels with the clips, so a pattern whose lanes play other pads draws and
      * plays the same from the project; null keeps what the file already holds.
+     * [names] (its [GrooveStore.loadNames]) and [nextProg] (its [GrooveStore.loadNextProg])
+     * travel the same way: a pattern keeps the name it was given, and a number a
+     * discarded pattern held is not handed to a new one in the project's copy either.
+     * Null names keep the file's; [nextProg] only raises the stored mark.
      */
-    fun saveBeat(projectDir: File, clips: List<Mpc3Clip>, lanePads: Map<String, List<Int>>? = null): File =
-        GrooveStore.save(beatDir(projectDir), clips, lanePads)
+    fun saveBeat(
+        projectDir: File,
+        clips: List<Mpc3Clip>,
+        lanePads: Map<String, List<Int>>? = null,
+        names: Map<String, String>? = null,
+        nextProg: Int? = null,
+    ): File = GrooveStore.save(beatDir(projectDir), clips, lanePads, names, nextProg)
+
+    /** The project's pattern display names, by clip name; empty when it has none. */
+    fun beatNames(projectDir: File): Map<String, String> = GrooveStore.loadNames(beatDir(projectDir))
+
+    /** The project's high-water mark for pattern numbers, 0 when it has none. */
+    fun beatNextProg(projectDir: File): Int = GrooveStore.loadNextProg(beatDir(projectDir))
 
     /** The project's per-pattern lane maps, by clip name; empty when it has none. */
     fun beatLanePads(projectDir: File): Map<String, List<Int>> = GrooveStore.loadLanePads(beatDir(projectDir))

@@ -30,7 +30,7 @@ terse, a little smug, never cutesy-apologetic.
 | Moment | Copy |
 |---|---|
 | Boot | `SNIPSNAP — READY.` |
-| Empty shelf | `NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY).` |
+| Empty shelf | panel: `NOTHING TAPED YET.`, then `RECORD IT, CUT IT, KIT IT, WRITE IT. OR START FROM A KIT.`, the filled `CATCH YOUR FIRST SOUND ▸` and outline `START FROM A KIT ▸` buttons, and in amber `ENDS AS MPC KITS, WAVS AND SONGS`. |
 | Empty kit | `16 EMPTY PADS. TERRIFYING.` |
 | Capture blocked | message box: `TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT.` + [FINE] |
 | Landing trouble | message box: the toast's line as title (`1 KIT LANDED ON THE SHELF. 1 SKIPPED.` / `NOTHING LANDED.`), then `SKIPPED · BROKEN: NO KIT.JSON` lines in warn, `LANDED · FUNK` after + [FINE]. A clean landing keeps its toast. |
@@ -54,7 +54,7 @@ terse, a little smug, never cutesy-apologetic.
   happened"* — and the line KEEP says now is the offer that replaced them,
   which says what did happen and carries a door to the step that uses it.
   Kept here, struck through, so the gag is not re-added from this list.
-- **Pencil rewind** — tap the cassette: a pencil appears in the left hub and
+- **Pencil rewind** — *removed from the UI (D9); the model still has it, no reel reaches it.* Tap the cassette: a pencil appears in the left hub and
   winds the tape back to zero, wind sound included. The single most
   cassette-native gag that exists.
 - **Defrag chop screen** — auto-chop progress drawn as a defrag block grid
@@ -107,7 +107,7 @@ counter. Try tapping the cassette.
 
 **The two gestures drifted from this page.** The catalog above says the
 pencil rewind is a *tap on the cassette* and the tape counter a
-*triple-tap*; in the app the rewind is a **hold on the left reel** and the
+*triple-tap*; in the app the rewind is gone (D9) and the
 counter a **single tap** on the position readout. Recorded rather than
 "fixed" in either direction: which gesture is right is a design call, and
 both are working eggs under law 4 today.

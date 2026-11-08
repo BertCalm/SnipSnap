@@ -55,7 +55,7 @@ class StepEditorPartsTest : ComposeScreenTest() {
         val dir = File(cache, "step-parts-${System.nanoTime()}").apply { mkdirs() }
         dirs += dir
         GrooveStore.save(dir, listOf(Mpc3Clip("Kit", 1, emptyList()), clip))
-        return StepEditorState(dir, clip.name, scope) { edits += it }
+        return StepEditorState(dir, clip.name, scope, onEdit = { edits += it })
     }
 
     private val clip = GrooveEdit.toggleStep(Mpc3Clip("Kit E", 1, emptyList()), GrooveEdit.Lane.SNARE, 4)
@@ -73,6 +73,38 @@ class StepEditorPartsTest : ComposeScreenTest() {
         tap(Copy.stepVelocitySpoken(Copy.VEL_SOFT))
         val written = edits.last().change!!(clip)
         assertEquals(GrooveEdit.VelocityLevel.SOFT.velocity, GrooveEdit.velocityAt(written, GrooveEdit.Lane.SNARE, 4)!!, 0f)
+    }
+
+    @Test
+    fun the_strip_offers_roll_nudge_and_length_and_a_roll_tap_writes_that_many_hits() {
+        val state = stateWith(clip)
+        state.select(GrooveEdit.Lane.SNARE, 4)
+        setPhoneContent {
+            StepDetailStrip(state, GrooveEdit.Lane.SNARE, clip, LocalScheme.current, "SNARE", 0) { edits += it }
+        }
+        for (n in 1..4) button(Copy.stepRollSpoken(n)).assertExists()
+        button(Copy.stepRollSpoken(1)).assertIsSelected()
+        for (name in listOf(Copy.STEP_EARLY, Copy.STEP_LATE, Copy.STEP_CENTRE)) button(name).assertExists()
+        button(Copy.stepLengthSpoken(Copy.STEP_LEN_TIE_2)).assertExists()
+        tap(Copy.stepRollSpoken(3))
+        val written = edits.last().change!!(clip)
+        assertEquals(3, com.snipsnap.kit.StepShape.rollOf(written, GrooveEdit.Lane.SNARE, 4))
+    }
+
+    @Test
+    fun tapping_a_chance_sets_every_hit_of_a_rolled_step() {
+        val rolled = com.snipsnap.kit.StepShape.setRoll(clip, GrooveEdit.Lane.SNARE, 4, 3)
+        val state = stateWith(rolled)
+        state.select(GrooveEdit.Lane.SNARE, 4)
+        setPhoneContent {
+            StepDetailStrip(state, GrooveEdit.Lane.SNARE, rolled, LocalScheme.current, "SNARE", 0) { edits += it }
+        }
+        for (c in com.snipsnap.kit.StepShape.CHANCES) button(Copy.stepChanceSpoken(c)).assertExists()
+        button(Copy.stepChanceSpoken(100)).assertIsSelected()
+        tap(Copy.stepChanceSpoken(50))
+        val written = edits.last().change!!(rolled)
+        assertEquals(3, written.notes.size)
+        assertEquals(listOf(50, 50, 50), written.notes.map { it.chance })
     }
 
     @Test

@@ -172,22 +172,4 @@ class LabelledHitsTest {
             root.deleteRecursively()
         }
     }
-
-    @Test
-    fun `the lines say what went where, and the strip is furniture`() {
-        assertEquals("A01 LABELLED KICK. IN THE CALIBRATION FOLDER; SEND HITS TO BENCH CARRIES IT.", Copy.hitLabelled("A01", "KICK"))
-        val gone = Copy.hitUnlabelled("A01")
-        assertTrue("GONE" in gone && "UNTOUCHED" in gone, "a destructive line answers what is left: $gone")
-        assertEquals("LABELLED KICK", Copy.hitStrip("KICK"))
-        assertEquals("NOT LABELLED", Copy.hitStrip(null))
-        assertFalse(Copy.hitStrip(null).endsWith("."), "a strip is furniture, not a sentence")
-        assertEquals("12 HITS ON ONE FILE, AS AUDIO. PICK WHERE IT GOES.", Copy.hitsPacked(12))
-        assertEquals("1 HIT ON ONE FILE, AS AUDIO. PICK WHERE IT GOES.", Copy.hitsPacked(1))
-        assertTrue("SENDS SOUND" in Copy.SEND_HITS_NOTE, "the one button that sends audio says so: ${Copy.SEND_HITS_NOTE}")
-        assertTrue("RENDERS" in Copy.HIT_IS_A_RENDER && "RENDERS" in Copy.HITS_BOX_NOTE, "the refusal and the note give the same reason")
-        for (line in listOf(Copy.hitLabelled("A01", "KICK"), gone, Copy.hitsPacked(2), Copy.HITS_BOX_NOTE, Copy.HIT_IS_A_RENDER, Copy.SEND_HITS_NOTE, Copy.HITS_EMPTY, Copy.HITS_FAILED)) {
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
-            assertTrue(line.endsWith("."), "lands on a full stop: $line")
-        }
-    }
 }

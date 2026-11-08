@@ -80,7 +80,7 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         // still being read is not an empty one.
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
         button(Places.CATCH_FIRST).assertDoesNotExist()
-        button("NEW KIT ▸ STARTERS").assertDoesNotExist()
+        button(Copy.START_FROM_KIT).assertDoesNotExist()
     }
 
     @Test
@@ -90,10 +90,10 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertDoesNotExist()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertIsDisplayed()
         button(Places.CATCH_FIRST).assertIsDisplayed()
-        // The cold shelf draws this row too: the positive control for the
-        // literal the loading test asserts absent, so a rename of the button
-        // cannot leave that assertion passing for nothing.
-        button("NEW KIT ▸ STARTERS").assertIsDisplayed()
+        // The cold shelf draws this button too, inside the empty panel: the
+        // positive control for the label the loading test asserts absent, so a
+        // rename of the button cannot leave that assertion passing for nothing.
+        button(Copy.START_FROM_KIT).assertIsDisplayed()
     }
 
     @Test
@@ -106,7 +106,7 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertDoesNotExist()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
         button(Places.CATCH_FIRST).assertDoesNotExist()
-        button("NEW KIT ▸ STARTERS").assertDoesNotExist()
+        button(Copy.START_FROM_KIT).assertDoesNotExist()
 
         // It was only the delay: 100 ms later the words are up, so the
         // absence above was a real one.
@@ -140,19 +140,19 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertIsDisplayed()
 
         // The read ends 300 ms in, 100 ms after the words appeared: they stay
-        // until 500 ms after they appeared, with the footer's way in still
+        // until 500 ms after they appeared, with the panel's two ways in still
         // away, and the content is not drawn under them.
         loading = false
         pump(350)
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertIsDisplayed()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
         button(Places.CATCH_FIRST).assertDoesNotExist()
-        button("NEW KIT ▸ STARTERS").assertDoesNotExist()
+        button(Copy.START_FROM_KIT).assertDoesNotExist()
 
         pump(110)
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertDoesNotExist()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertIsDisplayed()
         button(Places.CATCH_FIRST).assertIsDisplayed()
-        button("NEW KIT ▸ STARTERS").assertIsDisplayed()
+        button(Copy.START_FROM_KIT).assertIsDisplayed()
     }
 }

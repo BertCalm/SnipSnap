@@ -1518,9 +1518,9 @@ class ConventionTest {
      *    and the model are one roster; a place renamed in one and not the
      *    other is the defect shape this repo keeps finding.
      * 2. Every place the first-run note names is a real one, and it names
-     *    the two the plan says it does (TAPE, then PROJECT). A note that
-     *    said "THEN KIT" would be J13 again: a word that reads as a place
-     *    and lands nowhere.
+     *    none (the tab row above the panel says them). A note that said
+     *    "THEN KIT" would be J13 again: a word that reads as a place and
+     *    lands nowhere.
      */
     @Test
     fun `the first-run note names real places`() {
@@ -1529,13 +1529,15 @@ class ConventionTest {
         assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
 
         val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
-        for (expected in listOf("TAPE", "PROJECT")) {
-            assertTrue(
-                expected in words,
-                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
-                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
-            )
-        }
+        // The note no longer names places at all: the panel's row of places
+        // went with the amber line, and the buttons under the note are the
+        // way in. Held as absence, so a place sneaking back in is a failure
+        // here and not a drift.
+        assertTrue(
+            "TAPE" !in words && "PROJECT" !in words,
+            "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") names a place again. The tab row says the places; " +
+                "the note says the four verbs and that a kit is a way in too.",
+        )
         // The old tab names that are no longer anywhere on the row. A note
         // that still said one of them would point a new user at a screen
         // that does not exist as a destination any more.
@@ -1912,12 +1914,6 @@ class ConventionTest {
         "humStart" to "the instant that hum began",
         "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
         "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
-        // RATE THE CUTS (docs/WORKSHOP.md, WS2). A star is a verdict on THIS
-        // model's cuts, not a preference: a re-chop, a MERGE or a SPLIT is
-        // different cuts, and a rating of the old ones riding onto the new
-        // would be logged against a setting that never earned it - the
-        // same reason `ChopReviewModel.confirmed` does not follow a re-chop.
-        "stars" to "a star rates this model's own cuts; a re-chop, a MERGE or a SPLIT is different cuts, and a verdict on the old ones must not ride onto them",
     )
 
     /**
@@ -5618,5 +5614,112 @@ class ConventionTest {
             "a control behind STRIKE passes `enabled` to tapeClick. These are dimmed, not disabled: they stay " +
                 "tappable and keep their value for when STRIKE comes on.",
         )
+    }
+
+    // ==================== Law: every hold has a visible twin ====================
+
+    /** A waiver names why the hold has no twin; the list below is empty and a new hold takes a visible twin and a `// twin:` tag, not a waiver. */
+    private data class HoldWaiver(val why: String, val lineText: String)
+
+    /**
+     * Holds with no visible twin, keyed on the file and the site line's own trimmed text (never a line number).
+     *
+     * **This list only shrinks, and it is empty.** The pencil rewind (D9) and the workshop (D8) were its last owners and
+     * are gone from the tree. The law stays: [HOLD_WAIVER_CEILING] is 0, so a hold with no visible twin fails the build
+     * rather than being waived. Raising the ceiling is the visible admission that the list grew, and a hold added after
+     * this law should never need to.
+     */
+    private val HOLD_WAIVERS: Map<String, List<HoldWaiver>> = emptyMap()
+    private val HOLD_WAIVER_CEILING = 0
+
+    /** How many lines above a hold site its `// twin:` tag may sit; a hold's modifier chain and its labels sit between. */
+    private val TWIN_TAG_WINDOW = 8
+
+    private val holdDeclaration = Regex("""\bonLong\w*\s*:""")
+    private val holdSite = Regex("""\bonLongClick\b(?!Label)|\bonLongPress\w*|\b(delay|withTimeoutOrNull)\(\w*LONG_PRESS_MS""")
+
+    /**
+     * Every line that registers a hold: `onLongClick`, `onLongPress` and its `...Chip`/`...Ring` plumbing, semantics
+     * `onLongClick(`, `combinedClickable(onLongClick =`, and the hand-timed `delay(LONG_PRESS_MS)` pads use. Imports,
+     * comments, `const val`s and parameter declarations (`onLongPress: () -> Unit`) are not sites. A scrim absorber
+     * (`detectTapGestures { }` with no `onLongPress`) has no such line, which is why it needs no exemption.
+     */
+    private fun holdSites(lines: List<String>): List<Int> = lines.indices.filter { i ->
+        val line = lines[i]
+        val t = line.trim()
+        !isCommentLine(line) && !t.startsWith("import ") && !t.startsWith("const val ") && !t.contains(" const val ") &&
+            holdSite.containsMatchIn(holdDeclaration.replace(t, ""))
+    }
+
+    private fun hasTwinTag(lines: List<String>, site: Int): Boolean =
+        (maxOf(0, site - TWIN_TAG_WINDOW)..site).any { Regex("""//\s*twin:\s*\S""").containsMatchIn(lines[it]) }
+
+    /** One line per fault: a hold with no tag and no waiver, and a waiver that matches no hold. Empty when the tree and the list agree. */
+    private fun holdTwinProblems(files: Map<String, List<String>>, waivers: Map<String, List<HoldWaiver>>): List<String> {
+        val problems = mutableListOf<String>()
+        for ((file, lines) in files.toSortedMap()) {
+            val unused = waivers[file].orEmpty().toMutableList()
+            for (site in holdSites(lines)) {
+                val text = lines[site].trim()
+                val waiver = unused.firstOrNull { it.lineText == text }
+                when {
+                    waiver != null -> unused.remove(waiver)
+                    hasTwinTag(lines, site) -> Unit
+                    else -> problems += "$file:${site + 1} registers a hold (`$text`) with no visible twin. Give the hold a " +
+                        "visible control that does the same thing (a button, chip or ⋮ on the screen) and put " +
+                        "`// twin: <that control>` within $TWIN_TAG_WINDOW lines above it. HOLD_WAIVERS only shrinks."
+                }
+            }
+            for (left in unused) {
+                problems += "$file: the hold waiver for `${left.lineText}` (${left.why}) matches no hold in the file. " +
+                    "Delete the entry and lower HOLD_WAIVER_CEILING; the list only shrinks."
+            }
+        }
+        for (file in waivers.keys - files.keys) problems += "$file: HOLD_WAIVERS names a file that is not in :app. Delete the entry."
+        return problems
+    }
+
+    @Test
+    fun `law - every press-and-hold names its visible twin, or is waived with an owner`() {
+        val files = requireAppKotlinFiles().associate { it.relativeToAppRoot() to it.readText(Charsets.UTF_8).lines() }
+        val found = files.values.sumOf { holdSites(it).size }
+        assertTrue(found > 20, "found $found hold sites under :app (recon counted about 40, 24 once the pencil went) - the scan is broken, not the tree.")
+        assertEquals(
+            HOLD_WAIVER_CEILING,
+            HOLD_WAIVERS.values.sumOf { it.size },
+            "lower the ceiling in the same change that removes a waiver (HOLD_WAIVERS only shrinks; a new hold takes a " +
+                "visible twin and a `// twin:` tag, and raising the ceiling is the visible admission that the list grew)",
+        )
+        val problems = holdTwinProblems(files, HOLD_WAIVERS)
+        assertTrue(
+            problems.isEmpty(),
+            "the spec's 7.4: every hold gets a visible equivalent.\n  " + problems.joinToString("\n  "),
+        )
+    }
+
+    @Test
+    fun `law - the hold-twin law finds an untagged hold, accepts a tagged one and a waived one, and skips scrims and declarations`() {
+        val untagged = listOf("Modifier.combinedClickable(", "    onLongClick = { arm() },", "    onClick = { open() },", ")")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to untagged), emptyMap()).size, "a bare hold is a fault")
+        val tagged = listOf("// twin: the ⋮ on the row", "Modifier.combinedClickable(", "    onLongClick = { arm() },", ")")
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to tagged), emptyMap()), "a tagged hold passes")
+        val far = listOf("// twin: the ⋮ on the row") + List(TWIN_TAG_WINDOW + 2) { "x" } + listOf("onLongClick = { arm() },")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to far), emptyMap()).size, "a tag too far above its hold does not count")
+        val semantic = listOf("semantics {", "    onLongClick(label = \"OPEN\") { open(); true }", "}")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to semantic), emptyMap()).size, "a semantics action is a hold")
+        val timed = listOf("scope.launch {", "    delay(LONG_PRESS_MS)", "}")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to timed), emptyMap()).size, "a hand-timed hold is a hold")
+        val waived = mapOf("A.kt" to listOf(HoldWaiver("fixture", "onLongClick = { arm() },")))
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to listOf("    onLongClick = { arm() },")), waived), "a waived hold passes")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to listOf("// twin: x", "onLongClick = { other() },")), waived).size, "a waiver that matches nothing is a fault")
+        val exempt = listOf(
+            "import androidx.compose.ui.semantics.onLongClick",
+            "// onLongClick = { x() }",
+            "    onLongPress: () -> Unit,",
+            "private const val LONG_PRESS_MS = 480L",
+            ".pointerInput(Unit) { detectTapGestures { } }",
+            "onLongClickLabel = \"SOMETHING\",",
+        )
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to exempt), emptyMap()), "imports, comments, declarations, scrims and labels are not holds")
     }
 }
