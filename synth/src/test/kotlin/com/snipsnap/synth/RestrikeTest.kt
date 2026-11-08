@@ -50,6 +50,12 @@ class RestrikeTest {
     fun `every take keeps the drum's root`() {
         var checked = 0
         for (p in patches()) {
+            // BOX and the hand drums are held by their modes instead (StrikeVelocityTest's bank test: the
+            // same ratios over the same fundamental at every velocity, and a take keeps the drum's
+            // structure seed). On their dense heads the detector's reading moves with the modes'
+            // balance, which a take's softer landing shifts: the fitted DJEMBE's open tone, its partials
+            // fixed at 559 and 582 Hz, read 39 cents apart between takes.
+            if (p is TerraPatch && (p.voice == TerraVoice.BOX || p.voice in Terra.HAND_DRUMS)) continue
             val ref = p.render()
             if (ref.durationSeconds < 0.32f) continue
             val root = Pitch.detect(ref, fromSec = 0.22f, windowSec = 0.10f)?.takeIf { it.confidence >= .5f } ?: continue

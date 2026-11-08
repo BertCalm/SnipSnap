@@ -53,16 +53,24 @@ object TerraKits {
     fun classic(): List<ArrangedPad?> = listOf(
         // Udu Low Whoomp: 55Hz, hardness 0.10, droop 0.05, CAVITY 0.90 ("deep air push").
         slot("Udu Whoomp", TerraVoice.RESONANT_CAVITY, DrumClass.KICK, "TUNE" to 0.1058f, "FORCE" to 0.10f, "DROOP" to 0.0769f, "CAVITY" to 0.90f), // A01
-        // Bayan Heel Drag: 65Hz, hardness 0.25, droop 0.55 (a bayan's own heel-pressure pitch sweep).
-        slot("Bayan Drag", TerraVoice.COMPOUND_MEMBRANE, DrumClass.KICK, "TUNE" to 0.0803f, "FORCE" to 0.25f, "DROOP" to 0.8462f), // A02
-        // Djembe Bass: 73Hz, hardness 0.30, droop 0.12, POS 0.05 ("warm thump") - measured KICK: see TerraTest's own note on why.
-        slot("Djembe Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.KICK, "TUNE" to 0.1362f, "FORCE" to 0.30f, "POS" to 0.05f, "DROOP" to 0.1846f), // A03
+        // Bayan Drag: the BAYAN voice (TerraFitted, 2026-11-08), fitted to the owner's bayan reference: a ghe on
+        // 92 Hz, the heel letting go from 1.6x (BEND 1). The owner: "Both work" for the fall and the held ghe (BEND 0).
+        // Classified TOM, as the classifier hears it: a real ghe's partials (267-741 Hz) put its centroid
+        // past a kick's, where the old 65 Hz membrane pad was a KICK.
+        slot("Bayan Drag", TerraVoice.BAYAN, DrumClass.TOM, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "BEND" to 1f), // A02
+        // Djembe Bass: the DJEMBE voice's bass stroke (TerraFitted, 2026-11-08), fitted to the owner's djembe reference,
+        // then round 10's B: a deeper bowl (58 Hz), a bigger boom and the palm's thump. Classified TOM, as the
+        // classifier hears it (centroid 128 Hz, low share 0.823, just under a kick's 0.85 at that centroid).
+        slot("Djembe Bass", TerraVoice.DJEMBE, DrumClass.TOM, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "STROKE" to 0f, "THUMP" to 0.5f), // A03
         // Cajon Low Port: 60Hz, hardness 0.20, CAVITY 0.70, BUZZ 0.15 ("slight snare rattle").
         slot("Cajon Low", TerraVoice.RESONANT_CAVITY, DrumClass.KICK, "TUNE" to 0.1516f, "FORCE" to 0.20f, "CAVITY" to 0.70f, "BUZZ" to 0.15f), // A04
-        // Dholak Bass: 98Hz, hardness 0.35, droop 0.35 ("heavy dynamic pitch sag").
-        slot("Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f), // A05
-        // Dumbek Doum: 110Hz, hardness 0.40, droop 0.18 ("full center mass displacement") - measured TOM: centroidHz=125.4, lowRatio=0.642, same honest bass-family reasoning as Djembe Bass above.
-        slot("Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f), // A06
+        // Dholak Bass: the DHOLAK voice (TerraFitted, 2026-11-08), fitted to the owner's dholak reference: 95 Hz falling
+        // from 1.55x (round 9's B, 7.6 semitones), the treble head ringing in sympathy.
+        slot("Dholak Bass", TerraVoice.DHOLAK, DrumClass.TOM, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "DROP" to 0.5f, "TREBLE" to 0.5f), // A05
+        // Dumbek Doum: the DOUM voice (TerraHands, 2026-11-08): the Dumbek Tek's goblet struck in its centre, its air at
+        // 110 Hz answering the head's net volume (round 5's A). Classified PERC, as the classifier hears it
+        // (centroid 200 Hz, low share 0.478): the 340 Hz head carries more of it than the air does.
+        slot("Dumbek Doum", TerraVoice.DOUM, DrumClass.PERC, "TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.4f, "AIR" to 0.5f, "SHELL" to 0.5f), // A06
         // Cajon Slap: a box. The spec's TUNED_BAR slap shared the balafon's bar modes and had no low end
         // (heard 2026-11-06 as "very similar" to Balafon Key); its RESONANT_CAVITY rebuild the same day
         // had the bass but read "too much like a drum machine rimshot". Now the BOX voice (TerraBox) at
@@ -71,8 +79,9 @@ object TerraKits {
         // macros are spelled out (BOX's defaults) so the pad never moves with them. Classified SNARE, as
         // the wires lift the high band past half (0.54); a cajón's slap is its backbeat.
         slot("Cajon Slap", TerraVoice.BOX, DrumClass.SNARE, "TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f), // A07
-        // Djembe Open Tone: 245Hz, hardness 0.50, droop 0.05, POS 0.5 ("harmonic mode resonance").
-        slot("Djembe Open", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f), // A08
+        // Djembe Open: the DJEMBE voice's open tone (TerraFitted, 2026-11-08), fitted to the owner's djembe reference,
+        // then round 9's B: the head's notes ringing 1.8x longer.
+        slot("Djembe Open", TerraVoice.DJEMBE, DrumClass.PERC, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "STROKE" to 1f, "THUMP" to 0.5f), // A08
         // Tabla Dayan (Tin): D4/293.6Hz, a rim strike. The DAYAN voice (TerraHands), from the owner's listening rounds (2026-11-07):
         // round 3's open ring "C but tighter, more forceful snap", then the third of three settings heard in
         // the app: a harder finger (FORCE 0.9) and more snap (CLICK 0.65). Its macros are spelled out so the
