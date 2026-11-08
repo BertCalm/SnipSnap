@@ -14,6 +14,22 @@ import kotlin.math.abs
 import kotlin.test.*
 
 class RivetStarterTest {
+    @Test fun `factory authoring retains soft legacy hits and escaped names`() {
+        for (voice in RivetVoice.entries) {
+            val versions = if (voice == RivetVoice.KICK || voice == RivetVoice.SNARE) listOf(1, 2) else listOf(2)
+            for (model in versions) {
+                val source = RivetPatch("Soft \"hit\" \$strike\\path", voice,
+                    modelVersion = model, velocity = .37f)
+                val expression = KotlinLiteral.parse(UserPresets.rosterLine(source).removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", expression.name)
+                assertEquals("RivetPatch", (expression.receiver as KotlinLiteral.Call).name)
+                val replay = RivetPatch.fromJsonText((expression.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(source, replay)
+                assertContentEquals(source.render().samples, replay.render().samples)
+            }
+        }
+    }
+
     @Test fun `industrial room search finds RIVET under drums`() {
         assertEquals(EngineCategory.DRUMS, EngineCatalog.entry("RIVET")?.primary)
         val names = EngineCatalog.ENTRIES.keys.toList()

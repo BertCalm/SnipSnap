@@ -310,7 +310,14 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.ErosionPatch) {
+            if (preset is com.snipsnap.synth.RivetPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("RivetPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.RivetPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted)
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.ErosionPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("ErosionPatch", (call.receiver as KotlinLiteral.Call).name)
@@ -1212,6 +1219,11 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.RivetPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.RivetPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.RivetPatch::class.java, decoder.returnType,
+                    "RIVET promotion retains native strike and renderer version")
+                assertTrue("private val promoted:" in text, "RIVET promotions need a destination beside the accepted bank")
             } else if (engine == com.snipsnap.synth.ErosionPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ErosionPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ErosionPatch::class.java, decoder.returnType,
