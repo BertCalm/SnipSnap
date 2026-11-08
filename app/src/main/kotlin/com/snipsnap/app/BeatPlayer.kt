@@ -149,6 +149,19 @@ class BeatPlayer(
 
     /** How far ahead of the needle steps have been handed to the engine, so each goes once. */
     private val cursor = BeatSchedule.Cursor()
+
+    /**
+     * The pass of the loop the windows are in: 0 from the start, one more each time the clock wraps. The step chances
+     * are rolled on it ([BeatSchedule.forEachNoteDue]), so a half-likely step is decided afresh every lap. Back to 0
+     * wherever the windows start over (stop, seek, anchor, a new pattern), so a restart replays the same first lap.
+     */
+    private var lap = 0L
+
+    /** Forget how far ahead the windows went, and the lap they were in. */
+    private fun resetWindow() {
+        cursor.reset()
+        lap = 0L
+    }
     private var clip: Mpc3Clip? = null
     private var fromScratchSteps = LiveRecord.DEFAULT_BARS * GrooveEdit.STEPS_PER_BAR
     private var programDir: File? = null
@@ -164,6 +177,8 @@ class BeatPlayer(
      * not push one for a kit it has not finished loading.
      */
     fun setProgram(dir: File, clip: Mpc3Clip?, fromScratchSteps: Int) {
+        // A different pattern starts its own first lap; an edit of the same one keeps counting.
+        if (clip?.name != this.clip?.name) lap = 0L
         this.programDir = dir
         this.clip = clip
         this.fromScratchSteps = fromScratchSteps
@@ -193,6 +208,7 @@ class BeatPlayer(
     fun anchorAt(nanos: Long, pos: Float) {
         anchorNanos = nanos
         anchorPos = pos
+        lap = 0L
     }
 
     /**
@@ -228,7 +244,7 @@ class BeatPlayer(
      * being where the windows were counting from - a stop, a seek, the loop ending for a restart.
      */
     private fun dropScheduled() {
-        cursor.reset()
+        resetWindow()
         val entry = kitNow() ?: return
         hosts.peek(entry.dir)?.engine?.cancelPending()
     }
@@ -364,7 +380,7 @@ class BeatPlayer(
         recording = false
         countingIn = false
         stop()
-        cursor.reset()
+        resetWindow()
         clip = null
         programDir = null
         position = 0f
@@ -468,7 +484,7 @@ class BeatPlayer(
         var lastPos = position
         // A new loop reads the stream afresh (it may be a new one) and counts its windows from the needle.
         audioClock.reset(engine.sampleRate())
-        cursor.reset()
+        resetWindow()
         anchorNanos = lastNanos
         anchorPos = lastPos
         // Fix 1's own seam bug: the count-in's click loop fires its four
@@ -596,7 +612,7 @@ class BeatPlayer(
         }
         val clip = t.clip
         if (clip != null && clip.notes.isNotEmpty()) {
-            BeatSchedule.forEachNoteDue(clip, from, to, t.totalSteps) { n, pos ->
+            BeatSchedule.forEachNoteDue(clip, from, to, t.totalSteps, lap) { n, pos ->
                 // Mpc3Note.slotFor, not `note - 35`: the map wraps, so notes 0..35 are pads 93..128 and
                 // subtracting alone gives them a slot no kit has.
                 //
@@ -627,6 +643,7 @@ class BeatPlayer(
             }
         }
         cursor.advance(to, if (t.wrapped) t.totalSteps else 0f)
+        if (t.wrapped) lap++
     }
 
     private companion object {

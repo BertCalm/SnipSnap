@@ -1624,6 +1624,9 @@ object Copy {
     const val STEP_ROLL = "ROLL"
     const val STEP_NUDGE = "NUDGE"
     const val STEP_LENGTH = "LENGTH"
+
+    /** The fourth row: how often the step sounds. Buttons say 100% / 75% / 50% / 25%. */
+    const val STEP_CHANCE = "CHANCE"
     const val STEP_EARLY = "EARLY"
     const val STEP_LATE = "LATE"
     const val STEP_CENTRE = "CENTRE"
@@ -1635,6 +1638,8 @@ object Copy {
     fun stepRollName(n: Int): String = "×$n"
     fun stepRollSpoken(n: Int): String = "ROLL ×$n"
     fun stepLengthSpoken(name: String): String = "LENGTH $name"
+    fun stepChanceName(percent: Int): String = "$percent%"
+    fun stepChanceSpoken(percent: Int): String = "CHANCE $percent%"
 
     /** The strip's reading of where the step's hits sit against its line, in pulses (240 to a step). A label, not a toast. */
     fun stepNudgeReading(pulses: Int): String = when {

@@ -3127,7 +3127,7 @@ private fun StepEditorOverlay(
                                         // read as identical unlabelled
                                         // squares to a screen reader.
                                         .stepCellClick(
-                                            label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}",
+                                            label = stepCellLabel(LANE_DRUM_WORD.getValue(lane), col, vel),
                                             // twin: the TAP · EDIT chip in StepEditorPanel, which makes a tap open the same detail
                                             onLongClick = { state.select(lane, step) },
                                         ) { state.tap(clip, lane, step) }
@@ -3135,9 +3135,8 @@ private fun StepEditorOverlay(
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .velocityFill(vel, laneColor)
                                         .border(
-                                            if (state.selLane == lane && state.selStep == step) 2.dp else 1.dp,
-                                            if (state.selLane == lane && state.selStep == step) scheme.amber.tape
-                                            else if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            stepEdgeWidth(state.selLane == lane && state.selStep == step, vel),
+                                            stepEdgeColor(state.selLane == lane && state.selStep == step, isPlayhead, vel, scheme),
                                             RoundedCornerShape(3.dp),
                                         ),
                                 )

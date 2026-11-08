@@ -102,11 +102,13 @@ object StepShape {
         val range = cellRange(clip, step)
         val start = cell.minOf { it.timePulses }.coerceIn(range.first, maxOf(range.first, range.last - spacing * (n - 1)))
         val velocity = cell.maxOf { it.velocity }
+        // The step's chance rides through a re-roll: the first hit's, as it is the one a nudge keeps.
+        val chance = cell.minBy { it.timePulses }.chance
         val note = GrooveEdit.noteFor(lane, pads)
         val length = if (n == 1) GrooveEdit.STEP_PULSES else spacing
         val hits = (0 until n).map { i ->
             val t = start + i * spacing
-            Mpc3Note(note, t, velocity, length.coerceAtMost(clip.lengthPulses - t).coerceAtLeast(1))
+            Mpc3Note(note, t, velocity, length.coerceAtMost(clip.lengthPulses - t).coerceAtLeast(1), chance)
         }
         val others = clip.notes.filterNot { it.note == note && GrooveEdit.cellOf(it.timePulses) == step }
         return clip.copy(notes = (others + hits).sortedBy { it.timePulses })
@@ -172,6 +174,30 @@ object StepShape {
             if (it.note == note && GrooveEdit.cellOf(it.timePulses) == step) {
                 it.copy(lengthPulses = length.pulses.coerceAtMost(gap).coerceAtMost(clip.lengthPulses - it.timePulses).coerceAtLeast(1))
             } else it
+        }
+        return if (notes == clip.notes) clip else clip.copy(notes = notes)
+    }
+
+    /** The chances a step can be given, percent, most often first. */
+    val CHANCES: List<Int> = listOf(100, 75, 50, 25)
+
+    /** How often the step sounds, percent: its earliest hit's; null for an off step. */
+    fun chanceOf(clip: Mpc3Clip, lane: Lane, step: Int, pads: List<Int> = GrooveEdit.DEFAULT_LANE_PADS): Int? =
+        notesOf(clip, lane, step, pads).minByOrNull { it.timePulses }?.chance
+
+    /**
+     * Every hit of the step set to sound [chance] percent of the time (the
+     * step rolls once, see [StepChance]). Nothing else about it moves.
+     * [clip] unchanged when the step is off or already that chance.
+     */
+    fun setChance(clip: Mpc3Clip, lane: Lane, step: Int, chance: Int, pads: List<Int> = GrooveEdit.DEFAULT_LANE_PADS): Mpc3Clip {
+        require(chance in 0..Mpc3Note.ALWAYS) { "chance is 0..${Mpc3Note.ALWAYS}: $chance" }
+        requireStep(clip, step)
+        val cell = notesOf(clip, lane, step, pads)
+        if (cell.isEmpty()) return clip
+        val note = GrooveEdit.noteFor(lane, pads)
+        val notes = clip.notes.map {
+            if (it.note == note && GrooveEdit.cellOf(it.timePulses) == step) it.copy(chance = chance) else it
         }
         return if (notes == clip.notes) clip else clip.copy(notes = notes)
     }

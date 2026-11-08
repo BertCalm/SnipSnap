@@ -127,7 +127,7 @@ object SessionBuilder {
             val grooves = groovesFor(index, kitDir)
             tracks += Mpc3ProjectTrack.Drum(
                 DrumProgram(kit.name, slots),
-                clips = GrooveEdit.forSequences(grooves, Mpc3ProjectWriter.MAX_SEQUENCES),
+                clips = GrooveEdit.forSequences(grooves, Mpc3ProjectWriter.MAX_SEQUENCES).map { ChanceExport.forMpc(it) },
             )
             kitTracks += kit.name
             if (tempo == null) tempo = kit.tempoBpm
