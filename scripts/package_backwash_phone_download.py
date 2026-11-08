@@ -23,7 +23,7 @@ apkButton.addEventListener('click',async()=>{
   const urls=PARTS;const chunks=[];let total=0;
   for(let i=0;i<urls.length;i++){
    status.textContent=`Preparing download: part ${i+1} of ${urls.length}…`;
-   const response=await fetch(urls[i],{credentials:'same-origin'});
+   const response=await fetch(urls[i],{credentials:'same-origin',cache:'no-store'});
    if(!response.ok)throw new Error('Download interrupted.');
    const bytes=new Uint8Array(await response.arrayBuffer());chunks.push(bytes);total+=bytes.length;
   }
@@ -39,7 +39,7 @@ apkButton.addEventListener('click',async()=>{
   status.textContent='APK verified. Open snipsnap-backwash-preview.apk from your downloads to install.';
  } catch(error){status.textContent=error.message+' Please try again.';}
  finally{apkButton.disabled=false;}
-});'''.replace('PARTS',json.dumps(parts)).replace('SIZE',str(len(apk))).replace('HASH',json.dumps(report['apkSha256']))
+});'''.replace('PARTS',json.dumps([part+'?v='+report['apkSha256'][:16] for part in parts])).replace('SIZE',str(len(apk))).replace('HASH',json.dumps(report['apkSha256']))
 s=re.sub(r'<script>const apkButton=.*?</script>', '', s, flags=re.S)
 s=s.replace('</body>','<script>'+script+'</script></body>');p.write_text(s)
 (assets/'apk-download.js').write_text(script)
