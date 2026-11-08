@@ -620,13 +620,13 @@ The one larger difference is 4 to 16 kHz after 0.3 s, 2 to 4.5 dB, about 100 dB 
 | TOOTH MARK | G1 | .75 / .35 / .55 / .5 / .5 / 0 | PERC | TONAL |
 | SLOW MELT | D#2 | 1 / .4 / .3 / .5 / .7 / .2 | PERC | TONAL |
 | CLIMB IN | A#1 | .4 / .5 / .25 / .38 / .5 / 0 | PERC | TONAL |
-| WARM HUSH | C2 | .5 / .5 / .3 / .5 / .5 / 1 | LOOP | LOOP |
+| WARM CALM | C2 | .5 / .5 / .3 / .5 / .5 / 1 | LOOP | LOOP |
 
 All six sit at the house loudness (-14.7 dB). Names avoid BITE, LIFT and DRONE, which are other engines' macro or voice words, though the name test checks only engines, voices and rack sections.
 
 **The classifier at C1.** A short BELLY one-shot under G1 reads as KICK (C1 and D#1 at LENGTH 0 to .5; G1 at velocity .3), as REDUCE and UPRIGHT do at C1: the decay reading is unreliable below one period of the note (`KEEL.md`, Limits). DEEP CUSHION is long for that reason, LOW HULL's fix.
 
-**The kit.** A01 to A08 unchanged (the REDUCE walk); A09 WARM GUT, A10 BRIGHT PICK (UPRIGHT); A11 SOFT PILLOW, A12 TOOTH MARK (BELLY); A13 QUICK SINK, A14 LOW HULL (REDUCE); A15 BOWED NOTE (UPRIGHT loop), A16 WARM HUSH (BELLY loop). MUTED THUMB, HOT WOOD and the REDUCE loop SETTLED HUM left the kit and stay presets: the walk already gives REDUCE eight pads, and a kit is sixteen.
+**The kit.** A01 to A08 unchanged (the REDUCE walk); A09 WARM GUT, A10 BRIGHT PICK (UPRIGHT); A11 SOFT PILLOW, A12 TOOTH MARK (BELLY); A13 QUICK SINK, A14 LOW HULL (REDUCE); A15 BOWED NOTE (UPRIGHT loop), A16 WARM CALM (BELLY loop). MUTED THUMB, HOT WOOD and the REDUCE loop SETTLED HUM left the kit and stay presets: the walk already gives REDUCE eight pads, and a kit is sixteen. (A16 was named WARM HUSH until HUSH became a rack section on 2026-11-07; renamed WARM CALM, as LOUD ROOM became LOUD HALL when ROOM did.)
 
 **Not heard:** Kotlin BELLY, its presets, its loop, and the fitted detune's faster beat on low held keys.
 

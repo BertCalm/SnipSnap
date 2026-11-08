@@ -43,6 +43,13 @@ import kotlin.math.tanh
  * TERRA's macros by name, its [Body] and HIT, its velocity and its takes,
  * not the bank or the output stage: no DROOP, no PUNCH.
  *
+ * SLAP, DAYAN and DARBUKA (2026-11-07) are the hand drums built the same
+ * way ([TerraHands]): a djembe slap, a tabla tin and a dumbek tek, each a
+ * circular head's hundreds of modes driven by the hand's contact, with the
+ * drum's body (a bowl's air, a syahi's harmonics, a ceramic shell). They
+ * came from the owner hearing COMPOUND_MEMBRANE's slap and rim pads as a
+ * drum machine.
+ *
  * Unlike [Modes.ring], the modal bank here can't be a fixed two-pole
  * recursion: DROOP needs the fundamental itself to slide during the decay,
  * so each mode is rung by a phase-accumulated oscillator re-tuned every
@@ -52,7 +59,7 @@ import kotlin.math.tanh
  * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
  * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX }
+enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA }
 
 object Terra {
 
@@ -112,7 +119,11 @@ object Terra {
             MacroSpec("BUZZ", 0f),
         )
         TerraVoice.BOX -> TerraBox.macros()
+        TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> TerraHands.macros(voice)
     }
+
+    /** The hand drums ([TerraHands]): their own render and output stage, like BOX. */
+    internal val HAND_DRUMS = setOf(TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA)
 
     /** The factory macro settings for [voice]. */
     fun defaults(voice: TerraVoice): Map<String, Float> =
@@ -187,12 +198,13 @@ object Terra {
         // BOX has its own output stage (TerraBox.finish): the prototype the
         // owner picked had no PUNCH.
         if (voice == TerraVoice.BOX) return Snip(TerraBox.finish(box(m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
+        if (voice in HAND_DRUMS) return Snip(TerraBox.finish(hand(voice, m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
         val (raw, clackFrames) = when (voice) {
             TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate, inputsFor, velocity, take) to 0
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity, take)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
-            TerraVoice.BOX -> error("BOX returned above")
+            TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> error("$voice returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -248,7 +260,30 @@ object Terra {
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity).first
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, bankOnly = true, velocity = velocity)
             TerraVoice.BOX -> box(m, renderRate, inputsFor, velocity, plateOnly = true)
+            TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
         }
+    }
+
+    /** Each hand drum's two seeds: its head's split pairs (the drum, fixed) and its hand's noise (per take). */
+    private fun handSeeds(voice: TerraVoice): Pair<Int, Int> = when (voice) {
+        TerraVoice.SLAP -> 47 to 53
+        TerraVoice.DAYAN -> 59 to 61
+        else -> 67 to 71
+    }
+
+    /**
+     * A hand drum ([TerraHands]) at the render [rate]: its [Body] is its head's modes (SLAP,
+     * DARBUKA) or the dayan's ring, untilted by velocity (TerraHands says why). A pitch curve is
+     * refused: these heads have no droop line.
+     */
+    private fun hand(voice: TerraVoice, m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)?, velocity: Float, take: Int = 0, headOnly: Boolean = false): FloatArray {
+        val (structure, noise) = handSeeds(voice)
+        val inputs = inputsFor?.let { f ->
+            val (modes, fundamental) = TerraHands.bodyModes(voice, m, structure)
+            f(Body(modes, fundamental, 0f, TerraHands.frames(rate), rate, onsetSamples = 0))
+        }
+        require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
+        return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
     }
 
     /**

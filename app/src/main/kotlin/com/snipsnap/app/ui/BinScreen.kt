@@ -37,7 +37,7 @@ import java.io.File
  * taken back (`docs/SCREEN_PLAN_2026_10.md` §3.1 and §3.8) — reached from the
  * shelf, and from SNIPS' own BIN door, with a back chip that names where it was
  * opened from ([backLabel], the model's words: SHELF over the shelf, SNIPS over SNIPS). It
- * holds two headed lists, DELETED KITS above DELETED SNIPS, each with its own
+ * holds two headed lists, DELETED KITS AND PROJECTS above DELETED SNIPS, each with its own
  * RESTORE rows and its own EMPTY THE BIN NOW.
  *
  * It is one screen rather than two because the two it replaces
@@ -65,6 +65,8 @@ fun BinScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitRestored: (KitShelf.Entry) -> Unit,
+    /** A deleted project came back: the shelf re-reads its PROJECTS (a bin restore never shows them otherwise). */
+    onProjectRestored: () -> Unit = {},
     onSnipRestored: (File) -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -100,6 +102,7 @@ fun BinScreen(
             shelf = shelf,
             onToast = onToast,
             onRestored = onKitRestored,
+            onProjectRestored = onProjectRestored,
             onBusyChange = { kitsBusy = it },
             modifier = Modifier.fillMaxWidth().weight(1f),
         )

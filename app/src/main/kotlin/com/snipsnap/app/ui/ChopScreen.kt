@@ -1054,6 +1054,7 @@ private fun ChopContent(
                         // fingers. The picker offers the same thing in
                         // words, which is finding 21's complaint about
                         // hidden long-presses answered in passing.
+                        // twin: the class picker's THE MACHINE SAID row (ClassPicker onMachine), one tap on the chip away
                         onLongPressChip = {
                             model.clearOverride(row.n - 1)
                             pickerFor = null
@@ -1688,6 +1689,7 @@ private fun SliceRow(
                     // clearOverride). Tapping is what reclassifies, by
                     // opening the picker. TalkBack was announcing this
                     // action as the one gesture it is not.
+                    // twin: the class picker's THE MACHINE SAID row (ClassPicker onMachine), opened by a tap on this same chip
                     onLongClickLabel = "RESTORE THE MACHINE'S CALL",
                     onLongClick = { onLongPressChip() },
                     onClick = { onTapChip() },

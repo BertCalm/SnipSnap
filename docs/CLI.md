@@ -566,7 +566,10 @@ VIBRATO section at 5.5 Hz: the pitch swings 42 cents at AMT 70, the pad sheet's 
 none at AMT 0; for held sounds, a choir and a snare are too short for it to read) and `dived` (a whammy dive, the
 DIVE section: the pitch falls 12 semitones over about 170 ms at AMT 70, the pad sheet's tap, and about 17 at AMT 100,
 less below and none at AMT 0, and holds there; the pad grows as a lower pitch does; for held sounds, a snare, a tom
-and a rim are too short for a dive).
+and a rim are too short for a dive) and `hushed` (a gate, the HUSH section: the pad is shut to silence 12 dB under its
+peak over about 87 ms at AMT 70, the pad sheet's tap, and 6 dB under it at AMT 100, a deeper and later gate below and
+none at AMT 0; for tails, so a snare with ROOM on it is the gated 80s snare, while a dry snare is only shorter and a
+hat a stub).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -582,7 +585,7 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), `eased` (in front of the amp, fixed
-there), `vibratoed` (after the amp, fixed there), `dived` (in front of the amp, fixed there), and
+there), `vibratoed` (after the amp, fixed there), `dived` (in front of the amp, fixed there), `hushed` (after the amp and the room, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -603,8 +606,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY · ROOM · FADE IN · VIBRATO · DIVE — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
-`delayed`, `roomed`, `eased`, `vibratoed` and `dived`), of which the row draws five, the user's choice and the same
+DELAY · ROOM · FADE IN · VIBRATO · DIVE · HUSH — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed`, `roomed`, `eased`, `vibratoed`, `dived` and `hushed`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);

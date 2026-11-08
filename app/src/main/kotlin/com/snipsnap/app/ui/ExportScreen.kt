@@ -1442,6 +1442,7 @@ private fun CardRow(
                     indication = null,
                     enabled = enabled,
                     onClickLabel = "PICK A CARD",
+                    // twin: the FORGET CARD button beside the card (Copy.CARD_FORGET), which calls the same onForget
                     onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
                     onLongClick = if (tree != null) onForget else null,
                     onClick = onPick,

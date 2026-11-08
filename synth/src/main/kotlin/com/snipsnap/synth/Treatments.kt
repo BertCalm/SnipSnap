@@ -151,6 +151,14 @@ object Treatments {
         // on the heard setting). AMT 1 falls about 17 semitones. OVER is left at its default, which is also its neutral, so AMT
         // never moves the fall time. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
         "dived" to FxChain(dive = mapOf("DROP" to 0.5f / 0.7f)),
+        // HUSH: a gate, the pad shut to silence once it falls FLOOR under its own peak. The owner heard it at its gate
+        // (2026-11-07) on a snare and a tom through ROOM, a dry snare and an open hat: the snare through ROOM is the gated
+        // 80s snare, the dry snare only a shorter snare, the hat a stub. They chose 12 dB under the peak at the default
+        // close (about 87 ms) for a tap. A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and
+        // BoardSheet.DEFAULT_AMOUNT, which synth cannot see; PadSheetTest pins that they still land here) and FLOOR fades
+        // linearly toward 0, so FLOOR 1.0 makes a tap FLOOR 0.7, which HUSH's law puts at 12 dB. AMT 1 is 6 dB, a lower AMT
+        // a deeper and later gate, and AMT 0 no gate at all. CLOSE is left at its default, which is also its neutral.
+        "hushed" to FxChain(hush = mapOf("FLOOR" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

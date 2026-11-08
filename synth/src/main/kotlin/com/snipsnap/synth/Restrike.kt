@@ -12,7 +12,8 @@ import kotlin.random.Random
  * - a little softer or harder ([FORCE_SPREAD], through [StrikeVelocity]:
  *   the modes' balance, the bend and the grit move together);
  * - a little off the last spot, on TERRA ([POSITION_SPREAD] on POS, which
- *   reweights the modes by where the head is struck);
+ *   reweights the modes by where the head is struck; a voice without POS,
+ *   DAYAN, keeps its spot);
  * - with its own click or grit, since each take re-seeds the strike's noise
  *   (`take` on [Skin.render] and [Terra.render]).
  * The root and the decay are the drum's own on every take.
@@ -54,8 +55,9 @@ object Restrike {
         return when (patch) {
             is SkinPatch -> Skin.render(patch.voice, patch.macros, velocity = v, take = take)
             is TerraPatch -> {
-                val pos = Terra.defaults(patch.voice).getValue("POS")
-                val moved = if (take == 0) patch.macros
+                // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
+                val pos = Terra.defaults(patch.voice)["POS"]
+                val moved = if (take == 0 || pos == null) patch.macros
                 else patch.macros + ("POS" to ((patch.macros["POS"] ?: pos) + offset).coerceIn(0f, 1f))
                 Terra.render(patch.voice, moved, patch.striker, velocity = v, take = take)
             }
