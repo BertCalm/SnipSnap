@@ -3362,6 +3362,26 @@ tasks.register<JavaExec>("generateBackwashPushedKit") {
     args("${rootDir}/testkit/backwash-pushed-kit", "pushed")
 }
 
+tasks.register<JavaExec>("generateHalobarKit") {
+    group = "distribution"
+    description = "Render the HALOBAR vibraphone, marimba and xylophone listening kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarKitGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateHalobarAudition") {
+    group = "distribution"
+    description = "Render HALOBAR native voice, macro, phrase and performance evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition")
+}
+
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"
     description = "Render the reference-informed dry revision without altering the rejected first study."

@@ -103,6 +103,9 @@ import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
 import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.Ferry
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Chitin
 import com.snipsnap.synth.ChitinVoice
 import com.snipsnap.synth.ChitinPresets
@@ -326,8 +329,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(ChitinPatch.ENGINE, LorentzPatch.ENGINE, RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
-            throw CliError("--patch is only supported by CHITIN, RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, OBBLIGATO, LATTICE, OHM, FERRY, MERIDIAN, OTIS and LORENTZ, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(HalobarPatch.ENGINE, ChitinPatch.ENGINE, LorentzPatch.ENGINE, RimePatch.ENGINE, ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE, MeridianPatch.ENGINE, OtisPatch.ENGINE)) {
+            throw CliError("--patch is only supported by HALOBAR, CHITIN, RIME, APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, OVERLAP, OBBLIGATO, LATTICE, OHM, FERRY, MERIDIAN, OTIS and LORENTZ, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -370,6 +373,7 @@ object SynthCommand {
         }
         val macroOverrides = opts["--macros"]?.let { raw ->
             val names = when (engine) {
+                HalobarPatch.ENGINE -> Halobar.macrosFor(HalobarVoice.valueOf(voice))
                 ChitinPatch.ENGINE -> Chitin.macrosFor(ChitinVoice.valueOf(voice))
                 RimePatch.ENGINE -> Rime.macrosFor(RimeVoice.valueOf(voice))
                 OtisPatch.ENGINE -> Otis.macrosFor(OtisVoice.valueOf(voice))
@@ -386,7 +390,7 @@ object SynthCommand {
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 ObbligatoPatch.ENGINE -> Obbligato.macrosFor()
                 OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.SOURCE_MODEL)
-                else -> throw CliError("--macros is only supported by OBBLIGATO, MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
+                else -> throw CliError("--macros is only supported by HALOBAR, OBBLIGATO, MERIDIAN, RIME, OTIS, TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM, FERRY, LORENTZ and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -434,6 +438,7 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OverlapPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, LatticePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                HalobarPatch.ENGINE -> Halobar.minimumMidi(HalobarVoice.valueOf(voice))..Halobar.MAX_MIDI
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OtisPatch.ENGINE -> Otis.MIDI_MIN..Otis.MIDI_MAX
                 LorentzPatch.ENGINE -> Lorentz.MIN_MIDI..Lorentz.MAX_MIDI
@@ -487,7 +492,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by MERIDIAN, OTIS, APSIS, ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM, FERRY and FILAMENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by HALOBAR, MERIDIAN, OTIS, APSIS, ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM, FERRY and FILAMENT, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -634,6 +639,8 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is HalobarPatch -> if (midiOverride == null) patch else patch.copy(
+                    macros=patch.macros+("TUNE" to Halobar.tuneForMidi(patch.voice,midiOverride)))
                 is RimePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is LorentzPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to (midiOverride - Lorentz.MIN_MIDI) / Lorentz.TUNE_SEMITONES.toFloat()),
@@ -730,7 +737,9 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is LorentzPatch) {
+            if (withNote is HalobarPatch) {
+                withNote.copy(macros=withNote.macros+macroOverrides)
+            } else if (withNote is LorentzPatch) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is ChitinPatch) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
@@ -962,7 +971,7 @@ object SynthCommand {
             val meridianHeld = if (patch is MeridianPatch && Meridian.isLoop(patch.macros, patch.model)) {
                 Meridian.renderHeld(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seedContext, patch.model)
             } else null
-            val snip = if (heldObbligato != null) heldObbligato.snip else if (heldOverlap != null) heldOverlap.snip else if (meridianHeld != null) meridianHeld.snip else if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
+            val snip = if (heldObbligato != null) heldObbligato.snip else if (heldOverlap != null) heldOverlap.snip else if (meridianHeld != null) meridianHeld.snip else if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if ((patch is TesseraPatch || patch is HalobarPatch) && velocityOverride != null) {
                 val dry = Velocity.atVelocity(patch, velocityOverride)
                 landing?.process(dry) ?: dry
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
@@ -988,7 +997,7 @@ object SynthCommand {
                     CausticInstrument.isLoop(it.voice, it.macros, it.model)
                 }?.let { SmplChunk(it.midi, SmplChunk.Loop(0, snip.frameCount.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is ChitinPatch || patch is LorentzPatch || patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+            if (patch is HalobarPatch || patch is ChitinPatch || patch is LorentzPatch || patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
