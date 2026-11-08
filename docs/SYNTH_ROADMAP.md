@@ -3304,3 +3304,19 @@ record. The pre-existing saved-pad device callback failure above is not claimed
 fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
 is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
 See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
+
+### BACKWASH factory bank (2026-11-08)
+
+Owner-requested picker engine: damped drum sources → resonant chorus → parallel
+compression → amp. Five drum voices, six macros, finite one-shots. Existing
+UNDERTOW is unrelated and unchanged. Model 3 now has the sixteen heard kit
+recipes in the factory roster, with a 48-layer MPC 3/MPC 2 trial export.
+Phone timing, device UI execution and confirmed MPC hardware validation remain pending; see [BACKWASH](BACKWASH.md) and
+[spec](superpowers/specs/2026-11-07-backwash-drum-engine-design.md).
+
+
+BACKWASH processing promotion (2026-11-08): owner-approved Seasick, Clamped,
+Overloaded and Pushed treatments now supply 20 additional factory presets.
+Processing model 4 extends upper macro ranges; saved model-3 recipes retain a
+frozen renderer. A separate 16-pad/48-layer stronger kit and updated Android
+preview accompany the promotion; hardware validation remains pending.

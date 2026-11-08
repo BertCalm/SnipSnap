@@ -236,6 +236,7 @@ object Velocity {
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is SkinPatch -> Skin.macrosFor(patch.voice)
+        is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
@@ -484,6 +485,7 @@ object Velocity {
         // brighter click (StrikeVelocity). SKIN SNARE additionally changes
         // its wire excitation; hats, ride and shaker retain their macro response.
         is SkinPatch -> if (patch.voice in Skin.STRUCK) Skin.render(patch.voice, patch.macros, velocity = v) else null
+        is BackwashPatch -> patch.render(v)
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep

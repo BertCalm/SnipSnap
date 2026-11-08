@@ -67,6 +67,28 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         .fetchSemanticsNodes().isNotEmpty()
 
     @Test
+    fun backwashRestoresItsDrumVoiceAndSixControls() {
+        show("BACKWASH", "SNARE")
+        button("SNARE").assertIsSelected()
+        button("PRESET Tight Snare").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.9f, progress("DAMP"), .0001f)
+        for (label in listOf("TUNE", "DAMP", "SWAY", "TRAIL", "PRESS", "DRIVE")) button(label).assertExists()
+        adjust("TRAIL", .8f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("BACKWASH", settings["engine"])
+        assertEquals(.8f, progress("TRAIL"), .0001f)
+        assertFalse(showsLoop())
+        button("PRESET Pushed Snare").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        for (label in listOf("SWAY", "TRAIL", "PRESS", "DRIVE")) assertEquals(1f, progress(label), .0001f)
+        compose.runOnIdle { generation++ }
+        pump()
+        for (label in listOf("SWAY", "TRAIL", "PRESS", "DRIVE")) assertEquals(1f, progress(label), .0001f)
+    }
+
+    @Test
     fun chitinLoadsCandidateBassAndKeepsMaximumHoldFinite() {
         show("CHITIN", "SHELL")
         button("SHELL").assertIsSelected()

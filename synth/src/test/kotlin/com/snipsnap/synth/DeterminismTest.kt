@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `BACKWASH replays every saved drum byte for byte`() {
+        for (voice in BackwashVoice.entries) {
+            val patch = BackwashPatch("Canary", voice, Backwash.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
         val fx = BoomBapKits.coloration

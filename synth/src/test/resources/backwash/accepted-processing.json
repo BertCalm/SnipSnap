@@ -1,0 +1,102 @@
+[
+  {
+    "voice": "KICK",
+    "prefix": "Seasick",
+    "sha256": "573bf2bfc6a66ca681280cc5a1608bb2085ff18751f7258943bfe461b5e90350"
+  },
+  {
+    "voice": "KICK",
+    "prefix": "Clamped",
+    "sha256": "6c232826087272796344285a580e945d882a68285a98d48199ae879ab5d88f98"
+  },
+  {
+    "voice": "KICK",
+    "prefix": "Overloaded",
+    "sha256": "3a7a2195c924c9a1e174e3911c99d550e0a1ef7075226ee936a9797331901164"
+  },
+  {
+    "voice": "KICK",
+    "prefix": "Pushed",
+    "sha256": "c389f67b62ad0bf72c6c90b83cacac7262ac049b92ac205503f7659b775e8710"
+  },
+  {
+    "voice": "SNARE",
+    "prefix": "Seasick",
+    "sha256": "7f4107453ebc904eb83551a0f26aef5b19687a276fdb89206bfc998850e0f4df"
+  },
+  {
+    "voice": "SNARE",
+    "prefix": "Clamped",
+    "sha256": "1fe903e8a34d7202b1fd0083f24e47c43000b4f61e31634f3edd1c2eae3e3ae9"
+  },
+  {
+    "voice": "SNARE",
+    "prefix": "Overloaded",
+    "sha256": "896e9a561a1bb1bb085d422ce2bdc6ea0fa5be89e29255b61ce233055ff41ba4"
+  },
+  {
+    "voice": "SNARE",
+    "prefix": "Pushed",
+    "sha256": "4f2c8777ff0a079103a6cae51be9eb85cb2c21ecd024d2778a2c5776a64247bd"
+  },
+  {
+    "voice": "TOM",
+    "prefix": "Seasick",
+    "sha256": "3672e11158fd8fc341875beb609bc385322ff7f76553c301bec70f478ba58a94"
+  },
+  {
+    "voice": "TOM",
+    "prefix": "Clamped",
+    "sha256": "200a4707584e5b76777c5d6723836a9ce3d21da68af08c152d0b587f8bb25d06"
+  },
+  {
+    "voice": "TOM",
+    "prefix": "Overloaded",
+    "sha256": "581f00f2a35f9882926f520190f42d60963845cc8d87f56fa73c55a1a64da4fc"
+  },
+  {
+    "voice": "TOM",
+    "prefix": "Pushed",
+    "sha256": "daf1d9c00e6aa25e414950136acfe4c2c12f035895d5a83d6eef510b672efb47"
+  },
+  {
+    "voice": "HAT_CLOSED",
+    "prefix": "Seasick",
+    "sha256": "236616cf672818daf63a5bea9a4aae442578e34288803f6f96ca24bb972fbce5"
+  },
+  {
+    "voice": "HAT_CLOSED",
+    "prefix": "Clamped",
+    "sha256": "3ffcf7018b83e4e2ab355645341c6f4de06312df3d982337d9d377ccdf4527a9"
+  },
+  {
+    "voice": "HAT_CLOSED",
+    "prefix": "Overloaded",
+    "sha256": "8b4e55d25709d26ea1cb6629d94aba239fcb319d8d7e4718ef8b32ccba2cad55"
+  },
+  {
+    "voice": "HAT_CLOSED",
+    "prefix": "Pushed",
+    "sha256": "631da667298ad406751718b24009b4db81f568cd4d37025e77f639330e1d687a"
+  },
+  {
+    "voice": "HAT_OPEN",
+    "prefix": "Seasick",
+    "sha256": "ccf419b60e37b6be33fddfbd5eafc30df1b7596d45aa7de2ca369e7e7b9ba862"
+  },
+  {
+    "voice": "HAT_OPEN",
+    "prefix": "Clamped",
+    "sha256": "d7c930b3e31a62d35b3a88b7ddbad9456d6a0d470afdbc600fab7f5a24802b6d"
+  },
+  {
+    "voice": "HAT_OPEN",
+    "prefix": "Overloaded",
+    "sha256": "00255cf707dc4b2a0d01fc055e7f1f8c58247d6770dcfe4b7c0e23ff3d85c34a"
+  },
+  {
+    "voice": "HAT_OPEN",
+    "prefix": "Pushed",
+    "sha256": "a658ce0f8f194783a157e2597c0894f01be9fb711e6a565408cf3f2b8b2965d8"
+  }
+]
