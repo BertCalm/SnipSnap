@@ -257,8 +257,10 @@ each in this cloud JVM. Android device timing is not measured. Two Compose
 regressions cover mode selection/navigation and sending/reopening a real pad;
 they require Android CI or a device, not the JVM gate.
 
-Full JVM gate: `./gradlew --no-daemon test` completed with exit status 0.
-The nine modules report **9,098 tests**, zero failures, errors or skips.
-After a workspace interruption, the recovery run reran all 2,244 shell tests
-and reused completed module results (21m 15s, one test task executed).
-Android compilation and the two new device regressions are tracked in CI.
+Full JVM gate on the merged base (`22ab69f22`): `./gradlew --no-daemon test`
+completed with exit status 0. The nine modules report **9,122 tests**, zero
+failures, errors or skips, including three shelf regressions for Backroom
+promotion, original SKIN promotion and breeding across both models. Completed
+module results were reused after interruptions; the final 304 CLI tests reran
+successfully. Android compilation and the two new device regressions are tracked
+in CI.
