@@ -118,8 +118,8 @@ internal object TerraHands {
             MacroSpec("POS", 0.875f), MacroSpec("BOWL", 0.5f), MacroSpec("SMACK", 0.5f))
         // TUNE: the tonic, 196 to 440 Hz (0.5 is D4). DECAY: the ring's length. OPEN: 0 the ring
         // finger mutes the fundamental (na), 1 it rings. CLICK: the finger's snap on the kinar.
-        TerraVoice.DAYAN -> listOf(MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.8f),
-            MacroSpec("OPEN", 1f), MacroSpec("CLICK", 0.5f))
+        TerraVoice.DAYAN -> listOf(MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.9f),
+            MacroSpec("OPEN", 1f), MacroSpec("CLICK", 0.65f))
         // TUNE: the head's (0, 1) mode, 200 to 600 Hz (0.483 is 340 Hz). DECAY: the head's T60,
         // 150 ms to 480 to 1 s. SHELL: how long the ceramic rings. SNAP: the fingertip's snap.
         TerraVoice.DARBUKA -> listOf(MacroSpec("TUNE", 0.483f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.92f),
