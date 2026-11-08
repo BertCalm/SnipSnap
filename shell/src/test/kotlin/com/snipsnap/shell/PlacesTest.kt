@@ -81,4 +81,29 @@ class PlacesTest {
             assertFalse("▾" in drawn, "▾ has no glyph in either face and draws as a dot: " + drawn)
         }
     }
+
+    @Test
+    fun `the menus that open as sheets name a thing and say what it does on a line of its own, in capitals and with no arrow`() {
+        val pairs = listOf(
+            Places.ARM_MIC to Places.ARM_MIC_DESC,
+            Places.ARM_INSIDE to Places.ARM_INSIDE_DESC,
+            Places.SHEET_ADD_FROM_SHELF to Places.SHEET_ADD_FROM_SHELF_DESC,
+            Places.TOOL_BACKUP to Places.TOOL_BACKUP_DESC,
+            Places.TOOL_CHOP_ALL to Places.TOOL_CHOP_ALL_DESC,
+            Places.TOOL_XRAY to Places.TOOL_XRAY_DESC,
+            Places.TOOL_DOUBLES to Places.TOOL_DOUBLES_DESC,
+            Places.PROJECT_RENAME to Places.PROJECT_RENAME_DESC,
+            Places.PROJECT_DELETE to Places.PROJECT_DELETE_DESC,
+            Places.PROJECT_DROP to Places.PROJECT_DROP_DESC,
+        )
+        for ((name, description) in pairs) {
+            for (line in listOf(name, description)) {
+                assertFalse("▸" in line, "the description is a line of its own, not after an arrow: $line")
+                assertEquals(line.uppercase(), line, "TapeOS shouts: $line")
+            }
+        }
+        for (title in listOf(Places.ARM_SHEET_TITLE, Places.SHEET_KITS_TITLE, Places.TOOLS_TITLE, Places.STARTER_SHEET_TITLE)) {
+            assertEquals(title.uppercase(), title)
+        }
+    }
 }

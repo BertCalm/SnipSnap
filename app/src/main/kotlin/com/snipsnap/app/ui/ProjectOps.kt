@@ -39,6 +39,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.ShelfModel
 import java.util.Locale
 
@@ -167,7 +168,7 @@ internal fun ProjectOpsHost(
     }
 }
 
-/** A scrim and a raised card: the shape `ChoiceSheet` and the kit dialogs share, with a heading line. */
+/** A scrim and a raised card: the shape the kit dialogs share, with a heading line. */
 @Composable
 private fun OpsCard(heading: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val scheme = LocalScheme.current
@@ -194,6 +195,12 @@ private fun OpsCard(heading: String, onDismiss: () -> Unit, content: @Composable
     }
 }
 
+/**
+ * The project row's menu, as a [SheetMenu] titled with the project's name: RENAME,
+ * DELETE and REMOVE A KIT, each a name and the line under it. REMOVE A KIT is
+ * disabled, not hidden, when there is nothing to take out. Each row keeps the accessible
+ * name that says which project it acts on.
+ */
 @Composable
 private fun ProjectMenuCard(
     row: ShelfModel.ProjectRow,
@@ -202,21 +209,17 @@ private fun ProjectMenuCard(
     onDrop: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val scheme = LocalScheme.current
     val name = row.name.uppercase(Locale.ROOT)
-    OpsCard(name, onDismiss) {
-        ActionButton("RENAME", scheme, enabled = true, accessibilityLabel = "RENAME PROJECT $name", modifier = Modifier.fillMaxWidth(), onClick = onRename)
-        ActionButton("DELETE", scheme, enabled = true, accessibilityLabel = "DELETE PROJECT $name", modifier = Modifier.fillMaxWidth(), onClick = onDelete)
-        // Disabled, not hidden, when there is nothing to take out.
-        ActionButton(
-            "REMOVE A KIT ▸",
-            scheme,
+    SheetMenu(name, onDismiss) {
+        SheetRow(Places.PROJECT_RENAME, Places.PROJECT_RENAME_DESC, onRename, accessibilityLabel = "RENAME PROJECT $name")
+        SheetRow(Places.PROJECT_DELETE, Places.PROJECT_DELETE_DESC, onDelete, accessibilityLabel = "DELETE PROJECT $name")
+        SheetRow(
+            Places.PROJECT_DROP,
+            Places.PROJECT_DROP_DESC,
+            onDrop,
             enabled = row.project.kits.isNotEmpty(),
             accessibilityLabel = "REMOVE A KIT FROM PROJECT $name",
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onDrop,
         )
-        ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
     }
 }
 
