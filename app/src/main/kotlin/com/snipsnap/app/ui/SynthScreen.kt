@@ -6649,6 +6649,30 @@ private fun PresetList(
     key(engine, voice, "YOURS") {
         PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
     }
+    // The visible twin of that hold: while one of the player's own is the
+    // loaded sound, its FORGET door sits under the strip and asks the same
+    // question the hold asks.
+    yours.firstOrNull { it.name == current }?.let { chosen ->
+        PresetForgetDoor(chosen.name, scheme) { onHold(chosen) }
+    }
+}
+
+/** FORGET for the loaded YOURS preset: the same dialog a hold on its chip opens, which says the bin keeps it. */
+@Composable
+private fun PresetForgetDoor(name: String, scheme: Scheme, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(56.dp))
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = "${Copy.PRESET_FORGET_DOOR} YOUR PRESET $name", onClick = onClick)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+        }
+    }
 }
 
 /**
@@ -6712,6 +6736,7 @@ private fun PresetStrip(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClickLabel = "$spoken ${p.name}",
+                                        // twin: PresetForgetDoor, the FORGET door under the YOURS strip while this preset is loaded
                                         onLongClickLabel = "FORGET ${p.name}",
                                         onLongClick = { onHold(p) },
                                         onClick = { onSelect(p) },
