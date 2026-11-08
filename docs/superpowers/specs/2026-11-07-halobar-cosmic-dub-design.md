@@ -230,6 +230,16 @@ records the exact tested tree, source hashes, APK hash, timing samples and scope
 `NativeReplay.java` and its TSV fixture make the same-runtime parity check
 repeatable. Physical phone/MPC behavior and browser QA remain unverified.
 
+The later development integration, based on `2e572bf4c`, preserves both SKIN
+and HALOBAR preset restoration. Its 273 focused JVM checks passed
+(135 synth, 137 shelf/integration, 1 CLI), as did all six
+native C++ tests, Android assembly and device-test compilation. The 195-case
+Float32 replay and twelve approved factory parameter comparisons passed again.
+The merged downbeat regression test was corrected to pass its required lap
+argument. These are focused checks on the later base; the complete nine-module
+suite was not repeated there. The earlier complete-run and correction scopes above remain
+separate. HALOBAR DSP and approved audio remain unchanged.
+
 ## Evidence ledger
 
 - Verified: real repository APIs, registrations and initial focused test exit

@@ -1,7 +1,7 @@
 {
   "engine": "HALOBAR",
   "audioModel": 1,
-  "recordedUtc": "2026-11-08T17:38:43.610019+00:00",
+  "recordedUtc": "2026-11-08T17:57:24.922974+00:00",
   "acceptance": {
     "ownerMessage": "Sound great, continue",
     "date": "2026-11-08",
@@ -10,14 +10,15 @@
     "approvedSourceCommit": "c54f01b44f8295757a78a4de8f44f9c00acb4473",
     "approvedSiteVersion": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_8d7953272df081918cc6b1ad67c85264"
   },
-  "integrationBase": "22ab69f22f8a0d5f88e151b11059565e4482622c",
+  "integrationBase": "2e572bf4c25eb2ceaa9ca74dd26263a267e75eb1",
   "fullRunTree": "475aa0bf6e5e2e0289dba75b1f706eed096ff3b0",
   "postFixSourceCommit": "aa6b57687e76ed758fade6de2554abbbcd35e295",
   "sourceSha256": {
     "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt": "85c959d7865f568f17d70a93ca921fb92ee1e3b3a486f48cd660fcbc3a69391a",
     "synth/src/main/kotlin/com/snipsnap/synth/HalobarPresets.kt": "c89605613ebc93df8afdda489fb3664634ffb7a7c6d525a249f39331744556b7",
     "synth/src/main/kotlin/com/snipsnap/synth/Presets.kt": "2ea1d95b633d1026b8ae8b90f69fb070b019e5434efc1c269697bfc7b196e3dd",
-    "shell/src/main/kotlin/com/snipsnap/shell/UserPresets.kt": "5d1ab129190e0971f990be892f1e936f04ddb779da9f1918f9e02a2fa9536441"
+    "shell/src/main/kotlin/com/snipsnap/shell/UserPresets.kt": "774b806db83ff2ac124be012ae74e0b90e29ed3393f8468c1fbf2f60e0322a1c",
+    "app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt": "fea53ffe533c416e3990ce89637c506fb8f563d152a7c965456676625d70c384"
   },
   "factoryRecipes": {
     "count": 12,
@@ -531,13 +532,16 @@
       "tests": 53,
       "scope": "HALOBAR engine/presets, shared registry, patch/recipe decoding and HALOBAR determinism"
     },
-    "scope": "Latest coverage combines the complete run with passing correction results by module, class and testcase. The complete command originally exited 1; the full synth suite was not repeated after the source-only shelf fix. All eight other JVM modules reran, with the affected synth suites rechecked."
+    "scope": "Latest coverage combines the complete run with passing correction results by module, class and testcase. The complete command originally exited 1; the full synth suite was not repeated after the source-only shelf fix. All eight other JVM modules reran, with the affected synth suites rechecked. These earlier complete-run and correction scopes belong to development base 22ab69f22; currentBaseIntegration separately records the later focused integration checks.",
+    "integrationBase": "22ab69f22f8a0d5f88e151b11059565e4482622c"
   },
   "android": {
     "command": "./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin",
     "exitCode": 0,
-    "bytes": 82122871,
-    "sha256": "e374366cca2c9fe76e62c9eebaeaba3b6b801e8641e3ff41ddc0ec9816cd4799",
+    "bytes": 82180219,
+    "sha256": "360c0fa9f5f5941b32e62eca3da2d0acbf74310e126187b553b58d96e07a32c4",
+    "sourceCommit": "4565f3e697bfd2e16eab8a5790f1e6aea8a6ccf0",
+    "sourceTree": "0a3cb47d6d189049517d68996084688523c73b36",
     "onDeviceExecution": "unverified"
   },
   "checks": [
@@ -648,5 +652,198 @@
     "Browser playback unverified in the managed environment",
     "HOLD is finite and does not create seamless sampler loops",
     "Full JVM run and correction scopes must be reported separately"
-  ]
+  ],
+  "previousIntegrationBase": "22ab69f22f8a0d5f88e151b11059565e4482622c",
+  "previousSourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt": "85c959d7865f568f17d70a93ca921fb92ee1e3b3a486f48cd660fcbc3a69391a",
+    "synth/src/main/kotlin/com/snipsnap/synth/HalobarPresets.kt": "c89605613ebc93df8afdda489fb3664634ffb7a7c6d525a249f39331744556b7",
+    "synth/src/main/kotlin/com/snipsnap/synth/Presets.kt": "2ea1d95b633d1026b8ae8b90f69fb070b019e5434efc1c269697bfc7b196e3dd",
+    "shell/src/main/kotlin/com/snipsnap/shell/UserPresets.kt": "5d1ab129190e0971f990be892f1e936f04ddb779da9f1918f9e02a2fa9536441"
+  },
+  "previousAndroid": {
+    "command": "./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin",
+    "exitCode": 0,
+    "bytes": 82122871,
+    "sha256": "e374366cca2c9fe76e62c9eebaeaba3b6b801e8641e3ff41ddc0ec9816cd4799",
+    "onDeviceExecution": "unverified"
+  },
+  "currentBaseIntegration": {
+    "base": "2e572bf4c25eb2ceaa9ca74dd26263a267e75eb1",
+    "sourceCommit": "4565f3e697bfd2e16eab8a5790f1e6aea8a6ccf0",
+    "sourceTree": "0a3cb47d6d189049517d68996084688523c73b36",
+    "checks": [
+      {
+        "stage": "current-base-synth",
+        "args": [
+          "--no-daemon",
+          ":synth:test",
+          "--tests",
+          "com.snipsnap.synth.HalobarTest",
+          "--tests",
+          "com.snipsnap.synth.HalobarPresetsTest",
+          "--tests",
+          "com.snipsnap.synth.PresetsTest",
+          "--tests",
+          "com.snipsnap.synth.PatchesTest",
+          "--tests",
+          "com.snipsnap.synth.PadRecipeTest",
+          "--tests",
+          "com.snipsnap.synth.VelocityTest",
+          "--tests",
+          "com.snipsnap.synth.FxTest",
+          "--tests",
+          "com.snipsnap.synth.DeterminismTest.HALOBAR voices regenerate through JSON after cache eviction"
+        ],
+        "started": 1794159884.1684809,
+        "state": "passed",
+        "sourceTree": "f0863922e4752f391ebfc5fba87c7d0f882b29de",
+        "ended": 1794160145.6035004,
+        "exitCode": 0
+      },
+      {
+        "stage": "current-base-shell",
+        "args": [
+          "--no-daemon",
+          ":shell:test",
+          "--tests",
+          "com.snipsnap.shell.BeatScheduleTest",
+          "--tests",
+          "com.snipsnap.shell.UserPresetsTest",
+          "--tests",
+          "com.snipsnap.shell.HalobarStarterTest",
+          "--tests",
+          "com.snipsnap.shell.SynthRootTest",
+          "--tests",
+          "com.snipsnap.shell.StarterShelfTest",
+          "--tests",
+          "com.snipsnap.shell.ConventionTest",
+          "--tests",
+          "com.snipsnap.shell.BackroomPresetsTest",
+          "--tests",
+          "com.snipsnap.shell.StarterKitsTest.starter IDs are stable, include new synth kits, and blank leads"
+        ],
+        "started": 1794160269.8024964,
+        "state": "passed",
+        "sourceTree": "0a3cb47d6d189049517d68996084688523c73b36",
+        "ended": 1794160381.2150528,
+        "exitCode": 0
+      },
+      {
+        "stage": "current-base-cli",
+        "args": [
+          "--no-daemon",
+          ":cli:test",
+          "--tests",
+          "com.snipsnap.cli.HalobarCommandTest"
+        ],
+        "started": 1794160381.2249327,
+        "state": "passed",
+        "sourceTree": "0a3cb47d6d189049517d68996084688523c73b36",
+        "ended": 1794160426.7033327,
+        "exitCode": 0
+      },
+      {
+        "stage": "current-base-android",
+        "args": [
+          "--no-daemon",
+          ":app:assembleDebug",
+          ":app:compileDebugAndroidTestKotlin"
+        ],
+        "started": 1794160426.7131217,
+        "state": "passed",
+        "sourceTree": "0a3cb47d6d189049517d68996084688523c73b36",
+        "ended": 1794160644.4222345,
+        "exitCode": 0
+      }
+    ],
+    "focusedJvmTests": {
+      "synth": 135,
+      "shell": 137,
+      "cli": 1
+    },
+    "focusedJvmTotal": 273,
+    "nativeCpp": {
+      "tests": 6,
+      "failures": 0,
+      "exitCode": 0,
+      "commands": [
+        "cmake -S app/src/main/cpp/test -B build/native-tests",
+        "cmake --build build/native-tests -j 2",
+        "ctest --test-dir build/native-tests --output-on-failure"
+      ],
+      "cmake": "Android SDK CMake 3.22.1",
+      "oboeHeaders": "Locally cached Oboe 1.9.0 headers"
+    },
+    "acceptedFloat32Replay": {
+      "cases": 195,
+      "exitCode": 0,
+      "normal4x": 192,
+      "diagnostic8x": 3
+    },
+    "approvedFactoryParameters": {
+      "recipes": 12,
+      "exitCode": 0,
+      "comparison": "Exact JSON under existing voice-prefixed audition titles"
+    },
+    "dspUnchanged": true,
+    "mergedTestCompileCorrection": "BeatScheduleTest now supplies lap = 0L after the merged chance-scheduling API change; runtime source unchanged by this correction",
+    "initialIntegrationAttempt": [
+      {
+        "stage": "current-base-synth",
+        "args": [
+          "--no-daemon",
+          ":synth:test",
+          "--tests",
+          "com.snipsnap.synth.HalobarTest",
+          "--tests",
+          "com.snipsnap.synth.HalobarPresetsTest",
+          "--tests",
+          "com.snipsnap.synth.PresetsTest",
+          "--tests",
+          "com.snipsnap.synth.PatchesTest",
+          "--tests",
+          "com.snipsnap.synth.PadRecipeTest",
+          "--tests",
+          "com.snipsnap.synth.VelocityTest",
+          "--tests",
+          "com.snipsnap.synth.FxTest",
+          "--tests",
+          "com.snipsnap.synth.DeterminismTest.HALOBAR voices regenerate through JSON after cache eviction"
+        ],
+        "started": 1794159884.1684809,
+        "state": "passed",
+        "sourceTree": "f0863922e4752f391ebfc5fba87c7d0f882b29de",
+        "ended": 1794160145.6035004,
+        "exitCode": 0
+      },
+      {
+        "stage": "current-base-shell",
+        "args": [
+          "--no-daemon",
+          ":shell:test",
+          "--tests",
+          "com.snipsnap.shell.UserPresetsTest",
+          "--tests",
+          "com.snipsnap.shell.HalobarStarterTest",
+          "--tests",
+          "com.snipsnap.shell.SynthRootTest",
+          "--tests",
+          "com.snipsnap.shell.StarterShelfTest",
+          "--tests",
+          "com.snipsnap.shell.ConventionTest",
+          "--tests",
+          "com.snipsnap.shell.BackroomPresetsTest",
+          "--tests",
+          "com.snipsnap.shell.StarterKitsTest.starter IDs are stable, include new synth kits, and blank leads"
+        ],
+        "started": 1794160145.6139128,
+        "state": "failed",
+        "sourceTree": "f0863922e4752f391ebfc5fba87c7d0f882b29de",
+        "ended": 1794160231.1529481,
+        "exitCode": 1
+      }
+    ],
+    "allChecksPassed": true,
+    "scope": "Focused integration checks after merging the later development base; the complete nine-module JVM suite was not repeated on this base. Earlier full-run and correction results remain separately recorded."
+  }
 }

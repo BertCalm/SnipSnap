@@ -124,6 +124,12 @@ internal object TerraHands {
         // 150 ms to 480 to 1 s. SHELL: how long the ceramic rings. SNAP: the fingertip's snap.
         TerraVoice.DARBUKA -> listOf(MacroSpec("TUNE", 0.483f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.92f),
             MacroSpec("POS", 0.875f), MacroSpec("SHELL", 0.5f), MacroSpec("SNAP", 0.5f))
+        // The doum: DARBUKA's goblet struck in its centre. TUNE as DARBUKA's (0.483 is 340 Hz). DECAY:
+        // the head's T60, 150 ms to 400 to 1 s. AIR: the goblet's air at 110 Hz, driven by the head's
+        // net volume, its peak 0 to 1x the head's (0.5 heard). SHELL: the ceramic's ring, 0 to 0.24.
+        TerraVoice.DOUM -> listOf(MacroSpec("TUNE", 0.483f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.4f),
+            MacroSpec("AIR", 0.5f), MacroSpec("SHELL", 0.5f))
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraFitted.macros(voice)
         else -> error("$voice is not a TERRA hand drum")
     }
 
@@ -132,8 +138,12 @@ internal object TerraHands {
     /** One contact: a strip of the head from radius [r0] to [r1] (0 centre, 1 rim), its share of the push, and when it lands. */
     class Impact(val r0: Double, val r1: Double, val share: Double, val delayMs: Double)
 
-    /** A mode of the head: its frequency, its weight per impact, its T60. */
-    class HeadMode(val hz: Double, val weights: DoubleArray, val t60: Double)
+    /**
+     * A mode of the head: its frequency, its weight per impact, its T60, and the air it moves: an
+     * (0, n) mode displaces `2 J1(j0n) / j0n` of its peak (0.43, -0.12, 0.06 for n = 1..3); every
+     * m > 0 mode nets zero, so only a centre stroke drives a goblet's or a bowl's air.
+     */
+    class HeadMode(val hz: Double, val weights: DoubleArray, val t60: Double, val volume: Double = 0.0)
 
     private fun stripWeight(m: Int, z: Double, r0: Double, r1: Double): Double {
         var s = 0.0
@@ -161,7 +171,7 @@ internal object TerraHands {
                 if (ws.maxOf { abs(it) } < 0.004) continue
                 val t = max(floor, t60 * (f01 / f).pow(tilt))
                 if (m == 0) {
-                    out += HeadMode(f, ws, t)
+                    out += HeadMode(f, ws, t, volume = 2.0 * Bessel.j(1, z) / z)
                 } else {
                     val d = split * (0.4 + 0.6 * rng.nextDouble())
                     val half = DoubleArray(ws.size) { ws[it] * 0.7 }
@@ -300,6 +310,20 @@ internal object TerraHands {
 
     fun darbukaF01(m: Map<String, Float>): Double = Dsp.expMap(m.getValue("TUNE"), 200f, 600f).toDouble()
 
+    /** The doum's contact: the fingers flat near the centre. */
+    fun doumImpacts(): List<Impact> = listOf(Impact(0.05, 0.5, 1.0, 0.0))
+
+    fun doumModes(m: Map<String, Float>, seed: Int): List<HeadMode> = headModes(
+        darbukaF01(m), doumImpacts(), Dsp.around(m.getValue("DECAY"), 0.15f, 0.4f, 1.0f).toDouble(), tilt = 0.6, floor = 0.006, seed = seed,
+    )
+
+    /** The goblet's air (110 Hz, T60 0.3 s) driven by the head's net volume, over the head's peak [headPeak]. */
+    private fun goblet(modes: List<HeadMode>, force: Float, velocity: Float, headPeak: Double, rate: Int, frames: Int): DoubleArray {
+        val pushing = modes.filter { it.volume != 0.0 }.map { HeadMode(it.hz, DoubleArray(it.weights.size) { k -> it.weights[k] * it.volume }, it.t60) }
+        val vol = ringHead(pushing, doumImpacts(), force, velocity, rate, frames)
+        return resonator(DoubleArray(frames) { vol[it] / headPeak }, 110.0, 0.3, 1.0, rate, frames)
+    }
+
     fun darbukaModes(m: Map<String, Float>, seed: Int): List<HeadMode> = headModes(
         darbukaF01(m), darbukaImpacts(m), Dsp.around(m.getValue("DECAY"), 0.15f, 0.48f, 1.0f).toDouble(), tilt = 0.6, floor = 0.006, seed = seed,
     )
@@ -334,6 +358,8 @@ internal object TerraHands {
         TerraVoice.SLAP -> slapF01(m).let { f -> slapModes(m, seed).map { Modes.Mode((it.hz / f).toFloat(), it.weights.sumOf { w -> abs(w) }.toFloat(), it.t60.toFloat()) } to f.toFloat() }
         TerraVoice.DARBUKA -> darbukaF01(m).let { f -> darbukaModes(m, seed).map { Modes.Mode((it.hz / f).toFloat(), abs(it.weights[0]).toFloat(), it.t60.toFloat()) } to f.toFloat() }
         TerraVoice.DAYAN -> dayanF0(m).let { f -> dayanRing(m, seed).map { (hz, g, t) -> Modes.Mode((hz / f).toFloat(), g.toFloat(), t.toFloat()) } to f.toFloat() }
+        TerraVoice.DOUM -> darbukaF01(m).let { f -> doumModes(m, seed).map { Modes.Mode((it.hz / f).toFloat(), abs(it.weights[0]).toFloat(), it.t60.toFloat()) } to f.toFloat() }
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraFitted.bodyModes(voice, m)
         else -> error("$voice is not a TERRA hand drum")
     }
 
@@ -423,6 +449,38 @@ internal object TerraHands {
                 val tickMix = clickMix * 0.7 * force * v.toDouble().pow(1.5)
                 FloatArray(frames) {
                     ((if (tonePeak > 1e-12) tones[it] / tonePeak else 0.0) * 0.6 + click[it] * clickMix * v + tick[it] * tickMix).toFloat()
+                }
+            }
+            TerraVoice.DOUM -> {
+                // Round 5's A, heard 2026-11-08 (docs/TERRA_HANDS.md): the head struck near its centre,
+                // the goblet's air answering through the head's net volume, the ceramic shell, the
+                // fingers' thud.
+                val impacts = doumImpacts()
+                val modes = doumModes(m, structureSeed)
+                if (level != null) require(level.size == modes.size && level.all { it.isNotEmpty() }) { "a level curve per mode (${modes.size}), each at least one value long" }
+                val head = ringHead(modes, impacts, force, v, rate, frames, level)
+                if (headOnly) return head
+                val unstruck = if (level == null) head else ringHead(modes, impacts, force, v, rate, frames)
+                val headPeak = peakOf(unstruck).toDouble()
+                divide(head, headPeak.toFloat())
+                // the air's level is set at the full hit (its peak AIR x the head's), then follows the hit
+                val air = goblet(modes, force, v, headPeak, rate, frames)
+                // at the full hit the reference is this render's own head and air; below it, the full hit's
+                val refPeak = if (v >= 1f) peakOf(goblet(modes, force, 1f, headPeak, rate, frames))
+                else peakOf(goblet(modes, force, 1f, peakOf(ringHead(modes, impacts, force, 1f, rate, frames)).toDouble(), rate, frames))
+                val airGain = if (refPeak > 1e-12) Dsp.lin(m.getValue("AIR"), 0f, 1f) / refPeak else 0.0
+                val p = pulse(force, v, rate)
+                val shell = DoubleArray(frames)
+                for ((hz, g, t) in listOf(Triple(1380.0, 1.0, 0.256), Triple(2310.0, 0.6, 0.192), Triple(3420.0, 0.4, 0.144))) {
+                    val r = resonator(p, hz, t, g, rate, frames)
+                    for (i in shell.indices) shell[i] += r[i]
+                }
+                val shellPeak = peakOf(shell)
+                val shellMix = Dsp.lin(m.getValue("SHELL"), 0f, 0.24f) * v
+                val thud = bandNoise(noiseSeed, 200f, 2500f, 4.0, 1.2, rate, frames, rms = 0.2594)
+                val thudMix = 0.06 * force * v.toDouble().pow(1.5)
+                FloatArray(frames) {
+                    (head[it] + air[it] * airGain + (if (shellPeak > 1e-12) shell[it] / shellPeak else 0.0) * shellMix + thud[it] * thudMix).toFloat()
                 }
             }
             else -> error("$voice is not a TERRA hand drum")

@@ -868,64 +868,14 @@ logcat tag to grab when something is wrong.
   the partner. Open another kit's pad, pick the room, ROOM, then KEEP: the
   pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
-- **WORKSHOP / SEND TO BENCH** (`docs/WORKSHOP.md`): on SETUP, tap the
-  TAPE PROPERTIES title seven times inside two seconds — the last three
-  taps count down in a toast, the seventh says WORKSHOP OPEN, and a
-  WORKSHOP section appears under HELP; it should still be there after a
-  relaunch, and CLOSE THE WORKSHOP should take it away with a toast
-  naming the seven taps. SEND TO BENCH with TEACH THE MACHINE off should
-  refuse naming the switch; with it on and nothing corrected yet, refuse
-  naming CHOP. Correct a chip on CHOP with TEACH on, SEND TO PADS, then
-  SEND TO BENCH: the chooser opens on `SnipSnap Bench <date>.zip` and
-  the toast counts the corrections and kits. Send it to yourself, unzip
-  on a laptop: `manifest.txt` names the kit and the count, and
-  `overrides.jsonl` dropped into `reference/calibration/` makes
-  `TeachLogTest` print the correction. If the chooser never appears, the
-  `FileProvider` note under SHARE / BACKUP above applies here too — it
-  is the same cache folder.
-- **The BENCH row on CHOP** (`docs/WORKSHOP.md`, WS2): with the WORKSHOP
-  open, CHOP shows CONFIRM ALL and five digits above the slices, under
-  CLASSIC / FOLD / MELODIC — check six segments fit one row at 390dp
-  without the SELECTED caption wrapping. With TEACH THE MACHINE off the
-  row is dim and the note under it names SETUP. With it on: correct one
-  chip, CONFIRM ALL (the toast counts the rest and the button stays
-  pressed), tap a star (the toast names it), step HITS once (the star
-  clears; CONFIRM ALL releases), CONFIRM ALL and a star again, SEND TO
-  PADS. Then SEND TO BENCH and unzip on a laptop: `overrides.jsonl` holds
-  the correction plus one line per confirmed chip with `label` equal to
-  `machineSaid`, and `cuts.jsonl` one line naming the mode, HITS, EAR,
-  CUT, SNAP and a `tries` of 1. Dropped into `reference/calibration/`,
-  `TeachLogTest` prints corrections and confirmations apart and
-  `CutRatingsTest` prints the setting's line.
-- **LABEL THIS HIT** (`docs/WORKSHOP.md`, WS3): with the WORKSHOP open,
-  hold a captured pad and scroll to the foot of its sheet: a sixth box,
-  BENCH, its strip reading NOT LABELLED. Open it (the other boxes close),
-  tap KICK: the toast names the pad and the label, the chip lights in the
-  pad's colour, the strip reads LABELLED KICK, and `Calibration/` beside
-  the kits holds `kick_<kit>_A01.wav`. Tap SNARE: one file, renamed. Tap
-  SNARE again: the file is gone, the strip is back to NOT LABELLED, and
-  the pad still plays. Open a starter kit's pad or a SYNTH pad: the note
-  is amber, the chips dim, and a tap refuses naming the render. Leave and
-  come back: the lit chip is still lit. Then SETUP ▸ SEND HITS TO BENCH:
-  the chooser opens on `SnipSnap Hits <date>.zip`, its manifest counts by
-  class, and the WAVs dropped into `reference/calibration/` make
-  `CalibrationCorpusTest` print them in its confusion matrix. With nothing
-  labelled it refuses naming the pad sheet. SEND TO BENCH's own zip must
-  still carry no WAV.
-- **BENCH NOTES** (`docs/WORKSHOP.md`, WS4): with the WORKSHOP open,
-  every screen's title bar ends in a NOTE chip; close the workshop and it
-  is gone. On PLAY with a kit open, tap it: a slip drops from the bar
-  reading BENCH NOTE over `PLAY · <kit>`, with the keyboard already up
-  and KEEP dim. Type two lines, KEEP: the toast reads NOTED ON PLAY.
-  Hold a pad, tap NOTE on its sheet: the slip's line now ends in the pad
-  (`KIT · <kit> · A01`). Back on an open slip closes it and keeps
-  nothing. Then SEND TO BENCH — with nothing corrected it still packs,
-  and the toast counts the notes — and unzip on a laptop: `manifest.txt`
-  ends with both notes as `→` lines stamped with the screen, the kit,
-  the pad and the time, ready to paste under a `docs/BENCH.md` row, and
-  `notes.jsonl` holds the same two lines. With the keyboard up the
-  slip's KEEP row must stay above the keys.
-- **SAVE AS PRESET** (`docs/WORKSHOP.md`, WS5 — no workshop needed): on
+- **No workshop (PR 6c, D8).** The seven taps on SETUP's title do nothing
+  now: SETUP has no WORKSHOP section, no TEACH THE MACHINE row, no SEND TO
+  BENCH or SEND HITS TO BENCH. CHOP has no CONFIRM ALL or star row, a pad
+  sheet has no BENCH box, and the title bar has no NOTE chip. A phone that
+  still has `workshop` or `teach` in its saved preferences ignores them.
+  The JVM-side pipeline stays in `:shell` with its tests, for a later
+  owner decision (`docs/WORKSHOP.md`).
+- **SAVE AS PRESET** (`docs/WORKSHOP.md`, WS5): on
   SYNTH, THUMP · KICK, the action row reads SCRAMBLE / SAVE PRESET ▸ /
   SEND TO PAD ▸ — check all three labels fit at 390dp without an
   ellipsis. Load DUSTY BOOM, drag DRIVE up, tap SAVE PRESET ▸: a slip
@@ -941,10 +891,7 @@ logcat tag to grab when something is wrong.
   caption says it replaces yours and the button reads REPLACE; tap it:
   MY KICK REPLACED, one chip, the new settings. Kill and relaunch the
   app, open SYNTH: MY KICK is still there and sounds the same. Then
-  SETUP ▸ WORKSHOP ▸ SEND TO BENCH: the toast counts 1 PRESET, and on a
-  laptop the zip holds `presets.json` and a manifest ending in a
-  `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
-  it and saves nothing.
+  Back on an open slip closes it and saves nothing.
 - **LIBRATION**: select GATHER, TWINS or DEPARTURE in SYNTH and audition the
   four presets per voice. Change ROOT, TOUCH and LENGTH as well as the five
   sound controls. Save under YOURS, leave and return, then SEND TO PAD: the

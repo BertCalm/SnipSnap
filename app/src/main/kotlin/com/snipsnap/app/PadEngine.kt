@@ -667,6 +667,22 @@ class PadEngine(preferredSampleRate: Int) {
         return NativePads.armPrint(handle, frames)
     }
 
+    /**
+     * [armPrint], addressed to the audio clock: the print is exactly the engine's frames
+     * `[startFrame, startFrame + frames)` ([framesRendered]'s own count), begun and ended by the audio
+     * thread on those frames. BOUNCE uses it so its edges are not the screen's frames to land.
+     *
+     * [frames] is clamped to what [maxPrintSeconds] allows rather than refused (the print then ends when its
+     * buffer is full, as it always did); the stop frame still names the full length. False when a print is
+     * still live, the engine is not running, or there is nothing to record.
+     */
+    @Synchronized
+    fun armPrintAt(startFrame: Long, frames: Long): Boolean {
+        if (!isUp() || frames <= 0L) return false
+        val ceiling = (maxPrintSeconds() * sampleRate()).toLong()
+        return NativePads.armPrintAt(handle, minOf(frames, ceiling).toInt(), startFrame, startFrame + frames)
+    }
+
     @Synchronized
     fun printState(): PrintState =
         if (open) PrintState.entries[NativePads.printState(handle)] else PrintState.IDLE

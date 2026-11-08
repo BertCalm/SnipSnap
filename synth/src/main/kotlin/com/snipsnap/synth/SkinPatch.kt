@@ -15,14 +15,24 @@ data class SkinPatch(
     override val name: String,
     val voice: SkinVoice,
     override val macros: Map<String, Float>,
+    val model: Int = 1,
 ) : Patch {
     init {
-        Patches.validateMacros(this, Skin.macrosFor(voice))
+        require(model == 1 || model == 2 && voice == SkinVoice.SNARE) { "unsupported SKIN model $model for $voice" }
+        Patches.validateMacros(this, macroSpecs())
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Skin.render(voice, macros)
+    fun macroSpecs() = if (model == 2) BackroomSnare.macros else Skin.macrosFor(voice)
+    fun defaults() = if (model == 2) BackroomSnare.defaults() else Skin.defaults(voice)
+    override fun render() = render(1f)
+    fun render(velocity: Float, take: Int = 0) = if (model == 2) BackroomSnare.render(macros, velocity, take)
+        else Skin.render(voice, macros, velocity = velocity, take = take)
+    override fun toJsonValue() = if (model == 1) Patches.toJsonValue(this)
+        else JsonValue.Obj(LinkedHashMap(Patches.toJsonValue(this).entries).apply {
+            put("model", JsonValue.Num(model.toDouble()))
+        })
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
@@ -31,7 +41,7 @@ data class SkinPatch(
 
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> SkinVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
-                SkinPatch(name, voice, macros)
+                SkinPatch(name, voice, macros, value.obj()["model"]?.int() ?: 1)
             }
 
         fun fromJsonText(text: String): SkinPatch = fromJsonValue(Json.parse(text)) as SkinPatch

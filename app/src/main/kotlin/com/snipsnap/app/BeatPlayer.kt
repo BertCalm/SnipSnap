@@ -149,6 +149,19 @@ class BeatPlayer(
 
     /** How far ahead of the needle steps have been handed to the engine, so each goes once. */
     private val cursor = BeatSchedule.Cursor()
+
+    /**
+     * The pass of the loop the windows are in: 0 from the start, one more each time the clock wraps. The step chances
+     * are rolled on it ([BeatSchedule.forEachNoteDue]), so a half-likely step is decided afresh every lap. Back to 0
+     * wherever the windows start over (stop, seek, anchor, a new pattern), so a restart replays the same first lap.
+     */
+    private var lap = 0L
+
+    /** Forget how far ahead the windows went, and the lap they were in. */
+    private fun resetWindow() {
+        cursor.reset()
+        lap = 0L
+    }
     private var clip: Mpc3Clip? = null
     private var fromScratchSteps = LiveRecord.DEFAULT_BARS * GrooveEdit.STEPS_PER_BAR
     private var programDir: File? = null
@@ -164,6 +177,8 @@ class BeatPlayer(
      * not push one for a kit it has not finished loading.
      */
     fun setProgram(dir: File, clip: Mpc3Clip?, fromScratchSteps: Int) {
+        // A different pattern starts its own first lap; an edit of the same one keeps counting.
+        if (clip?.name != this.clip?.name) lap = 0L
         this.programDir = dir
         this.clip = clip
         this.fromScratchSteps = fromScratchSteps
@@ -193,6 +208,7 @@ class BeatPlayer(
     fun anchorAt(nanos: Long, pos: Float) {
         anchorNanos = nanos
         anchorPos = pos
+        lap = 0L
     }
 
     /**
@@ -228,7 +244,7 @@ class BeatPlayer(
      * being where the windows were counting from - a stop, a seek, the loop ending for a restart.
      */
     private fun dropScheduled() {
-        cursor.reset()
+        resetWindow()
         val entry = kitNow() ?: return
         hosts.peek(entry.dir)?.engine?.cancelPending()
     }
@@ -364,7 +380,7 @@ class BeatPlayer(
         recording = false
         countingIn = false
         stop()
-        cursor.reset()
+        resetWindow()
         clip = null
         programDir = null
         position = 0f
@@ -468,7 +484,7 @@ class BeatPlayer(
         var lastPos = position
         // A new loop reads the stream afresh (it may be a new one) and counts its windows from the needle.
         audioClock.reset(engine.sampleRate())
-        cursor.reset()
+        resetWindow()
         anchorNanos = lastNanos
         anchorPos = lastPos
         // Fix 1's own seam bug: the count-in's click loop fires its four
@@ -567,16 +583,16 @@ class BeatPlayer(
      * The window is `(cursor, np + lookahead]`, not `(lastPos, np]`: each step is found up to
      * [BeatSchedule.LOOKAHEAD_NANOS] before the needle reaches it, and goes to the engine with the frame
      * of the audio stream it is due on, so the voice starts there and not at the next callback after this
-     * frame. With no usable audio clock yet, or while the tap asks for the old behaviour
-     * ([BeatTap.needsImmediate] - a BOUNCE arming or printing), the lookahead is nothing and every step is
-     * handed over as it is crossed, at the next callback, as it was before.
+     * frame. With no usable audio clock yet the lookahead is nothing and every step is handed over as it is
+     * crossed, at the next callback, as it was before. A BOUNCE does not change that: it rides the same
+     * windows (see [BeatTap.bouncePasses]).
      *
      * The needle, [position] and the anchors the touch placement reads are untouched: they are still the
      * frame's own, so RECORD places a hit against exactly the reference it always did.
      */
     private fun dispatch(now: Long, engine: PadEngine, t: Tick, lastPos: Float, np: Float) {
         audioClock.observe(engine.framesRendered(), System.nanoTime())
-        val scheduling = audioClock.ready && tap?.needsImmediate() != true
+        val scheduling = audioClock.ready
         if (!scheduling && cursor.leadOver(np) > 0.0) {
             // Scheduling went off with steps already ahead of the needle: take them back, and walk them
             // again as ordinary crossings. Those at or behind the needle are due now and stay.
@@ -585,9 +601,18 @@ class BeatPlayer(
         }
         val from = cursor.start(lastPos)
         val to = cursor.end(lastPos, np, BeatSchedule.aheadSteps(scheduling, t.stepsPerSecond))
+        // A BOUNCE waiting for a downbeat is addressed to the downbeat's own frame, the one the pass's first
+        // note is handed over on a few lines down (same window, same `due`, same clock), and the audio thread
+        // starts and ends the print on its frames. Nothing the screen's frame does can move either edge.
+        val passes = if (scheduling) tap?.bouncePasses() ?: 0 else 0
+        if (passes > 0 && BeatSchedule.downbeatInWindow(from, to, t.totalSteps)) {
+            val downbeat = audioClock.frameAt(BeatSchedule.dueNanos(now, np, t.totalSteps.toDouble(), t.stepsPerSecond))
+            val plan = BeatSchedule.bouncePlan(downbeat, passes, t.totalSteps, t.stepsPerSecond, engine.sampleRate())
+            tap?.bounceStarted(engine.armPrintAt(plan.startFrame, plan.frames))
+        }
         val clip = t.clip
         if (clip != null && clip.notes.isNotEmpty()) {
-            BeatSchedule.forEachNoteDue(clip, from, to, t.totalSteps) { n, pos ->
+            BeatSchedule.forEachNoteDue(clip, from, to, t.totalSteps, lap) { n, pos ->
                 // Mpc3Note.slotFor, not `note - 35`: the map wraps, so notes 0..35 are pads 93..128 and
                 // subtracting alone gives them a slot no kit has.
                 //
@@ -618,6 +643,7 @@ class BeatPlayer(
             }
         }
         cursor.advance(to, if (t.wrapped) t.totalSteps else 0f)
+        if (t.wrapped) lap++
     }
 
     private companion object {
@@ -641,11 +667,18 @@ interface BeatTap {
     fun loopEnded()
 
     /**
-     * True while the beat's steps must be handed over as they are crossed rather than ahead of time: a
-     * BOUNCE armed or printing arms and stops its print on the frame's own wrap, and a downbeat already
-     * scheduled would start before that. Asked every frame.
+     * How many passes a BOUNCE that is armed and waiting for the loop's downbeat wants printed, or 0 when none
+     * is waiting. Asked every frame. The beat answers it by addressing the print to the next downbeat's frame
+     * and the end of the last pass, on the audio clock, and reports through [bounceStarted].
      */
-    fun needsImmediate(): Boolean = false
+    fun bouncePasses(): Int = 0
+
+    /**
+     * The print asked for through [bouncePasses] was armed (true) or refused (false: another print is live, or
+     * the engine is not running). From here the audio thread owns the print's start and its stop; the screen
+     * only sees it reach DONE.
+     */
+    fun bounceStarted(armed: Boolean) {}
 
     /** AUDITION: a rewrite of the hit about to sound at [slot], or null to play the pad as it is. The lookups happen here, not in what is returned. */
     fun swapFor(slot: Int, pos: Float, barSteps: Int): ((PadHit.Hit) -> PadHit.Hit?)? = null

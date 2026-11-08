@@ -6,6 +6,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.Mpc3Exporter
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3ProjectTrack
+import com.snipsnap.kit.ChanceExport
 import com.snipsnap.mpc3.Mpc3ProjectWriter
 import com.snipsnap.mpc3.Mpc3Song
 import java.io.File
@@ -92,8 +93,9 @@ object SongExport {
      * them), so this is how a repeat reaches the hardware; it used to be
      * dropped, and a section meant to play twice arrived once.
      */
-    fun sectionClips(plan: Arranger.Arrangement): List<Mpc3Clip> =
+    fun sectionClips(plan: Arranger.Arrangement, mode: ChanceExport.Mode = ChanceExport.MODE): List<Mpc3Clip> =
         plan.sections.mapIndexed { i, s ->
-            Arranger.tiled(s.clip, s.repeats).copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
+            // WRITE: not pre-resolved, the MPC rolls `probability`. BAKE: rolled per repeat, under the source's own name (before the rename below).
+            Arranger.tiled(s.clip, s.repeats, roll = mode == ChanceExport.Mode.BAKE).copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
         }
 }

@@ -108,6 +108,16 @@ The APK build and device-test compilation also passed. The latest
 [acceptance ledger](../reference/halobar/native-acceptance.json) records the
 source tree, hashes and measurement samples.
 
+The later development integration, based on `2e572bf4c`, preserves both SKIN
+and HALOBAR preset restoration. Its 273 focused JVM checks passed
+(135 synth, 137 shelf/integration, 1 CLI), as did all six
+native C++ tests, Android assembly and device-test compilation. The 195-case
+Float32 replay and twelve approved factory parameter comparisons passed again.
+The merged downbeat regression test was corrected to pass its required lap
+argument. These are focused checks on the later base; the complete nine-module
+suite was not repeated there. The earlier complete-run and correction scopes above remain
+separate. HALOBAR DSP and approved audio remain unchanged.
+
 See the [engineering spec](superpowers/specs/2026-11-07-halobar-cosmic-dub-design.md)
 for the model contract, regression probes and final build evidence. The frozen
 [Python reference](../reference/halobar/README.md) records the approved sketch;

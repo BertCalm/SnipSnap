@@ -34,7 +34,7 @@ object Workshop {
 
     /**
      * From this many taps still needed and down, each tap says how many are
-     * left ([Copy.workshopKnock]) — Android's own developer-options
+     * left (once, as a toast) — Android's own developer-options
      * convention: a few quiet taps, then a countdown. A knock that never
      * spoke would be a secret; one that counted from the first tap would
      * be a button.

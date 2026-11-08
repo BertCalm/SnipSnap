@@ -20,6 +20,7 @@ import com.snipsnap.synth.Ohm
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.SnapPatch
+import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.crossTable
 import java.io.File
 import java.util.Random
@@ -283,6 +284,8 @@ object Breed {
                     // renderers share a voice name, but have different macro sets.
                     // Keep A's renderer and performance fields through withMacros.
                     is OhmPatch -> crossed.filterKeys { name -> Ohm.macrosFor(ap.model).any { it.name == name } }
+                    // Original SKIN and Backroom share a voice but not controls.
+                    is SkinPatch -> crossed.filterKeys { name -> ap.macroSpecs().any { it.name == name } }
                     else -> crossed
                 }
                 // SNAP is the one engine whose "settings" are a drawn line,

@@ -198,7 +198,7 @@ object Exporters {
             // is one over, so say which one stayed behind rather than drop it.
             val leftOut = if (clip == null) GrooveEdit.leftOut(stored, effectiveClips, GrooveStore.loadNames(kitDir)) else emptyList()
             val capNote = if (leftOut.isEmpty()) emptyList() else listOf(Finding(Severity.WARN, GrooveEdit.leftOutMessage(leftOut)))
-            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips.map { ChanceExport.forMpc(it) }))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
             // Song slot 1 wears the kit's name (GG3.1 plumbing; steps wait

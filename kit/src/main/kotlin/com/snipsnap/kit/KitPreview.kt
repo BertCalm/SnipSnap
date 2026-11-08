@@ -53,10 +53,14 @@ object KitPreview {
         kitDir: File,
         clip: Mpc3Clip? = null,
         tempoBpm: Float? = null,
+        /** The clip was already rolled by its step chances (a caller that tiled or rotated it first), so it may be empty. */
+        allowSilence: Boolean = false,
     ): Snip {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         val groove = clip ?: GrooveStore.load(kitDir).firstOrNull() ?: defaultPattern(kit)
-        return mix(kit, kitDir, groove.notes, groove.lengthPulses, tempoBpm)
+        // One pass: pass 0 of the step chances (StepChance). A clip a caller has already resolved is unchanged.
+        val rolled = StepChance.resolve(groove, 0L)
+        return mix(kit, kitDir, rolled.notes, groove.lengthPulses, tempoBpm, allowSilence = allowSilence || (groove.notes.isNotEmpty() && rolled.notes.isEmpty()))
     }
 
     /**
@@ -67,10 +71,10 @@ object KitPreview {
      * hardware: an open hat at the end of one section stops at the next
      * section's closed hat instead of ringing over it.
      */
-    fun renderNotes(kit: Kit, kitDir: File, notes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float? = null): Snip {
+    fun renderNotes(kit: Kit, kitDir: File, notes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float? = null, allowSilence: Boolean = false): Snip {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         require(lengthPulses > 0) { "a take has a length: $lengthPulses pulses" }
-        return mix(kit, kitDir, notes, lengthPulses, tempoBpm)
+        return mix(kit, kitDir, notes, lengthPulses, tempoBpm, allowSilence)
     }
 
     /**
@@ -89,8 +93,11 @@ object KitPreview {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         require(passes >= 1) { "a loop plays at least once" }
         val one = clip.lengthPulses
-        val notes = (0 until passes).flatMap { r -> clip.notes.map { it.copy(timePulses = it.timePulses + r * one) } }
-        val rendered = mix(kit, kitDir, notes, one * passes, tempoBpm)
+        // Each pass rolls its own chances, before the copy moves the notes (the roll is keyed on the step).
+        val notes = (0 until passes).flatMap { r ->
+            StepChance.resolve(clip, r.toLong()).notes.map { it.copy(timePulses = it.timePulses + r * one) }
+        }
+        val rendered = mix(kit, kitDir, notes, one * passes, tempoBpm, allowSilence = clip.notes.isNotEmpty() && notes.isEmpty())
         val framesPerPulse = 60.0 / playedBpm(tempoBpm ?: kit.tempoBpm) * RATE / 960.0
         val loopFrames = ((one * passes) * framesPerPulse).roundToInt().coerceAtLeast(1)
         if (rendered.frameCount <= loopFrames) return rendered
@@ -104,7 +111,11 @@ object KitPreview {
         return Snip(out, 2, RATE)
     }
 
-    private fun mix(kit: Kit, kitDir: File, clipNotes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float?): Snip {
+    /**
+     * [allowSilence]: the notes were all rolled out by their step chances (StepChance), so a take of
+     * nothing is the right answer, not a clip whose notes miss every pad.
+     */
+    private fun mix(kit: Kit, kitDir: File, clipNotes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float?, allowSilence: Boolean = false): Snip {
         // kit.tempoBpm is only validated >0 <1000, so a hostile or nonsense
         // 0.001 would blow framesPerPulse up until the frame math overflows to
         // a negative array size. A preview clamps to a musical range - it is
@@ -185,10 +196,10 @@ object KitPreview {
             }
             voices += voice
         }
-        require(voices.isNotEmpty()) { "no clip note lands on a pad this kit has" }
+        require(voices.isNotEmpty() || allowSilence) { "no clip note lands on a pad this kit has" }
 
         val totalFrames = ((lengthPulses * framesPerPulse).roundToInt() +
-            (TAIL_SEC * RATE).toInt()).coerceAtLeast(voices.maxOf { min(it.end, it.start + it.samples.frameCount) })
+            (TAIL_SEC * RATE).toInt()).coerceAtLeast(voices.maxOfOrNull { min(it.end, it.start + it.samples.frameCount) } ?: 0)
         val out = FloatArray(totalFrames * 2)
 
         for (v in voices) {

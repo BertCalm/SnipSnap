@@ -45,8 +45,26 @@ object GrooveStore {
      */
     const val VERSION = 2
 
+    /**
+     * 3 since a note can carry a `chance` under 100 (BEAT step 4), written
+     * ONLY by a file that holds one: a groove.json with no chancy note is
+     * still [VERSION] 2, byte for byte what it was.
+     *
+     * The bump is not decoration either. A build that predates `chance`
+     * reads a note's known keys and ignores the rest, so it would play
+     * every hit of a step the person set to 50% and say nothing; it has to
+     * refuse the file instead, which a version it does not know is exactly
+     * how it does. `answer.json` shares [clipToJson] but its notes are
+     * generated at 100, never write the key, and its own version needs no move.
+     */
+    const val CHANCE_VERSION = 3
+
     /** The oldest sidecar this build understands. */
     const val MIN_VERSION = 1
+
+    /** The version [clips] need: [CHANCE_VERSION] when a note has a chance, else [VERSION]. */
+    internal fun versionFor(clips: List<Mpc3Clip>): Int =
+        if (clips.any { c -> c.notes.any { it.chance < Mpc3Note.ALWAYS } }) CHANCE_VERSION else VERSION
 
     /**
      * Key of the additive per-pattern lane map: `{"<clip name>": [slot x7]}`.
@@ -192,7 +210,7 @@ object GrooveStore {
         nextProg: Int = 0,
     ): JsonValue = JsonValue.Obj(
         linkedMapOf<String, JsonValue>(
-            "version" to JsonValue.Num(VERSION.toDouble()),
+            "version" to JsonValue.Num(versionFor(clips).toDouble()),
             "clips" to JsonValue.Arr(clips.map { clipToJson(it) }),
         ).also { root ->
             if (lanePads.isNotEmpty()) {
@@ -212,8 +230,8 @@ object GrooveStore {
     private fun fromJson(root: JsonValue): List<Mpc3Clip> {
         val obj = root.obj()
         val version = obj["version"]?.int() ?: throw JsonException("groove.json has no version")
-        if (version !in MIN_VERSION..VERSION) {
-            throw JsonException("groove.json version $version is not supported (this build reads $MIN_VERSION..$VERSION)")
+        if (version !in MIN_VERSION..CHANCE_VERSION) {
+            throw JsonException("groove.json version $version is not supported (this build reads $MIN_VERSION..$CHANCE_VERSION)")
         }
         return obj["clips"]?.arr().orEmpty().map { clipFromJson(it) }
     }
@@ -244,7 +262,7 @@ object GrooveStore {
                             "timePulses" to JsonValue.Num(n.timePulses.toDouble()),
                             "velocity" to JsonValue.Num(n.velocity.toDouble()),
                             "lengthPulses" to JsonValue.Num(n.lengthPulses.toDouble()),
-                        ),
+                        ).also { if (n.chance < Mpc3Note.ALWAYS) it["chance"] = JsonValue.Num(n.chance.toDouble()) },
                     )
                 },
             ),
@@ -269,6 +287,7 @@ object GrooveStore {
                     timePulses = n["timePulses"]?.long() ?: throw JsonException("note has no timePulses"),
                     velocity = n["velocity"]?.num()?.toFloat() ?: throw JsonException("note has no velocity"),
                     lengthPulses = n["lengthPulses"]?.long() ?: throw JsonException("note has no lengthPulses"),
+                    chance = n["chance"]?.int() ?: Mpc3Note.ALWAYS,
                 )
             },
         )
