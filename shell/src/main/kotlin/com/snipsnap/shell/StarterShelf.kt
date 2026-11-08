@@ -50,7 +50,7 @@ object StarterShelf {
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
             ),
         ),
-        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel")),
+        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "rivet-workshop", "rivet-factory", "rivet-warehouse")),
         Group(
             Copy.STARTER_HEADING_MOVING,
             listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),

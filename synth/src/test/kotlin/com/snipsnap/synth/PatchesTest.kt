@@ -42,6 +42,7 @@ class PatchesTest {
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
+        RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
         ErosionPatch("Door", ErosionVoice.ARC),
@@ -70,7 +71,7 @@ class PatchesTest {
             val fields = patch.toJsonValue().entries
             assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
                 "${patch.engine}: complete saved controls survive the dispatcher")
-            if (patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch) {
+            if (patch is RivetPatch || patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch) {
                 // These formats pin complete control snapshots instead of
                 // inheriting newer voice defaults when a field is missing.
                 for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {
