@@ -220,7 +220,7 @@ class BeatScheduleTest {
         val from = 31.0
         val to = 32.5
         var noteDue = -1.0
-        BeatSchedule.forEachNoteDue(clip, from, to, total) { _, pos -> noteDue = pos }
+        BeatSchedule.forEachNoteDue(clip, from, to, total, lap = 0L) { _, pos -> noteDue = pos }
         assertEquals(total.toDouble(), noteDue)
         val sps2 = BeatClock.stepsPerSecond(97f)
         assertEquals(
