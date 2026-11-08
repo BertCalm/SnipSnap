@@ -4,6 +4,9 @@ import com.snipsnap.synth.Rime
 import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.AccordVoice
@@ -124,6 +127,9 @@ class StarterKitsTest {
      * drumClassFor, and the sixteen reach every voice.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "halobar" to OneEngine(HalobarPatch::class.java, HalobarVoice.entries.map { it.name }.toSet()) {
+            (it as HalobarPatch).let { p -> Halobar.drumClassFor(p.voice,p.macros) }
+        },
         "accord" to OneEngine(AccordPatch::class.java, AccordVoice.entries.map { it.name }.toSet()) {
             Accord.drumClassFor(it as AccordPatch)
         },
@@ -570,9 +576,13 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "fired-bronze"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "fired-bronze"),
             StarterKits.ALL.map { it.id },
         )
+        val halobar = StarterKits.byId("halobar")!!
+        assertEquals("HALOBAR", halobar.displayName)
+        assertFalse(halobar.seeded, "HALOBAR is an authored finite kit")
+        assertEquals(KeySpec.parse("Cminpent"), halobar.key)
         val chamber = StarterKits.byId("chamber")!!
         assertEquals("CHAMBER", chamber.displayName)
         assertFalse(chamber.seeded, "CHAMBER is a fixed authored kit")

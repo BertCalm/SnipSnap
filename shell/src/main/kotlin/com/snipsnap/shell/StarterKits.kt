@@ -108,6 +108,12 @@ object StarterKits {
             seeded = true,
         ) { Shuffle.withRemixBank(Shuffle.kit(it), it) },
         Starter(
+            "halobar", "HALOBAR",
+            "Vibraphone, marimba and xylophone with rhythmic dub echoes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.halobar() },
+        Starter(
             "melodic", "MELODIC",
             "Plucks and organ stabs in A minor pentatonic. Runs, not just hits.",
             seeded = false,

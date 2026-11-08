@@ -5,6 +5,11 @@ testkit/cairn-tumble/
 __pycache__/
 
 build/
+# HALOBAR native audio, editable MPC program and timing evidence regenerate.
+testkit/halobar-audition/
+testkit/SnipSnap Halobar Kit/
+testkit/.halobar-work/
+reference/halobar/audition/
 # Regenerated listening-only study; its source and complete replay task are tracked.
 testkit/ohm-reply-ring-audition/
 testkit/ohm-reply-ring-handoff/
