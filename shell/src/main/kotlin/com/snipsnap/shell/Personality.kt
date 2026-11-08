@@ -607,6 +607,22 @@ object Copy {
     /** A pick that could not be written to the kit's art.json: this export still uses it. */
     const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
 
+    // Press-and-hold twins (docs/superpowers/specs/2026-10-27-ui-clarity-design.md 7.4): every
+    // hold in the app has a visible control that does the same thing, and ConventionTest's
+    // hold-twin law keeps it that way.
+    /**
+     * The `⋮` on a kit, expansion or room row: a tap does exactly what holding the row does
+     * (arms the row's RENAME, DELETE and EXPANSION doors, or reveals FORGET). A glyph, not a sentence.
+     */
+    const val ROW_MORE = "⋮"
+    /** The YOURS preset door beside the strip: opens the same forget dialog a hold on the chip opens. */
+    const val PRESET_FORGET_DOOR = "FORGET"
+    /** ORBIT's strip, tap mode off: a tap places or lifts a hit, as it always did. */
+    const val ORBIT_TAP_PLACES = "TAP · PLACE"
+
+    /** ORBIT's strip, tap mode on: a tap moves the brush's property one rung, as holding the square does. */
+    fun orbitTapWrites(brush: String): String = "TAP · $brush"
+
     // Expansions on the phone: born from a held kit, gathered on the shelf.
     /** The armed kit row's third door. */
     const val EXPANSION_DOOR = "EXPANSION ▸"
@@ -1526,7 +1542,7 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD OR TAP · EDIT FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
     /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
     fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
 
@@ -1555,6 +1571,12 @@ object Copy {
 
     /** The strip's exact reading of the stored velocity, 1..100, beside the four levels. */
     fun stepDetailVelocity(percent: Int): String = "VELOCITY $percent"
+
+    /** BEAT's step chip, tap mode off: a tap flips the step on or off, as it always did. */
+    const val STEP_TAP_TOGGLES = "TAP · ON/OFF"
+
+    /** BEAT's step chip, tap mode on: a tap opens the step's detail, as holding the step does. */
+    const val STEP_TAP_EDITS = "TAP · EDIT"
 
     /** A step cell's long-press, as a screen reader names it. A label, not a toast. */
     const val STEP_DETAIL_LONG_LABEL = "EDIT STEP"
@@ -2334,6 +2356,30 @@ object Copy {
     fun kitRenamed(name: String): String = "RENAMED TO $name."
     const val KIT_RENAME_BUSY = "RENAMING…"
     const val KIT_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+
+    // ---- PROJECT ROWS (PR 6b): RENAME, DELETE, REMOVE A KIT from the row's ⋮ ----
+    /**
+     * DELETE on a project row, confirmed: the project goes to the bin,
+     * and the kits it held stay on the shelf (`ProjectStore.trash` touches
+     * nothing outside the project's own folder).
+     */
+    fun projectDeleted(name: String): String = "$name IS IN THE BIN. ITS KITS STAY ON THE SHELF. ${Reversal.MIND}"
+    /** The confirm over DELETE: says what is lost, what is not, and how to get it back. */
+    val PROJECT_DELETE_CONFIRM: String = "DELETE THIS PROJECT? ITS KITS STAY ON THE SHELF. " + Reversal.BIN
+    /** The move to the bin threw or the project was already gone; nothing moved. */
+    const val PROJECT_DELETE_FAILED = "COULDN'T MOVE THAT PROJECT TO THE BIN. IT IS STILL ON THE SHELF."
+    /** RENAME refused: another project already answers to [name], compared without case. */
+    fun projectNameTaken(name: String): String = "THERE IS ALREADY A PROJECT CALLED $name. PICK ANOTHER NAME."
+    /** RENAME failed for any other reason; the project keeps its name. */
+    const val PROJECT_RENAME_FAILED = "COULDN'T RENAME THAT PROJECT. IT KEEPS ITS NAME."
+    /** REMOVE A KIT done: [kit] is out of [project] and still on the shelf. */
+    fun projectKitDropped(kit: String, project: String): String = "$kit IS OUT OF $project. IT STAYS ON THE SHELF."
+    /** REMOVE A KIT failed; the project holds what it held. */
+    const val PROJECT_KIT_DROP_FAILED = "COULDN'T TAKE THAT KIT OUT OF THE PROJECT. IT HOLDS WHAT IT HELD."
+    /** The REMOVE A KIT sheet's question. */
+    const val PROJECT_DROP_SHEET = "TAKE WHICH KIT OUT? IT STAYS ON THE SHELF."
+    /** RESTORE on a binned project; [name] is the name it landed under, which a clash may have changed. */
+    fun projectRestored(name: String): String = "$name IS BACK ON THE SHELF."
 
     // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
     /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */

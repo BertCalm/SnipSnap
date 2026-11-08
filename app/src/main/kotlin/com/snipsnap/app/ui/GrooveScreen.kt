@@ -3145,8 +3145,9 @@ private fun StepEditorOverlay(
                                         // squares to a screen reader.
                                         .stepCellClick(
                                             label = stepCellLabel(LANE_DRUM_WORD.getValue(lane), col, vel),
+                                            // twin: the TAP · EDIT chip in StepEditorPanel, which makes a tap open the same detail
                                             onLongClick = { state.select(lane, step) },
-                                        ) { onEdit(toggledStep(clip, lane, step, state)) }
+                                        ) { state.tap(clip, lane, step) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .velocityFill(vel, laneColor)

@@ -1,0 +1,17 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Pushed Edge",
+    "voice": "HAT_OPEN",
+    "macros": {
+      "TUNE": 0.5400000214576721,
+      "DECAY": 0.3199999928474426,
+      "TONE": 0.41999998688697815,
+      "PUNCH": 0.550000011920929,
+      "RING": 0.2800000011920929
+    }
+  },
+  "alias": false
+}

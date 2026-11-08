@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateCompletionInventory") {
+    group = "verification"
+    description = "Count compiled engine voices and factory recipes without claiming musical acceptance."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CompletionInventoryGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("completionInventoryOutput").orNull
+        ?: "${rootDir}/build/reports/synth-completion/inventory.json")
+}
+
 tasks.register<JavaExec>("generateApsisAcceptance") {
     group = "distribution"
     description = "Export the GRAIN/ANCHOR velocity bank and perform its actual native MPC WAVs."
@@ -3266,4 +3276,13 @@ tasks.register<JavaExec>("generateDiveAudition") {
     mainClass.set("com.snipsnap.synth.DiveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/dive-audition")
+}
+
+tasks.register<JavaExec>("generateHushAudition") {
+    group = "distribution"
+    description = "Render HUSH's listening gate clips under testkit/hush-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HushAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/hush-audition")
 }

@@ -58,7 +58,7 @@ internal object TerraCases {
         KitPad("A06", "Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
         KitPad("A07", "Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)),
         KitPad("A08", "Djembe Open", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
-        KitPad("A09", "Tabla Tin", TerraVoice.DAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.8f, "OPEN" to 1f, "CLICK" to 0.5f)),
+        KitPad("A09", "Tabla Tin", TerraVoice.DAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.9f, "OPEN" to 1f, "CLICK" to 0.65f)),
         KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
         KitPad("A11", "Dumbek Tek", TerraVoice.DARBUKA, mapOf("TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f)),
         KitPad("A12", "Djembe Slap", TerraVoice.SLAP, mapOf("TUNE" to 0.53f, "DECAY" to 0.5f, "FORCE" to 0.95f, "POS" to 0.875f, "BOWL" to 0.5f, "SMACK" to 0.5f)),

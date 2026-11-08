@@ -4,6 +4,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
+import com.snipsnap.synth.Hush
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Room
 import com.snipsnap.synth.Treatments
@@ -129,6 +130,15 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of the HUSH pedal, on either sheet, shuts the pad the 12 dB under its peak the owner chose`() {
+        val chosen = 12f // the shallowest of the three gates heard on 2026-11-07, the one the gated room wanted
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val floor = Treatments.chain("hushed", tap).hush!!.getValue("FLOOR")
+            assertEquals(chosen, Hush.floorDb(floor), 1e-4f, "a tap at $tap misses the chosen gate")
+        }
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -151,8 +161,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(42, PadSheet.ALL_SEGMENTS.size, "the card should hold 42 segments")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE", "HUSH"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(43, PadSheet.ALL_SEGMENTS.size, "the card should hold 43 segments")
     }
 
     /**
@@ -163,7 +173,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one and DIVE forty-two`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two and HUSH forty-three`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -198,9 +208,11 @@ class PadSheetTest {
             "VIBRATO",
             // DIVE's gate (2026-11-07): on the slate, behind MORE
             "DIVE",
+            // HUSH's gate (2026-11-07): on the slate, behind MORE
+            "HUSH",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(42, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(43, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test

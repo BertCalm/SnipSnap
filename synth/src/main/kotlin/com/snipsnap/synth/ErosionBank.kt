@@ -1,8 +1,8 @@
 package com.snipsnap.synth
 
 /**
- * Provisional playing recipes for the owner's next listen, not a factory roster.
- * The original sixteen recipes remain available; the contrast bank uses six controls.
+ * Accepted eight-role playing bank and the single source of factory recipe values.
+ * The original sixteen audition recipes remain available; the contrast bank uses six controls.
  */
 object ErosionBank {
     val velocities = listOf(.35f, .65f, 1f)

@@ -653,6 +653,7 @@ fun App(shelf: KitShelf) {
             shelfListsLoaded = true
             binnedCount = withContext(Dispatchers.IO) {
                 runCatching { shelf.binnedKits().size }.getOrDefault(0) +
+                    runCatching { ProjectStore.binned(shelf.root).size }.getOrDefault(0) +
                     runCatching { SnipStore.binned(context.filesDir).size }.getOrDefault(0)
             }
         }
@@ -2797,6 +2798,100 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * The project row's ⋮ → RENAME (PR 6b), confirmed with the typed name.
+     * `ProjectStore.rename` refuses a name another project holds (said as
+     * [Copy.projectNameTaken], the project untouched) and moves the folder
+     * with everything in it, so the beat and the kept song follow. If the
+     * renamed project is the open one, `project` is repointed at it: every
+     * reader of the project's folder goes through `project.name`, and a
+     * stale name would send the next beat write to a folder that is gone.
+     */
+    fun renameProject(oldName: String, newName: String) {
+        if (busy != null) return
+        busy = Busy(Copy.KIT_RENAME_BUSY)
+        scope.launch {
+            try {
+                val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelfModel.renameProject(oldName, newName) } }
+                // Re-read after the await: the open project may have changed meanwhile.
+                if (project?.name == oldName) project = renamed
+                projects = withContext(Dispatchers.IO) { runCatching { shelfModel.projects() }.getOrDefault(projects) }
+                dock.say(Copy.kitRenamed(renamed.name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ProjectStore.NameTakenException) {
+                dock.say(Copy.projectNameTaken(e.name))
+            } catch (e: Exception) {
+                Log.e(TAG, "renameProject: failed", e)
+                dock.say(Copy.PROJECT_RENAME_FAILED)
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
+     * The project row's ⋮ → DELETE (PR 6b), confirmed: the project's folder
+     * goes to the bin (`ProjectStore.trash`), its kits stay on the shelf. If
+     * it was the open project there is nothing open any more: the open kit
+     * is cleared and a screen over the shelf goes back to it, [deleteKit]'s
+     * own reset.
+     */
+    fun deleteProject(name: String) {
+        if (busy != null) return
+        busy = Busy(Copy.KIT_DELETE_BUSY)
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelfModel.trashProject(name) } }
+                projects = withContext(Dispatchers.IO) { runCatching { shelfModel.projects() }.getOrDefault(projects) }
+                binnedCount += 1
+                dock.say(Copy.projectDeleted(name))
+                if (project?.name == name) {
+                    project = null
+                    open = null
+                    if (nav.location.place != Place.SHELF) landOn(AppScreen.KITS)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteProject: failed", e)
+                dock.say(Copy.PROJECT_DELETE_FAILED)
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
+     * The project row's ⋮ → REMOVE A KIT (PR 6b): `ShelfModel.dropKit`. The
+     * kit stays on the shelf. When the project is the open one it is
+     * repointed at the updated project, and if the kit taken out was the
+     * open kit, the project's new active kit (or none) is open instead.
+     */
+    fun dropProjectKit(projectName: String, kitFolder: String) {
+        if (busy != null) return
+        // A small write; the generic WORKING… holds the shelf for it.
+        busy = Busy(Copy.WORKING_BUSY)
+        scope.launch {
+            try {
+                val updated = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelfModel.dropKit(projectName, kitFolder) } }
+                projects = withContext(Dispatchers.IO) { runCatching { shelfModel.projects() }.getOrDefault(projects) }
+                if (project?.name == projectName) {
+                    project = updated
+                    if (open?.dir?.name == kitFolder) open = kits.firstOrNull { it.dir.name == updated.activeKit }
+                }
+                dock.say(Copy.projectKitDropped(kitFolder, projectName))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "dropProjectKit: failed", e)
+                dock.say(Copy.PROJECT_KIT_DROP_FAILED)
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
      * BACKUP (X3.3): every kit on the shelf as one file, handed to the
      * chooser - Drive, a cable, a messenger to yourself. The same file
      * shared back in lands every kit again through the shelf's door.
@@ -3812,6 +3907,9 @@ fun App(shelf: KitShelf) {
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
+                                onRenameProject = ::renameProject,
+                                onDeleteProject = ::deleteProject,
+                                onDropProjectKit = ::dropProjectKit,
                                 onCatchFirst = ::requestArm,
                                 busy = busy != null,
                                 startingKit = pendingKit != null,
@@ -4240,6 +4338,7 @@ fun App(shelf: KitShelf) {
                                 },
                                 versions = versions,
                                 busy = busy != null,
+                                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which calls the same openPadSheet
                                 onLongPress = ::openPadSheet,
                                 onTakesBin = {
                                     versionsKitDir = open?.dir
