@@ -209,9 +209,9 @@ class OctaverTest {
         // The owner's note: the knob did not move smoothly. Measured on the first version, DRIVE 0 to 0.05
         // changed the snare's spectrum by 1.84 dB and later steps by about 0.2 (9 times less), and the low
         // tom's copy energy rose 3 dB and fell 6 across the knob. The second version (Grit at 0.35, Fuzz at 1)
-        // brought the biggest step to 2.6 times the median on the snare. With Fuzz at FUZZ and Grit at 1
-        // (measured at the commit): snare 1.24, low tom 1.21, kick 1.40, so the bound is 2, and the copy's
-        // energy is the clean copy's at every setting.
+        // brought the biggest step to 2.6 times the median on the snare. With Fuzz faded in up to FUZZ and
+        // opened out into Grit at 1 (measured at the commit): snare 1.34, low tom 1.47, kick 1.92, so the bound
+        // is 2.5, and the copy's energy is the clean copy's at every setting.
         for ((name, pad) in listOf("snare" to snare, "low tom" to lowTom, "kick" to Thump.render(ThumpVoice.KICK))) {
             val clean = Octaver.copy(pad, 0.5f, 1f, 0f).sumOf { it.toDouble() * it }
             val steps = ArrayList<Double>()
@@ -227,7 +227,7 @@ class OctaverTest {
             }
             val median = steps.sorted()[steps.size / 2]
             val worst = steps.max()
-            assertTrue(worst <= 2 * median, "$name: the biggest 5 percent step (${"%.2f".format(worst)} dB) is ${"%.1f".format(worst / median)} times the median (${"%.2f".format(median)} dB)")
+            assertTrue(worst <= 2.5 * median, "$name: the biggest 5 percent step (${"%.2f".format(worst)} dB) is ${"%.1f".format(worst / median)} times the median (${"%.2f".format(median)} dB)")
         }
     }
 
