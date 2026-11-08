@@ -1,3 +1,7 @@
+> Fired Bronze push round: owner requested stronger processor and amp. Separate drive
+> controls, 75% compressor blend, and stage-isolated auditions retain prior recipes.
+> See [push notes](FIRED_BRONZE_PUSH.md).
+
 > Fired Bronze processing round: accepted dry kit → manual-order processor adaptation →
 > separate amp. Shared-bus and individually processed-pad auditions are distinct; original
 > long tails retained. See [color-round notes](FIRED_BRONZE_COLOR.md).
