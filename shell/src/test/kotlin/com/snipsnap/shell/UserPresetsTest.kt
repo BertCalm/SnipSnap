@@ -1256,7 +1256,7 @@ class UserPresetsTest {
             if (engine == ObbligatoPatch.ENGINE) {
                 assertEquals(listOf(ObbligatoPatch.VOICE), Presets.all().filter { it.engine == engine }.map { it.voiceName }.distinct())
             } else {
-                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
+                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine).replace('.', '$'))
                 assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
             }
         }

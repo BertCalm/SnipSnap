@@ -133,11 +133,12 @@ object EngineCatalog {
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
         "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
-        // Last, as it is in the `Engine` enum: the picker steps in the enum's order and a device test
+        // The picker steps in the `Engine` enum's order and a device test
         // holds that walk to this map's order, so a new engine goes at the end of both.
         "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
         "EROSION" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry electrical percussion, from low thuds to bright crackle"),
         "RIVET" to EngineEntry(listOf(EngineCategory.DRUMS), "Industrial drums from a small room to a warehouse"),
+        "FIRED_BRONZE" to EngineEntry(listOf(EngineCategory.DRUMS), "Skin, clay and bronze through a driven processor and amp"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

@@ -378,6 +378,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
         ScannedChainPatch.ENGINE -> "ScannedChainVoice"
         OrphicaPatch.ENGINE -> "OrphicaMaterial"
         OpenSkyPatch.ENGINE -> "OpenSkyVoice"
@@ -387,6 +388,7 @@ object UserPresets {
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
     fun rosterFile(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzePresets.kt"
         ScannedChainPatch.ENGINE -> "ScannedChainPresets.kt"
         OpenSkyPatch.ENGINE -> "OpenSkyPresets.kt"
         OverlapPatch.ENGINE -> "OverlapFactoryPresets.kt"

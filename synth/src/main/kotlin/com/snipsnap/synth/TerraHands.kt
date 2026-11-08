@@ -129,7 +129,7 @@ internal object TerraHands {
         // net volume, its peak 0 to 1x the head's (0.5 heard). SHELL: the ceramic's ring, 0 to 0.24.
         TerraVoice.DOUM -> listOf(MacroSpec("TUNE", 0.483f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.4f),
             MacroSpec("AIR", 0.5f), MacroSpec("SHELL", 0.5f))
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraFitted.macros(voice)
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> TerraFitted.macros(voice)
         else -> error("$voice is not a TERRA hand drum")
     }
 
@@ -359,7 +359,7 @@ internal object TerraHands {
         TerraVoice.DARBUKA -> darbukaF01(m).let { f -> darbukaModes(m, seed).map { Modes.Mode((it.hz / f).toFloat(), abs(it.weights[0]).toFloat(), it.t60.toFloat()) } to f.toFloat() }
         TerraVoice.DAYAN -> dayanF0(m).let { f -> dayanRing(m, seed).map { (hz, g, t) -> Modes.Mode((hz / f).toFloat(), g.toFloat(), t.toFloat()) } to f.toFloat() }
         TerraVoice.DOUM -> darbukaF01(m).let { f -> doumModes(m, seed).map { Modes.Mode((it.hz / f).toFloat(), abs(it.weights[0]).toFloat(), it.t60.toFloat()) } to f.toFloat() }
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraFitted.bodyModes(voice, m)
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> TerraFitted.bodyModes(voice, m)
         else -> error("$voice is not a TERRA hand drum")
     }
 

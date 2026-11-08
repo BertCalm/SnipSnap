@@ -223,9 +223,9 @@ class UatSimTest {
 
         step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
-        note("the one filled button reads: ${Places.CATCH_FIRST}; NEW KIT ▸ STARTERS is the outline row beneath it")
+        note("the empty panel holds the filled ${Places.CATCH_FIRST} and the outline ${Copy.START_FROM_KIT} under the note: \"${Copy.FIRST_RUN_PLACES_NOTE}\"; then the amber \"${Copy.EMPTY_SHELF_ENDS}\"")
 
-        step(++taps, "Tap the outline row, NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
+        step(++taps, "Tap the outline button, ${Copy.START_FROM_KIT}. Menu heading: PICK A STARTER")
         StarterKits.ALL.forEachIndexed { i, s ->
             note("${i + 1}. ${s.displayName.padEnd(14)} ${if (s.seeded) "(TAPS REROLL) " else ""}— ${s.blurb}")
         }
@@ -685,7 +685,7 @@ class UatSimTest {
         }
         note("the row is ${Layout.MENU_ROW_H}dp and each place fills it, against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, kept)")
         note("stage rows under TAPE (${Places.TAPE_STAGES.joinToString(" · ")}) and PROJECT (${Places.PROJECT_STAGES.joinToString(" · ")}); SHELF and MAKE are lists")
-        note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸, ${Places.GEAR_HELP} ▸ and ${Places.GEAR_MIDI} ▸ — the first two were tabs twelve and thirteen of the old row, all one tap from anywhere now")
+        note("the title bar's right end holds ${Copy.TITLE_HELP} (?) and ${Copy.TITLE_SETTINGS} (gear), each opening its screen directly, one tap from anywhere; ${Copy.SETUP_MIDI_DEVICES} is a row inside ${Copy.TITLE_SETTINGS}")
         note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
         note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
         note("title bar reads: SNIPSNAP, then the open project's name — the stale M0 build tag went with finding 2")

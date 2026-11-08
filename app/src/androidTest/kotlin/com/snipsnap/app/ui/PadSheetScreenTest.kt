@@ -313,26 +313,27 @@ class PadSheetScreenTest : ComposeScreenTest() {
     /**
      * `PadSheetBoxes.summaries` wired into the screen's five strips. MAKE
      * is deliberately excluded from the count — its own KDoc explains it
-     * never reads UNTOUCHED, since it advertises what the box can do
-     * rather than reporting what the pad carries.
+     * never reports carried, since it advertises what the box can do
+     * rather than reporting what the pad carries. An idle strip names what its box holds.
      */
     @Test
-    fun an_untouched_pad_shows_untouched_on_every_bench_strip_but_make() {
+    fun an_untouched_pad_names_what_is_inside_on_every_bench_strip() {
         show(padSheetKit(listOf(1)), slot = 1)
         // The editor itself draws only the two doors, with their closed lines: no strip is on it.
-        fun untouched() = compose.onAllNodesWithText(PadSheetBoxes.UNTOUCHED, useUnmergedTree = true).fetchSemanticsNodes().size
-        assertEquals("the editor draws no strips of its own", 0, untouched())
-        compose.onNodeWithText(PadSheetBoxes.NOTHING_APPLIED, useUnmergedTree = true).assertExists()
+        fun idle(vararg words: String) = words.sumOf { compose.onAllNodesWithText(it, useUnmergedTree = true).fetchSemanticsNodes().size }
+        assertEquals("the editor draws no strips of its own", 0, idle(PadSheetBoxes.TREATMENT_HOLDS, PadSheetBoxes.SHAPE_HOLDS, PadSheetBoxes.OUTSIDE_HOLDS))
+        assertEquals("no closed line reads UNTOUCHED", 0, idle("UNTOUCHED"))
+        compose.onNodeWithText(PadSheetBoxes.EFFECTS_HOLDS, useUnmergedTree = true).assertExists()
         compose.onNodeWithText(PadSheetBoxes.MUTATE_OFFERS, useUnmergedTree = true).assertExists()
 
         // EFFECTS holds TREATMENT, SHAPE and OUTSIDE.
         activate(Copy.PAD_EFFECTS_DOOR)
-        assertEquals(3, untouched())
+        assertEquals(3, idle(PadSheetBoxes.TREATMENT_HOLDS, PadSheetBoxes.SHAPE_HOLDS, PadSheetBoxes.OUTSIDE_HOLDS))
         tap("BACK TO PAD ${PadBanks.tag(1)}")
         assertEquals("Back from EFFECTS lands on the editor", 0, backs)
         // VARIATIONS holds MUTATE.
         activate(Copy.PAD_VARIATIONS_DOOR)
-        assertEquals(1, untouched())
+        assertTrue("MUTATE names what it holds", idle(PadSheetBoxes.MUTATE_OFFERS) >= 1)
     }
 
     /**

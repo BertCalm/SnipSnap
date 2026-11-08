@@ -40,15 +40,15 @@ object Copy {
      * The product loop, named once, on the only screen a new user is
      * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
      * -> export was never stated anywhere in the app). The shelf draws the
-     * four places above it ([Places.PLACES]) and this sentence under them.
+     * four places above it ([Places.PLACES]) and, on the empty shelf, this sentence in the panel.
      *
-     * Four verbs, then two places. The verbs say what you do at each stop:
-     * RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
-     * PADS, WRITE IT on its OUT. What follows names two places rather
-     * than four tabs, because CUT is a stage of TAPE and WRITE is a stage
-     * of PROJECT (`docs/SCREEN_PLAN_2026_10.md` §3.1); `PlacesTest` holds
-     * the verbs and the two names, and the loop-names law in
-     * `ConventionTest` holds the names to real places.
+     * Four verbs, then the kit way in. The verbs say what you do at each
+     * stop: RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
+     * PADS, WRITE IT on its OUT (`docs/SCREEN_PLAN_2026_10.md` §3.1). The note
+     * once named TAPE and PROJECT as well; the row of places above the panel
+     * says that now, so `PlacesTest` holds the verbs and the tail, and the
+     * loop-names law in `ConventionTest` holds every word in it to a real
+     * place or a non-tab.
      *
      * The verb for step three is KIT IT, not PLAY IT (J13): PLAY was a
      * tab, and the app's only explanation of its own loop glossed a
@@ -66,20 +66,39 @@ object Copy {
      * A HIT land sounds on pads without CUT. No door of this screen is named
      * here on purpose: NEW KIT sits directly under this panel and TAPE is on
      * the row above it, so a line pointing at either would be a third copy of
-     * a control already twice on screen. (On a cold shelf the primary is now
-     * CATCH YOUR FIRST SOUND ▸, with NEW KIT ▸ STARTERS an outline row under
-     * it; the note still names neither, for the same reason.)
+     * a control already twice on screen. (On a cold shelf both ways in now sit inside
+     * this panel, under the note: CATCH YOUR FIRST SOUND ▸, filled, and
+     * [START_FROM_KIT]. The note names neither button, for the same reason,
+     * and the row of places that used to sit above it is gone: it repeated the
+     * tab row.)
      *
-     * **The last clause names the one door that is not on this screen**
-     * (the UX review's SH1): the loop starts with a recording, and the way to
-     * one is LISTEN · MIC in the dock, below, on every screen. The sentence
-     * used to describe the loop and point at nothing.
+     * **The tail is "OR START FROM A KIT."** The note used to end by pointing
+     * at LISTEN · MIC in the dock and by sending a user TAPE, THEN PROJECT;
+     * the two buttons under it do that work now, so the note says only that a
+     * kit is a way in too.
      *
      * Step three stays KIT IT, not PLAY IT: `ConventionTest` holds PLAY in
      * its list of retired tab names, and a verb that reads as a place is
      * what that law is for.
      */
-    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN. TAP LISTEN · MIC BELOW TO BEGIN."
+    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. OR START FROM A KIT."
+
+    /**
+     * The empty shelf's second way in, a button inside the panel under the
+     * note ([Places.CATCH_FIRST] is the first, and the filled one). It opens
+     * the same PICK A STARTER list the outline NEW KIT ▸ STARTERS row opens
+     * once the shelf has projects; the label says what the tap lands on, in
+     * the note's own words ("OR START FROM A KIT."), where the old label named
+     * the list.
+     */
+    const val START_FROM_KIT = "START FROM A KIT ▸"
+
+    /**
+     * The empty panel's last line, amber: what the loop ends as, so a new user
+     * knows what the app hands back before recording anything. Furniture, not
+     * a sentence, so it keeps no full stop.
+     */
+    const val EMPTY_SHELF_ENDS = "ENDS AS MPC KITS, WAVS AND SONGS"
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
@@ -1172,6 +1191,13 @@ object Copy {
     // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
     /** The heading of the MIDI OUT section of SETUP. */
     const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"
+
+    /** The door in SETTINGS to the MIDI devices screen; it used to sit behind the title bar's gear. */
+    const val SETUP_MIDI_DEVICES = "MIDI DEVICES ▸"
+
+    /** The title bar's two buttons: their accessible names (clarity spec §7.3). */
+    const val TITLE_HELP = "HELP"
+    const val TITLE_SETTINGS = "SETTINGS"
     /** Under the MIDI OUT heading: where the notes go, and the port other apps can always open. */
     const val SETUP_MIDI_OUT_NOTE = "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN ALWAYS OPEN SNIPSNAP OUT."
     /** In place of the device list when nothing is plugged in. */

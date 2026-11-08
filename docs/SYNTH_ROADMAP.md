@@ -1,4 +1,39 @@
+> Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
+> FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
+> See [integration and verification](FIRED_BRONZE_INTEGRATION.md).
+
+> Fired Bronze performance round: accepted Both pushed remains exact at full strength.
+> Velocity-linked processor/amp drive and a four-layer kit are ready for listening.
+> See [performance notes](FIRED_BRONZE_PERFORMANCE.md).
+
+> Fired Bronze push round: owner requested stronger processor and amp. Separate drive
+> controls, 75% compressor blend, and stage-isolated auditions retain prior recipes.
+> See [push notes](FIRED_BRONZE_PUSH.md).
+
+> Fired Bronze processing round: accepted dry kit → manual-order processor adaptation →
+> separate amp. Shared-bus and individually processed-pad auditions are distinct; original
+> long tails retained. See [color-round notes](FIRED_BRONZE_COLOR.md).
+
+> Fired Bronze dry kit round: Josh preferred the R2 source study. A separate 16-pad
+> recipe family adds bass-skin kick, rim-driven rattle snare and shared bronze hats.
+> New kit listening is pending; no processor or amp is added. See [dry kit notes](FIRED_BRONZE_DRY_KIT.md).
+
 # Synth roadmap — generate kits, not just capture them
+
+**Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner
+listening. Five credited tabla preview profiles now drive additive/stochastic
+synthesis; separate pressure, cavity and published-frequency gong candidates
+remain uncalibrated. V1 recipes are preserved. See [R2 evidence and limits](FIRED_BRONZE_R2.md).
+
+
+**Fired Bronze first-build study (2026-11-07).** Sixteen Indian and Southeast
+Asian inspired percussion roles retain kick, snare and paired hats. Authored
+modal articulations and a stored bayan pressure gesture feed an explicit
+compressor/saturation/delay/space treatment followed by a separate amp.
+`generateFiredBronzeAudition` writes dry/processor/amp comparisons, velocity
+layers, replayable study recipes and an MPC sample kit. Source calibration,
+listening, factory registration, phone timing and hardware loading remain open.
+See [FIRED_BRONZE.md](FIRED_BRONZE.md).
 
 **RIVET accepted industrial drum bank (2026-11-08).** Six finite voices share
 TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS, with an independent close strike as the

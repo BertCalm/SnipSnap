@@ -1,0 +1,42 @@
+"""Build the dry listening page and portable archive after Kotlin rendering."""
+from pathlib import Path
+import json,html,shutil,zipfile
+root=Path('testkit/fired-bronze-r2')
+notice=Path('synth/src/main/resources/fired-bronze-r2/NOTICE.txt')
+shutil.copyfile(notice,root/'NOTICE.txt')
+shutil.copyfile('docs/FIRED_BRONZE_R2.md',root/'BUILD_NOTES.md')
+ids={'tin':'171911','tun':'171909','na':'171905','te':'171913','ga':'171902'}
+labels={'tin':'Tin · Edge Ring','tun':'Tun · Center Ring','na':'Na · Rim Ring','te':'Te · Pressed Tap','ga':'Ga · Bass Stroke','pressure':'Moving Bass','clay_open':'Open Clay','clay_closed':'Covered Clay','kettle':'Measured Kettle','gong':'Long Gong'}
+def player(native,matched,label,recipe=None):
+ assert (root/native).is_file(),native
+ assert (root/matched).is_file(),matched
+ return f'<div class="clip"><p class="label">{html.escape(label)}</p><audio controls preload="none" aria-label="{html.escape(label)}" src="{matched}" data-matched="{matched}" data-native="{native}"></audio><div class="links"><a href="{native}" download>Native WAV</a>'+ (f'<a href="recipes/{recipe}.json" download>Recipe</a>' if recipe else '')+'</div></div>'
+def generated(name,variant,label):
+ id=name+'_'+variant;return player('native/'+id+'.wav','listen/'+id+'.wav',label,id)
+cards=[];hyp=[]
+for name,label in labels.items():
+ item=f'<article><h3>{html.escape(label)}</h3>'
+ if name in ids:
+  item+='<p class="status">Fitted from one labelled recording</p>'+player('references/'+ids[name]+'.wav','listen/reference_'+name+'.wav','Reference · ajaysm / CC BY 4.0')
+ else:
+  desc={'pressure':'Pressure and decay mechanism; gesture remains uncalibrated.','clay_open':'Shell plus cavity hypothesis; no ghatam recording fit.','clay_closed':'The same shell with reduced cavity opening; uncalibrated.','kettle':'Published specimen frequencies; authored amplitudes and decays.','gong':'Published specimen frequencies; eight-second authored decay.'}[name]
+  item+='<p class="status">'+desc+'</p>'
+ item+=generated(name,'default','R2 · dry synthesis')+'<details><summary>Touch and damping comparisons</summary>'+generated(name,'soft','30% velocity · extrapolated')+generated(name,'damped','Additional damping')
+ if name in ['pressure','clay_open','gong']:item+=generated(name,'still','Motion off')+generated(name,'motion','Motion full')
+ item+='</details></article>'
+ (cards if name in ids else hyp).append(item)
+page='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fired Bronze revision 2: reference recordings beside dry spectral synthesis."><title>Fired Bronze / Dry revision</title><style>
+:root{color-scheme:dark;--bg:#171b1c;--surface:#202627;--line:#3b4442;--gold:#e7b97b;--muted:#b8c1bc}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f2eee7;font:16px/1.6 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:36px 24px 60px}a{color:var(--gold);text-underline-offset:4px}.eyebrow{font:12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}h1{font-size:clamp(42px,8vw,86px);line-height:1.05;letter-spacing:-.055em;font-weight:500;margin:20px 0}h2{font-size:30px;letter-spacing:-.035em;font-weight:500}h3{font-size:25px;font-weight:500;letter-spacing:-.02em;margin:0 0 6px}.intro{max-width:700px;font-size:19px;color:var(--muted)}header{padding:25px 0 35px;border-bottom:1px solid var(--line)}.actions{display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin-top:24px}.button{background:var(--gold);color:var(--bg);padding:12px 18px;border-radius:5px;text-decoration:none;font-weight:650}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}article{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:24px;min-width:0}.status,.small{font-size:13px;color:var(--muted)}.status{min-height:42px}.clip{margin:18px 0}.label{font-size:13px;color:var(--muted);margin:0 0 8px}audio{display:block;width:100%;height:40px}.links{display:flex;gap:18px;font-size:11px;margin-top:6px}.links a{color:var(--muted)}details{border-top:1px solid var(--line);padding-top:14px}summary{color:var(--gold);cursor:pointer}.section-top{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-top:28px}select{background:var(--surface);color:#eee;border:1px solid var(--line);padding:10px;border-radius:4px}img{width:100%;height:auto;border-radius:5px}footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}:focus-visible{outline:3px solid var(--gold);outline-offset:4px}@media(max-width:700px){main{padding:20px 16px}.grid{grid-template-columns:1fr}article{padding:18px}.intro{font-size:17px}}</style></head><body><main>
+<header><p class="eyebrow">SnipSnap / Fired Bronze / Revision 02</p><h1>The dry voices,<br>against a reference.</h1><p class="intro">The first kit sounded too much like a basic drum machine. This revision starts with five distinct tabla strokes, measured from labelled recordings. Listen to the reference and the synthesis side by side, before any processor or amp.</p><div class="actions"><a class="button" href="fired-bronze-r2.zip" download>Download dry study ↓</a><a href="https://fired-bronze-audition.bertcalm.chatgpt.site/r1.html">First build archive</a><a href="#mechanisms">Gong & cavity studies</a></div><p class="small">Research study. The fitted recordings are short MP3 previews, not complete natural decays. New touch and tuning settings remain extrapolations.</p></header>
+<section><div class="section-top"><h2>Five articulation fits</h2><label class="small">Playback <select id="level"><option value="matched">Loudness matched</option><option value="native">Native levels</option></select></label></div><p class="small">Start with Tun, Tin and Na. Their strongest partials differ markedly. Playing a clip pauses the previous one. For the shortest strokes, use each player's play button to repeat.</p><div class="grid">FITTED</div></section>
+<section id="mechanisms"><h2>Mechanisms still being tested</h2><p class="intro">These candidates have weaker calibration. Kettle and gong frequencies come from published measurements; their decay shapes are authored. The pressure and clay voices are hypotheses, not recording matches.</p><div class="grid">HYPOTHESES</div></section>
+<section><h2>What the measurements show</h2><p class="small">The plots compare normalized spectra, not perceived realism. Tin, Tun and Na keep their measured dominant peaks. Te has a weaker spectral fit; Tun's normalized amplitude-envelope error is about 13%. There is no independent test recording or listener acceptance yet.</p><img src="reference-comparison.png" width="1540" height="1260" alt="Three spectral comparisons showing reference and Kotlin render for Tin, Tun and Na"><p><a href="reference-comparison.json">Reference-fit measurements</a> · <a href="metrics.csv">Render timings</a> · <a href="BUILD_NOTES.md">Build notes</a></p></section>
+<footer><p>Reference recordings: <a href="https://freesound.org/people/ajaysm/packs/10737/">Tabla Strokes by ajaysm</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. HQ previews decoded to mono and loudness adjusted for comparison. Synthesis profiles adapt their spectral envelopes; oscillators and seeded noise generate the audio. No performer endorsement is implied.</p><p><a href="NOTICE.txt">Full credits and changes</a> · <a href="references/provenance.json">Recording provenance</a> · R1 recipes remain unchanged. This dry study does not replace the 16-pad MPC kit.</p></footer>
+</main><script>const players=[...document.querySelectorAll('audio')];players.forEach(p=>p.addEventListener('play',()=>players.forEach(o=>{if(o!==p)o.pause()})));document.getElementById('level').addEventListener('change',e=>players.forEach(p=>{p.pause();p.src=p.dataset[e.target.value];p.load()}));</script></body></html>'''
+(root/'index.html').write_text(page.replace('FITTED',''.join(cards)).replace('HYPOTHESES',''.join(hyp)))
+# Archive excludes the archive itself and downloaded compressed source duplicates.
+archive=root/'fired-bronze-r2.zip'
+with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
+ for p in sorted(root.rglob('*')):
+  if p.is_file() and p!=archive and p.suffix!='.mp3':z.write(p,p.relative_to(root))
+print(archive,archive.stat().st_size)
