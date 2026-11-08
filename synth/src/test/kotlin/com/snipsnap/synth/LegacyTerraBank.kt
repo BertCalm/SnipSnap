@@ -56,7 +56,7 @@ internal object LegacyTerraBank {
             MacroSpec("BUZZ", 0f),
         )
         TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> error("$voice came after the freeze and has no frozen copy")
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> error("$voice came after the freeze and has no frozen copy")
     }
 
     fun defaults(voice: TerraVoice): Map<String, Float> =
@@ -72,7 +72,7 @@ internal object LegacyTerraBank {
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate) to 0
             TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> error("$voice came after the freeze and has no frozen copy")
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> error("$voice came after the freeze and has no frozen copy")
         }
         Dsp.normalize(raw)
         val out = if (clackFrames > 0) {

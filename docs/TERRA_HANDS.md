@@ -1,4 +1,4 @@
-# TERRA's hand drums: SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK and BAYAN
+# TERRA's hand drums: SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN and TUN
 
 Three TERRA voices built on 2026-11-07, one per pad, to replace the TERRA kit's
 djembe slap (A12), tabla tin (A09) and dumbek tek (A11). The code is
@@ -152,7 +152,7 @@ Velocity, centroid at v = 0.25 / 0.6 / 1: SLAP 437 / 580 / 840 Hz, DAYAN
 
 Five more pads left COMPOUND_MEMBRANE: Bayan Drag (A02), Djembe Bass (A03),
 Dholak Bass (A05), Dumbek Doum (A06) and Djembe Open (A08). Tabla Tun (A10)
-stays until there is a reference for it.
+followed the same day, fitted to an open recording ([The tun](#the-tun-tun-2026-11-08)).
 
 ### Rounds 5 to 7, designed blind, heard as a drum machine
 
@@ -332,6 +332,114 @@ The owner picked these strokes as they were, so they ship as picked.
   StrikeVelocityTest's does: the fitted open tone's fixed 559/582 Hz pair read
   39 cents apart between takes.
 
+## The tun: TUN (2026-11-08)
+
+Tabla Tun (A10) was the last pad on COMPOUND_MEMBRANE. It is now TUN, in
+`TerraFitted.kt`, fitted the way DJEMBE, DHOLAK and BAYAN were. Rounds 5 to 7
+had already shown that a tun designed blind reads as a drum machine.
+
+### The reference
+
+There was no video of a tun, so the reference is an open dataset: the 4-way
+tabla stroke dataset (M. A. Rohit, A. Bhattacharjee and P. Rao, ISMIR 2021,
+https://zenodo.org/record/7110248, CC BY 4.0). It is measured only and never
+shipped. The listening pages played three of its strokes, credited.
+
+The dataset files Na, Tin and Tun together as "resonant treble", so the tuns
+were sorted by sound:
+- **What marks a tun.** It is the index finger on the syahi's centre, lifted
+  at once, so the head's (0, 1) mode leads. Na and Tin damp that mode almost
+  to silence and ring on the harmonics above it.
+- **Finding each drum's pitch.** A pitch search that includes the
+  fundamental locks an octave out on Na strokes. So each drum's fundamental
+  was found from the spacing of harmonics 2 to 6.
+- **The strokes used.** Three tuns from the hand-labelled test set
+  (kachu-na_DM at 61.38, 75.02 and 120.72 s) on a dayan ringing at 299 Hz,
+  almost the kit's D4. Ten more from eight other tabla sets cross-check them.
+
+Measured on them:
+- **The note.** It rings 2.5 to 2.6 s and is there from its first cycle,
+  with no build-up. After 30 ms it holds within 2% of its pitch.
+- **The overtones.** 30 to 50 dB under the note. They vary more than
+  anything else between drums: 1.80x at -10 to -44 dB, 2.70x at -17 to -40 dB.
+- **A relation the app does not follow.** On all nine drums the tun's note
+  sits at 1/1.80 of the Na's strongest harmonic, not 1/2. DAYAN, the kit's
+  Tin, keeps exact harmonics, so the tun is put at the Tin's fundamental (D4,
+  293.66 Hz): the same drum, as the app models it.
+- **The knock.** The fingertip on the hard syahi gives the stroke's sharpest
+  peak, 8 to 20 dB over the note. It lands 13 to 21 ms after the note starts,
+  with a lesser hit at 1 to 5 ms, about 4 dB under. Its energy sits mostly
+  at 400 to 800 Hz.
+- **The burst.** A 25 ms wash at about the note's own level, 350 to 700 Hz,
+  with a thud at 140 to 220 Hz. It is gone within about 100 ms.
+- **What was not the stroke.** Outside the note's band, the body window's
+  levels match the levels before the stroke: that is the previous strokes
+  still ringing. Those pre-stroke levels were taken off the fit's target.
+
+### Round 1, heard
+
+https://claude.ai/artifact/KimSJD6gzXj4m5MnfZcYw8 played the real tuns, three
+builds and the app's tabla pads, at one loudness:
+- **A:** the knock 15 ms after the note, as played.
+- **B:** the knock with the note.
+- **C:** B with the nine drums' stronger overtones.
+
+Heard: the real strokes "Yes, that's a tun"; A; and, for the Tin then the
+pick, "Sounds like the tun".
+
+### In the app
+
+TUN is A, in `TerraFitted.kt`:
+- **The note and its overtones:** the partial table, struck by the 1 ms
+  half-sine.
+- **The knock** (`Knock`): the head's modes above 380 Hz, struck at the
+  centre. Each octave's gain is calibrated once on the knock's first 6 ms so
+  that its spectrum is the reference's, then the knock is high-passed at
+  250 Hz (a spike this short leaks into the bass as a step does). It lands at
+  15 ms, 5.08x the body's peak, with the lesser hit at 0. It is driven as
+  v^2, as the skin is, and a longer contact knocks duller.
+- **The residual:** fitted per third-octave band, as for the other fitted
+  drums.
+
+**One rule is new for a knocked stroke.** The knock is the stroke's peak, so
+the residual is scaled against the full hit's peak (v = 1, KNOCK and LAG as
+picked), not the current hit's. Scaling by the current peak would have put a
+soft tun's note 14 dB higher against its wash.
+
+| Voice | Controls | Pad |
+|---|---|---|
+| TUN | TUNE, DECAY, FORCE, KNOCK (none, as measured at 0.5, +6 dB), LAG (with the note, 15 ms at 0.5, 30 ms) | A10 |
+
+**Why the takes differ.** The picked prototype's first 30 ms at 400 to
+500 Hz was 10 dB under what the fit expects. Over so short a window a narrow
+band of noise acts like a tone of random phase, so it can cancel or reinforce
+the knock, and in A it happened to cancel. The real tuns spread as widely at
+448 Hz (+1, -10 and -13 dB). So the app's takes differ by up to 12 dB there,
+as a player's do.
+
+**The noise seed.** Of 24 seeds, the shipped one (141) puts the pad's first
+take nearest the pick: 2.8 dB rms over third octaves in the attack window,
+2.9 dB in the body. The seed it replaced landed 15 dB over the pick at 448 Hz.
+
+**The averaging, left as it is.** The residual's target averaged the three
+references' energies, where the other drums averaged decibels. A refit on the
+dB mean was closer in the attack (2.4 dB) but 8 to 10 dB thinner at 450 to
+560 Hz in the body. The owner heard the energy-mean fit, so it ships.
+
+**Velocity.** The first 30 ms centroid is 788 Hz at v = 0.5 and 1276 Hz at
+v = 1. The pick reads 1358 Hz. StrikeVelocityTest's brightening check passes.
+
+**Length and cost.** 1.45 s, like the other fitted drums. The note is at
+-34 dB when the fade starts. A render takes about 100 ms warm.
+
+**Tests.**
+- **TerraKitsTest.** It asked every voice to reach a kit pad. COMPOUND_MEMBRANE
+  no longer does: A10 was its last pad. The test now asks it of every voice
+  but the retired membrane.
+- **TerraFrozenTest.** It counts six pads on frozen voices, where it counted
+  seven. `TerraCases.RETIRED_HANDS` keeps A10 as it shipped, so the frozen
+  grid stays forty cases.
+
 ## Ledger
 
 - **Heard:** the three rounds above, each for the Python clips it played; the
@@ -343,7 +451,7 @@ The owner picked these strokes as they were, so they ship as picked.
   split range, each drum's T60 and tilt, the bowl's 72 Hz and the shells'
   modes, the noise bursts' bands and lengths, and the mix levels.
 - **Frozen guards:** `TerraFrozenTest` holds the four original voices to
-  `LegacyTerraBank`. The frozen grid keeps the eight pads as they shipped
+  `LegacyTerraBank`. The frozen grid keeps the nine pads as they shipped
   before (`TerraCases.RETIRED_HANDS`), so it stays forty cases.
 - **Heard (every stroke):** rounds 5 to 10 above, for the Python clips each
   played; the app's four new voices not yet.
@@ -351,6 +459,9 @@ The owner picked these strokes as they were, so they ship as picked.
   the app against the picks (above).
 - **Not yet heard clearly:** soft and medium hits, asked twice at one
   loudness ("Can't tell" both times). The velocity laws stand as measured.
-- **Still open:** Tabla Tun (A10) keeps COMPOUND_MEMBRANE until there is a
-  reference for it. Saved pads on COMPOUND_MEMBRANE are untouched; the kit's
-  pads moved to new voices.
+- **Heard (the tun):** round 1 above, for the Python clips it played. The
+  app's TUN against the pick: https://claude.ai/artifact/GGfRPFLZ792UUgLkPgNZZs,
+  not yet answered.
+- **No pad left on COMPOUND_MEMBRANE.** The kit's sixteen pads are all on
+  newer voices or the frozen cavity, bell and bar. Saved pads on
+  COMPOUND_MEMBRANE are untouched, and the voice stays.
