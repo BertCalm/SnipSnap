@@ -1,5 +1,8 @@
 # Fired Bronze first build
 
+Owner listening rejected this version as sounding like a basic drum machine.
+It remains a reproducible archive. Continue with [the R2 dry study](FIRED_BRONZE_R2.md).
+
 Sixteen finite hybrid percussion candidates with three velocity timbres, an
 explicit processor-before-amp treatment, complete study recipes, and an MPC
 sample export. Not factory-approved; no traditional-instrument fidelity claim.

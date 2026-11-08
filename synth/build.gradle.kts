@@ -3280,3 +3280,14 @@ tasks.register<JavaExec>("generateDiveAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/dive-audition")
 }
+
+tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
+    group = "distribution"
+    description = "Render the reference-informed dry revision without altering the rejected first study."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeR2Audition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("firedBronzeR2Output").orNull ?: "testkit/fired-bronze-r2")
+    if (providers.gradleProperty("firedBronzeR2ReferencesOnly").isPresent) args("--references-only")
+}

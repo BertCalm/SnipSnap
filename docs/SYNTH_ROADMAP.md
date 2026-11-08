@@ -1,5 +1,11 @@
 # Synth roadmap — generate kits, not just capture them
 
+**Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner
+listening. Five credited tabla preview profiles now drive additive/stochastic
+synthesis; separate pressure, cavity and published-frequency gong candidates
+remain uncalibrated. V1 recipes are preserved. See [R2 evidence and limits](FIRED_BRONZE_R2.md).
+
+
 **Fired Bronze first-build study (2026-11-07).** Sixteen Indian and Southeast
 Asian inspired percussion roles retain kick, snare and paired hats. Authored
 modal articulations and a stored bayan pressure gesture feed an explicit
