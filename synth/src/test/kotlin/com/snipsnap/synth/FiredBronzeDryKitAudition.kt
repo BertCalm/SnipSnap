@@ -37,7 +37,7 @@ object FiredBronzeDryKitAudition {
         } finally {work.deleteRecursively()}
         println("Dry kit rendered: 16 pads, velocity comparisons, two grooves, MPC program at ${root.absolutePath}")
     }
-    internal fun groove(full:Boolean):Snip {
+    internal fun groove(full:Boolean, treatment: ((Snip, P) -> Snip)? = null):Snip {
         data class Hit(val p:FiredBronzeDryKit.Pad,val beat:Double,val v:Float)
         val hits=buildList {
             for(bar in 0..3) {
@@ -54,10 +54,13 @@ object FiredBronzeDryKitAudition {
             if(full){add(Hit(P.KETTLE_LOW,.25,.65f));add(Hit(P.KETTLE_HIGH,8.25,.65f));add(Hit(P.GONG,16.0,.7f))}
         }.sortedBy{it.beat}
         // The ending gong gets its full eight seconds, independent of the phrase grid.
-        val out=FloatArray(((if(full)18.1 else 11.3)*Dsp.RATE).toInt())
+        val out=FloatArray((((if(full)18.1 else 11.3)+(if(treatment!=null)1.0 else 0.0))*Dsp.RATE).toInt())
         val cache=mutableMapOf<Pair<FiredBronzeDryKit.Pad,Float>,Snip>()
         for((index,h) in hits.withIndex()) {
-            val s=cache.getOrPut(h.p to h.v){FiredBronzeDryKit.Recipe(h.p,velocity=h.v).render()}
+            val s=cache.getOrPut(h.p to h.v){
+                val dry=FiredBronzeDryKit.Recipe(h.p,velocity=h.v).render()
+                treatment?.invoke(dry,h.p) ?: dry
+            }
             val start=(h.beat*60/96*Dsp.RATE).roundToInt()
             val next=if(h.p.choke!=0) hits.drop(index+1).firstOrNull{it.p.choke==h.p.choke} else null
             val stop=next?.let{((it.beat-h.beat)*60/96*Dsp.RATE).roundToInt()}?:s.frameCount

@@ -3301,3 +3301,12 @@ tasks.register<JavaExec>("generateFiredBronzeDryKitAudition") {
     maxHeapSize = "1g"
     args("testkit/fired-bronze-dry-kit")
 }
+
+tasks.register<JavaExec>("generateFiredBronzeColorAudition") {
+    group = "distribution"
+    description = "Render processor and amp comparisons around the accepted dry kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeColorAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}

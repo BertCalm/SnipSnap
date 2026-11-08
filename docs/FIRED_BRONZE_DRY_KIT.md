@@ -1,3 +1,6 @@
+> Listening update: Josh accepted this dry kit with “Sounds good, carry on.”
+> The next [processor and amp round](FIRED_BRONZE_COLOR.md) retains these sources.
+
 # Fired Bronze: dry kit round
 
 The characteristic gesture is **recognizable hand contact → shaped drum body →

@@ -1,3 +1,7 @@
+> Fired Bronze processing round: accepted dry kit → manual-order processor adaptation →
+> separate amp. Shared-bus and individually processed-pad auditions are distinct; original
+> long tails retained. See [color-round notes](FIRED_BRONZE_COLOR.md).
+
 > Fired Bronze dry kit round: Josh preferred the R2 source study. A separate 16-pad
 > recipe family adds bass-skin kick, rim-driven rattle snare and shared bronze hats.
 > New kit listening is pending; no processor or amp is added. See [dry kit notes](FIRED_BRONZE_DRY_KIT.md).
