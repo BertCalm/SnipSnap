@@ -30,7 +30,7 @@ terse, a little smug, never cutesy-apologetic.
 | Moment | Copy |
 |---|---|
 | Boot | `SNIPSNAP — READY.` |
-| Empty shelf | `NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY).` |
+| Empty shelf | panel: `NOTHING TAPED YET.`, then `RECORD IT, CUT IT, KIT IT, WRITE IT. OR START FROM A KIT.`, the filled `CATCH YOUR FIRST SOUND ▸` and outline `START FROM A KIT ▸` buttons, and in amber `ENDS AS MPC KITS, WAVS AND SONGS`. |
 | Empty kit | `16 EMPTY PADS. TERRIFYING.` |
 | Capture blocked | message box: `TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT.` + [FINE] |
 | Landing trouble | message box: the toast's line as title (`1 KIT LANDED ON THE SHELF. 1 SKIPPED.` / `NOTHING LANDED.`), then `SKIPPED · BROKEN: NO KIT.JSON` lines in warn, `LANDED · FUNK` after + [FINE]. A clean landing keeps its toast. |
