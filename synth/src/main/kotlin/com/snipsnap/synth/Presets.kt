@@ -17,6 +17,8 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        RivetPatch.ENGINE -> RivetVoice.entries.firstOrNull { it.name == voice }
+            ?.let(RivetPresets::forVoice) ?: emptyList()
         WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
             ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
@@ -341,7 +343,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        ErosionPresets.all() + WickPresets.all() +
+        RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

@@ -38,6 +38,7 @@ class PadRecipeTest {
 
     private fun handBuiltPatches(): List<Patch> = listOf(
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
+        RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
         AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
