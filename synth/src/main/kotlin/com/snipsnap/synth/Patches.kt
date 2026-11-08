@@ -68,6 +68,7 @@ object Patches {
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
             SirenPatch.ENGINE -> SirenPatch.fromJsonValue(value)
+            HalobarPatch.ENGINE -> HalobarPatch.fromJsonValue(value)
             ForkPatch.ENGINE -> ForkPatch.fromJsonValue(value)
             TerraPatch.ENGINE -> TerraPatch.fromJsonValue(value)
             SilkPatch.ENGINE -> SilkPatch.fromJsonValue(value)

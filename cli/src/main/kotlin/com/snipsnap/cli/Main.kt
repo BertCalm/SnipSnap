@@ -97,6 +97,8 @@ object Cli {
         |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
         |                         --macros HOLD=1 loops aftermath; --instrument [--release S] keeps encounter;
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
+        |                        (HALOBAR: VIBRAPHONE/MARIMBA/XYLOPHONE; --midi 48..84 (xylophone 57..84);
+        |                         --velocity 0..1 --macros SPACE=.7,RETURN=.6 --patch recipe.patch; finite notes)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
         |                         --model 1|2|3|4 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;

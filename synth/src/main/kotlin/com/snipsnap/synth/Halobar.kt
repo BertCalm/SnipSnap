@@ -1,0 +1,412 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
+import com.snipsnap.audio.Resampler
+import com.snipsnap.audio.Snip
+import java.util.concurrent.CancellationException
+import kotlin.math.*
+import kotlin.random.Random
+
+enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE }
+
+/**
+ * A clear mallet strike hands its body to rhythmic echoes, then a moving halo.
+ *
+ * Three independently damped bar modes, with separate contact noise and a body
+ * send. The send reduces the root so coherent mono echoes do not cancel a long
+ * vibraphone note. Returns never re-excite the bars. The fixed-delay feedback
+ * path contracts: its Butterworth low-pass has gain <= 1, tanh(d*x)/d has slope
+ * <= 1, and the loop gain never exceeds .84. Phase motion and the finite FIR
+ * halo sit outside that loop. No limiter supplies the stability argument.
+ *
+ * Ratios reuse Modes' sourced tuned-bar tables (1:4:10 and 1:3:6). Contact,
+ * gains, decays and processing laws are musical shapes from the Python proof,
+ * not measured materials. The motor is amplitude modulation, not fan geometry.
+ * HOLD is finite, including its reserved top; a long filed LOOP is not a wrap.
+ */
+object Halobar {
+    const val RATE = Dsp.RATE
+    const val MODEL_VERSION = 1
+    const val ROOT_MIDI = 60
+    const val MIN_MIDI = 48
+    const val MAX_MIDI = 84
+    const val BPM = 72.0
+    const val MAX_SECONDS = 12.0
+    const val MAX_SOURCE_SECONDS = 8.0
+    const val MAX_TAIL_SECONDS = 6.0
+    const val MAX_FINITE_HOLD = .98f
+    private const val TWO_PI = 2.0 * PI
+    private const val LOG_1000 = 6.907755278982137
+    private const val CACHE_BYTES = 6 * 1024 * 1024
+    private val divisions = doubleArrayOf(1.5, 1.0, .75, .5, .375, .25)
+    val RATE_LABELS = listOf("Dotted quarter", "Quarter", "Dotted eighth", "Eighth", "Dotted sixteenth", "Sixteenth")
+    fun rateLabel(value: Float): String = RATE_LABELS[min(5,((if(value.isFinite())value.coerceIn(0f,1f) else .45f)*6).toInt())]
+    private val specs = listOf(MacroSpec("TUNE", .5f), MacroSpec("TOUCH", .4f),
+        MacroSpec("RATE", .45f), MacroSpec("RETURN", .45f), MacroSpec("SPACE", .35f),
+        MacroSpec("MOTION", .25f), MacroSpec("HOLD", .3f))
+
+    fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: HalobarVoice): List<MacroSpec> = specs
+    fun defaults(voice: HalobarVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
+    internal fun settled(macros: Map<String, Float>, voice: HalobarVoice): Map<String, Float> =
+        defaults(voice).mapValues { (name, fallback) -> macros[name]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback }
+    fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: HalobarVoice) = ROOT_MIDI
+    fun minimumMidi(voice: HalobarVoice) = if (voice == HalobarVoice.XYLOPHONE) 57 else MIN_MIDI
+    fun midiFor(voice: HalobarVoice, tune: Float): Int {
+        val t = if (tune.isFinite()) tune.coerceIn(0f, 1f) else .5f
+        val bottom = minimumMidi(voice)
+        return (if (t < .5f) bottom + 2f*(ROOT_MIDI-bottom)*t else ROOT_MIDI + 48f*(t-.5f)).roundToInt()
+    }
+    fun tuneForMidi(voice: HalobarVoice, midi: Int): Float {
+        val bottom = minimumMidi(voice)
+        require(midi in bottom..MAX_MIDI) { "HALOBAR MIDI must be $bottom..$MAX_MIDI for $voice" }
+        return if (midi <= ROOT_MIDI) (midi-bottom)/(2f*(ROOT_MIDI-bottom)) else .5f+(midi-ROOT_MIDI)/48f
+    }
+    fun frequencyFor(voice: HalobarVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
+    fun isLoop(@Suppress("UNUSED_PARAMETER") hold: Float) = false
+    fun scramble(voice: HalobarVoice, random: Random = Random.Default, temperature: Float = .35f,
+        near: Patch? = null): Map<String, Float> {
+        val d = defaults(voice)
+        val start = settled(d + (near?.macros ?: emptyMap()), voice)
+        return Dsp.scrambleNear(start, if (temperature.isFinite()) temperature.coerceIn(0f,1f) else .35f, random)
+            .toMutableMap().also { it["HOLD"] = it.getValue("HOLD").coerceAtMost(MAX_FINITE_HOLD) }
+    }
+
+    private data class Material(val ratios: DoubleArray, val gains: DoubleArray,
+        val t60: DoubleArray, val soft: Double, val hard: Double)
+    private fun material(voice: HalobarVoice): Material = when (voice) {
+        HalobarVoice.VIBRAPHONE -> Material(ratios(Modes.Material.WOOD_MARIMBA),
+            doubleArrayOf(1.0,.47,.20), doubleArrayOf(6.2,1.8,.65), .0014,.00012)
+        HalobarVoice.MARIMBA -> Material(ratios(Modes.Material.WOOD_MARIMBA),
+            doubleArrayOf(1.0,.66,.34), doubleArrayOf(1.65,.43,.16), .0023,.00018)
+        HalobarVoice.XYLOPHONE -> Material(ratios(Modes.Material.WOOD_XYLO),
+            doubleArrayOf(1.0,1.10,.55), doubleArrayOf(.62,.18,.075), .00085,.00007)
+    }
+    private fun ratios(type: Modes.Material) = Modes.tableFor(type).map { it.ratio.toDouble() }.toDoubleArray()
+
+    internal data class Plan(val midi: Int, val hz: Double, val frames: Int,
+        val sourceFrames: Int, val delayFrames: Int, val headFrames: List<Int>,
+        val loopGain: Double, val loopCutoffHz: Double, val effectiveHold: Float,
+        val contactSeconds: Double, val modeT60: List<Double>, val tailCapped: Boolean,
+        val sourceCapped: Boolean, val rateIndex: Int)
+
+    internal fun plan(voice: HalobarVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Plan {
+        val m = settled(macros, voice)
+        val mat = material(voice)
+        val midi = midiFor(voice, m.getValue("TUNE"))
+        val hz = Keys.midiHz(midi).toDouble()
+        val hold = m.getValue("HOLD").coerceAtMost(MAX_FINITE_HOLD)
+        val life = .5 + 1.8*hold
+        val register = (261.625565/hz).pow(.18)
+        val t60 = mat.t60.map { it*life*register }.toMutableList()
+        // The lowest wooden bars retain a pitched bass body even with HOLD
+        // down. This is actual fundamental decay, not silence added to change
+        // a duration label. The floor recedes above A3 and leaves the default
+        // F3/F4/F5 reference decays unchanged.
+        if(voice==HalobarVoice.MARIMBA) t60[0]=max(t60[0],1.6*min(1.0,(220.0/hz).pow(4)))
+        val bodySeconds = t60.max()+.05
+        val sourceFrames = ceil(min(MAX_SOURCE_SECONDS,bodySeconds)*RATE).toInt()
+        val index = min(5, (m.getValue("RATE")*6).toInt())
+        val beat = 60.0/BPM
+        val delay = (beat*divisions[index]*RATE).roundToInt()
+        val heads = listOf(delay,delay+(beat*.5*RATE).roundToInt(),2*delay)
+        val gain = .12+.72*m.getValue("RETURN")
+        val repeats = ceil(-LOG_1000/ln(gain)).toInt()
+        val desiredTail = repeats*delay.toDouble()/RATE + (heads.max()-delay).toDouble()/RATE + .9
+        val hasReturn = m.getValue("SPACE") > 0f
+        val seconds = if (hasReturn) min(MAX_SECONDS,sourceFrames.toDouble()/RATE+min(MAX_TAIL_SECONDS,desiredTail)) else sourceFrames.toDouble()/RATE
+        val frames = ceil(seconds*RATE).toInt().coerceAtMost((MAX_SECONDS*RATE).toInt())
+        val u = .78*velocityValue(velocity)
+        val touch = (m.getValue("TOUCH")+.35*(u-.78)).coerceIn(0.0,1.0)
+        val contact = (mat.soft*(mat.hard/mat.soft).pow(touch)*(261.625565/hz).pow(.65)).coerceIn(.000065,.004)
+        return Plan(midi,hz,frames,sourceFrames,delay,heads,gain,
+            5700.0*(1900.0/5700.0).pow(m.getValue("RETURN").toDouble()),hold,
+            contact,t60,hasReturn && (desiredTail>MAX_TAIL_SECONDS || sourceFrames.toDouble()/RATE+desiredTail>MAX_SECONDS),
+            bodySeconds>MAX_SOURCE_SECONDS,index)
+    }
+    fun drumClassFor(voice: HalobarVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
+        if (plan(voice,macros).frames > (1.5*RATE).toInt()) DrumClass.LOOP else DrumClass.PERC
+    private fun velocityValue(v: Float): Double = (if (v.isFinite()) v.coerceIn(0f,1f) else 1f).toDouble()
+    private fun cancelCheck() { if (Thread.currentThread().isInterrupted) throw CancellationException("HALOBAR render cancelled") }
+
+    internal data class Probe(val samples: FloatArray, val plan: Plan, val rawPeak: Float,
+        val loopPeak: Double, val kernelL1: Double, val endingRmsBeforeFade: Double,
+        val outputGain: Double)
+
+    private data class RenderKey(val voice: HalobarVoice, val controls: List<Float>, val velocity: Float, val model: Int)
+    private val cache = LinkedHashMap<RenderKey,FloatArray>(8,.75f,true)
+    private var cacheBytes = 0
+    internal fun clearCache() = synchronized(cache) { cache.clear(); cacheBytes=0 }
+    private fun cached(key: RenderKey): FloatArray? = synchronized(cache) { cache[key]?.copyOf() }
+    private fun remember(key: RenderKey, samples: FloatArray) = synchronized(cache) {
+        val size = samples.size*4
+        if (size <= CACHE_BYTES) {
+            cache.remove(key)?.let { cacheBytes-=it.size*4 }
+            while (cacheBytes+size>CACHE_BYTES && cache.isNotEmpty()) {
+                val iterator=cache.entries.iterator(); val entry=iterator.next()
+                cacheBytes-=entry.value.size*4; iterator.remove()
+            }
+            cache[key]=samples.copyOf(); cacheBytes+=size
+        }
+    }
+
+    fun render(voice: HalobarVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
+        model: Int = MODEL_VERSION): Snip {
+        cancelCheck()
+        require(model == MODEL_VERSION) { "unsupported HALOBAR model $model" }
+        val m=settled(macros,voice)
+        // Canonicalize the reserved HOLD top before keying or any seed calculation.
+        val canonical=m + ("HOLD" to m.getValue("HOLD").coerceAtMost(MAX_FINITE_HOLD))
+        val v=velocityValue(velocity).toFloat()
+        val key=RenderKey(voice,specs.map { canonical.getValue(it.name) },v,model)
+        cached(key)?.let { return Snip(it,1,RATE) }
+        val samples=renderProbe(voice,canonical,v,normalize=true).samples
+        remember(key,samples)
+        return Snip(samples,1,RATE)
+    }
+
+    /** Fresh calculation for diagnostics and timing; never satisfied by completed-audio cache. */
+    internal fun renderProbe(voice: HalobarVoice, macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f, normalize: Boolean = false, oversample: Int = Dsp.OVERSAMPLE): Probe {
+        require(oversample == 4 || oversample == 8) { "HALOBAR probe rate must be 4x or 8x" }
+        cancelCheck()
+        val m=settled(macros,voice); val p=plan(voice,m,velocity)
+        if (velocityValue(velocity)==0.0) return Probe(FloatArray(p.frames),p,0f,0.0,0.0,0.0,1.0)
+        val rate=RATE*oversample
+        // A finite source needs only a short filter flush. Processing seconds of
+        // exact zero through Float IIRs enters subnormal arithmetic on the JVM.
+        val dry=FloatArray(min(p.frames*oversample,p.sourceFrames*oversample+256))
+        val send=if(m.getValue("SPACE")>0f) FloatArray(p.frames*oversample) else null
+        val kernelNorm=bars(voice,m,p,velocity,rate,oversample,dry,send)
+        val loopPeak=if(send!=null) echoes(send,m,p,rate,oversample) else 0.0
+        // Only nonlinear audio needs 4x. The allpasses and finite convolution
+        // are linear at the delivery rate, with ample Nyquist guard for the LFO.
+        val sourceOut=down(dry,rate)
+        val out=if(sourceOut.size==p.frames) sourceOut else sourceOut.copyOf(p.frames)
+        var ending=0.0
+        if(send!=null) {
+            val echo=down(send,rate)
+            phase(echo,m.getValue("MOTION").toDouble())
+            val halo=haloConvolution(echo)
+            val echoGain=1.55*m.getValue("SPACE").toDouble().pow(.65)
+            val haloGain=.75*m.getValue("SPACE").toDouble().pow(1.2)
+            val fade=min((.1*RATE).roundToInt(),out.size)
+            for(i in out.indices) {
+                var wet=echoGain*echo[i]+haloGain*halo[i]
+                if(i>=out.size-fade) {
+                    ending+=wet*wet
+                    if(p.tailCapped) wet*=cosineFall(i-(out.size-fade),fade)
+                }
+                out[i]=(out[i]+wet).toFloat()
+            }
+            ending=sqrt(ending/fade)
+        }
+        var peak=0f; var mean=0.0
+        for(x in out) { peak=max(peak,abs(x)); mean+=x }
+        mean/=out.size
+        val hp=Dsp.FixedOnePole(20f,RATE)
+        for(i in out.indices) { val x=out[i]-mean.toFloat(); out[i]=x-hp.lp(x) }
+        var before=0f; for(x in out) before=max(before,abs(x))
+        if(normalize) Dsp.levelTo(out,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
+        var after=0f; for(x in out) after=max(after,abs(x))
+        Dsp.fadeTail(out)
+        cancelCheck()
+        return Probe(out,p,peak,loopPeak,kernelNorm,ending,if(before>0)after/before.toDouble() else 1.0)
+    }
+
+    private fun cosineFall(i: Int,n: Int) = if(n<=1) 0.0 else .5+.5*cos(PI*i/(n-1))
+    private fun down(raw: FloatArray,rate: Int): FloatArray {
+        cancelCheck(); Tide.bandLimit(raw,rate)
+        if(rate==RATE*Dsp.OVERSAMPLE) return Dsp.decimate(raw,RATE)
+        var snip=Snip(raw,1,rate)
+        while(snip.sampleRate>RATE) snip=Resampler.resample(snip,snip.sampleRate/2)
+        return snip.samples
+    }
+
+    private fun bars(voice: HalobarVoice,m: Map<String,Float>,p: Plan,v: Float,
+        rate: Int,oversample: Int,dry: FloatArray,send: FloatArray?): Double {
+        val material=material(voice)
+        val length=max(5,(p.contactSeconds*rate).roundToInt())
+        val force=FloatArray(length+(.002*rate).roundToInt())
+        var sum=0.0
+        for(i in 0 until length) { force[i]=(.5-.5*cos(TWO_PI*i/(length-1))).toFloat(); sum+=force[i] }
+        for(i in 0 until length) force[i]=(force[i]/sum).toFloat()
+        Tide.bandLimit(force,rate)
+        val norm=force.sumOf { abs(it.toDouble()) }
+        val u=.78*velocityValue(v)
+        val amplitude=.63*u
+        val states=Array(material.ratios.size) { index ->
+            val hz=p.hz*material.ratios[index]
+            val r=exp(-LOG_1000/(p.modeT60[index]*rate))
+            val theta=TWO_PI*hz/rate
+            doubleArrayOf(2*r*cos(theta),-r*r,material.gains[index]*r*sin(theta),0.0,0.0,
+                if(hz<.44*RATE)1.0 else 0.0)
+        }
+        val end=min(dry.size,p.sourceFrames*oversample)
+        val fade=min(end,(.1*rate).roundToInt())
+        val motor=2.0+5*m.getValue("MOTION")
+        val step=TWO_PI*motor/rate; val cr=cos(step);val sr=sin(step)
+        var c=1.0;var s=0.0
+        val depth=if(voice==HalobarVoice.VIBRAPHONE) .65*m.getValue("MOTION") else 0.0
+        val openDecay=exp(-1.0/(rate*.010));var closed=1.0
+        for(i in 0 until end) {
+            if(i and 16383==0) cancelCheck()
+            val x=if(i>0&&i<=force.size) force[i-1].toDouble() else 0.0
+            var body=0.0;var feed=0.0
+            for(k in states.indices) {
+                val z=states[k]
+                if(z[5]==0.0) continue
+                val y=z[2]*x+z[0]*z[3]+z[1]*z[4]
+                z[4]=z[3];z[3]=y
+                body+=y;feed+=y*(if(k==0).35 else 1.0)
+            }
+            val tremolo=1-depth*.5+depth*.5*c
+            val damping=if(i>=end-fade) cosineFall(i-(end-fade),fade) else 1.0
+            dry[i]=(body*amplitude*tremolo*damping).toFloat()
+            if(send!=null) send[i]=(feed*amplitude*tremolo*(1-closed)*damping).toFloat()
+            closed*=openDecay
+            val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+        }
+        val noise=Dsp.Noise(Dsp.seedFor("HALOBAR_SOURCE_V1",voice.name,p.midi))
+        val hitFrames=(RATE*.009).toInt()
+        val hit=FloatArray(hitFrames)
+        val lp1=Dsp.FixedOnePole(min(8500.0,p.hz*9).toFloat(),RATE)
+        val lp2=Dsp.FixedOnePole(min(8500.0,p.hz*9).toFloat(),RATE)
+        val gain=if(voice==HalobarVoice.XYLOPHONE) .025+.08*m.getValue("TOUCH") else .015+.055*m.getValue("TOUCH")
+        for(i in hit.indices) hit[i]=(lp2.lp(lp1.lp(noise.next()))*(.5-.5*cos(TWO_PI*i/(hit.size-1)))*exp(-i/(RATE*.0018))*gain*u).toFloat()
+        val internalHit=FloatArray(hit.size*oversample)
+        for(i in internalHit.indices) {
+            val j=i/oversample;val f=(i%oversample).toFloat()/oversample
+            internalHit[i]=hit[j]*(1-f)+(if(j+1<hit.size)hit[j+1] else 0f)*f
+        }
+        Tide.bandLimit(internalHit,rate)
+        for(i in 0 until min(dry.size,internalHit.size)) dry[i]+=internalHit[i]
+        return norm
+    }
+
+    /** Fixed two-pole Butterworth, Double state and no resonant gain. */
+    private class LowPass(hz: Double,rate: Int) {
+        private val k=tan(PI*hz/rate)
+        private val norm=1/(1+sqrt(2.0)*k+k*k)
+        private val b0=k*k*norm;private val b1=2*b0
+        private val a1=2*(k*k-1)*norm;private val a2=(1-sqrt(2.0)*k+k*k)*norm
+        private var z1=0.0;private var z2=0.0
+        fun step(x: Double): Double {
+            val y=b0*x+z1;z1=b1*x-a1*y+z2;z2=b0*x-a2*y;return y
+        }
+    }
+
+    private fun echoes(bus: FloatArray,m: Map<String,Float>,p: Plan,rate: Int,oversample: Int,
+        gainOverride: Double? = null, energyTrace: MutableList<Double>? = null): Double {
+        val heads=p.headFrames.map { it*oversample }
+        val delay=p.delayFrames*oversample
+        val history=FloatArray(heads.max()+1)
+        val low=LowPass(p.loopCutoffHz,rate)
+        val sendLow=LowPass(6800.0,rate)
+        val hp=Dsp.FixedOnePole(85f,rate)
+        val drive=1+2.5*m.getValue("RETURN")
+        var index=0;var peak=0.0;var passEnergy=0.0
+        val gain=gainOverride ?: p.loopGain
+        // The source has faded to exact zero; 100 ms also settles the 85 Hz
+        // send filter far below PCM resolution. Feedback keeps running.
+        val feedEnd=min(bus.size,p.sourceFrames*oversample+(rate*.1).roundToInt())
+        for(i in bus.indices) {
+            if(i and 16383==0) cancelCheck()
+            val input=bus[i]
+            val fed=if(i<feedEnd) sendLow.step((input-hp.lp(input)).toDouble()) else 0.0
+            val delayed=if(i>=delay)history[(index-delay+history.size)%history.size].toDouble() else 0.0
+            val q=fed+gain*tanh(drive*low.step(delayed))/drive
+            history[index]=q.toFloat();peak=max(peak,abs(q))
+            if(energyTrace!=null) { passEnergy+=q*q; if((i+1)%delay==0) { energyTrace.add(passEnergy);passEnergy=0.0 } }
+            var out=0.0
+            for(k in heads.indices) if(i>=heads[k]) out+=history[(index-heads[k]+history.size)%history.size]*(if(k==0).62 else if(k==1).25 else .13)
+            bus[i]=out.toFloat()
+            index++;if(index==history.size)index=0
+        }
+        return peak
+    }
+
+    internal fun feedbackEnergyProbe(gainOverride: Double? = null): List<Double> {
+        val m=settled(mapOf("RETURN" to 1f),HalobarVoice.VIBRAPHONE)
+        val p=plan(HalobarVoice.VIBRAPHONE,m)
+        val rate=RATE*Dsp.OVERSAMPLE;val delay=p.delayFrames*Dsp.OVERSAMPLE
+        val input=FloatArray(delay*12)
+        for(i in 0 until delay)input[i]=(1e-5*sin(TWO_PI*700*i/rate)*(.5-.5*cos(TWO_PI*i/(delay-1)))).toFloat()
+        val trace=mutableListOf<Double>()
+        echoes(input,m,p,rate,Dsp.OVERSAMPLE,gainOverride,trace)
+        return trace
+    }
+
+    private fun phase(bus: FloatArray,motion: Double) {
+        if(motion==0.0)return
+        val coefficients=doubleArrayOf(310.0,970.0,3100.0).map { val k=tan(PI*it/RATE);(k-1)/(k+1) }
+        val x=DoubleArray(3);val y=DoubleArray(3)
+        val angle=TWO_PI*(.08+.18*motion)/RATE;val cr=cos(angle);val sr=sin(angle)
+        var c=1.0;var s=0.0
+        for(i in bus.indices) {
+            var z=bus[i].toDouble()
+            for(k in 0..2) { val q=coefficients[k]*z+x[k]-coefficients[k]*y[k];x[k]=z;y[k]=q;z=q }
+            val mix=motion*(.32+.22*s)
+            bus[i]=(bus[i]*(1-mix)+z*mix).toFloat()
+            val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+        }
+    }
+
+    private const val HOP=4096
+    private const val FFT_SIZE=HOP*2
+    private data class Spectrum(val re: FloatArray,val im: FloatArray)
+    private val haloKernel: FloatArray by lazy {
+        val noise=Dsp.Noise(Dsp.seedFor("HALOBAR_HALO_V1"))
+        val filter=LowPass(4000.0,RATE)
+        val kernel=FloatArray((.9*RATE).toInt())
+        var energy=0.0
+        for(i in kernel.indices) {
+            val t=i.toDouble()/RATE
+            val value=filter.step(noise.next().toDouble())*exp(-t/.15)*min(t/.018,1.0)
+            kernel[i]=value.toFloat();energy+=value*value
+        }
+        val gain=.24/sqrt(energy)
+        for(i in kernel.indices)kernel[i]=(kernel[i]*gain).toFloat()
+        kernel
+    }
+    private val haloSpectra: List<Spectrum> by lazy {
+        val kernel=haloKernel
+        (0 until (kernel.size+HOP-1)/HOP).map { partition ->
+            val re=FloatArray(FFT_SIZE);val im=FloatArray(FFT_SIZE)
+            val size=min(HOP,kernel.size-partition*HOP)
+            kernel.copyInto(re,0,partition*HOP,partition*HOP+size)
+            Fft.forward(re,im);Spectrum(re,im)
+        }
+    }
+    internal fun haloKernelForProbe()=haloKernel.copyOf()
+    internal fun convolveHaloForProbe(input: FloatArray)=haloConvolution(input)
+
+    /** Uniform partitioned convolution; immutable kernel spectra, per-render history. */
+    private fun haloConvolution(input: FloatArray): FloatArray {
+        val kernels=haloSpectra;val count=kernels.size
+        val reHistory=Array(count) { FloatArray(FFT_SIZE) };val imHistory=Array(count) { FloatArray(FFT_SIZE) }
+        val out=FloatArray(input.size);val overlap=FloatArray(HOP)
+        val sumRe=FloatArray(FFT_SIZE);val sumIm=FloatArray(FFT_SIZE)
+        var block=0
+        for(start in input.indices step HOP) {
+            cancelCheck()
+            val slot=block%count;val re=reHistory[slot];val im=imHistory[slot]
+            re.fill(0f);im.fill(0f)
+            input.copyInto(re,0,start,min(start+HOP,input.size));Fft.forward(re,im)
+            sumRe.fill(0f);sumIm.fill(0f)
+            for(part in 0 until min(count,block+1)) {
+                val old=(slot-part+count)%count;val a=reHistory[old];val b=imHistory[old]
+                val k=kernels[part]
+                for(bin in 0 until FFT_SIZE) {
+                    sumRe[bin]+=a[bin]*k.re[bin]-b[bin]*k.im[bin]
+                    sumIm[bin]+=a[bin]*k.im[bin]+b[bin]*k.re[bin]
+                }
+            }
+            Fft.inverse(sumRe,sumIm)
+            for(i in 0 until min(HOP,input.size-start)) out[start+i]=sumRe[i]+overlap[i]
+            for(i in overlap.indices)overlap[i]=sumRe[i+HOP]
+            block++
+        }
+        return out
+    }
+}

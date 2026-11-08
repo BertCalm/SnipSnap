@@ -201,6 +201,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is HalobarPatch -> Halobar.macrosFor(patch.voice)
         is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
@@ -401,6 +402,7 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is HalobarPatch -> Halobar.render(patch.voice, patch.macros, velocity = v, model = patch.model)
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()

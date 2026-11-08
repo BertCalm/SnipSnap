@@ -12,6 +12,15 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `HALOBAR voices regenerate through JSON after cache eviction`() {
+        for (voice in HalobarVoice.entries) {
+            val patch = HalobarPatch("Canary", voice, mapOf("RETURN" to .65f, "SPACE" to .55f))
+            val expected = patch.render().samples
+            Halobar.clearCache()
+            assertContentEquals(expected, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
         val fx = BoomBapKits.colorationFor("snare")

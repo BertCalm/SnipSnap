@@ -3278,6 +3278,27 @@ tasks.register<JavaExec>("generateDiveAudition") {
     args("${rootDir}/testkit/dive-audition")
 }
 
+
+tasks.register<JavaExec>("generateHalobarKit") {
+    group = "distribution"
+    description = "Render the HALOBAR vibraphone, marimba and xylophone listening kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarKitGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateHalobarAudition") {
+    group = "distribution"
+    description = "Render HALOBAR native voice, macro, phrase and performance evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition")
+}
+
 tasks.register<JavaExec>("generateHushAudition") {
     group = "distribution"
     description = "Render HUSH's listening gate clips under testkit/hush-audition/."

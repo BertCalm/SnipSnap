@@ -15,6 +15,7 @@ import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
@@ -90,6 +91,7 @@ class SynthRootTest {
                 WickPresets.all().first(),
                 NacrePresets.all().first(),
                 FerryPresets.all().first(),
+                *HalobarPresets.all().toTypedArray(),
             )
         }
 

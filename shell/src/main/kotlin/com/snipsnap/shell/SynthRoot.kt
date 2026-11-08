@@ -49,6 +49,8 @@ import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
@@ -301,6 +303,11 @@ object SynthRoot {
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
+        // HALOBAR has a piecewise TUNE curve, so use its exact inverse.
+        is HalobarPatch -> Field(Halobar.midiFor(patch.voice,tuneOf(patch)),
+            Halobar.minimumMidi(patch.voice)..Halobar.MAX_MIDI) { midi ->
+            patch.copy(macros=patch.macros+("TUNE" to Halobar.tuneForMidi(patch.voice,midi)))
+        }
         is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
         is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
