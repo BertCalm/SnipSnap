@@ -34,13 +34,27 @@ object BoomBapAuditionGenerator {
         add(Hit("shaker", 7.25, .5f))
     }.sortedBy { it.beat }
 
+    // Preserve the accepted two-bar comparison. The longer phrase is a separate audition.
+    private val phraseHits = buildList {
+        addAll(hits)
+        addAll(hits.map { it.copy(beat = it.beat + 8.0) })
+        removeAll { it.part == "kick" && it.beat == 5.75 }
+        add(Hit("kick", 5.5, .72f))
+        add(Hit("kick", 6.75, .62f))
+        add(Hit("snare", 4.79, .22f))
+        removeAll { it.part == "snare" && it.beat == 15.79 }
+        add(Hit("stick", 14.52, .42f))
+        add(Hit("snare", 15.52, .34f))
+        add(Hit("snare", 15.77, .48f))
+        add(Hit("kick", 15.5, .65f))
+    }.sortedBy { it.beat }
+
     @JvmStatic fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "testkit/boom-bap-audition").absoluteFile
         root.mkdirs()
         val rows = mutableListOf<Map<String, Any?>>()
         val metrics = StringBuilder("id,seconds,peak,dc,centroid_hz,render_ms\n")
         val parts = BoomBapKits.parts()
-        val fx = BoomBapKits.coloration
         fun emit(id: String, label: String, section: String, s: Snip, ms: Double? = null,
                  velocity: Float? = null, recipe: String? = null) {
             check(s.samples.all { it.isFinite() }) { "$id is non-finite" }
@@ -62,7 +76,7 @@ object BoomBapAuditionGenerator {
             // Warm the JVM before timing; this is host evidence, not a phone budget claim.
             repeat(2) { part.patch.render() }
             for (processed in listOf(false, true)) {
-                val chain = fx.takeIf { processed }
+                val chain = BoomBapKits.colorationFor(part.id).takeIf { processed }
                 val recipe = PadRecipe(part.patch, chain)
                 val mode = if (processed) "processed" else "dry"
                 val recipePath = "recipes/${part.id}_$mode.json"
@@ -82,27 +96,30 @@ object BoomBapAuditionGenerator {
         }
         emit("groove_dry", "88 BPM: dry kit", "Groove", groove(processed = false))
         emit("groove_processed", "88 BPM: processed kit", "Groove", groove(processed = true))
+        emit("phrase_dry", "88 BPM: four-bar phrase, dry", "Groove", groove(false, fourBars = true))
+        emit("phrase_processed", "88 BPM: four-bar phrase, processed", "Groove", groove(true, fourBars = true))
         // Warmed medians avoid treating the first JIT/GC event as the cost of a knob turn.
         val timings = parts.associate { part ->
             part.id to listOf(false, true).associate { processed ->
-                val recipe = PadRecipe(part.patch, fx.takeIf { processed })
+                val recipe = PadRecipe(part.patch, BoomBapKits.colorationFor(part.id).takeIf { processed })
                 repeat(3) { recipe.render() }
                 val runs = List(7) { val start = System.nanoTime(); recipe.render(); (System.nanoTime() - start) / 1e6 }
                 (if (processed) "processedMedianMs" else "dryMedianMs") to runs.sorted()[3]
             }
         }
-        val manifest = mapOf("status" to "Kotlin audition candidate; not heard", "bpm" to BPM,
+        val manifest = mapOf("status" to "More Snap: user-accepted sound; four-bar phrase awaiting listening; MPC hardware unverified", "bpm" to BPM,
             "leveling" to "Listening copies match loudest-200ms RMS; native files retain renderer levels. Groove dynamics are retained within each clip.",
             "replay" to "Velocity.layerAt(recipe.render(), recipe.patch, recipe.fx, velocity, Velocity.brightnessSpec(recipe.patch)). Old_soft clips use Velocity.soften(reference, .75).",
             "clips" to rows, "timings" to timings,
-            "events" to hits.map { mapOf("part" to it.part, "beat" to it.beat, "velocity" to it.velocity) })
+            "events" to hits.map { mapOf("part" to it.part, "beat" to it.beat, "velocity" to it.velocity) },
+            "phraseEvents" to phraseHits.map { mapOf("part" to it.part, "beat" to it.beat, "velocity" to it.velocity) })
         val json = Json.write(value(manifest))
         File(root, "manifest.json").writeText(json)
         File(root, "metrics.csv").writeText(metrics.toString())
         val page = requireNotNull(javaClass.getResourceAsStream("/audition/boom-bap-audition.html"))
             .bufferedReader().use { it.readText() }
         File(root, "index.html").writeText(page.replace("/*MANIFEST*/{}", json))
-        File(root, "README.txt").writeText("Backroom study: six editable pads, three velocity layers each. Open index.html for matched listening copies. Load the XPM folder on MPC for the processed kit. A02 holds the ghost snare in its lower velocity zones. No hardware load or listening approval claimed. See manifest.json for the identical dry/wet groove event schedule and recipes.\n")
+        File(root, "README.txt").writeText("Backroom study: six editable pads, three velocity layers each. Open index.html for matched listening copies. Load the XPM folder on MPC for the processed kit. A02 holds the ghost snare in its lower velocity zones. More Snap sound accepted by the user; four-bar phrase listening and MPC hardware loading remain open. See manifest.json for the identical dry/wet groove event schedule and recipes.\n")
         val work = File(root, ".kit-work")
         try {
             val kit = KitAssembler.assembleArranged(BoomBapKits.NAME, BoomBapKits.study(), work)
@@ -119,24 +136,26 @@ object BoomBapAuditionGenerator {
         println(Json.write(value(timings)))
     }
 
-    internal fun groove(processed: Boolean): Snip {
+    internal fun groove(processed: Boolean, fourBars: Boolean = false): Snip {
+        val events = if (fourBars) phraseHits else hits
+        val beats = if (fourBars) 16 else 8
         val parts = BoomBapKits.parts().associateBy { it.id }
-        val fx = BoomBapKits.coloration.takeIf { processed }
-        val references = parts.mapValues { (_, p) -> PadRecipe(p.patch, fx).render() }
+        fun fxFor(id: String) = BoomBapKits.colorationFor(id).takeIf { processed }
+        val references = parts.mapValues { (_, p) -> PadRecipe(p.patch, fxFor(p.id)).render() }
         val cache = mutableMapOf<Pair<String, Float>, Snip>()
         val rate = Dsp.RATE
         val secondsPerBeat = 60.0 / BPM
-        val out = FloatArray(((8 * secondsPerBeat + 1.5) * rate).roundToInt())
-        for ((index, hit) in hits.withIndex()) {
+        val out = FloatArray(((beats * secondsPerBeat + 1.5) * rate).roundToInt())
+        for ((index, hit) in events.withIndex()) {
             val part = parts.getValue(hit.part)
             val s = cache.getOrPut(hit.part to hit.velocity) {
-                Velocity.layerAt(references.getValue(hit.part), part.patch, fx, hit.velocity,
+                Velocity.layerAt(references.getValue(hit.part), part.patch, fxFor(part.id), hit.velocity,
                     Velocity.brightnessSpec(part.patch), useAtVelocity = true)
             }
             val start = (hit.beat * secondsPerBeat * rate).roundToInt()
             // Match the kit's hat choke group, including a short ramp instead of a click.
             val nextHat = if (hit.part in listOf("open", "closed"))
-                hits.drop(index + 1).firstOrNull { it.part in listOf("open", "closed") } else null
+                events.drop(index + 1).firstOrNull { it.part in listOf("open", "closed") } else null
             val stop = nextHat?.let { ((it.beat - hit.beat) * secondsPerBeat * rate).roundToInt() }
                 ?: s.frameCount
             val count = minOf(s.frameCount, stop, out.size - start)

@@ -1,0 +1,17 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Pushed Tip",
+    "voice": "HAT_CLOSED",
+    "macros": {
+      "TUNE": 0.5400000214576721,
+      "DECAY": 0.18000000715255737,
+      "TONE": 0.4000000059604645,
+      "PUNCH": 0.550000011920929,
+      "RING": 0.27000001072883606
+    }
+  },
+  "alias": false
+}
