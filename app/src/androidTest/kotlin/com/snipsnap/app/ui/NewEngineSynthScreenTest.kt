@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.synth.Ballast
+import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
 import kotlinx.coroutines.CoroutineScope
@@ -80,12 +81,20 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals("BACKWASH", settings["engine"])
         assertEquals(.8f, progress("TRAIL"), .0001f)
         assertFalse(showsLoop())
+        val original = SynthDrafts.read(settings).single { it.engine == "BACKWASH" && it.voiceName == "SNARE" } as BackwashPatch
+        assertEquals(3, original.model)
+        assertEquals(.8f, original.macros.getValue("TRAIL"), .0001f)
         button("PRESET Pushed Snare").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         for (label in listOf("SWAY", "TRAIL", "PRESS", "DRIVE")) assertEquals(1f, progress(label), .0001f)
+        adjust("PRESS", .72f)
         compose.runOnIdle { generation++ }
         pump()
-        for (label in listOf("SWAY", "TRAIL", "PRESS", "DRIVE")) assertEquals(1f, progress(label), .0001f)
+        for (label in listOf("SWAY", "TRAIL", "DRIVE")) assertEquals(1f, progress(label), .0001f)
+        assertEquals(.72f, progress("PRESS"), .0001f)
+        val pushed = SynthDrafts.read(settings).single { it.engine == "BACKWASH" && it.voiceName == "SNARE" } as BackwashPatch
+        assertEquals(4, pushed.model)
+        assertEquals(.72f, pushed.macros.getValue("PRESS"), .0001f)
     }
 
     @Test
