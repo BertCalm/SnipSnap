@@ -30,6 +30,8 @@ Choose SYNTH → RIVET for six voices and sixteen factory sounds. The six macros
 separate VELOCITY slider edit finite hits. HOLD and a semitone ROOT editor are absent:
 TUNE is continuous drum tuning. Saved presets, navigation drafts and sent pad recipes
 retain the complete macro map, model version and strike strength.
+Factory-authoring lines use the complete JSON constructor too, retaining native
+velocity and legacy model-1 recipes when a saved sound is promoted.
 
 FRESH TAPE → RIVET WORKSHOP / RIVET FACTORY / RIVET WAREHOUSE supplies the accepted
 sixteen-pad bank at SIZE .10 / .55 / 1.00 respectively. All use WALLS .75, with two soft
@@ -101,12 +103,12 @@ The Kotlin tests cover frozen kick/snare PCM, recipe compatibility, factory regi
 three-layer starter delivery and exported WAV replay. The Compose device suite adds
 last-frame edit/save/send and navigation coverage; compiling it is not a device pass.
 
-Phone-integration verification: 176 relevant JVM tests passed (52 synth, 124 shell),
+Phone-integration snapshot (`2986131`): 176 relevant JVM tests passed (52 synth, 124 shell),
 including the picker/catalogue conventions. Both `:app:assembleDebug` and
 `:app:assembleDebugAndroidTest` passed; the development APK's signature verifies.
 Regenerating all three native MPC kits passed format read-back. All 144 velocity WAVs
-and three groove WAVs match the accepted audition byte for byte. Earlier unfiltered
-JVM attempts ended without a final result; no full-suite pass is claimed.
+and three groove WAVs matched the accepted audition byte for byte. At that snapshot,
+unfiltered JVM attempts ended without a final result; it did not claim a full-suite pass.
 
 ## Why it is built this way
 
