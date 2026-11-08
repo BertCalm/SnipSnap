@@ -35,6 +35,8 @@ threshold *fitting*.
 
 ## From the phone: SEND TO BENCH
 
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
+
 The other on-ramp is the app's own teach log. With TEACH THE MACHINE on
 (SETUP), every chip corrected on CHOP is logged as a feature vector plus
 the human's label into that kit's folder — never audio — and, since the
@@ -67,6 +69,8 @@ accuracy on real material. The second sums the cut ratings by setting,
 best first, with what each setting cost in tries and hand edits.
 
 ## From the phone: LABEL THIS HIT
+
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
 
 The WAVs themselves come the same way, by their own door. On any pad's
 sheet with the WORKSHOP open, the BENCH box offers the nine classes as

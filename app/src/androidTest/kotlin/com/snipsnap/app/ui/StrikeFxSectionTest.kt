@@ -100,7 +100,6 @@ class StrikeFxSectionTest : ComposeScreenTest() {
                     onKitUpdated = {},
                     onShelfAssetWritten = {},
                     appScope = appScope,
-                    workshopOpen = false,
                     openBox = null,
                     onOpenBox = {},
                     pedalRow = PedalSlate.DEFAULT,

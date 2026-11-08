@@ -286,43 +286,4 @@ class BenchExportTest {
         assertEquals(TeachLog.FILE_NAME, BenchExport.LOG_NAME)
         assertEquals(CutRatings.FILE_NAME, BenchExport.RATINGS_NAME)
     }
-
-    @Test
-    fun `the toasts say what left and what did not`() {
-        assertEquals("14 LABELS AND 3 CUT RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 0, 0, 2))
-        assertEquals("14 LABELS, 3 CUT RATINGS AND 2 NOTES FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 2, 0, 2))
-        assertEquals("1 LABEL FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(1, 0, 0, 0, 1), "names only what the file holds")
-        assertEquals("1 CUT RATING FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 1, 0, 0, 1))
-        assertEquals("1 NOTE ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 0, 1, 0, 0), "a note is nobody's kit")
-        assertEquals("2 NOTES AND 1 PRESET ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 0, 2, 1, 0), "a preset is nobody's kit either")
-        assertTrue("SAVED PRESET" in Copy.SEND_TO_BENCH_NOTE, "the note under the button says the presets ride too: ${Copy.SEND_TO_BENCH_NOTE}")
-        assertFalse("SENT" in Copy.benchPacked(3, 1, 0, 0, 2), "the chooser opening is not the file leaving")
-        // The two refusals are two different answers, and the TEACH-off one
-        // names the switch that fixes it.
-        assertTrue(Copy.BENCH_EMPTY != Copy.BENCH_EMPTY_TEACH_OFF)
-        assertTrue("TEACH THE MACHINE" in Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_EMPTY_TEACH_OFF)
-        assertTrue("CHOP" in Copy.BENCH_EMPTY, "with TEACH on, the remedy is a chip: ${Copy.BENCH_EMPTY}")
-        // The note under the button keeps the consent line true in so many
-        // words: TEACH never sends, the button is the only way out.
-        assertTrue("NEVER AUDIO" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
-        assertTrue("NEVER SENDS ANYTHING BY ITSELF" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
-        assertTrue("NOTE" in Copy.BENCH_EMPTY && "NOTE" in Copy.BENCH_EMPTY_TEACH_OFF, "both refusals name the remedy that needs no switch")
-        for (line in listOf(Copy.benchPacked(3, 1, 1, 0, 2), Copy.BENCH_EMPTY, Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_FAILED, Copy.SEND_TO_BENCH_NOTE)) {
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
-            assertTrue(line.endsWith("."), "lands on a full stop: $line")
-        }
-    }
-
-    @Test
-    fun `the BENCH row's lines say what they log and when`() {
-        assertEquals("3 CHIPS CONFIRMED: THE MACHINE HAD THEM RIGHT. LOGGED WHEN YOU SEND.", Copy.confirmedAll(3))
-        assertEquals("1 CHIP CONFIRMED: THE MACHINE HAD IT RIGHT. LOGGED WHEN YOU SEND.", Copy.confirmedAll(1))
-        assertEquals("CUTS RATED 4 OF 5. LOGGED WHEN YOU SEND, WITH THE BENCH'S SETTINGS.", Copy.cutsRated(4))
-        assertTrue("WHEN YOU SEND" in Copy.BENCH_ROW_NOTE, "the note says when the log is written: ${Copy.BENCH_ROW_NOTE}")
-        assertTrue("SETUP" in Copy.BENCH_ROW_TEACH_OFF, "the dim row names the switch: ${Copy.BENCH_ROW_TEACH_OFF}")
-        for (line in listOf(Copy.confirmedAll(2), Copy.cutsRated(1), Copy.BENCH_ROW_NOTE, Copy.BENCH_ROW_TEACH_OFF)) {
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
-            assertTrue(line.endsWith("."), "lands on a full stop: $line")
-        }
-    }
 }

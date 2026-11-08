@@ -45,7 +45,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -87,29 +86,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
-
-/** How long a reel has to be held before it counts as the pencil-rewind long-press. */
-private const val PENCIL_LONG_PRESS_MS = 500L
 
 /**
- * How long a synthesized TalkBack long-click holds the pencil rewind on
- * for. A real hold runs for as long as the finger stays down; a
- * semantics action has no such duration, so this is a fixed, brief
- * substitute — long enough to be audible as a nudge, short enough not
- * to run away with the tape unattended.
- */
-private const val PENCIL_A11Y_NUDGE_MS = 250L
-
-/**
- * How long a screen-reader WIND lasts, in milliseconds — [WindButton]'s
- * own [PENCIL_A11Y_NUDGE_MS], and for the same reason. `windStart` only
+ * How long a screen-reader WIND lasts, in milliseconds. `windStart` only
  * sets a target speed; the tape is moved by the step loop's per-frame
  * `step()`, so a start/stop pair with no elapsed time between them resets
  * the target before a single tick can ever observe it and the tape does
  * not move at all. The action would announce success and do nothing.
- * Shorter than the pencil's nudge because winding is much faster per
- * tick than a rewind-by-ear.
  */
 private const val WIND_A11Y_NUDGE_MS = 180L
 
@@ -923,9 +906,6 @@ private fun TapeDeckContent(
             } ?: scheme.lcdInk.tape,
             model = model,
             position = position,
-            onToast = onToast,
-            onScrubStart = ::stopVoice,
-            onTouch = ::touch,
         )
         WaveformLcd(
             model,
@@ -1460,8 +1440,7 @@ private fun WindButton(
 }
 
 /**
- * The cassette: kit name, two reels, and the pencil-rewind gag on the left
- * one. `entry` is null when the tape loaded from a snip or last-commit
+ * The cassette: kit name and two reels. `entry` is null when the tape loaded from a snip or last-commit
  * source with no kit open (a shelf-armed capture) — the label falls back
  * to a bare "TAPE" rather than a kit name that doesn't exist yet.
  *
@@ -1480,12 +1459,8 @@ private fun CassetteRow(
     titleColor: androidx.compose.ui.graphics.Color,
     model: TapeDeckModel,
     position: () -> Double,
-    onToast: (String) -> Unit,
-    onScrubStart: () -> Unit,
-    onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
-    val scope = rememberCoroutineScope()
 
     Row(
         Modifier
@@ -1500,47 +1475,7 @@ private fun CassetteRow(
             fraction = { 1f - windFraction(position(), model.lengthFrames) },
             rotation = { rotationForPosition(position(), model.sampleRate) },
             scheme = scheme,
-            modifier = Modifier
-                .size(Layout.MIN_HIT_TARGET.dp)
-                // This reel had zero accessibility affordance at all
-                // (audit finding 1's "no visible affordance either"
-                // twin, finding 8) — no text child, no click action, a
-                // 500ms hold as the *only* way to reach pencil rewind.
-                // A semantics onLongClick can't hold for real, so it
-                // runs the same start/toast/stop sequence for a fixed
-                // PENCIL_A11Y_NUDGE_MS instead of however long a finger
-                // stays down.
-                .semantics {
-                    contentDescription = "REWIND PENCIL"
-                    onLongClick(label = "SPIN BACK BY EAR") {
-                        scope.launch {
-                            onScrubStart()
-                            onTouch()
-                            val started = model.pencilRewind()
-                            onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
-                            delay(PENCIL_A11Y_NUDGE_MS)
-                            model.pencilOff()
-                            onTouch()
-                        }
-                        true
-                    }
-                }
-                .pointerInput(model) {
-                    detectTapGestures(
-                        onPress = {
-                            val releasedEarly = withTimeoutOrNull(PENCIL_LONG_PRESS_MS) { tryAwaitRelease() }
-                            if (releasedEarly == null) {
-                                onScrubStart()
-                                onTouch()
-                                val started = model.pencilRewind()
-                                onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
-                                tryAwaitRelease()
-                                model.pencilOff()
-                                onTouch()
-                            }
-                        },
-                    )
-                },
+            modifier = Modifier.size(Layout.MIN_HIT_TARGET.dp),
         )
         TapeText(
             title,
