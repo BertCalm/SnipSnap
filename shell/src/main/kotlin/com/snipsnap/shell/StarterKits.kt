@@ -520,6 +520,21 @@ object StarterKits {
             "Eight dry percussion roles, from low thuds to bright crackle, with soft, medium and hard touch.",
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
+        Starter(
+            "rivet-workshop", "RIVET WORKSHOP",
+            "Industrial drums in a small room. Sixteen pads, three strike strengths and choking metal hats.",
+            seeded = false,
+        ) { SynthKits.rivet(.10f) },
+        Starter(
+            "rivet-factory", "RIVET FACTORY",
+            "Industrial drums with a wider room. The same sixteen roles and three strike strengths.",
+            seeded = false,
+        ) { SynthKits.rivet(.55f) },
+        Starter(
+            "rivet-warehouse", "RIVET WAREHOUSE",
+            "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
+            seeded = false,
+        ) { SynthKits.rivet(1f) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
