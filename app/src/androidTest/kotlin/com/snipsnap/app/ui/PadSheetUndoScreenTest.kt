@@ -113,7 +113,6 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
                 onKitUpdated = {},
                 onShelfAssetWritten = {},
                 appScope = appScope,
-                workshopOpen = false,
                 openBox = openBoxState,
                 onOpenBox = { openBoxState = it },
                 pedalRow = PedalSlate.DEFAULT,

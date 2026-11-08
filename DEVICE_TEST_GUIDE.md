@@ -27,7 +27,7 @@ UI tests live in `app/src/androidTest` and run on a device under
    coast feel like tape, and does it glide onto a hit (SNAPPED toast)?
 5. Play, then hit Home mid-play. **Audio must stop.** Reopen — the needle must
    be where you left it, not teleported to the end.
-6. Long-press the LEFT reel: pencil rewind gag + toast.
+6. Hold the LEFT reel: nothing happens (the pencil rewind is gone).
 7. Look at the needle and waveform: crisp lines, or hairlines? (We converted
    px→dp by review; your screen is the proof.)
 

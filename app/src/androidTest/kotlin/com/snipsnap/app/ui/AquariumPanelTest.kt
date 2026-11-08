@@ -354,7 +354,7 @@ class AquariumPanelTest : ComposeScreenTest() {
                 onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
                 onKitUpdated = { updated = it }, onShelfAssetWritten = {}, appScope = appScope,
-                workshopOpen = false, openBox = openBox, onOpenBox = { openBox = it },
+                openBox = openBox, onOpenBox = { openBox = it },
                 pedalRow = PedalSlate.DEFAULT, onPedalRowChange = {},
                 aquariumRenderer = renderer,
             )
@@ -558,7 +558,7 @@ class AquariumPanelTest : ComposeScreenTest() {
         waitFor("the preview before changing benches") { renderer.entered.count == 0L }
         // openBox is caller-owned. Changing it here exercises the same input
         // update as parent navigation, including paths that do not tap Close.
-        compose.runOnIdle { openBox = "BENCH" }
+        compose.runOnIdle { openBox = null }
         pump()
         tagged("aquarium-panel").assertDoesNotExist()
         renderer.release.countDown()

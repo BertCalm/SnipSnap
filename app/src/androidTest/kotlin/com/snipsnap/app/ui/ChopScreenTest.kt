@@ -122,8 +122,6 @@ class ChopScreenTest : ComposeScreenTest() {
                     entry = entry,
                     lastCommit = commit,
                     shelf = shelf,
-                    teachEnabled = false,
-                    workshopOpen = false,
                     onToast = { toasts += it },
                     onSentToGrid = { e, line -> sent += e to line },
                     onLandedOnto = { e, bank, line -> landed += Triple(e, bank, line) },

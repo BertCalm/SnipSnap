@@ -93,7 +93,6 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
                 onKitUpdated = {},
                 onShelfAssetWritten = {},
                 appScope = appScope,
-                workshopOpen = false,
                 openBox = openBox,
                 onOpenBox = { openBox = it },
                 pedalRow = PedalSlate.DEFAULT,

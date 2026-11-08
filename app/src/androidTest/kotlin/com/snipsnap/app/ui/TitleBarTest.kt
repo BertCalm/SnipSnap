@@ -44,7 +44,7 @@ class TitleBarTest {
         rule.setContent {
             TapeTheme(Schemes.DEFAULT) {
                 Column(Modifier.width(320.dp)) {
-                    TitleBar(projectName = name, onNote = {}, onGear = {})
+                    TitleBar(projectName = name, onGear = {})
                     TitleBar(onGear = {})
                 }
             }

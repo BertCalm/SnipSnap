@@ -66,15 +66,4 @@ class BenchNotesTest {
             root.deleteRecursively()
         }
     }
-
-    @Test
-    fun `the lines say where the note went`() {
-        assertEquals("NOTED ON PLAY. SEND TO BENCH CARRIES IT.", Copy.noted("PLAY"))
-        assertTrue("SEND TO BENCH" in Copy.NOTE_PROMPT, "the prompt says how the words leave: ${Copy.NOTE_PROMPT}")
-        for (line in listOf(Copy.noted("KIT"), Copy.NOTE_PROMPT, Copy.NOTE_FAILED)) {
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
-            assertTrue(line.endsWith("."), "lands on a full stop: $line")
-        }
-        assertFalse("SENT" in Copy.noted("PLAY"), "kept is not sent")
-    }
 }

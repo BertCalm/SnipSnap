@@ -858,7 +858,7 @@ class PersonalityTest {
      * are actually held to the law.
      */
     private val legacyHandListedToasts = setOf(
-        "MELODIC_ON", "KEY_OFF", "TEACHING_ON", "TEACHING_OFF",
+        "MELODIC_ON", "KEY_OFF",
         "BANK_B_LIT", "TWINS_REROLLED", "BACK_FROM_BIN", "BIN_EMPTIED",
         // "HUMANIZED" dropped (feel axis, task 6): HUMANIZE ⚄ is gone, so
         // Copy.HUMANIZED no longer exists for reflection to find — this was
@@ -881,7 +881,7 @@ class PersonalityTest {
         // `treated`, `keyed` and `loopBounced` are held by. Delete those
         // assertions and the text is unchecked again.
         "NO_PITCH", "RETREAT_REFUSED",
-        "TAKES_BIN_RULE", "TEACH_CONSENT", "SNAPPED",
+        "TAKES_BIN_RULE", "SNAPPED",
         "TAKES_EMPTY", "BIN_EMPTY_STATE", "BIN_ITEM_GONE", "KIT_WONT_OPEN",
         "UNMUTATED", "MUTATE_NEEDS_ONE", "CRATE_EMPTY",
         "SCULPTED", "STRETCHED", "FROZEN", "PAD_TOO_SHORT", "PAD_TOO_LONG",
