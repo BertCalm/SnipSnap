@@ -634,6 +634,28 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = treated.recipe) }
     }
 
+    /** Rebuild the owned four-strike bank from an edited source, preserving pad mix and zones. */
+    fun replaceFiredBronze(slot: Int, recipe: com.snipsnap.synth.PadRecipe): KitPad {
+        val pad = kit.pad(slot)
+        require(FiredBronzePads.canEdit(pad)) { "pad $slot is not a native Fired Bronze bank" }
+        val patch = recipe.patch as? com.snipsnap.synth.FiredBronzePatch
+            ?: throw IllegalArgumentException("a Fired Bronze bank requires a Fired Bronze patch")
+        require(com.snipsnap.synth.Velocity.patchForLayers(recipe) != null) {
+            "this finishing recipe cannot be replayed on strike layers"
+        }
+        val hard = recipe.render()
+        // Render every zone before touching files, so a failed render leaves the kit intact.
+        val rendered = com.snipsnap.synth.FiredBronzePerformance.layerVelocities.map { velocity ->
+            if (velocity == 1f) hard else com.snipsnap.synth.Velocity.layerAt(
+                hard, patch, recipe.fx, velocity, null, useAtVelocity = true)
+        }
+        pad!!.velocityLayers.zip(rendered).forEach { (layer, snip) ->
+            moveToBin(layer.sampleFile)
+            WavWriter.write(File(kitDir, layer.sampleFile), snip)
+        }
+        return update(slot) { it.copy(recipe = recipe.toJsonValue(), source = it.source - "rawSha256" - "rawVelocitySha256" - "desampled") }
+    }
+
     /**
      * Rewrite one pad's audio through [transform], bin-backed like every
      * treatment — the mix doctor's fixes and future processors all use

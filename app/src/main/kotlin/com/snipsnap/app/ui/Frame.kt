@@ -1,13 +1,11 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -600,16 +597,6 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
         contentAlignment = Alignment.Center,
     ) {
         TapeText(text, TapeType.pixelSmall, ink)
-    }
-}
-
-/** Behind the gear in the title bar: SETUP ▸, HELP ▸ and MIDI ▸, one tap from every screen. */
-@Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onMidi: () -> Unit, onDismiss: () -> Unit) {
-    SheetMenu("MORE", onDismiss) {
-        SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup)
-        SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp)
-        SheetRow("${Places.GEAR_MIDI} ▸", onClick = onMidi)
     }
 }
 

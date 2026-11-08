@@ -54,6 +54,8 @@ object StarterKits {
         val seeded: Boolean,
         /** A key the kit's melodic content is in, when it has one. */
         val key: KeySpec? = null,
+        /** Authored tempo, when timing is part of the kit recipe. */
+        val tempoBpm: Float? = null,
         /** Optional source payloads written before kit.json makes a kit visible. */
         private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
@@ -65,7 +67,7 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            return KitAssembler.assembleArranged(name, build(seed), dir, key)
+            return KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
         }
     }
 
@@ -535,6 +537,11 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter(
+            "fired-bronze", "FIRED BRONZE",
+            "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers.",
+            seeded = false, tempoBpm = 96f,
+        ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

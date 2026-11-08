@@ -2,6 +2,19 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFiredBronzeAudition") {
+    group = "distribution"
+    description = "Render the sixteen-pad Fired Bronze study, source/treatment comparisons, recipes and MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("firedBronzeReplay").orNull
+    if (replay != null) args("--replay", replay,
+        providers.gradleProperty("firedBronzeReplayOutput").orNull ?: "testkit/fired-bronze-replay.wav")
+    else args(providers.gradleProperty("firedBronzeOutput").orNull ?: "testkit/fired-bronze-audition")
+}
+
 tasks.register<JavaExec>("generateRivetKit") {
     group = "distribution"
     description = "Export three RIVET sixteen-pad, three-zone industrial drum kits with native MPC 3 and MPC 2 read-back."
@@ -3296,6 +3309,52 @@ tasks.register<JavaExec>("generateDiveAudition") {
     mainClass.set("com.snipsnap.synth.DiveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/dive-audition")
+}
+
+tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
+    group = "distribution"
+    description = "Render the reference-informed dry revision without altering the rejected first study."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeR2Audition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("firedBronzeR2Output").orNull ?: "testkit/fired-bronze-r2")
+    if (providers.gradleProperty("firedBronzeR2ReferencesOnly").isPresent) args("--references-only")
+}
+
+tasks.register<JavaExec>("generateFiredBronzeDryKitAudition") {
+    group = "distribution"
+    description = "Render the dry kit built around the accepted R2 source study."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeDryKitAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/fired-bronze-dry-kit")
+}
+
+tasks.register<JavaExec>("generateFiredBronzeColorAudition") {
+    group = "distribution"
+    description = "Render processor and amp comparisons around the accepted dry kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzeColorAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}
+
+tasks.register<JavaExec>("generateFiredBronzePushAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzePushAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}
+
+tasks.register<JavaExec>("generateFiredBronzePerformanceAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FiredBronzePerformanceAudition")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
 }
 
 tasks.register<JavaExec>("generateHushAudition") {
