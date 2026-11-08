@@ -53,7 +53,7 @@ object Restrike {
         if (!canRestrike(patch)) return null
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
-            is SkinPatch -> Skin.render(patch.voice, patch.macros, velocity = v, take = take)
+            is SkinPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {
                 // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
                 val pos = Terra.defaults(patch.voice)["POS"]
