@@ -106,7 +106,6 @@ import com.snipsnap.synth.Ferry
 import com.snipsnap.synth.Halobar
 import com.snipsnap.synth.HalobarVoice
 import com.snipsnap.synth.HalobarPatch
-import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.Chitin
 import com.snipsnap.synth.ChitinVoice
 import com.snipsnap.synth.ChitinPresets
@@ -356,7 +355,6 @@ object SynthCommand {
         }
 
         val presets = when (engine) {
-            HalobarPatch.ENGINE -> HalobarVoice.entries.firstOrNull { it.name == voice }?.let { HalobarPresets.forVoice(it) } ?: emptyList()
             ChitinPatch.ENGINE -> ChitinVoice.entries.firstOrNull { it.name == voice }?.let { ChitinPresets.forVoice(it) } ?: emptyList()
             RimePatch.ENGINE -> RimeVoice.entries.firstOrNull { it.name == voice }?.let { RimePresets.forVoice(it) } ?: emptyList()
             FerryPatch.ENGINE -> FerryVoice.entries.firstOrNull { it.name == voice }?.let { FerryPresets.forVoice(it) } ?: emptyList()

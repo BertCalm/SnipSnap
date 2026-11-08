@@ -1,4 +1,4 @@
-# HALOBAR Python reference
+# HALOBAR reference and native acceptance evidence
 
 This is the frozen R1 sketch that the owner approved before native implementation.
 It supplies the material/contact shapes and listening comparison, not application
@@ -21,3 +21,20 @@ See [HALOBAR](../../docs/HALOBAR.md) for native render commands and boundaries.
 
 `native-validation.json` records the integrated Kotlin test/build results and
 measured native timing, separately from the historical Python evidence.
+
+The owner accepted the published native audition on 2026-11-08.
+`native-acceptance.json` records the later factory promotion, bounded preparation
+cache, current-base checks and separate SPACE/fresh timing. The old validation
+file above preserves the initial implementation snapshot.
+
+`native-parity.tsv` freezes 195 Float32 little-endian hashes captured from
+`c54f01b44f8295757a78a4de8f44f9c00acb4473` on Temurin 21.0.13. It covers the
+153 audition recipes, defaults, 36 seeded control/velocity combinations and
+three 8x diagnostic cases. This is same-runtime replay evidence, not a claim
+that transcendental implementations are identical on every device.
+`NativeReplay.java` reads that table and fails on any sample or length change.
+Compile it against the built synth runtime classpath, then run with the table
+as its first argument. Add `render` as the second argument to exercise normal
+rendering and cache reuse for the 192 4x cases; the three 8x cases always use
+the diagnostic entry point. `generateHalobarAudition` independently rebuilds
+the 153 native audition recipes, WAVs, phrases and both timing measurements.

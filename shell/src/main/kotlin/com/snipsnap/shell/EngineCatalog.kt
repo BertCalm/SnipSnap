@@ -137,6 +137,7 @@ object EngineCatalog {
         // holds that walk to this map's order, so a new engine goes at the end of both.
         "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
         "EROSION" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry electrical percussion, from low thuds to bright crackle"),
+        "RIVET" to EngineEntry(listOf(EngineCategory.DRUMS), "Industrial drums from a small room to a warehouse"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

@@ -53,6 +53,8 @@ import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
@@ -440,6 +442,16 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is HalobarPatch) {
+            // Keep the selected audio version instead of relying on future defaults.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "HalobarPatch.fromJsonText($recipe),"
+        }
+        if (patch is RivetPatch) {
+            // Preserve native strike and renderer version, including old model-1 hits.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "RivetPatch.fromJsonText($recipe),"
+        }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

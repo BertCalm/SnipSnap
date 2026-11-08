@@ -39,6 +39,7 @@ object Halobar {
     private const val TWO_PI = 2.0 * PI
     private const val LOG_1000 = 6.907755278982137
     private const val CACHE_BYTES = 6 * 1024 * 1024
+    private const val STEM_CACHE_BYTES = 8 * 1024 * 1024
     private val divisions = doubleArrayOf(1.5, 1.0, .75, .5, .375, .25)
     val RATE_LABELS = listOf("Dotted quarter", "Quarter", "Dotted eighth", "Eighth", "Dotted sixteenth", "Sixteenth")
     fun rateLabel(value: Float): String = RATE_LABELS[min(5,((if(value.isFinite())value.coerceIn(0f,1f) else .45f)*6).toInt())]
@@ -136,7 +137,30 @@ object Halobar {
     private data class RenderKey(val voice: HalobarVoice, val controls: List<Float>, val velocity: Float, val model: Int)
     private val cache = LinkedHashMap<RenderKey,FloatArray>(8,.75f,true)
     private var cacheBytes = 0
-    internal fun clearCache() = synchronized(cache) { cache.clear(); cacheBytes=0 }
+    private data class StemKey(val voice: HalobarVoice, val controls: List<Float>, val velocity: Float)
+    private data class Stems(val plan: Plan, val dry: FloatArray, val echo: FloatArray?,
+        val halo: FloatArray?, val loopPeak: Double, val kernelNorm: Double)
+    private val stemCache = LinkedHashMap<StemKey,Stems>(2,.75f,true)
+    private var stemCacheBytes = 0
+    internal fun clearCache() {
+        synchronized(cache) { cache.clear(); cacheBytes=0 }
+        synchronized(stemCache) { stemCache.clear(); stemCacheBytes=0 }
+    }
+    private fun cachedStems(key: StemKey): Stems? = synchronized(stemCache) { stemCache[key] }
+    private fun rememberStems(key: StemKey, stems: Stems) = synchronized(stemCache) {
+        fun bytes(s: Stems) = (s.dry.size+(s.echo?.size ?: 0)+(s.halo?.size ?: 0))*4
+        val size=bytes(stems)
+        if(size<=STEM_CACHE_BYTES) {
+            stemCache.remove(key)?.let { stemCacheBytes-=bytes(it) }
+            while(stemCacheBytes+size>STEM_CACHE_BYTES && stemCache.isNotEmpty()) {
+                val iterator=stemCache.entries.iterator();val entry=iterator.next()
+                stemCacheBytes-=bytes(entry.value);iterator.remove()
+            }
+            // These arrays are private and never modified after preparation.
+            // Finishing always owns a new output, including on concurrent hits.
+            stemCache[key]=stems;stemCacheBytes+=size
+        }
+    }
     private fun cached(key: RenderKey): FloatArray? = synchronized(cache) { cache[key]?.copyOf() }
     private fun remember(key: RenderKey, samples: FloatArray) = synchronized(cache) {
         val size = samples.size*4
@@ -160,7 +184,17 @@ object Halobar {
         val v=velocityValue(velocity).toFloat()
         val key=RenderKey(voice,specs.map { canonical.getValue(it.name) },v,model)
         cached(key)?.let { return Snip(it,1,RATE) }
-        val samples=renderProbe(voice,canonical,v,normalize=true).samples
+        val samples=if(v==0f) FloatArray(plan(voice,canonical,v).frames) else {
+            val space=canonical.getValue("SPACE")
+            // At positive SPACE, only the final echo/halo gains change. The
+            // prepared source and returns depend on every other control and
+            // velocity. SPACE=0 has a different duration and bypasses this cache.
+            val stemKey=if(space>0f) StemKey(voice,specs.filter { it.name!="SPACE" }
+                .map { canonical.getValue(it.name) },v) else null
+            val stems=stemKey?.let(::cachedStems) ?: prepare(voice,canonical,
+                plan(voice,canonical,v),v,Dsp.OVERSAMPLE).also { if(stemKey!=null)rememberStems(stemKey,it) }
+            finish(stems,space,normalize=true).samples
+        }
         remember(key,samples)
         return Snip(samples,1,RATE)
     }
@@ -172,6 +206,11 @@ object Halobar {
         cancelCheck()
         val m=settled(macros,voice); val p=plan(voice,m,velocity)
         if (velocityValue(velocity)==0.0) return Probe(FloatArray(p.frames),p,0f,0.0,0.0,0.0,1.0)
+        return finish(prepare(voice,m,p,velocity,oversample),m.getValue("SPACE"),normalize)
+    }
+
+    private fun prepare(voice: HalobarVoice,m: Map<String,Float>,p: Plan,velocity: Float,
+        oversample: Int): Stems {
         val rate=RATE*oversample
         // A finite source needs only a short filter flush. Processing seconds of
         // exact zero through Float IIRs enters subnormal arithmetic on the JVM.
@@ -182,14 +221,22 @@ object Halobar {
         // Only nonlinear audio needs 4x. The allpasses and finite convolution
         // are linear at the delivery rate, with ample Nyquist guard for the LFO.
         val sourceOut=down(dry,rate)
-        val out=if(sourceOut.size==p.frames) sourceOut else sourceOut.copyOf(p.frames)
+        val echo=send?.let { down(it,rate) }
+        echo?.let { phase(it,m.getValue("MOTION").toDouble()) }
+        val halo=echo?.let(::haloConvolution)
+        cancelCheck()
+        return Stems(p,sourceOut,echo,halo,loopPeak,kernelNorm)
+    }
+
+    private fun finish(stems: Stems,space: Float,normalize: Boolean): Probe {
+        val p=stems.plan
+        val out=stems.dry.copyOf(p.frames)
         var ending=0.0
-        if(send!=null) {
-            val echo=down(send,rate)
-            phase(echo,m.getValue("MOTION").toDouble())
-            val halo=haloConvolution(echo)
-            val echoGain=1.55*m.getValue("SPACE").toDouble().pow(.65)
-            val haloGain=.75*m.getValue("SPACE").toDouble().pow(1.2)
+        if(stems.echo!=null) {
+            val echo=stems.echo
+            val halo=checkNotNull(stems.halo)
+            val echoGain=1.55*space.toDouble().pow(.65)
+            val haloGain=.75*space.toDouble().pow(1.2)
             val fade=min((.1*RATE).roundToInt(),out.size)
             for(i in out.indices) {
                 var wet=echoGain*echo[i]+haloGain*halo[i]
@@ -211,7 +258,7 @@ object Halobar {
         var after=0f; for(x in out) after=max(after,abs(x))
         Dsp.fadeTail(out)
         cancelCheck()
-        return Probe(out,p,peak,loopPeak,kernelNorm,ending,if(before>0)after/before.toDouble() else 1.0)
+        return Probe(out,p,peak,stems.loopPeak,stems.kernelNorm,ending,if(before>0)after/before.toDouble() else 1.0)
     }
 
     private fun cosineFall(i: Int,n: Int) = if(n<=1) 0.0 else .5+.5*cos(PI*i/(n-1))

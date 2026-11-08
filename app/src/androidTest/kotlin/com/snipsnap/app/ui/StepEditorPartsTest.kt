@@ -55,7 +55,7 @@ class StepEditorPartsTest : ComposeScreenTest() {
         val dir = File(cache, "step-parts-${System.nanoTime()}").apply { mkdirs() }
         dirs += dir
         GrooveStore.save(dir, listOf(Mpc3Clip("Kit", 1, emptyList()), clip))
-        return StepEditorState(dir, clip.name, scope) { edits += it }
+        return StepEditorState(dir, clip.name, scope, onEdit = { edits += it })
     }
 
     private val clip = GrooveEdit.toggleStep(Mpc3Clip("Kit E", 1, emptyList()), GrooveEdit.Lane.SNARE, 4)

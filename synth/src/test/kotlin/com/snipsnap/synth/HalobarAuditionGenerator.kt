@@ -113,10 +113,24 @@ object HalobarAuditionGenerator {
             mapOf("voice" to v.name,"samples" to times,"medianMs" to times[15],"p95Ms" to times[28],
                 "targetMs" to 50,"budgetMet" to (times[28]<=50),"completedAudioCache" to false)
         }
+        // Every SPACE value is new: completed-audio hits cannot satisfy this
+        // playability measurement. Only the private prepared stems are reused.
+        val spacePerformance=voices.map { v ->
+            Halobar.clearCache()
+            repeat(8) { i -> Halobar.render(v,mapOf("SPACE" to (.2f+i*.001f))) }
+            val times=(0 until 30).map { i ->
+                val start=System.nanoTime()
+                Halobar.render(v,mapOf("SPACE" to (.4f+i*.003f)))
+                (System.nanoTime()-start)/1e6
+            }.sorted()
+            mapOf("voice" to v.name,"samples" to times,"medianMs" to times[15],"p95Ms" to times[28],
+                "targetMs" to 50,"budgetMet" to (times[28]<=50),"completedAudioCache" to false,
+                "preparedStemCache" to true,"control" to "SPACE")
+        }
         val manifest=mapOf("engine" to "HALOBAR","model" to Halobar.MODEL_VERSION,"bpm" to Halobar.BPM,
-            "status" to "Native listening build; finite notes; factory references await owner audition",
+            "status" to "Owner accepted native audition on 2026-11-08; twelve unchanged factory recipes; finite notes",
             "runtime" to System.getProperty("java.runtime.version"),"processors" to Runtime.getRuntime().availableProcessors(),
-            "referenceGain" to .25,"performance" to performance,"phrases" to phraseFiles,
+            "referenceGain" to .25,"performance" to performance,"spacePerformance" to spacePerformance,"phrases" to phraseFiles,
             "clips" to clips.map { it.metrics+mapOf("file" to it.file,"title" to it.title,"group" to it.group) })
         File(root,"manifest.json").writeText(Json.write(json(manifest)))
         File(root,"metrics.csv").printWriter().use { writer ->
@@ -129,9 +143,10 @@ object HalobarAuditionGenerator {
                     (if(group=="registers")"<p><a href=\"reference/${it.id}.wav\">Fixed-gain 24-bit reference</a></p>" else "")+"</article>" }+"</details>"
         }
         val timings=performance.joinToString("") { "<tr><td>${it["voice"]}</td><td>${"%.1f".format(Locale.ROOT,it["medianMs"])}</td><td>${"%.1f".format(Locale.ROOT,it["p95Ms"])}</td><td>${it["budgetMet"]}</td></tr>" }
+        val spaceTimings=spacePerformance.joinToString("") { "<tr><td>${it["voice"]}</td><td>${"%.1f".format(Locale.ROOT,it["medianMs"])}</td><td>${"%.1f".format(Locale.ROOT,it["p95Ms"])}</td><td>${it["budgetMet"]}</td></tr>" }
         val template=checkNotNull(javaClass.getResource("/audition/halobar-audition.html")) { "HALOBAR audition template missing" }.readText()
-        File(root,"index.html").writeText(template.replace("{{TIMINGS}}",timings).replace("{{CARDS}}",cards))
-        println(Json.write(json(mapOf("clips" to clips.size,"performance" to performance))))
+        File(root,"index.html").writeText(template.replace("{{TIMINGS}}",timings).replace("{{SPACE_TIMINGS}}",spaceTimings).replace("{{CARDS}}",cards))
+        println(Json.write(json(mapOf("clips" to clips.size,"performance" to performance,"spacePerformance" to spacePerformance))))
     }
 
     private fun phrase(voice: HalobarVoice,dub: Boolean): FloatArray {

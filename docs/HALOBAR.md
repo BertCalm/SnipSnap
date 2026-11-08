@@ -47,10 +47,11 @@ then the full family. The page contains three-register comparisons, all seven
 control sweeps, five interacting control pairs, and twelve listening references.
 Register references also have fixed-gain, unlevelled 24-bit versions.
 
-Those references are available in the picker and CLI, and explicitly remain
-outside the global factory preset roster until the native sound has been heard.
-The earlier Python audition received owner approval; that does not establish a
-listening verdict for this Kotlin renderer.
+The twelve unchanged recipes now join the factory preset roster, following the
+owner's approval of the published native audition on 2026-11-08: “Sound great,
+continue.” This establishes an overall listening verdict, not phone timing or
+MPC hardware acceptance. The [hosted audition](https://halobar-native-audition.bertcalm.chatgpt.site)
+retains the same native audio.
 
 ## Implementation and limits
 
@@ -68,12 +69,44 @@ run at the delivery rate, outside the feedback loop. Loop gain stays at or below
 halo cannot feed itself. House mean removal, 20 Hz high-pass, loudness matching,
 peak ceiling and tail fade finish the mono 44.1 kHz output.
 
-The completed-render cache is bounded to 6 MiB and owns copies of its arrays;
-immutable halo spectra use less than 1 MiB. Warm fresh-control medians were 291 ms for vibraphone, 164 ms for marimba and
-136 ms for xylophone on the development JVM, exceeding the 50 ms target.
-The native audition records thirty uncached measurements per voice after eight
-warm-ups. These are desktop timings, not phone measurements. Device playback,
-MPC hardware loading and the native listening verdict remain unverified.
+The completed-render cache is bounded to 6 MiB and owns copies of its arrays.
+An additional 8 MiB cache retains private, immutable dry/echo/halo stems. After a
+wet render, changing positive SPACE only remixes those stems and applies the
+house output stage. Voice, every other control and velocity invalidate that
+preparation. SPACE zero retains the shorter dry-only duration. The immutable
+halo spectra use less than 1 MiB.
+
+Fresh diagnostics bypass both audio caches. The audition reports uncached
+calculation and changing-SPACE timing separately, with thirty measurements per
+voice after eight warm-ups. SPACE edits meet the 50 ms desktop target; full
+fresh calculations remain above it. These are JVM timings, not phone timings.
+Device playback and MPC hardware loading remain unverified. The owner approved
+the native audition on 2026-11-08.
+
+## Accepted-sound verification
+
+| Voice | Fresh median / p95 ms | SPACE edit median / p95 ms |
+|---|---:|---:|
+| Vibraphone | 310.1 / 341.1 | 14.5 / 16.9 |
+| Marimba | 175.9 / 181.0 | 9.2 / 10.5 |
+| Xylophone | 145.9 / 156.0 | 8.1 / 10.1 |
+
+Thirty measurements after eight warm-ups, on Temurin 21 with four visible
+processors. Every SPACE measurement uses a different positive value; completed
+output hits cannot satisfy it. The first wet calculation still pays the full
+preparation cost. Other controls invalidate preparation.
+
+All 179 audition WAVs, 153 recipes and sixteen MPC samples remain byte-identical
+to the approved version. A 195-case Float32 replay also matches the earlier
+renderer exactly: 192 normal 4x cases plus three 8x diagnostics. The complete
+JVM run found one missing preset-authoring contract. Its 4,915 synth
+checks passed. After the metadata correction, all 4,219 other-module JVM
+checks and 53 affected synth/recipe checks passed. The full synth
+suite was not repeated after that source-only correction; the DSP and twelve
+accepted recipe settings remain identical.
+The APK build and device-test compilation also passed. The latest
+[acceptance ledger](../reference/halobar/native-acceptance.json) records the
+source tree, hashes and measurement samples.
 
 See the [engineering spec](superpowers/specs/2026-11-07-halobar-cosmic-dub-design.md)
 for the model contract, regression probes and final build evidence. The frozen
@@ -87,4 +120,5 @@ it is not the production renderer.
 - Darkening and saturation make repeated answers evolve inside a bounded loop.
 - Phase motion and the halo sit after feedback so they cannot destabilize it.
 - Finite releases make every exported pad usable without pretending it sustains
-  seamlessly. The main remaining engineering cost is fresh-control render time.
+  seamlessly. Prepared stems make SPACE editing inexpensive while preserving
+  the approved audio; full fresh rendering remains the main engineering cost.

@@ -2,6 +2,26 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateRivetKit") {
+    group = "distribution"
+    description = "Export three RIVET sixteen-pad, three-zone industrial drum kits with native MPC 3 and MPC 2 read-back."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RivetKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rivetKitOutput").orNull ?: "${rootDir}/testkit/rivet-kit")
+}
+
+tasks.register<JavaExec>("generateRivetAudition") {
+    group = "distribution"
+    description = "Render RIVET kick/snare, room-size grooves, macro sweeps and saved prototype recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RivetAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rivetOutput").orNull ?: "${rootDir}/testkit/rivet-audition")
+}
+
 tasks.register<JavaExec>("generateCompletionInventory") {
     group = "verification"
     description = "Count compiled engine voices and factory recipes without claiming musical acceptance."

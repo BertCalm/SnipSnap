@@ -174,6 +174,36 @@ class HalobarTest {
         }
     }
 
+    @Test fun `SPACE edits reuse private stems without changing fresh audio or other controls`() {
+        for(v in HalobarVoice.entries) {
+            Halobar.clearCache()
+            Halobar.render(v,mapOf("SPACE" to .31f))
+            // A different positive SPACE can reuse preparation, but it must
+            // still apply its own gains, loudness and finite ending.
+            val m=mapOf("SPACE" to .73f)
+            val changed=Halobar.render(v,m).samples
+            val fresh=Halobar.renderProbe(v,m,normalize=true).samples
+            assertContentEquals(fresh,changed,"$v SPACE edit")
+            changed.fill(123f)
+            assertContentEquals(Halobar.renderProbe(v,mapOf("SPACE" to .57f),normalize=true).samples,
+                Halobar.render(v,mapOf("SPACE" to .57f)).samples,"$v stem ownership")
+            // Each dependency must invalidate preparation, including the
+            // reserved HOLD top and the shorter dry-only duration.
+            for(name in Halobar.defaults(v).keys) {
+                Halobar.clearCache()
+                Halobar.render(v,m)
+                val edited=m+(name to 1f)
+                assertContentEquals(Halobar.renderProbe(v,edited,normalize=true).samples,
+                    Halobar.render(v,edited).samples,"$v $name invalidation")
+            }
+            assertContentEquals(Halobar.renderProbe(v,m,velocity=.41f,normalize=true).samples,
+                Halobar.render(v,m,velocity=.41f).samples,"$v velocity invalidation")
+            val dry=m+("SPACE" to 0f)
+            assertContentEquals(Halobar.renderProbe(v,dry,normalize=true).samples,
+                Halobar.render(v,dry).samples,"$v dry bypass")
+        }
+    }
+
     @Test fun `direct settlement is forgiving while saved patch validation is strict`() {
         for(v in HalobarVoice.entries) {
             assertEquals(Halobar.defaults(v),Halobar.settled(mapOf("TOUCH" to Float.NaN,"RETURN" to Float.POSITIVE_INFINITY,"UNKNOWN" to 1f),v))

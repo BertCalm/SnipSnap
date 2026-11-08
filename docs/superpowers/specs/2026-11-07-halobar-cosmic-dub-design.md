@@ -104,7 +104,11 @@ linear stages. Halo is a deterministic .9 second, low-passed noise FIR with
 energy norm .24, partitioned into 4096-frame blocks and 8192-point FFTs. Immutable
 kernel spectra are shared; mutable convolution history belongs to each render.
 The 6 MiB completed-audio cache copies on input/output and keys voice, settled
-controls, velocity and model. Unknown macro names never affect seed identity.
+controls, velocity and model. The accepted-sound continuation adds an 8 MiB
+cache of private, immutable dry/echo/halo stems, keyed by voice, all controls
+except positive SPACE, and velocity. SPACE edits only recombine and condition
+the stems; dry-only notes bypass preparation reuse and retain their own duration.
+Fresh diagnostics bypass both caches. Unknown macro names never affect seed identity.
 Cancellation checks bound long source, echo and convolution work.
 
 The source buffer ends after its fade plus a filter flush; long exact-zero
@@ -121,6 +125,8 @@ fresh renders per voice after eight warm-ups, with the completed-audio cache
 bypassed. The resulting manifest is the authority for final machine timings.
 
 ## As built
+
+Initial integration, before native listening acceptance:
 
 Implemented the Kotlin engine and model-aware patch decoder, velocity dispatch,
 determinism canary, twelve provisional references, sixteen editable kit recipes,
@@ -165,7 +171,7 @@ All eight other-module JVM suites and all three synth CI shards exited 0, with 9
 
 The machine-readable [validation ledger](../../../reference/halobar/native-validation.json) records the tested tree, source hashes, APK hash, precise native timings and open listening/device limits.
 
-## Current development-base integration
+## Development-base integration at 3154473
 
 After the full 9,078-test run, development base `315447328` was merged, retaining
 the newer EROSION, effects and app changes. Registration overlaps were resolved
@@ -182,6 +188,48 @@ The full legacy suite was not repeated on this later development-base merge;
 the validation ledger keeps the two scopes separate. Phone and MPC hardware
 behavior, native listening acceptance and the 50 ms fresh-render target remain open.
 
+## Accepted native sound and SPACE edit latency (2026-11-08)
+
+The owner approved the published native audition with “Sound great, continue.”
+Its twelve unchanged recipes now enter the factory roster, and the app/CLI use
+the shared dispatcher. The original contact, bar, feedback, phase, convolution
+and output arithmetic remain in place. The cached preparation is private and
+immutable; final mixing always owns its output. A new test checks SPACE replay,
+array ownership, all control dependencies, velocity and dry-only duration.
+
+| Voice | Fresh median / p95 ms | SPACE edit median / p95 ms |
+|---|---:|---:|
+| Vibraphone | 310.1 / 341.1 | 14.5 / 16.9 |
+| Marimba | 175.9 / 181.0 | 9.2 / 10.5 |
+| Xylophone | 145.9 / 156.0 | 8.1 / 10.1 |
+
+The measurements distinguish full fresh calculation from prepared-stem reuse.
+Only positive SPACE editing meets the 50 ms desktop target. First calculation
+and other controls still require preparation. The full fresh target remains
+open; no phone timing follows from desktop measurements.
+
+On development base `22ab69f22`, the complete `./gradlew --no-daemon test`
+run covered 9,134 tests and exited 1 for one missing HALOBAR preset-authoring
+helper. All 4,915 synth checks passed. The correction makes promotion emit
+the complete saved JSON constructor and adds a voice-filtered promotion bank;
+accepted recipes and DSP are unchanged. All 4,219 tests across the eight other
+JVM modules reran successfully, alongside 53 affected synth/recipe checks.
+The full synth suite was not repeated after the source-only correction. Latest
+case coverage is 9,134 passing cases across the two scopes, not a claim that
+the original complete command exited 0. Android `assembleDebug` and
+`compileDebugAndroidTestKotlin` exited 0 after the correction. Both HALOBAR
+and RIVET registrations survive the integration: 79 picker engines and 76
+starters. The device-test compilation includes the merged step-editor callback
+fix; it does not establish an on-device test result.
+
+All 179 audition WAVs, 153 patch files and sixteen MPC WAVs are byte-identical
+to the approved originals. Fresh diagnostics and normal rendering match the
+195-case Float32 fixture from `c54f01b44`; 192 cases exercise the normal 4x
+renderer and three are 8x diagnostics. The [latest acceptance ledger](../../../reference/halobar/native-acceptance.json)
+records the exact tested tree, source hashes, APK hash, timing samples and scope.
+`NativeReplay.java` and its TSV fixture make the same-runtime parity check
+repeatable. Physical phone/MPC behavior and browser QA remain unverified.
+
 ## Evidence ledger
 
 - Verified: real repository APIs, registrations and initial focused test exit
@@ -189,7 +237,10 @@ behavior, native listening acceptance and the 50 ms fresh-render target remain o
 - Measured: Python R1 report is frozen under `reference/halobar`; native probes
   are emitted independently by `generateHalobarAudition`.
 - Shape: mode weights, decay/contact laws, processing gains and halo envelope.
-- Heard: owner approved the Python R1 audition. Kotlin listening remains open.
+- Heard: owner approved the Python R1 audition, then the published native
+  audition on 2026-11-08 (“Sound great, continue”). This is overall sound
+  acceptance; physical phone/MPC results remain unverified. The twelve unchanged
+  native recipes now enter the factory roster.
 
 ## Why it is built this way
 

@@ -35,6 +35,8 @@ import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.RivetVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -76,6 +78,9 @@ import kotlin.test.assertTrue
  * range. The screen only draws what [SynthRoot] says.
  */
 class SynthRootTest {
+    @Test fun `RIVET drum tuning does not advertise a semitone root editor`() {
+        for (voice in RivetVoice.entries) assertEquals(null, SynthRoot.of(RivetPatch("Drum", voice)))
+    }
 
     companion object {
         /** Every factory sound, plus one hand-built patch per engine kept off the preset roster. */
@@ -96,7 +101,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

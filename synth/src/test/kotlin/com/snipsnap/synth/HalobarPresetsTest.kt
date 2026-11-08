@@ -5,9 +5,10 @@ import com.snipsnap.audio.DrumClass
 import kotlin.test.*
 
 class HalobarPresetsTest {
-    @Test fun `listening references keep identity valid names and reproducible recipes`() {
+    @Test fun `accepted factory recipes keep identity valid names and reproducible recipes`() {
         for(voice in HalobarVoice.entries) {
             val patches=HalobarPresets.forVoice(voice)
+            assertEquals(patches,Presets.forVoice(HalobarPatch.ENGINE,voice.name))
             assertEquals(patches.size,patches.map { it.name }.distinct().size)
             assertEquals(patches.size,patches.map { it.macros }.distinct().size)
             for(p in patches) {
@@ -17,8 +18,10 @@ class HalobarPresetsTest {
                 assertEquals(p,Patches.fromJsonText(p.toJsonText()))
             }
         }
-        assertTrue(HalobarPatch.ENGINE in PatchTypes.PROTOTYPES)
-        assertTrue(Presets.forVoice(HalobarPatch.ENGINE,HalobarVoice.MARIMBA.name).isEmpty())
+        assertFalse(HalobarPatch.ENGINE in PatchTypes.PROTOTYPES)
+        assertEquals(HalobarPresets.all(),Presets.all().filterIsInstance<HalobarPatch>())
+        assertEquals(12,HalobarPresets.all().size)
+        assertTrue(Presets.forVoice(HalobarPatch.ENGINE,"UNKNOWN").isEmpty())
     }
 
     @Test fun `the native kit has sixteen editable dry rack recipes across the family`() {
