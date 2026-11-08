@@ -201,7 +201,10 @@ BACKROOM · MORE SNAP**. Four controls start at 50%: ATTACK, BODY, WIRE (wire le
 and BRIGHTNESS. Selecting ORIGINAL loads the original SKIN snare defaults;
 selecting Backroom loads More Snap. These buttons start a new recipe, so an old
 pad's external rack cannot accidentally be applied twice. Save, reopen, preview,
-scramble and navigation retain the selected model and its controls.
+scramble and navigation retain the selected model and its controls. Preset
+promotion uses the complete JSON constructor for Backroom, avoiding the original
+factory helper. Breeding retains the first parent's model and filters crossed
+controls to that model, as it already does for OHM's different control sets.
 
 SKIN SNARE `model: 2` stores the four controls and renders the original snare
 through its coordinated SPIKE → CRUNCH → TAPE → ROOM treatment. An omitted model
