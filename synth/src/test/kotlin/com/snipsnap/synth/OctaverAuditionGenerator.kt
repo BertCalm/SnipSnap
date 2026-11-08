@@ -14,7 +14,9 @@ import java.util.Locale
  * section's defaults (DRIVE at Grit, the owner's pick). At DEPTH 0.7 each is also heard clean (DRIVE 0),
  * halfway to Fuzz and at Fuzz (DRIVE 1), and Fuzz at DEPTH 1. The snare and the low tom are also heard with
  * the copy held to the hit (HANG 0), and the snare and the mid tom with the copy dark (TONE 0, 150 Hz) and
- * open (TONE 1, 2.4 kHz), at DEPTH 0.7. Every clip shares one loudness ([AuditionLevel]). Run via
+ * open (TONE 1, 2.4 kHz), at DEPTH 0.7. The snare, the low tom and the kick are also heard across DRIVE in
+ * eight steps at DEPTH 0.5, to judge that the knob moves evenly. Every clip shares one loudness
+ * ([AuditionLevel]). Run via
  * `./gradlew :synth:generateOctaverAudition`.
  */
 object OctaverAuditionGenerator {
@@ -42,6 +44,11 @@ object OctaverAuditionGenerator {
             clips["sub_70_between"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to (Octaver.GRIT + 1f) / 2f))
             clips["sub_70_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to 1f))
             clips["sub_100_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 1f, "DRIVE" to 1f))
+            if (name == "SNARE" || name == "LOW_TOM" || name == "KICK") {
+                for (d in listOf(0f, 0.12f, 0.24f, Octaver.GRIT, 0.5f, 0.67f, 0.83f, 1f)) {
+                    clips[String.format(Locale.ROOT, "drive_%03d", (d * 100).toInt())] = Octaver.process(dry, mapOf("DEPTH" to 0.5f, "DRIVE" to d))
+                }
+            }
             if (name == "SNARE" || name == "LOW_TOM") {
                 clips["sub_70_hang0"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "HANG" to 0f))
             }

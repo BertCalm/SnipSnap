@@ -187,6 +187,49 @@ class OctaverTest {
         }
     }
 
+    /** Third-octave band levels, 31.5 Hz to 12.5 kHz, as dB of [x]'s energy: its spectral shape, not its loudness. */
+    private fun bands(x: FloatArray): DoubleArray {
+        val k = kotlin.math.sqrt(2f)
+        var tot = 0.0
+        for (v in x) tot += v.toDouble() * v
+        return DoubleArray(27) { b ->
+            val c = 31.5f * Math.pow(2.0, b / 3.0).toFloat()
+            val lo = c / Math.pow(2.0, 1.0 / 6).toFloat()
+            val hi = c * Math.pow(2.0, 1.0 / 6).toFloat()
+            val f1 = Dsp.TptSvf(rate)
+            val f2 = Dsp.TptSvf(rate)
+            var e = 0.0
+            for (v in x) { f1.process(v, hi, k); f2.process(f1.low, lo, k); e += f2.high.toDouble() * f2.high }
+            10 * log10(e / tot + 1e-12)
+        }
+    }
+
+    @Test
+    fun `DRIVE moves the sound evenly from 0 to 1 and never changes how much octave there is`() {
+        // The owner's note: the knob did not move smoothly. Measured on the first version, DRIVE 0 to 0.05
+        // changed the snare's spectrum by 1.84 dB and later steps by about 0.2 (9 times less), and the low
+        // tom's copy energy rose 3 dB and fell 6 across the knob. Now (measured at the commit): every 5 percent
+        // step is within 3.5 times the median step (about snare 2.6, low tom 1.2, kick 1.6; the first version
+        // was 8.8 on the snare), and the copy's energy is the clean copy's at every setting.
+        for ((name, pad) in listOf("snare" to snare, "low tom" to lowTom, "kick" to Thump.render(ThumpVoice.KICK))) {
+            val clean = Octaver.copy(pad, 0.5f, 1f, 0f).sumOf { it.toDouble() * it }
+            val steps = ArrayList<Double>()
+            var prev: DoubleArray? = null
+            for (i in 0..20) {
+                val d = i / 20f
+                val copyEnergy = Octaver.copy(pad, 0.5f, 1f, d).sumOf { it.toDouble() * it }
+                val amount = 10 * log10(copyEnergy / clean)
+                assertTrue(abs(amount) < 0.1, "$name: DRIVE $d changes the copy's energy by ${"%.2f".format(amount)} dB")
+                val b = bands(Octaver.process(pad, mapOf("DEPTH" to 0.5f, "DRIVE" to d)).samples)
+                prev?.let { p -> steps += kotlin.math.sqrt(b.indices.sumOf { (b[it] - p[it]) * (b[it] - p[it]) } / b.size) }
+                prev = b
+            }
+            val median = steps.sorted()[steps.size / 2]
+            val worst = steps.max()
+            assertTrue(worst <= 3.5 * median, "$name: the biggest 5 percent step (${"%.2f".format(worst)} dB) is ${"%.1f".format(worst / median)} times the median (${"%.2f".format(median)} dB)")
+        }
+    }
+
     @Test
     fun `Fuzz follows the clean copy's envelope, has no DC and ends at zero`() {
         for (pad in listOf(snare, lowTom)) {
