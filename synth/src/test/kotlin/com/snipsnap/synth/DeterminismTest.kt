@@ -12,6 +12,15 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `Velour approved source and both saved boards replay byte for byte`() {
+        val source = VelourKits.source(VelourKits.roles[0])
+        for (type in listOf(BoardType.VELOUR, BoardType.VELOUR_BLOOM)) {
+            val recipe = BoardRecipe(type)
+            assertContentEquals(recipe.process(source).samples,
+                BoardRecipe.fromJsonText(recipe.toJsonText()).process(source).samples)
+        }
+    }
+
     @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
         for (voice in RivetVoice.entries) {
             val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))

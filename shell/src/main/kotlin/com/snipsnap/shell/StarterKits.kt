@@ -29,6 +29,8 @@ import java.io.File
  * and VELOCITY qualify that. CONFLUENCE's eight wordless pads are finite rendered
  * recordings; their checked source bank and exact arrangement metadata travel
  * beside the kit, rather than pretending to be asset-free synth recipes.
+ * VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
+ * their printed wet pads do not pretend to have dry-source synth recipes.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -535,6 +537,16 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter(
+            "velour", "VELOUR",
+            "Muted drums, scattered echoes and a warm amp. Three touch zones; new kit voices to explore.",
+            seeded = false,
+        ) { com.snipsnap.synth.VelourKits.build() },
+        Starter(
+            "velour-bloom", "VELOUR BLOOM",
+            "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
+            seeded = false,
+        ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

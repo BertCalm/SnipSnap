@@ -434,7 +434,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 75 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 77 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -492,6 +492,15 @@ edits individual hits; FRESH TAPE supplies WORKSHOP, FACTORY and WAREHOUSE kits,
 each with sixteen pads, three strike layers and choking hats. The
 [audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/RIVET.md) include the pending hardware check.
+
+VELOUR and VELOUR BLOOM preserve the selected synthetic C kick/snare sources
+in two fixed sixteen-pad, three-touch-zone kits. Their reusable boards place
+chorus, finite echoes, grains and room before a sagging amp surrogate. Added
+hats, toms, stick, shaker and ride remain listening candidates. The
+[private audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/native/)
+and [implementation notes](docs/VELOUR.md) separate reference parity, printed
+pad behavior and pending hardware checks. Run `./gradlew :synth:generateVelourKit`
+to reproduce both kits and the native/reference comparisons.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
