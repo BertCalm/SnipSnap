@@ -1,13 +1,11 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -604,58 +601,15 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
 }
 
 /**
- * One row of a [ChoiceSheet]: its label and what it does. The label carries
- * its own ▸ when it opens a screen. [accessibilityLabel] is the accessible
- * name when it should not be the label - the name the dock's chip already
- * wears for the same door.
- */
-data class SheetRow(val label: String, val accessibilityLabel: String? = null, val onClick: () -> Unit)
-
-/**
- * A short menu over the screen — the shelf's own pop-up shape (a scrim, a
- * raised card, a CANCEL), so it reads as the same kind of thing the TOOLS
- * menu is. Tapping outside the card is a genuine dismiss path and needs
- * its own label even though CANCEL below also reaches it; the card
- * swallows the tap so it does not fall through to the scrim. Opening a
- * row may be a navigation; opening the sheet never is.
- */
-@Composable
-fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
-    val scheme = LocalScheme.current
-    BackHandler(onBack = onDismiss)
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(label = "CANCEL", onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .raisedBevel(scheme)
-                .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            for (row in rows) {
-                ActionButton(row.label, scheme, enabled = true, accessibilityLabel = row.accessibilityLabel, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
-            }
-            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
-        }
-    }
-}
-
-/**
  * Behind the dock's idle capture chip: the two sources the shelf's
  * ArmControl offered as two buttons — the room through the mic, or
- * another app's audio with the projection consent.
+ * another app's audio with the projection consent. The mic row's accessible
+ * name stays [Places.LISTEN], the name the dock's chip wears for the same door.
  */
 @Composable
 fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit) {
-    ChoiceSheet(
-        listOf(SheetRow(Places.ARM_MIC, accessibilityLabel = Places.LISTEN, onClick = onMic), SheetRow(Places.ARM_INSIDE, onClick = onInside)),
-        onDismiss,
-    )
+    SheetMenu(Places.ARM_SHEET_TITLE, onDismiss) {
+        SheetRow(Places.ARM_MIC, Places.ARM_MIC_DESC, onMic, accessibilityLabel = Places.LISTEN)
+        SheetRow(Places.ARM_INSIDE, Places.ARM_INSIDE_DESC, onInside)
+    }
 }
