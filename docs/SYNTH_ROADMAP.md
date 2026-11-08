@@ -1,20 +1,17 @@
 # Synth roadmap — generate kits, not just capture them
 
-**RIVET kit trial (2026-11-07).** The user approved continuing the initial direction.
-Model 2 adds TOM/METAL and a shared-source closed/open hat pair while frozen hashes protect
-all original corner/strike PCM. `RivetKits`/`SynthKits.rivet` supply sixteen candidate roles,
-three native velocity zones and hat choking. `generateRivetKit` exports workshop/factory/
-warehouse MPC 3 programs with MPC 2 twins and grooves using actual exported samples.
-New-role listening, hardware checks, phone integration and factory promotion remain open.
-See the [expansion specification](superpowers/specs/2026-11-07-rivet-kit-expansion.md).
-
-**RIVET industrial drum prototype (2026-11-07).** A registered KICK/SNARE engine owns
-the source, metal bank, oversampled drive and parallel ROOM response. Six shared macros
-include SIZE from workshop to warehouse, with an independent close branch. Complete
-versioned patches and native velocity replay are wired in. HOLD is explicitly refused.
-`generateRivetAudition` supplies size-comparison grooves, native/matched hits and replay
-recipes. Listening, phone timing, further voices, presets, a sixteen-pad kit and Android
-integration remain open. See [RIVET.md](RIVET.md) and its engineering specification.
+**RIVET accepted industrial drum bank (2026-11-08).** Six finite voices share
+TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS, with an independent close strike as the
+room grows from workshop to warehouse. The accepted sixteen roles are factory
+presets and three FRESH TAPE starters, each with three native strike layers and
+shared hat choking. SYNTH exposes all six voices, complete saved recipes and
+velocity; HOLD remains refused. Model 2 retains the original kick/snare PCM.
+`generateRivetKit` exports both MPC formats and sample-based grooves. The Android
+app and UI-test APKs compile; 176 focused JVM checks passed and all 147 exported
+WAVs match the accepted audition byte for byte. Phone timing and physical MPC
+results remain unrecorded. See [RIVET.md](RIVET.md), the
+[engineering specification](superpowers/specs/2026-11-07-rivet-industrial-drum-engine-design.md)
+and the [expansion specification](superpowers/specs/2026-11-07-rivet-kit-expansion.md).
 
 **EROSION accepted contrast bank and handoff (2026-11-07).** Josh accepted the
 native eight-role audition. The implementation is merged in PR #891. Factory

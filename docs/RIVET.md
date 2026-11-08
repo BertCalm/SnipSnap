@@ -9,6 +9,9 @@ HAT_OPEN. Josh accepted the full kit audition and approved phone integration. It
 metallic shaping, oversampled drive and parallel room response. The shared `Modes` and
 `Room` implementations supply the DSP. Existing engines and ROOM recipes are unchanged.
 
+Sound acceptance was reaffirmed on 2026-11-08. Physical phone and MPC test details
+(device model, firmware and individual check results) have not been recorded.
+
 The six controls are TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS. SIZE changes the room's
 geometry, not the drum tuning. WALLS changes absorption. A separate close branch preserves
 the strike. Nonzero HOLD is explicitly unsupported; all renders are finite one-shots.
