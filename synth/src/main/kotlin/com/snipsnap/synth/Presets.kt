@@ -171,6 +171,10 @@ object Presets {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
         }
+        ErosionPatch.ENGINE -> {
+            val v = ErosionVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ErosionPresets.forVoice(v)
+        }
         ScourPatch.ENGINE -> {
             val v = ScourVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ScourPresets.forVoice(v)
@@ -339,7 +343,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        RivetPresets.all() + WickPresets.all() +
+        RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

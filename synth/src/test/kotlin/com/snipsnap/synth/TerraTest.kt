@@ -453,8 +453,9 @@ class TerraTest {
     /**
      * The controller's ruling for R1b: phi = 0 must reproduce R1's HIT bit for
      * bit. Compared with LegacyTerraHit, R1's colouring frozen at 58757f10,
-     * not with the floored code itself: every level curve on the five voices
-     * (BOX's plate included), the ten strikers and four strengths, then the
+     * not with the floored code itself: every level curve on every voice
+     * (BOX's plate and the hand drums' heads included), the ten strikers and
+     * four strengths, then the
      * forty cases rendered at HIT 1 with a dark and a bright head.
      */
     @Test
@@ -473,7 +474,7 @@ class TerraTest {
                 }
             }
         }
-        assertEquals(200, curves)
+        assertEquals(TerraVoice.entries.size * 40, curves)
         var renders = 0
         for (id in listOf("kick01", "tsnare")) {
             val x = Terra.upsample(TerraStrikers.head(id))

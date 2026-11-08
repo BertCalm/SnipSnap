@@ -516,6 +516,11 @@ object StarterKits {
             key = KeySpec.parse("C"),
         ) { ChordStabs.borrowedKit(KeySpec.parse("C")) },
         Starter(
+            "erosion", "EROSION",
+            "Eight dry percussion roles, from low thuds to bright crackle, with soft, medium and hard touch.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionKits.contrast() },
+        Starter(
             "rivet-workshop", "RIVET WORKSHOP",
             "Industrial drums in a small room. Sixteen pads, three strike strengths and choking metal hats.",
             seeded = false,

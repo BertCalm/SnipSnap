@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
+ *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → HUSH → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -42,6 +42,10 @@ import com.snipsnap.json.JsonValue
  * room after spring and before motion: a spring tank is a device, and the
  * room is where everything, the tank included, is heard. ROOM is the last
  * space, and the tape still stops with the room on it.
+ *
+ * hush after room and before motion: a gate is heard on what the room made, so a
+ * recipe with both is the gated reverb, and the tape still stops with the gated
+ * sound on it (the measured reason it is not after CRUNCH is on [Hush]).
  *
  * dive right after pitch, in the same TRANSPORT stage: it is the sampler's variable-speed
  * read again, pitch that moves over time instead of sitting still, so it grows the pad the
@@ -102,6 +106,7 @@ data class FxChain(
     val compressor: Map<String, Float>? = null,
     val forge: Map<String, Float>? = null,
     val room: Map<String, Float>? = null,
+    val hush: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -262,6 +267,7 @@ data class FxChain(
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
             Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
+            Section("hush", Hush.MACROS, { it.hush }, { c, m -> c.copy(hush = m) }, Hush::process),
             Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
         )
 

@@ -267,6 +267,9 @@ import com.snipsnap.synth.Arco
 import com.snipsnap.synth.ArcoPatch
 import com.snipsnap.synth.ArcoVoice
 import com.snipsnap.synth.Scour
+import com.snipsnap.synth.Erosion
+import com.snipsnap.synth.ErosionVoice
+import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.ScourPatch
 import com.snipsnap.synth.ScourVoice
 import com.snipsnap.synth.Keel
@@ -898,7 +901,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET) {
+                    val nativeFactory = if (e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -918,6 +921,7 @@ fun SynthScreen(
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
+                        else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
                         else if (e == Engine.RIVET) seed.seededDrafts.firstOrNull { it is RivetPatch && it.voice == v }
                         else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
@@ -1110,7 +1114,7 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
-        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -5777,7 +5781,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, RIVET;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5868,6 +5872,7 @@ private enum class Engine {
         BORE -> BoreVoice.entries
         ARCO -> ArcoVoice.entries
         SCOUR -> ScourVoice.entries
+        EROSION -> ErosionVoice.entries
         KEEL -> KeelVoice.entries
     }
 
@@ -5943,6 +5948,7 @@ private enum class Engine {
         BORE -> Bore.macrosFor(voice as BoreVoice)
         ARCO -> Arco.macrosFor(voice as ArcoVoice)
         SCOUR -> Scour.macrosFor(voice as ScourVoice)
+        EROSION -> Erosion.macrosFor(voice as ErosionVoice)
         KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
@@ -6023,6 +6029,7 @@ private enum class Engine {
         BORE -> Bore.defaults(voice as BoreVoice)
         ARCO -> Arco.defaults(voice as ArcoVoice)
         SCOUR -> Scour.defaults(voice as ScourVoice)
+        EROSION -> Erosion.defaults(voice as ErosionVoice)
         KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
@@ -6107,6 +6114,7 @@ private enum class Engine {
         BORE -> Bore.scramble(voice as BoreVoice, random)
         ARCO -> Arco.scramble(voice as ArcoVoice, random)
         SCOUR -> Scour.scramble(voice as ScourVoice, random)
+        EROSION -> Erosion.scramble(voice as ErosionVoice, random)
         KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
@@ -6197,6 +6205,7 @@ private enum class Engine {
         BORE -> Bore.render(voice as BoreVoice, macros)
         ARCO -> Arco.render(voice as ArcoVoice, macros)
         SCOUR -> Scour.render(voice as ScourVoice, macros)
+        EROSION -> Erosion.render(voice as ErosionVoice, macros)
         KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
@@ -6284,6 +6293,7 @@ private enum class Engine {
         BORE -> Bore.drumClassFor(voice as BoreVoice, macros)
         ARCO -> Arco.drumClassFor(voice as ArcoVoice, macros)
         SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
+        EROSION -> Erosion.drumClassFor(voice as ErosionVoice, macros)
         KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
@@ -6365,6 +6375,7 @@ private enum class Engine {
         BORE -> BorePatch(name, voice as BoreVoice, macros)
         ARCO -> ArcoPatch(name, voice as ArcoVoice, macros)
         SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
+        EROSION -> ErosionPatch(name, voice as ErosionVoice, macros)
         KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
@@ -6703,6 +6714,30 @@ private fun PresetList(
     key(engine, voice, "YOURS") {
         PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
     }
+    // The visible twin of that hold: while one of the player's own is the
+    // loaded sound, its FORGET door sits under the strip and asks the same
+    // question the hold asks.
+    yours.firstOrNull { it.name == current }?.let { chosen ->
+        PresetForgetDoor(chosen.name, scheme) { onHold(chosen) }
+    }
+}
+
+/** FORGET for the loaded YOURS preset: the same dialog a hold on its chip opens, which says the bin keeps it. */
+@Composable
+private fun PresetForgetDoor(name: String, scheme: Scheme, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(56.dp))
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = "${Copy.PRESET_FORGET_DOOR} YOUR PRESET $name", onClick = onClick)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+        }
+    }
 }
 
 /**
@@ -6766,6 +6801,7 @@ private fun PresetStrip(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClickLabel = "$spoken ${p.name}",
+                                        // twin: PresetForgetDoor, the FORGET door under the YOURS strip while this preset is loaded
                                         onLongClickLabel = "FORGET ${p.name}",
                                         onLongClick = { onHold(p) },
                                         onClick = { onSelect(p) },

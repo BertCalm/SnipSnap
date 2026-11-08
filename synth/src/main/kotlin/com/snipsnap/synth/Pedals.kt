@@ -39,7 +39,7 @@ enum class PedalSide(val id: String) {
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
  * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
  * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
- * whammy dive, gated on 2026-11-07.
+ * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -160,6 +160,12 @@ object Pedals {
         // owner heard it only there. For held sounds: a snare, a tom and a rim are too short for a dive. Gated on 2026-11-07
         // (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3). Behind MORE.
         Entry("DIVE", "dived", character("dived"), PedalSide.PRE, movable = false, gated = true),
+        // A gate: the `hushed` character, the HUSH section, whose tap (AMT 0.7) shuts the pad 12 dB under its peak over about
+        // 87 ms. After the amp and after the room, where the rack puts it, so a pad with ROOM on it is the gated 80s snare; not
+        // movable, since a gate in front of the room would shut the hit, not the room. For tails: a dry snare is only shorter
+        // and a hat a stub. Gated on 2026-11-07 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3,
+        // idea 5, which called it CHOKE; a choke is a choke group here). Behind MORE.
+        Entry("HUSH", "hushed", character("hushed"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

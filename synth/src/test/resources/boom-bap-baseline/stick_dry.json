@@ -1,0 +1,17 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Pushed Stick",
+    "voice": "STICK",
+    "macros": {
+      "TUNE": 0.3499999940395355,
+      "DECAY": 0.4399999976158142,
+      "PUNCH": 0.550000011920929,
+      "BODY": 0.6000000238418579,
+      "CLICK": 0.2199999988079071
+    }
+  },
+  "alias": false
+}

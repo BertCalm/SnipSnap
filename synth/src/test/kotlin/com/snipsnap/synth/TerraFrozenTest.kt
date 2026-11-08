@@ -23,7 +23,7 @@ class TerraFrozenTest {
     @Test
     fun `the frozen copy's macro table is today's`() {
         for (voice in TerraCases.FROZEN_VOICES) assertEquals(LegacyTerraBank.macrosFor(voice), Terra.macrosFor(voice), voice.name)
-        assertEquals(TerraVoice.entries - TerraCases.FROZEN_VOICES, listOf(TerraVoice.BOX), "only BOX came after the freeze")
+        assertEquals(listOf(TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA), TerraVoice.entries - TerraCases.FROZEN_VOICES, "the voices that came after the freeze")
     }
 
     @Test
@@ -38,8 +38,9 @@ class TerraFrozenTest {
 
     /**
      * The audio the kit ships with, through whatever path TerraPatch.render
-     * takes - the routing Task 5 rewrites. The fifteen pads on frozen voices
-     * against the frozen copy; A07, the BOX, against its own voice.
+     * takes - the routing Task 5 rewrites. The twelve pads on frozen voices
+     * against the frozen copy; A07 (BOX) and A09, A11 and A12 (the hand
+     * drums) against their own voices.
      */
     @Test
     fun `the shipped Terra Kit is the frozen TERRA, pad for pad`() {
@@ -52,11 +53,11 @@ class TerraFrozenTest {
                 assertContentEquals(LegacyTerraBank.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
                 frozen++
             } else {
-                assertEquals("A07" to TerraVoice.BOX, pad.slot to pad.voice, "the one pad off the frozen voices")
+                assertTrue(pad.slot to pad.voice in setOf("A07" to TerraVoice.BOX, "A09" to TerraVoice.DAYAN, "A11" to TerraVoice.DARBUKA, "A12" to TerraVoice.SLAP), "pad ${pad.slot} on ${pad.voice} is off the frozen voices")
                 assertContentEquals(Terra.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
             }
         }
-        assertEquals(15, frozen)
+        assertEquals(12, frozen)
     }
 
     /**

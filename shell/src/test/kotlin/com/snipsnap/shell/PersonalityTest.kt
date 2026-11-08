@@ -631,7 +631,9 @@ class PersonalityTest {
      */
     private val notASentence = setOf(
         // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
-        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
+        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_TAP_TOGGLES", "STEP_TAP_EDITS", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
+        // The step-detail strip's roll, nudge and length rows: captions and buttons, not toasts.
+        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
         // The Bubble permission line's door: a label, not a toast.
         "BUBBLE_ALLOW",
         // Pattern names: the rename hint and button, the slip's title and buttons, the list's heading and close chip. Labels, not toasts.
@@ -643,7 +645,7 @@ class PersonalityTest {
         // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
         "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
         // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
-        "EXPANSION_DOOR", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
+        "EXPANSION_DOOR", "ROW_MORE", "PRESET_FORGET_DOOR", "ORBIT_TAP_PLACES", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
         // The shelf's EXPANSIONS group heading and the rename dialog title.
         "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
         // SYNTH's four group headings: labels over a run of controls, not landings.

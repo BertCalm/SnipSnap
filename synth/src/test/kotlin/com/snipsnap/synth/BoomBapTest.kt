@@ -58,7 +58,7 @@ class BoomBapTest {
 
     @Test fun `a wet ghost preserves the rack tail and matches the reference peak`() {
         val p = snare
-        val fx = BoomBapKits.coloration
+        val fx = BoomBapKits.colorationFor("snare")
         val ref = fx.process(p.render())
         val dry = Velocity.atVelocity(p, .25f)
         val wet = Velocity.layerAt(ref, p, fx, .25f, Velocity.brightnessSpec(p))
@@ -103,15 +103,18 @@ class BoomBapTest {
     }
 
     @Test fun `the dry and processed grooves retain one schedule without clipping`() {
-        val dry = BoomBapAuditionGenerator.groove(false)
-        val wet = BoomBapAuditionGenerator.groove(true)
-        assertEquals(dry.frameCount, wet.frameCount)
-        assertFalse(dry.samples.contentEquals(wet.samples))
-        for (s in listOf(dry, wet)) {
-            assertTrue(s.samples.all { it.isFinite() && abs(it) <= 1f })
-            assertTrue(peak(s) > .1f)
+        for (fourBars in listOf(false, true)) {
+            val dry = BoomBapAuditionGenerator.groove(false, fourBars)
+            val wet = BoomBapAuditionGenerator.groove(true, fourBars)
+            assertEquals(dry.frameCount, wet.frameCount)
+            assertFalse(dry.samples.contentEquals(wet.samples))
+            for (s in listOf(dry, wet)) {
+                assertTrue(s.samples.all { it.isFinite() && abs(it) <= 1f })
+                assertTrue(peak(s) > .1f)
+            }
+            assertContentEquals(wet.samples, BoomBapAuditionGenerator.groove(true, fourBars).samples)
+            assertEquals(((if (fourBars) 16 else 8) * 60.0 / 88.0 + 1.5), wet.durationSeconds.toDouble(), 1.0 / 44100)
         }
-        assertContentEquals(wet.samples, BoomBapAuditionGenerator.groove(true).samples)
     }
 
     @Test fun `study recipes replay and every pad has distinct soft layers`() {
@@ -130,5 +133,28 @@ class BoomBapTest {
             assertFalse(layers[0].samples.contentEquals(layers[1].samples))
             assertFalse(layers[1].samples.contentEquals(layers[2].samples))
         }
+    }
+    @Test fun `accepted More Snap recipes retain the audition PCM exactly`() {
+        val hashes = requireNotNull(javaClass.getResourceAsStream("/boom-bap-baseline/sha256.txt"))
+            .bufferedReader().use { it.readLines() }.associate {
+                val fields = it.split("  "); fields[1] to fields[0]
+            }
+        val work = kotlin.io.path.createTempDirectory("backroom-baseline").toFile()
+        try {
+            for (part in BoomBapKits.parts()) for (processed in listOf(false, true)) {
+                val mode = if (processed) "processed" else "dry"
+                val name = "${part.id}_${mode}"
+                val saved = requireNotNull(javaClass.getResourceAsStream("/boom-bap-baseline/$name.json"))
+                    .bufferedReader().use { it.readText() }
+                val expected = PadRecipe.fromJsonText(saved)
+                val actual = PadRecipe(part.patch, BoomBapKits.colorationFor(part.id).takeIf { processed })
+                assertEquals(expected.toJsonValue(), actual.toJsonValue(), name)
+                val file = java.io.File(work, "$name.wav")
+                com.snipsnap.audio.WavWriter.write(file, actual.render(), com.snipsnap.audio.WavWriter.BitDepth.PCM_24)
+                val digest = java.security.MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+                    .joinToString("") { "%02x".format(it) }
+                assertEquals(hashes.getValue("${name}_100.wav"), digest, name)
+            }
+        } finally { work.deleteRecursively() }
     }
 }
