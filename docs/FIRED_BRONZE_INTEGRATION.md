@@ -1,6 +1,8 @@
 # Fired Bronze integration
 
-Baseline read: `350d9a4d795d4c5d4fdc85d9aaf986efa96f2cfa`.
+Approved audio baseline: `350d9a4d795d4c5d4fdc85d9aaf986efa96f2cfa`.
+The integration includes current main `22ab69f22f8a0d5f88e151b11059565e4482622c`,
+including its Erosion and Rivet registration changes.
 Josh accepted the Performance kit on MPC on 2026-11-08: “Good on MPC, we can proceed”.
 This freezes the existing source models, Both pushed treatment, sixteen-pad order,
 pad mix, hat choke group, four native strikes (.20/.45/.70/1), peak matching and tails.
@@ -50,6 +52,7 @@ newly generated files to those hashes before testing edits.
 ## Verification ledger
 
 - **Heard:** Josh accepted the Performance kit on MPC. No automated hardware measurement is claimed.
-- **Verified:** 26 focused tests passed, exit 0: 14 synth tests (all 64 approved render comparisons, macro edits, JSON replay, velocity response, determinism and registry coverage) and 12 shell tests (all 64 frozen WAV hashes, 96 BPM, four-zone edits/replay/save/reload, menu coverage and root handling).
-- **Verified:** `:app:assembleDebug` passed, exit 0. The debug APK signature verifies and all five fitted profiles plus attribution are packaged. The full local attempt was stopped after four integration failures: catalog/README coverage (three checks) and preset-promotion mapping (one). Those paths were corrected; final focused validation and sharded CI status follow below.
+- **Verified:** 140 focused tests passed after merging current main, exit 0: 14 synth tests (all 64 approved render comparisons, macro edits, JSON replay, velocity response, determinism and registry coverage) and 126 shell tests (all 64 frozen WAV hashes, 96 BPM, four-zone edits/replay/save/reload, menu/catalog coverage, preset promotion, repository conventions and root handling).
+- **Verified:** final `:app:assembleDebug` passed after the main-branch merge, exit 0. The APK signature verifies and all five fitted profiles plus attribution are packaged.
+- **Full regression status:** the local full-suite attempt exposed four registration failures: catalog/README coverage (three checks) and preset-promotion mapping (one). It was stopped to fix those issues. All four now pass in the focused run. Full-suite completion is not claimed by these local checks; the draft PR's sharded CI records the full JVM, native and emulator results.
 - **Not yet measured:** phone render latency and interactive Android listening. Prior host treatment-only timing remains in [the push report](FIRED_BRONZE_PUSH.md); this adapter does not claim a faster DSP path.
