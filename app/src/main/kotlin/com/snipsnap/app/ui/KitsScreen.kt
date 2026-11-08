@@ -789,7 +789,6 @@ fun KitsScreen(
                 onPick = { dismissStarter(); onFresh(it) },
                 onDismiss = dismissStarter,
             )
-            BackHandler(onBack = dismissStarter)
         }
 
         if (toolsMenuOpen) {
@@ -805,7 +804,6 @@ fun KitsScreen(
                 onDoubles = { dismissTools(); onDoubles() },
                 onDismiss = dismissTools,
             )
-            BackHandler(onBack = dismissTools)
         }
 
         opsTarget?.let { target ->
@@ -1538,80 +1536,27 @@ fun PrimaryAction(
     }
 }
 
+/**
+ * PICK A STARTER, as a [SheetMenu]: each starter a name and its blurb, under the
+ * headings of [StarterShelf.display] (the stored order, [StarterKits.ALL], is untouched).
+ * A starter's row is named PICK NAME for a screen reader, as it was before it moved
+ * into a sheet. Swiping down, the scrim and Back all dismiss; there is no CANCEL row.
+ */
 @Composable
 internal fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
-    val scheme = LocalScheme.current
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
-            // No CANCEL button exists in this menu at all (picking a
-            // starter or tapping outside are the only ways out), so this
-            // scrim is the only accessible dismiss path — it needs its
-            // own explicit label.
-            .tapeClick(label = "CANCEL", onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .raisedBevel(scheme)
-                // Swallow taps so the scrim's dismiss doesn't fire through.
-                // A raw pointerInput, not tapeClick: the starter rows below
-                // carry their own accessible names, and clickable()'s own
-                // semantics would add a second, nameless actionable node
-                // wrapping all of them. A bare gesture detector registers
-                // no semantics node at all (MessageBox.kt's pattern).
-                .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
-            // The viewport stays inside the screen; long rosters scroll so every
-            // starter remains reachable without moving the scrim or its dismiss area.
-            // Grouped under headings in StarterShelf's display order; the stored
-            // order (StarterKits.ALL) is untouched. See StarterShelf.
-            for ((heading, starters) in StarterShelf.display()) {
-                StarterHeading(heading)
-                for (starter in starters) StarterRow(starter, onPick)
+    SheetMenu(Places.STARTER_SHEET_TITLE, onDismiss) {
+        for ((heading, starters) in StarterShelf.display()) {
+            SheetHeading(heading)
+            for (starter in starters) {
+                SheetRow(
+                    starter.displayName,
+                    starter.blurb,
+                    onClick = { onPick(starter) },
+                    accessibilityLabel = "PICK ${starter.displayName.uppercase()}",
+                    tag = if (starter.seeded) Places.STARTER_REROLL_TAG else null,
+                )
             }
         }
-    }
-}
-
-/** A group heading in the starter picker: a label announced as a heading, not a button. A private composable so its layout stays out of [StarterMenu]'s method. */
-@Composable
-private fun StarterHeading(text: String) {
-    TapeText(
-        text,
-        TapeType.pixel,
-        LocalScheme.current.ink2.tape,
-        Modifier.fillMaxWidth().padding(top = 6.dp).semantics { heading() },
-        maxLines = 1,
-    )
-}
-
-@Composable
-private fun StarterRow(starter: StarterKits.Starter, onPick: (StarterKits.Starter) -> Unit) {
-    val scheme = LocalScheme.current
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .sunkenField(scheme)
-            .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
-            if (starter.seeded) {
-                Spacer(Modifier.width(6.dp))
-                TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
-            }
-        }
-        TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }
 
@@ -1619,19 +1564,11 @@ private fun StarterRow(starter: StarterKits.Starter, onPick: (StarterKits.Starte
  * The TOOLS door (oilslick followups): BACKUP, CHOP ALL, X-RAY and DOUBLES,
  * nested behind one row instead of pinned as four individual rows on the
  * shelf — measured cost was the pinned button stack running to 43% of the
- * screen regardless of how many kits were on it. Follows [StarterMenu]'s
- * shape immediately above, NOT `GrooveScreen.kt`'s `StepEditorOverlay`
- * (fixed in this same session for leaking nine of GROOVE's controls to
- * TalkBack): confirmed on-device with an accessibility-tree dump that the
- * shelf behind this menu (`NEW KIT`, `SNIPS`, the kit rows, etc.) is not
- * exposed while this is open — same scrim + `tapeClick(label = "CANCEL")`
- * dismiss + tap-swallowing card as `StarterMenu`, so the same result holds
- * here, not merely assumed from precedent.
- *
- * Unlike `StarterMenu`, this carries an explicit CANCEL row rather than
- * relying on the scrim tap alone — the four rows inside are actions with
- * consequences (a picker launch, a share sheet), not a single "pick one and
- * you're in" list, so a written-out way out matters more here.
+ * screen regardless of how many kits were on it. A [SheetMenu]: each tool a
+ * name and a line of what it does. A tool that cannot run now stays in the
+ * list, dimmed. The four are actions with consequences (a picker launch, a
+ * share sheet), so each opens only on a tap; swiping down, the scrim and Back
+ * are the way out.
  */
 @Composable
 private fun ToolsMenu(
@@ -1645,66 +1582,11 @@ private fun ToolsMenu(
     onDoubles: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val scheme = LocalScheme.current
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
-            // Same reasoning as StarterMenu's own scrim above: tapping
-            // outside the card is a genuine dismiss path and needs its own
-            // label even though CANCEL below also reaches it.
-            .tapeClick(label = "CANCEL", onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .raisedBevel(scheme)
-                // Swallows the tap so it doesn't fall through to the
-                // scrim's CANCEL — same reasoning as StarterMenu's own
-                // pointerInput above.
-                .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            TapeText("TOOLS", TapeType.display, scheme.ink.tape)
-            ActionButton(
-                "BACKUP ▸ EVERY KIT, ONE FILE",
-                scheme,
-                enabled = canBackup,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onBackup,
-            )
-            ActionButton(
-                "CHOP ALL ▸ EVERY FILE, ONE KIT",
-                scheme,
-                enabled = canChopAll,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onChopAll,
-            )
-            ActionButton(
-                "X-RAY ▸ INSPECT A FILE",
-                scheme,
-                enabled = canXRay,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onXRay,
-            )
-            ActionButton(
-                "DOUBLES ▸ SAME SOUND, ANY KIT",
-                scheme,
-                enabled = canDoubles,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onDoubles,
-            )
-            ActionButton(
-                "CANCEL",
-                scheme,
-                enabled = true,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onDismiss,
-            )
-        }
+    SheetMenu(Places.TOOLS_TITLE, onDismiss) {
+        SheetRow(Places.TOOL_BACKUP, Places.TOOL_BACKUP_DESC, onBackup, enabled = canBackup)
+        SheetRow(Places.TOOL_CHOP_ALL, Places.TOOL_CHOP_ALL_DESC, onChopAll, enabled = canChopAll)
+        SheetRow(Places.TOOL_XRAY, Places.TOOL_XRAY_DESC, onXRay, enabled = canXRay)
+        SheetRow(Places.TOOL_DOUBLES, Places.TOOL_DOUBLES_DESC, onDoubles, enabled = canDoubles)
     }
 }
 

@@ -1,22 +1,21 @@
 package com.snipsnap.app.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Motion
 import com.snipsnap.shell.StarterKits
+import com.snipsnap.shell.StarterShelf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -27,12 +26,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class StarterMenuTest : ComposeScreenTest() {
 
+    // StarterMenu is a BottomSheet: a Dialog, a window of its own at the size of the display,
+    // so the old 480 dp host box no longer bounds it (SynthEngineHeaderTest's caveat). The
+    // roster is far longer than a sheet's 88%, so a row below the fold still has to be scrolled to.
     private fun show(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
         setPhoneContent {
-            Box(Modifier.fillMaxWidth().height(480.dp).testTag(HOST)) {
-                StarterMenu(onPick = onPick, onDismiss = onDismiss)
-            }
+            StarterMenu(onPick = onPick, onDismiss = onDismiss)
         }
+        // Past the slide up, so a touch lands on a seated panel.
+        pump(Motion.SHEET_SLIDE_MS + 100L)
     }
 
     private fun dragChoicesUp() {
@@ -87,13 +89,14 @@ class StarterMenuTest : ComposeScreenTest() {
     }
 
     @Test
-    fun tapping_outside_the_starter_card_dismisses_without_picking() {
+    fun tapping_the_scrim_above_the_starter_sheet_dismisses_without_picking() {
         val picked = mutableListOf<StarterKits.Starter>()
         var dismissals = 0
         show(onPick = { picked += it }, onDismiss = { dismissals++ })
 
-        // The card retains its 12dp outer padding; this is the scrim corner.
-        compose.onNodeWithTag(HOST).performTouchInput {
+        // The panel is anchored at the bottom and shorter than the window, so the scrim's top
+        // left corner is bare scrim. The scrim keeps the name CANCEL the old menu gave it.
+        button("CANCEL").performTouchInput {
             down(0, Offset(1f, 1f))
             up(0)
         }
@@ -105,7 +108,12 @@ class StarterMenuTest : ComposeScreenTest() {
         }
     }
 
-    private companion object {
-        const val HOST = "starter-menu-host"
+    @Test
+    fun a_starter_row_is_a_name_over_its_blurb_and_at_least_the_minimum_touch_target_tall() {
+        show(onPick = {}, onDismiss = {})
+        val first = StarterShelf.display().first().second.first()
+        val row = button("PICK ${first.displayName.uppercase()}")
+        row.assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
+        assertTrue("the blurb is on the row", compose.onAllNodesWithText(first.blurb, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
     }
 }
