@@ -193,3 +193,69 @@ both hats share mute group 1. The user has not yet tested it on MPC, so
 hardware loading, ghost-velocity feel, hat choking and kick/snare balance
 remain pending. Factory registration remains absent. The new phrase is
 published for listening; browser playback was not reverified in this pass.
+
+## Backroom snare controls
+
+The accepted control studies now have an explicit editor entry: **SKIN → SNARE →
+BACKROOM · MORE SNAP**. Four controls start at 50%: ATTACK, BODY, WIRE (wire length),
+and BRIGHTNESS. Selecting ORIGINAL loads the original SKIN snare defaults;
+selecting Backroom loads More Snap. These buttons start a new recipe, so an old
+pad's external rack cannot accidentally be applied twice. Save, reopen, preview,
+scramble and navigation retain the selected model and its controls.
+
+SKIN SNARE `model: 2` stores the four controls and renders the original snare
+through its coordinated SPIKE → CRUNCH → TAPE → ROOM treatment. An omitted model
+remains model 1; original patches keep their JSON shape and renderer. Model 2 is
+refused for other voices. Additional user effects still run after this treatment.
+The recipe's default alias flag includes the internal CRUNCH stage.
+
+| Control | Low → high | Coordinated response |
+| --- | --- | --- |
+| Attack | rounded → sharp | Source punch, SPIKE attack/sustain, TAPE drive |
+| Body | thin/high → full/low | Source tuning, head/wire mix and decay |
+| Wire | short → long | Rattle, mix and decay, with extra early travel through the dark rack |
+| Brightness | dark → open | CRUNCH tone and TAPE age |
+
+The 150 native PCM24 pair clips at the [published pair study](https://snipsnap-backroom-audition.bertcalm.chatgpt.site/pairs/index.html)
+are pinned in `backroom-pairs.sha256`. Their provenance is the accepted site source
+commit `0430aa0ce6464ab555f568e18bfa68126584956f`. They cover five positions on each
+pair, at 25%, 60% and 100% strikes. The new renderer is checked through JSON reload
+and the production velocity-layer path against those hashes. The original kit's
+twelve hash pins remain separate. Implementation started from repo `315447328`.
+
+Body and Wire both change the source mix and decay. Away from their centre lines,
+the responses combine in odds space, preserving bounded continuous travel without
+last-slider-wins behavior. Exact centre branches retain the two heard pair
+surfaces. The short-wire/open-brightness excitation correction also stays intact.
+This four-control combination is an engineering extension: the user accepted the
+two pair studies, but has not yet heard every four-control combination.
+
+Soft hits excite the original SKIN strike model and enter the internal rack at
+the strike's level; peak matching leaves final dynamics to the sampler. Re-strike
+uses the same path with deterministic alternate noise. Each hit renders the rack once. The velocity-layer caller owns peak matching
+against its existing full-strength reference. There is no simulation or new oversampling stage. The existing SKIN and rack DSP do the work.
+
+### Why it is built this way
+
+- The recording chain belongs to this sound. Moving the source controls alone
+  through the dark chain hid too much of their response.
+- Four centred controls make the accepted sound easy to recover, while one
+  central resolver makes simultaneous edits independent of edit order.
+- A saved model keeps existing SKIN snares unchanged and carries the treatment
+  through rendering, velocity layers and re-strikes.
+- The six-pad kit remains a study awaiting MPC checks. Adding editable snare
+  controls does not promote the kit to the factory roster.
+
+Focused verification: 57 JVM tests passed (BackroomSnare, BoomBap, Skin and
+Restrike), including all 150 published pair hashes and the original kit pins.
+A standalone Kotlin probe after 30 warm-up renders measured median 18.26 ms
+(full hit) and 17.99 ms (60% strike), with p95 21.33/20.96 ms over 30 renders
+each in this cloud JVM. Android device timing is not measured. Two Compose
+regressions cover mode selection/navigation and sending/reopening a real pad;
+they require Android CI or a device, not the JVM gate.
+
+Full JVM gate: `./gradlew --no-daemon test` completed with exit status 0.
+The nine modules report **9,098 tests**, zero failures, errors or skips.
+After a workspace interruption, the recovery run reran all 2,244 shell tests
+and reused completed module results (21m 15s, one test task executed).
+Android compilation and the two new device regressions are tracked in CI.
