@@ -248,6 +248,7 @@ object SynthRoot {
 
     /** The root of [patch], or null for an engine that has none a note name would describe. */
     fun of(patch: Patch): Control? = when (patch) {
+        is com.snipsnap.synth.FiredBronzePatch -> null // Mixed percussion kit; TUNE is relative, not a shared MIDI root.
         // ---- a saved note, TUNE (where there is one) a transposition of it ----
         is AccordPatch -> Field(patch.midi, Accord.MIN_MIDI..Accord.MAX_MIDI) { patch.copy(midi = it) }
         is AlloyPatch -> Field(patch.midi, Alloy.MIDI_MIN..Alloy.MIDI_MAX) { patch.copy(midi = it) }

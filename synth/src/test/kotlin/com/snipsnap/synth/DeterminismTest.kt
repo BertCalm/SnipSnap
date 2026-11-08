@@ -19,6 +19,44 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `FIRED BRONZE editable patch replays`() {
+        val patch = FiredBronzePatch("Edge Ring", FiredBronzeDryKit.Pad.TIN)
+        assertContentEquals(patch.render().samples, Patches.fromJsonValue(patch.toJsonValue()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE performance recipe replays`() {
+        val r = FiredBronzePerformance.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .45f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzePerformance.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE pushed recipe replays`() {
+        val r = FiredBronzePush.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.SNARE, velocity = .65f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzePush.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE color recipe replays`() {
+        val r = FiredBronzeColor.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .65f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzeColor.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE dry kit rattle replays`() {
+        val r = FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.SNARE, velocity = .65f, take = 3)
+        assertContentEquals(r.render().samples, FiredBronzeDryKit.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE R2 reference profile reproduces its spectral render`() {
+        val r = FiredBronzeR2.Recipe(FiredBronzeR2.Voice.NA, velocity = .65f, take = 3)
+        assertContentEquals(r.render().samples, FiredBronzeR2.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE study recipes reproduce every processed pad`() {
+        for (part in FiredBronze.Part.entries) {
+            val recipe = FiredBronze.Recipe(part, velocity = .65f, take = 2)
+            assertContentEquals(recipe.render().samples,
+                FiredBronze.Recipe.fromJsonText(recipe.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
         for (voice in RivetVoice.entries) {
             val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))
@@ -664,6 +702,7 @@ class DeterminismTest {
                 TerraVoice.DJEMBE -> mapOf("THUMP" to 1f)
                 TerraVoice.DHOLAK -> mapOf("DROP" to 1f)
                 TerraVoice.BAYAN -> mapOf("BEND" to 0f)
+                TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }

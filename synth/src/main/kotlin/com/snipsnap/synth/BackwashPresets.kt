@@ -2,8 +2,8 @@ package com.snipsnap.synth
 
 /** The original kit plus the four approved processing treatments as editable presets. */
 object BackwashPresets {
-    private fun p(voice: BackwashVoice, name: String, vararg settings: Pair<String, Float>) =
-        BackwashPatch(name, voice, Backwash.defaults(voice) + settings)
+    private fun p(voice: BackwashVoice, name: String, vararg macros: Pair<String, Float>) =
+        BackwashPatch(name, voice, Backwash.defaults(voice) + macros)
 
     /** Bank-A pad order is also the export source of truth. */
     private val bank = listOf(

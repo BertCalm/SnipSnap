@@ -205,16 +205,19 @@ fun spokenBack(label: String): String? =
  * one word of state the title carries, since the status bar that carried
  * the open kit's name is gone and the project is the unit now.
  *
- * [onGear] is the gear (`docs/SCREEN_PLAN_2026_10.md` §1): SETUP and HELP
- * behind one chip at the bar's right end, one tap from every screen, where
- * the two used to be the twelfth and thirteenth tabs of a row that fit
- * nine. Drawn as the same button-on-a-bar the NOTE chip is.
+ * [onHelp] and [onSettings] are two labelled icon buttons at the bar's
+ * right end (clarity spec §7.3): a `?` that opens HELP and a gear that
+ * opens SETTINGS, each directly, one tap from every screen. They replaced
+ * one gear chip and the pop-up behind it. Each is a whole
+ * [Layout.MIN_HIT_TARGET] wide and tall, drawn as the same
+ * button-on-a-bar the NOTE chip is.
  */
 @Composable
 fun TitleBar(
     modifier: Modifier = Modifier,
     projectName: String? = null,
-    onGear: () -> Unit,
+    onHelp: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     // `.masthead`: a flat bar, a hairline under it, no gradient.
@@ -255,15 +258,17 @@ fun TitleBar(
                     Modifier.weight(1f, fill = false).widthIn(max = 140.dp).semantics { contentDescription = fullName },
                 )
             }
-            // The gear's accessible name says what is behind it; the glyph
-            // alone would be read as a symbol name or not at all.
-            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP} · ${Places.GEAR_MIDI}", onClick = onGear)
+            // The glyphs alone would be read as a symbol name or not at all,
+            // so each button's accessible name is the word for its screen.
+            TitleChip("?", label = Copy.TITLE_HELP, onClick = onHelp)
+            TitleChip("⚙", label = Copy.TITLE_SETTINGS, onClick = onSettings)
         }
     }
 }
 
 /**
- * A button on the title bar. The whole 34dp height is the tap target; the
+ * A button on the title bar. The whole bar height ([Layout.TITLEBAR_H], a
+ * hit target tall) and at least [Layout.MIN_HIT_TARGET] of width are the tap target; the
  * bevel sits inside a vertical inset so it reads as a button on the bar
  * rather than the bar's own edge. `tapeClick` before the inset, so the
  * inset is inside the target and not taken out of it.
@@ -274,6 +279,7 @@ private fun TitleChip(text: String, label: String, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxHeight()
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
             .tapeClick(label = label, onClick = onClick)
             .padding(vertical = 5.dp)
             .raisedBevel(scheme)

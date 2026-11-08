@@ -421,7 +421,8 @@ object Layout {
     const val FRAME_W = 390
     const val FRAME_H = 844
     const val OUTER_MARGIN = 12
-    const val TITLEBAR_H = 34
+    /** A hit target tall: the Help and Settings buttons in the bar fill it (clarity spec §7.3). */
+    const val TITLEBAR_H = 48
 
     /**
      * The title bar's lockup: the cap height of SNIP and SNAP, which is also

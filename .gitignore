@@ -678,6 +678,21 @@ testkit/backwash-pushed-kit/
 
 testkit/backwash-preview/
 
+# Fired Bronze's native comparisons, recipes and layered MPC kit regenerate.
+testkit/fired-bronze-audition/
+testkit/fired-bronze-audition.zip
+testkit/fired-bronze-replay.wav
+# Reference-informed dry comparisons; reconstruct via the checked-in scripts/task.
+testkit/fired-bronze-r2/
+
+testkit/fired-bronze-dry-kit/
+
+testkit/fired-bronze-color/
+
+testkit/fired-bronze-push/
+
+testkit/fired-bronze-performance/
+
 testkit/hush-audition/
 testkit/octaver-audition/
 

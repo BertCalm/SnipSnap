@@ -150,7 +150,8 @@ class PrintedPadsIntegrationTest {
         val opaque = KitPad(1, "main.wav", recipe = Json.parse(
             """{"future":{"aquariumPad":99,"boardPad":99}}""",
         ) as JsonValue.Obj)
-        assertEquals(PadSheetBoxes.UNTOUCHED, PadSheetBoxes.summaries(opaque, null)[PadSheetBoxes.Box.TREATMENT])
+        assertEquals(PadSheetBoxes.TREATMENT_HOLDS, PadSheetBoxes.summaries(opaque, null)[PadSheetBoxes.Box.TREATMENT])
+        assertFalse(PadSheetBoxes.lines(opaque, null).getValue(PadSheetBoxes.Box.TREATMENT).carried)
         assertFalse(PrintedPads.has(opaque.recipe), "nested marker text remains ordinary opaque history")
     }
 
