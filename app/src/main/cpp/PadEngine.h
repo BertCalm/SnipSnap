@@ -229,6 +229,13 @@ public:
      * first round.
      */
     bool armPrint(size_t maxFrames) { return print_.arm(maxFrames, 2); }
+    /**
+     * As [armPrint], but the print keeps exactly the frames `[startFrame, stopFrame)` of the engine's own
+     * count ([framesRendered]): the audio thread starts and ends it on those frames, so a bounce's edges are
+     * not the UI thread's to land. `maxFrames` is the reservation (the ceiling); a stop past it is the buffer
+     * filling first.
+     */
+    bool armPrintAt(size_t maxFrames, int64_t startFrame, int64_t stopFrame) { return print_.armAt(maxFrames, 2, startFrame, stopFrame); }
     void requestStopPrint() { print_.requestStop(); }
     PrintBuffer::State printState() const { return print_.state(); }
     size_t printFrames() const { return print_.framesWritten(); }
