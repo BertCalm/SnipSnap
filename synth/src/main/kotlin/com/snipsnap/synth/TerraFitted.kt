@@ -422,14 +422,6 @@ internal object TerraFitted {
     }
 
     /**
-     * The residual: per band, unit-RMS noise through the band's 8-pole Butterworth band-pass, times
-     * its level and decay. Built at the output rate (its bands end at 8 kHz, and the fit itself ran
-     * at 44.1 kHz), then linearly upsampled to [rate]; the output stage's band-limit removes the
-     * upsampling's images. The noise's RMS through the filter is its expected one (the uniform
-     * noise's variance, 1/3, times the filter's impulse energy, cached per band), so a band stops
-     * once it has decayed 140 dB.
-     */
-    /**
      * A band's velocity exponent: the palm's thud (bands under 250 Hz) falls as v^0.5, a soft palm
      * still thuds; above, the exponent climbs with the band's log frequency from v^0.75 to v^3 at
      * 8 kHz, past the head's notes' v^1, so a harder hit is brighter at its onset (the house test asks
@@ -439,6 +431,14 @@ internal object TerraFitted {
     private fun bandExponent(lo: Double): Double =
         if (lo < 250.0) 0.5 else 0.75 + 2.25 * (kotlin.math.ln(lo / 250.0) / kotlin.math.ln(8000.0 / 250.0)).coerceIn(0.0, 1.0)
 
+    /**
+     * The residual: per band, unit-RMS noise through the band's 8-pole Butterworth band-pass, times
+     * its level and decay. Built at the output rate (its bands end at 8 kHz, and the fit itself ran
+     * at 44.1 kHz), then linearly upsampled to [rate]; the output stage's band-limit removes the
+     * upsampling's images. The noise's RMS through the filter is its expected one (the uniform
+     * noise's variance, 1/3, times the filter's impulse energy, cached per band), so a band stops
+     * once it has decayed 140 dB.
+     */
     private fun residual(st: Stroke, pl: Played, decay: Double, rate: Int, frames: Int, seed: Int, velocity: Double): DoubleArray {
         val low = Dsp.RATE
         val lowFrames = frames / (rate / low) + 2
