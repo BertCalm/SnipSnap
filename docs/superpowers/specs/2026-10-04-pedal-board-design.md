@@ -23,8 +23,8 @@ The per-pad rack has 19 sections in a fixed order (`FxChain.SECTIONS`, the order
 | Wah, envelope filter | No. CONTOUR sweeps a ladder low-pass once from the hit, about 90 percent over in 30 ms; the owner: "it just sounds like a filter was applied". |
 | Tremolo, vibrato | No. RING is sum-and-difference and its slowest rate is 30 Hz. |
 | Flanger | No. PHASE is allpass notches, not a comb. |
-| Octave | No. SPEED is the transport (the whole pad's pitch), not the played note. |
-| Noise gate | No. GATE is a keyed rhythmic chop outside the rack. |
+| Octave | No. SPEED is the transport (the whole pad's pitch), not the played note. Reopened by the owner on 2026-11-08 as SUB (the `octaver` section): an octave under a snare or a tom at the pad's own length, which SPEED cannot do because it doubles the length and drops the dry hit. |
+| Noise gate | No. GATE is a keyed rhythmic chop outside the rack. A gate as a tone was reopened as HUSH (2026-11-07, the gated 80s snare); hum removal stays out. |
 
 The fixed rack order is already the guitar-pedal convention: wah, compressor, fuzz or drive, amp, then modulation, delay and reverb. A pedal takes its natural slot; no routing is added.
 
@@ -120,7 +120,7 @@ A section **before the amp**: `squash → fuzz → valve → crunch`. Deferred b
 
 ## Out of scope
 
-Octave; a noise gate; a tuner; through-zero flanging; an optical-tremolo model; a routing or pedal-ordering UI (the order is fixed on purpose); tempo-synced rates; stereo widening; presets (authored by ear after each gate, per section that passes).
+A hum-removal noise gate; a tuner; through-zero flanging; an optical-tremolo model; a routing or pedal-ordering UI (the order is fixed on purpose); tempo-synced rates; stereo widening; presets (authored by ear after each gate, per section that passes).
 
 ## Effort, from footprints
 

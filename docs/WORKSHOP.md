@@ -1,5 +1,17 @@
 # WORKSHOP — the developer's bench, inside the app
 
+> **Status (2026-11): removed from the UI.** The owner never used the
+> workshop or Teach the machine, so the UI-clarity spec (§7.4.1, D8) took
+> them out: the seven-tap knock on SETUP's title, the NOTE chip, CONFIRM
+> ALL and the stars on CHOP, the pad sheet's BENCH box, SEND TO BENCH,
+> SEND HITS TO BENCH and the TEACH THE MACHINE setting. Nothing in the app
+> reaches them now, and a stale `workshop` or `teach` preference is
+> ignored. The JVM-side pipeline stays in `:shell` for now, with its
+> tests (`TeachLog`, `BenchExport`, `CutRatings`, `LabelledHits`,
+> `BenchNotes`, `Workshop`, `ChopReview`); deleting it is a separate
+> cleanup the owner decides. SAVE AS PRESET (WS5) was never behind the
+> workshop and stays. What follows is the original spec, kept as history.
+
 *The spec for the admin mode. Status: the door and every tool on the
 list are built — WS1–WS4 inside the workshop (SEND TO BENCH, CONFIRM ALL
 and the cut rating, LABEL THIS HIT, BENCH NOTES) and WS5, SAVE AS

@@ -182,8 +182,8 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07) and HUSH (2026-11-07). The rack has 27 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
-swell, smear, ghost, spike, volume, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07), HUSH (2026-11-07) and OCTAVER (2026-11-08, chip-less). The rack has 28 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
+swell, smear, ghost, spike, volume, octaver, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
 vinyl, tape, vibrato, ensemble, phase, echo, spring, room, hush, motion. The pedal library (`Pedals.kt`) has
 twelve pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE, HUSH) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
@@ -197,7 +197,9 @@ brainstorm's 808-envelope use did not survive. Three pedals in a row heard the s
 over time needs a held sound, so a gate for one should lead with a held source. HUSH (the HUSH section, character `hushed`,
 after ROOM) passed on 2026-11-07 the other way round: a gate needs a tail to cut, and the one it cut well was a snare's
 room (the gated 80s snare), not the dry snare (only shorter), an open hat (a stub) or the CHUG (one held note, measured
-as unchanged, so left out of the listen). Measure the sources' decay before a level-driven gate. A pedal needs its own listening gate, and its
+as unchanged, so left out of the listen). Measure the sources' decay before a level-driven gate. OCTAVER (SUB, after VOLUME, chip-less until its gate) is the first
+pedal aimed at short hits: an offline half-speed copy from the onset, so it cannot flam; measured before its listen, a
+kick's octave (29 Hz) is mostly under 40 Hz while a snare's and a tom's land at 56 to 89 Hz. Check where a pitch move lands in Hz. Its first listen came back "could be thicker": a clean octave under 60 Hz is weight a phone does not play. The owner picked Grit and Fuzz from a five-way round, so SUB grew DRIVE (a linked tanh clipper on the copy, Grit at 0.375, Fuzz at 1) and a tanh squash in place of the peak match; on the low tom and kick DRIVE lifts the copy's 150 to 400 Hz share by 3 to 8 dB. A sub effect needs harmonics where small speakers play, not only the sub. A pedal needs its own listening gate, and its
 character must land on the setting the owner heard at the pad sheet's tap (AMT 70): the ROOM
 chip's first version fell short of the heard room for exactly that reason.
 

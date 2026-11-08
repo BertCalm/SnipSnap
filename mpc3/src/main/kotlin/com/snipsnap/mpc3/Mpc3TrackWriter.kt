@@ -14,14 +14,21 @@ import java.io.File
  * One note of an embedded pattern clip. [note] is a MIDI note — for a drum
  * track, which pad it plays is [Mpc3Note.slotFor]. Velocity is MPC 3's
  * normalised float, not a 0..127 int.
+ *
+ * [chance] is how often the hit sounds, 0..[ALWAYS] percent (BEAT step 4).
+ * Every player that reads a clip must roll it (`StepChance` in `:kit`) or
+ * write it to the MPC as the note's `probability`; a path that ignores it
+ * plays every hit.
  */
 data class Mpc3Note(
     val note: Int,
     val timePulses: Long,
     val velocity: Float,
     val lengthPulses: Long = 240L,
+    val chance: Int = ALWAYS,
 ) {
     init {
+        require(chance in 0..ALWAYS) { "chance out of range: $chance" }
         require(note in 0..127) { "note out of range: $note" }
         require(timePulses >= 0) { "timePulses must not be negative" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
@@ -29,6 +36,9 @@ data class Mpc3Note(
     }
 
     companion object {
+        /** A hit that always sounds: the default [chance]. */
+        const val ALWAYS = 100
+
         /** Pads a drum program holds — `Kit`'s own range, and `padNoteMap`'s length. */
         const val PAD_SLOTS = 128
 
@@ -1152,7 +1162,7 @@ class Mpc3TrackWriter(
                         add("note" to i(n.note.toLong()))
                         add("velocity" to d(n.velocity.toDouble()))
                         add("length" to i(n.lengthPulses))
-                        add("probability" to i(100))
+                        add("probability" to i(n.chance.toLong()))
                         add("ratchet" to i(1))
                         add("articulation" to i(0))
                         for (m in 0 until 16) {

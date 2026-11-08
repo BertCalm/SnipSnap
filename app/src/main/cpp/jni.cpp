@@ -744,6 +744,16 @@ Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong handle, jint m
     }
 }
 
+/** armPrint, addressed: the print is exactly engine frames [startFrame, stopFrame). */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_armPrintAt(JNIEnv*, jobject, jlong handle, jint maxFrames, jlong startFrame, jlong stopFrame) {
+    try {
+        return pads(handle)->armPrintAt(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0, startFrame, stopFrame) ? JNI_TRUE : JNI_FALSE;
+    } catch (const std::exception&) {
+        return JNI_FALSE;
+    }
+}
+
 JNIEXPORT jint JNICALL
 Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong handle) {
     return static_cast<jint>(pads(handle)->printState());

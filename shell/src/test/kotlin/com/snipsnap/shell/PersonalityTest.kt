@@ -586,18 +586,18 @@ class PersonalityTest {
         )
         assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
 
-        // It names no door of this screen, which is the rule its own KDoc
-        // sets: NEW KIT ▸ STARTERS is already the primary action directly
-        // under this panel, and naming it here would be a third copy of a
-        // control twice on screen. The one door it does name, LISTEN · MIC,
-        // is the dock's, and is checked below against the dock's own word.
-        for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH")) {
+        // It names no button of this screen, which is the rule its own KDoc
+        // sets: CATCH YOUR FIRST SOUND ▸ and START FROM A KIT ▸ sit directly
+        // under it in the same panel, and naming them here would be a second
+        // copy of a control already on screen. "A KIT" is the way in, not the
+        // button's label.
+        for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH", "LISTEN", "MIC")) {
             assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
         }
-        // ...and the door it does name is the dock's, in the dock's own word:
-        // a note pointing at a LISTEN · MIC the dock had renamed would send
-        // a new user looking for a control that is not there.
-        assertTrue(Places.LISTEN in note, "the note does not name the dock's ${Places.LISTEN}: $note")
+        assertTrue(note.endsWith(" OR START FROM A KIT."), "the tail says the second way in: $note")
+        // The panel's two ways in are the labels the note glosses.
+        assertEquals("START FROM A KIT ▸", Copy.START_FROM_KIT)
+        assertEquals("CATCH YOUR FIRST SOUND ▸", Places.CATCH_FIRST)
 
         // The doors it declines to name are named where the inventory
         // lives instead. CATCH has had a line since HELP was written;
@@ -633,7 +633,7 @@ class PersonalityTest {
         // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
         "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_TAP_TOGGLES", "STEP_TAP_EDITS", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
         // The step-detail strip's roll, nudge and length rows: captions and buttons, not toasts.
-        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
+        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_CHANCE", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
         // The Bubble permission line's door: a label, not a toast.
         "BUBBLE_ALLOW",
         // Pattern names: the rename hint and button, the slip's title and buttons, the list's heading and close chip. Labels, not toasts.
@@ -753,6 +753,9 @@ class PersonalityTest {
         // filtered labels come from Copy.shelfFilter(), a function, which
         // this reflective law does not reach - ShelfFilterTest holds those.
         "SHELF_FILTER_ALL",
+        // The empty panel's button and its amber closing line: a label and
+        // furniture on the panel, not sentences the app says once.
+        "START_FROM_KIT", "EMPTY_SHELF_ENDS",
         // Permanent on-screen furniture, not toasts: the two legends that sit
         // under KIT's grid and the kit shelf's own list for as long as those
         // screens are open, and HELP's two section headings. ROOMS' third
@@ -858,7 +861,7 @@ class PersonalityTest {
      * are actually held to the law.
      */
     private val legacyHandListedToasts = setOf(
-        "MELODIC_ON", "KEY_OFF", "TEACHING_ON", "TEACHING_OFF",
+        "MELODIC_ON", "KEY_OFF",
         "BANK_B_LIT", "TWINS_REROLLED", "BACK_FROM_BIN", "BIN_EMPTIED",
         // "HUMANIZED" dropped (feel axis, task 6): HUMANIZE ⚄ is gone, so
         // Copy.HUMANIZED no longer exists for reflection to find — this was
@@ -881,7 +884,7 @@ class PersonalityTest {
         // `treated`, `keyed` and `loopBounced` are held by. Delete those
         // assertions and the text is unchecked again.
         "NO_PITCH", "RETREAT_REFUSED",
-        "TAKES_BIN_RULE", "TEACH_CONSENT", "SNAPPED",
+        "TAKES_BIN_RULE", "SNAPPED",
         "TAKES_EMPTY", "BIN_EMPTY_STATE", "BIN_ITEM_GONE", "KIT_WONT_OPEN",
         "UNMUTATED", "MUTATE_NEEDS_ONE", "CRATE_EMPTY",
         "SCULPTED", "STRETCHED", "FROZEN", "PAD_TOO_SHORT", "PAD_TOO_LONG",

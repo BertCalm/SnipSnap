@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace snipsnap {
@@ -40,11 +41,24 @@ public:
      * store of Recording, and the callback reads it only after the
      * matching acquire load.
      */
-    bool arm(size_t maxFrames, int channels = 1) {
+    bool arm(size_t maxFrames, int channels = 1) { return armAt(maxFrames, channels, -1, -1); }
+
+    /**
+     * As [arm], but addressed to the engine's own frame count (what [recordAt] is given as `blockStart`):
+     * the print keeps nothing before `startFrame` and finishes, Done, on the block that reaches
+     * `stopFrame`, having kept exactly the frames in `[startFrame, stopFrame)`. Either may be -1 for
+     * "no address": record from the next callback, or until the buffer is full or a stop is asked for.
+     *
+     * Like `channels_`, both are written before the release store of Recording and read by the callback
+     * only after its acquire load, so they need no atomics of their own.
+     */
+    bool armAt(size_t maxFrames, int channels, int64_t startFrame, int64_t stopFrame) {
         const State s = state_.load(std::memory_order_acquire);
         if (s == State::Recording || s == State::Stopping) return false;
         if (channels < 1) return false;
         channels_ = static_cast<size_t>(channels);
+        startFrame_ = startFrame;
+        stopFrame_ = stopFrame;
         frames_.assign(maxFrames * channels_, 0.0f);
         written_ = 0;
         state_.store(State::Recording, std::memory_order_release);
@@ -77,6 +91,48 @@ public:
         for (size_t i = 0; i < n; ++i) frames_[written_ + i] = bus[i];
         written_ += n;
         if (written_ >= frames_.size()) {
+            state_.store(State::Done, std::memory_order_release);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Audio thread: one callback's block, `count` frames of interleaved bus that begin at engine frame
+     * `blockStart`. With no address this is [record]. With one, only the part of the block inside
+     * `[startFrame, stopFrame)` is kept: a block before the start is skipped whole, one that straddles it
+     * keeps its tail, and the block that reaches the stop keeps its head and flips to Done. A start already
+     * behind `blockStart` (the UI thread was late arming) records from the top of the block, so the print
+     * ends on the stop frame but is short by the lateness, never shifted.
+     */
+    inline bool recordAt(const float* bus, size_t count, int64_t blockStart) {
+        if (startFrame_ < 0 && stopFrame_ < 0) return record(bus, count);
+        const State s = state_.load(std::memory_order_acquire);
+        if (s == State::Stopping) {
+            state_.store(State::Done, std::memory_order_release);
+            return false;
+        }
+        if (s != State::Recording) return false;
+        const int64_t blockEnd = blockStart + static_cast<int64_t>(count);
+        size_t skip = 0;
+        if (startFrame_ > blockStart) {
+            if (startFrame_ >= blockEnd) return true;  // not yet
+            skip = static_cast<size_t>(startFrame_ - blockStart);
+        }
+        size_t take = count - skip;
+        bool reachedStop = false;
+        if (stopFrame_ >= 0 && stopFrame_ < blockEnd) {
+            const int64_t keep = stopFrame_ - (blockStart + static_cast<int64_t>(skip));
+            take = keep > 0 ? static_cast<size_t>(keep) : 0;
+            reachedStop = true;
+        }
+        const size_t room = frames_.size() - written_;
+        const size_t want = take * channels_;
+        const size_t n = want < room ? want : room;
+        const float* from = bus + skip * channels_;
+        for (size_t i = 0; i < n; ++i) frames_[written_ + i] = from[i];
+        written_ += n;
+        if (reachedStop || written_ >= frames_.size()) {
             state_.store(State::Done, std::memory_order_release);
             return false;
         }
@@ -124,6 +180,8 @@ private:
     std::vector<float> frames_;
     size_t written_ = 0;  // in samples, not frames
     size_t channels_ = 1;
+    int64_t startFrame_ = -1;  // engine frames; -1 = no address (see armAt)
+    int64_t stopFrame_ = -1;
     std::atomic<State> state_{State::Idle};
 };
 

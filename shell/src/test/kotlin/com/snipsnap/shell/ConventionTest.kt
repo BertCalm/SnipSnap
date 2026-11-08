@@ -1518,9 +1518,9 @@ class ConventionTest {
      *    and the model are one roster; a place renamed in one and not the
      *    other is the defect shape this repo keeps finding.
      * 2. Every place the first-run note names is a real one, and it names
-     *    the two the plan says it does (TAPE, then PROJECT). A note that
-     *    said "THEN KIT" would be J13 again: a word that reads as a place
-     *    and lands nowhere.
+     *    none (the tab row above the panel says them). A note that said
+     *    "THEN KIT" would be J13 again: a word that reads as a place and
+     *    lands nowhere.
      */
     @Test
     fun `the first-run note names real places`() {
@@ -1529,13 +1529,15 @@ class ConventionTest {
         assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
 
         val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
-        for (expected in listOf("TAPE", "PROJECT")) {
-            assertTrue(
-                expected in words,
-                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
-                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
-            )
-        }
+        // The note no longer names places at all: the panel's row of places
+        // went with the amber line, and the buttons under the note are the
+        // way in. Held as absence, so a place sneaking back in is a failure
+        // here and not a drift.
+        assertTrue(
+            "TAPE" !in words && "PROJECT" !in words,
+            "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") names a place again. The tab row says the places; " +
+                "the note says the four verbs and that a kit is a way in too.",
+        )
         // The old tab names that are no longer anywhere on the row. A note
         // that still said one of them would point a new user at a screen
         // that does not exist as a destination any more.
@@ -1912,12 +1914,6 @@ class ConventionTest {
         "humStart" to "the instant that hum began",
         "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
         "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
-        // RATE THE CUTS (docs/WORKSHOP.md, WS2). A star is a verdict on THIS
-        // model's cuts, not a preference: a re-chop, a MERGE or a SPLIT is
-        // different cuts, and a rating of the old ones riding onto the new
-        // would be logged against a setting that never earned it - the
-        // same reason `ChopReviewModel.confirmed` does not follow a re-chop.
-        "stars" to "a star rates this model's own cuts; a re-chop, a MERGE or a SPLIT is different cuts, and a verdict on the old ones must not ride onto them",
     )
 
     /**
@@ -5622,32 +5618,19 @@ class ConventionTest {
 
     // ==================== Law: every hold has a visible twin ====================
 
-    /**
-     * Why a hold is waived, named so the list reads as owners and not as excuses.
-     *
-     * [PENCIL] is the only owner left, with two lines of one gesture. A new hold takes a
-     * visible twin and a `// twin:` tag, not a waiver.
-     */
-    private enum class HoldWaiverOwner(val why: String) {
-        PENCIL("TapeScreen's pencil rewind is being removed (the UI-clarity spec's D9), so it gets no twin."),
-    }
-
-    private data class HoldWaiver(val owner: HoldWaiverOwner, val lineText: String)
+    /** A waiver names why the hold has no twin; the list below is empty and a new hold takes a visible twin and a `// twin:` tag, not a waiver. */
+    private data class HoldWaiver(val why: String, val lineText: String)
 
     /**
      * Holds with no visible twin, keyed on the file and the site line's own trimmed text (never a line number).
      *
-     * **This list only shrinks.** The workshop (D8) owns no hold site in the tree, so it has no entry. Delete an entry
-     * in the same change that gives its hold a twin or removes the hold, and lower [HOLD_WAIVER_CEILING]; raising the
-     * ceiling is the visible admission that the list grew, and a hold added after this law should never need to.
+     * **This list only shrinks, and it is empty.** The pencil rewind (D9) and the workshop (D8) were its last owners and
+     * are gone from the tree. The law stays: [HOLD_WAIVER_CEILING] is 0, so a hold with no visible twin fails the build
+     * rather than being waived. Raising the ceiling is the visible admission that the list grew, and a hold added after
+     * this law should never need to.
      */
-    private val HOLD_WAIVERS: Map<String, List<HoldWaiver>> = mapOf(
-        "ui/TapeScreen.kt" to listOf(
-            HoldWaiver(HoldWaiverOwner.PENCIL, """onLongClick(label = "SPIN BACK BY EAR") {"""),
-            HoldWaiver(HoldWaiverOwner.PENCIL, "val releasedEarly = withTimeoutOrNull(PENCIL_LONG_PRESS_MS) { tryAwaitRelease() }"),
-        ),
-    )
-    private val HOLD_WAIVER_CEILING = 2
+    private val HOLD_WAIVERS: Map<String, List<HoldWaiver>> = emptyMap()
+    private val HOLD_WAIVER_CEILING = 0
 
     /** How many lines above a hold site its `// twin:` tag may sit; a hold's modifier chain and its labels sit between. */
     private val TWIN_TAG_WINDOW = 8
@@ -5688,7 +5671,7 @@ class ConventionTest {
                 }
             }
             for (left in unused) {
-                problems += "$file: the hold waiver for `${left.lineText}` (${left.owner.why}) matches no hold in the file. " +
+                problems += "$file: the hold waiver for `${left.lineText}` (${left.why}) matches no hold in the file. " +
                     "Delete the entry and lower HOLD_WAIVER_CEILING; the list only shrinks."
             }
         }
@@ -5700,7 +5683,7 @@ class ConventionTest {
     fun `law - every press-and-hold names its visible twin, or is waived with an owner`() {
         val files = requireAppKotlinFiles().associate { it.relativeToAppRoot() to it.readText(Charsets.UTF_8).lines() }
         val found = files.values.sumOf { holdSites(it).size }
-        assertTrue(found > 25, "found $found hold sites under :app (recon counted about 40) - the scan is broken, not the tree.")
+        assertTrue(found > 20, "found $found hold sites under :app (recon counted about 40, 24 once the pencil went) - the scan is broken, not the tree.")
         assertEquals(
             HOLD_WAIVER_CEILING,
             HOLD_WAIVERS.values.sumOf { it.size },
@@ -5726,7 +5709,7 @@ class ConventionTest {
         assertEquals(1, holdTwinProblems(mapOf("A.kt" to semantic), emptyMap()).size, "a semantics action is a hold")
         val timed = listOf("scope.launch {", "    delay(LONG_PRESS_MS)", "}")
         assertEquals(1, holdTwinProblems(mapOf("A.kt" to timed), emptyMap()).size, "a hand-timed hold is a hold")
-        val waived = mapOf("A.kt" to listOf(HoldWaiver(HoldWaiverOwner.PENCIL, "onLongClick = { arm() },")))
+        val waived = mapOf("A.kt" to listOf(HoldWaiver("fixture", "onLongClick = { arm() },")))
         assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to listOf("    onLongClick = { arm() },")), waived), "a waived hold passes")
         assertEquals(1, holdTwinProblems(mapOf("A.kt" to listOf("// twin: x", "onLongClick = { other() },")), waived).size, "a waiver that matches nothing is a fault")
         val exempt = listOf(

@@ -178,8 +178,8 @@ object Hush {
         return Snip(out, ch, snip.sampleRate)
     }
 
-    /** The largest value of [x] over a [window]-frame window centred on each frame (a monotonic deque, O(n)). */
-    private fun slidingMax(x: FloatArray, window: Int): FloatArray {
+    /** The largest value of [x] over a [window]-frame window centred on each frame (a monotonic deque, O(n)). SUB's envelope reads it too. */
+    internal fun slidingMax(x: FloatArray, window: Int): FloatArray {
         val n = x.size
         val out = FloatArray(n)
         val half = window / 2

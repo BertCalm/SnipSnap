@@ -31,11 +31,19 @@ internal object TerraCases {
     /** A07 as it shipped from PR #890 until BOX replaced it (2026-11-06): the cavity slap, kept in the frozen grid. */
     val RETIRED_A07 = KitPad("A07", "Cajon Slap (cavity)", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.837f, "FORCE" to 0.9f, "POS" to 0.9f, "DROOP" to 0f, "CAVITY" to 0.8f, "BUZZ" to 0.75f, "DECAY" to 0.35f))
 
-    /** A09, A11 and A12 as they shipped until the hand drums replaced them (2026-11-07), kept in the frozen grid. */
+    /**
+     * The hand-drum pads as they shipped on COMPOUND_MEMBRANE until the hand drums replaced them
+     * (A09, A11, A12 on 2026-11-07; A02, A03, A05, A06, A08 on 2026-11-08), kept in the frozen grid.
+     */
     val RETIRED_HANDS = listOf(
         KitPad("A09", "Tabla Tin (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.80f, "POS" to 0.95f, "DROOP" to 0.0308f)),
         KitPad("A11", "Dumbek Tek (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 1.0f, "FORCE" to 0.92f, "POS" to 0.95f)),
         KitPad("A12", "Djembe Slap (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.9167f, "FORCE" to 0.95f, "POS" to 0.9f, "DROOP" to 0.3077f, "DECAY" to 0f)),
+        KitPad("A02", "Bayan Drag (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.0803f, "FORCE" to 0.25f, "DROOP" to 0.8462f)),
+        KitPad("A03", "Djembe Bass (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.1362f, "FORCE" to 0.30f, "POS" to 0.05f, "DROOP" to 0.1846f)),
+        KitPad("A05", "Dholak Bass (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f)),
+        KitPad("A06", "Dumbek Doum (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
+        KitPad("A08", "Djembe Open (membrane)", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
     )
 
     /** The frozen grid's pad for [slot]: today's, or the retired one where a post-freeze voice took it. */
@@ -51,13 +59,13 @@ internal object TerraCases {
 
     val KIT: List<KitPad> = listOf(
         KitPad("A01", "Udu Whoomp", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.1058f, "FORCE" to 0.10f, "DROOP" to 0.0769f, "CAVITY" to 0.90f)),
-        KitPad("A02", "Bayan Drag", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.0803f, "FORCE" to 0.25f, "DROOP" to 0.8462f)),
-        KitPad("A03", "Djembe Bass", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.1362f, "FORCE" to 0.30f, "POS" to 0.05f, "DROOP" to 0.1846f)),
+        KitPad("A02", "Bayan Drag", TerraVoice.BAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "BEND" to 1f)),
+        KitPad("A03", "Djembe Bass", TerraVoice.DJEMBE, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "STROKE" to 0f, "THUMP" to 0.5f)),
         KitPad("A04", "Cajon Low", TerraVoice.RESONANT_CAVITY, mapOf("TUNE" to 0.1516f, "FORCE" to 0.20f, "CAVITY" to 0.70f, "BUZZ" to 0.15f)),
-        KitPad("A05", "Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f)),
-        KitPad("A06", "Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f)),
+        KitPad("A05", "Dholak Bass", TerraVoice.DHOLAK, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "DROP" to 0.5f, "TREBLE" to 0.5f)),
+        KitPad("A06", "Dumbek Doum", TerraVoice.DOUM, mapOf("TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.4f, "AIR" to 0.5f, "SHELL" to 0.5f)),
         KitPad("A07", "Cajon Slap", TerraVoice.BOX, mapOf("TUNE" to 0.4f, "DECAY" to 0.5f, "FORCE" to 0.8f, "POS" to 0.875f, "CAVITY" to 0.3f, "BUZZ" to 0.5f)),
-        KitPad("A08", "Djembe Open", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.7185f, "FORCE" to 0.50f, "POS" to 0.5f, "DROOP" to 0.0769f)),
+        KitPad("A08", "Djembe Open", TerraVoice.DJEMBE, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "STROKE" to 1f, "THUMP" to 0.5f)),
         KitPad("A09", "Tabla Tin", TerraVoice.DAYAN, mapOf("TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.9f, "OPEN" to 1f, "CLICK" to 0.65f)),
         KitPad("A10", "Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f)),
         KitPad("A11", "Dumbek Tek", TerraVoice.DARBUKA, mapOf("TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f)),

@@ -113,6 +113,9 @@ object NativePads {
      * speed.
      */
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
+
+    /** [armPrint], addressed: the print is exactly the engine's frames `[startFrame, stopFrame)`, started and ended by the audio thread. */
+    external fun armPrintAt(handle: Long, maxFrames: Int, startFrame: Long, stopFrame: Long): Boolean
     external fun printState(handle: Long): Int
     external fun requestStopPrint(handle: Long)
     external fun stopPrint(handle: Long): FloatArray?

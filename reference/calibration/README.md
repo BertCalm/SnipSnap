@@ -28,7 +28,7 @@ A dozen files is enough to start; more is better. `snipsnap classify` on
 a capture prints the features next to the verdict, which is a fast way to
 pre-check a label.
 
-**From the phone**, the same files come by **LABEL THIS HIT**
+**From the phone** (removed from the app, D8; kept as the format): the same files came by **LABEL THIS HIT**
 (`docs/WORKSHOP.md`, WS3): with the WORKSHOP open, a pad sheet's BENCH
 box copies the pad's WAV into `Calibration/` beside the kits under this
 folder's own naming rule, and **SEND HITS TO BENCH** on SETUP packs that
@@ -47,6 +47,8 @@ arrives is captures, labelled by ear.
   60% overall**, the "the classifier is broken on real material" line.
 
 ## The overrides log
+
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
 
 Beside the WAVs, `overrides.jsonl` collects **teach-the-machine** data:
 every chip override in the chop screen, logged as a feature vector plus

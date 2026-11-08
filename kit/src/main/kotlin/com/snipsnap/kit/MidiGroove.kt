@@ -36,7 +36,10 @@ object MidiGroove {
 
     // ---- writing -----------------------------------------------------------
 
-    fun write(clip: Mpc3Clip, bpm: Float, channel: Int = DRUM_CHANNEL): ByteArray {
+    fun write(clip: Mpc3Clip, bpm: Float, channel: Int = DRUM_CHANNEL): ByteArray = writeResolved(StepChance.resolve(clip, 0L), bpm, channel)
+
+    /** A .mid has no chance to carry: it holds the hits that sound on pass 0 (StepChance), as a one-pass render does. */
+    private fun writeResolved(clip: Mpc3Clip, bpm: Float, channel: Int): ByteArray {
         require(bpm > 0) { "bpm must be positive: $bpm" }
         require(channel in 0..15) { "channel must be 0..15: $channel" }
 

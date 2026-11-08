@@ -230,6 +230,7 @@ import com.snipsnap.synth.FiredBronzePatch
 import com.snipsnap.synth.FiredBronzeInstrument
 import com.snipsnap.synth.FiredBronzeDryKit
 import com.snipsnap.shell.FiredBronzePads
+import com.snipsnap.synth.BackroomSnare
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
@@ -721,6 +722,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  * by reopening a pad, so both put a saved recipe on the same sliders.
  */
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
+    is SkinPatch -> editable.defaults()
     is OrphicaPatch -> Orphica.macrosFrom(editable.config)
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is TrefoilPatch -> if (editable.playback == TrefoilPlayback.HELD) TrefoilHeld.defaults(editable.voice) else Trefoil.defaults(editable.voice)
@@ -918,7 +920,8 @@ fun SynthScreen(
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
-                        ?: if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
+                        ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seed.seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
@@ -961,6 +964,7 @@ fun SynthScreen(
                             CausticInstrument.defaults(recipe.voice, 2).mapValues { (name, fallback) ->
                                 settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() ?: fallback
                             })
+                        recipe is SkinPatch -> recipe.defaults() + recipe.macros
                         recipe is RimePatch -> Rime.defaults(recipe.voice, recipe.model) + recipe.macros
                         recipe is TidalPatch -> Tidal.defaults(recipe.voice, recipe.model) + recipe.macros
                         recipe is OverlapPatch -> editableDefaults(defaults, recipe) + recipe.macros
@@ -1108,7 +1112,7 @@ fun SynthScreen(
             loadedPatchesByVoice, voice as RelayVoice, macros,
             seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
         )
-        if (engine == Engine.EMBOUCHURE) {
+        if (engine == Engine.EMBOUCHURE || engine == Engine.SKIN) {
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
         }
@@ -1118,6 +1122,7 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
+        else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
         else if (patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
@@ -1181,6 +1186,12 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.SKIN) {
+            val current = loadedPatchesByVoice[engine to voice] as? SkinPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: SkinPatch(name, voice as SkinVoice, controls)
+        }
         if (engine == Engine.OHM) {
             // Reply, Ring and native performance edits can share a frame with SAVE or SEND.
             val current = loadedPatchesByVoice[engine to voice] as? OhmPatch
@@ -3233,10 +3244,15 @@ fun SynthScreen(
                     RootStepperRow(rootControl, scheme) { midi -> updateRoot(rootControl, midi, rootPair) }
                 }
 
+                if (engine == Engine.SKIN && voice == SkinVoice.SNARE) {
+                    BackroomSnareControls((loadedPatch as? SkinPatch)?.model == 2, scheme, ::loadPreset)
+                }
+
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? SkinPatch)?.model, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
+                    else if (loadedPatch is SkinPatch) loadedPatch.macroSpecs()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
@@ -3276,6 +3292,7 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            (loadedPatch as? SkinPatch)?.model == 2 -> BackroomSnare.scramble(random)
                             engine == Engine.LIBRATION ->
                                 Libration.scramble(voice as LibrationVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice))) +

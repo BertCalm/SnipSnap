@@ -1305,8 +1305,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
-spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
+spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
+ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1562,7 +1562,7 @@ UI layer. What lives here:
 - **`TapeDeckModel`** — the trim screen's transport physics, ported
   coefficient-for-coefficient from the prototype that already feels right:
   drag/flick/coast/glide, spin-up, onset snap, IN/OUT swap semantics, loop
-  preview, the pencil rewind, the odometer.
+  preview, the odometer. (The pencil rewind is gone, model and all, D9.)
 - **`VoiceAllocator`** — play mode's choke/steal/note-off decisions behind
   an interface, so the Oboe layer stays thin and dumb.
 - **`ChopReviewModel` / `KitBuilderModel` / `ExportWizardModel`** — chop
@@ -1572,16 +1572,12 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `BenchExport` / `CutRatings` / `LabelledHits` /
-  `BenchNotes`** — the developer's bench inside the app
-  (`docs/WORKSHOP.md`): the knock that opens it, CHOP's CONFIRM ALL and
-  cut rating (the teach log learns when the machine was *right*, and
-  which bench settings cut well), the pad sheet's LABEL THIS HIT (a
-  capture into the calibration corpus, by ear), the title bar's NOTE (a
-  bench note stamped with the screen, the kit, the pad and the time,
-  rendered by the manifest as a line for `docs/BENCH.md`), and the two
-  hand-outs — SEND TO BENCH for the logs, the notes and the saved
-  presets, SEND HITS TO BENCH for the audio — for `reference/calibration/`.
+- **`Workshop` / `TeachLog` / `BenchExport` / `CutRatings` / `LabelledHits` /
+  `BenchNotes` / `ChopReviewModel`'s confirm and harvest** — the developer's
+  bench pipeline (`docs/WORKSHOP.md`). Removed from the UI (the knock, TEACH
+  THE MACHINE, CONFIRM ALL and the stars, the pad sheet's BENCH box, the NOTE
+  chip, SEND TO BENCH, SEND HITS TO BENCH; UI-clarity spec §7.4.1, D8); kept
+  here with their tests until the owner decides to delete them.
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
@@ -1632,7 +1628,7 @@ in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
-- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the developer's tools behind a knock on SETUP, SEND TO BENCH first, and the list after it
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the UI (D8), with SAVE AS PRESET, which was never behind it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 

@@ -40,15 +40,15 @@ object Copy {
      * The product loop, named once, on the only screen a new user is
      * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
      * -> export was never stated anywhere in the app). The shelf draws the
-     * four places above it ([Places.PLACES]) and this sentence under them.
+     * four places above it ([Places.PLACES]) and, on the empty shelf, this sentence in the panel.
      *
-     * Four verbs, then two places. The verbs say what you do at each stop:
-     * RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
-     * PADS, WRITE IT on its OUT. What follows names two places rather
-     * than four tabs, because CUT is a stage of TAPE and WRITE is a stage
-     * of PROJECT (`docs/SCREEN_PLAN_2026_10.md` §3.1); `PlacesTest` holds
-     * the verbs and the two names, and the loop-names law in
-     * `ConventionTest` holds the names to real places.
+     * Four verbs, then the kit way in. The verbs say what you do at each
+     * stop: RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
+     * PADS, WRITE IT on its OUT (`docs/SCREEN_PLAN_2026_10.md` §3.1). The note
+     * once named TAPE and PROJECT as well; the row of places above the panel
+     * says that now, so `PlacesTest` holds the verbs and the tail, and the
+     * loop-names law in `ConventionTest` holds every word in it to a real
+     * place or a non-tab.
      *
      * The verb for step three is KIT IT, not PLAY IT (J13): PLAY was a
      * tab, and the app's only explanation of its own loop glossed a
@@ -66,20 +66,39 @@ object Copy {
      * A HIT land sounds on pads without CUT. No door of this screen is named
      * here on purpose: NEW KIT sits directly under this panel and TAPE is on
      * the row above it, so a line pointing at either would be a third copy of
-     * a control already twice on screen. (On a cold shelf the primary is now
-     * CATCH YOUR FIRST SOUND ▸, with NEW KIT ▸ STARTERS an outline row under
-     * it; the note still names neither, for the same reason.)
+     * a control already twice on screen. (On a cold shelf both ways in now sit inside
+     * this panel, under the note: CATCH YOUR FIRST SOUND ▸, filled, and
+     * [START_FROM_KIT]. The note names neither button, for the same reason,
+     * and the row of places that used to sit above it is gone: it repeated the
+     * tab row.)
      *
-     * **The last clause names the one door that is not on this screen**
-     * (the UX review's SH1): the loop starts with a recording, and the way to
-     * one is LISTEN · MIC in the dock, below, on every screen. The sentence
-     * used to describe the loop and point at nothing.
+     * **The tail is "OR START FROM A KIT."** The note used to end by pointing
+     * at LISTEN · MIC in the dock and by sending a user TAPE, THEN PROJECT;
+     * the two buttons under it do that work now, so the note says only that a
+     * kit is a way in too.
      *
      * Step three stays KIT IT, not PLAY IT: `ConventionTest` holds PLAY in
      * its list of retired tab names, and a verb that reads as a place is
      * what that law is for.
      */
-    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN. TAP LISTEN · MIC BELOW TO BEGIN."
+    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. OR START FROM A KIT."
+
+    /**
+     * The empty shelf's second way in, a button inside the panel under the
+     * note ([Places.CATCH_FIRST] is the first, and the filled one). It opens
+     * the same PICK A STARTER list the outline NEW KIT ▸ STARTERS row opens
+     * once the shelf has projects; the label says what the tap lands on, in
+     * the note's own words ("OR START FROM A KIT."), where the old label named
+     * the list.
+     */
+    const val START_FROM_KIT = "START FROM A KIT ▸"
+
+    /**
+     * The empty panel's last line, amber: what the loop ends as, so a new user
+     * knows what the app hands back before recording anything. Furniture, not
+     * a sentence, so it keeps no full stop.
+     */
+    const val EMPTY_SHELF_ENDS = "ENDS AS MPC KITS, WAVS AND SONGS"
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
@@ -454,9 +473,6 @@ object Copy {
     const val DECK_NEXT = "NEXT"
     /** The deck glided onto an onset after a coast. */
     const val SNAPPED = "SNAPPED TO THE HIT."
-    const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
-    const val PENCIL_DONE = "REWOUND."
-    const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
@@ -1149,13 +1165,6 @@ object Copy {
     /** The dock's line while the kit switcher saves the project's active kit. */
     const val SWITCHING_KIT_BUSY = "SWITCHING KITS…"
 
-    // ---- Settings: teach the machine (X4.4) ----
-    const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
-    const val TEACHING_OFF = "TEACHING OFF. THE MACHINE STOPS TAKING NOTES."
-
-    // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
-    const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
-
     // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
@@ -1196,85 +1205,6 @@ object Copy {
     const val SETUP_MIDI_OUT_PORT_OK = "OUT"
     /** Beside a device whose port another app already holds. */
     const val SETUP_MIDI_OUT_PORT_BUSY = "BUSY"
-
-    // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
-    /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
-    const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."
-    /** The knock landed. Says where the section is, since nothing else on screen does. */
-    const val WORKSHOP_OPENED = "WORKSHOP OPEN. IT IS AT THE FOOT OF SETUP."
-    /**
-     * CLOSE THE WORKSHOP: says how to get back in, because a door that
-     * closes without saying so is a door lost (law 3). The number is
-     * [Workshop.KNOCKS] itself, not a second copy of it — a `val` rather
-     * than a `const` so the reflective copy laws still find it.
-     */
-    val WORKSHOP_CLOSED: String = "WORKSHOP CLOSED. ${countOf(Workshop.KNOCKS, "TAP", "TAPS")} ON THE TITLE OPEN IT AGAIN."
-    /** The knock counting down from [Workshop.HINT_FROM]: [remaining] taps still to go. */
-    fun workshopKnock(remaining: Int): String = "${countOf(remaining, "MORE TAP", "MORE TAPS")} FOR THE WORKSHOP."
-    /**
-     * Under SEND TO BENCH: what the button packs, and the fact that keeps
-     * [TEACH_CONSENT] true — TEACH itself never sends; this button, pressed
-     * on purpose, is the only way a log leaves.
-     */
-    const val SEND_TO_BENCH_NOTE = "EVERY LABEL, CUT RATING, NOTE AND SAVED PRESET ON THIS PHONE, IN ONE FILE FOR THE BENCH. FEATURES, LABELS, RATINGS, KNOB SETTINGS AND YOUR OWN WORDS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
-    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedies are a chip or a note. */
-    const val BENCH_EMPTY = "NOTHING TO SEND. NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP, OR TAKE A NOTE, FIRST."
-    /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedies. */
-    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NO CHIP IS LOGGED. TURN IT ON ABOVE, OR TAKE A NOTE."
-    /**
-     * SEND TO BENCH: the zip is packed and the chooser is up. Counts the
-     * labels (corrections and confirmations alike), the cut ratings, the
-     * notes and the saved presets, naming only what the file holds, and
-     * names the kits only when something came from one. Ends on the same "PICK WHERE IT GOES."
-     * as [backedUp] and [kitPacked] because it is the same moment, and
-     * never says SENT: `ShareOut.send` only reports that the chooser
-     * opened.
-     */
-    fun benchPacked(labels: Int, ratings: Int, notes: Int, presets: Int, kits: Int): String {
-        val what = listOfNotNull(
-            countOf(labels, "LABEL", "LABELS").takeIf { labels > 0 },
-            countOf(ratings, "CUT RATING", "CUT RATINGS").takeIf { ratings > 0 },
-            countOf(notes, "NOTE", "NOTES").takeIf { notes > 0 },
-            countOf(presets, "PRESET", "PRESETS").takeIf { presets > 0 },
-        )
-        val joined = when (what.size) {
-            0 -> "NOTHING"
-            1 -> what[0]
-            else -> what.dropLast(1).joinToString(", ") + " AND " + what.last()
-        }
-        val from = if (kits > 0) " FROM ${countOf(kits, "KIT", "KITS")}" else ""
-        return "$joined$from ON ONE FILE. PICK WHERE IT GOES."
-    }
-    /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
-    const val BENCH_FAILED = "SEND TO BENCH FAILED. TRY AGAIN."
-
-    // ---- LABEL THIS HIT and SEND HITS TO BENCH (docs/WORKSHOP.md, WS3) ----
-    /** Under the BENCH box's legend on a pad sheet: what a tap does, where the copy goes, and what the corpus wants. */
-    const val HITS_BOX_NOTE = "LABEL THIS HIT BY EAR. A COPY OF ITS WAV GOES TO THE CALIBRATION FOLDER WITH THE LABEL IN ITS NAME. CAPTURES ONLY: THE BENCH KNOWS ITS RENDERS ALREADY."
-    /** A tap on a pad whose recipe is a synth patch: the refusal, and the reason the corpus README gives. */
-    const val HIT_IS_A_RENDER = "THAT PAD IS A RENDER, NOT A CAPTURE. THE BENCH KNOWS ITS RENDERS ALREADY."
-    /** The copy landed: which pad, as what, and the button that carries it off the phone. */
-    fun hitLabelled(pad: String, label: String): String = "$pad LABELLED $label. IN THE CALIBRATION FOLDER; SEND HITS TO BENCH CARRIES IT."
-    /** The current label tapped again: the copy is out of the folder, and the pad's own file is not what went. */
-    fun hitUnlabelled(pad: String): String = "$pad UNLABELLED. ITS COPY IN THE CALIBRATION FOLDER IS GONE; THE PAD ITSELF IS UNTOUCHED."
-    /** The BENCH box's strip: what the folder holds for this pad — furniture, no full stop, like every strip on the sheet. */
-    fun hitStrip(label: String?): String = label?.let { "LABELLED $it" } ?: "NOT LABELLED"
-    /** Under SEND HITS TO BENCH on SETUP: what it packs, whose it is, and that it is the one button that sends sound. */
-    const val SEND_HITS_NOTE = "THE HITS YOU LABELLED ON THEIR PAD SHEETS, AS AUDIO, THEIR LABELS IN THEIR NAMES. YOUR OWN CAPTURES AND NOTHING ELSE ON THE PHONE. THIS IS THE ONLY BUTTON THAT SENDS SOUND."
-    /** SEND HITS TO BENCH with an empty folder: the remedy is a pad sheet. */
-    const val HITS_EMPTY = "NOTHING TO SEND. NO HIT IS LABELLED YET. LABEL ONE ON ITS PAD SHEET FIRST."
-    /** SEND HITS TO BENCH: the zip is packed and the chooser is up — the same moment as [benchPacked], and it says AUDIO because this one is. */
-    fun hitsPacked(n: Int): String = "${countOf(n, "HIT", "HITS")} ON ONE FILE, AS AUDIO. PICK WHERE IT GOES."
-    /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
-    const val HITS_FAILED = "SEND HITS TO BENCH FAILED. TRY AGAIN."
-
-    // ---- BENCH NOTES (docs/WORKSHOP.md, WS4) ----
-    /** Under the note's field: what rides along with the words, and how it leaves. */
-    const val NOTE_PROMPT = "WHAT DID YOU HEAR? THE SCREEN, THE KIT, THE PAD AND THE TIME RIDE ALONG. SEND TO BENCH CARRIES IT."
-    /** KEEP landed: where the note was taken, and the button that carries it off the phone. */
-    fun noted(screen: String): String = "NOTED ON $screen. SEND TO BENCH CARRIES IT."
-    /** The append threw; the words are not on disk. */
-    const val NOTE_FAILED = "THE NOTE DID NOT SAVE. TRY AGAIN."
 
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
@@ -1624,6 +1554,9 @@ object Copy {
     const val STEP_ROLL = "ROLL"
     const val STEP_NUDGE = "NUDGE"
     const val STEP_LENGTH = "LENGTH"
+
+    /** The fourth row: how often the step sounds. Buttons say 100% / 75% / 50% / 25%. */
+    const val STEP_CHANCE = "CHANCE"
     const val STEP_EARLY = "EARLY"
     const val STEP_LATE = "LATE"
     const val STEP_CENTRE = "CENTRE"
@@ -1635,6 +1568,8 @@ object Copy {
     fun stepRollName(n: Int): String = "×$n"
     fun stepRollSpoken(n: Int): String = "ROLL ×$n"
     fun stepLengthSpoken(name: String): String = "LENGTH $name"
+    fun stepChanceName(percent: Int): String = "$percent%"
+    fun stepChanceSpoken(percent: Int): String = "CHANCE $percent%"
 
     /** The strip's reading of where the step's hits sit against its line, in pulses (240 to a step). A label, not a toast. */
     fun stepNudgeReading(pulses: Int): String = when {
@@ -2508,17 +2443,6 @@ object Copy {
     fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
     /** The CUT bench's readout for the count while a chop is running. */
     const val CHOP_BENCH_BUSY = "CUTTING…"
-
-    // ---- CHOP's BENCH row: CONFIRM ALL and the cut rating (docs/WORKSHOP.md) ----
-    /** Under the row with TEACH on: what the two controls do, and when it is written. */
-    const val BENCH_ROW_NOTE = "CONFIRM ALL VOUCHES FOR EVERY CHIP YOU LEFT ALONE. THE STARS RATE THE CUTS. BOTH LOG WHEN YOU SEND."
-    /** Under the row with TEACH off: why the row is dim, and the switch that lights it. */
-    const val BENCH_ROW_TEACH_OFF = "TEACH THE MACHINE IS OFF, SO NOTHING HERE IS LOGGED. TURN IT ON IN SETUP."
-    /** CONFIRM ALL landed: [n] chips the machine named and the human left alone are the human's word now. */
-    fun confirmedAll(n: Int): String =
-        "${countOf(n, "CHIP", "CHIPS")} CONFIRMED: THE MACHINE HAD ${if (n == 1) "IT" else "THEM"} RIGHT. LOGGED WHEN YOU SEND."
-    /** A star tapped: the cuts rated [stars] of [CutRatings.STARS], to be written with the bench's settings. */
-    fun cutsRated(stars: Int): String = "CUTS RATED $stars OF ${CutRatings.STARS}. LOGGED WHEN YOU SEND, WITH THE BENCH'S SETTINGS."
 
     // ---- CHOP round two: SNAP and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
     /**
