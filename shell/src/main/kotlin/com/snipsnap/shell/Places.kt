@@ -75,15 +75,20 @@ object Places {
     const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
 
     /**
-     * The first row of the dock's capture choice: the room, through the mic.
-     * The chip above already says LISTEN · MIC, so the row repeating it told
-     * nobody what it was for; this says it, as [ARM_INSIDE] does for the other.
+     * The first row of the dock's capture choice, in its sheet: the room, through
+     * the mic. The chip above already says LISTEN · MIC, so the row says what it is
+     * for on a line under the name, as [ARM_INSIDE_DESC] does for the other.
      * The row's accessible name stays [LISTEN].
      */
-    const val ARM_MIC = "MIC ▸ RECORD THIS ROOM"
+    const val ARM_MIC = "MIC"
+    const val ARM_MIC_DESC = "RECORD THIS ROOM"
 
-    /** The second row of the dock's capture choice: another app's audio, with the projection consent. The arrow: it opens that consent. */
-    const val ARM_INSIDE = "APP AUDIO ▸ RECORD AN APP"
+    /** The second row of the dock's capture choice: another app's audio, with the projection consent that it opens. */
+    const val ARM_INSIDE = "APP AUDIO"
+    const val ARM_INSIDE_DESC = "RECORD AN APP"
+
+    /** The capture sheet's title. */
+    const val ARM_SHEET_TITLE = "RECORD FROM"
 
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
@@ -119,8 +124,38 @@ object Places {
     /** The header chip that opens [ADD_FROM_SHELF]: the same door, in the room the header has. */
     const val ADD_KIT = "+ KIT"
 
-    /** The kit sheet's last row. The arrow: it opens the shelf in pick mode. */
-    const val SHEET_ADD_FROM_SHELF = "+ FROM SHELF ▸"
+    /** The starter sheet: its title, and the tag on a starter that rerolls on every tap. */
+    const val STARTER_SHEET_TITLE = "PICK A STARTER"
+    const val STARTER_REROLL_TAG = "TAPS REROLL"
+
+    /** The shelf's TOOLS sheet: its title, and each tool as a name and the line under it. */
+    const val TOOLS_TITLE = "TOOLS"
+    const val TOOL_BACKUP = "BACKUP"
+    const val TOOL_BACKUP_DESC = "EVERY KIT, ONE FILE"
+    const val TOOL_CHOP_ALL = "CHOP ALL"
+    const val TOOL_CHOP_ALL_DESC = "EVERY FILE, ONE KIT"
+    const val TOOL_XRAY = "X-RAY"
+    const val TOOL_XRAY_DESC = "INSPECT A FILE"
+    const val TOOL_DOUBLES = "DOUBLES"
+    const val TOOL_DOUBLES_DESC = "SAME SOUND, ANY KIT"
+
+    /**
+     * The project row's menu: each action a name and the line under it. The names
+     * a screen reader hears carry the project's, and are made where the row is drawn.
+     */
+    const val PROJECT_RENAME = "RENAME"
+    const val PROJECT_RENAME_DESC = "GIVE THE PROJECT A NEW NAME"
+    const val PROJECT_DELETE = "DELETE"
+    const val PROJECT_DELETE_DESC = "TO THE BIN, KITS STAY ON THE SHELF"
+    const val PROJECT_DROP = "REMOVE A KIT"
+    const val PROJECT_DROP_DESC = "TAKE ONE OUT, IT STAYS ON THE SHELF"
+
+    /** The kit sheet's title. */
+    const val SHEET_KITS_TITLE = "SWITCH KIT"
+
+    /** The kit sheet's last row, and the line under it: it opens the shelf in pick mode. */
+    const val SHEET_ADD_FROM_SHELF = "+ FROM SHELF"
+    const val SHEET_ADD_FROM_SHELF_DESC = "PUT ANOTHER KIT IN THIS PROJECT"
 
     /**
      * One row of the kit sheet. The active kit is marked in words and a

@@ -68,7 +68,7 @@ import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
 import com.snipsnap.app.ui.CaptureSheet
-import com.snipsnap.app.ui.ChoiceSheet
+import com.snipsnap.app.ui.SheetMenu
 import com.snipsnap.app.ui.SheetRow
 import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.NoKitPanel
@@ -4769,18 +4769,18 @@ fun App(shelf: KitShelf) {
                 // the active one marked, each a tap to put it on the grid,
                 // and the shelf's door as the last row.
                 val p = project
-                ChoiceSheet(
-                    rows = p?.kits.orEmpty().map { folder ->
+                SheetMenu(Places.SHEET_KITS_TITLE, onDismiss = { kitSheetOpen = false }) {
+                    for (folder in p?.kits.orEmpty()) {
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
                         // A sheet opened just before a job started: the tap does
                         // nothing visible and the sheet stays, rather than
                         // closing on a switch `activateKit` would refuse.
-                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) {
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit), onClick = {
                             if (busy == null) { kitSheetOpen = false; activateKit(folder) }
-                        }
-                    } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
-                    onDismiss = { kitSheetOpen = false },
-                )
+                        })
+                    }
+                    SheetRow(Places.SHEET_ADD_FROM_SHELF, Places.SHEET_ADD_FROM_SHELF_DESC, onClick = { kitSheetOpen = false; addFromShelf() })
+                }
             }
             if (captureSheetOpen) {
                 CaptureSheet(
