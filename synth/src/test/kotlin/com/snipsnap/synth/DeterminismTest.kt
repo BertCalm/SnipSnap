@@ -695,6 +695,7 @@ class DeterminismTest {
                 TerraVoice.DJEMBE -> mapOf("THUMP" to 1f)
                 TerraVoice.DHOLAK -> mapOf("DROP" to 1f)
                 TerraVoice.BAYAN -> mapOf("BEND" to 0f)
+                TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }

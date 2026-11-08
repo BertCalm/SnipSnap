@@ -23,11 +23,14 @@ class TerraKitsTest {
     }
 
     @Test
-    fun `all four topologies reach a pad`() {
+    fun `every voice but the retired membrane reaches a pad`() {
+        // COMPOUND_MEMBRANE no longer does: its last pad, A10 (Tabla Tun), moved to TUN on 2026-11-08,
+        // after its other hand-drum pads had moved to the hand voices (docs/TERRA_HANDS.md). It is still
+        // a voice of its own, and the frozen grid still renders its retired pads (TerraCases.RETIRED_HANDS).
         val voices = TerraKits.classic().mapNotNull { pad ->
             pad?.recipe?.let { PadRecipe.fromJsonValue(it) }?.patch?.voiceName
         }.toSet()
-        assertEquals(TerraVoice.entries.map { it.name }.toSet(), voices)
+        assertEquals(TerraVoice.entries.map { it.name }.toSet() - TerraVoice.COMPOUND_MEMBRANE.name, voices)
     }
 
     /**

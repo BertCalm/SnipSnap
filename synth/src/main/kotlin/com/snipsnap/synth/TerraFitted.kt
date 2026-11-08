@@ -12,10 +12,13 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 
 /**
- * TERRA's fitted hand drums: DJEMBE (the bass and open strokes), DHOLAK (the bass head) and BAYAN
- * (the tabla's bass drum, its ghe). Each stroke is resynthesised from the owner's reference
- * recordings (2026-11-08: phone screen recordings of a djembe, a dholak and a bayan, measured
- * only, never shipped), then tuned by ear over rounds 8 to 10 (docs/TERRA_HANDS.md).
+ * TERRA's fitted hand drums: DJEMBE (the bass and open strokes), DHOLAK (the bass head), BAYAN
+ * (the tabla's bass drum, its ghe) and TUN (the tabla's treble drum, struck at the syahi's centre).
+ * Each stroke is resynthesised from reference recordings, then tuned by ear (docs/TERRA_HANDS.md):
+ * the first three from the owner's (2026-11-08: phone screen recordings of a djembe, a dholak and a
+ * bayan, measured only, never shipped), over rounds 8 to 10; the tun from three tuns in an open
+ * tabla dataset (M. A. Rohit, A. Bhattacharjee and P. Rao, ISMIR 2021, zenodo.org/record/7110248,
+ * CC BY 4.0; measured only, never shipped), its round 1 A.
  *
  * The characteristic gesture: **the hand lands → the head's own notes ring for a fifth of a second
  * to two seconds, paired notes beating, the bass ones bending as the head relaxes or the heel lets
@@ -38,6 +41,10 @@ import kotlin.math.tan
  *   fades with the stroke at the level the real one has.
  * - **The skin.** The head's own short upper modes (Bessel, as [TerraHands]) above 1.3 kHz, struck
  *   by the same contact: the attack's grain.
+ * - **The knock** (TUN). A fingertip on the syahi's hard paste knocks: the reference's sharpest
+ *   peak, 8 to 20 dB over the note, 13 to 21 ms after the note starts (a lesser one at the start).
+ *   The head's modes above 380 Hz, struck at the centre, each octave scaled so the knock's spectrum
+ *   is the reference's (most of it 400 to 800 Hz).
  *
  * Literal: the partial tables, bends and residual bands (measured, then the owner's three tweaks:
  * the bass a deeper, longer, thumpier bowl; the open tone ringing 1.8x longer; the dholak falling
@@ -61,11 +68,22 @@ internal object TerraFitted {
     /** One third-octave band of the residual: its edges, its level against the partials' peak, its decay's T60. */
     class Band(val lo: Double, val hi: Double, val a: Double, val t: Double)
 
-    /** A fitted stroke: its partials and residual, the body's gain on its own peak, the contact, the skin, and its bend (depth, time). */
+    /**
+     * A fingertip's knock ([TerraFitted]'s class doc): the head's modes over [loHz] from an [f01] head,
+     * struck at the centre, each octave (lo, hi, dB of the knock's energy in its first 6 ms) scaled to
+     * the reference's; [level] its peak against the body's, landing [delayMs] after the note (the
+     * pick), [pre] the lesser hit at the note's start against it.
+     */
+    private class Knock(
+        val f01: Double, val level: Double, val delayMs: Double, val pre: Double, val seed: Int, val t60: Double,
+        val octaves: List<Triple<Double, Double, Double>>, val loHz: Double = 380.0, val highPassHz: Double = 250.0,
+    )
+
+    /** A fitted stroke: its partials and residual, the body's gain on its own peak, the contact, the skin, its bend (depth, time) and its knock, if any. */
     private class Stroke(
         val partials: List<Partial>, val bands: List<Band>, val bodyGain: Double, val widthMs: Double,
         val skinF01: Double, val skinImpacts: List<TerraHands.Impact>, val skinT60: Double, val skinLevel: Double, val skinSeed: Int,
-        val bendDepth: Double, val bendSeconds: Double,
+        val bendDepth: Double, val bendSeconds: Double, val knock: Knock? = null,
     )
 
     // ---------------------------------------------------------------- the measured tables
@@ -220,6 +238,52 @@ internal object TerraFitted {
         skinF01 = 180.0, skinImpacts = listOf(TerraHands.Impact(0.55, 0.8, 1.0, 0.0)),
         skinT60 = 0.05, skinLevel = 0.19953, skinSeed = 21, bendDepth = 0.6, bendSeconds = 0.05)
 
+    // The tun: the dataset's three test-set tuns (kachu-na_DM at 61.38, 75.02 and 120.72 s, a dayan
+    // ringing at 299 Hz), moved to D4, the kit's Tabla Tin's fundamental. The note rings 2.55 s from
+    // its first cycle; the overtones that were not already ringing before the stroke, 40 to 47 dB
+    // under it; the residual fitted to what the stroke itself adds (each band's level before the
+    // stroke, the previous strokes still ringing, taken off the target).
+    private val TUN_PARTIALS = listOf(
+        Partial(293.66, 1.0, 2.55, false, 0.0),
+        Partial(276.04, 0.00817008, 2.0, false, 0.0),
+        Partial(396.441, 0.0118065, 0.85, false, 0.0),
+        Partial(446.363, 0.0187565, 0.67, false, 0.0),
+        Partial(492.761, 0.0522681, 0.55, false, 0.0),
+        Partial(525.651, 0.0280787, 0.75, false, 0.0),
+        Partial(787.009, 0.0287203, 0.8, false, 0.0),
+        Partial(1180.513, 0.0288815, 0.57, false, 0.0),
+    )
+    private val TUN_BANDS = listOf(
+        Band(79.3701, 100.0, 5.25595, 0.068),
+        Band(100.0, 125.992, 1.8568, 0.105),
+        Band(125.992, 158.74, 1.54797, 0.105),
+        Band(158.74, 200.0, 1.34647, 0.105),
+        Band(317.48, 400.0, 0.0779459, 0.179),
+        Band(400.0, 503.968, 0.252584, 0.179),
+        Band(503.968, 634.96, 0.0477697, 0.304),
+        Band(634.96, 800.0, 0.169481, 0.126),
+        Band(1007.94, 1269.92, 0.14397, 0.137),
+        Band(1269.92, 1600.0, 0.232473, 0.044),
+        Band(1600.0, 2015.87, 0.076081, 0.052),
+        Band(2015.87, 2539.84, 0.0744406, 0.052),
+        Band(2539.84, 3200.0, 0.0459126, 0.057),
+        Band(3200.0, 4031.75, 0.0425126, 0.057),
+        Band(4031.75, 5079.68, 0.0333862, 0.062),
+        Band(5079.68, 6400.0, 0.0861999, 0.052),
+        Band(6400.0, 8063.49, 0.0429425, 0.057),
+    )
+
+    // The tun as the owner picked it (round 1's A, "as played"): the note from the first sample, the
+    // knock 15 ms later at +15 dB over the note's peak (5.084 against the body's own), the lesser
+    // hit at the start 4.2 dB under it. The knock's octaves: its energy in the reference (mean of
+    // three), 400-800 Hz carrying most of it.
+    private val TUN_STROKE = Stroke(TUN_PARTIALS, TUN_BANDS, bodyGain = 1.0, widthMs = 1.0,
+        skinF01 = 293.66, skinImpacts = listOf(TerraHands.Impact(0.0, 0.25, 1.0, 0.0)),
+        skinT60 = 0.02, skinLevel = 0.0, skinSeed = 9, bendDepth = 0.0, bendSeconds = 0.1,
+        knock = Knock(f01 = 293.66, level = 5.084412, delayMs = 15.0, pre = 0.616595, seed = 9, t60 = 0.02,
+            octaves = listOf(Triple(100.0, 200.0, -12.0), Triple(200.0, 400.0, -8.9), Triple(400.0, 800.0, -2.1),
+                Triple(800.0, 1600.0, -15.0), Triple(1600.0, 3200.0, -17.6), Triple(3200.0, 6400.0, -22.9), Triple(6400.0, 12800.0, -34.7))))
+
     // ---------------------------------------------------------------- macros
 
     fun macros(voice: TerraVoice): List<MacroSpec> = when (voice) {
@@ -236,6 +300,11 @@ internal object TerraFitted {
         // BEND: 0 the ghe holds its note, 1 the heel lets go (falls from 1.6x).
         TerraVoice.BAYAN -> listOf(MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.5f),
             MacroSpec("BEND", 1f))
+        // KNOCK: the fingertip's knock, from none (0) through the measured +15 dB over the note (0.5) to
+        // twice that (1). LAG: when it lands after the note starts, from with it (0) through the
+        // measured 15 ms (0.5, the pick) to 30 ms (1).
+        TerraVoice.TUN -> listOf(MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("FORCE", 0.5f),
+            MacroSpec("KNOCK", 0.5f), MacroSpec("LAG", 0.5f))
         else -> error("$voice is not a fitted TERRA hand drum")
     }
 
@@ -245,8 +314,9 @@ internal object TerraFitted {
 
     // ---------------------------------------------------------------- the strokes a voice plays
 
-    /** The strokes [voice] sounds at [m], each with its weight and the per-voice adjustments (bend, partial gains, band gains). */
-    private class Played(val stroke: Stroke, val weight: Double, val bendDepth: Double, val partialGain: (Partial) -> Double, val bandGain: (Band) -> Double)
+    /** The strokes [voice] sounds at [m], each with its weight and the per-voice adjustments (bend, partial gains, band gains, the knock's gain and delay). */
+    private class Played(val stroke: Stroke, val weight: Double, val bendDepth: Double, val partialGain: (Partial) -> Double, val bandGain: (Band) -> Double,
+                         val knockGain: Double = 1.0, val knockDelayMs: Double = stroke.knock?.delayMs ?: 0.0)
 
     private fun played(voice: TerraVoice, m: Map<String, Float>): List<Played> = when (voice) {
         TerraVoice.DJEMBE -> {
@@ -264,6 +334,8 @@ internal object TerraFitted {
             listOf(Played(DHOLAK_STROKE, 1.0, 1.1 * m.getValue("DROP"), { p -> if (!p.bends) treble else 1.0 }, { 1.0 }))
         }
         TerraVoice.BAYAN -> listOf(Played(BAYAN_STROKE, 1.0, 0.6 * m.getValue("BEND"), { 1.0 }, { 1.0 }))
+        TerraVoice.TUN -> listOf(Played(TUN_STROKE, 1.0, 0.0, { 1.0 }, { 1.0 },
+            knockGain = 2.0 * m.getValue("KNOCK"), knockDelayMs = 30.0 * m.getValue("LAG")))
         else -> error("$voice is not a fitted TERRA hand drum")
     }
 
@@ -304,14 +376,38 @@ internal object TerraFitted {
             val body = body(st, pl, width, tune, decay, rate, frames, curves)
             if (headOnly) { for (i in out.indices) out[i] += body[i] * pl.weight; continue }
             val bodyPeak = peakOf(if (curves == null) body else body(st, pl, width, tune, decay, rate, frames, null))
-            val skin = skin(st, width, tune, rate, frames)
+            val skin = if (st.skinLevel > 0.0) skin(st, width, tune, rate, frames) else DoubleArray(frames)
             val skinPeak = peakOf(skin)
+            // the knock (TUN), each hit at unit peak: driven as v^2, as the skin is, and a longer contact
+            // (a softer FORCE or hand) knocks duller, by the skin's own law
+            val k = st.knock
+            val knockForce = (KNOCK_FORCE - (width - st.widthMs) / 2.3).coerceIn(0.0, 1.0).toFloat()
+            val main = if (k == null) null else knockWave(k, k.seed, tune, knockForce, rate)
+            val pre = if (k == null) null else knockWave(k, k.seed + 1, tune, knockForce, rate)
+            fun knockAt(i: Int, delay: Int, preScale: Double): Double {
+                if (k == null || main == null || pre == null) return 0.0
+                val j = i - delay
+                return (if (j >= 0 && j < main.size) main[j] else 0.0) + (if (i < pre.size) k.pre * preScale * pre[i] else 0.0)
+            }
+            val knockDelay = (pl.knockDelayMs * 1e-3 * rate).toInt()
+            val knockPre = min(1.0, pl.knockDelayMs / 5.0)      // the lesser hit merges into the knock as LAG closes
+            val knockGain = (k?.level ?: 0.0) * pl.knockGain * v * v
             val p = DoubleArray(frames) {
-                (if (bodyPeak > 1e-12) body[it] / bodyPeak * st.bodyGain else 0.0) + (if (skinPeak > 1e-12) skin[it] / skinPeak * st.skinLevel * v * v else 0.0)
+                (if (bodyPeak > 1e-12) body[it] / bodyPeak * st.bodyGain else 0.0) + (if (skinPeak > 1e-12) skin[it] / skinPeak * st.skinLevel * v * v else 0.0) +
+                    knockGain * knockAt(it, knockDelay, knockPre)
             }
             // the residual's levels were fitted against the band-limited partials' peak
             val pLimited = TerraBox.lowpass(TerraBox.lowpass(FloatArray(frames) { p[it].toFloat() }, 20000f, rate), 20000f, rate)
-            val pPeak = if (curves == null) pLimited.maxOf { abs(it) }.toDouble() else {
+            val pPeak = if (k != null) {
+                // a knock is the stroke's sharpest peak (5x the note's), so the residual was fitted against
+                // the full hit's: the reference is the stroke as picked (v = 1, KNOCK and LAG as measured),
+                // unstruck by HIT, so a soft or knockless hit keeps its note's balance with the residual
+                val ref = if (curves == null) body else body(st, pl, width, tune, decay, rate, frames, null)
+                val refPeak = peakOf(ref)
+                val pickedDelay = (k.delayMs * 1e-3 * rate).toInt()
+                val picked = FloatArray(frames) { ((if (refPeak > 1e-12) ref[it] / refPeak * st.bodyGain else 0.0) + k.level * knockAt(it, pickedDelay, 1.0)).toFloat() }
+                TerraBox.lowpass(TerraBox.lowpass(picked, 20000f, rate), 20000f, rate).maxOf { abs(it) }.toDouble()
+            } else if (curves == null) pLimited.maxOf { abs(it) }.toDouble() else {
                 val ref = body(st, pl, width, tune, decay, rate, frames, null)
                 val refPeak = peakOf(ref)
                 val unstruck = DoubleArray(frames) { (if (refPeak > 1e-12) ref[it] / refPeak * st.bodyGain else 0.0) + (if (skinPeak > 1e-12) skin[it] / skinPeak * st.skinLevel * v * v else 0.0) }
@@ -407,6 +503,51 @@ internal object TerraFitted {
         }
         return out
     }
+
+    /** The knock's force at the picked contact (1 ms): the prototype's. */
+    private const val KNOCK_FORCE = 0.95
+
+    /** 0.25 s: the knock's modes ring 20 ms at the most (its T60 at 380 Hz), so this holds all of it. */
+    private const val KNOCK_SECONDS = 0.25
+
+    /** The knock's mode groups per (seed, f01, rate), one per octave, each with the gain that puts its energy where the reference has it. */
+    private val knockGroups = java.util.concurrent.ConcurrentHashMap<Triple<Int, Double, Int>, List<Pair<List<TerraHands.HeadMode>, Double>>>()
+
+    /**
+     * One knock at unit peak: the head's modes over [Knock.loHz] (an [Knock.f01] head moved by TUNE), struck
+     * at the centre with [force], each octave at its calibrated gain, high-passed at [Knock.highPassHz] (a
+     * spike this short leaks into the bass as a step does; the reference's knock has little below 250 Hz).
+     * The gains are calibrated once, at the picked contact's force, on the knock's first 6 ms (the window
+     * its spectrum was measured in), so a duller contact keeps them and sounds duller.
+     */
+    private fun knockWave(k: Knock, seed: Int, tune: Double, force: Float, rate: Int): DoubleArray {
+        val impacts = KNOCK_IMPACTS
+        val groups = knockGroups.getOrPut(Triple(seed, k.f01 * tune, rate)) {
+            val modes = TerraHands.headModes(k.f01 * tune, impacts, k.t60, tilt = 0.4, floor = 0.004, seed = seed).filter { it.hz > k.loHz * tune }
+            val w = (0.006 * rate).toInt()
+            k.octaves.map { (lo, hi, db) ->
+                val group = modes.filter { it.hz >= lo * tune && it.hz < hi * tune }
+                val y = if (group.isEmpty()) FloatArray(0) else TerraHands.ringHead(group, impacts, KNOCK_FORCE.toFloat(), 1f, rate, w)
+                var e = 0.0
+                for (x in y) e += x.toDouble() * x
+                group to (if (e > 0.0) sqrt(10.0.pow(db / 10.0) / e) else 0.0)
+            }
+        }
+        val frames = (KNOCK_SECONDS * rate).toInt()
+        val sum = FloatArray(frames)
+        for ((group, gain) in groups) {
+            if (gain == 0.0) continue
+            val y = TerraHands.ringHead(group, impacts, force, 1f, rate, frames)
+            for (i in sum.indices) sum[i] += (y[i] * gain).toFloat()
+        }
+        val hp = TerraBox.highpass(sum, (k.highPassHz * tune).toFloat(), rate)
+        var pk = 0f
+        for (x in hp) pk = max(pk, abs(x))
+        return DoubleArray(frames) { if (pk > 1e-12f) hp[it] / pk.toDouble() else 0.0 }
+    }
+
+    /** The fingertip on the syahi: the head's centre, out to a quarter of its radius. */
+    private val KNOCK_IMPACTS = listOf(TerraHands.Impact(0.0, 0.25, 1.0, 0.0))
 
     /** The skin's Bessel modes per (seed, f01, T60): the strip weights are the costly part and only TUNE moves them. */
     private val skinModes = java.util.concurrent.ConcurrentHashMap<Triple<Int, Double, Double>, List<TerraHands.HeadMode>>()
