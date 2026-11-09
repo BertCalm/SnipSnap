@@ -23,6 +23,8 @@ renderer and original audition recipes are preserved. The broader
 remaining voice, articulation, kit, round-robin and chord requirements;
 [Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
 
+TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
+
 ## The loop
 
 ```

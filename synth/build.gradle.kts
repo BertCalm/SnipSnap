@@ -3456,3 +3456,13 @@ tasks.register<JavaExec>("generateVelourKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
+
+tasks.register<JavaExec>("generateTriadAudition") {
+    group = "distribution"
+    description = "Render the shared-bus TRIAD groove, dry stems and three rig comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-audition")
+}
