@@ -162,3 +162,5 @@ The dry Jungle core now has a deeper kick sweep, lower and longer main snare, br
 Nine synth tests and the three-kit save/playback/SFZ integration passed. The 131-clip/262-WAV asset validation and DOM-mock control checks passed. All 16 reference hits exactly match v4, and every Dub/Electro exported WAV remains byte-identical. Measured raw-render energy between 30 and 150 ms is 1.95× for the kick, 4.28× for the main snare and 8.69× for the alternate snare versus v4; these measurements do not establish listening acceptance.
 
 The listening ZIP is 24,845,017 bytes. Browser decoding, owner listening and device checks remain pending. MPC hardware round robin still needs the chain-WAV slice map; the earlier emulator CI failure remains unresolved.
+
+Published audition source: `526d6e2568dbedf72859fd23ed4db1ec48fadebf`; deployment `appgdep_6af20de182248191b21e9fcecdb39ed3` succeeded.
