@@ -1,6 +1,6 @@
 # HALOBAR crotales
 
-Status: native implementation; measurements and listening gate in progress.
+Status: native implementation and measured audition published; owner listening pending.
 Repository baseline: `49d3f3013b8e0a0cb1d9fa5fd2e37e7d4eff9d53`, the
 reviewable glockenspiel follow-up in #1003. This addition depends on that work.
 
@@ -55,6 +55,13 @@ band-limited contact -> five damped disc-inspired modes @ 176.4 kHz
                        v
                DC removal -> house level -> finite fade
 ```
+
+Delivery remains mono 44.1 kHz, with a 4x source and nonlinear return.
+`Tide.bandLimit` then `Dsp.decimate` reduce the dry and echo signals before
+phase motion and the FIR halo at the delivery rate. DC removal, house loudness
+and the finite fade finish the mix. Each note and its tail last at most twelve
+seconds. A long file may receive the sampler's LOOP category; it has no
+seamless loop region or sampler loop markers.
 
 The shared return never re-excites the source. Its existing contraction proof
 still applies: feedback at most .84, non-expanding saturation and a unity-bounded
@@ -155,9 +162,69 @@ make those risks reviewable. No sound has been heard by the implementing tool.
   CLI, JSON, picker and root-stepper integration paths were read in the repo.
 - Proposed: ratios, weights, losses, contact and register are musical design
   choices pending listening.
-- Measured: see the completed as-built record below when validation finishes.
+- Measured: see the completed as-built record and validation ledger below.
 - Heard: original three voices have prior owner approval. Crotales listening,
   phone performance and physical MPC loading remain open.
+
+## As built, 2026-11-09
+
+The [crotales audition](https://halobar-native-audition.bertcalm.chatgpt.site/crotales/) and separate sixteen-pad MPC
+study kit are published. The preceding four voices remain available. The
+original twelve factory recipes retain their prior approval; crotales studies
+have no listening verdict yet.
+
+| Measurement | Native result |
+|---|---:|
+| Individual clips | 71 |
+| Crotales measured pitch cases | 10 |
+| Largest absolute root error | 1.503 cents |
+| Minimum root confidence | 0.957 |
+| Fresh render median / p95 | 286.8 / 315.4 ms |
+| Positive SPACE edit median / p95 | 13.0 / 14.5 ms |
+
+Timing used 21.0.13+9-LTS, four visible processors, thirty measurements after
+eight warm-ups. Fresh preparation remains above the 50 ms playability target;
+prepared SPACE edits meet it. The result does not establish phone performance.
+
+The complete `./gradlew --no-daemon test` command passed 9,227 cases across
+all nine JVM modules, with zero failures, errors or skips and no test exclusions.
+The command was repeated after moving only the unchanged audition-task
+registration beside its HALOBAR sibling to resolve a textual conflict after
+#1003 merged. Production and test Kotlin/Java sources stayed byte-identical;
+unchanged Test inputs reuse the completed full execution. The separate 25-case focused run passed
+after the contact corrections described above; its cases are not added to the
+complete run's count. Android assembly and device-test compilation passed,
+and the APK's v2 signature verified. On-device execution remains unverified.
+
+All 195 accepted Float32 reference cases and 69 preceding glockenspiel cases
+still match. The 179 approved audition WAVs and 153 recipes remain byte-identical,
+as do all 163 preceding glockenspiel assets locally. All twelve factory parameter
+maps match. Every new audition clip replays exactly through the production
+renderer, and all sixteen exported MPC samples regenerate byte-identically
+from their saved PadRecipes. Physical MPC loading remains open.
+
+The first Site archive exceeded the host's 256 MiB expanded limit. The final
+bundle removes only the unlinked duplicate unpacked study-kit folders and
+uses lossless FLAC for the 71 new streamed clips. Decoded PCM16 was checked
+byte-for-byte against every native WAV. The [delivery hash table](../reference/halobar/crotales-hosted-pcm.tsv)
+records both containers and their common decoded PCM16 hash. Phrase WAVs, source recipes, study-kit
+ZIP downloads, all original audition WAVs and recipes, and all 69 prior glockenspiel clips
+retain their exact bytes. The expanded hosted bundle is 225,805,797
+bytes. The complete offline audition archive retains native WAVs and unpacked
+kits. All three hosted pages passed local link checks. Browser QA was unavailable.
+
+The [validation ledger](../reference/halobar/crotales-native-validation.json)
+records the actual command exits, timing distributions, source and APK hashes,
+two earlier contact-probe failures, final numerical result and published Site.
+The fixed tested code tree is `e5a653f2c88239053d4c617b6675955ed11750f6`, published as
+[`045e17a68`](https://github.com/BertCalm/SnipSnap/commit/045e17a6817c537baed118ba192304a82d47058d).
+The [71-case fixture](../reference/halobar/crotales-native-parity.tsv) replays
+with `NativeReplay.java`, passing `render` and the label
+`"provisional crotales audition"` after the TSV path. The glockenspiel and
+foundation ledgers remain historical records of their own builds.
+
+Tubular bells remain planned. Crotales listening, phone performance and MPC
+hardware loading remain open.
 
 ## Why it is built this way
 

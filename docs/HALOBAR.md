@@ -19,7 +19,7 @@ recipe. Its dub is inside the engine; the external effects rack starts dry.
 
 | Control | Default | What moves |
 |---|---:|---|
-| TUNE | .50 | Note, snapped to semitones; C4 at the middle |
+| TUNE | .50 | Note, snapped to semitones within each voice's register |
 | TOUCH | .40 | Mallet contact duration and attack noise |
 | RATE | .45 | Six rhythmic delay divisions at a fixed 72 BPM reference |
 | RETURN | .45 | Feedback amount, saturation and progressively darker repeats |
