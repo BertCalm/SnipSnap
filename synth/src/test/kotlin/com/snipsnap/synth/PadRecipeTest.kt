@@ -37,6 +37,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
         RivetPatch("Industrial kick", RivetVoice.KICK),

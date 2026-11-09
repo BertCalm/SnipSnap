@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `BACKWASH replays every saved drum byte for byte`() {
+        for (voice in BackwashVoice.entries) {
+            val patch = BackwashPatch("Canary", voice, Backwash.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `Velour approved source and both saved boards replay byte for byte`() {
         val source = VelourKits.source(VelourKits.roles[0])
         for (type in listOf(BoardType.VELOUR, BoardType.VELOUR_BLOOM)) {

@@ -80,20 +80,25 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 80 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 81 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
-SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET and FIRED BRONZE.
+SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE and BACKWASH.
 
 RIVET supplies six industrial drum voices and sixteen accepted factory sounds.
 TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS shape each finite hit; VELOCITY
 changes the strike. Saved recipes retain the renderer version and strike strength.
 FRESH TAPE → RIVET WORKSHOP / FACTORY / WAREHOUSE supplies the same sixteen
 pads in three rooms, each with soft, middle and hard layers and a shared hat mute group.
+
+BACKWASH provides five drum voices and 36 factory presets: sixteen drawn from its
+model-3 MPC kit and twenty stronger processing presets. The core sound, tighter drums, tom tunings and moving-double
+variants retain the published audio. Each voice opens with its heard default;
+TOM starts with Mid Tom. Factory selection fills the six existing controls.
 
 WICK provides PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE, with six factory
 presets each. ROOT, native VELOCITY and RATTLE BODY survive preset recall,
@@ -957,3 +962,33 @@ The four faces were fetched from Google Fonts (open licenses — OFL /
 Apache 2.0 families). Fine for development and sideloaded test builds;
 before any public release, confirm each family's license on its Google
 Fonts page and bundle the license texts.
+
+### BACKWASH phone preview
+
+Build the separately installable ARM64 trial and its instrumentation package:
+
+```
+./gradlew --no-daemon -PbackwashPreviewBuild=true \
+  -PsnipsnapTestBuildType=backwashPreview \
+  :app:assembleBackwashPreview :app:assembleBackwashPreviewAndroidTest
+```
+
+The opt-in variant uses application ID `com.snipsnap.app.backwashpreview`,
+launcher label **SnipSnap Backwash Preview**, and Android 10+ / ARM64 support.
+It retains all sixteen model-3 BACKWASH factory presets and adds twenty model-4
+processing presets: Seasick, Clamped, Overloaded and Pushed for each voice.
+Its app data is separate from the established development package.
+
+On an attached ARM64 device, run the targeted editor test with:
+
+```
+./gradlew -PbackwashPreviewBuild=true -PsnipsnapTestBuildType=backwashPreview \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.NewEngineSynthScreenTest#backwashRestoresItsDrumVoiceAndSixControls \
+  :app:connectedBackwashPreviewAndroidTest
+```
+
+Manual trial: open SYNTH, choose BACKWASH, select SNARE and Tight Snare,
+confirm DAMP .90, preview the hit, and move TRAIL. Leave and return to check
+restoration. Then compare the five core voices and send a chosen sound to a
+pad. Phone render latency, playback stability and this instrumentation test
+need actual device execution; an assembled APK does not establish those results.

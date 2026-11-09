@@ -3311,6 +3311,57 @@ tasks.register<JavaExec>("generateDiveAudition") {
     args("${rootDir}/testkit/dive-audition")
 }
 
+tasks.register<JavaExec>("generateBackwashAudition") {
+    group = "distribution"
+    description = "Render Backwash drum candidates, stage comparisons, recipes and metrics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/backwash-audition")
+}
+
+tasks.register<JavaExec>("generateBackwashNeighborhood") {
+    group = "distribution"
+    description = "Render small editable variations around the owner-preferred Backwash source."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashNeighborhoodGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/backwash-neighborhood")
+}
+
+tasks.register<JavaExec>("generateBackwashKit") {
+    group = "distribution"
+    description = "Export the model-3 Backwash MPC trial with 48 strike layers and verified playback."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/backwash-kit")
+}
+
+tasks.register<JavaExec>("generateBackwashProcessing") {
+    group = "distribution"
+    description = "Render stronger processing around the preserved Backwash model-3 kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashProcessingGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/backwash-processing")
+}
+
+
+tasks.register<JavaExec>("generateBackwashPushedKit") {
+    group = "verification"
+    description = "Export the approved stronger Backwash processing as a 16-pad MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashKitGenerator")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-pushed-kit", "pushed")
+}
+
 tasks.register<JavaExec>("generateHalobarKit") {
     group = "distribution"
     description = "Render the HALOBAR vibraphone, marimba and xylophone listening kit."

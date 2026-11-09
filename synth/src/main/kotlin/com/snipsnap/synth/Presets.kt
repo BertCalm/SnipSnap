@@ -17,6 +17,8 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        BackwashPatch.ENGINE -> BackwashVoice.entries.firstOrNull { it.name == voice }
+            ?.let(BackwashPresets::forVoice) ?: emptyList()
         HalobarPatch.ENGINE -> HalobarVoice.entries.firstOrNull { it.name == voice }
             ?.let(HalobarPresets::forVoice) ?: emptyList()
         FiredBronzePatch.ENGINE -> FiredBronzeDryKit.Pad.entries.firstOrNull { it.name == voice }
@@ -347,7 +349,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

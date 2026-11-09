@@ -91,6 +91,14 @@ android {
             applicationIdSuffix = ".brassgrow"
             versionNameSuffix = "-development"
         }
+        if (providers.gradleProperty("backwashPreviewBuild").getOrElse("false").toBooleanStrict()) create("backwashPreview") {
+            // Keep the listening trial separate from the existing development app and shelf.
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".backwashpreview"
+            versionNameSuffix = "-backwash-preview"
+            matchingFallbacks += listOf("debug")
+            ndk { abiFilters += "arm64-v8a" }
+        }
         if (creaseStudyEnabled) create("creaseStudy") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".creasestudy"

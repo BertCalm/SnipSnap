@@ -3354,6 +3354,22 @@ fixed by compilation. An additional automatic VERSIONS metadata/audio mismatch
 is documented in [ONSET_VERSION_HISTORY_LIMIT](ONSET_VERSION_HISTORY_LIMIT.md).
 See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-03-onset-native-extension-design.md).
 
+### BACKWASH factory bank (2026-11-08)
+
+Owner-requested picker engine: damped drum sources → resonant chorus → parallel
+compression → amp. Five drum voices, six macros, finite one-shots. Existing
+UNDERTOW is unrelated and unchanged. Model 3 now has the sixteen heard kit
+recipes in the factory roster, with a 48-layer MPC 3/MPC 2 trial export.
+Phone timing, device UI execution and confirmed MPC hardware validation remain pending; see [BACKWASH](BACKWASH.md) and
+[spec](superpowers/specs/2026-11-07-backwash-drum-engine-design.md).
+
+
+BACKWASH processing promotion (2026-11-08): owner-approved Seasick, Clamped,
+Overloaded and Pushed treatments now supply 20 additional factory presets.
+Processing model 4 extends upper macro ranges; saved model-3 recipes retain a
+frozen renderer. A separate 16-pad/48-layer stronger kit and updated Android
+preview accompany the promotion; hardware validation remains pending.
+
 Backroom update: the user-accepted More Snap recipes now feed the six-pad candidate and its velocity layers. A separate four-bar phrase adds a second-bar variation and turnaround; the accepted two-bar render is retained. Factory promotion awaits MPC checks. See `docs/BOOM_BAP.md`.
 
 Backroom controls: an explicit SKIN SNARE model 2 maps Attack, Body, Wire and Brightness around the accepted More Snap midpoint. Original SKIN patches remain model 1. The two heard pair surfaces have 150 PCM24 regression pins; all-four interactions resolve centrally. See `docs/BOOM_BAP.md`.

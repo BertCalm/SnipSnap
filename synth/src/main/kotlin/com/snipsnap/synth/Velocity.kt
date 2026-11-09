@@ -239,6 +239,7 @@ object Velocity {
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is FiredBronzePatch -> FiredBronzeInstrument.macros
         is SkinPatch -> patch.macroSpecs()
+        is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
@@ -490,6 +491,7 @@ object Velocity {
         // its wire excitation; hats, ride and shaker retain their macro response.
         is FiredBronzePatch -> FiredBronzeInstrument.render(patch.voice, patch.macros, v)
         is SkinPatch -> if (patch.voice in Skin.STRUCK) patch.render(velocity = v) else null
+        is BackwashPatch -> patch.render(v)
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
