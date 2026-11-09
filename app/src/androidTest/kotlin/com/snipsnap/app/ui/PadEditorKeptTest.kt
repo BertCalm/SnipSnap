@@ -89,6 +89,10 @@ class PadEditorKeptTest : ComposeScreenTest() {
         compose.onNodeWithText("BECOME 0.0").performClick()
         compose.onNodeWithText("MOVE REAMP").performClick()
         compose.onNodeWithText("DRAFT $DEFAULT").performClick()
+        // setPhoneContent freezes the clock, and performClick only waitForIdle's.
+        // With autoAdvance off that does not run the frame, so the new text is
+        // not composed until pump(), the same wait the other assertions here use.
+        pump()
         compose.onNodeWithText("DRAFT $STAGED").assertExists()
         toolAndBack()
         compose.onNodeWithText("DRAFT $STAGED").assertExists()
