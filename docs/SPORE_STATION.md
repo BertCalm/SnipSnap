@@ -100,3 +100,16 @@ mock-DOM smoke test; this does not verify browser audio decoding.
 Cloud JVM full-grid build times were 4,674.5 ms (Jungle), 4,985.2 ms (Dub)
 and 3,782.3 ms (Electro), each including 18 pads × 9 takes and the authored
 phrases. These are full-kit generation costs, not single-knob or phone timings.
+
+The published v2 manifest's source hashes identify the render sources in
+SnipSnap commit `de51f10bc9ab096e9611870611401055f3fc81a4`. Subsequent
+verification notes, the signed-zero silence assertion and the object-level
+provenance comment do not change audio.
+
+V2 verification: 624 kit tests, 439 loop tests, 306 CLI tests and 40 focused
+synthesis/articulation tests passed. The complete 83-starter preflight,
+shelf/convention checks and Spore save/playback/SFZ integration checks passed
+after updating the starter expectations and accepting either signed zero as
+silence. The final targeted-plus-CLI command exited 0. The earlier broad shell
+run exercised 2,266 tests; its stale registration expectations were corrected
+and rerun. The full synthesis suite was not repeated for v2.

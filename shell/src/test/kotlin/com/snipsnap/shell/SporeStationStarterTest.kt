@@ -31,7 +31,7 @@ class SporeStationStarterTest {
                             val original = expected[i].velocityTakes[z][t % 3]
                             if (i >= 16) {
                                 assertEquals((4.0 * 60 / genre.bpm * 44100).toInt(), original.frameCount)
-                                assertEquals(0f, original.samples.last())
+                                assertEquals(0f, kotlin.math.abs(original.samples.last()), "either signed zero is silence")
                             }
                             assertTrue(original.samples.all { it.isFinite() })
                             assertTrue(original.peak() in .00001f..1.00001f)

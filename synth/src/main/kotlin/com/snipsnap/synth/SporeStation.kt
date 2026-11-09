@@ -4,7 +4,8 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.kit.ArrangedPad
 import kotlin.math.ln
 
-/** A curated 170 BPM kit, not a new synthesis engine. All motion is saved in ordinary recipes. */
+/** A curated drum family built from existing engines, not a new synthesis engine.
+ * Single-hit audition studies retain recipes; shelf grids retain complete audio and provenance. */
 object SporeStation {
     const val BPM = 170
     const val VERSION = 2
