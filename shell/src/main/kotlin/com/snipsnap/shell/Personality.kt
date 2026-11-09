@@ -1690,6 +1690,31 @@ object Copy {
     const val SONG_ROW_PULL_UP = "PULL-UP IN"
     /** BASS turned on in a kit with no Answer bassline: kept for when there is one, and said. */
     const val SONG_BASS_NONE_YET = "BASS IS ON, BUT THIS KIT HAS NO ANSWER BASSLINE YET. MAKE ONE AND IT PLAYS HERE."
+    /**
+     * Live play (song plan Phase 2): PLAY starts at the selected section,
+     * LOOP names its state in words, a row tapped while playing is played
+     * next and says NEXT, and KEEP THIS ORDER makes what was played the song.
+     */
+    const val SONG_PLAY = "► PLAY"
+    const val SONG_STOP = "■ STOP"
+    const val SONG_LOOP_ON = "LOOP ON"
+    const val SONG_LOOP_OFF = "LOOP OFF"
+    const val SONG_KEEP_ORDER = "KEEP THIS ORDER"
+    const val SONG_ROW_NEXT = "NEXT"
+    /** PLAY when a section past the first is selected: `► FROM 3`. */
+    fun songPlayFrom(number: Int): String = if (number <= 1) SONG_PLAY else "► FROM $number"
+    /** PLAY's spoken name: where it starts. */
+    fun songA11yPlayFrom(number: Int, name: String): String = "PLAY FROM SECTION $number, ${name.uppercase(java.util.Locale.ROOT)}"
+    /** The line under the song while it plays. A sentence. */
+    const val SONG_CAPTION_PLAYING = "TAP A SECTION TO PLAY IT NEXT. IT STARTS WHEN THE PATTERN PLAYING NOW COMES ROUND."
+    /** KEEP THIS ORDER with nothing played since the song last changed. */
+    const val SONG_KEEP_NOTHING = "PLAY THE SONG FIRST. KEEP THIS ORDER KEEPS THE SECTIONS IN THE ORDER YOU PLAYED THEM."
+    /** KEEP THIS ORDER when what was played is the song as it stands. */
+    const val SONG_KEEP_SAME = "YOU PLAYED THE SONG AS IT STANDS, SO THE ORDER IS UNCHANGED."
+    /** KEEP THIS ORDER's landing: the song is now [sections] long; [left] passes past the song's limit were not kept. */
+    fun songKeptOrder(sections: Int, left: Int, max: Int): String =
+        "KEPT THE ORDER YOU PLAYED: ${countOf(sections, "SECTION", "SECTIONS")}." +
+            if (left > 0) " A SONG HOLDS $max SECTIONS, SO THE LAST ${countOf(left, "PASS", "PASSES")} WERE LEFT OUT." else ""
     /** What UNDO names for the edits that have no button label of their own ([songUndo]); the others are named by theirs. */
     const val SONG_VERB_REORDER = "REORDER"
     const val SONG_VERB_REPEATS = "REPEATS"

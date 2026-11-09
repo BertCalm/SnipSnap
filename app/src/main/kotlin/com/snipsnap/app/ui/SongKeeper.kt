@@ -247,6 +247,28 @@ internal class SongKeeper(
         }
     }
 
+    /**
+     * KEEP THIS ORDER: [played] (the section of every pass heard, in order,
+     * from [com.snipsnap.shell.SongCursor.played]) becomes the song, each
+     * run of one section kept as that section played that many times. It is
+     * an edit like any other, so UNDO puts the song back.
+     */
+    fun keepOrder(played: List<Int>) {
+        val k = kept ?: return
+        val laid = plan ?: return
+        if (played.isEmpty() || played.any { it !in laid.sections.indices } || laid.sections.size != k.sections.size) {
+            toast(Copy.SONG_KEEP_NOTHING)
+            return
+        }
+        val made = Arranger.playedOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
+        if (made.plan == k) {
+            toast(Copy.SONG_KEEP_SAME)
+            return
+        }
+        edit(Copy.SONG_KEEP_ORDER, made.plan, 0)
+        toast(Copy.songKeptOrder(made.plan.sections.size, made.left, SongPlan.MAX_SECTIONS))
+    }
+
     /** Puts back the song before the last edit. */
     fun undo() {
         val last = undoStack.lastOrNull() ?: return

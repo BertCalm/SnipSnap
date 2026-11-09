@@ -1089,4 +1089,60 @@ class ArrangerTest {
             if (turns == 0) assertTrue(mix.snip.samples.contentEquals(plain.snip.samples), "no turn, no pull-up")
         }
     }
+
+    @Test
+    fun `every pass of every section is on the grid, and the passes run end to end`() {
+        val m = model("Passes")
+        val drafted = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val plan = Arranger.resolve(m.kit, m.kitDir, drafted.withRepeats(1, 3)!!).arrangement
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+        assertEquals(plan.sections.sumOf { it.repeats }, mix.passes.size, "one pass per time through")
+        val framesPerPulse = 60.0 / com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm) * com.snipsnap.kit.KitPreview.RATE / Mpc3Clip.PULSES_PER_BEAT
+        var pulses = 0L
+        var k = 0
+        for ((i, s) in plan.sections.withIndex()) {
+            for (r in 0 until s.repeats) {
+                val p = mix.passes[k++]
+                assertEquals(i, p.section)
+                assertEquals((pulses * framesPerPulse).roundToInt(), p.start, "section $i pass $r on its bar")
+                pulses += s.clip.lengthPulses
+                assertEquals((pulses * framesPerPulse).roundToInt(), p.end, "section $i pass $r ends on the next bar")
+            }
+        }
+        assertEquals(mix.sectionStarts, plan.sections.indices.map { i -> mix.passes.first { it.section == i }.start })
+        assertTrue(mix.passes.zipWithNext().all { (a, b) -> a.end == b.start }, "no gap and no overlap between passes")
+    }
+
+    private fun sections(vararg names: String) = SongPlan(7, names.map { PlanSection(it, ClipRef.CAPTURED, repeats = 1) })
+
+    @Test
+    fun `KEEP THIS ORDER keeps each run of a section as that section played that many times`() {
+        val kept = sections("intro", "theme", "the turn").let { it.withLock(1, true)!!.withBass(2, true)!! }
+        val made = Arranger.playedOrder(kept, listOf(1, 1, 1), listOf(1, 1, 0, 2, 2, 1))!!
+        assertEquals(listOf("theme" to 2, "intro" to 1, "the turn" to 2, "theme" to 1), made.plan.sections.map { it.name to it.repeats })
+        assertEquals(kept.sections[1].copy(repeats = 2), made.plan.sections[0], "the lock, seed and flags go with it")
+        assertEquals(kept.sections[2].copy(repeats = 2), made.plan.sections[2])
+        assertEquals(7, made.plan.seed)
+        assertEquals(0, made.left)
+        assertNull(Arranger.playedOrder(kept, listOf(1, 1, 1), emptyList()), "nothing played keeps nothing")
+    }
+
+    @Test
+    fun `a song played straight through keeps the song it was`() {
+        val kept = sections("intro", "theme").withRepeats(1, 3)!!
+        assertEquals(kept, Arranger.playedOrder(kept, listOf(1, 1), listOf(0, 1, 1, 1))!!.plan)
+    }
+
+    @Test
+    fun `a run longer than one sequence holds is split, and a song past its limit says what was left out`() {
+        val kept = sections("theme")
+        // One sequence holds 64 bars, so a 16-bar clip plays at most 4 times in one section.
+        val long = Arranger.playedOrder(kept, listOf(16), List(10) { 0 })!!
+        assertEquals(listOf(4, 4, 2), long.plan.sections.map { it.repeats })
+        val many = sections("a", "b")
+        val alternating = List(SongPlan.MAX_SECTIONS + 3) { it % 2 }
+        val cut = Arranger.playedOrder(many, listOf(1, 1), alternating)!!
+        assertEquals(SongPlan.MAX_SECTIONS, cut.plan.sections.size)
+        assertEquals(3, cut.left)
+    }
 }

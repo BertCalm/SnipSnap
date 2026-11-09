@@ -473,8 +473,54 @@ object Arranger {
 
     // ---- the mixdown (KK3) ------------------------------------------------
 
-    /** The stitched song plus where each section starts, in frames. */
-    data class Mix(val snip: Snip, val sectionStarts: List<Int>)
+    /**
+     * The stitched song plus where each section starts, in frames, and
+     * [passes]: every time through every section's clip, in song order, on
+     * the same grid. Live play ([SongCursor]) moves between passes.
+     */
+    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList())
+
+    /**
+     * One time through [section]'s clip: frames [start] until [end] of the
+     * mix, on the grid. A section played three times is three passes.
+     */
+    data class Pass(val section: Int, val start: Int, val end: Int)
+
+    /**
+     * What a played run of passes makes as a song: [plan], and how many
+     * passes did not fit ([left]) once the song reached
+     * [SongPlan.MAX_SECTIONS] sections.
+     */
+    data class Played(val plan: SongPlan, val left: Int)
+
+    /**
+     * KEEP THIS ORDER: the song [played] makes, where [played] names the
+     * section of every pass heard, in order, and [clipBars] is each
+     * section's clip length. Each run of one section becomes that section
+     * (its clip, lock, seed, BASS and PULL-UP) played that many times. A run
+     * longer than one sequence holds ([maxRepeats]) is split across copies.
+     * Null when nothing was played.
+     */
+    fun playedOrder(kept: SongPlan, clipBars: List<Int>, played: List<Int>): Played? {
+        if (played.isEmpty()) return null
+        val runs = mutableListOf<Pair<Int, Int>>()
+        for (s in played) {
+            val last = runs.lastOrNull()
+            if (last != null && last.first == s) runs[runs.lastIndex] = s to last.second + 1 else runs += s to 1
+        }
+        val out = mutableListOf<PlanSection>()
+        var left = 0
+        for ((s, count) in runs) {
+            val max = maxRepeats(clipBars[s])
+            var rest = count
+            while (rest > 0) {
+                val take = minOf(rest, max)
+                if (out.size < SongPlan.MAX_SECTIONS) out += kept.sections[s].copy(repeats = take) else left += take
+                rest -= take
+            }
+        }
+        return Played(SongPlan(kept.seed, out), left)
+    }
 
     /** The section a pull-up leads into, in the arranger's own draft. */
     private const val TURN = SectionNames.THE_TURN
@@ -576,7 +622,13 @@ object Arranger {
         val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, clips[last].notes, clips[last].lengthPulses, bpm, allowSilence = chancy).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
-        return Mix(song, starts)
+        val passes = plan.sections.indices.flatMap { i ->
+            val one = plan.sections[i].clip.lengthPulses
+            (0 until plan.sections[i].repeats).map { r ->
+                Pass(i, frameAt(startPulses[i] + r * one), frameAt(startPulses[i] + (r + 1) * one))
+            }
+        }
+        return Mix(song, starts, passes)
     }
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */

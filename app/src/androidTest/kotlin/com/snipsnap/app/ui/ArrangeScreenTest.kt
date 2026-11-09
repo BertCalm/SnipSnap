@@ -229,4 +229,44 @@ class ArrangeScreenTest : ComposeScreenTest() {
             runCatching { compose.onNodeWithContentDescription("SECTION 2:", substring = true).assertContentDescriptionContains(Copy.SONG_ROW_PULL_UP, substring = true) }.isSuccess
         }
     }
+
+    @Test
+    fun live_play_starts_at_the_selected_section_and_keep_this_order_keeps_what_was_played() {
+        val entry = grooveKit("SONG LIVE TEST")
+        val projectDir = File(entry.dir.parentFile, "project").apply { mkdirs() }
+        setPhoneContent {
+            CompositionLocalProvider(LocalReduceMotion provides true) {
+                ArrangeScreen(entry = entry, backLabel = "◄ BEAT", onBack = {}, onToast = {}, projectDir = projectDir)
+            }
+        }
+        waitFor("the plan to be kept", timeoutMillis = 30_000) { SongPlanStore.load(projectDir, entry.dir.name) != null }
+        val before = SongPlanStore.load(projectDir, entry.dir.name)!!
+        // Nothing has played, so there is nothing to keep.
+        button(Copy.SONG_KEEP_ORDER).assertIsNotEnabled()
+        // LOOP says its state in words.
+        button(Copy.SONG_LOOP_OFF).performClick()
+        pump()
+        button(Copy.SONG_LOOP_ON).performClick()
+        pump()
+        button(Copy.SONG_LOOP_OFF).assertExists()
+
+        // PLAY starts where the selection is.
+        compose.onNodeWithContentDescription("SECTION 3:", substring = true).performClick()
+        pump()
+        compose.onNodeWithContentDescription("PLAY FROM SECTION 3", substring = true).performClick()
+        waitFor("the song to mix and play", timeoutMillis = 60_000) { runCatching { button(Copy.SONG_STOP).assertExists() }.isSuccess }
+        // A row tapped while playing plays next, and says so.
+        compose.onNodeWithContentDescription("SECTION 1:", substring = true).performClick()
+        pump()
+        compose.onNodeWithContentDescription("SECTION 1:", substring = true).assertContentDescriptionContains(Copy.SONG_ROW_NEXT, substring = true)
+
+        // KEEP THIS ORDER stops and keeps what was heard: at the least, section 3 first.
+        button(Copy.SONG_KEEP_ORDER).assertIsEnabled().performClick()
+        waitFor("the played order to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name) != before
+        }
+        val after = SongPlanStore.load(projectDir, entry.dir.name)!!
+        assertEquals(before.sections[2].name, after.sections[0].name)
+        button(Copy.songUndo(Copy.SONG_KEEP_ORDER)).assertIsEnabled()
+    }
 }

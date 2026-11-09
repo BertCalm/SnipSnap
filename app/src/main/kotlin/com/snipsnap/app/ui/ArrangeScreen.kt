@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
-import com.snipsnap.app.MixVoice
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -84,9 +82,13 @@ import kotlinx.coroutines.withContext
  * Every section states the rule that picked its clip
  * ([Arranger.Section.reason]) — tap a row to read it in the LCD readout
  * below the list; during playback the readout follows whichever section
- * is actually sounding, tracked by a wall-clock estimate against the
- * mixdown's own section-start frames (cosmetic only — [MixVoice] is the
- * transport of record, this is just what draws the needle).
+ * the speaker is playing.
+ *
+ * Playing is live ([LivePlay], song plan Phase 2): PLAY starts at the
+ * selected section, LOOP repeats the section playing, a row tapped while
+ * playing plays next (when the pattern playing comes round), and KEEP THIS
+ * ORDER makes the sections heard, in the order heard, the song. All of it
+ * moves through the one cached mix, so nothing renders twice.
  *
  * The song is the person's to keep and change ([SongKeeper]): reorder,
  * repeats, swap a section's clip for any other the kit can play (BEAT's
@@ -129,26 +131,16 @@ fun ArrangeScreen(
     // EXPORT is writing; PLAY and REROLL wait, so no second render starts beside it.
     var exporting by remember(kitDir) { mutableStateOf(false) }
 
-    var voice by remember(kitDir) { mutableStateOf<MixVoice?>(null) }
-    var playing by remember(kitDir) { mutableStateOf(false) }
-    var posSeconds by remember(kitDir) { mutableFloatStateOf(0f) }
-
-    fun stopPlayback() {
-        voice?.stop()
-        voice = null
-        playing = false
-        posSeconds = 0f
-    }
-    DisposableEffect(kitDir) { onDispose { voice?.release() } }
-    // An edit makes a different song: what was playing is the old one.
-    LaunchedEffect(plan) { stopPlayback() }
+    // Live play: from the selected section, LOOP, a tapped row next, KEEP THIS ORDER.
+    val live = remember(kitDir) { LivePlay() }
+    val playing = live.playing
+    fun stopPlayback() = live.stop()
+    DisposableEffect(kitDir) { onDispose { live.release() } }
+    // An edit makes a different song: what was playing, and what was played, are the old one's.
+    LaunchedEffect(plan) { live.forget() }
 
     fun playMix(m: Arranger.Mix) {
-        val v = MixVoice(m.snip.samples, m.snip.sampleRate)
-        voice = v
-        posSeconds = 0f
-        playing = true
-        v.start()
+        live.start(m, keeper.selected.coerceIn(0, (m.sectionStarts.size - 1).coerceAtLeast(0)))
     }
 
     fun togglePlay() {
@@ -224,26 +216,22 @@ fun ArrangeScreen(
         keeper.reroll()
     }
 
-    // The needle: a wall-clock estimate of playback position, matched
-    // against the mixdown's own section-start frames. MixVoice is the
-    // actual transport; this only ever draws where it should be.
+    // KEEP THIS ORDER: what was heard becomes the song. While playing it stops first, so the take is what was heard up to the tap.
+    fun keepOrder() {
+        if (keeper.loading || mixing || exporting) return
+        live.stop()
+        keeper.keepOrder(live.take)
+    }
+
+    // The needle follows the speaker (LivePlay.tick), once a frame while playing.
     LaunchedEffect(playing, kitDir) {
         if (!playing) return@LaunchedEffect
-        var lastNanos = withFrameNanos { it }
-        while (isActive) {
-            withFrameNanos { now ->
-                val dtNanos = (now - lastNanos).coerceAtLeast(0)
-                lastNanos = now
-                posSeconds += dtNanos / 1_000_000_000f
-            }
-            val total = mix?.snip?.durationSeconds
-            if (total != null && posSeconds >= total) stopPlayback()
+        while (isActive && live.playing) {
+            withFrameNanos { }
+            live.tick()
         }
     }
-    val activeIndex = mix?.let { m ->
-        val frame = (posSeconds * m.snip.sampleRate).toInt()
-        m.sectionStarts.indexOfLast { it <= frame }.takeIf { it >= 0 }
-    }
+    val activeIndex = live.active
     val selectedIndex = keeper.selected.coerceIn(0, ((plan?.sections?.size ?: 1) - 1).coerceAtLeast(0))
     val readoutIndex = if (playing) (activeIndex ?: selectedIndex) else selectedIndex
 
@@ -283,21 +271,33 @@ fun ArrangeScreen(
                     readoutIndex = readoutIndex,
                     activeIndex = if (playing) activeIndex else null,
                     names = keeper.names,
-                    onTap = { keeper.selected = it },
+                    queued = if (playing) live.queued else null,
+                    onTap = {
+                        keeper.selected = it
+                        if (live.playing) live.queue(it)
+                    },
                     modifier = Modifier.weight(1f),
                 )
                 ReadoutPanel(currentPlan.sections.getOrNull(readoutIndex))
                 SongEditor(keeper, currentPlan.sections.getOrNull(selectedIndex), selectedIndex, currentPlan.sections.size, busy = mixing || exporting)
-                TransportRow(
-                    playing = playing,
+                val from = currentPlan.sections.getOrNull(selectedIndex)
+                LiveRow(
+                    live = live,
+                    from = selectedIndex + 1,
+                    fromName = from?.name ?: "",
                     mixing = mixing,
                     exporting = exporting,
                     onPlay = ::togglePlay,
+                    onKeep = ::keepOrder,
+                )
+                TransportRow(
+                    mixing = mixing,
+                    exporting = exporting,
                     onReroll = ::reroll,
                     onExport = ::exportSong,
                 )
                 TapeText(
-                    if (keeper.keeps) Copy.SONG_CAPTION_KEPT else Copy.SONG_CAPTION_NOT_KEPT,
+                    if (playing) Copy.SONG_CAPTION_PLAYING else if (keeper.keeps) Copy.SONG_CAPTION_KEPT else Copy.SONG_CAPTION_NOT_KEPT,
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     Modifier.fillMaxWidth(),
@@ -315,6 +315,8 @@ private fun SectionList(
     readoutIndex: Int,
     activeIndex: Int?,
     names: Map<Int, String>,
+    /** The section that plays next, while playing. */
+    queued: Int?,
     onTap: (Int) -> Unit,
     modifier: Modifier,
 ) {
@@ -331,6 +333,7 @@ private fun SectionList(
                 section = section,
                 selected = i == readoutIndex,
                 active = i == activeIndex,
+                next = i == queued,
                 names = names,
                 onTap = { onTap(i) },
             )
@@ -350,24 +353,59 @@ private fun ReadoutPanel(shown: Arranger.Section?) {
     }
 }
 
+/**
+ * PLAY from the selected section (or STOP), LOOP with its state in words,
+ * and KEEP THIS ORDER, which has something to keep once a play has been
+ * heard (or while one plays).
+ */
 @Composable
-private fun TransportRow(
-    playing: Boolean,
+private fun LiveRow(
+    live: LivePlay,
+    from: Int,
+    fromName: String,
     mixing: Boolean,
     exporting: Boolean,
     onPlay: () -> Unit,
+    onKeep: () -> Unit,
+) {
+    val scheme = LocalScheme.current
+    val playing = live.playing
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        ActionButton(
+            if (playing) Copy.SONG_STOP else if (mixing) Copy.ARRANGE_MIXING else Copy.songPlayFrom(from),
+            scheme,
+            enabled = !mixing && (playing || !exporting),
+            accessibilityLabel = if (playing || mixing) null else Copy.songA11yPlayFrom(from, fromName),
+            modifier = Modifier.weight(1f),
+            onClick = onPlay,
+        )
+        ActionButton(
+            if (live.loop) Copy.SONG_LOOP_ON else Copy.SONG_LOOP_OFF,
+            scheme,
+            enabled = true,
+            lit = live.loop,
+            modifier = Modifier.weight(1f),
+            onClick = live::toggleLoop,
+        )
+        ActionButton(
+            Copy.SONG_KEEP_ORDER,
+            scheme,
+            enabled = !mixing && !exporting && (playing || live.take.isNotEmpty()),
+            modifier = Modifier.weight(1.4f),
+            onClick = onKeep,
+        )
+    }
+}
+
+@Composable
+private fun TransportRow(
+    mixing: Boolean,
+    exporting: Boolean,
     onReroll: () -> Unit,
     onExport: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        ActionButton(
-            if (playing) "■ STOP" else if (mixing) Copy.ARRANGE_MIXING else "► PLAY",
-            scheme,
-            enabled = !mixing && (playing || !exporting),
-            modifier = Modifier.weight(1f),
-            onClick = onPlay,
-        )
         ActionButton(
             Copy.SONG_REROLL,
             scheme,
@@ -472,6 +510,7 @@ private fun SectionRow(
     section: Arranger.Section,
     selected: Boolean,
     active: Boolean,
+    next: Boolean,
     names: Map<Int, String>,
     onTap: () -> Unit,
 ) {
@@ -497,7 +536,8 @@ private fun SectionRow(
                     "${Copy.countOf(section.repeats, "TIME", "TIMES")}, ${Copy.countOf(section.bars, "BAR", "BARS")}" +
                     (if (section.locked) ", ${Copy.SONG_LOCKED}" else "") +
                     (if (section.bass) ", ${Copy.SONG_ROW_BASS}" else "") +
-                    (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else ""),
+                    (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else "") +
+                    (if (next) ", ${Copy.SONG_ROW_NEXT}" else ""),
             ) { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -512,6 +552,7 @@ private fun SectionRow(
                 // too, never a colour alone.
                 TapeText(
                     listOfNotNull(
+                        Copy.SONG_ROW_NEXT.takeIf { next },
                         "SELECTED".takeIf { selected },
                         Copy.SONG_LOCKED.takeIf { section.locked },
                         Copy.SONG_ROW_BASS.takeIf { section.bass },
