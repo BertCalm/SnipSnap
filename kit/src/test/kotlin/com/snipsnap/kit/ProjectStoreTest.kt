@@ -331,4 +331,59 @@ class ProjectStoreTest {
         ProjectStore.trash(shelf, "A")
         assertEquals(emptySet(), ProjectStore.released(shelf))
     }
+    @Test
+    fun `a kit renamed on the shelf is held under its new name, in place and still active`() {
+        val renamed = sampleProject().withKitRenamed("Funk Room", "Funk Den")
+        assertEquals(listOf("Kitchen", "Funk Den"), renamed.kits)
+        assertEquals("Funk Den", renamed.activeKit)
+        assertEquals(sampleProject(), sampleProject().withKitRenamed("Elsewhere", "Gone"), "a project not holding it is unchanged")
+        val both = Project("Both", listOf("A", "B"), activeKit = "A").withKitRenamed("A", "B")
+        assertEquals(listOf("B"), both.kits, "never held twice")
+        assertEquals("B", both.activeKit)
+    }
+
+    @Test
+    fun `following a kit rename rewrites every project that held it, its song and the bin's, and leaves the rest`() {
+        kitOnShelf("Kitchen")
+        kitOnShelf("Funk Den")
+        ProjectStore.save(shelf, sampleProject())
+        ProjectStore.save(shelf, Project("Other", listOf("Kitchen")))
+        val binned = Project("Asleep", listOf("Funk Room"))
+        ProjectStore.save(shelf, binned)
+        ProjectStore.trash(shelf, "Asleep")
+        val lateSet = ProjectStore.dir(shelf, "Late Set")
+        val song = SongPlan(0, listOf(PlanSection("theme", ClipRef.CAPTURED)))
+        SongPlanStore.save(lateSet, "Funk Room", song)
+        assertEquals(listOf("Funk Room"), ProjectStore.missingKits(shelf, sampleProject()), "the folder is already gone: this is the bug")
+
+        val followed = ProjectStore.followKitRename(shelf, "Funk Room", "Funk Den")
+
+        assertEquals(listOf("Late Set"), followed.updated.map { it.name }, "only live projects that held it")
+        assertTrue(followed.failed.isEmpty())
+        val late = ProjectStore.load(lateSet)
+        assertEquals(listOf("Kitchen", "Funk Den"), late.kits)
+        assertEquals("Funk Den", late.activeKit)
+        assertTrue(ProjectStore.missingKits(shelf, late).isEmpty(), "the kit is no longer gone")
+        assertEquals(song, SongPlanStore.load(lateSet, "Funk Den"))
+        assertNull(SongPlanStore.load(lateSet, "Funk Room"))
+        assertEquals(listOf("Kitchen"), ProjectStore.load(ProjectStore.dir(shelf, "Other")).kits)
+        val asleep = ProjectStore.binned(shelf).single()
+        assertEquals(listOf("Funk Den"), asleep.project.kits, "a restore finds the kit")
+    }
+
+    @Test
+    fun `a released kit stays released under its new name, and one bad project does not stop the rest`() {
+        ProjectStore.release(shelf, listOf("Loose"))
+        ProjectStore.save(shelf, Project("Holds", listOf("Loose 2")))
+        val broken = File(ProjectStore.projectsDir(shelf), "Broken").apply { mkdirs() }
+        File(broken, ProjectStore.FILE_NAME).writeText("{ not json")
+        ProjectStore.save(shelf, Project("Fine", listOf("Loose 2")))
+
+        val followed = ProjectStore.followKitRename(shelf, "Loose", "Free")
+        assertEquals(setOf("Free"), ProjectStore.released(shelf))
+        assertEquals(listOf(broken.name), followed.failed.map { it.name })
+
+        val again = ProjectStore.followKitRename(shelf, "Loose 2", "Bound")
+        assertEquals(setOf("Fine", "Holds"), again.updated.map { it.name }.toSet(), "the broken one did not stop the others")
+    }
 }
