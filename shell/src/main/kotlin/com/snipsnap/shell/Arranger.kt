@@ -186,6 +186,73 @@ object Arranger {
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
     }
 
+    /** A rerolled plan, and how many sections it redrew (a new clip, or a new take of a seeded one). */
+    data class Rerolled(val plan: SongPlan, val redrawn: Int)
+
+    /** Clips that stand in for one another on a reroll: the full beat, and the light one. A fill stays a fill. */
+    private val FULL_FAMILY = listOf(ClipRef.CAPTURED, ClipRef.TIGHT, ClipRef.GHOSTED)
+    private val LIGHT_FAMILY = listOf(ClipRef.SPARSE, ClipRef.HALF)
+
+    /**
+     * REROLL: every unlocked section redrawn with [newSeed], the song's
+     * order kept. A section on one of the derived clips draws again from
+     * its family — the full beat (captured, tight, ghosted) or the light
+     * one (sparse, half) — among what the kit can make now, so an intro
+     * stays light and a body section stays full. It avoids repeating the
+     * section before it when its family has another choice, and keeps
+     * the section's length in bars as near as the new clip allows.
+     *
+     * Left as they are: a locked section; a section playing one of your
+     * own programs (the arranger never swaps out what somebody wrote); a
+     * fill, which stays the fill and gets a new take from the seed. The
+     * draw is keyed on [newSeed] and the section's place, so the same
+     * reroll of the same plan is the same song.
+     */
+    fun rerolled(
+        kit: Kit,
+        kitDir: File,
+        plan: SongPlan,
+        newSeed: Int,
+        swingPercent: Int? = null,
+        feel: Float = 0f,
+        feelTemplate: GrooveFeel.Template? = null,
+    ): Rerolled {
+        val palette = Palette.load(kit, kitDir, swingPercent, feel, feelTemplate)
+        var redrawn = 0
+        val out = ArrayList<PlanSection>(plan.sections.size)
+        for ((i, s) in plan.sections.withIndex()) {
+            if (s.locked) {
+                out += s
+                continue
+            }
+            val family = when (s.clip) {
+                in FULL_FAMILY -> FULL_FAMILY
+                in LIGHT_FAMILY -> LIGHT_FAMILY
+                else -> null
+            }
+            if (family == null) {
+                // Yours keeps its clip; a fill (or a name this build does not know) keeps its name and takes the new seed.
+                if (s.clip == ClipRef.FILL || s.clip == ClipRef.GHOSTED) redrawn++
+                out += s.copy(seed = newSeed)
+                continue
+            }
+            val choices = family.filter { palette.clip(it, newSeed) != null }
+            if (choices.isEmpty()) {
+                out += s.copy(seed = newSeed)
+                continue
+            }
+            val previous = out.lastOrNull()?.clip
+            val pool = choices.filter { it != previous }.ifEmpty { choices }
+            val pick = pool[kotlin.random.Random(newSeed * 31 + i).nextInt(pool.size)]
+            val oldBars = (palette.clip(s.clip, s.seed)?.bars ?: 1) * s.repeats
+            val newBars = palette.clip(pick, newSeed)!!.bars
+            val repeats = Math.round(oldBars.toFloat() / newBars).coerceIn(1, maxRepeats(newBars))
+            if (pick != s.clip || pick == ClipRef.GHOSTED) redrawn++
+            out += s.copy(clip = pick, repeats = repeats, seed = newSeed)
+        }
+        return Rerolled(plan.copy(seed = newSeed, sections = out), redrawn)
+    }
+
     /** A clip name the kit can play, and how many bars one play of it is. */
     data class Pick(val ref: String, val bars: Int)
 

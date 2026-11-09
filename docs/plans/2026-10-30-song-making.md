@@ -248,6 +248,7 @@ clipping.
 - The `.xpj` writes each section through its repeats as one longer sequence, until song steps exist (the writer still refuses them).
 - OUT's demo WAV renders the active kit's kept song when there is one.
 - SONG (`ArrangeScreen`, `SongKeeper`) edits the kept song: move up and down (no drag yet), repeats - and +, swap the clip for any the kit can play (every user program included), duplicate, delete, + SECTION, lock, REROLL for the unlocked sections only, and UNDO naming what it undoes. Swing and FEEL are not kept with a song; they are laid over it each visit.
+- REROLL (2026-11-08) redraws each unlocked section's clip from its family (full: captured, tight, ghosted; light: sparse, half) among what the kit can make, keeps the order and each section's length in bars, and avoids the clip of the section before it when the family has another. Locked sections and your own programs are left alone; a fill stays a fill with a new take (`Arranger.rerolled`). Not yet seen on a phone.
 
 **Goal:** the Arranger suggests a song, and the user changes it.
 
