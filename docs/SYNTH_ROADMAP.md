@@ -1,3 +1,8 @@
+> TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
+> shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
+> presets, HOLD, phone controls and MPC program export remain outside this gate.
+> See [design and evidence](TRIAD.md).
+
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
 > FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md).

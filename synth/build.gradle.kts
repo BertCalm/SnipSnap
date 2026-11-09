@@ -3467,6 +3467,24 @@ tasks.register<JavaExec>("generateVelourKit") {
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
 
+tasks.register<JavaExec>("generateTriadAudition") {
+    group = "distribution"
+    description = "Render the shared-bus TRIAD groove, dry stems and three rig comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-audition")
+}
+
+tasks.register<JavaExec>("generateTriadHandsAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadHandsAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-hands-r2")
+}
 
 tasks.register<JavaExec>("generateCosmicBreaksKit") {
     group = "distribution"

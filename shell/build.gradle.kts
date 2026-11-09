@@ -503,3 +503,12 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
+
+tasks.register<JavaExec>("generateTriadKits") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TriadKitAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/triad-kits")
+}
