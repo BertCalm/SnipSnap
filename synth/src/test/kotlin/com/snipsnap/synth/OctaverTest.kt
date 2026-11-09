@@ -244,6 +244,26 @@ class OctaverTest {
     }
 
     @Test
+    fun `a tap of the SUB chip is DEPTH 0_5 at Grit, the sound the owner heard, and AMT walks the depth alone`() {
+        val tap = 0.7f
+        // The drum check (2026-11-09): every SUB clip was DEPTH 0.5, and the owner picked Grit, DRIVE 1, on ONSET's drums.
+        val onsetSnare = Onset.render(OnsetVoice.SNARE)
+        // DEPTH alone: DRIVE is left at its default, Grit, which is also its neutral, so no AMT can move it.
+        assertEquals(setOf("DEPTH"), Treatments.chain("octaved").octaver!!.keys, "the octaved character set more than DEPTH")
+        assertEquals(1f, Octaver.MACROS.single { it.name == "DRIVE" }.default, "DRIVE's default is no longer Grit")
+        assertEquals(0.5f, Treatments.chain("octaved", tap).octaver!!.getValue("DEPTH"), 1e-6f, "a tap is not DEPTH 0.5")
+        assertTrue(Treatments.chain("octaved", 1f).octaver!!.getValue("DEPTH") > 0.5f, "AMT 1 is not more octave than a tap")
+        // The tap is the clip the owner heard.
+        val heard = Octaver.process(onsetSnare, mapOf("DEPTH" to 0.5f, "DRIVE" to 1f)).samples
+        val tapped = Treatments.apply("octaved", onsetSnare, tap).snip.samples
+        assertEquals(heard.size, tapped.size, "the tap's length differs from the heard clip")
+        var worst = 0f
+        for (i in heard.indices) worst = maxOf(worst, abs(heard[i] - tapped[i]))
+        assertTrue(worst < 1e-3f, "the tap is not the heard clip: worst sample difference $worst")
+        assertContentEquals(onsetSnare.samples, Treatments.apply("octaved", onsetSnare, 0f).snip.samples, "AMT 0 is not a copy")
+    }
+
+    @Test
     fun `stereo is linked, the result is deterministic and unknown keys are ignored`() {
         val l = lowTom.samples
         val stereo = Snip(FloatArray(l.size * 2) { i -> if (i % 2 == 0) l[i / 2] else 0.1f * l[i / 2] }, 2, rate)

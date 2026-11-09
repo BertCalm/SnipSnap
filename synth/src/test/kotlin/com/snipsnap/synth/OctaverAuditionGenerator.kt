@@ -15,7 +15,9 @@ import java.util.Locale
  * at Fuzz ([Octaver.FUZZ]) and halfway from Fuzz to Grit, and Fuzz at DEPTH 1. The snare and the low tom are also heard with
  * the copy held to the hit (HANG 0), and the snare and the mid tom with the copy dark (TONE 0, 150 Hz) and
  * open (TONE 1, 2.4 kHz), at DEPTH 0.7. The snare, the low tom and the kick are also heard across DRIVE in
- * eight steps at DEPTH 0.5, to judge that the knob moves evenly. Every clip shares one loudness
+ * eight steps at DEPTH 0.5, to judge that the knob moves evenly. ONSET's snare and tom come first, heard the
+ * same way and across DRIVE: at the gate (2026-11-09) the owner liked ONSET's drums best and THUMP's, which every
+ * earlier round used and which stay here as that record, least. Every clip shares one loudness
  * ([AuditionLevel]). Run via
  * `./gradlew :synth:generateOctaverAudition`.
  */
@@ -28,6 +30,8 @@ object OctaverAuditionGenerator {
         root.walkTopDown().filter { it.isFile && it.extension == "wav" }.forEach { it.delete() }
 
         val sources = linkedMapOf(
+            "ONSET_SNARE" to Onset.render(OnsetVoice.SNARE),
+            "ONSET_TOM" to Onset.render(OnsetVoice.TOM),
             "SNARE" to Thump.render(ThumpVoice.SNARE),
             "LOW_TOM" to Thump.render(ThumpVoice.TOM, mapOf("TUNE" to 0.2f)),
             "MID_TOM" to Thump.render(ThumpVoice.TOM, mapOf("TUNE" to 0.5f)),
@@ -44,7 +48,7 @@ object OctaverAuditionGenerator {
             clips["sub_70_between"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to (Octaver.FUZZ + 1f) / 2f))
             clips["sub_70_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 0.7f, "DRIVE" to Octaver.FUZZ))
             clips["sub_100_fuzz"] = Octaver.process(dry, mapOf("DEPTH" to 1f, "DRIVE" to Octaver.FUZZ))
-            if (name == "SNARE" || name == "LOW_TOM" || name == "KICK") {
+            if (name == "SNARE" || name == "LOW_TOM" || name == "KICK" || name.startsWith("ONSET_")) {
                 for (d in listOf(0f, 0.16f, 0.33f, 0.49f, Octaver.FUZZ, 0.77f, 0.88f, 1f)) {
                     clips[String.format(Locale.ROOT, "drive_%03d", (d * 100).toInt())] = Octaver.process(dry, mapOf("DEPTH" to 0.5f, "DRIVE" to d))
                 }
