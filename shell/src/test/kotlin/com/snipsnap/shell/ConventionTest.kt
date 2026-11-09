@@ -2095,9 +2095,9 @@ class ConventionTest {
         }
         for (map in listOf("mutateKnobs", "outsideKnobs")) {
             assertTrue(
-                Regex("""val\s+$map\s*=\s*remember\(slot\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
-                "expected `$map` to be a `remember(slot) { mutableStateMapOf<String, Float>() }` — one dialled " +
-                    "value per move, reset only when the pad itself changes.",
+                Regex("""val\s+$map\s*=\s*rememberKeptKnobs\(slot,\s*null\)""").containsMatchIn(src),
+                "expected `val $map = rememberKeptKnobs(slot, null)` (a `rememberSaveable` state map keyed on the pad) — one " +
+                    "dialled value per move, reset only when the pad itself changes, and kept while GRAIN, SPLICE or STACK is open over the editor.",
             )
         }
     }
@@ -2128,13 +2128,13 @@ class ConventionTest {
         val src = padSheetScreen.readText(Charsets.UTF_8)
         for (name in listOf("measuredRoom", "pendingDepth", "pendingBloom")) {
             assertTrue(
-                !Regex("""var\s+$name\s+by\s+remember\(slot\)""").containsMatchIn(src),
+                !Regex("""var\s+$name\s+by\s+(remember\(slot\)|rememberKeptFraction\(slot)""").containsMatchIn(src),
                 "`$name` is keyed on `slot` again, so moving to the next pad destroys it. It is not a " +
                     "property of one pad: a measured room is the room (and KEEP ROOM shelves it named after " +
                     "the *kit*), and MAKE PAD's DEPTH/BLOOM are a tool's settings. Key it on `entry.dir`.",
             )
             assertTrue(
-                Regex("""var\s+$name\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+                Regex("""var\s+$name\s+by\s+(remember\(entry\.dir\)|rememberKeptFraction\(entry\.dir,)""").containsMatchIn(src),
                 "expected `$name` to be keyed on `entry.dir` — the kit, which is the scope it belongs to. " +
                     "Unkeyed would carry a measured room across a kit switch and let KEEP ROOM name it after " +
                     "the wrong kit; keyed on `slot` it dies on the pad-nav arrows.",
@@ -2200,9 +2200,9 @@ class ConventionTest {
         val src = padSheetScreen.readText(Charsets.UTF_8)
         assertTrue(
             Regex(
-                """var\s+pendingBecome\s+by\s+remember\(slot\)\s*\{\s*mutableFloatStateOf\(\s*MutateSheet\.BECOME\.defaultFraction\s*\)\s*\}""",
+                """var\s+pendingBecome\s+by\s+rememberKeptFraction\(\s*slot,\s*null,\s*MutateSheet\.BECOME\.defaultFraction\s*\)""",
             ).containsMatchIn(codeOnly(src)),
-            "expected `var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }` " +
+            "expected `var pendingBecome by rememberKeptFraction(slot, null, MutateSheet.BECOME.defaultFraction)` " +
                 "- BECOME's one value per pad, opening OFF, reset only when the pad itself changes.",
         )
         val drift = codeOnly(blockAfter(src, "fun onDrift() {"))
