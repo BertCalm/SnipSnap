@@ -17,3 +17,7 @@ python3 .claude/skills/luthier/scripts/check_resources.py
 
 For pull-request and CI work, also read
 [Steward](.claude/skills/steward/SKILL.md).
+
+## Engine completion gates
+
+Apply the owner's [engine acceptance gates](docs/ENGINE_ACCEPTANCE_GATES.md) to every engine. A listening preview or passing render test does not satisfy the end-to-end velocity/round-robin gate.

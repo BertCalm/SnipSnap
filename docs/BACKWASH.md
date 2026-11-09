@@ -483,3 +483,18 @@ Why it is built this way: candidate 2's cross-stick rang like a small metal obje
 Generate with `:synth:generateBackwashPercussionReference`. The comparison uses candidate 2 dry as the baseline, revision 3 dry, and revision 3 through the same lower-drive chain. This remains test-source work; model-4 saves, factory defaults and downloadable Android/MPC kits retain their existing sounds. The source decision still needs listening approval; full-length ride integration and render-time optimization remain separate work.
 
 Revision-3 Kotlin render validation passed for 12 matched clips, deterministic source replay, finite output at three velocities, and late-energy checks. Local FFT analysis of the generated dry files finds about 89% of tambourine energy in 6–16 kHz (candidate 2: 5%); about 11.3% of dry ride energy remains after one second (candidate 2: 0.23%). These quantify the intended brightness and sustained-ring changes; they do not establish that the timbres match by ear.
+
+### Acoustic-source shortlist and owner gates
+
+The owner rejected the synthesized auxiliary percussion and authorized finding licensed acoustic recordings. The new source-only audition selects 53 files from two CC0 libraries, recorded in `reference/backwash-acoustic/sources.json` with pinned commits and original SHA-256/Git blob hashes:
+
+- Virtuosity Drums: cross-stick (16 dynamic recordings, grouped for audition into four adjacent dynamic bands with four distinct recorded strikes), ride bell (3 velocities × 3 takes), and cowbell (3 velocities × 7 takes).
+- VSCO 2 Community Edition: tambourine hits (2 velocities × 2 takes) and three recorded roll dynamics.
+
+The cross-stick grouping is an authored audition mapping over neighboring recorded velocity layers; the upstream cross-stick SFZ has one sample per each of 16 velocities, not four round robins per original velocity. The other chosen hit articulations have explicit upstream alternate-take labels. No synthetic detuning or duplicated waveform is counted as a take.
+
+`python scripts/build_backwash_acoustic_audition.py CACHE_DIR OUTPUT_DIR` verifies original hashes, converts to mono 44.1 kHz, uses a fixed gain per instrument across its dynamics and takes, renders 13 demonstrations, checks decoded 24-bit FLAC against the generated PCM, and records every audition event's source. It applies no effect chain, EQ, compression, distortion or added reverb. Recorded room acoustics remain. `build_backwash_acoustic_page.py OUTPUT_DIR SITE_DIST` publishes the listening controls and provenance. The candidate sounds need owner listening approval before integration.
+
+Both libraries explicitly provide CC0 1.0 licenses permitting adaptation and redistribution. Their license/readme snapshots are retained alongside the source manifest, and the audition credits the creators. VSCO's README requests credit and asks against selling raw samples directly; this audition preserves credit and the project is not selling a raw-sample pack. A Salamander mirror's CC0 claim conflicted with the original CC BY-SA license, so no Salamander assets were used.
+
+The owner's completion requirements are now in `docs/ENGINE_ACCEPTANCE_GATES.md`, linked from AGENTS.md and the Luthier conventions. BACKWASH has **not** passed: it still needs distinct genre kits, authored roll/riser coverage where appropriate, and velocity/round-robin verification through rendering, saving, playback and export. The acoustic shortlist and web audition do not change existing saved model-4 recipes, phone builds or MPC kits.
