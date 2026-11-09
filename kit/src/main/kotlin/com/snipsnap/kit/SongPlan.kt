@@ -32,11 +32,32 @@ object ClipRef {
 }
 
 /**
+ * What a section's name meant before a section kept its own [PlanSection.bass]
+ * and [PlanSection.pullUp]: the arranger's draft names them this way, and a
+ * song kept before those fields existed is read through it.
+ */
+object SectionNames {
+    const val THE_TURN = "the turn"
+    private val BASS_UNDER = setOf("theme", "variation", "reprise")
+
+    fun bassUnder(name: String): Boolean = name in BASS_UNDER
+
+    fun pullsUpInto(name: String): Boolean = name == THE_TURN
+}
+
+/**
  * One section of a kept song: its [name], the clip it plays by name
  * ([clip], see [ClipRef]), how many times it plays through ([repeats]),
  * whether REROLL leaves it alone ([locked]), and the [seed] its clip was
  * drawn with. The seed is per section so a locked section keeps the take
  * it was locked on while the rest are redrawn.
+ *
+ * [bass] is whether the kit's Answer bassline plays under this section,
+ * and [pullUp] whether the record is pulled up over the last beat before
+ * it (the spinback into the turn). Both belong to the section, not to its
+ * name: a copy, a move or a different name keeps them. Left out, they are
+ * what the name has always meant ([SectionNames]), so a song kept before
+ * they existed sounds as it did.
  */
 data class PlanSection(
     val name: String,
@@ -44,6 +65,8 @@ data class PlanSection(
     val repeats: Int = 1,
     val locked: Boolean = false,
     val seed: Int = 0,
+    val bass: Boolean = SectionNames.bassUnder(name),
+    val pullUp: Boolean = SectionNames.pullsUpInto(name),
 ) {
     init {
         require(name.isNotBlank()) { "a section needs a name" }
@@ -93,11 +116,15 @@ data class SongPlan(val seed: Int, val sections: List<PlanSection>) {
         return copy(sections = sections.filterIndexed { at, _ -> at != i })
     }
 
-    /** A new section at the end playing [ref] once, or null at [MAX_SECTIONS]. */
+    /** A new section at the end playing [ref] once, or null at [MAX_SECTIONS]. It carries the bass (a body section, unless the person turns it off) and no pull-up. */
     fun added(ref: String): SongPlan? {
         if (sections.size >= MAX_SECTIONS) return null
-        return copy(sections = sections + PlanSection("section ${sections.size + 1}", ref, seed = seed))
+        return copy(sections = sections + PlanSection("section ${sections.size + 1}", ref, seed = seed, bass = true, pullUp = false))
     }
+
+    fun withBass(i: Int, on: Boolean): SongPlan? = replaced(i) { it.copy(bass = on) }
+
+    fun withPullUp(i: Int, on: Boolean): SongPlan? = replaced(i) { it.copy(pullUp = on) }
 
     /** Every unlocked section redrawn with [newSeed]; locked ones keep the seed they have. */
     fun rerolled(newSeed: Int): SongPlan =

@@ -240,6 +240,7 @@ object Velocity {
         is FiredBronzePatch -> FiredBronzeInstrument.macros
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
+        is BreakerPatch -> Breaker.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
@@ -492,6 +493,8 @@ object Velocity {
         is FiredBronzePatch -> FiredBronzeInstrument.render(patch.voice, patch.macros, v)
         is SkinPatch -> if (patch.voice in Skin.STRUCK) patch.render(velocity = v) else null
         is BackwashPatch -> patch.render(v)
+        // BREAKER strikes its SKIN source at the velocity; the chain after it keeps the timbre that gives.
+        is BreakerPatch -> patch.render(v)
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep

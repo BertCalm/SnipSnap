@@ -14,6 +14,7 @@ import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.PlanSection
+import com.snipsnap.kit.SectionNames
 import com.snipsnap.kit.SongPlan
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -81,6 +82,10 @@ object Arranger {
         val ref: String = "",
         val locked: Boolean = false,
         val seed: Int = 0,
+        /** The Answer's bass plays under it ([PlanSection.bass]). */
+        val bass: Boolean = SectionNames.bassUnder(name),
+        /** A pull-up plays over the beat before it ([PlanSection.pullUp]). */
+        val pullUp: Boolean = SectionNames.pullsUpInto(name),
     ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
@@ -142,7 +147,7 @@ object Arranger {
      */
     fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
         seed = arrangement.seed,
-        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed) },
+        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp) },
     )
 
     /**
@@ -171,7 +176,7 @@ object Arranger {
         val sections = plan.sections.map { s ->
             val clip = palette.clip(s.clip, s.seed)
             if (clip != null) {
-                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed)
+                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp)
             } else {
                 if (s.clip !in refused) refused += s.clip
                 // A gone program of yours is not replaced by a different one of
@@ -180,7 +185,7 @@ object Arranger {
                 // the section name the old one had.
                 val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
-                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed)
+                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp)
             }
         }
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
@@ -468,14 +473,57 @@ object Arranger {
 
     // ---- the mixdown (KK3) ------------------------------------------------
 
-    /** The stitched song plus where each section starts, in frames. */
-    data class Mix(val snip: Snip, val sectionStarts: List<Int>)
+    /**
+     * The stitched song plus where each section starts, in frames, and
+     * [passes]: every time through every section's clip, in song order, on
+     * the same grid. Live play ([SongCursor]) moves between passes.
+     */
+    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList())
 
-    /** The bed sits under the body sections only — never the intro or the turn. */
-    private val BED_SECTIONS = setOf("theme", "variation", "reprise")
+    /**
+     * One time through [section]'s clip: frames [start] until [end] of the
+     * mix, on the grid. A section played three times is three passes.
+     */
+    data class Pass(val section: Int, val start: Int, val end: Int)
 
-    /** The section a pull-up leads into. */
-    private const val TURN = "the turn"
+    /**
+     * What a played run of passes makes as a song: [plan], and how many
+     * passes did not fit ([left]) once the song reached
+     * [SongPlan.MAX_SECTIONS] sections.
+     */
+    data class Played(val plan: SongPlan, val left: Int)
+
+    /**
+     * KEEP THIS ORDER: the song [played] makes, where [played] names the
+     * section of every pass heard, in order, and [clipBars] is each
+     * section's clip length. Each run of one section becomes that section
+     * (its clip, lock, seed, BASS and PULL-UP) played that many times. A run
+     * longer than one sequence holds ([maxRepeats]) is split across copies.
+     * Null when nothing was played.
+     */
+    fun playedOrder(kept: SongPlan, clipBars: List<Int>, played: List<Int>): Played? {
+        if (played.isEmpty()) return null
+        val runs = mutableListOf<Pair<Int, Int>>()
+        for (s in played) {
+            val last = runs.lastOrNull()
+            if (last != null && last.first == s) runs[runs.lastIndex] = s to last.second + 1 else runs += s to 1
+        }
+        val out = mutableListOf<PlanSection>()
+        var left = 0
+        for ((s, count) in runs) {
+            val max = maxRepeats(clipBars[s])
+            var rest = count
+            while (rest > 0) {
+                val take = minOf(rest, max)
+                if (out.size < SongPlan.MAX_SECTIONS) out += kept.sections[s].copy(repeats = take) else left += take
+                rest -= take
+            }
+        }
+        return Played(SongPlan(kept.seed, out), left)
+    }
+
+    /** The section a pull-up leads into, in the arranger's own draft. */
+    private const val TURN = SectionNames.THE_TURN
 
     /** The Answer plays under the song at bed level. */
     private const val BED_GAIN = 0.8f
@@ -529,11 +577,11 @@ object Arranger {
         val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
         val starts = plan.sections.indices.map { frameAt(startPulses[it]) }
 
-        // Every section named "the turn" (past the first) is preceded by a
-        // pull-up, so a song with the turn played twice pulls up twice. The
-        // plan's sections can be moved, copied and removed by the person, so
-        // there may be none, or several; the name is the cue, as it always was.
-        val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].name == TURN }
+        // Every section marked [Section.pullUp] (past the first, which has
+        // nothing before it to pull up) is preceded by a pull-up, so a song
+        // with the turn played twice pulls up twice. The mark is the
+        // section's own, kept through a move, a copy or a new name.
+        val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].pullUp }
         val cuts = listOf(0) + turns + listOf(plan.sections.size)
         val stretches = cuts.zipWithNext { from, to -> from until to }
 
@@ -547,7 +595,7 @@ object Arranger {
             var audio = drums
             if (bed != null) {
                 for (i in range) {
-                    if (plan.sections[i].name in BED_SECTIONS) {
+                    if (plan.sections[i].bass) {
                         audio = addAt(audio, renderBed(bed, clips[i].lengthPulses, framesPerPulse), starts[i] - starts[first])
                     }
                 }
@@ -574,7 +622,13 @@ object Arranger {
         val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, clips[last].notes, clips[last].lengthPulses, bpm, allowSilence = chancy).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
-        return Mix(song, starts)
+        val passes = plan.sections.indices.flatMap { i ->
+            val one = plan.sections[i].clip.lengthPulses
+            (0 until plan.sections[i].repeats).map { r ->
+                Pass(i, frameAt(startPulses[i] + r * one), frameAt(startPulses[i] + (r + 1) * one))
+            }
+        }
+        return Mix(song, starts, passes)
     }
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
