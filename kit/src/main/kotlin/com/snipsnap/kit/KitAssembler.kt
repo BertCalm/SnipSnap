@@ -61,8 +61,16 @@ data class ArrangedPad(
      * hat cannot cut it off (KIT FROM ANYTHING's A06 and A07).
      */
     val muteGroup: Int? = null,
+    /** Complete velocity × round-robin grid, soft first; every row includes its first take. */
+    val velocityTakes: List<List<Snip>> = emptyList(),
 ) {
     init {
+        require(velocityTakes.isEmpty() || (velocityTakes.size in 2..4 && velocityTakes.all { row ->
+            row.size in 2..8 && row.all { it.frameCount > 0 && it.channels == snip.channels && it.sampleRate == snip.sampleRate }
+        })) { "velocity takes need 2..4 zones of 2..8 nonempty, format-matched hits" }
+        require(velocityTakes.isEmpty() || (takes.isEmpty() && softVariants.isEmpty() && layerNames.isEmpty())) {
+            "velocity takes supply the complete grid"
+        }
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
         require(takes.isEmpty() || softVariants.isEmpty()) { "a chain pad is single-zone: takes or soft variants, not both" }
         require(layerNames.isEmpty() || (softVariants.isNotEmpty() && layerNames.size == softVariants.size + 1)) {
@@ -126,15 +134,20 @@ object KitAssembler {
             }
             val stem = String.format(Locale.ROOT, "%s_%s_%02d", label, stemClass, n)
 
-            // A folded pad: every take end to end, the lead first, and the
-            // chain that steps through them a hit at a time.
-            val chain = if (pad.takes.isEmpty()) null else {
-                val all = listOf(pad.snip) + pad.takes
+            // Folded hits keep their lead first; a grid lays out each zone
+            // soft first. Boundaries preserve each take's actual frame count.
+            val all = if (pad.velocityTakes.isNotEmpty()) pad.velocityTakes.flatten() else listOf(pad.snip) + pad.takes
+            val chain = if (all.size == 1) null else {
                 var at = 0L
                 val boundaries = all.map { t -> at.also { at += t.frameCount } }
-                ChainInfo(boundaries, cycle = all.size)
+                var base = 0
+                val zones = pad.velocityTakes.takeIf { it.isNotEmpty() }?.mapIndexed { z, row ->
+                    ChainZone(128 * z / pad.velocityTakes.size, 128 * (z + 1) / pad.velocityTakes.size - 1,
+                        base.also { base += row.size }, row.size)
+                }
+                ChainInfo(boundaries, cycle = zones?.first()?.cycle ?: all.size, zones = zones)
             }
-            WavWriter.write(File(dir, "$stem.wav"), if (chain == null) pad.snip else concat(listOf(pad.snip) + pad.takes))
+            WavWriter.write(File(dir, "$stem.wav"), if (chain == null) pad.snip else concat(all))
 
             // Soft variants become velocity zones: the band 1..127 splits
             // evenly, softest zone first, the main sample on top. The first
