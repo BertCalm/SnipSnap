@@ -6,7 +6,9 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
 /** A compound board identity, kept separate from the existing fixed rack. */
-enum class BoardType(val id: String) { WIDE("wide"), RUSH("rush"), OBLITERATE("obliterate") }
+enum class BoardType(val id: String) {
+    WIDE("wide"), RUSH("rush"), OBLITERATE("obliterate"), VELOUR("velour"), VELOUR_BLOOM("velour-bloom")
+}
 
 /**
  * A saved board and its macro intensity. No mutable parameter maps or DSP
@@ -35,6 +37,8 @@ data class BoardRecipe(
         BoardType.WIDE -> Wide.process(snip, amount)
         BoardType.RUSH -> Rush.process(snip, amount)
         BoardType.OBLITERATE -> ObliterateBoard.process(snip, amount, obliterate!!)
+        BoardType.VELOUR -> Velour.process(snip, amount, Velour.Treatment.VELOUR)
+        BoardType.VELOUR_BLOOM -> Velour.process(snip, amount, Velour.Treatment.BLOOM)
     }
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
