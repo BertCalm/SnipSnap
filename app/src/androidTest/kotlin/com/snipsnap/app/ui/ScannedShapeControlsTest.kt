@@ -175,7 +175,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     fun a_drawn_starting_shape_commits_without_resetting_the_current_recipe() {
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original)
-        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "VELOCITY", "LENGTH")) {
+        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▾", "VELOCITY", "LENGTH")) {
             assertReadsInFull(label)
         }
 
@@ -260,9 +260,9 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
         )
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original, KitShelf.Entry(dir, KitStore.load(dir)))
-        assertReadsInFull("RECALL SCANNED PAD ▸")
+        assertReadsInFull("RECALL SCANNED PAD ▾")
 
-        tap("RECALL SCANNED PAD ▸")
+        tap("RECALL SCANNED PAD ▾")
         tap("${PadBanks.tag(3)} · KEPT CHAIN")
 
         assertEquals(recipe, recalled)

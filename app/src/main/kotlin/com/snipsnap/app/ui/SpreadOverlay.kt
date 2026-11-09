@@ -181,7 +181,7 @@ internal fun SpreadOverlay(
                     when {
                         busy -> "…"
                         count == 0 -> "NO PAD FREE"
-                        else -> "SPREAD ▸ $count ${if (count == 1) "PAD" else "PADS"}"
+                        else -> "SPREAD · $count ${if (count == 1) "PAD" else "PADS"}"
                     },
                     TapeType.pixel,
                     scheme.titleInk.tape,

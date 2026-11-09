@@ -182,7 +182,7 @@ internal fun ScannedShapeControls(
                 error = null
                 drawing = true
             }
-            LabButton("FROM PAD ▸", scheme, enabled = !busy && pads.isNotEmpty(), modifier = Modifier.weight(1.4f)) {
+            LabButton("FROM PAD ▾", scheme, enabled = !busy && pads.isNotEmpty(), modifier = Modifier.weight(1.4f)) {
                 error = null
                 pickingSource = true
             }
@@ -208,7 +208,7 @@ internal fun ScannedShapeControls(
             onValueChange = { changePatch(edit.patch.copy(config = edit.patch.config.copy(seconds = it.coerceIn(.25f, 4f)))) },
         )
         if (recallable.isNotEmpty()) {
-            LabButton("RECALL SCANNED PAD ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            LabButton("RECALL SCANNED PAD ▾", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                 recalling = true
             }
         }

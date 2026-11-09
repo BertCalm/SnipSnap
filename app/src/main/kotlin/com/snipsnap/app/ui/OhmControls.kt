@@ -131,7 +131,7 @@ internal fun OhmControls(
                     else -> "ONE FINITE NOTE. LENGTH SHAPES THE RING."
                 }, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
             )
-            LabButton("EXTEND ▸ SUSTAIN + SOURCES", scheme, enabled = true,
+            LabButton("EXTEND · SUSTAIN + SOURCES", scheme, enabled = true,
                 modifier = Modifier.fillMaxWidth(), accessibilityLabel = "OHM EXTEND") {
                 changePatch(extendedOhmPatch(currentPatch))
             }
@@ -155,7 +155,7 @@ internal fun OhmControls(
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("FROM PAD ▸", scheme, enabled = !busy && pads.isNotEmpty(),
+                LabButton("FROM PAD ▾", scheme, enabled = !busy && pads.isNotEmpty(),
                     modifier = Modifier.weight(1f), accessibilityLabel = "OHM EXCITER FROM PAD") {
                     pickingSource = true
                 }
