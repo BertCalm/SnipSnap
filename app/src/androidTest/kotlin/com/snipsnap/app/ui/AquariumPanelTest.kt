@@ -284,7 +284,8 @@ class AquariumPanelTest : ComposeScreenTest() {
         showPanel(AquariumEditor(context()).selectPreset("full"))
         revealPanelAction("aquarium-cancel")
         assertReadsInFull("AQUARIUM · PAD")
-        assertReadsInFull("◄ PAD")
+        // A section folds with CLOSE. The old "◄ PAD" chip was the back-label waiver this panel left behind.
+        assertReadsInFull("CLOSE")
         tagged("aquarium-cancel").assertHeightIsAtLeast(44.dp)
         for ((id, label) in listOf("before" to "BEFORE", "hear" to "PREVIEW", "keep" to "KEEP", "remove" to "REMOVE", "undo" to "UNDO")) {
             revealPanelAction("aquarium-$id")
