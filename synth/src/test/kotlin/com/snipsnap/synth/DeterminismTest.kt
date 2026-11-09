@@ -19,6 +19,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `Velour approved source and both saved boards replay byte for byte`() {
+        val source = VelourKits.source(VelourKits.roles[0])
+        for (type in listOf(BoardType.VELOUR, BoardType.VELOUR_BLOOM)) {
+            val recipe = BoardRecipe(type)
+            assertContentEquals(recipe.process(source).samples,
+                BoardRecipe.fromJsonText(recipe.toJsonText()).process(source).samples)
+        }
+    }
+
     @Test fun `HALOBAR voices regenerate through JSON after cache eviction`() {
         for (voice in HalobarVoice.entries) {
             val patch = HalobarPatch("Canary", voice, mapOf("RETURN" to .65f, "SPACE" to .55f))

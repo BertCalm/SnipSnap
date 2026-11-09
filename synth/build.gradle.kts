@@ -3445,3 +3445,14 @@ tasks.register<JavaExec>("generateOctaverAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/octaver-audition")
 }
+
+/** Owner-selected C source assets through the native board, with independent Python parity evidence. */
+tasks.register<JavaExec>("generateVelourKit") {
+    group = "distribution"
+    description = "Export Velour and Velour Bloom three-zone kits, both MPC formats and native/reference comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelourKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
+}
