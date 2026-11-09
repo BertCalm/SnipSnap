@@ -710,6 +710,9 @@ experiments/velour/__pycache__/
 /testkit/velour-kit/
 testkit/backwash-percussion-comparison/
 
+# Spore Station's rendered audio, MPC programs and audition assets regenerate.
+/testkit/spore-station/
+
 testkit/backwash-percussion-revision-2/
 
 testkit/backwash-percussion-revision-3/

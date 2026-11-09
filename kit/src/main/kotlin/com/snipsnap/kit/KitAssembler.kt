@@ -61,15 +61,21 @@ data class ArrangedPad(
      * hat cannot cut it off (KIT FROM ANYTHING's A06 and A07).
      */
     val muteGroup: Int? = null,
-    /** Soft-to-hard velocity zones, each containing independently rendered cycling takes.
+    /** Soft-to-hard velocity zones, each containing its own ordered round-robin takes.
      * [snip] is the first hard take; the grid owns the written audio when present. */
     val velocityTakes: List<List<Snip>> = emptyList(),
 ) {
     init {
         if (velocityTakes.isNotEmpty()) {
-            require(velocityTakes.size in 2..4 && velocityTakes.all { it.size in 2..8 })
-            require(takes.isEmpty() && softVariants.isEmpty() && layerNames.isEmpty())
-            require(velocityTakes.flatten().all { it.frameCount > 0 && it.channels == snip.channels && it.sampleRate == snip.sampleRate })
+            require(velocityTakes.size in 2..4 && velocityTakes.all { it.size in 2..8 }) {
+                "a velocity-take grid has 2..4 zones of 2..8 takes"
+            }
+            require(softVariants.isEmpty() && takes.isEmpty() && layerNames.isEmpty()) {
+                "a velocity-take grid replaces soft variants, takes and layer names"
+            }
+            require(velocityTakes.flatten().all { it.frameCount > 0 && it.channels == snip.channels && it.sampleRate == snip.sampleRate }) {
+                "grid takes must be nonempty and share the pad format"
+            }
             require(snip.samples.contentEquals(velocityTakes.last().first().samples)) { "main sample must be the first hard take" }
         }
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }

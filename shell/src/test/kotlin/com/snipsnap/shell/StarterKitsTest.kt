@@ -209,13 +209,14 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks")) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "spore-jungle", "spore-dub", "spore-electro")) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
                 // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each,
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
+                    "spore-jungle", "spore-dub", "spore-electro" -> 18
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID, "erosion" -> 8
@@ -230,9 +231,11 @@ class StarterKitsTest {
                 }
                 // CLOUD's grain clouds (A07-A16) are render-only: GRAINS has no Patch type.
                 // CONFLUENCE carries source-bank provenance instead of typed Patch recipes.
+                // Spore grids retain all nine takes as printed audio and provenance, not a single-hit recipe.
                 // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
+                    "spore-jungle", "spore-dub", "spore-electro" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
                     StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks" -> (1..16).toList()
@@ -587,7 +590,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks"),
             StarterKits.ALL.map { it.id },
         )
         val halobar = StarterKits.byId("halobar")!!

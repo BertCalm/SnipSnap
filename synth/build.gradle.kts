@@ -3527,6 +3527,16 @@ tasks.register<JavaExec>("generateTriadHandsAudition") {
     args("testkit/triad-hands-r2")
 }
 
+tasks.register<JavaExec>("generateSporeStationAudition") {
+    group = "distribution"
+    description = "Render Spore Station's two banks, comparisons, grooves and editable MPC kits."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SporeStationAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("sporeOutput").orNull ?: "${rootDir}/testkit/spore-station")
+}
+
 tasks.register<JavaExec>("generateCosmicBreaksKit") {
     group = "distribution"
     description = "Export the approved sixteen-pad Cosmic Breaks sample kit in both MPC formats."
