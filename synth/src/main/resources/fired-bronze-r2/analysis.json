@@ -1,0 +1,67 @@
+{
+  "TIN": {
+    "duration": 0.31875283446712016,
+    "dominant_hz": [
+      587.79,
+      1176.59,
+      1460.22,
+      879.5,
+      1753.61
+    ],
+    "modes": 17,
+    "residual_energy_fraction": 0.05780505884284076,
+    "source_sha256": "a12517ca11a2b9a361a0c9fdcca1ab5a421573f3147ab451ba763dbf6b2784c7"
+  },
+  "TUN": {
+    "duration": 0.2409297052154195,
+    "dominant_hz": [
+      321.65,
+      878.49,
+      590.14,
+      1484.45,
+      1781.2
+    ],
+    "modes": 19,
+    "residual_energy_fraction": 0.027991937682506556,
+    "source_sha256": "2be348be15481dfe0fb889f6e5798c05230fb3fafdbccf8d23c7736e3ec75396"
+  },
+  "NA": {
+    "duration": 0.2807256235827664,
+    "dominant_hz": [
+      882.52,
+      1181.97,
+      1489.49,
+      589.47,
+      1793.98
+    ],
+    "modes": 20,
+    "residual_energy_fraction": 0.17374806353300334,
+    "source_sha256": "8b8d476ac3f41ca469d029019e5e39e0d5a5ad725b5100b373915c81dae4c0d6"
+  },
+  "TE": {
+    "duration": 0.08419501133786848,
+    "dominant_hz": [
+      257.05,
+      365.06,
+      801.78,
+      1440.03,
+      458.59
+    ],
+    "modes": 20,
+    "residual_energy_fraction": 0.10199300916457363,
+    "source_sha256": "a4fc05bf21799c19786e0aede94a43ac987c2342c4ad4254d71af06da0ccae4a"
+  },
+  "GA": {
+    "duration": 0.12108843537414966,
+    "dominant_hz": [
+      120.79,
+      360.01,
+      286.66,
+      456.57,
+      215.0
+    ],
+    "modes": 20,
+    "residual_energy_fraction": 0.00756878175919705,
+    "source_sha256": "1f3290d35a5f04ff4778dfeb968deb1fd58349267f13508659af4a933290abe0"
+  }
+}

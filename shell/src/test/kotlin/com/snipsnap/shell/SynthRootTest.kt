@@ -15,6 +15,7 @@ import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
@@ -95,11 +96,12 @@ class SynthRootTest {
                 WickPresets.all().first(),
                 NacrePresets.all().first(),
                 FerryPresets.all().first(),
+                *HalobarPresets.all().toTypedArray(),
             )
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

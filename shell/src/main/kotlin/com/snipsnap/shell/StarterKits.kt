@@ -29,6 +29,8 @@ import java.io.File
  * and VELOCITY qualify that. CONFLUENCE's eight wordless pads are finite rendered
  * recordings; their checked source bank and exact arrangement metadata travel
  * beside the kit, rather than pretending to be asset-free synth recipes.
+ * VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
+ * their printed wet pads do not pretend to have dry-source synth recipes.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -54,6 +56,8 @@ object StarterKits {
         val seeded: Boolean,
         /** A key the kit's melodic content is in, when it has one. */
         val key: KeySpec? = null,
+        /** Authored tempo, when timing is part of the kit recipe. */
+        val tempoBpm: Float? = null,
         /** Optional source payloads written before kit.json makes a kit visible. */
         private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
@@ -65,7 +69,7 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            return KitAssembler.assembleArranged(name, build(seed), dir, key)
+            return KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
         }
     }
 
@@ -103,6 +107,12 @@ object StarterKits {
             "The dice kit plus a remixed bank B - every pad's evil twin.",
             seeded = true,
         ) { Shuffle.withRemixBank(Shuffle.kit(it), it) },
+        Starter(
+            "halobar", "HALOBAR",
+            "Vibraphone, marimba and xylophone with rhythmic dub echoes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.halobar() },
         Starter(
             "melodic", "MELODIC",
             "Plucks and organ stabs in A minor pentatonic. Runs, not just hits.",
@@ -535,6 +545,21 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter(
+            "velour", "VELOUR",
+            "Muted drums, scattered echoes and a warm amp. Three touch zones; new kit voices to explore.",
+            seeded = false,
+        ) { com.snipsnap.synth.VelourKits.build() },
+        Starter(
+            "velour-bloom", "VELOUR BLOOM",
+            "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
+            seeded = false,
+        ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
+        Starter(
+            "fired-bronze", "FIRED BRONZE",
+            "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers.",
+            seeded = false, tempoBpm = 96f,
+        ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

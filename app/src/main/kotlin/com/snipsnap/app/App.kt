@@ -68,7 +68,7 @@ import com.snipsnap.app.ui.KitFromResultOverlay
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
 import com.snipsnap.app.ui.CaptureSheet
-import com.snipsnap.app.ui.ChoiceSheet
+import com.snipsnap.app.ui.SheetMenu
 import com.snipsnap.app.ui.SheetRow
 import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.NoKitPanel
@@ -92,7 +92,6 @@ import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
 import com.snipsnap.app.ui.DoorChip
-import com.snipsnap.app.ui.GearSheet
 import com.snipsnap.app.ui.InstrumentsBench
 import com.snipsnap.app.ui.PlaceRow
 import com.snipsnap.app.ui.LocalProjectTempoSetter
@@ -3529,7 +3528,6 @@ fun App(shelf: KitShelf) {
     // The gear's two-row sheet. Open/closed state, not a navigation: the
     // sim counts HELP as one step from anywhere and this is the half of
     // that step that moves nothing.
-    var gearOpen by remember { mutableStateOf(false) }
     // The dock's capture choice (mic, or another app), the same shape.
     var captureSheetOpen by remember { mutableStateOf(false) }
 
@@ -3551,7 +3549,7 @@ fun App(shelf: KitShelf) {
     // showing without closing it, so the screen under it can have its own
     // BackHandler out of the composition. Back there must pop the gear bench,
     // not be left to a handler that isn't mounted.
-    val anyOverlayOpen = gearOpen || captureSheetOpen || kitSheetOpen
+    val anyOverlayOpen = captureSheetOpen || kitSheetOpen
     //
     // KITS is no longer among the exclusions (J11): with a real stack
     // there is nothing special about the shelf except that it is usually
@@ -3616,7 +3614,7 @@ fun App(shelf: KitShelf) {
                 // The NOTE chip only while the WORKSHOP is open; a phone
                 // that never knocked draws the bar exactly as before. The
                 // gear is always there: SETUP and HELP, one tap from anywhere.
-                TitleBar(projectName = project?.name, onGear = { gearOpen = true })
+                TitleBar(projectName = project?.name, onHelp = { landOn(AppScreen.HELP) }, onSettings = { landOn(AppScreen.PROPERTIES) })
                 // The frame (`docs/SCREEN_PLAN_2026_10.md` §1): the four
                 // places, then the stage row where the place has stages.
                 PlaceRow(current = location.place, onSelect = ::goToPlace)
@@ -4328,6 +4326,7 @@ fun App(shelf: KitShelf) {
                             cardName = prefs.getString(PREF_CARD_TREE, null)
                                 ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
                             onHelp = { landOn(AppScreen.HELP) },
+                            onMidiDevices = { landOn(AppScreen.MIDI) },
                         )
                         top == null && location.stage == Stage.CUT -> ChopScreen(
                             entry = open,
@@ -4770,32 +4769,24 @@ fun App(shelf: KitShelf) {
                 // the active one marked, each a tap to put it on the grid,
                 // and the shelf's door as the last row.
                 val p = project
-                ChoiceSheet(
-                    rows = p?.kits.orEmpty().map { folder ->
+                SheetMenu(Places.SHEET_KITS_TITLE, onDismiss = { kitSheetOpen = false }) {
+                    for (folder in p?.kits.orEmpty()) {
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
                         // A sheet opened just before a job started: the tap does
                         // nothing visible and the sheet stays, rather than
                         // closing on a switch `activateKit` would refuse.
-                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) {
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit), onClick = {
                             if (busy == null) { kitSheetOpen = false; activateKit(folder) }
-                        }
-                    } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
-                    onDismiss = { kitSheetOpen = false },
-                )
+                        })
+                    }
+                    SheetRow(Places.SHEET_ADD_FROM_SHELF, Places.SHEET_ADD_FROM_SHELF_DESC, onClick = { kitSheetOpen = false; addFromShelf() })
+                }
             }
             if (captureSheetOpen) {
                 CaptureSheet(
                     onMic = { captureSheetOpen = false; chooseCaptureSource(CaptureSource.MIC); requestArm() },
                     onInside = { captureSheetOpen = false; chooseCaptureSource(CaptureSource.APP_AUDIO); requestArmInside() },
                     onDismiss = { captureSheetOpen = false },
-                )
-            }
-            if (gearOpen) {
-                GearSheet(
-                    onSetup = { gearOpen = false; landOn(AppScreen.PROPERTIES) },
-                    onHelp = { gearOpen = false; landOn(AppScreen.HELP) },
-                    onMidi = { gearOpen = false; landOn(AppScreen.MIDI) },
-                    onDismiss = { gearOpen = false },
                 )
             }
             kitFromMade?.let { made ->

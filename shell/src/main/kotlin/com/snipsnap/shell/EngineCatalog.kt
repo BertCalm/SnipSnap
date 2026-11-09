@@ -72,6 +72,7 @@ object EngineCatalog {
         "GLINT" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.VOICES), "Buzzy synth tones with a sweeping, vowel-like peak"),
         "SIREN" to EngineEntry(listOf(EngineCategory.PADS), "Dub siren: wails, trills, lasers and bird chirps"),
         "FORK" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Electric piano and vibraphone-style bars"),
+        "HALOBAR" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Vibraphone, marimba and xylophone with rhythmic dub echoes"),
         "FLOTILLA" to EngineEntry(listOf(EngineCategory.PADS), "Slow looping textures of soft pulses and wooden knocks"),
         "AEROSTAT" to EngineEntry(listOf(EngineCategory.WINDS, EngineCategory.DRUMS), "Tube knock followed by a rising, whistling air tone"),
         "TREMOR" to EngineEntry(listOf(EngineCategory.DRUMS), "Low drum hits with rattling beads and ringing strings"),
@@ -132,11 +133,13 @@ object EngineCatalog {
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
         "CHITIN" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Bass and leads with a shared sync and phaser sweep"),
-        // Last, as it is in the `Engine` enum: the picker steps in the enum's order and a device test
+        // The picker steps in the `Engine` enum's order and a device test
         // holds that walk to this map's order, so a new engine goes at the end of both.
         "WICK" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Plucks, bubbles and swells with answering gate motion"),
         "EROSION" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry electrical percussion, from low thuds to bright crackle"),
         "RIVET" to EngineEntry(listOf(EngineCategory.DRUMS), "Industrial drums from a small room to a warehouse"),
+        "FIRED_BRONZE" to EngineEntry(listOf(EngineCategory.DRUMS), "Skin, clay and bronze through a driven processor and amp"),
+        "BACKWASH" to EngineEntry(listOf(EngineCategory.DRUMS), "Damped drums with wavering tails and warm amp grit"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

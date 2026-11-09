@@ -87,8 +87,10 @@ object TerraKits {
         // the app: a harder finger (FORCE 0.9) and more snap (CLICK 0.65). Its macros are spelled out so the
         // pad never moves with the voice's defaults.
         slot("Tabla Tin", TerraVoice.DAYAN, DrumClass.PERC, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.9f, "OPEN" to 1f, "CLICK" to 0.65f), // A09
-        // Tabla Dayan (Tun): same D4 fundamental as Tin, hardness 0.45, center strike ("resonant open center strike").
-        slot("Tabla Tun", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.8057f, "FORCE" to 0.45f, "POS" to 0.05f), // A10
+        // Tabla Tun: the TUN voice (TerraFitted, 2026-11-08), fitted to three tuns in an open tabla dataset
+        // (CC BY 4.0, measured only): the dayan's note at D4, the Tin's fundamental, ringing 2.55 s, and the
+        // fingertip's knock 15 ms after it. The owner's pick, round 1's A ("as played").
+        slot("Tabla Tun", TerraVoice.TUN, DrumClass.PERC, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "KNOCK" to 0.5f, "LAG" to 0.5f), // A10
         // Dumbek Tek: a hard fingertip at the rim. The DARBUKA voice (TerraHands, 2026-11-07): round 3's B, a ceramic goblet with more ring.
         slot("Dumbek Tek", TerraVoice.DARBUKA, DrumClass.PERC, "TUNE" to 0.483f, "DECAY" to 0.5f, "FORCE" to 0.92f, "POS" to 0.875f, "SHELL" to 0.5f, "SNAP" to 0.5f), // A11
         // Djembe Slap: the SLAP voice (TerraHands, 2026-11-07): round 2's A, "full body", the palm then the fingers over the bowl's air.

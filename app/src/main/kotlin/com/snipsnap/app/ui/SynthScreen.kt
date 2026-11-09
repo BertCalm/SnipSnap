@@ -226,6 +226,13 @@ import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Skin
+import com.snipsnap.synth.Backwash
+import com.snipsnap.synth.BackwashPatch
+import com.snipsnap.synth.BackwashVoice
+import com.snipsnap.synth.FiredBronzePatch
+import com.snipsnap.synth.FiredBronzeInstrument
+import com.snipsnap.synth.FiredBronzeDryKit
+import com.snipsnap.shell.FiredBronzePads
 import com.snipsnap.synth.BackroomSnare
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.SkinVoice
@@ -400,6 +407,9 @@ import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
@@ -903,7 +913,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET) {
+                    val nativeFactory = if (e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -917,6 +927,7 @@ fun SynthScreen(
                     }
                     val recipe = seed.seededOvenPatches[e to v]
                         ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.BACKWASH) seed.seededDrafts.filterIsInstance<BackwashPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
@@ -924,6 +935,7 @@ fun SynthScreen(
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
+                        else if (e == Engine.HALOBAR) seed.seededDrafts.firstOrNull { it is HalobarPatch && it.voice == v }
                         else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
                         else if (e == Engine.RIVET) seed.seededDrafts.firstOrNull { it is RivetPatch && it.voice == v }
                         else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
@@ -1098,6 +1110,12 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as OnsetVoice, macros,
             )
         }
+        if (engine == Engine.BACKWASH && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = BackwashPatch(
+                engine.patchDisplayName(voice), voice as BackwashVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1119,7 +1137,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -2142,7 +2160,7 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
+        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) && !(pad.chain != null && !pad.isRobinChain) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -2278,7 +2296,9 @@ fun SynthScreen(
                             // pad's identity would still say (and choke-group
                             // with) whatever it was before, while sounding like
                             // the new voice.
-                            model.replaceAudio(slot, recipe) { _ -> rendered }
+                            if (patch is FiredBronzePatch && FiredBronzePads.canEdit(model.pad(slot)))
+                                model.replaceFiredBronze(slot, padRecipe)
+                            else model.replaceAudio(slot, recipe) { _ -> rendered }
                             // FILAMENT and CHAMBER keep deliberate pad tuning
                             // when reopened. ROOT changes the native pitch
                             // and source tags; the player's tune offsets stay put.
@@ -3722,7 +3742,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
+                        enabled = !padChooser.sendBusy && target != null && (target.velocityLayers.isEmpty() || (engine == Engine.FIRED_BRONZE && FiredBronzePads.canEdit(target))) && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3869,6 +3889,7 @@ fun SynthScreen(
                 previewColor = classColor,
                 scheme = scheme,
                 busy = padChooser.sendBusy,
+                firedBronze = engine == Engine.FIRED_BRONZE,
                 onPick = ::sendToSlot,
                 onCancel = cancelChooser,
             )
@@ -4544,6 +4565,9 @@ private fun macroReadout(
     engine == Engine.REVEL && name == "HOLD" && Revel.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CHITIN && name == "TUNE" -> Scales.nameOf(Chitin.midiFor(voice as ChitinVoice, macros.getValue(name)))
     engine == Engine.CHITIN && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
+    engine == Engine.HALOBAR && name == "TUNE" -> Scales.nameOf(Halobar.midiFor(voice as HalobarVoice, macros.getValue(name)))
+    engine == Engine.HALOBAR && name == "RATE" -> Halobar.rateLabel(macros.getValue(name))
+    engine == Engine.HALOBAR && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
     engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
@@ -5798,7 +5822,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5811,7 +5835,9 @@ private enum class Engine {
         CHITIN -> ChitinVoice.entries
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
+        FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
+        BACKWASH -> BackwashVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
             OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
@@ -5832,6 +5858,7 @@ private enum class Engine {
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
+        HALOBAR -> HalobarVoice.entries
         FLOTILLA -> FlotillaVoice.entries
         AEROSTAT -> AerostatVoice.entries
         TREMOR -> TremorVoice.entries
@@ -5897,7 +5924,9 @@ private enum class Engine {
         CHITIN -> Chitin.macrosFor(voice as ChitinVoice)
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.macrosFor(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
+        BACKWASH -> Backwash.macrosFor(voice as BackwashVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -5915,6 +5944,7 @@ private enum class Engine {
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
+        HALOBAR -> Halobar.macrosFor(voice as HalobarVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         AEROSTAT -> Aerostat.macrosFor(voice as AerostatVoice)
         TREMOR -> Tremor.macrosFor(voice as TremorVoice)
@@ -5978,7 +6008,9 @@ private enum class Engine {
         CHITIN -> Chitin.defaults(voice as ChitinVoice)
         THUMP -> Thump.defaults(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.defaults(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
+        BACKWASH -> Backwash.defaults(voice as BackwashVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -5996,6 +6028,7 @@ private enum class Engine {
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
+        HALOBAR -> Halobar.defaults(voice as HalobarVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         AEROSTAT -> Aerostat.defaults(voice as AerostatVoice)
         TREMOR -> Tremor.defaults(voice as TremorVoice)
@@ -6059,7 +6092,9 @@ private enum class Engine {
         CHITIN -> Chitin.scramble(voice as ChitinVoice, random)
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
         SCANNED_CHAIN -> ScannedChain.scramble(voice as ScannedChainVoice, random)
+        FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
+        BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -6079,6 +6114,7 @@ private enum class Engine {
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
+        HALOBAR -> Halobar.scramble(voice as HalobarVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         AEROSTAT -> Aerostat.scramble(voice as AerostatVoice, random)
         TREMOR -> Tremor.macrosFor(voice as TremorVoice).associate { it.name to random.nextFloat() }
@@ -6154,7 +6190,9 @@ private enum class Engine {
         CHITIN -> Chitin.render(voice as ChitinVoice, macros)
         THUMP -> Thump.render(voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
+        BACKWASH -> Backwash.render(voice as BackwashVoice, macros)
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -6172,6 +6210,7 @@ private enum class Engine {
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
+        HALOBAR -> Halobar.render(voice as HalobarVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         AEROSTAT -> Aerostat.render(voice as AerostatVoice, macros)
         TREMOR -> Tremor.render(voice as TremorVoice, macros)
@@ -6239,7 +6278,9 @@ private enum class Engine {
         CHITIN -> Chitin.drumClassFor(voice as ChitinVoice, macros)
         THUMP -> (voice as ThumpVoice).drumClass
         SCANNED_CHAIN -> ScannedChain.drumClassFor(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
+        BACKWASH -> Backwash.drumClassFor(voice as BackwashVoice)
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
@@ -6259,6 +6300,7 @@ private enum class Engine {
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
+        HALOBAR -> Halobar.drumClassFor(voice as HalobarVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         AEROSTAT -> Aerostat.drumClassFor(voice as AerostatVoice, macros)
         TREMOR -> Tremor.drumClassFor(voice as TremorVoice, macros)
@@ -6323,7 +6365,9 @@ private enum class Engine {
         CHITIN -> ChitinPatch(name, voice as ChitinVoice, macros)
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChainPatch(name, voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
+        BACKWASH -> BackwashPatch(name, voice as BackwashVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
@@ -6341,6 +6385,7 @@ private enum class Engine {
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
+        HALOBAR -> HalobarPatch(name, voice as HalobarVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         AEROSTAT -> AerostatPatch(name, voice as AerostatVoice, macros)
         TREMOR -> TremorPatch(name, voice as TremorVoice, macros)
@@ -7247,6 +7292,7 @@ internal fun SlotChooserOverlay(
     busy: Boolean,
     onPick: (Int) -> Unit,
     onCancel: () -> Unit,
+    firedBronze: Boolean = false,
 ) {
     // A plain `background` doesn't hit-test — without a consuming gesture
     // here, a tap in any gap this overlay doesn't fully cover (the grid's
@@ -7291,6 +7337,7 @@ internal fun SlotChooserOverlay(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
                         for (slot in row) {
                             SlotCell(
+                                firedBronze = firedBronze,
                                 slot = slot,
                                 pad = kit?.pad(slot),
                                 previewColor = previewColor,
@@ -7319,6 +7366,7 @@ internal fun SlotChooserOverlay(
  */
 @Composable
 private fun SlotCell(
+    firedBronze: Boolean = false,
     slot: Int,
     pad: KitPad?,
     previewColor: Color,
@@ -7353,7 +7401,7 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
+    val locked = (pad.velocityLayers.isNotEmpty() && !(firedBronze && FiredBronzePads.canEdit(pad))) || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     // Locked (foreign-chained/layered, refused by replaceAudio) and explicitly

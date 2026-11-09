@@ -201,6 +201,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     internal fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is HalobarPatch -> Halobar.macrosFor(patch.voice)
         is RivetPatch -> Rivet.macrosFor(patch.voice)
         is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
@@ -236,7 +237,9 @@ object Velocity {
         is TidePatch -> Tide.macrosFor(patch.voice)
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
+        is FiredBronzePatch -> FiredBronzeInstrument.macros
         is SkinPatch -> patch.macroSpecs()
+        is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
@@ -402,6 +405,7 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is HalobarPatch -> Halobar.render(patch.voice, patch.macros, velocity = v, model = patch.model)
         is RivetPatch -> patch.copy(velocity = patch.velocity * v).render()
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
@@ -485,7 +489,9 @@ object Velocity {
         // A harder stick or beater: more upper modes, a deeper bend, a
         // brighter click (StrikeVelocity). SKIN SNARE additionally changes
         // its wire excitation; hats, ride and shaker retain their macro response.
+        is FiredBronzePatch -> FiredBronzeInstrument.render(patch.voice, patch.macros, v)
         is SkinPatch -> if (patch.voice in Skin.STRUCK) patch.render(velocity = v) else null
+        is BackwashPatch -> patch.render(v)
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep

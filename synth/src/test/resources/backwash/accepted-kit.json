@@ -1,0 +1,1154 @@
+[
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "c7c3c029c8d72bfa7b8f4d45ca217290ad388d5d02a1aaa3bd918e7d4d83b89c"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "72ffd8dda683e565616c535a0984bf8c32d73e04dff4922f516596b7e51f240e"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "c12acaacfbf4c6f40751a0b5d5373962315507bd1fdabdcba281853234a2ca66"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "8760d478ca903840a5a6cf0c59a99329eb94870b179ed211282b15bef8dcf6f6"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "0160cec99ca59e04cd28d1b6c048f177b8133c5d3c0573efae6bf3f3ba8ebafa"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "847d5a820dc4aaee4aefa1c351a18e91269e97aab83f494e2d172d67010bf065"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "5865a0817ec17b8377fa8cd2744b846a869419deabbfb14ec2e3b616f9242058"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "06e87fdcb0a5fa311855ec29ca56bb239491f7254e298d0f3fb74e28f0cfe0cb"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "10b36baf69071fe777ea3a189461c9e9d8fa480c7fc40fcbfb072230dec0ee6d"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "56cf5c5388f643c339b8bd80e1468c0d3da737d1bbed428655176d192869a672"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "01a78b253a4fffc648206b5f201dd947d30cf5c7a767f211f2bed72f3b554574"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Core Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "97d66129f4e982433e20e1d4bd060b64f5e4365d6a11e49e92a67298f20aeaa5"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "fe232a8d1ec13cb61f32f461742a6dfc1780d1b64e245a3b1492288cd10d8c1c"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "928ed6c3ac0ab8721eb44021898dcee0f53c59b32a47a98d2d4d3a83f5c6f9ab"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "00ae120c045422ad8dafc7463f70fd278e935f966f741ba4cf8e061babcabbc4"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "62d9074238db7d405e5249f67296620fd90e50e75a7a49b9595e32777505b0f5"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "b61f21a123187754b72a2c3077245b30ec53dd81370d01fa77711dc45070dcf6"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "712268f0542cdaef289423900238534ab8df4f1e95a8757e11ea31e0a8c51671"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "1fdf8a5377d916b467450064fc5e178aeb3302f138335e258724714696fe5c62"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "5d02e126017b9e61fefd960c3a4b5c9a1f2541ef2c815d30f3bec6d77f41b0b8"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "d39c4456f90a5a5ba027a488f133ecfa779873f34321b5291c134d5cc7b2c288"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Open Ring",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.6000000238418579,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "bb51798d80244aa6ca7da9cc1a4a7535c47128e1495a8b3f71ae7090a5261762"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Open Ring",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.6000000238418579,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "086f322472b6a598469c0f9c9fba9d1c8849ec062ca36b6b09074d286ca56ee3"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Open Ring",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.6000000238418579,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "deae19777ea38cee4060ba26630868a06374085cc3ba53648fe0eb10a3a3ddc8"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Low Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.15000000596046448,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "b9d182272c0b51235b677f8563e405eb1578a4b6382427137702b61031fff546"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Low Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.15000000596046448,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "b359a2cdbd8942f11de6aa34614526fcfcd7c4d9d6980a804034853f79d7782f"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Low Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.15000000596046448,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "05f99bc65e5cb3026d5cab03e827780b9f83ee28bedc56bf07c4fddc99469b30"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Mid Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "d5607c9b4c81cf1a4d73e26b441cab95fe89a0728aa39c3042964269e61e3abc"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Mid Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "5b624771d1be23549ad6681be0bd212a707c08c141fe4ca48b5445a1f0a5edf8"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Mid Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "6ac8327e0aa2cd8c675c18e5aef39d4b69aa503ade9aa7a8c61b930149979ece"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "High Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.5799999833106995,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "a2916510aa99056f015bbce765dcf910ce8550cc9e00d1ca7c37bd3f58c562a9"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "High Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.5799999833106995,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "30c7c9c6cdd1d4581981c4d251c805ad6f591cb6235fed7163c22522ba46ead1"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "High Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.5799999833106995,
+          "DAMP": 0.75,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "30af85457e3dcbae47b3545e73fc0e1994b66cd7378957dfb1e15896ec52f7e7"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "6716b3e72558d97079eca3e1b11485f0dc03e58bf3b5a3dfda610169dcdc36be"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "f33d5c4965b0598de2a147811416982c40294e4904c204afd3d02196b785895b"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Tight Tom",
+        "voice": "TOM",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.8999999761581421,
+          "SWAY": 0.30000001192092896,
+          "TRAIL": 0.25,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "6784b561fdd27c731035d194117b910f7f5fdbb784bc91c800e0cc9829633162"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "e6fcb13f4ad89f3e605e83187c2ecc9bfbdf5398b3a3c065a42e9a30985cecc1"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "ac45e436a7b19dae41c70983a989c91f07eb7237df8284894a89604f19c36b35"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Kick",
+        "voice": "KICK",
+        "macros": {
+          "TUNE": 0.3499999940395355,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "d2a6d0e1017f347d1404574d6d9c81fc85ee8ac72d7f2a7f5607005a52140367"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "880f4e0ef9c4f88d6ed2a7ba907faf2898e8d48ce0828162a4918a9439e5e7cd"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "5dc164a886896142cd4896bb1710953d1049237e575a8bb4ed0fafebca9dd612"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Snare",
+        "voice": "SNARE",
+        "macros": {
+          "TUNE": 0.6499999761581421,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "c541f5424979156fdbc80b038d560138cfb1f2d956d2ae0d17c7e5d9c70997aa"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "8131ea9a59583366b707bca2a5ae9c75cb71f8b9dd2871203f0232e222af9a14"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "43d27ac5d5bb4779e626f6d0972f89b45b7f295e5d2f7fd8450a8f03dbc731fe"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Closed",
+        "voice": "HAT_CLOSED",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "4478d69824a8570c7d8489c8af119afebfa318b3fb7a8dedb96721a25ffa575a"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.30000001192092896,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "f4dadbfca5143804b58600e3396f428a012c5cc500a3676172f970544acf255f"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 0.6000000238418579,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "7eb301d29dd3805290fc202d281025a8492241c2557c3b009c4261eb651450cd"
+  },
+  {
+    "format": "snipsnap-backwash-strike",
+    "model": 3,
+    "velocity": 1,
+    "recipe": {
+      "recipe": 2,
+      "patch": {
+        "engine": "BACKWASH",
+        "version": 1,
+        "name": "Double Open",
+        "voice": "HAT_OPEN",
+        "macros": {
+          "TUNE": 0.5,
+          "DAMP": 0.75,
+          "SWAY": 0.44999998807907104,
+          "TRAIL": 0.4000000059604645,
+          "PRESS": 0.44999998807907104,
+          "DRIVE": 0.25
+        }
+      },
+      "alias": false
+    },
+    "wavSha256": "06f149a014b476d2bde89aa8275728cd7dee09fdf758c55d7e8ed079e5665ff1"
+  }
+]

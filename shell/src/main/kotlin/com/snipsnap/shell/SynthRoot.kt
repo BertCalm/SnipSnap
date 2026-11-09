@@ -50,6 +50,8 @@ import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
@@ -125,6 +127,7 @@ import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.SilkPatch
 import com.snipsnap.synth.Siren
 import com.snipsnap.synth.SirenPatch
+import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
@@ -247,6 +250,7 @@ object SynthRoot {
 
     /** The root of [patch], or null for an engine that has none a note name would describe. */
     fun of(patch: Patch): Control? = when (patch) {
+        is com.snipsnap.synth.FiredBronzePatch -> null // Mixed percussion kit; TUNE is relative, not a shared MIDI root.
         // ---- a saved note, TUNE (where there is one) a transposition of it ----
         is AccordPatch -> Field(patch.midi, Accord.MIN_MIDI..Accord.MAX_MIDI) { patch.copy(midi = it) }
         is AlloyPatch -> Field(patch.midi, Alloy.MIDI_MIN..Alloy.MIDI_MAX) { patch.copy(midi = it) }
@@ -302,6 +306,11 @@ object SynthRoot {
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
+        // HALOBAR has a piecewise TUNE curve, so use its exact inverse.
+        is HalobarPatch -> Field(Halobar.midiFor(patch.voice,tuneOf(patch)),
+            Halobar.minimumMidi(patch.voice)..Halobar.MAX_MIDI) { midi ->
+            patch.copy(macros=patch.macros+("TUNE" to Halobar.tuneForMidi(patch.voice,midi)))
+        }
         is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
         is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
@@ -341,7 +350,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch -> null
+        is BackwashPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }
