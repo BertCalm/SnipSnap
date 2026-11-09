@@ -451,6 +451,18 @@ object SynthKits {
         )
     }
 
+    /** A separate listening kit; it does not replace the accepted HALOBAR starter. */
+    fun halobarGlockenspielStudy(): List<ArrangedPad?> {
+        val voice=HalobarVoice.GLOCKENSPIEL
+        val notes=listOf(72,75,77,79,82,84,87,89)
+        return listOf(false,true).flatMap { dub -> notes.map { midi ->
+            val patch=HalobarPatch("Glockenspiel ${com.snipsnap.audio.Scales.nameOf(midi)} ${if(dub)"Dub" else "Dry"}",
+                voice,Halobar.defaults(voice)+mapOf("TUNE" to Halobar.tuneForMidi(voice,midi),
+                    "SPACE" to if(dub).6f else 0f,"RETURN" to .62f))
+            pad(patch,Halobar.drumClassFor(voice,patch.macros)).copy(displayName=patch.name,oneShot=true)
+        } }
+    }
+
     /** Eight vibraphone notes followed by eight native listening references. All tails are finite. */
     fun halobar(): List<ArrangedPad?> {
         fun landed(patch: HalobarPatch) = pad(patch, Halobar.drumClassFor(patch.voice, patch.macros))

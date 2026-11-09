@@ -3331,6 +3331,16 @@ tasks.register<JavaExec>("generateHalobarAudition") {
     args("${rootDir}/testkit/halobar-audition")
 }
 
+tasks.register<JavaExec>("generateHalobarGlockenspielAudition") {
+    group = "distribution"
+    description = "Render the provisional HALOBAR glockenspiel audition and separate MPC study kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarGlockenspielAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition/glockenspiel")
+}
+
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"
     description = "Render the reference-informed dry revision without altering the rejected first study."

@@ -29,6 +29,9 @@ object HalobarAuditionGenerator {
     @JvmStatic fun main(args: Array<String>) {
         val root=File(args.firstOrNull() ?: "../testkit/halobar-audition").apply { mkdirs() }
         val clips=mutableListOf<Clip>()
+        // This is the accepted three-voice reference. New voices receive their
+        // own audition until heard; the approved WAVs and kit stay reproducible.
+        val acceptedVoices=HalobarPresets.acceptedVoices
         fun clip(voice: HalobarVoice,m: Map<String,Float>,id: String,title: String,group: String,measurePitch: Boolean=false,velocity: Float=1f) {
             val start=System.nanoTime()
             val p=Halobar.renderProbe(voice,m,velocity=velocity,normalize=true)
@@ -58,16 +61,16 @@ object HalobarAuditionGenerator {
             clips+=Clip(id,title,group,path,row)
             println("$id: ${p.samples.size} frames, ${"%.1f".format(Locale.ROOT,milliseconds)} ms")
         }
-        for(v in HalobarVoice.entries) for((midi,note) in listOf(if(v==HalobarVoice.XYLOPHONE)57 to "A3" else 53 to "F3",65 to "F4",77 to "F5")) for((space,kind) in listOf(0f to "dry",.35f to "dub"))
+        for(v in acceptedVoices) for((midi,note) in listOf(if(v==HalobarVoice.XYLOPHONE)57 to "A3" else 53 to "F3",65 to "F4",77 to "F5")) for((space,kind) in listOf(0f to "dry",.35f to "dub"))
             clip(v,mapOf("TUNE" to Halobar.tuneForMidi(v,midi),"SPACE" to space),"${v.name.lowercase()}-$note-$kind","${v.name} $note $kind","registers",true)
-        for(v in HalobarVoice.entries) for(name in Halobar.defaults(v).keys) for(value in listOf(0f,.5f,1f))
+        for(v in acceptedVoices) for(name in Halobar.defaults(v).keys) for(value in listOf(0f,.5f,1f))
             clip(v,mapOf(name to value),"${v.name.lowercase()}-${name.lowercase()}-$value","${v.name} $name $value","macros")
         for((a,b) in listOf("TOUCH" to "SPACE","RETURN" to "SPACE","RATE" to "RETURN","MOTION" to "RETURN","HOLD" to "RETURN"))
             for(x in listOf(0f,1f)) for(y in listOf(0f,1f))
                 clip(HalobarVoice.XYLOPHONE,mapOf(a to x,b to y),"${a.lowercase()}-$x-${b.lowercase()}-$y","XYLOPHONE $a $x / $b $y","pairs")
-        for(v in HalobarVoice.entries) for(reference in HalobarPresets.forVoice(v))
+        for(v in acceptedVoices) for(reference in HalobarPresets.forVoice(v))
             clip(v,reference.macros,"${v.name.lowercase()}-${reference.name.lowercase().replace(' ','-')}","${v.name} ${reference.name}","references")
-        for(v in HalobarVoice.entries) {
+        for(v in acceptedVoices) {
             for(value in listOf(0f,.5f,1f))
                 clip(v,Halobar.defaults(v).mapValues { value },"${v.name.lowercase()}-all-$value","${v.name} all controls $value","edges")
             for(value in listOf(0f,.25f,.5f,.75f,1f))
@@ -77,7 +80,7 @@ object HalobarAuditionGenerator {
             val patch=PadRecipe.fromJsonValue(requireNotNull(pad?.recipe)).patch as HalobarPatch
             clip(patch.voice,patch.macros,"pad-${i+1}","Pad ${i+1}: ${patch.name}","kit")
         }
-        val voices=HalobarVoice.entries
+        val voices=acceptedVoices
         val phraseFiles=mutableListOf<Map<String,Any?>>()
         val all=mutableListOf<FloatArray>()
         val focused=mutableListOf<FloatArray>()

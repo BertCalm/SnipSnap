@@ -5,7 +5,7 @@ import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.Halobar
-import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
@@ -124,10 +124,11 @@ class StarterKitsTest {
      * The single-engine starters with no block of their own below. Each SynthKits
      * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
      * every pad is dry, carries its engine's patch, is filed by that engine's
-     * drumClassFor, and the sixteen reach every voice.
+     * drumClassFor, and the sixteen reach every declared starter voice.
+     * HALOBAR keeps the accepted three-voice starter; provisional studies have a separate kit.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
-        "halobar" to OneEngine(HalobarPatch::class.java, HalobarVoice.entries.map { it.name }.toSet()) {
+        "halobar" to OneEngine(HalobarPatch::class.java, HalobarPresets.acceptedVoices.map { it.name }.toSet()) {
             (it as HalobarPatch).let { p -> Halobar.drumClassFor(p.voice,p.macros) }
         },
         "accord" to OneEngine(AccordPatch::class.java, AccordVoice.entries.map { it.name }.toSet()) {

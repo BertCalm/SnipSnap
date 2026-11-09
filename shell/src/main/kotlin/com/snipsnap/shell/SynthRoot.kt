@@ -307,7 +307,7 @@ object SynthRoot {
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
         // HALOBAR has a piecewise TUNE curve, so use its exact inverse.
         is HalobarPatch -> Field(Halobar.midiFor(patch.voice,tuneOf(patch)),
-            Halobar.minimumMidi(patch.voice)..Halobar.MAX_MIDI) { midi ->
+            Halobar.minimumMidi(patch.voice)..Halobar.maximumMidi(patch.voice)) { midi ->
             patch.copy(macros=patch.macros+("TUNE" to Halobar.tuneForMidi(patch.voice,midi)))
         }
         is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
