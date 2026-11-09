@@ -34,6 +34,30 @@ import java.util.Random
  */
 object Robin {
 
+    private fun acousticPatch(model: KitBuilderModel, slot: Int): com.snipsnap.synth.BackwashPatch? {
+        val recipe = model.pad(slot)?.let { Breed.recipeOf(it) } ?: return null
+        // External racks require their own replay path; never silently drop one.
+        if (recipe.fx != null || recipe.board != null || recipe.terminalFadeMs != null) return null
+        return (recipe.patch as? com.snipsnap.synth.BackwashPatch)?.takeIf { it.model == 5 }
+    }
+
+    /** The bank's native dynamic groups and recorded takes, with no manufactured jitter. */
+    fun applyAcoustic(model: KitBuilderModel, slot: Int, patch: com.snipsnap.synth.BackwashPatch): KitPad {
+        require(patch.model == 5)
+        val pad = requireNotNull(model.pad(slot))
+        require(pad.chain == null) { "undo the existing chain before building the acoustic grid" }
+        val layers = com.snipsnap.synth.BackwashAcoustic.layerCount(patch.voice)
+        val count = com.snipsnap.synth.BackwashAcoustic.takeCount(patch.voice)
+        val rendered = (0 until layers).flatMap { z -> (0 until count).map { t ->
+            patch.copy(take = patch.take + t).render((z + .5f) / layers)
+        } }
+        val starts = sliceStarts(rendered)
+        model.replaceAudio(slot, pad.recipe) { concat(rendered) }
+        val zones = (0 until layers).map { z -> ChainZone(128*z/layers, if(z==layers-1)127 else 128*(z+1)/layers-1,z*count,count) }
+        return model.update(slot) { it.copy(chain=ChainInfo(starts,count,zones),robin=null,
+            source=it.source + mapOf("backwashModel" to "5", "recordedTakesPerLayer" to count.toString(), "velocityLayers" to layers.toString())) }
+    }
+
     const val DEFAULT_TAKES = 3
 
     /** The corpus's chains cycle 2..4; 8 matches the layer count ceiling. */
@@ -86,6 +110,7 @@ object Robin {
     ): KitPad {
         require(takes in 2..MAX_TAKES) { "takes is 2..$MAX_TAKES, got $takes" }
         zones?.let { require(it in 2..4) { "zones is 2..4, got $it" } }
+        acousticPatch(model, slot)?.let { return applyAcoustic(model, slot, it) }
         if (zones == null) return applyLegacy(model, slot, RobinSettings(null, takes, seed, followsKit = false))
         // Zone grids keep `robin = null` on the pad, so they are not robin chains.
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -170,6 +195,7 @@ object Robin {
      * recipe), kept byte-identical for the CLI and replay.
      */
     fun apply(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
+        acousticPatch(model, slot)?.let { return applyAcoustic(model, slot, it) }
         val amount = settings.amount ?: return applyLegacy(model, slot, settings)
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }

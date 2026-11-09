@@ -137,7 +137,8 @@ object BackwashKitGenerator {
     private fun sha(f:File)=MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString(""){"%02x".format(it)}
     private fun renderEvidence(kit:Kit,data:File,clip:Mpc3Clip,file:File){
         val notes=clip.notes.sortedBy{it.timePulses};val scale=60.0/94/960*44100
-        val out=FloatArray((clip.lengthPulses*scale+2*44100).toInt())
+        val longestTail = kit.pads.flatMap { it.velocityLayers }.maxOf { WavReader.read(File(data,it.sampleFile)).samples.size }
+        val out=FloatArray((clip.lengthPulses*scale).toInt()+longestTail+1)
         for((index,note)in notes.withIndex()){
             val pad=kit.pads.single{it.slot==Mpc3Note.slotFor(note.note)}
             val v=(note.velocity*127).roundToInt()

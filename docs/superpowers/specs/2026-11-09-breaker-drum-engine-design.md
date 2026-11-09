@@ -275,6 +275,13 @@ controls and the groove change. Two of the four become kits 2 and 3.
 **Heard (2026-11-09).** Dub Tank: "Pick it". Trip hop: "Pick it". Garage and Lo-fi: "Maybe". Kits
 2 and 3 are Dub Tank and Trip hop. Garage and Lo-fi stay here as candidates for a later kit.
 
+**The gate (docs/ENGINE_ACCEPTANCE_GATES.md).** Different effect strengths on the same kit are not
+distinct genre kits. The candidates above changed only the controls and the groove. That made them
+quick to compare, but they are not kits. Each picked genre becomes an authored 16-pad kit with its
+own tuning, damping, backbeat roles and pad arrangement. For example, Dub Tank puts the rimshot on
+the drop and adds a delay-thrown snare. Trip hop gets a lower, fatter kick and snare and a heavier
+break layout. Each layout goes to the owner before it is built.
+
 SLAP gained a time law for the dub reading: a 90 ms slapback up to 0.5, growing to 375 ms at 1.
 
 ## As built: round 1 (2026-11-09)

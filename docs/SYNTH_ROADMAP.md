@@ -1,3 +1,7 @@
+> Spore Station candidate jungle kit: Jungle, Dub and Electro shelf kits, with 18 pads each,
+> three velocity zones × three takes, raw/matched comparisons and sampler downloads.
+> Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.

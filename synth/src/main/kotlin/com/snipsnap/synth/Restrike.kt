@@ -19,9 +19,10 @@ import kotlin.random.Random
  * The root and the decay are the drum's own on every take.
  *
  * Only the modal drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
- * voices, every TERRA voice, and BREAKER (whose source is a struck SKIN
- * drum). Every take is deterministic in (patch, velocity, seed, take);
- * take 0 is the reference itself.
+ * voices, every TERRA voice, BREAKER (whose source is a struck SKIN drum)
+ * and BACKWASH's model 5 (which renders its own next take). Every take is
+ * deterministic in (patch, velocity, seed, take); take 0 is the reference
+ * itself.
  */
 object Restrike {
     /** A take lands up to this much softer than the hit it repeats (a fraction of the velocity). Shape. */
@@ -32,7 +33,8 @@ object Restrike {
 
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
-        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch || patch is BreakerPatch
+        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch || patch is BreakerPatch ||
+            (patch is BackwashPatch && patch.model == 5)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -52,6 +54,7 @@ object Restrike {
     fun take(patch: Patch, velocity: Float, seed: Int, take: Int): Snip? {
         require(take >= 0) { "a take is 0 or more, got $take" }
         if (!canRestrike(patch)) return null
+        if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is SkinPatch -> patch.render(velocity = v, take = take)
