@@ -5193,7 +5193,6 @@ class ConventionTest {
     /** Who gives a bench with no opener its opener. */
     private enum class OpenerOwner(val why: String) {
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
-        PR_4("routed in PR 4 with the inline panels the spec's section 7.3 turns into sections or screens (SPREAD)"),
     }
 
     /**
@@ -5201,18 +5200,16 @@ class ConventionTest {
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 4** ([OpenerOwner.PR_4]): SPREAD. It is not a screen but a panel inside the pad
-     *   editor, drawn in place of the sheet from inside `PadSheetScreen`, and
-     *   it writes through the editor's own job. The spec's §7.3 turns inline
-     *   panels behind a `▸` into sections or screens, which is PR 4's work, so
-     *   it is routed with them. (PR 3d moved the rest of the pad editor family,
-     *   PAD_SHEET, GRAIN_FIELD, SPLICE and STACK, off this list.)
+     * - SPREAD is not on the list because it is not a bench: PR 4e made it a sheet over the pad
+     *   editor (`SpreadSheet`, opened by `SPREAD · SCALE ACROSS PADS ▾`), and the roster entry went
+     *   with it. (PR 3d moved the rest of the pad editor family, PAD_SHEET, GRAIN_FIELD, SPLICE and
+     *   STACK, off this list.)
      * - **PR 3e** ([OpenerOwner.PR_3E]): LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
-     *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
+     *   §7.3.1 lists these as loose state to route, so they are
      *   routed later, not waived as panels that stay in their screen.
      *
      * Each bench on the list has an owner, the PR that gives it an opener
-     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a PR 4 author finds
+     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a later author finds
      * what they own by the enum, not by a name in a comment.
      *
      * The list only shrinks, and the ceiling pins it exactly. The law fails
@@ -5225,12 +5222,11 @@ class ConventionTest {
      * with nothing failing.
      */
     private val NOT_YET_OPENED: Map<Bench, OpenerOwner> = mapOf(
-        Bench.SPREAD to OpenerOwner.PR_4,
         Bench.LIVE_SNAP to OpenerOwner.PR_3E,
         Bench.DRAW to OpenerOwner.PR_3E,
         Bench.FIELD to OpenerOwner.PR_3E,
     )
-    private val NOT_YET_OPENED_CEILING = 4
+    private val NOT_YET_OPENED_CEILING = 3
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -5381,17 +5377,13 @@ class ConventionTest {
             "a bench with no opener and not on the list must be reported, naming the call that opens it",
         )
         assertTrue(
-            openerProblems(everyBench, mapOf(Bench.SPREAD to OpenerOwner.PR_4)).any { "SPREAD" in it && "PR_4" in it && "only shrinks" in it },
+            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
             "a listed bench that something opens is reported with its owner, so the author who opened it knows whose list it left",
         )
-        assertTrue(
-            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
-            "the same for an owner that is not PR 4",
-        )
         assertEquals(
-            setOf(OpenerOwner.PR_3E, OpenerOwner.PR_4),
+            setOf(OpenerOwner.PR_3E),
             NOT_YET_OPENED.values.toSet(),
-            "the list has benches for both owners; an owner with no bench left is a stale enum entry to delete with the last bench",
+            "the list has a bench for every owner; an owner with no bench left is a stale enum entry to delete with the last bench",
         )
     }
 
@@ -5426,7 +5418,7 @@ class ConventionTest {
      *   StackTakesScreen, TapeSpliceScreen's back chip and GrainFieldScreen, onto
      *   the model's words; none of them has a literal left.)
      * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
-     *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
+     *   and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES". (AquariumPanel left the list when it became a section: its button reads CLOSE.)
      * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
      *   previous-preset buttons start with the same arrow and a capital, but
      *   they step through pads and presets and go nowhere.
@@ -5436,10 +5428,9 @@ class ConventionTest {
         "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
-        "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
         "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 8
+    private val BACK_LABEL_WAIVER_CEILING = 7
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5839,6 +5830,7 @@ class ConventionTest {
         "FROM PAD ▾", "RECALL SCANNED PAD ▾", "SOURCE ▾", // pad and motion-source picker dialogs
         "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
         "REOPEN PAD · EDIT ITS RECIPE ▾", // SYNTH's pad picker dialog
+        "SPREAD · SCALE ACROSS PADS ▾", // the pad editor's and SYNTH's door to the SPREAD sheet (root, scale, pads, bank)
         "${'$'}{engine.displayName} ▾", "▾", // the engine picker sheet, and a BEAT lane's pad picker
     )
 
