@@ -113,3 +113,26 @@ after updating the starter expectations and accepting either signed zero as
 silence. The final targeted-plus-CLI command exited 0. The earlier broad shell
 run exercised 2,266 tests; its stale registration expectations were corrected
 and rerun. The full synthesis suite was not repeated for v2.
+
+## Version 3: dry jungle revision
+
+The Jungle core now has new SKIN model-1 sources on A01–A10, with no finishing
+rack: shell/beater kicks, a body-forward main snare, a tight bright alternate,
+quiet ghosts and short low-ring cymbals. Jungle's shelf grids and roll use these
+sources. Dub and Electro retain their existing sounds. The audition begins with
+a same-pattern dry A/B comparison and defaults to the new Jungle core tab; the
+previous core remains available. Hearing acceptance and the existing MPC slice-map
+blocker remain open.
+
+V3 validation passed eight focused synth tests and the three-kit save/playback/
+SFZ round-trip test. All 115 clips / 230 WAVs and 486 SFZ regions passed asset
+checks. The previous 79 raw clips and every Dub/Electro exported WAV remain
+byte-identical. Dry source differences are tested before FX; the paired grooves
+share comparison gain. Main snare render length: 195.1 → 172.3 ms; open hat:
+488.1 → 402.0 ms. These are rendered buffer lengths, not T60 measurements.
+
+V3 published Site source: `ba45ba125f3e02339b9d1031efc32727276d5fc0`.
+The prior PR head passed JVM, Android build and native CI; its emulator job
+failed and the log download returns HTTP 403 in this environment. Device
+verification is unresolved. This sound-design revision passed its local
+render/replay, grid integration, asset and mocked page-control checks.

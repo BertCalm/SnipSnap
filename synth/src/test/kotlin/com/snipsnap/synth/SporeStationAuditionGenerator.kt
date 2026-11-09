@@ -29,8 +29,8 @@ object SporeStationAuditionGenerator {
         add(Event(7.5,10,.7f)); add(Event(7.75,12,.6f))
     }.sortedBy { it.beat }
 
-    fun groove(pads: List<ArrangedPad>, hybrid: List<ArrangedPad>? = null): Snip {
-        val ev = events() + if(hybrid!=null) listOf(Event(3.5,14,.6f),Event(6.75,13,.7f)) else emptyList()
+    fun groove(pads: List<ArrangedPad>, hybrid: List<ArrangedPad>? = null, coreOnly: Boolean = false): Snip {
+        val ev = (events() + if(hybrid!=null) listOf(Event(3.5,14,.6f),Event(6.75,13,.7f)) else emptyList()).filter { !coreOnly || it.pad < 10 }
         val frames = (8*60.0/SporeStation.BPM*Dsp.RATE).roundToInt() +
             (pads + hybrid.orEmpty()).maxOf { it.snip.frameCount }
         val out = FloatArray(frames*2)
@@ -116,6 +116,7 @@ object SporeStationAuditionGenerator {
             timings[if(mutation) "mutationBankMs" else "coreBankMs"]=(System.nanoTime()-start)/1e6;return result
         }
         val core=bank(false); val mutations=bank(true)
+        val jungle=SporeStation.arranged(jungle=true)
         val dry=SporeStation.parts().mapIndexed { i,p ->
             val begin=System.nanoTime();val source=p.patch.render();timings["source${i+1}Ms"]=(System.nanoTime()-begin)/1e6
             core[i].copy(snip=source,softVariants=listOf(.3f,.6f).map { Velocity.peakMatch(source,Velocity.atVelocity(p.patch,it)) })
@@ -140,6 +141,16 @@ object SporeStationAuditionGenerator {
             clip("dry-${i+1}",p.name,"Dry",dry[i].snip,PadRecipe(p.patch),i+1)
             clip("core-${i+1}",p.name,"Core",core[i].snip,SporeStation.recipe(i),i+1)
             clip("mutation-${i+1}",p.name,"Mutations",mutations[i].snip,SporeStation.recipe(i,true),i+1)
+        }
+        jungle.forEachIndexed { i,p ->
+            clip("jungle-${i+1}", p.displayName ?: "Jungle ${i+1}", "Jungle", p.snip, SporeStation.recipe(i,jungle=true),i+1)
+        }
+        val comparison = listOf(groove(dry,coreOnly=true),groove(jungle,coreOnly=true))
+        val compareGain = minOf(1f,.92f/comparison.maxOf { it.peak() })
+        val compareMatch = minOf(.03f/comparison.maxOf { Loudness.of(it) },.99f/comparison.maxOf { it.peak() })
+        comparison.forEachIndexed { i,s ->
+            clip("dry-compare-$i", if(i==0) "Previous dry drums" else "Revised jungle drums", "Dry comparison",
+                scale(s,compareGain),matchedGain=compareMatch/compareGain)
         }
         val grooves=listOf(groove(dry),groove(core),groove(mutations),groove(core,mutations))
         val busGain=minOf(1f,.92f/grooves.maxOf { it.peak() })
@@ -188,7 +199,7 @@ object SporeStationAuditionGenerator {
         }
 
         val manifest=linkedMapOf<String,Any?>("title" to "Spore Station","version" to SporeStation.VERSION,"bpm" to SporeStation.BPM,
-            "baseline" to "07d4a9aa6ce14beb06b3269711b1fb5d6f129f55","status" to "candidate-awaiting-owner-listen",
+            "baseline" to "76d0cb3bd328a32fe2c832340efb9813a7675fb4","status" to "candidate-awaiting-owner-listen",
             "sourceSha256" to listOf("synth/src/main/kotlin/com/snipsnap/synth/SporeStation.kt", "synth/src/test/kotlin/com/snipsnap/synth/SporeStationAuditionGenerator.kt").associateWith { hash(File(it)) },
             "sampleRate" to Dsp.RATE,"clips" to clips,"downloads" to downloads,"timings" to timings,
             "renderEnvironment" to "Kotlin/JVM 21 cloud container; not phone timing",

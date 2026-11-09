@@ -8,7 +8,7 @@ import kotlin.math.ln
  * Single-hit audition studies retain recipes; shelf grids retain complete audio and provenance. */
 object SporeStation {
     const val BPM = 170
-    const val VERSION = 2
+    const val VERSION = 3
     data class Part(val name: String, val patch: Patch, val kind: DrumClass, val level: Float = .7f)
     data class Controls(val body: Float = .5f, val bite: Float = .35f, val dust: Float = .15f,
                         val twist: Float = .1f, val space: Float = .2f) {
@@ -37,12 +37,27 @@ object SporeStation {
         Part("Canopy Call", SirenPatch("Canopy Call", SirenVoice.BIRD, Siren.defaults(SirenVoice.BIRD) + m("HOLD" to .12f, "GRIT" to .15f)), DrumClass.PERC, .4f),
         skin("Event Horizon", SkinVoice.SNARE, DrumClass.PERC, .5f, "DECAY" to .3f, "SNAP" to .65f),
     )
+    /** Dry break-kit sources: shell/beater kicks, separate body/wire snares and low-ring metal.
+     * Keep the previous parts table intact for direct listening comparisons and the other genres. */
+    fun jungleParts(): List<Part> = listOf(
+        skin("Root Kick", SkinVoice.KICK, DrumClass.KICK, .9f, "TUNE" to .58f, "DECAY" to .07f, "TONE" to .60f, "CLICK" to .62f, "DROP" to .08f, "PUNCH" to .65f),
+        skin("Heel Kick", SkinVoice.KICK, DrumClass.KICK, .58f, "TUNE" to .80f, "DECAY" to 0f, "TONE" to .70f, "CLICK" to .35f, "DROP" to .04f, "PUNCH" to .20f),
+        skin("Canopy Crack", SkinVoice.SNARE, DrumClass.SNARE, .85f, "TUNE" to .58f, "DECAY" to .26f, "SNAP" to .58f, "RATTLE" to .14f, "SIZZLE" to .30f, "PUNCH" to .74f),
+        skin("Understory", SkinVoice.SNARE, DrumClass.SNARE, .24f, "TUNE" to .58f, "DECAY" to .07f, "SNAP" to .30f, "RATTLE" to .06f, "SIZZLE" to .12f, "PUNCH" to .05f),
+        skin("Fracture", SkinVoice.SNARE, DrumClass.SNARE, .73f, "TUNE" to .80f, "DECAY" to .08f, "SNAP" to .76f, "RATTLE" to .08f, "SIZZLE" to .68f, "PUNCH" to .65f),
+        skin("Twig", SkinVoice.STICK, DrumClass.PERC, .45f, "TUNE" to .62f, "DECAY" to .06f, "BODY" to .38f, "CLICK" to .62f, "PUNCH" to .20f),
+        skin("Needle", SkinVoice.HAT_CLOSED, DrumClass.HAT_CLOSED, .38f, "TUNE" to .60f, "DECAY" to .025f, "TONE" to .63f, "RING" to .04f, "PUNCH" to .08f),
+        skin("Aperture", SkinVoice.HAT_OPEN, DrumClass.HAT_OPEN, .40f, "TUNE" to .60f, "DECAY" to .10f, "TONE" to .55f, "RING" to .06f, "PUNCH" to .10f),
+        skin("Dust", SkinVoice.SHAKER, DrumClass.PERC, .30f, "DECAY" to .07f, "TONE" to .58f, "GRAIN" to .25f, "PUNCH" to .08f),
+        skin("Halo Ride", SkinVoice.RIDE, DrumClass.PERC, .36f, "TUNE" to .65f, "DECAY" to .12f, "TONE" to .45f, "SIZZLE" to .15f, "PUNCH" to .10f),
+    ) + parts().drop(10)
+
     /** Invert ECHO's exponential time map; the baked delay is tied to this kit's documented tempo. */
     fun echoTime(beats: Float): Float = (ln((60f / BPM * beats) / .06f) / ln(.35f / .06f)).coerceIn(0f, 1f)
 
-    fun recipe(index: Int, mutation: Boolean = false, controls: Controls = Controls()): PadRecipe {
+    fun recipe(index: Int, mutation: Boolean = false, controls: Controls = Controls(), jungle: Boolean = false): PadRecipe {
         require(index in 0..15)
-        val part = parts()[index]
+        val part = (if (jungle) jungleParts() else parts())[index]
         val old = part.patch.macros
         val changes = mutableMapOf<String, Float>()
         // BODY is explicitly a source balance/decay control, not a physical simulation.
@@ -65,12 +80,12 @@ object SporeStation {
                 "REPEAT" to .25f + space * .25f, "TONE" to .28f, "MIX" to space * .55f, "HEAD" to .8f) else null,
             tape = if (mutation) m("WOBBLE" to .12f, "DRIVE" to .12f, "AGE" to .22f) else null,
         )
-        return PadRecipe(patch, fx, terminalFadeMs = 4f)
+        return PadRecipe(patch, if (jungle && !mutation && index < 10) null else fx, terminalFadeMs = 4f)
     }
 
     /** Original single-hit audition comparisons; shelf/export callers use [performance]. */
-    fun arranged(mutation: Boolean = false): List<ArrangedPad> = parts().mapIndexed { index, part ->
-        val recipe = recipe(index, mutation)
+    fun arranged(mutation: Boolean = false, jungle: Boolean = false): List<ArrangedPad> = (if (jungle) jungleParts() else parts()).mapIndexed { index, part ->
+        val recipe = recipe(index, mutation, jungle = jungle)
         val hard = recipe.render()
         val soft = listOf(.3f, .6f).map { velocity ->
             // Match layer peaks once, retaining velocity-dependent timbre. The sampler applies velocity gain.
@@ -89,7 +104,7 @@ object SporeStation {
             Genre.JUNGLE -> Controls()
             Genre.DUB -> Controls(body = .8f, bite = .15f, dust = .25f, space = .8f)
             Genre.ELECTRO -> Controls(body = .3f, bite = .7f, dust = .05f, twist = .6f, space = .1f)
-        })
+        }, jungle = genre == Genre.JUNGLE)
         val patch = requireNotNull(base.patch)
         val changes = when (genre) {
             Genre.JUNGLE -> emptyMap()
@@ -146,7 +161,7 @@ object SporeStation {
                 val sound = if (index < 16) take(index, genre, velocity, t, mutation) else gesture(genre, index == 17, velocity, t)
                 Velocity.peakMatch(hard, sound)
             } }
-            val part = parts().getOrNull(index)
+            val part = (if (genre == Genre.JUNGLE) jungleParts() else parts()).getOrNull(index)
             ArrangedPad(hard, part?.kind ?: if (hard.durationSeconds >= 1.5) DrumClass.LOOP else DrumClass.PERC,
                 level = if (genre == Genre.DUB && index in 6..9) .28f else part?.level ?: .45f,
                 displayName = part?.name ?: if (index == 16) "Canopy Roll" else "Spore Ascent",

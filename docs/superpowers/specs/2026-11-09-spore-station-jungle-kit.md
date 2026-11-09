@@ -210,3 +210,35 @@ velocity gain; matched mode is for timbre comparisons.
 - Separate roll/riser pads keep individual hits useful for sequencing.
 - Native kits preserve the complete grid when MPC import cannot reconstruct it.
 - MPC hardware acceptance stays open until the actual slice-map contract is proven.
+
+## Version 3: distinct dry jungle core
+
+Owner feedback: the core drums need a more distinct dry sound catered to jungle.
+Baseline: `76d0cb3b`. The new Jungle source table changes A01–A10 while retaining
+the previous table for A/B listening, Dub and Electro. Main and pickup kicks now
+use SKIN's shell/beater model, with different tuning, short decays and small pitch
+drops. The main snare gives the head more weight and shortens its wires; the
+alternate snare is higher, tighter and brighter. Ghosts share the main snare's
+tuning but use reduced punch, wire balance and decay. Hats and ride use short,
+low-ring metal settings. All ten core pads use SKIN model 1 with no finishing
+rack, including no crunch. A11–A16 retain their psychedelic treatments.
+
+The Jungle shelf kit, its 3 × 3 grids and its snare roll all use the revised
+sources. The previous 79 source/macro/groove comparisons remain available. A new
+Jungle core tab and a paired dry-only groove comparison expose the change without
+colour percussion, alternate patterns or independently normalized groove levels.
+The choice remains a listening candidate; no claim of hearing the result is made.
+
+Measured in the Kotlin render: main snare length 195.1 → 172.3 ms; closed hat
+66.1 → 58.0 ms; open hat 488.1 → 402.0 ms. These are file lengths, not T60
+measurements. Eight focused synth tests and the full three-kit grid save/playback/
+SFZ integration test passed. Asset checks cover 115 clips / 230 WAVs and all
+486 SFZ regions. The previous 79 raw comparisons and all Dub/Electro exported
+WAVs are byte-identical. Browser decoding and owner listening remain unverified.
+
+### Why it is built this way
+
+- Shell and beater components give the kicks a struck-drum identity before effects.
+- Separating snare head, wire length and ghost settings leaves room between fast hits.
+- Short, low-ring hats make the subdivisions articulate without a metallic wash.
+- Keeping effects on the colour pads lets the break remain dry while the canopy moves.

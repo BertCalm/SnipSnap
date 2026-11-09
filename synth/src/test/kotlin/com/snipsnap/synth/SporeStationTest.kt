@@ -40,4 +40,23 @@ class SporeStationTest {
         // Float rounding after a gain-only change must not qualify as a new articulation.
         assertTrue(differenceEnergy > signalEnergy * .0001)
     }
+    @Test fun `jungle core is dry and distinct before any finishing rack`() {
+        for (i in 0..9) {
+            val r = SporeStation.genreRecipe(i, SporeStation.Genre.JUNGLE)
+            assertNull(r.fx, "pad $i must get its identity from the source")
+            val patch = assertIs<SkinPatch>(r.patch)
+            assertEquals(1, patch.model, "no hidden recording rack inside model 2")
+            val fresh = patch.render()
+            val previous = SporeStation.parts()[i].patch.render()
+            val n = minOf(fresh.samples.size, previous.samples.size)
+            val energy = (0 until n).sumOf { previous.samples[it].toDouble() * previous.samples[it] }
+            val difference = (0 until n).sumOf { val d = fresh.samples[it].toDouble() - previous.samples[it]; d*d }
+            assertTrue(difference > energy * .01, "pad $i must change before FX")
+            assertContentEquals(r.render().samples, PadRecipe.fromJsonValue(r.toJsonValue()).render().samples)
+            if (i in listOf(1,2,3,6,7)) assertTrue(fresh.frameCount < previous.frameCount, "pad $i has a shorter tail")
+        }
+        assertIs<OnsetPatch>(SporeStation.genreRecipe(0, SporeStation.Genre.DUB).patch)
+        assertIs<OnsetPatch>(SporeStation.genreRecipe(0, SporeStation.Genre.ELECTRO).patch)
+    }
+
 }
