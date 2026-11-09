@@ -19,6 +19,7 @@ data class BackwashPatch(
 ) : Patch {
     init {
         Patches.validateMacros(this, Backwash.macrosFor(voice))
+        require(model != 3 || voice.legacy) { "model 3 has no ${voice.name} voice" }
         require(model in 3..Backwash.MODEL_VERSION) { "unsupported backwash model $model" }
     }
 

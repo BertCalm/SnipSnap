@@ -6,12 +6,11 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class BackwashVoice(val source: SkinVoice, val drumClass: DrumClass) {
-    KICK(SkinVoice.KICK, DrumClass.KICK),
-    SNARE(SkinVoice.SNARE, DrumClass.SNARE),
-    TOM(SkinVoice.TOM, DrumClass.TOM),
-    HAT_CLOSED(SkinVoice.HAT_CLOSED, DrumClass.HAT_CLOSED),
-    HAT_OPEN(SkinVoice.HAT_OPEN, DrumClass.HAT_OPEN),
+enum class BackwashVoice(val drumClass: DrumClass, val legacy: Boolean = true) {
+    KICK(DrumClass.KICK), SNARE(DrumClass.SNARE), TOM(DrumClass.TOM),
+    HAT_CLOSED(DrumClass.HAT_CLOSED), HAT_OPEN(DrumClass.HAT_OPEN),
+    CROSS_STICK(DrumClass.PERC, false), TAMBOURINE(DrumClass.PERC, false),
+    COWBELL(DrumClass.PERC, false), RIDE(DrumClass.PERC, false),
 }
 
 /**
@@ -34,6 +33,12 @@ object Backwash {
             BackwashVoice.SNARE -> .65f
             BackwashVoice.TOM -> .35f
             else -> .5f
+        }) else if (!voice.legacy) it.copy(default = when (it.name) {
+            "SWAY" -> .55f
+            "TRAIL" -> .55f
+            "PRESS" -> .75f
+            "DRIVE" -> .65f
+            else -> it.default
         }) else it
     }
     fun defaults(voice: BackwashVoice) = macrosFor(voice).associate { it.name to it.default }
@@ -49,7 +54,8 @@ object Backwash {
         val m = settled(voice, macros)
         val damp = m.getValue("DAMP")
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
-        return BackwashDrums.render(voice, m.getValue("TUNE"), damp, v)
+        return if (voice.legacy) BackwashDrums.render(voice, m.getValue("TUNE"), damp, v)
+            else BackwashPercussion.render(voice, m.getValue("TUNE"), damp, v)
     }
 
     /**

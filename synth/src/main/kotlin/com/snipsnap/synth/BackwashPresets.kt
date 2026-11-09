@@ -6,7 +6,7 @@ object BackwashPresets {
         BackwashPatch(name, voice, Backwash.defaults(voice) + settings)
 
     /** Bank-A pad order is also the export source of truth. */
-    private val bank = listOf(
+    private val originalBank = listOf(
         p(BackwashVoice.KICK, "Core Kick"),
         p(BackwashVoice.SNARE, "Core Snare"),
         p(BackwashVoice.HAT_CLOSED, "Core Closed"),
@@ -24,13 +24,14 @@ object BackwashPresets {
         p(BackwashVoice.HAT_CLOSED, "Double Closed", "SWAY" to .45f, "TRAIL" to .4f),
         p(BackwashVoice.HAT_OPEN, "Double Open", "SWAY" to .45f, "TRAIL" to .4f),
     ).map { it.copy(model = 3) }
-    private val processing = BackwashVoice.entries.flatMap { voice ->
+    private val processing = BackwashVoice.entries.filter { it.legacy }.flatMap { voice ->
         val suffix = when (voice) {
             BackwashVoice.KICK -> "Kick"
             BackwashVoice.SNARE -> "Snare"
             BackwashVoice.TOM -> "Tom"
             BackwashVoice.HAT_CLOSED -> "Closed"
             BackwashVoice.HAT_OPEN -> "Open"
+            else -> error("processing study covers the original voices")
         }
         listOf(
             p(voice, "Seasick $suffix", "SWAY" to 1f, "TRAIL" to 1f),
@@ -39,13 +40,21 @@ object BackwashPresets {
             p(voice, "Pushed $suffix", "SWAY" to 1f, "TRAIL" to 1f, "PRESS" to 1f, "DRIVE" to 1f),
         )
     }
+    private val replacements = listOf(
+        p(BackwashVoice.CROSS_STICK, "Cross Stick"), p(BackwashVoice.TAMBOURINE, "Tambourine"),
+        p(BackwashVoice.COWBELL, "Cowbell"), p(BackwashVoice.RIDE, "Ride Cymbal"),
+    )
+    private val bank = originalBank.take(12) + replacements
+    /** Historical audition source only; retired Double recipes remain replayable from JSON. */
+    internal fun legacyKitOrder(): List<BackwashPatch> = originalBank
+
     /** Core row combined, second row clamped, toms overloaded, last row seasick. */
     fun processingKitOrder(): List<BackwashPatch> = listOf(
         "Pushed Kick", "Pushed Snare", "Pushed Closed", "Pushed Open",
         "Clamped Kick", "Clamped Snare", "Clamped Closed", "Clamped Open",
         "Overloaded Tom", "Pushed Tom", "Clamped Tom", "Seasick Tom",
-        "Seasick Kick", "Seasick Snare", "Seasick Closed", "Seasick Open",
-    ).map { name -> processing.single { it.name == name } }
+        "Cross Stick", "Tambourine", "Cowbell", "Ride Cymbal",
+    ).map { name -> (processing + replacements).single { it.name == name } }
 
     fun kitOrder(): List<BackwashPatch> = bank
     fun all(): List<BackwashPatch> = BackwashVoice.entries.flatMap(::forVoice)

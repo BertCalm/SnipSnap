@@ -29,7 +29,7 @@ object BackwashKitGenerator {
         val k = BackwashVoice.KICK; val s = BackwashVoice.SNARE; val c = BackwashVoice.HAT_CLOSED
         val o = BackwashVoice.HAT_OPEN; val t = BackwashVoice.TOM
         val pads = (if (pushed) BackwashPresets.processingKitOrder() else BackwashPresets.kitOrder()).map { Pad(it.name, it.voice, it.macros, it.model) }
-        val model = pads.map { it.model }.distinct().single()
+        val model = pads.map { it.model }.distinct().joinToString("/")
         val recipeDir = File(root, "recipes").apply { mkdirs() }
         val arranged = pads.mapIndexed { index, p ->
             val patch = BackwashPatch(p.name,p.voice,Backwash.defaults(p.voice)+p.macros,p.model)
@@ -50,7 +50,7 @@ object BackwashKitGenerator {
             }
             check(layers.last().samples.contentEquals(recipe.render().samples))
             ArrangedPad(layers.last(),p.voice.drumClass,recipe.toJsonValue(),
-                level=when(p.voice){k->.9f;s->1f;t->.85f;else->.38f},softVariants=layers.take(2),displayName=p.name,
+                level=when(p.voice){k->.9f;s->1f;t->.85f;BackwashVoice.CROSS_STICK->.8f;BackwashVoice.COWBELL->.55f;BackwashVoice.TAMBOURINE->.3f;BackwashVoice.RIDE->.4f;else->.38f},softVariants=layers.take(2),displayName=p.name,
                 layerNames=listOf("Soft","Medium","Hard"),muteGroup=if(p.voice==c||p.voice==o)1 else 0,
                 source=mapOf("engine" to "BACKWASH","model" to patch.model.toString(),"sourceVelocities" to "0.3,0.6,1.0",
                     "layerRecipeFormat" to "snipsnap-backwash-strike","layerRecipeBase" to "recipes/${PadNoteMap.labelForPad(index+1)}",
@@ -63,7 +63,9 @@ object BackwashKitGenerator {
             val b=bar*4.0
             for(i in 0..7)hit(if(bar==1&&i==7)4 else 3,b+i*.5,if(i%2==0)88 else 56)
             hit(1,b,114);hit(1,b+2,110);hit(1,b+2.75,80)
-            hit(2,b+1.012,109);hit(2,b+3.012,106)
+            hit(if(bar==1)13 else 2,b+1.012,109);hit(if(bar==1)13 else 2,b+3.012,106)
+            if(bar==2)for(i in 0..7)hit(14,b+i*.5,if(i%2==0)64 else 88)
+            if(bar==3){ for(i in 0..3)hit(16,b+i,80);for(offset in listOf(.5,1.75,2.5))hit(15,b+offset,96) }
             if(bar%2==0)hit(2,b+2.5,34)
         }
         hit(11,14.5,100);hit(10,15.0,108);hit(9,15.5,116)
@@ -111,7 +113,8 @@ object BackwashKitGenerator {
             All hats share mute group 1. Drums are one-shots; no held loops.
             Samples include BACKWASH's chorus/compression/amp. No extra playback effects.
             No extra attenuation is baked into soft samples; hardware velocity controls level.
-            kit.json stores each hard-layer PadRecipe; source model 3 with processing model $model.
+            kit.json stores each hard-layer PadRecipe and its renderer version.
+            Pads 13–16: cross-stick, tambourine, cowbell and ride; new voices use model 4.
             recipes/Axx-1..3.json additionally records source velocity and model for every layer.
             These strike wrappers are not ordinary PadRecipe JSON: reconstruct with Backwash.render
             using their nested recipe patch, velocity, and the current BACKWASH renderer. Generator checks exact replay.

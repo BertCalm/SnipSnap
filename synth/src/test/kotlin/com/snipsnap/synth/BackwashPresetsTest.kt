@@ -33,7 +33,10 @@ class BackwashPresetsTest {
             val item=entry.obj()
             assertEquals(3,item.getValue("model").int())
             val old=PadRecipe.fromJsonValue(item.getValue("recipe")).patch as BackwashPatch
-            val factory=Presets.byName(old.engine,old.voiceName,old.name) as BackwashPatch
+            val factory=if (old.name.startsWith("Double ")) {
+                assertNull(Presets.byName(old.engine,old.voiceName,old.name))
+                old
+            } else Presets.byName(old.engine,old.voiceName,old.name) as BackwashPatch
             assertEquals(old,factory)
             val snip=factory.render(item.getValue("velocity").num().toFloat())
             val bytes=ByteArrayOutputStream().also { WavWriter.write(it,snip,WavWriter.BitDepth.PCM_24) }.toByteArray()

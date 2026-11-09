@@ -14,9 +14,9 @@ Baseline inspected: `cc47036c43e36d3eca78bd6e70cb15994b08d469`.
 ## Current build
 
 The owner-approved sound is a dedicated model-3 acoustic-style drum source,
-followed by model-4 chorus, parallel compression and amp processing. Five voices
-supply 36 factory presets: the sixteen original recipes plus Seasick, Clamped,
-Overloaded and Pushed for every voice. Select BACKWASH → SNARE → Pushed Snare
+followed by model-4 chorus, parallel compression and amp processing. Nine voices
+supply 36 factory presets: twelve original recipes, four new percussion voices,
+and Seasick, Clamped, Overloaded and Pushed for each of the original five voices. Select BACKWASH → SNARE → Pushed Snare
 to start with all three stages pushed. TUNE and DAMP shape the drum; SWAY,
 TRAIL, PRESS and DRIVE shape its processing.
 
@@ -447,3 +447,13 @@ Copy the matching verification JSON into the site's `android-preview` directory
 first. The helper verifies the complete APK hash before splitting it, checks
 reassembly, and updates the existing download page. The checksum check does not
 replace APK signing verification or an on-device installation test.
+
+## Percussion replacement row
+
+The current 36-preset factory roster spans nine voices. Cross Stick, Tambourine, Cowbell and Ride Cymbal replace the four Double presets; both 16-pad exports put them on A13–A16. The first twelve pads retain their existing recipes. Saved Double recipes still replay exactly through their versioned renderer. New voices require model 4.
+
+### Why it is built this way
+
+The extra row now adds distinct physical gestures: a short woody cross-stick contact, repeated paired-jingle collisions, a two-dominant-mode metal bell, and an inharmonic cymbal plate with sustained noisy wash. These are designed modal models, not measured replicas. All four pass through the established chorus → compressor → amp chain. Velocity changes contact and spectral excitation; TUNE and DAMP change their source character. Four-times oversampling and decaying modal poles bound the sources before the existing output treatment.
+
+The updated four-bar audition introduces cross-stick in bar two, tambourine in bar three, and cowbell plus ride in bar four. The new timbres still need listening approval; numerical dissimilarity is not an assessment by ear. Targeted checks cover deterministic JSON replay at three velocities, finite bounded output, factory placement, and unchanged historical audio fixtures.
