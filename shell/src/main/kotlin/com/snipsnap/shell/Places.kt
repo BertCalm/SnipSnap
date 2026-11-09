@@ -174,7 +174,7 @@ object Places {
     /**
      * The closed THIS KIT group's second line: the tools inside that
      * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
-     * button's label inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     * button's or section's name inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
      */
     const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
 
@@ -186,6 +186,21 @@ object Places {
 
     /** THIS KIT's heading over VERSIONS + BIN and BREED. */
     const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
+
+    /** KEY's opener inside THIS KIT: a picker, so it opens a sheet (a trailing ▾). */
+    const val KEY_OPEN = "KEY ▾"
+
+    /** The KEY sheet's title. */
+    const val KEY_SHEET_TITLE = "KEY"
+
+    /**
+     * The closed line of a SCULPT or STRETCH section inside THIS KIT. With a pad
+     * to read from it says what GO would render: the mode, the knob's value and
+     * the pad ("CLOUD · 8 S · FROM A07"). With no pad yet it says what is inside,
+     * the modes ("CLOUD · SCRUB · SWARM"), never an empty or untouched word.
+     */
+    fun textureLine(modes: List<String>, mode: String, knobText: String, sourceTag: String?): String =
+        if (sourceTag == null) modes.joinToString(" · ") else "$mode · ${knobText.uppercase(Locale.ROOT)} · FROM $sourceTag"
 
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
