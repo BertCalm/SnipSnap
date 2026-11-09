@@ -2,12 +2,10 @@ package com.snipsnap.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,14 +21,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -45,19 +44,44 @@ import com.snipsnap.shell.Spread
  */
 internal class SpreadSource(val snip: Snip, val midi: Float?, val root: Int)
 
+/**
+ * The pad editor's door to [SpreadSheet]: nothing while [source] is null, else the
+ * sheet in the colour of [pad]. Its own function, not a block in the editor, because
+ * the editor's method is over the dex register ceiling and must not grow.
+ */
+@Composable
+internal fun PadSpreadSheet(
+    source: SpreadSource?,
+    kit: Kit?,
+    pad: KitPad,
+    scheme: Scheme,
+    busy: Boolean,
+    onSpread: (Spread.Options) -> Unit,
+    onCancel: () -> Unit,
+) {
+    if (source == null) return
+    SpreadSheet(kit, source, pad.colorHex ?: AutoPlace.colorFor(pad.drumClass), scheme, busy, onSpread, onCancel)
+}
+
 /** Bank rows as the MPC draws them: the top row first, the bank's first pad bottom-left. */
 private val BANK_ROWS = listOf(12..15, 8..11, 4..7, 0..3)
 
+/** The sheet's title: SPREAD's one line of what it does. */
+internal const val SPREAD_SHEET_TITLE = "SPREAD — ONE SOUND, ONE SCALE"
+
 /**
- * SPREAD's panel, shared by SYNTH and the pad sheet: ROOT and OCT, the
- * scale, how many pads and which bank, MONO and REPLACE FULL, and a live
- * preview of the bank — every pad's note, the roots in their lighter
- * shade, and what each pad left alone is keeping. The preview is
- * [Spread.plan] over [kit]; the caller plans again over the kit on disk
- * when it writes.
+ * SPREAD's sheet, shared by SYNTH and the pad sheet (clarity spec 7.3: a
+ * choose-then-confirm panel is a [BottomSheet], opened by a control that
+ * ends in a down arrow): ROOT and OCT, the scale, how many pads and which
+ * bank, MONO and REPLACE FULL, and a live preview of the bank — every
+ * pad's note, the roots in their lighter shade, and what each pad left
+ * alone is keeping. The preview is [Spread.plan] over [kit]; the caller
+ * plans again over the kit on disk when it writes. The scrim, Back and a
+ * pull down on the handle all reach [onCancel], and do nothing while
+ * [busy]: a write in flight keeps the sheet up until it lands.
  */
 @Composable
-internal fun SpreadOverlay(
+internal fun SpreadSheet(
     kit: Kit?,
     source: SpreadSource,
     /** The sound's pad colour, #rrggbb. */
@@ -86,28 +110,8 @@ internal fun SpreadOverlay(
     val noteColor = colorHex.removePrefix("#").toInt(16)
     val rootColor = Spread.rootTint(colorHex).removePrefix("#").toInt(16)
 
-    // Same catch-all as SlotChooserOverlay's: a tap in a gap must not fall
-    // through to the screen underneath.
-    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TapeText("SPREAD — ONE SOUND, ONE SCALE", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .tapeClick(label = "CANCEL", enabled = !busy, onClick = onCancel)
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(if (busy) "…" else "CANCEL", TapeType.pixel, scheme.amber.tape)
-                }
-            }
-
+    BottomSheet(SPREAD_SHEET_TITLE, onDismiss = { if (!busy) onCancel() }, scrimLabel = "CANCEL") {
+        Column(Modifier.fillMaxWidth().weight(1f).padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -181,7 +185,7 @@ internal fun SpreadOverlay(
                     when {
                         busy -> "…"
                         count == 0 -> "NO PAD FREE"
-                        else -> "SPREAD ▸ $count ${if (count == 1) "PAD" else "PADS"}"
+                        else -> "SPREAD · $count ${if (count == 1) "PAD" else "PADS"}"
                     },
                     TapeType.pixel,
                     scheme.titleInk.tape,

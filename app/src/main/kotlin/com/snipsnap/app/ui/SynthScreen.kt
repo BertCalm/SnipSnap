@@ -3011,7 +3011,7 @@ fun SynthScreen(
                 // Directly under the strip it adds to: the sound is kept before it is
                 // placed. No kit is needed - a preset is the shelf's, not the open kit's.
                     LabButton(
-                        if (presets.saveBusy) "…" else "SAVE PRESET ▸",
+                        if (presets.saveBusy) "…" else "SAVE PRESET",
                         scheme,
                         enabled = !presets.saveBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.fillMaxWidth(),
@@ -3026,7 +3026,7 @@ fun SynthScreen(
                 // forgotten on SNARE is found from KICK.
                 if (presets.binnedPresets.isNotEmpty()) {
                     LabButton(
-                        "DELETED PRESETS ▸ ${presets.binnedPresets.size} WAITING",
+                        "DELETED PRESETS · ${presets.binnedPresets.size} WAITING",
                         scheme,
                         enabled = !presets.binBusy,
                         modifier = Modifier.fillMaxWidth(),
@@ -3728,7 +3728,7 @@ fun SynthScreen(
 
                 SynthSectionHeading(Copy.SYNTH_HEADING_USE, scheme)
                 LabButton(
-                    "REOPEN PAD ▸ EDIT ITS RECIPE",
+                    "REOPEN PAD · EDIT ITS RECIPE ▾",
                     scheme,
                     enabled = reopenablePads.isNotEmpty() && !padChooser.sendBusy,
                     modifier = Modifier.fillMaxWidth(),
@@ -3751,7 +3751,7 @@ fun SynthScreen(
                 // One sound, a whole bank of notes: its own row, since the
                 // three above already fill theirs at the pixel face.
                 LabButton(
-                    if (spreadState.opening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    if (spreadState.opening) "…" else "SPREAD · SCALE ACROSS PADS ▾",
                     scheme,
                     enabled = kit != null && !padChooser.sendBusy && !spreadState.opening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
@@ -3766,7 +3766,7 @@ fun SynthScreen(
                 // replay its sweep at every wrap (the spec's SURFACE section).
                 if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
                     LabButton(
-                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE ▸",
+                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE",
                         scheme,
                         enabled = kit != null && !padChooser.sendBusy,
                         modifier = Modifier.fillMaxWidth(),
@@ -3792,7 +3792,7 @@ fun SynthScreen(
                 if (supportsHeldInstrument) {
                     if (engine == Engine.PRISM) PrismInstrumentHint(scheme)
                     LabButton(
-                        "MAKE INSTRUMENT ▸",
+                        "MAKE INSTRUMENT",
                         scheme,
                         enabled = heldInstrumentReady,
                         modifier = Modifier.fillMaxWidth(),
@@ -3833,7 +3833,7 @@ fun SynthScreen(
                 // RESIN's own breathing filter or SIREN's own wail.
                 if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
-                        "DRONE TO LOOP ▸",
+                        "DRONE TO LOOP",
                         scheme,
                         enabled = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -3856,7 +3856,7 @@ fun SynthScreen(
                     if (engine == Engine.PRISM) prismMotionStudio.cancelPreview()
                     voicePlayer?.stop(); voicePlayer = null
                 },
-                sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD ▸",
+                sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD",
                 sendEnabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                 onSend = {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) return@AuditionBar
@@ -3902,9 +3902,9 @@ fun SynthScreen(
 
         spreadState.source?.let { src ->
             // Self-guarded like the chooser's CANCEL: a write in flight
-            // keeps the panel up until it lands.
+            // keeps the sheet up until it lands.
             val cancelSpread = { if (!spreadState.busy) spreadState.source = null }
-            SpreadOverlay(
+            SpreadSheet(
                 kit = kit,
                 source = src,
                 colorHex = AutoPlace.colorFor(spreadState.drumClass),
@@ -3913,7 +3913,6 @@ fun SynthScreen(
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
-            SynthOverlayBackHandler(onBack = cancelSpread)
         }
 
         if (presets.namingPreset) {

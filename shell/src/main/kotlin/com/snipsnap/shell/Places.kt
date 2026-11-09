@@ -46,10 +46,10 @@ object Places {
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.
      */
-    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND ▸"
+    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND"
 
-    /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. The arrow: it opens that page. */
-    const val OPEN_SETTINGS = "OPEN SETTINGS ▸"
+    /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. No arrow: that page is Android's, not a screen of ours. */
+    const val OPEN_SETTINGS = "OPEN SETTINGS"
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
 
@@ -68,10 +68,10 @@ object Places {
 
     /**
      * BEAT's SHARE chip, beside BOUNCE TO SNIPS: the pattern as two passes of
-     * audio, handed to the share sheet. The arrow: it opens the sheet. Spoken
+     * audio, handed to the share sheet. No arrow: an action, and the sheet is Android's. Spoken
      * as [SHARE_BEAT_SPOKEN], because "share" alone does not say what.
      */
-    const val SHARE_BEAT = "SHARE ▸"
+    const val SHARE_BEAT = "SHARE"
     const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
 
     /**
@@ -103,20 +103,21 @@ object Places {
 
     // ---- PROJECT ▸ PADS ----
 
-    /** The kit switcher above the grid: `KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or the empty project's line. */
+    /** The kit switcher above the grid: `KITCHEN · 2 KITS IN THIS PROJECT ▾`, or the empty project's line. The `▾`: the chip opens a sheet. */
     fun switcher(project: Project): String {
         val active = project.activeKit ?: return NO_KITS
         val n = project.kits.size
-        return "${active.uppercase(Locale.ROOT)} ▾ · $n ${if (n == 1) "KIT" else "KITS"} IN THIS PROJECT"
+        val kits = if (n == 1) "KIT" else "KITS"
+        return "${active.uppercase(Locale.ROOT)} · $n $kits IN THIS PROJECT ▾"
     }
 
     /**
      * The name chip's accessible name: what a tap does, then the fact the
      * drawn chip has no room for. The line is [switcher]'s, and its `▾`
-     * is dropped on the way - neither face has the glyph, it drew as a
-     * dot, and a screen reader would read it out as a shape.
+     * is dropped on the way: a screen reader would read it out as a shape,
+     * and "SWITCH KIT" already says the chip opens a list.
      */
-    fun switchKitName(line: String): String = "SWITCH KIT · " + line.replace(" ▾", "")
+    fun switchKitName(line: String): String = "SWITCH KIT · " + line.removeSuffix(" ▾")
 
     const val NO_KITS = "NO KITS YET"
     const val ADD_FROM_SHELF = "+ FROM SHELF"

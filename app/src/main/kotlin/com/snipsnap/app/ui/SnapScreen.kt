@@ -984,7 +984,7 @@ fun SnapScreen(
                 SnapGroupHeading(Copy.SNAP_ONE_PAD, scheme)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
-                        if (cloudBusy) "…" else "CLOUD ▸",
+                        if (cloudBusy) "…" else "CLOUD",
                         scheme,
                         enabled = kit != null && field != null && !cloudBusy,
                         modifier = Modifier.weight(1f),
@@ -993,7 +993,7 @@ fun SnapScreen(
                         showCloudChooser = true
                     }
                     LabButton(
-                        if (spectrumBusy) "…" else "SPECTRUM ▸",
+                        if (spectrumBusy) "…" else "SPECTRUM",
                         scheme,
                         enabled = kit != null && photo != null && !spectrumBusy,
                         modifier = Modifier.weight(1f),
@@ -1002,7 +1002,7 @@ fun SnapScreen(
                         showSpectrumChooser = true
                     }
                     LabButton(
-                        if (telephoneBusy) "…" else "TELEPHONE ▸",
+                        if (telephoneBusy) "…" else "TELEPHONE",
                         scheme,
                         enabled = photo != null && !telephoneBusy,
                         modifier = Modifier.weight(1f),
@@ -1015,7 +1015,7 @@ fun SnapScreen(
                 SnapGroupHeading(Copy.SNAP_ALL_SIXTEEN, scheme)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
-                        if (busy) "…" else "KIT ▸",
+                        if (busy) "…" else "KIT",
                         scheme,
                         enabled = photo != null && !busy,
                         modifier = Modifier.weight(1f),
@@ -1024,7 +1024,7 @@ fun SnapScreen(
                         photo?.let(onBuildKit)
                     }
                     LabButton(
-                        if (busy) "…" else "CHORD ▸",
+                        if (busy) "…" else "CHORD",
                         scheme,
                         enabled = photo != null && !busy,
                         modifier = Modifier.weight(1f),
@@ -1051,7 +1051,7 @@ fun SnapScreen(
             SnapBottomBar(
                 classColor = classColor,
                 scheme = scheme,
-                sendLabel = if (sendBusy) "…" else "SEND TO PAD ▸",
+                sendLabel = if (sendBusy) "…" else "SEND TO PAD",
                 sendEnabled = kit != null && current != null && !current.flat && !sendBusy,
                 onAudition = { snip?.let { audition(it) } },
                 onSend = { showChooser = true },
@@ -1326,7 +1326,7 @@ private fun TelephoneOverlay(
                 }
             }
             LabButton(
-                "SEND TO PAD ▸",
+                "SEND TO PAD",
                 scheme,
                 enabled = generations.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
@@ -1776,7 +1776,7 @@ private fun DrawOverlay(
                     }
                     LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                     LabButton(
-                        "LOOP PAD ▸",
+                        "LOOP PAD",
                         scheme,
                         enabled = kitOpen && hasPath,
                         modifier = Modifier.weight(1f),
