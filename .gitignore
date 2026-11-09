@@ -715,3 +715,6 @@ experiments/velour/__pycache__/
 /testkit/triad-hands-r2/
 
 /testkit/triad-accepted/
+
+# Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
+/testkit/cosmic-breaks-kit/

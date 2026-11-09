@@ -21,6 +21,9 @@ class HalobarPresetsTest {
         assertFalse(HalobarPatch.ENGINE in PatchTypes.PROTOTYPES)
         assertEquals(HalobarPresets.all(),Presets.all().filterIsInstance<HalobarPatch>())
         assertEquals(12,HalobarPresets.all().size)
+        assertTrue(HalobarPresets.forVoice(HalobarVoice.GLOCKENSPIEL).isEmpty())
+        assertEquals(setOf("GLOCKENSPIEL"),PatchTypes.PROTOTYPE_VOICES[HalobarPatch.ENGINE])
+        assertEquals(4,HalobarPresets.auditionFor(HalobarVoice.GLOCKENSPIEL).size)
         assertTrue(Presets.forVoice(HalobarPatch.ENGINE,"UNKNOWN").isEmpty())
     }
 
@@ -39,6 +42,6 @@ class HalobarPresetsTest {
             assertEquals(Halobar.drumClassFor(patch.voice,patch.macros),p.drumClass)
             assertTrue(Classifier.classify(p.snip).drumClass in setOf(DrumClass.PERC,DrumClass.TONAL,DrumClass.LOOP))
         }
-        assertEquals(HalobarVoice.entries.toSet(),voices)
+        assertEquals(HalobarPresets.acceptedVoices.toSet(),voices)
     }
 }

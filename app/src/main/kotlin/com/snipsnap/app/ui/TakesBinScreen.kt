@@ -728,7 +728,7 @@ private fun TakeRowLine(
                 val changes = row.changes
                 val headline = if (changes == null) "WON'T READ" else KitDiff.headline(changes)
                 val headlineInk = if (changes == null) scheme.warn.tape else if (changes.isEmpty()) scheme.ink3.tape else scheme.ink2.tape
-                TapeText("$headline ${if (expanded) "▾" else "▸"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
+                TapeText("$headline ${if (expanded) "−" else "+"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
             }
             Spacer(Modifier.weight(1f))
             row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }

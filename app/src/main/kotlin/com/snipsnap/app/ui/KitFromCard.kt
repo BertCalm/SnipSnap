@@ -71,7 +71,7 @@ internal fun KitFromCard(
             }
         }
         ActionButton(
-            "MAKE KIT ▸ ${KitMaker.genreLabel(genre)}",
+            "MAKE KIT · ${KitMaker.genreLabel(genre)}",
             scheme,
             enabled = !busy,
             working = working,

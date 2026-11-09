@@ -5,7 +5,7 @@ import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.Halobar
-import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
@@ -124,10 +124,11 @@ class StarterKitsTest {
      * The single-engine starters with no block of their own below. Each SynthKits
      * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
      * every pad is dry, carries its engine's patch, is filed by that engine's
-     * drumClassFor, and the sixteen reach every voice.
+     * drumClassFor, and the sixteen reach every declared starter voice.
+     * HALOBAR keeps the accepted three-voice starter; provisional studies have a separate kit.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
-        "halobar" to OneEngine(HalobarPatch::class.java, HalobarVoice.entries.map { it.name }.toSet()) {
+        "halobar" to OneEngine(HalobarPatch::class.java, HalobarPresets.acceptedVoices.map { it.name }.toSet()) {
             (it as HalobarPatch).let { p -> Halobar.drumClassFor(p.voice,p.macros) }
         },
         "accord" to OneEngine(AccordPatch::class.java, AccordVoice.entries.map { it.name }.toSet()) {
@@ -208,7 +209,7 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom")) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "cosmic-breaks")) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
@@ -234,7 +235,7 @@ class StarterKitsTest {
                 val expectedRenderOnly = when (starter.id) {
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
-                    StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom" -> (1..16).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "cosmic-breaks" -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
@@ -576,7 +577,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "fired-bronze"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "fired-bronze", "cosmic-breaks"),
             StarterKits.ALL.map { it.id },
         )
         val halobar = StarterKits.byId("halobar")!!

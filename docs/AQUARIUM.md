@@ -1,12 +1,12 @@
 # Aquarium
 
-Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; KIT PERFORMANCE controls and a qualified SURFACE route now connect live playback and stereo printing; other mixers remain later work.
+Aquarium's six accepted effects are editable from **PAD → EFFECTS → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; KIT PERFORMANCE controls and a qualified SURFACE route now connect live playback and stereo printing; other mixers remain later work.
 
 The offline bridge was developed against SnipSnap `b429ec2c4bc89d225ac476af234c1a88a46fb07d`; the PAD panel builds on `fd76ffa382c1bf94d6a82e5a9484e6cd4140e91c`. The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md) and [staged plan](superpowers/plans/2026-10-18-aquarium-foundation.md) explain the larger feature. The owner's positive October 18 listening verdict covers the underlying audition. No new listening verdict is claimed for these host policies.
 
 ## PAD controls
 
-Open an existing pad's TREATMENT box, then AQUARIUM. The panel occupies that box; PEDALS keeps its existing placement. Fresh drafts start dry. Opening the panel, selecting a preset and moving controls do not play or save audio.
+Open an existing pad's EFFECTS screen, its TREATMENT box, then the AQUARIUM section. The closed section reads what the pad keeps (`KEPT · HALL`, `KEPT · CUSTOM SETTINGS`) or what it holds; open, the panel is all that box shows; PEDALS keeps its existing placement. Fresh drafts start dry. Opening the panel, selecting a preset and moving controls do not play or save audio.
 
 The eleven presets come directly from the accepted native preset resource: DRY, the six individual effects, DEPTH, MOTION, COLOR and FULL. Depth contains Fathom and Surface, Motion contains Drift and Tide, and Color contains Reef and Biolume. Each effect has an independent bypass, primary controls and folded details. The tabs group controls without changing the native six-stage processing order. Readouts use physical units, frequency sliders use logarithmic travel, and selectors offer exact native states. Bypass restores the last nonzero mix in the current draft, or the accepted single-effect preset mix for a fresh dry stage.
 

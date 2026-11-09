@@ -1243,14 +1243,14 @@ private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         ActionButton(
-            "SHARE KIT ▸ THIS KIT AS ONE FILE",
+            "SHARE KIT · THIS KIT AS ONE FILE",
             scheme,
             enabled = canShare,
             modifier = Modifier.fillMaxWidth(),
             onClick = onShareKit,
         )
         ActionButton(
-            "BEAT WRITERS ▸ BOUNCE · MIDI · CHART",
+            "BEAT WRITERS · BOUNCE · MIDI · CHART ▸",
             scheme,
             enabled = true,
             modifier = Modifier.fillMaxWidth(),
@@ -1533,7 +1533,7 @@ private fun FormatPickerRow(
             // wraps to a second line here rather than shrinking below
             // readable size — maxLines=2, fixed 9sp, per the brief.
             TapeText(
-                if (open) "${current.cyclerLabel} ▴" else "${current.cyclerLabel} ▾",
+                if (open) "${current.cyclerLabel} −" else "${current.cyclerLabel} +",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
@@ -1581,7 +1581,7 @@ private fun FormatPickerRow(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         TapeText(
-                            if (picked) "▸ ${f.cyclerLabel}" else f.cyclerLabel,
+                            if (picked) "● ${f.cyclerLabel}" else f.cyclerLabel,
                             TapeType.pixel,
                             if (picked) scheme.amber.tape else scheme.lcdInk.tape,
                             maxLines = 2,
