@@ -708,9 +708,24 @@ testkit/octaver-audition/
 # Velour source experiments regenerate caches and native listening/export evidence.
 experiments/velour/__pycache__/
 /testkit/velour-kit/
+testkit/backwash-percussion-comparison/
 
 # Spore Station's rendered audio, MPC programs and audition assets regenerate.
 /testkit/spore-station/
 
+testkit/backwash-percussion-revision-2/
+
+testkit/backwash-percussion-revision-3/
+
+testkit/backwash-acoustic-integration/
+
+# TRIAD listening assets regenerate from native Kotlin.
+/testkit/triad-audition/
+
+/testkit/triad-hands-r2/
+
+/testkit/triad-accepted/
+
+/testkit/triad-kits/
 # Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
 /testkit/cosmic-breaks-kit/

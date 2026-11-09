@@ -5,7 +5,7 @@ import java.security.MessageDigest
 import kotlin.test.*
 
 class CosmicBreaksKitsTest {
-    @Test fun `frozen assets match approved checksums and expected PCM`() {
+    @Test fun `versioned assets match checksums and expected PCM`() {
         val pads = CosmicBreaksKits.build()
         assertEquals(16, pads.size)
         for ((i, entry) in CosmicBreaksKits.entries.withIndex()) {
@@ -22,7 +22,13 @@ class CosmicBreaksKitsTest {
             assertTrue(kotlin.math.abs(p.snip.samples.average()) < .005)
             assertEquals(0f, p.snip.samples.last())
             assertNull(p.recipe, "printed treatment must not be applied twice")
-            assertTrue(p.softVariants.isEmpty(), "no unapproved velocity timbres")
+            assertEquals(listOf(4, 4, 4), p.velocityTakes.map { it.size })
+            assertContentEquals(p.snip.samples, p.velocityTakes[2][0].samples)
+            assertEquals(12, entry.variants.map { it.sha256 }.distinct().size)
+            for (v in entry.variants) {
+                val actual = MessageDigest.getInstance("SHA-256").digest(CosmicBreaksKits.resource(v.file)).joinToString("") { "%02x".format(it) }
+                assertEquals(v.sha256, actual)
+            }
             assertTrue(p.oneShot)
         }
         assertEquals(DrumClass.HAT_CLOSED, pads[2].drumClass)
