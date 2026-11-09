@@ -457,3 +457,9 @@ The current 36-preset factory roster spans nine voices. Cross Stick, Tambourine,
 The extra row now adds distinct physical gestures: a short woody cross-stick contact, repeated paired-jingle collisions, a two-dominant-mode metal bell, and an inharmonic cymbal plate with sustained noisy wash. These are designed modal models, not measured replicas. All four pass through the established chorus → compressor → amp chain. Velocity changes contact and spectral excitation; TUNE and DAMP change their source character. Four-times oversampling and decaying modal poles bound the sources before the existing output treatment.
 
 The updated four-bar audition introduces cross-stick in bar two, tambourine in bar three, and cowbell plus ride in bar four. The new timbres still need listening approval; numerical dissimilarity is not an assessment by ear. Targeted checks cover deterministic JSON replay at three velocities, finite bounded output, factory placement, and unchanged historical audio fixtures.
+
+### Dry / lower-drive / previous percussion comparison
+
+`./gradlew :synth:generateBackwashPercussionComparison` renders the same hard strike through three paths: source only, full processing with DRIVE 0.15, and previous full processing with DRIVE 0.65. The source-only path bypasses all three effects, retaining source output conditioning. SWAY 0.55, TRAIL 0.55 and PRESS 0.75 stay fixed. Lower drive still includes amp coloration. The factory defaults and existing exports remain at the previous settings while the comparison is auditioned.
+
+Each instrument's three files share a peak-safe loudness target, reached by scalar gain only, without extra limiting. The generator verifies finite output, headroom, matching tolerance and exact replay of the four downloadable candidate recipes. This distinguishes source texture from processing without changing multiple effect controls at once. Listening approval is pending.

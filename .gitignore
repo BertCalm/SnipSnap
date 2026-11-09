@@ -708,3 +708,4 @@ testkit/octaver-audition/
 # Velour source experiments regenerate caches and native listening/export evidence.
 experiments/velour/__pycache__/
 /testkit/velour-kit/
+testkit/backwash-percussion-comparison/

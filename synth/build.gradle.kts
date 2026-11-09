@@ -3456,3 +3456,13 @@ tasks.register<JavaExec>("generateVelourKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
+
+tasks.register<JavaExec>("generateBackwashPercussionComparison") {
+    group = "verification"
+    description = "Compare dry percussion with lower-drive and previous processing at matched levels."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionComparison")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-comparison")
+}
