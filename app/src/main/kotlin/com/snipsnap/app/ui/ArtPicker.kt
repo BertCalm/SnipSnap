@@ -204,7 +204,7 @@ private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, s
             }
         }
         TapeText(
-            if (picked) "▸ ${knobs.style.name}" else knobs.style.name,
+            if (picked) "● ${knobs.style.name}" else knobs.style.name,
             TapeType.pixel.copy(textAlign = TextAlign.Center),
             if (picked) scheme.amber.tape else scheme.ink.tape,
             Modifier.fillMaxWidth(),
@@ -257,7 +257,7 @@ internal fun ArtRow(knobs: ArtKnobs, enabled: Boolean, scheme: Scheme, onOpen: (
             contentAlignment = Alignment.Center,
         ) {
             TapeText(
-                "$summary ▸",
+                "$summary ▾",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),

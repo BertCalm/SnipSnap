@@ -10,6 +10,7 @@ import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.synth.Halobar
 import com.snipsnap.synth.HalobarPatch
+import com.snipsnap.synth.HalobarPresets
 import com.snipsnap.synth.HalobarVoice
 import com.snipsnap.synth.PadRecipe
 import kotlin.io.path.createTempDirectory
@@ -38,7 +39,7 @@ class HalobarStarterTest {
                 assertEquals(44100,audio.sampleRate)
                 patch.voice
             }.toSet()
-            assertEquals(HalobarVoice.entries.toSet(),voices)
+            assertEquals(HalobarPresets.acceptedVoices.toSet(),voices)
             for(format in listOf(ExportFormat.PROGRAM_FOLDER,ExportFormat.MPC3_TRACK)) {
                 val result=Exporters.export(format,kit,dir,root.resolve(format.id))
                 val findings=ExportReadBack.verify(kit,result)

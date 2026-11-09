@@ -1,0 +1,378 @@
+{
+  "engine": "HALOBAR",
+  "voice": "GLOCKENSPIEL",
+  "audioModel": 1,
+  "recordedUtc": "2026-11-09T03:00:27.373394+00:00",
+  "status": "Built and measured; owner listening pending; four provisional studies held out of the twelve accepted factory recipes",
+  "baselineCommit": "f918220a049f1407a4f32a3bbf2449ab6461fce3",
+  "integrationBase": "33788b3ba5b2de66b52609e55066b0350bb4f5a7",
+  "localValidationCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+  "testedCodeTree": "82c5a0148d92c73bba1c09c5d3667137ce8008bb",
+  "publishedCodeCommit": "c61d9f6fad7ab4d83d7ef2896903fb25d7b86e5e",
+  "nativeAuditionSourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+  "initialFullAttempt": {
+    "stage": "first-full-attempt",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "/workspace/run-snipsnap-gradle.py",
+      "--no-daemon",
+      "test"
+    ],
+    "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+    "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+    "started": 1794182357.5112529,
+    "state": "failed",
+    "exitCode": 1,
+    "ended": 1794183757.1003418,
+    "reason": "Accepted starter stays three voices; its general fixture still expected the provisional fourth voice"
+  },
+  "followupBranch": "claude/halobar-glockenspiel",
+  "foundationPullRequest": "https://github.com/BertCalm/SnipSnap/pull/985 (merged externally)",
+  "sourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt": "b1a0192ce3826c59f21c0915b6cc16dab630de352904db619ab15a774ccd7424",
+    "synth/src/main/kotlin/com/snipsnap/synth/HalobarPresets.kt": "ace3889513bbba5238628f0ca8bca9d8fab60fee2c3d22522d915317a6107dab",
+    "synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt": "d172e5290a3d7bca19ce3c35fef09dc9864a523604e0955e148626c0578f6b8b",
+    "shell/src/main/kotlin/com/snipsnap/shell/SynthRoot.kt": "1602482c4d19701ce29f7d53205a40eb1900c63aca07b50de26c16d5b80730fb",
+    "cli/src/main/kotlin/com/snipsnap/cli/SynthCommand.kt": "4a8a45e6e988b4295fbdf1c1de53ca0f5db27cc4c2d4469d03d0e44be597e148",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarTest.kt": "a110b3937583cbd61a2249f634378a17df38c64fc562b804f2cfc6df281a247e",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarGlockenspielTest.kt": "96171d7ec968c0a2137aacba0ecd4dff6bcad83b97e76571dbe59f2c196a50ed",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarGlockenspielAuditionGenerator.kt": "6370c9078718d4e7e9a67045e418db3fd6684598b4200dd7b7a0a782a9ad33fc"
+  },
+  "sharedRenderAndReturnSha256": "a3ca77c46941e801f2cc05a4dd6c6672e44522024ba3d1a4e722ee760e219d84",
+  "sharedRenderAndReturnUnchanged": true,
+  "pitchRangeMidi": [
+    60,
+    96
+  ],
+  "pitchMidpointMidi": 72,
+  "remainingPlannedVoices": [
+    "CROTALES",
+    "TUBULAR_BELLS"
+  ],
+  "jvm": {
+    "command": "./gradlew --no-daemon test",
+    "exitCode": 0,
+    "tests": 9221,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": {
+      "json": 16,
+      "xpm": 51,
+      "audio": 457,
+      "kit": 622,
+      "mpc3": 95,
+      "synth": 4977,
+      "loop": 439,
+      "cli": 306,
+      "shell": 2258
+    },
+    "scope": "Complete nine-module Gradle test command on the fixed source snapshot. Unchanged modules may be UP-TO-DATE; the command ran without test exclusions.",
+    "focusedSynth": {
+      "exitCode": 0,
+      "tests": 27,
+      "command": "./gradlew --no-daemon :synth:test --tests com.snipsnap.synth.HalobarTest --tests com.snipsnap.synth.HalobarGlockenspielTest --tests com.snipsnap.synth.HalobarPresetsTest --tests com.snipsnap.synth.PresetsTest"
+    },
+    "otherFocusedCases": {
+      "focused-cli": 2,
+      "focused-shell": 120
+    }
+  },
+  "android": {
+    "command": "./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin",
+    "exitCode": 0,
+    "bytes": 82340705,
+    "sha256": "3b2a10f1548204b7e658344568cad3866d85a46f5d148a13fb05d18cf7937192",
+    "signature": "APK v2 signature verified",
+    "builtSourceCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+    "glockenspielDspUnchangedSinceAudition": true,
+    "onDeviceExecution": "unverified"
+  },
+  "compatibility": {
+    "approvedFloat32Cases": 195,
+    "approvedReplayExitCode": 0,
+    "approvedFactoryRecipes": 12,
+    "approvedFactorySettingsUnchanged": true,
+    "approvedAuditionWavs": 179,
+    "approvedAuditionRecipes": 153,
+    "foundationFilesBytesIdentical": true,
+    "provisionalAuditionReplayCases": 69,
+    "provisionalReplayExitCode": 0,
+    "newVoiceCases": 63,
+    "existingVoiceComparisonCases": 6,
+    "studyKitRecipeReplays": 16,
+    "studyKitWavsBytesIdentical": true,
+    "provisionalFixture": "glockenspiel-native-parity.tsv",
+    "provisionalFixtureSha256": "a08dfb17357c307024c2e70c6af9b92ae0ac2c671a83a99095ad76d82e98f485"
+  },
+  "measurements": {
+    "clips": 69,
+    "glockenspielPitchChecks": 10,
+    "maximumRootErrorCents": 0.09490992937925459,
+    "minimumPitchConfidence": 0.9166696071624756,
+    "freshPerformance": {
+      "samples": [
+        224.944474,
+        225.537726,
+        226.13978,
+        226.456131,
+        226.924393,
+        226.967723,
+        227.109968,
+        228.711262,
+        229.518412,
+        229.682558,
+        230.114226,
+        231.061026,
+        231.473591,
+        231.675559,
+        231.939355,
+        232.092009,
+        232.500106,
+        233.28317,
+        233.289054,
+        233.492313,
+        233.981021,
+        234.616221,
+        237.345363,
+        239.64185,
+        240.376458,
+        241.381545,
+        241.474905,
+        241.740965,
+        246.007646,
+        246.484782
+      ],
+      "medianMs": 232.092009,
+      "p95Ms": 246.007646,
+      "budgetMs": 50,
+      "budgetMet": false,
+      "preparedStemCache": false,
+      "completedAudioCache": false
+    },
+    "spacePerformance": {
+      "samples": [
+        9.998861,
+        10.085326,
+        10.100371,
+        10.248159,
+        10.276761,
+        10.346803,
+        10.449942,
+        10.460367,
+        10.597699,
+        10.603787,
+        10.637698,
+        10.665126,
+        10.699233,
+        10.798129,
+        11.028399,
+        11.041428,
+        11.055923,
+        11.144793,
+        11.299774,
+        11.346082,
+        11.430303,
+        11.462917,
+        11.490902,
+        11.694625,
+        11.740771,
+        11.812453,
+        11.835227,
+        12.407566,
+        13.171745,
+        13.738175
+      ],
+      "medianMs": 11.041428,
+      "p95Ms": 13.171745,
+      "budgetMs": 50,
+      "budgetMet": true,
+      "preparedStemCache": true,
+      "completedAudioCache": false
+    },
+    "runtime": "21.0.13+9-LTS",
+    "processors": 4
+  },
+  "audition": {
+    "url": "https://halobar-native-audition.bertcalm.chatgpt.site/glockenspiel/",
+    "siteSourceCommit": "4950e0b4551dad9b327b38488542332fe6c935d3",
+    "deploymentId": "appgdep_6af10cd8ed308191843e918a59ca74a4",
+    "versionId": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_f1f446c7791081918314c55eb90b31b5",
+    "deploymentStatus": "succeeded",
+    "browserQA": "unverified; managed browser helper unavailable"
+  },
+  "allChecksPassed": true,
+  "checks": [
+    {
+      "stage": "native-audition",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":synth:generateHalobarGlockenspielAudition"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182115.3979528,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794182171.3391445
+    },
+    {
+      "stage": "compatibility",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/halobar-glockenspiel/verify-compatibility.py"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182171.3410544,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794182209.23136
+    },
+    {
+      "stage": "focused-cli",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":cli:test",
+        "--tests",
+        "com.snipsnap.cli.HalobarCommandTest"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182209.2335756,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794182257.2710228
+    },
+    {
+      "stage": "focused-shell",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":shell:test",
+        "--tests",
+        "com.snipsnap.shell.UserPresetsTest",
+        "--tests",
+        "com.snipsnap.shell.HalobarStarterTest",
+        "--tests",
+        "com.snipsnap.shell.SynthRootTest",
+        "--tests",
+        "com.snipsnap.shell.StarterShelfTest",
+        "--tests",
+        "com.snipsnap.shell.ConventionTest"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182257.2745783,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794182293.6719122
+    },
+    {
+      "stage": "android",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":app:assembleDebug",
+        ":app:compileDebugAndroidTestKotlin"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182293.6744463,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794182357.5084596
+    },
+    {
+      "stage": "first-full-attempt",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "test"
+      ],
+      "sourceCommit": "06f3c4d3bbae3905e1f7a79d979b61fa8162d851",
+      "sourceTree": "d9bb20f76ada201f706f64a5cfe6b9aa91229127",
+      "started": 1794182357.5112529,
+      "state": "failed",
+      "exitCode": 1,
+      "ended": 1794183757.1003418,
+      "reason": "Accepted starter stays three voices; its general fixture still expected the provisional fourth voice"
+    },
+    {
+      "stage": "study-kit-test",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":synth:test",
+        "--tests",
+        "com.snipsnap.synth.HalobarGlockenspielTest"
+      ],
+      "sourceCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+      "sourceTree": "82c5a0148d92c73bba1c09c5d3667137ce8008bb",
+      "started": 1794183797.7046332,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794184001.1306605
+    },
+    {
+      "stage": "compatibility-current-base",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/halobar-glockenspiel/verify-current-base.py"
+      ],
+      "sourceCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+      "sourceTree": "82c5a0148d92c73bba1c09c5d3667137ce8008bb",
+      "started": 1794184001.1391878,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794184055.879501
+    },
+    {
+      "stage": "android-current-base",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":app:assembleDebug",
+        ":app:compileDebugAndroidTestKotlin"
+      ],
+      "sourceCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+      "sourceTree": "82c5a0148d92c73bba1c09c5d3667137ce8008bb",
+      "started": 1794184055.8815207,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794184224.5484378
+    },
+    {
+      "stage": "full-jvm",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "test"
+      ],
+      "sourceCommit": "9423a46b0290cea2b90ccf80e8c4e9694d4fb21b",
+      "sourceTree": "82c5a0148d92c73bba1c09c5d3667137ce8008bb",
+      "started": 1794184224.5543475,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794193098.23161
+    }
+  ],
+  "starterFixtureCorrection": "The first full attempt stopped on the original starter coverage fixture, which still expected the unapproved glockenspiel in the accepted three-voice kit. Its expected set now follows the accepted roster; the separate study kit has an added native recipe regeneration test. The HALOBAR DSP and audition audio did not change. The merged foundation and newer app changes were integrated before the final full command, and Android was rebuilt on that frozen base.",
+  "limits": [
+    "Owner listening to glockenspiel pending",
+    "Full fresh render exceeds the 50 ms target",
+    "Phone performance, device-test execution and physical MPC loading unverified",
+    "HOLD is finite, never a seamless sampler loop"
+  ],
+  "historicalFoundationEvidence": "native-acceptance.json records the earlier three-voice acceptance, previous full-run failure/correction scopes and APK. Those counts are not added to this complete glockenspiel run."
+}

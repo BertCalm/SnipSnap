@@ -5193,7 +5193,6 @@ class ConventionTest {
     /** Who gives a bench with no opener its opener. */
     private enum class OpenerOwner(val why: String) {
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
-        PR_4("routed in PR 4 with the inline panels the spec's section 7.3 turns into sections or screens (SPREAD)"),
     }
 
     /**
@@ -5201,18 +5200,16 @@ class ConventionTest {
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 4** ([OpenerOwner.PR_4]): SPREAD. It is not a screen but a panel inside the pad
-     *   editor, drawn in place of the sheet from inside `PadSheetScreen`, and
-     *   it writes through the editor's own job. The spec's §7.3 turns inline
-     *   panels behind a `▸` into sections or screens, which is PR 4's work, so
-     *   it is routed with them. (PR 3d moved the rest of the pad editor family,
-     *   PAD_SHEET, GRAIN_FIELD, SPLICE and STACK, off this list.)
+     * - SPREAD is not on the list because it is not a bench: PR 4e made it a sheet over the pad
+     *   editor (`SpreadSheet`, opened by `SPREAD · SCALE ACROSS PADS ▾`), and the roster entry went
+     *   with it. (PR 3d moved the rest of the pad editor family, PAD_SHEET, GRAIN_FIELD, SPLICE and
+     *   STACK, off this list.)
      * - **PR 3e** ([OpenerOwner.PR_3E]): LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
-     *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
+     *   §7.3.1 lists these as loose state to route, so they are
      *   routed later, not waived as panels that stay in their screen.
      *
      * Each bench on the list has an owner, the PR that gives it an opener
-     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a PR 4 author finds
+     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a later author finds
      * what they own by the enum, not by a name in a comment.
      *
      * The list only shrinks, and the ceiling pins it exactly. The law fails
@@ -5225,12 +5222,11 @@ class ConventionTest {
      * with nothing failing.
      */
     private val NOT_YET_OPENED: Map<Bench, OpenerOwner> = mapOf(
-        Bench.SPREAD to OpenerOwner.PR_4,
         Bench.LIVE_SNAP to OpenerOwner.PR_3E,
         Bench.DRAW to OpenerOwner.PR_3E,
         Bench.FIELD to OpenerOwner.PR_3E,
     )
-    private val NOT_YET_OPENED_CEILING = 4
+    private val NOT_YET_OPENED_CEILING = 3
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -5381,17 +5377,13 @@ class ConventionTest {
             "a bench with no opener and not on the list must be reported, naming the call that opens it",
         )
         assertTrue(
-            openerProblems(everyBench, mapOf(Bench.SPREAD to OpenerOwner.PR_4)).any { "SPREAD" in it && "PR_4" in it && "only shrinks" in it },
+            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
             "a listed bench that something opens is reported with its owner, so the author who opened it knows whose list it left",
         )
-        assertTrue(
-            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
-            "the same for an owner that is not PR 4",
-        )
         assertEquals(
-            setOf(OpenerOwner.PR_3E, OpenerOwner.PR_4),
+            setOf(OpenerOwner.PR_3E),
             NOT_YET_OPENED.values.toSet(),
-            "the list has benches for both owners; an owner with no bench left is a stale enum entry to delete with the last bench",
+            "the list has a bench for every owner; an owner with no bench left is a stale enum entry to delete with the last bench",
         )
     }
 
@@ -5426,7 +5418,7 @@ class ConventionTest {
      *   StackTakesScreen, TapeSpliceScreen's back chip and GrainFieldScreen, onto
      *   the model's words; none of them has a literal left.)
      * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
-     *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
+     *   and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES". (AquariumPanel left the list when it became a section: its button reads CLOSE.)
      * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
      *   previous-preset buttons start with the same arrow and a capital, but
      *   they step through pads and presets and go nowhere.
@@ -5436,10 +5428,9 @@ class ConventionTest {
         "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
-        "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
         "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 8
+    private val BACK_LABEL_WAIVER_CEILING = 7
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5722,4 +5713,131 @@ class ConventionTest {
         )
         assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to exempt), emptyMap()), "imports, comments, declarations, scrims and labels are not holds")
     }
+
+    // ---- Law: ▸ opens a screen, ▾ opens a sheet, and nothing else uses them (clarity spec §7.3, PR 4d) ----
+
+    /**
+     * `▸` on a control means "opens a screen" (a bench, or a stage or place
+     * switch) and nothing else; `▾` means "opens a sheet or a picker" (a
+     * BottomSheet, a SheetMenu, a Dialog picker) and nothing else. An action
+     * (GO, SAVE PRESET, SEND TO PAD, SHARE), an inline panel toggle, a
+     * disclosure toggle (`+` / `−`) and a selected row (`● `) carry neither.
+     * A label with a description puts the glyph last: `NAME · DESCRIPTION ▸`,
+     * never `NAME ▸ DESCRIPTION`.
+     *
+     * Mechanically: every string literal in the shipped sources that holds a
+     * `▸`, `▾` or `▴` is read. A literal where the glyph is followed by more
+     * text is a separator or a marker, and fails unless it is help prose
+     * naming a path ([GLYPH_PATHS]). A literal that ends in a glyph must be
+     * in the allow-list for that glyph. Whether a given control really opens
+     * a screen or a sheet is for the reviewer; the allow-lists make adding
+     * one a visible edit.
+     */
+    @Test
+    fun `law - an arrow on a control means a screen or a sheet, and nothing else carries one`() {
+        val seenEnds = mutableSetOf<String>()
+        val seenPaths = mutableSetOf<String>()
+        val problems = mutableListOf<String>()
+        for ((path, line, literal) in glyphLiterals()) {
+            val where = "$path:$line `$literal`"
+            val trimmed = literal.trimEnd()
+            when {
+                "▴" in literal -> problems += "$where: ▴ is retired; an open/closed fold is `+` / `−`"
+                GLYPH_REST.containsMatchIn(literal) -> {
+                    val path = GLYPH_PATHS.firstOrNull { it in literal }
+                    if (path == null) problems += "$where: a glyph with words after it. A description goes before the glyph (`NAME · DESCRIPTION ▸`), a selected row is `● NAME`"
+                    else seenPaths += path
+                }
+                trimmed.endsWith("▸") -> {
+                    if (trimmed in SCREEN_OPENERS) seenEnds += trimmed else problems += "$where: ▸ is for a control that opens a screen; add it to SCREEN_OPENERS if it does, drop the glyph if it is an action"
+                }
+                trimmed.endsWith("▾") -> {
+                    if (trimmed in SHEET_OPENERS) seenEnds += trimmed else problems += "$where: ▾ is for a control that opens a sheet or picker; add it to SHEET_OPENERS if it does, drop the glyph if it is not"
+                }
+            }
+        }
+        for (entry in SCREEN_OPENERS + SHEET_OPENERS) {
+            if (entry !in seenEnds) problems += "allow-list entry `$entry` is no longer drawn anywhere; remove it"
+        }
+        for (entry in GLYPH_PATHS) {
+            if (entry !in seenPaths) problems += "path entry `$entry` is no longer in any help line; remove it"
+        }
+        if (problems.isNotEmpty()) fail("The arrow rule (▸ screen, ▾ sheet, nothing else):\n  " + problems.joinToString("\n  "))
+    }
+
+    @Test
+    fun `law - the arrow rule finds a separator, a marker, a retired fold and an unlisted opener, and lets a listed one and a path through`() {
+        fun problemsIn(vararg literals: String) = literals.count { lit ->
+            val trimmed = lit.trimEnd()
+            "▴" in lit || (GLYPH_REST.containsMatchIn(lit) && GLYPH_PATHS.none { it in lit }) ||
+                (trimmed.endsWith("▸") && trimmed !in SCREEN_OPENERS) || (trimmed.endsWith("▾") && trimmed !in SHEET_OPENERS)
+        }
+        assertEquals(1, problemsIn("SAVE PRESET ▸ NOW"), "a separator is a fault")
+        assertEquals(1, problemsIn("▸ HALL"), "a marker is a fault")
+        assertEquals(1, problemsIn("FORMAT ▴"), "a fold glyph is a fault")
+        assertEquals(1, problemsIn("SAVE PRESET ▸"), "an action with an arrow is a fault")
+        assertEquals(1, problemsIn("TOOLS ▸"), "a sheet opener with the screen arrow is a fault")
+        assertEquals(0, problemsIn("STACK ▸", "TOOLS ▾", "TRY IT FROM MUTATE ▸ ROOM.", "DUST FROM +"), "listed openers, a path and a fold pass")
+    }
+
+    private val GLYPH_REST = Regex("[▸▾]\\s*\\S")
+
+    /** Every string literal in the shipped sources that holds an arrow: file, line, text. Comments are skipped. */
+    private fun glyphLiterals(): List<Triple<String, Int, String>> {
+        val literal = Regex(""""((?:[^"\\\n]|\\.)*)"""")
+        val found = mutableListOf<Triple<String, Int, String>>()
+        val roots = File("..").listFiles { f -> f.isDirectory }.orEmpty().map { File(it, "src/main/kotlin") }.filter { it.isDirectory }
+        for (root in roots) {
+            for (file in root.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+                file.readLines(Charsets.UTF_8).forEachIndexed { i, raw ->
+                    val line = raw.trim()
+                    if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) return@forEachIndexed
+                    for (m in literal.findAll(raw)) {
+                        if (Regex("[▸▾▴]").containsMatchIn(m.groupValues[1])) found += Triple(file.name, i + 1, m.groupValues[1])
+                    }
+                }
+            }
+        }
+        return found
+    }
+
+    /** Controls that open a screen: a bench, or a place or stage switch. */
+    private val SCREEN_OPENERS = setOf(
+        "CUT ▸", "PADS ▸", "BEAT ▸", "OUT ▸", // Places.DOOR_*: the stage doors
+        "OPEN ▸", "CAPTURE ▸", "FROM SNIPS ▸", // the pad strip's doors, and a project row's OPEN
+        "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
+        "BREED · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
+        "SHELF ▸", "TAPE ▸", "SNIPS ▸", // the empty-state routes
+        "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
+        "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYS ▸", // MAKE's rows
+        "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
+        "STACK ▸", "SPLICE ▸", "GRAIN ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
+        "VERSIONS + BIN · RESTORE ▸", "SPLIT · SINES · TRANSIENT · AIR ▸", // THIS KIT's two screens
+        "BEAT WRITERS · BOUNCE · MIDI · CHART ▸", // EXPORT's way to the BEAT stage
+        "BIN · ${'$'}binnedCount WAITING ▸", "LOOP · ${'$'}loopTracks OF ${'$'}{Session.TRACK_COUNT} TRACKS ▸", // the shelf's BIN and LOOP rows
+        "READ AS GROOVE ▸", "COPY GROOVE ▸", // TAPE's two ways onto GROOVE
+        "LIVE ▸", "FIELD ▸", "RING ▸", // SNAP's live camera, the field screen, and the ring on ORBIT
+        "OPEN KIT ▸", "HELP ▸", // the kit result's way in, and the setup screen's way to HELP
+        "▸", // MessageBox strips the arrow off a route's label for its accessible name
+    )
+
+    /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
+    private val SHEET_OPENERS = setOf(
+        " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
+        "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
+        "${'$'}{active.uppercase(Locale.ROOT)} · ${'$'}n ${'$'}kits IN THIS PROJECT ▾", // the kit switcher's line: the chip opens the kit sheet
+        "CHANGE ART ▾", "EXPANSION ▾", // the expansion sheet's picker and the door to the sheet
+        "FROM PAD ▾", "RECALL SCANNED PAD ▾", "SOURCE ▾", // pad and motion-source picker dialogs
+        "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
+        "REOPEN PAD · EDIT ITS RECIPE ▾", // SYNTH's pad picker dialog
+        "SPREAD · SCALE ACROSS PADS ▾", // the pad editor's and SYNTH's door to the SPREAD sheet (root, scale, pads, bank)
+        "${'$'}{engine.displayName} ▾", "▾", // the engine picker sheet, and a BEAT lane's pad picker
+    )
+
+    /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
+    private val GLYPH_PATHS = listOf(
+        "RE-TRIM ▸: TAPE", "REMIX BANK B ▸ DEALS EVIL TWINS", "BREED ▸ PICK A KIT", "REMIX BANK B ▸ DEALS TWINS HERE", // HELP lines naming the button then what it does
+        "VERSIONS ▸ ROLLS BACK", "MUTATE ▸ ROOM", "ROOM ▸ SEND", "OUTSIDE ▸ ROOM", // toasts and lines naming a menu path
+        "OPEN ▸ FOR ITS BENCH", "CLIP ▸ KIT WRITES ONE", // PADS help, and ORBIT's section line
+    )
 }
