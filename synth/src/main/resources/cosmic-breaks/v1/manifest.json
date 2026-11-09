@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "prototypeVersion": 2,
+  "siteCommit": "10857a750238566cfc3284a0bd788288203624ca",
+  "sourceSha256": "8646292bcd2762e6e9546b26472a571a7efb3e646e966ef90e2640ffa13510a3",
+  "approval": "Owner: Sounds cool, continue. Overall direction approved; not hardware acceptance.",
+  "macros": {
+    "tune": 0.5,
+    "punch": 0.58,
+    "space": 0.42,
+    "drift": 0.42,
+    "drive": 0.35,
+    "hold": 0.4
+  },
+  "sampleRate": 44100,
+  "channels": 1,
+  "bits": 16,
+  "frames": 176400,
+  "pads": [
+    {
+      "slot": 1,
+      "name": "Kick",
+      "file": "01-kick.wav",
+      "sha256": "ab9022c8031079d1b99673728cf02eca8d71aa791e7cb71153df829cd4005435"
+    },
+    {
+      "slot": 2,
+      "name": "Snare",
+      "file": "02-snare.wav",
+      "sha256": "6d0a174ebead136ba6e5b2f94a323abf085caeebf8d736ec2d226ed413a81a4b"
+    },
+    {
+      "slot": 3,
+      "name": "Closed hat",
+      "file": "03-closed-hat.wav",
+      "sha256": "9bb34003bf145156ec5867360d4050ae501e9ae6b8542f57de07f16266b979d5"
+    },
+    {
+      "slot": 4,
+      "name": "Open hat",
+      "file": "04-open-hat.wav",
+      "sha256": "a2de94b9d6c3a60448ca38a13d232d26b34c6594927d6109d0f0dc436d2dd86a"
+    },
+    {
+      "slot": 5,
+      "name": "Low tom",
+      "file": "05-low-tom.wav",
+      "sha256": "eca1503a9e12b58664e19d41757dd1aa08f931363666bd058ad012e692235b99"
+    },
+    {
+      "slot": 6,
+      "name": "High tom",
+      "file": "06-high-tom.wav",
+      "sha256": "8bcee3c672f72254bfa01bebbf848b57e5d5c323185a4fb76f7e26777714a269"
+    },
+    {
+      "slot": 7,
+      "name": "Rim",
+      "file": "07-rim.wav",
+      "sha256": "cb36621097961816fcd430050d55fc497612717bf7e67f9ec0d721baf4d85d7d"
+    },
+    {
+      "slot": 8,
+      "name": "Metal",
+      "file": "08-metal.wav",
+      "sha256": "224f0508ccfd7cd3c35ca5f688973c2e9649f16a691ebe2cf8b6368b07f793ed"
+    },
+    {
+      "slot": 9,
+      "name": "Data tick",
+      "file": "09-data-tick.wav",
+      "sha256": "bc25835cea504b0d26b20f0b8d243b7324011a59ca8d65b586f1fe476d2ddc4b"
+    },
+    {
+      "slot": 10,
+      "name": "Packet roll",
+      "file": "10-packet-roll.wav",
+      "sha256": "14d22a36c50fc95f74a374612348f3806e571c27436ac85deccc86ebd7cad1e8"
+    },
+    {
+      "slot": 11,
+      "name": "Laser chip",
+      "file": "11-laser-chip.wav",
+      "sha256": "5c0d6c0bf237f26e8b005898170760d96452411a152bc605a96fe15d306f72f7"
+    },
+    {
+      "slot": 12,
+      "name": "Relay rattle",
+      "file": "12-relay-rattle.wav",
+      "sha256": "bc2f4f8ac9264502522dd9a95e1b18de2b76e7d292ead4c58dd78f9db585917a"
+    },
+    {
+      "slot": 13,
+      "name": "Ride bell",
+      "file": "13-ride-bell.wav",
+      "sha256": "e3b99033b8440297dfc5595268bfcfae17aca6118d915367e3666e56b0a5a412"
+    },
+    {
+      "slot": 14,
+      "name": "Ride cymbal",
+      "file": "14-ride-cymbal.wav",
+      "sha256": "b973a009909e6d5dc020e27e396197cdead29e02bd73a7aa65b4351e5ec65199"
+    },
+    {
+      "slot": 15,
+      "name": "Sub kick",
+      "file": "15-sub-kick.wav",
+      "sha256": "6a0e022325f4167479806d82c71399ded697d074d2f93d6a243b0419e213ad25"
+    },
+    {
+      "slot": 16,
+      "name": "Crack snare",
+      "file": "16-crack-snare.wav",
+      "sha256": "7fc10c38f8fd3f982fe81425171f31e59b6b152c05e33559a864990c6b711e08"
+    }
+  ]
+}

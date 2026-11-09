@@ -708,3 +708,6 @@ testkit/octaver-audition/
 # Velour source experiments regenerate caches and native listening/export evidence.
 experiments/velour/__pycache__/
 /testkit/velour-kit/
+
+# Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
+/testkit/cosmic-breaks-kit/

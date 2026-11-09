@@ -684,7 +684,7 @@ fun KitScreen(
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▾", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
                     }
                     TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
                 }
@@ -1024,7 +1024,7 @@ fun KitScreen(
                     // under the grid, and the loop wants to keep playing while
                     // you work it.
                     ActionButton(
-                        "SPLIT ▸ SINES · TRANSIENT · AIR",
+                        "SPLIT · SINES · TRANSIENT · AIR ▸",
                         scheme,
                         enabled = !busy && kit.pads.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth(),
@@ -1044,7 +1044,7 @@ fun KitScreen(
                     // the app. "ROLL BACK OR RESTORE" also dropped to
                     // "RESTORE": RESTORE alone says the same thing the longer
                     // phrase did.
-                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                    ActionButton("VERSIONS + BIN · RESTORE ▸", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
                 }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     // BREED: this kit's own recipes crossed with a second kit's
@@ -1445,7 +1445,7 @@ private fun KeyPanel(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("OFF", scheme, enabled = !busy && key != null, modifier = Modifier.weight(1f), onClick = { onSetKey(null) })
-            ActionButton("IN KEY ▸ RETUNE TONAL PADS", scheme, enabled = !busy && key != null, modifier = Modifier.weight(2f), onClick = onInKey)
+            ActionButton("IN KEY · RETUNE TONAL PADS", scheme, enabled = !busy && key != null, modifier = Modifier.weight(2f), onClick = onInKey)
         }
 
         if (readouts.isEmpty()) {
@@ -1527,7 +1527,7 @@ private fun TexturePanel(
         var startedHere by remember { mutableStateOf(false) }
         LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            "$kind ▸ NEW TAPE",
+            "$kind · NEW TAPE",
             scheme,
             enabled = !busy,
             working = busy && startedHere,
