@@ -64,7 +64,11 @@ import kotlin.math.pow
  * on a board, so DRIVE and VALVE colour the hit and its octave as one sound, and EQ and CONTOUR then shape
  * both. A FADE IN ahead of it fades the copy too, because the copy is made of what VOLUME made.
  *
- * Chip-less until the owner's listening gate.
+ * For snares and toms. At its gate (2026-11-09) the owner heard it on a snare and a tom from each of four drum
+ * engines (THUMP, SKIN, TERRA's djembe slap and dumbek doum, ONSET), dry and at DEPTH 0.5 clean, Fuzz and Grit:
+ * SUB helps, Grit was their pick, and THUMP, the drums every earlier round used, was the drum they liked least
+ * ("mostly the drum"). So the SUB chip's tap is DEPTH 0.5 at Grit (the `octaved` character). A kick's octave
+ * still lands under 40 Hz, weight a phone does not play.
  */
 object Octaver {
 
