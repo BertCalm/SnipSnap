@@ -5,6 +5,11 @@ MARIMBA and XYLOPHONE share the processing, while their contact length, mode
 weights and decay remain distinct. The vibraphone also has an amplitude motor.
 These are synthesized tuned bars, not recordings or measured instrument models.
 
+GLOCKENSPIEL is the new fourth voice, with four inharmonic steel-bar modes and
+a C4–C7 register centered on C5. Its [separate audition and study kit](HALOBAR_GLOCKENSPIEL.md)
+await listening; the twelve accepted factory recipes and original starter stay
+fixed. CROTALES and TUBULAR BELLS are the remaining planned additions.
+
 Select HALOBAR in the synth picker, or open its sixteen-pad FRESH TAPE kit in
 the keys shelf. The first eight pads play a C minor pentatonic vibraphone walk;
 four marimba and four xylophone references follow. Every pad retains an editable
@@ -104,7 +109,7 @@ checks passed. After the metadata correction, all 4,219 other-module JVM
 checks and 53 affected synth/recipe checks passed. The full synth
 suite was not repeated after that source-only correction; the DSP and twelve
 accepted recipe settings remain identical.
-The APK build and device-test compilation also passed. The latest
+The APK build and device-test compilation also passed. The accepted-foundation
 [acceptance ledger](../reference/halobar/native-acceptance.json) records the
 source tree, hashes and measurement samples.
 
