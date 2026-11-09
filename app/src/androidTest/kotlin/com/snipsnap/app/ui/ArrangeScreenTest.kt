@@ -267,6 +267,9 @@ class ArrangeScreenTest : ComposeScreenTest() {
         }
         val after = SongPlanStore.load(projectDir, entry.dir.name)!!
         assertEquals(before.sections[2].name, after.sections[0].name)
+        // The keep is written at the tap; the frozen clock needs a frame for the screen to show it.
+        pump()
         button(Copy.songUndo(Copy.SONG_KEEP_ORDER)).assertIsEnabled()
+        button(Copy.SONG_STOP).assertDoesNotExist()
     }
 }
