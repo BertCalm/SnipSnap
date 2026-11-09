@@ -135,7 +135,6 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
-import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.loop.Arp
 import com.snipsnap.loop.DroneFit
@@ -2731,15 +2730,18 @@ fun App(shelf: KitShelf) {
             try {
                 val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
                 if (renamed != null) {
-                    // The songs kept for this kit are keyed by its folder name,
-                    // so each project that kept one moves it to the new name -
-                    // before anything below re-points a bench at the new folder,
-                    // or an open SONG would find nothing under it and plan afresh.
-                    withContext(Dispatchers.IO) {
-                        for (projectDir in ProjectStore.list(shelf.root)) {
-                            runCatching { SongPlanStore.rename(projectDir, entry.dir.name, renamed.dir.name) }
-                                .onFailure { Log.e(TAG, "renameKit: the kept song did not follow in ${projectDir.name}", it) }
-                        }
+                    // Projects hold a kit by its folder name, and keep its song
+                    // under that name too: every project that held it (the bin's
+                    // included) now holds it under the new one, its kept song with
+                    // it - before anything below re-points a bench at the new
+                    // folder, or an open SONG would find nothing under it and plan
+                    // afresh, and the project would read the kit as gone.
+                    val followed = withContext(Dispatchers.IO) { ProjectStore.followKitRename(shelf.root, entry.dir.name, renamed.dir.name) }
+                    for (dir in followed.failed) Log.e(TAG, "renameKit: ${dir.name} did not follow the rename")
+                    // The open project in memory too, or its next save would write the old name back.
+                    val current = project
+                    if (current != null) {
+                        followed.updated.firstOrNull { it.name == current.name }?.let { project = it }
                     }
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     dock.say(Copy.kitRenamed(renamed.kit.name))
