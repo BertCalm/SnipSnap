@@ -100,6 +100,7 @@ class SynthRootTest {
                 FerryPresets.all().first(),
                 *HalobarPresets.all().toTypedArray(),
                 HalobarPatch("Glockenspiel Study", HalobarVoice.GLOCKENSPIEL, emptyMap()),
+                HalobarPatch("Crotales Study", HalobarVoice.CROTALES, emptyMap()),
             )
         }
 

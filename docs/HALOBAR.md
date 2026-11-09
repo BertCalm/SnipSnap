@@ -8,7 +8,9 @@ These are synthesized tuned bars, not recordings or measured instrument models.
 GLOCKENSPIEL is the new fourth voice, with four inharmonic steel-bar modes and
 a C4–C7 register centered on C5. Its [separate audition and study kit](HALOBAR_GLOCKENSPIEL.md)
 await listening; the twelve accepted factory recipes and original starter stay
-fixed. CROTALES and TUBULAR BELLS are the remaining planned additions.
+fixed. [CROTALES](HALOBAR_CROTALES.md) now adds a fifth voice: a longer bronze-disc
+inspired ring, sounding C6–C8, with its own audition and study kit. Tubular bells
+remain planned.
 
 Select HALOBAR in the synth picker, or open its sixteen-pad FRESH TAPE kit in
 the keys shelf. The first eight pads play a C minor pentatonic vibraphone walk;
@@ -17,7 +19,7 @@ recipe. Its dub is inside the engine; the external effects rack starts dry.
 
 | Control | Default | What moves |
 |---|---:|---|
-| TUNE | .50 | Note, snapped to semitones; C4 at the middle |
+| TUNE | .50 | Note, snapped to semitones within each voice's register |
 | TOUCH | .40 | Mallet contact duration and attack noise |
 | RATE | .45 | Six rhythmic delay divisions at a fixed 72 BPM reference |
 | RETURN | .45 | Feedback amount, saturation and progressively darker repeats |

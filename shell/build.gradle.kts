@@ -513,3 +513,12 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
     maxHeapSize = "2g"
     args("${rootDir}/testkit/backwash-acoustic-integration")
 }
+
+tasks.register<JavaExec>("generateTriadKits") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TriadKitAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/triad-kits")
+}

@@ -31,6 +31,8 @@ import java.io.File
  * beside the kit, rather than pretending to be asset-free synth recipes.
  * COSMIC BREAKS, VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
  * their printed wet pads do not pretend to have dry-source synth recipes.
+ * TRIAD starters are versioned rendered banks: three velocity zones and four takes
+ * per zone, including finite bus phrases, with source provenance on every pad.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -540,6 +542,21 @@ object StarterKits {
             "Eight dry percussion roles, from low thuds to bright crackle, with soft, medium and hard touch.",
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
+        Starter(
+            "triad-techno", "TRIAD WAREHOUSE TECHNO",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 128f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.TECHNO) },
+        Starter(
+            "triad-house", "TRIAD SUBMERGED HOUSE",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 118f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.DEEP_HOUSE) },
+        Starter(
+            "triad-minimal", "TRIAD FRACTURE MINIMAL",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 126f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.MINIMAL) },
         Starter(
             "rivet-workshop", "RIVET WORKSHOP",
             "Industrial drums in a small room. Sixteen pads, three strike strengths and choking metal hats.",
