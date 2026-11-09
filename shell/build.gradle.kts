@@ -57,7 +57,11 @@ tasks.test {
     // the live set grows with every engine (10 to 35 MB each). With 1g the whole suite
     // passed at a 475 MB peak live set; 1536m is that peak with room for the next
     // dozen engines, set here rather than discovered when one tips it over.
-    maxHeapSize = "1536m"
+    // On 2026-11-09 jvm-other's executor 25 still ran out: StereoPerformanceImportTest
+    // copies the 180-second stereo cap in SnipStore.import, and the worker that had
+    // already memoised the pad makers had no contiguous room left. 2g is the step
+    // the long shell tasks beside this one already take.
+    maxHeapSize = "2g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
