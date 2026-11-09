@@ -1673,6 +1673,11 @@ The bank now includes 20 stronger processing presets alongside the 16 original
 recipes, with versioned rendering to preserve saved sounds.
 [Design, listening history and verification](docs/BACKWASH.md).
 
+BREAKER is a drum engine in progress: surf rock by way of boom bap. Backroom's accepted kick
+and snare run through record dust, a tube, a spring tank that drips, a slap echo, a compressor that
+crushes the spring back up behind each hit, and a bright combo amp. Round 1 (kick and snare) is a
+prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
+
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.
 See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).

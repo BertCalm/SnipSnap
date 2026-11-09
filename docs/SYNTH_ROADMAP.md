@@ -3386,3 +3386,12 @@ not a new synth engine. Assets and checksums retain the printed source and FX;
 FRESH TAPE registration, MPC 2/3 generator and native read-back checks accompany
 it. One velocity layer; no editable synth recipe or shared-bus equivalence.
 See [COSMIC_BREAKS.md](COSMIC_BREAKS.md). Hardware acceptance remains open.
+
+### BREAKER, round 1 (2026-11-09)
+
+Owner-requested drum engine: surf rock by way of boom bap, through a drum processor and a surf amp.
+Backroom's accepted SKIN kick and snare → DUST (CRUNCH and VINYL) → tube → CRUSH → spring tank →
+SLAP → CRUSH after the spring → VALVE. Round 0 heard in the Python harness (tank B, the crushed
+swell, still boom bap, the high-crush kick). Round 1 is KICK and SNARE in Kotlin, a prototype
+outside the factory presets; the rest of the kit, the genre kits and the audition follow. See
+[BREAKER](BREAKER.md) and the [design](superpowers/specs/2026-11-09-breaker-drum-engine-design.md).

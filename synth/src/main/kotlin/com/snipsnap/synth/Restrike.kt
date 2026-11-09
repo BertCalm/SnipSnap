@@ -19,8 +19,9 @@ import kotlin.random.Random
  * The root and the decay are the drum's own on every take.
  *
  * Only the modal drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
- * voices and every TERRA voice. Every take is deterministic in (patch,
- * velocity, seed, take); take 0 is the reference itself.
+ * voices, every TERRA voice, and BREAKER (whose source is a struck SKIN
+ * drum). Every take is deterministic in (patch, velocity, seed, take);
+ * take 0 is the reference itself.
  */
 object Restrike {
     /** A take lands up to this much softer than the hit it repeats (a fraction of the velocity). Shape. */
@@ -31,7 +32,7 @@ object Restrike {
 
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
-        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch
+        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch || patch is BreakerPatch
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -54,6 +55,8 @@ object Restrike {
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is SkinPatch -> patch.render(velocity = v, take = take)
+            // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
+            is BreakerPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {
                 // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
                 val pos = Terra.defaults(patch.voice)["POS"]
