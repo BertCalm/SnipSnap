@@ -857,8 +857,9 @@ fun KitScreen(
         val bankBEmpty = kit.pads.none { it.slot in PadBanks.slots(1) }
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
-        // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
-        var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
+        // Two sections inside THIS KIT, one open at a time (the panels they
+        // replace were exclusive too): the kind that is open, or null.
+        var openTexture by remember(entry.dir) { mutableStateOf<String?>(null) }
         val sources = kit.pads.map { it.slot }.sorted()
 
         // SOURCE: the pad the player picked, remembered against the kit
@@ -890,15 +891,7 @@ fun KitScreen(
         // which is what the chips are for. Untouched, each still opens on
         // its own default.
         val textureModes = remember(entry.dir) { mutableStateMapOf<String, String>() }
-        val mode = panelKind?.takeIf { it != KEY_PANEL }
-            ?.let { textureModes[it] ?: TextureKits.modesFor(it).first() } ?: ""
-        val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
         val textureKnobs = remember(entry.dir) { mutableStateMapOf<Pair<String, String>, Float>() }
-        // Dialled value first, then this mode's own default; 0f only when
-        // no panel is open and there is no knob to have a default.
-        val fraction = panelKind?.let { textureKnobs[it to mode] }
-            ?: knob?.defaultFraction
-            ?: 0f
 
         // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
@@ -909,7 +902,7 @@ fun KitScreen(
         // two-column grid truncated them, and a truncated visible label is
         // worse than a longer column. VERSIONS + BIN · REMIX BANK B · KEY
         // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
-        // row, then the two texture doors; the panel below them scrolls, so
+        // row, then the two texture sections, which fold open in place; the box scrolls, so
         // a short screen never pushes the grid.
         //
         // The padding below the scroll is inside it: a dock's height of
@@ -990,26 +983,9 @@ fun KitScreen(
                 }
                 KitGroupHeading(Places.KIT_WHOLE_SOUND)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
-                    // Still the fourth door's shape - a bevel that lights amber
-                    // while its panel is open - not an ActionButton.
-                    val keyOpen = panelKind == KEY_PANEL
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            // Always clickable, `!busy` forwarded rather than
-                            // dropped: a screen reader is told this control is
-                            // temporarily unavailable instead of it silently
-                            // vanishing from the tree (accessibility audit
-                            // finding 12 — see ActionButton in PadSheetScreen.kt).
-                            .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText("KEY ▸", TapeType.pixel, if (busy) scheme.ink3.tape else if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
-                    }
+                    // KEY: the kit's key, IN KEY, and the tonal pads' tune readout,
+                    // in a sheet of its own (clarity spec 7.3: a picker is a sheet).
+                    KeyDoor(entry.dir, kit, busy, scheme, Modifier.weight(1f), onSetKey, onInKey)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // DUST ALL: the per-pad DUST chip on every pad at one amount,
@@ -1024,45 +1000,15 @@ fun KitScreen(
                         onClick = onDustAll,
                     )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (kind in TextureKits.KINDS) {
-                        val open = panelKind == kind
-                        val doorEnabled = !busy && kit.pads.isNotEmpty()
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                                .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                                // Always clickable, `doorEnabled` forwarded
-                                // rather than dropped: a screen reader is told
-                                // this door is temporarily unavailable instead
-                                // of it silently vanishing from the tree
-                                // (accessibility audit finding 12).
-                                .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            // TEXTURES dropped from SCULPT's own subtitle
-                            // (truncation pass): equal 26/23-character weights
-                            // on this even split were marginal at 411dp and
-                            // truncated at 360dp, and "TEXTURES" was the padded
-                            // half — GRANULAR already names the technique.
-                            // STRETCH's two words are untouched: SLOW and
-                            // FREEZE are its own two modes (`modesFor`), not
-                            // padding.
-                            val doorSubtitle = when (kind) {
-                                "SCULPT" -> "GRANULAR"
-                                "STRETCH" -> "SLOW & FREEZE"
-                                else -> ""
-                            }
-                            TapeText(
-                                "$kind ▸ $doorSubtitle",
-                                TapeType.pixel,
-                                if (!doorEnabled) scheme.ink3.tape else if (open) scheme.titleInk.tape else scheme.ink2.tape,
-                            )
-                        }
-                    }
-                }
+                TextureSections(
+                    kit = kit, busy = busy, scheme = scheme,
+                    openKind = openTexture,
+                    onToggle = { kind -> openTexture = if (openTexture == kind) null else kind },
+                    modes = textureModes, knobs = textureKnobs,
+                    sources = sources, sourceSlot = sourceSlot,
+                    onPickSource = { pickedSource = it },
+                    onTexture = onTexture,
+                )
 
                 // SHARE is OUT's now (plan §3.5): one file out the share sheet
                 // is an output, so it sits with the other outputs.
@@ -1083,40 +1029,6 @@ fun KitScreen(
                         enabled = !busy && kit.pads.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onSplit,
-                    )
-                }
-                if (panelKind == KEY_PANEL) {
-                    KeyPanel(
-                        key = kit.key,
-                        readouts = KeyPicker.readouts(kit),
-                        busy = busy,
-                        onSetKey = onSetKey,
-                        onInKey = onInKey,
-                    )
-                }
-
-                val kind = panelKind
-                val src = sourceSlot
-                if (kind != null && knob != null && src != null) {
-                    TexturePanel(
-                        kind = kind,
-                        modes = TextureKits.modesFor(kind),
-                        mode = mode,
-                        onMode = { picked -> textureModes[kind] = picked },
-                        sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
-                        onSourceStep = { step ->
-                            val i = sources.indexOf(src)
-                            if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
-                        },
-                        knobLabel = knob.label,
-                        knobFraction = fraction,
-                        knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
-                        onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
-                        busy = busy,
-                        onGo = {
-                            val seed = Random.nextLong(0L, 1_000_000L)
-                            onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
-                        },
                     )
                 }
                 KitGroupHeading(Places.KIT_VERSIONS_AND_KITS)
@@ -1345,8 +1257,124 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-/** The action row's fourth door, beside the texture kinds. */
-private const val KEY_PANEL = "KEY"
+/**
+ * KEY's opener: a bevelled door labelled [Places.KEY_OPEN] that opens the KEY
+ * sheet. The sheet is a picker (twelve roots, five scales, OFF), with IN KEY and
+ * the tonal pads' readouts under it, so it is a [BottomSheet] around [KeyPanel]
+ * rather than a list of rows. [kitDir] keys the open flag, so switching kit
+ * never leaves another kit's sheet up.
+ */
+@Composable
+private fun KeyDoor(
+    kitDir: java.io.File,
+    kit: com.snipsnap.kit.Kit,
+    busy: Boolean,
+    scheme: Scheme,
+    modifier: Modifier,
+    onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
+    onInKey: () -> Unit,
+) {
+    var open by remember(kitDir) { mutableStateOf(false) }
+    Box(
+        modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .raisedBevel(scheme)
+            // Always clickable, `!busy` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 - see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = "OPEN KEY", enabled = !busy) { open = true }
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(Places.KEY_OPEN, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink2.tape)
+    }
+    if (open) {
+        BottomSheet(Places.KEY_SHEET_TITLE, onDismiss = { open = false }, wrap = true) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            ) {
+                KeyPanel(
+                    key = kit.key,
+                    readouts = KeyPicker.readouts(kit),
+                    busy = busy,
+                    onSetKey = onSetKey,
+                    onInKey = onInKey,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SCULPT and STRETCH as two sections of THIS KIT (clarity spec 7.3: an inline
+ * panel behind a glyph becomes a section). Each is a [GroupBox] whose closed line
+ * says what is inside until a pad is there to read from, then what GO would
+ * render ([Places.textureLine]). They stay sections and not screens: a source
+ * stepper, mode chips, one knob and GO, with no preview transport of their own.
+ * The mode and knob a player dialled live in [modes] and [knobs], owned by the
+ * kit, so folding one section and opening the other loses nothing.
+ */
+@Composable
+private fun TextureSections(
+    kit: com.snipsnap.kit.Kit,
+    busy: Boolean,
+    scheme: Scheme,
+    openKind: String?,
+    onToggle: (String) -> Unit,
+    modes: MutableMap<String, String>,
+    knobs: MutableMap<Pair<String, String>, Float>,
+    sources: List<Int>,
+    sourceSlot: Int?,
+    onPickSource: (Int) -> Unit,
+    onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
+) {
+    for (kind in TextureKits.KINDS) {
+        val kindModes = TextureKits.modesFor(kind)
+        val mode = modes[kind] ?: kindModes.first()
+        val knob = TextureKits.knobFor(kind, mode)
+        // Dialled value first, then this mode's own default.
+        val fraction = knobs[kind to mode] ?: knob.defaultFraction
+        val knobText = TextureKits.knobLabel(knob, knob.value(fraction))
+        val src = sourceSlot
+        GroupBox(
+            legend = kind,
+            summary = Places.textureLine(kindModes, mode, knobText, src?.let { MutateSheet.padTag(it) }),
+            open = openKind == kind && src != null,
+            onToggle = { onToggle(kind) },
+            scheme = scheme,
+            // Always clickable, `enabled` forwarded: a kit with no pad has
+            // nothing to turn into a tape, and a job in flight owns the app.
+            enabled = !busy && kit.pads.isNotEmpty(),
+        ) {
+            if (src != null) {
+                TexturePanel(
+                    kind = kind,
+                    modes = kindModes,
+                    mode = mode,
+                    onMode = { picked -> modes[kind] = picked },
+                    sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
+                    onSourceStep = { step ->
+                        val i = sources.indexOf(src)
+                        if (i >= 0 && sources.size > 1) onPickSource(sources[(i + step).mod(sources.size)])
+                    },
+                    knobLabel = knob.label,
+                    knobFraction = fraction,
+                    knobText = knobText,
+                    onKnob = { f -> knobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
+                    busy = busy,
+                    onGo = {
+                        val seed = Random.nextLong(0L, 1_000_000L)
+                        onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
+                    },
+                )
+            }
+        }
+    }
+}
 
 /**
  * The KEY panel (F5.3): twelve root chips, five scale chips, OFF, IN KEY,
