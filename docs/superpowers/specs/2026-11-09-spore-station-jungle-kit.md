@@ -150,3 +150,12 @@ control changes the late signal; it does not establish a preferred setting.
 Full regression completed: `./gradlew --no-daemon test`, exit 0, 9,239 tests,
 zero failures/errors/skips in nine JVM modules (1h 25m 20s). Android is outside
 this run; no Android UI or native source was changed.
+
+After the full regression run, upstream advanced to `18378ec9`. The merge
+preserves the incoming Cosmic Breaks, HALOBAR and UI changes alongside Spore
+Station. Declaration conflicts were resolved without changing Spore Station's
+DSP or recipes. Post-merge validation passed 105 focused synth/shell/CLI tests,
+full audition regeneration and both MPC exports. All 158 audition WAVs and all
+96 exported velocity WAVs are byte-identical to the published build. The full
+9,239-test result above is from before this upstream merge; the complete suite
+was not repeated on the merged head. Browser and MPC hardware checks remain pending.

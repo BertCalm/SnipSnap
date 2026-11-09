@@ -68,3 +68,12 @@ Full regression: `./gradlew --no-daemon test` exited 0, with 9,239 JVM tests,
 zero failures, zero errors and zero skips across nine modules. Android was not
 included because this environment has no SDK. The full run took 1h 25m 20s.
 The published audio source files are unchanged from that validated build.
+
+After the full regression run, upstream advanced to `18378ec9`. The merge
+preserves the incoming Cosmic Breaks, HALOBAR and UI changes alongside Spore
+Station. Declaration conflicts were resolved without changing Spore Station's
+DSP or recipes. Post-merge validation passed 105 focused synth/shell/CLI tests,
+full audition regeneration and both MPC exports. All 158 audition WAVs and all
+96 exported velocity WAVs are byte-identical to the published build. The full
+9,239-test result above is from before this upstream merge; the complete suite
+was not repeated on the merged head. Browser and MPC hardware checks remain pending.
