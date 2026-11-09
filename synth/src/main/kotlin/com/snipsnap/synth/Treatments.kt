@@ -159,6 +159,14 @@ object Treatments {
         // linearly toward 0, so FLOOR 1.0 makes a tap FLOOR 0.7, which HUSH's law puts at 12 dB. AMT 1 is 6 dB, a lower AMT
         // a deeper and later gate, and AMT 0 no gate at all. CLOSE is left at its default, which is also its neutral.
         "hushed" to FxChain(hush = mapOf("FLOOR" to 1.0f)),
+        // SUB: an octave-down copy mixed under the pad, the OCTAVER section. The owner heard it at its gate (2026-11-09)
+        // on a snare and a tom from each of four drum engines (THUMP, SKIN, TERRA, ONSET), dry and at DEPTH 0.5 clean, Fuzz
+        // and Grit: SUB helps, Grit was their pick, and the drum they liked least, THUMP, was most of what they had disliked
+        // in earlier rounds. A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT; PadSheetTest
+        // pins that they still land here) and DEPTH fades linearly toward 0, so DEPTH 0.5 / 0.7 makes a tap DEPTH 0.5, the
+        // amount heard. DRIVE, TONE and HANG are left at their defaults, which are also their neutrals, so AMT never moves
+        // them; DRIVE's default, 1, is Grit. AMT 1 is DEPTH about 0.71, a lower AMT less octave, AMT 0 none.
+        "octaved" to FxChain(octaver = mapOf("DEPTH" to 0.5f / 0.7f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

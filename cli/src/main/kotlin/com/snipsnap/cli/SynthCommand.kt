@@ -358,7 +358,7 @@ object SynthCommand {
         val presets = when (engine) {
             HalobarPatch.ENGINE -> HalobarVoice.entries.firstOrNull { it.name == voice }?.let {
                 HalobarPresets.forVoice(it).ifEmpty {
-                    listOf(HalobarPatch("Glockenspiel Study",it,Halobar.defaults(it)))
+                    listOf(HalobarPatch("${it.name.lowercase().replaceFirstChar { c -> c.uppercase() }} Study",it,Halobar.defaults(it)))
                 }
             } ?: emptyList()
             ChitinPatch.ENGINE -> ChitinVoice.entries.firstOrNull { it.name == voice }?.let { ChitinPresets.forVoice(it) } ?: emptyList()
