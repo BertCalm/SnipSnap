@@ -39,7 +39,12 @@ enum class BreakerVoice(val drumClass: DrumClass) { KICK(DrumClass.KICK), SNARE(
  * No HOLD: every hit is a one-shot, [SECONDS] long, under the classifier's loop threshold.
  */
 object Breaker {
-    const val MODEL_VERSION = 1
+    /**
+     * 2 (round 1b): the kick rings through tank A, the tank its round-0 pick was heard through, and
+     * the slap is the round-0 95 ms. 1 (round 1): every voice through tank B, a 90 ms slap. A save
+     * keeps the model it was made with.
+     */
+    const val MODEL_VERSION = 2
 
     /** The render's length: tails are capped here, with a [FADE_SECONDS] raised-cosine fade, so a hit never files as a LOOP (1.5 s). */
     const val SECONDS = 1.49f
@@ -97,7 +102,24 @@ object Breaker {
         )
     }
 
-    fun render(voice: BreakerVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
+    /**
+     * Each drum's tank, as the owner picked it at round 0. The snare rings through tank B, the
+     * surf spring they chose. The kick rings through tank A, the tank its "high crush" pick was
+     * heard through: even at the kick's short DRIP the tank colours the tail, so a kick through
+     * tank B is not the kick that was picked (round 1 heard it "close, but not it"). Model 1 put
+     * both through tank B.
+     */
+    private fun tankFor(voice: BreakerVoice, model: Int) =
+        if (model >= 2 && voice == BreakerVoice.KICK) BreakerChain.TANK_A else BreakerChain.TANK_B
+
+    fun render(
+        voice: BreakerVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f,
+        take: Int = 0,
+        model: Int = MODEL_VERSION,
+    ): Snip {
+        require(model in 1..MODEL_VERSION) { "unsupported breaker model $model" }
         val m = settled(voice, macros)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
         val dry = source(voice, m, v, take)
@@ -107,8 +129,8 @@ object Breaker {
         val crush = m.getValue("CRUSH").toDouble()
         var x = BreakerChain.saturate(DoubleArray(dusted.samples.size) { dusted.samples[it].toDouble() }, rate)
         x = BreakerChain.crush(x, minOf(1.0, crush / .5) * .7, rate)
-        x = BreakerChain.tankMix(x, m.getValue("DRIP").toDouble(), frames, rate)
-        x = BreakerChain.slap(x, m.getValue("SLAP").toDouble(), rate)
+        x = BreakerChain.tankMix(x, m.getValue("DRIP").toDouble(), frames, rate, tankFor(voice, model))
+        x = BreakerChain.slap(x, m.getValue("SLAP").toDouble(), rate, if (model >= 2) BreakerChain.SLAP_SECONDS else .09)
         x = BreakerChain.crush(x, maxOf(0.0, (crush - .5) / .5), rate)
         val amp = m.getValue("AMP")
         val amped = Valve.process(Snip(FloatArray(frames) { x[it].toFloat() }, 1, rate),

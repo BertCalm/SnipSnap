@@ -92,21 +92,47 @@ class BreakerTest {
     }
 
     @Test
-    fun `the tank's echoes rise in pitch and fall away`() {
-        val impulse = DoubleArray(frames).also { it[10] = 1.0 }
-        val ir = BreakerChain.spring(impulse, .6, frames, rate)
-        val window = (.1 * rate).toInt()
-        val energy = (0 until frames / window).map { w -> (w * window until (w + 1) * window).sumOf { ir[it] * ir[it] } }
-        val levels = energy.map { 10 * log10(it / energy[0] + 1e-30) }
-        println("BREAKER tank energy per 100 ms, dB re the first: ${levels.map { "%.1f".format(it) }}")
-        for (w in 1 until levels.size) assertTrue(levels[w] < levels[w - 1] + .5, "the tank never gains energy (window $w: ${levels[w]} after ${levels[w - 1]})")
-        assertTrue(levels.last() < levels.first() - 30, "the tank decays")
-        // The first echo: its 2.5 kHz arrives after its 300 Hz (lows travel faster in a spring).
-        val first = FloatArray((.08 * rate).toInt()) { ir[it].toFloat() }
-        fun arrival(hz: Float): Int { val y = band(first, hz, 2f); return y.indices.maxBy { abs(y[it]) } }
-        val low = arrival(300f); val high = arrival(2500f)
-        println("BREAKER first echo: 300 Hz peaks at ${"%.1f".format(low * 1000.0 / rate)} ms, 2.5 kHz at ${"%.1f".format(high * 1000.0 / rate)} ms")
-        assertTrue(high > low, "the chirp rises: highs arrive later")
+    fun `both tanks' echoes rise in pitch and fall away`() {
+        for ((name, tank) in listOf("A" to BreakerChain.TANK_A, "B" to BreakerChain.TANK_B)) {
+            val impulse = DoubleArray(frames).also { it[10] = 1.0 }
+            val ir = BreakerChain.spring(impulse, .6, frames, rate, tank)
+            val window = (.1 * rate).toInt()
+            val energy = (0 until frames / window).map { w -> (w * window until (w + 1) * window).sumOf { ir[it] * ir[it] } }
+            val levels = energy.map { 10 * log10(it / energy[0] + 1e-30) }
+            println("BREAKER tank $name energy per 100 ms, dB re the first: ${levels.map { "%.1f".format(it) }}")
+            for (w in 1 until levels.size) assertTrue(levels[w] < levels[w - 1] + .5, "tank $name never gains energy (window $w: ${levels[w]} after ${levels[w - 1]})")
+            assertTrue(levels.last() < levels.first() - 30, "tank $name decays")
+            // The first echo: its 2.5 kHz arrives after its 300 Hz (lows travel faster in a spring).
+            // Zero-phase (forward, then backward): a narrow band-pass's own delay is longer at
+            // 300 Hz than at 2.5 kHz, and would otherwise be read as the tank's.
+            val first = FloatArray((.08 * rate).toInt()) { ir[it].toFloat() }
+            fun arrival(hz: Float): Int {
+                val y = band(band(first, hz, 2f).reversedArray(), hz, 2f).reversedArray()
+                return y.indices.maxBy { abs(y[it]) }
+            }
+            val low = arrival(300f); val high = arrival(2500f)
+            println("BREAKER tank $name first echo: 300 Hz peaks at ${"%.1f".format(low * 1000.0 / rate)} ms, 2.5 kHz at ${"%.1f".format(high * 1000.0 / rate)} ms")
+            assertTrue(high > low, "tank $name's chirp rises: highs arrive later")
+        }
+    }
+
+    @Test
+    fun `the slap's first repeat lands at the round-0 95 ms, 90 ms on model 1`() {
+        val impulse = DoubleArray(rate).also { it[0] = 1.0 }
+        fun firstRepeat(base: Double) = BreakerChain.slap(impulse, .2, rate, base).withIndex().drop(1).maxBy { abs(it.value) }.index
+        assertEquals((.095 * rate).toInt(), firstRepeat(BreakerChain.SLAP_SECONDS), "model 2")
+        assertEquals((.09 * rate).toInt(), firstRepeat(.09), "model 1")
+    }
+
+    @Test
+    fun `a model-1 save keeps round 1's kick, and model 2 is the re-fit one`() {
+        val old = BreakerPatch("Round one", BreakerVoice.KICK, emptyMap(), model = 1)
+        val back = BreakerPatch.fromJsonText(old.toJsonText())
+        assertEquals(1, back.model)
+        assertContentEquals(Breaker.render(BreakerVoice.KICK, model = 1).samples, back.render().samples, "a model-1 save replays model 1")
+        assertContentEquals(back.render().samples, assertNotNull(Restrike.take(back, 1f, 7, 0)).samples, "take 0 of a model-1 save is model 1")
+        assertFalse(back.render().samples.contentEquals(Breaker.render(BreakerVoice.KICK).samples), "model 2 changes the kick")
+        assertEquals(Breaker.MODEL_VERSION, BreakerPatch("New", BreakerVoice.KICK, emptyMap()).model)
     }
 
     @Test

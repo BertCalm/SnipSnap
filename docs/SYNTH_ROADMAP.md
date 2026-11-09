@@ -3399,3 +3399,11 @@ SLAP → CRUSH after the spring → VALVE. Round 0 heard in the Python harness (
 swell, still boom bap, the high-crush kick). Round 1 is KICK and SNARE in Kotlin, a prototype
 outside the factory presets; the rest of the kit, the genre kits and the audition follow. See
 [BREAKER](BREAKER.md) and the [design](superpowers/specs/2026-11-09-breaker-drum-engine-design.md).
+
+Round 1b (renderer model 2):
+- **Heard at round 1:** the owner accepted the snare, the takes and the soft hit, and heard the kick
+  as "close, but not it".
+- **The cause:** the kick had moved off the tank its pick was heard through, and the slap had moved
+  from 95 to 90 ms. Round 1 had blamed the kick's onset; that was a measuring artefact.
+- **The change:** the kick goes back to tank A, and the slap back to 95 ms. Model-1 saves keep
+  round 1's sound.

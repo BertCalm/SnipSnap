@@ -39,5 +39,7 @@ Old model-3 and model-4 recipes retain their original renderers. Source selectio
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
   - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
   - **Playback and export: not yet verified.**
-- **Sound character:** the owner chose the round-0 settings by ear. The round-1 Kotlin renders are waiting for the owner's listen.
+- **Sound character:** the owner chose the round-0 settings by ear.
+  - **Round 1:** they heard the app's snare, its takes and a half-strength hit as theirs, and the kick as "close, but not it".
+  - **Round 1b (model 2):** the kick gets back the tank and slap time its pick was heard with. Measured, it is within 1.1 dB of the pick in every band, except up to 2.2 dB at 450 Hz. It is waiting for the owner's listen.
 - **Overall: incomplete.** This is a prototype with two voices.

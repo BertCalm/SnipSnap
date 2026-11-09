@@ -115,16 +115,18 @@ internal object BreakerChain {
 
     // ------------------------------------------------------------------ DRIP: the spring tank
 
-    /** Where the chirps live: the tank's transition frequency (tank B, the owner's pick). */
-    private const val FC = 3000.0
+    /**
+     * A tank's chirp (shape): [fc] is the transition frequency the chirps live under, [k] the
+     * allpasses' stretch (round(rate / 2 fc) at 44.1 kHz), [ap] each stage's coefficient (positive,
+     * so each stage delays the highs more than the lows) and [stages] how many there are.
+     */
+    class Tank(val fc: Double, val k: Int, val ap: Double, val stages: Int)
 
-    /** The allpasses' stretch, round(rate / 2 FC): 7 at 44.1 kHz. */
-    private const val K = 7
+    /** Tank A from round 0: a lighter, brighter bend (fc 4.3 kHz). The kick the owner picked rang through it. */
+    val TANK_A = Tank(fc = 4300.0, k = 5, ap = 0.6, stages = 60)
 
-    /** Each stage's coefficient: positive, so each delays the highs more than the lows. */
-    private const val AP = 0.7
-
-    private const val STAGES = 100
+    /** Tank B from round 0: the bend lower and deeper, a twang near 3 kHz. The owner's surf spring. */
+    val TANK_B = Tank(fc = 3000.0, k = 7, ap = 0.7, stages = 100)
 
     /** (transit s, pre-delay s, weight): two springs of slightly different lengths, interleaving. */
     private val SPRINGS = listOf(Triple(.037, 0.0, 1.0), Triple(.043, .004, .8))
@@ -132,11 +134,12 @@ internal object BreakerChain {
     /**
      * The tank's return for [x]. The send is high-passed at 250 Hz (a driver transformer passes
      * little bass, so a kick does not turn to mud) and driven into the tank by the dwell. In each
-     * spring an echo is the last one through the chirp chain and a 4th-order low-pass at [FC]
-     * again, a transit later and g quieter, so the dispersion grows with every bounce. The chain is
-     * allpass and g < 1, so the loop's gain is under 1 at every frequency by construction: no limiter.
+     * spring an echo is the last one through the chirp chain and a 4th-order low-pass at the
+     * tank's fc again, a transit later and g quieter, so the dispersion grows with every bounce. The
+     * chain is allpass and g < 1, so the loop's gain is under 1 at every frequency by construction:
+     * no limiter.
      */
-    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int): DoubleArray {
+    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B): DoubleArray {
         val hp = Section.highpass(250.0, BUTTERWORTH_Q, rate)
         val send = DoubleArray(frames) { hp.process(x.getOrElse(it) { 0.0 }) }
         val p = peak(send)
@@ -147,21 +150,23 @@ internal object BreakerChain {
         for (i in send.indices) send[i] = tanh(dwell * send[i] / p) / norm
         val t60 = 1.0 + 1.6 * drip
         for ((transit, pre, weight) in SPRINGS) {
-            val lp1 = Section.lowpass(FC, 0.5411961001461970, rate)
-            val lp2 = Section.lowpass(FC, 1.3065629648763766, rate)
+            val lp1 = Section.lowpass(tank.fc, 0.5411961001461970, rate)
+            val lp2 = Section.lowpass(tank.fc, 1.3065629648763766, rate)
             val g = 10.0.pow(-3 * transit / t60)
             val length = (transit * rate).roundToInt()
             val delay = DoubleArray(length)
             val preFrames = (pre * rate).roundToInt()
-            val xs = DoubleArray(STAGES * K)
-            val ys = DoubleArray(STAGES * K)
+            val k = tank.k
+            val ap = tank.ap
+            val xs = DoubleArray(tank.stages * k)
+            val ys = DoubleArray(tank.stages * k)
             for (t in 0 until frames) {
                 val e = delay[t % length]
                 var s = send[t] + g * e
-                val idx = t % K
-                for (st in 0 until STAGES) {
-                    val o = st * K + idx
-                    val y = AP * s + xs[o] - AP * ys[o]
+                val idx = t % k
+                for (st in 0 until tank.stages) {
+                    val o = st * k + idx
+                    val y = ap * s + xs[o] - ap * ys[o]
                     xs[o] = s; ys[o] = y; s = y
                 }
                 delay[t % length] = lp2.process(lp1.process(s))
@@ -172,10 +177,10 @@ internal object BreakerChain {
     }
 
     /** The dry hit plus the tank's return, darkened by the tank's tone (3.5 kHz), at 0.9 x DRIP of the dry peak. */
-    fun tankMix(x: DoubleArray, drip: Double, frames: Int, rate: Int): DoubleArray {
+    fun tankMix(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B): DoubleArray {
         val xs = DoubleArray(frames) { x.getOrElse(it) { 0.0 } }
         if (drip <= 0) return xs
-        val ret = spring(xs, drip, frames, rate)
+        val ret = spring(xs, drip, frames, rate, tank)
         val tone = Section.lowpass(3500.0, BUTTERWORTH_Q, rate)
         for (i in ret.indices) ret[i] = tone.process(ret[i])
         val pr = peak(ret)
@@ -186,14 +191,18 @@ internal object BreakerChain {
 
     // ------------------------------------------------------------------ SLAP
 
+    /** The slapback the owner heard at round 0: 95 ms. Model 1 (round 1) used 90 ms. */
+    const val SLAP_SECONDS = .095
+
     /**
-     * One echo line whose repeats darken (a 3 kHz one-pole per pass). Its time (shape): a 90 ms
+     * One echo line whose repeats darken (a 3 kHz one-pole per pass). Its time (shape): a [base]
      * slapback up to SLAP 0.5, then growing to a 375 ms echo at 1. The engine gets no tempo, so this
-     * is milliseconds, not a note value.
+     * is milliseconds, not a note value. The time is not cosmetic on a kick: the first repeat lands
+     * on the body still ringing, and 5 ms decides whether its lows add or partly cancel.
      */
-    fun slap(x: DoubleArray, amount: Double, rate: Int): DoubleArray {
+    fun slap(x: DoubleArray, amount: Double, rate: Int, base: Double = SLAP_SECONDS): DoubleArray {
         if (amount <= 0) return x
-        val time = if (amount <= .5) .09 else .09 + (.375 - .09) * (amount - .5) / .5
+        val time = if (amount <= .5) base else base + (.375 - base) * (amount - .5) / .5
         val fb = .45 * amount
         var gain = .55 * amount
         val d = (time * rate).toInt()
