@@ -5817,7 +5817,7 @@ class ConventionTest {
         "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
         "BREED · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "SHELF ▸", "TAPE ▸", "SNIPS ▸", // the empty-state routes
-        "${'$'}{Places.GEAR_SETUP} ▸", "${'$'}{Places.GEAR_HELP} ▸", "${'$'}{Places.GEAR_MIDI} ▸", // the gear sheet's rows each open a screen
+        "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
         "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYS ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
         "STACK ▸", "SPLICE ▸", "GRAIN ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
@@ -5834,6 +5834,7 @@ class ConventionTest {
     private val SHEET_OPENERS = setOf(
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
+        "${'$'}{active.uppercase(Locale.ROOT)} · ${'$'}n ${'$'}kits IN THIS PROJECT ▾", // the kit switcher's line: the chip opens the kit sheet
         "CHANGE ART ▾", "EXPANSION ▾", // the expansion sheet's picker and the door to the sheet
         "FROM PAD ▾", "RECALL SCANNED PAD ▾", "SOURCE ▾", // pad and motion-source picker dialogs
         "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
