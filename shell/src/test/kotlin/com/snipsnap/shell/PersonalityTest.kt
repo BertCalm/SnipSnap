@@ -682,6 +682,7 @@ class PersonalityTest {
         // SONG's buttons on the selected section, its UNDO button and the two words it prints on a chip or a row: labels, not toasts.
         "SONG_UP", "SONG_DOWN", "SONG_REPEAT_LESS", "SONG_REPEAT_MORE", "SONG_SWAP", "SONG_DUPLICATE", "SONG_DELETE",
         "SONG_LOCK", "SONG_UNLOCK", "SONG_ADD", "SONG_REROLL", "SONG_UNDO", "SONG_PICK_NOW", "SONG_LOCKED",
+        "SONG_BASS_ON", "SONG_BASS_OFF", "SONG_PULL_UP_ON", "SONG_PULL_UP_OFF", "SONG_ROW_BASS", "SONG_ROW_PULL_UP", "SONG_PLAY", "SONG_STOP", "SONG_LOOP_ON", "SONG_LOOP_OFF", "SONG_KEEP_ORDER", "SONG_ROW_NEXT",
         // The words UNDO names an edit by, and the spoken names of SONG's glyph buttons: labels, not toasts.
         "SONG_VERB_REORDER", "SONG_VERB_REPEATS", "SONG_VERB_SWAP", "SONG_VERB_REROLL",
         "SONG_A11Y_UP", "SONG_A11Y_DOWN", "SONG_A11Y_REPEAT_LESS", "SONG_A11Y_REPEAT_MORE", "SONG_A11Y_REROLL",

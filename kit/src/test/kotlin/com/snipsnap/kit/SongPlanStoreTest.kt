@@ -169,6 +169,47 @@ class SongPlanStoreTest {
     }
 
     @Test
+    fun `a section keeps its own bass and pull-up through a save, a copy and a new name`() {
+        // Set against what the names would say, so a round trip that fell back on the name would show.
+        val p = SongPlan(0, listOf(PlanSection("intro", ClipRef.SPARSE, bass = true), PlanSection("the turn", ClipRef.FILL, pullUp = false, bass = true)))
+        SongPlanStore.save(dir, "Kitchen", p)
+        val back = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(p, back)
+        assertEquals(listOf(true, true), back.sections.map { it.bass })
+        assertEquals(listOf(false, false), back.sections.map { it.pullUp })
+        val renamed = back.sections[1].copy(name = "my break")
+        assertTrue(renamed.bass)
+        assertFalse(renamed.pullUp)
+        val copied = back.duplicated(0)!!.sections[1]
+        assertTrue(copied.bass, "a copy keeps the bass")
+    }
+
+    @Test
+    fun `a song kept before sections had their own bass and pull-up reads them from the names`() {
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"intro","clip":"sparse"},{"name":"theme","clip":"captured"},{"name":"the turn","clip":"fill"},""" +
+                """{"name":"reprise","clip":"captured"},{"name":"section 5","clip":"captured"}]}}}""",
+        )
+        val p = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(listOf(false, true, false, true, false), p.sections.map { it.bass })
+        assertEquals(listOf(false, false, true, false, false), p.sections.map { it.pullUp })
+        assertEquals(SongPlanStore.VERSION, 1, "no version bump: an older build still reads the file, and ignores the new fields")
+    }
+
+    @Test
+    fun `an added section carries the bass and no pull-up, and each can be set`() {
+        val added = plan().added(ClipRef.CAPTURED)!!
+        val s = added.sections.last()
+        assertTrue(s.bass)
+        assertFalse(s.pullUp)
+        val i = added.sections.lastIndex
+        assertFalse(added.withBass(i, false)!!.sections[i].bass)
+        assertTrue(added.withPullUp(i, true)!!.sections[i].pullUp)
+        assertNull(added.withBass(99, true))
+    }
+
+    @Test
     fun `yours references round-trip their number`() {
         assertEquals(2, ClipRef.yoursId(ClipRef.yours(2)))
         assertNull(ClipRef.yoursId("captured"))
