@@ -10,6 +10,7 @@ import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
+import com.snipsnap.kit.PlanSection
 import com.snipsnap.kit.SongPlan
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -917,6 +918,45 @@ class ArrangerTest {
         assertEquals(direct.sections.first { it.name == "the turn" }.clip, after.sections[turn].clip)
     }
 
+    private fun withBass(m: KitBuilderModel) {
+        val rate = 44_100
+        WavWriter.write(File(m.kitDir, "bass.wav"), Snip(FloatArray(rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate))
+        AnswerStore.save(m.kitDir, AnswerStore.StoredAnswer(0, "Flag Answer", "bass.wav", Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))))
+    }
+
+    private fun mixOf(m: KitBuilderModel, plan: SongPlan) =
+        Arranger.mixdown(m.kit, m.kitDir, Arranger.resolve(m.kit, m.kitDir, plan).arrangement).snip.samples
+
+    @Test
+    fun `a section's bass and pull-up are its own, not its name's`() {
+        val m = model("Flags")
+        withBass(m)
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val renamed = plan.copy(sections = plan.sections.mapIndexed { i, s -> s.copy(name = "part ${i + 1}") })
+        assertTrue(mixOf(m, plan).contentEquals(mixOf(m, renamed)), "every section renamed, the same song: bass and pull-up stayed")
+
+        val turn = plan.sections.indexOfFirst { it.pullUp }
+        val theme = plan.sections.indexOfFirst { it.name == "theme" }
+        assertTrue(turn > 0 && plan.sections[theme].bass)
+        assertTrue(!mixOf(m, plan).contentEquals(mixOf(m, plan.withPullUp(turn, false)!!)), "turning the pull-up off changes the song")
+        assertTrue(!mixOf(m, plan).contentEquals(mixOf(m, plan.withBass(theme, false)!!)), "turning the theme's bass off changes the song")
+        // An added section plays the bass, which a "section N" never did.
+        val added = plan.added(ClipRef.CAPTURED)!!
+        assertTrue(!mixOf(m, added).contentEquals(mixOf(m, added.withBass(added.sections.lastIndex, false)!!)), "an added section carries the bass")
+    }
+
+    @Test
+    fun `a section planned again after a refusal keeps its own bass and pull-up`() {
+        val m = model("FlagsRefused")
+        val plan = SongPlan(0, listOf(PlanSection("theme", "gone-clip", bass = false, pullUp = true), PlanSection("reprise", ClipRef.CAPTURED)))
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan)
+        assertEquals(listOf("gone-clip"), resolved.refused)
+        val s = resolved.arrangement.sections[0]
+        assertEquals(false, s.bass, "not the draft theme's bass")
+        assertEquals(true, s.pullUp)
+        assertEquals(plan.sections.map { it.bass to it.pullUp }, Arranger.toPlan(resolved.arrangement).sections.map { it.bass to it.pullUp })
+    }
+
     private val full = setOf(ClipRef.CAPTURED, ClipRef.TIGHT, ClipRef.GHOSTED)
     private val light = setOf(ClipRef.SPARSE, ClipRef.HALF)
 
@@ -1036,8 +1076,8 @@ class ArrangerTest {
             assertEquals(turns, arr.sections.count { it.name == "the turn" })
             val mix = Arranger.mixdown(m.kit, m.kitDir, arr)
             assertEquals(arr.sections.size, mix.sectionStarts.size)
-            // The same song with its turns renamed: no cue, so no spinback.
-            val plain = Arranger.mixdown(m.kit, m.kitDir, arr.copy(sections = arr.sections.map { if (it.name == "the turn") it.copy(name = "fill") else it }))
+            // The same song with its turns' pull-up turned off: no cue, so no spinback. (Renaming no longer does it: the mark is the section's own.)
+            val plain = Arranger.mixdown(m.kit, m.kitDir, arr.copy(sections = arr.sections.map { if (it.name == "the turn") it.copy(pullUp = false) else it }))
             for ((i, section) in arr.sections.withIndex()) {
                 if (section.name != "the turn") continue
                 val end = mix.sectionStarts[i]
@@ -1048,5 +1088,61 @@ class ArrangerTest {
             }
             if (turns == 0) assertTrue(mix.snip.samples.contentEquals(plain.snip.samples), "no turn, no pull-up")
         }
+    }
+
+    @Test
+    fun `every pass of every section is on the grid, and the passes run end to end`() {
+        val m = model("Passes")
+        val drafted = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val plan = Arranger.resolve(m.kit, m.kitDir, drafted.withRepeats(1, 3)!!).arrangement
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+        assertEquals(plan.sections.sumOf { it.repeats }, mix.passes.size, "one pass per time through")
+        val framesPerPulse = 60.0 / com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm) * com.snipsnap.kit.KitPreview.RATE / Mpc3Clip.PULSES_PER_BEAT
+        var pulses = 0L
+        var k = 0
+        for ((i, s) in plan.sections.withIndex()) {
+            for (r in 0 until s.repeats) {
+                val p = mix.passes[k++]
+                assertEquals(i, p.section)
+                assertEquals((pulses * framesPerPulse).roundToInt(), p.start, "section $i pass $r on its bar")
+                pulses += s.clip.lengthPulses
+                assertEquals((pulses * framesPerPulse).roundToInt(), p.end, "section $i pass $r ends on the next bar")
+            }
+        }
+        assertEquals(mix.sectionStarts, plan.sections.indices.map { i -> mix.passes.first { it.section == i }.start })
+        assertTrue(mix.passes.zipWithNext().all { (a, b) -> a.end == b.start }, "no gap and no overlap between passes")
+    }
+
+    private fun sections(vararg names: String) = SongPlan(7, names.map { PlanSection(it, ClipRef.CAPTURED, repeats = 1) })
+
+    @Test
+    fun `KEEP THIS ORDER keeps each run of a section as that section played that many times`() {
+        val kept = sections("intro", "theme", "the turn").let { it.withLock(1, true)!!.withBass(2, true)!! }
+        val made = Arranger.playedOrder(kept, listOf(1, 1, 1), listOf(1, 1, 0, 2, 2, 1))!!
+        assertEquals(listOf("theme" to 2, "intro" to 1, "the turn" to 2, "theme" to 1), made.plan.sections.map { it.name to it.repeats })
+        assertEquals(kept.sections[1].copy(repeats = 2), made.plan.sections[0], "the lock, seed and flags go with it")
+        assertEquals(kept.sections[2].copy(repeats = 2), made.plan.sections[2])
+        assertEquals(7, made.plan.seed)
+        assertEquals(0, made.left)
+        assertNull(Arranger.playedOrder(kept, listOf(1, 1, 1), emptyList()), "nothing played keeps nothing")
+    }
+
+    @Test
+    fun `a song played straight through keeps the song it was`() {
+        val kept = sections("intro", "theme").withRepeats(1, 3)!!
+        assertEquals(kept, Arranger.playedOrder(kept, listOf(1, 1), listOf(0, 1, 1, 1))!!.plan)
+    }
+
+    @Test
+    fun `a run longer than one sequence holds is split, and a song past its limit says what was left out`() {
+        val kept = sections("theme")
+        // One sequence holds 64 bars, so a 16-bar clip plays at most 4 times in one section.
+        val long = Arranger.playedOrder(kept, listOf(16), List(10) { 0 })!!
+        assertEquals(listOf(4, 4, 2), long.plan.sections.map { it.repeats })
+        val many = sections("a", "b")
+        val alternating = List(SongPlan.MAX_SECTIONS + 3) { it % 2 }
+        val cut = Arranger.playedOrder(many, listOf(1, 1), alternating)!!
+        assertEquals(SongPlan.MAX_SECTIONS, cut.plan.sections.size)
+        assertEquals(3, cut.left)
     }
 }
