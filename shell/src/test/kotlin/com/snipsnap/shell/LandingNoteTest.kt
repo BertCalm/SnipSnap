@@ -157,7 +157,7 @@ class LandingNoteTest {
         var shared = 0
         val n = LandingNote.dubbed("Funk", onCard = true, files = 4, where = "SD/Funk", share = { shared++ })
         val route = assertNotNull(n.route)
-        assertEquals("SHARE ▸", route.label)
+        assertEquals("SHARE", route.label)
         route.go()
         assertEquals(1, shared)
     }

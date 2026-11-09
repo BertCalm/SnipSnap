@@ -552,7 +552,7 @@ fun KitsScreen(
                         if (!projectFirst) {
                             item(key = "projects-new") {
                                 ActionButton(
-                                    "NEW PROJECT ▸",
+                                    "NEW PROJECT",
                                     scheme,
                                     enabled = !busy,
                                     modifier = Modifier.fillMaxWidth(),
@@ -678,7 +678,7 @@ fun KitsScreen(
                         )
                     } else {
                         PrimaryAction(
-                            label = "NEW PROJECT ▸",
+                            label = "NEW PROJECT",
                             enabled = !busy,
                             onClick = onNewProject,
                         )
@@ -687,7 +687,7 @@ fun KitsScreen(
                     // often than the other way round, and the menu it opens still
                     // says PICK A STARTER as its own heading.
                     ActionButton(
-                        "NEW KIT ▸ STARTERS",
+                        "NEW KIT · STARTERS ▾",
                         scheme,
                         enabled = !busy,
                         working = startingKit,
@@ -709,7 +709,7 @@ fun KitsScreen(
                         // mid-word; the menu it opens says PICK A STARTER as its
                         // own heading, so the word isn't lost, just moved to where
                         // it always fits.
-                        label = "NEW KIT ▸ STARTERS",
+                        label = "NEW KIT · STARTERS ▾",
                         enabled = !busy,
                         working = startingKit,
                         onClick = { menuOpen = true },
@@ -726,7 +726,7 @@ fun KitsScreen(
             // anything could write a session at all.
             if (loopTracks > 0) {
                 ActionButton(
-                    "LOOP ▸ $loopTracks OF ${Session.TRACK_COUNT} TRACKS",
+                    "LOOP · $loopTracks OF ${Session.TRACK_COUNT} TRACKS ▸",
                     scheme,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
@@ -740,7 +740,7 @@ fun KitsScreen(
             // (locked behavior, Task 2 of the bin-restore plan).
             if (binnedCount > 0) {
                 ActionButton(
-                    "BIN ▸ $binnedCount WAITING",
+                    "BIN · $binnedCount WAITING ▸",
                     scheme,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
@@ -773,7 +773,7 @@ fun KitsScreen(
                 // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
                 // all stay top-level per the owner's ruling.
                 ActionButton(
-                    "TOOLS ▸",
+                    "TOOLS ▾",
                     scheme,
                     enabled = !busy,
                     accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, X-RAY, DOUBLES",

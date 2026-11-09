@@ -168,11 +168,11 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
         // The ring is owed after the show delay, not on the first frame: the
         // first composition is given the delay, and a frame or two to draw in.
         show(settleMillis = RING_DUE_MS) {
-            PrimaryAction("NEW KIT ▸ STARTERS", enabled = false, onClick = {}, working = true, ringClock = testClock)
+            PrimaryAction("NEW KIT · STARTERS ▾", enabled = false, onClick = {}, working = true, ringClock = testClock)
         }
 
         // Still the same words it had before it was pressed, not DUBBING…
-        compose.onNodeWithText("NEW KIT ▸ STARTERS").assertExists().assertIsNotEnabled()
+        compose.onNodeWithText("NEW KIT · STARTERS ▾").assertExists().assertIsNotEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, Copy.WORKING_BUSY))
         // With a ring beside them that is a node of its own: the spinner.
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
@@ -182,7 +182,7 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
     fun a_working_action_button_keeps_its_label_and_says_it_is_working() {
         show(settleMillis = RING_DUE_MS) {
             ActionButton(
-                "SCULPT ▸ NEW TAPE",
+                "SCULPT · NEW TAPE",
                 LocalScheme.current,
                 enabled = false,
                 working = true,
@@ -191,16 +191,16 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
             )
         }
 
-        compose.onNodeWithText("SCULPT ▸ NEW TAPE").assertExists().assertIsNotEnabled()
+        compose.onNodeWithText("SCULPT · NEW TAPE").assertExists().assertIsNotEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, Copy.WORKING_BUSY))
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
     }
 
     @Test
     fun a_button_that_is_not_working_has_no_spinner() {
-        show { PrimaryAction("NEW KIT ▸ STARTERS", enabled = true, onClick = {}) }
+        show { PrimaryAction("NEW KIT · STARTERS ▾", enabled = true, onClick = {}) }
 
-        compose.onNodeWithText("NEW KIT ▸ STARTERS").assertExists()
+        compose.onNodeWithText("NEW KIT · STARTERS ▾").assertExists()
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(0)
     }
 
@@ -347,7 +347,7 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
 
     private companion object {
         const val GRID = "grid"
-        const val RING_LABEL = "SCULPT ▸ NEW TAPE"
+        const val RING_LABEL = "SCULPT · NEW TAPE"
 
         /** One frame of the compose test clock, which `advanceTimeBy` rounds up to a whole number of. */
         const val FRAME_MS = 16L

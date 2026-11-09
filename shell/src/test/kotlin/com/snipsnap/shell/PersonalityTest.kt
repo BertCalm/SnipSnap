@@ -587,7 +587,7 @@ class PersonalityTest {
         assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
 
         // It names no button of this screen, which is the rule its own KDoc
-        // sets: CATCH YOUR FIRST SOUND ▸ and START FROM A KIT ▸ sit directly
+        // sets: CATCH YOUR FIRST SOUND and START FROM A KIT ▾ sit directly
         // under it in the same panel, and naming them here would be a second
         // copy of a control already on screen. "A KIT" is the way in, not the
         // button's label.
@@ -596,8 +596,8 @@ class PersonalityTest {
         }
         assertTrue(note.endsWith(" OR START FROM A KIT."), "the tail says the second way in: $note")
         // The panel's two ways in are the labels the note glosses.
-        assertEquals("START FROM A KIT ▸", Copy.START_FROM_KIT)
-        assertEquals("CATCH YOUR FIRST SOUND ▸", Places.CATCH_FIRST)
+        assertEquals("START FROM A KIT ▾", Copy.START_FROM_KIT)
+        assertEquals("CATCH YOUR FIRST SOUND", Places.CATCH_FIRST)
 
         // The doors it declines to name are named where the inventory
         // lives instead. CATCH has had a line since HELP was written;

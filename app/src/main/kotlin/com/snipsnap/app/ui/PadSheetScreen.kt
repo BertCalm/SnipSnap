@@ -3722,7 +3722,7 @@ fun PadSheetScreen(
                 )
             } else {
             ActionButton(
-                "AQUARIUM ▸", scheme, enabled = !busy,
+                "AQUARIUM", scheme, enabled = !busy,
                 accessibilityLabel = "AQUARIUM",
                 modifier = Modifier.fillMaxWidth().testTag("aquarium-open"),
                 onClick = {
@@ -4134,7 +4134,7 @@ fun PadSheetScreen(
                 onFractionCommit = {},
             )
             ActionButton(
-                "MAKE PAD ▸ INSTRUMENT",
+                "MAKE PAD · INSTRUMENT",
                 scheme,
                 enabled = !busy,
                 working = busy && padJob == Copy.MAKE_PAD_BUSY,
@@ -4169,7 +4169,7 @@ fun PadSheetScreen(
                 maxLines = 1,
             )
             ActionButton(
-                "MAKE SYNTH ▸ REPLACES THE WAV",
+                "MAKE SYNTH · REPLACES THE WAV",
                 scheme,
                 enabled = !busy,
                 working = busy && padJob == Copy.DESAMPLE_BUSY,
@@ -4202,7 +4202,7 @@ fun PadSheetScreen(
                 onClick = ::onMakeInstrument,
             )
             ActionButton(
-                if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                if (spreadOpening) "…" else "SPREAD · SCALE ACROSS PADS",
                 scheme,
                 enabled = !busy && !spreadOpening && snip != null,
                 accessibilityLabel = "SPREAD ACROSS PADS",
@@ -5324,7 +5324,7 @@ private fun DustFromRow(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
-                if (open) "DUST FROM ▾" else "DUST FROM ▸",
+                if (open) "DUST FROM −" else "DUST FROM +",
                 scheme,
                 enabled = !busy,
                 modifier = Modifier.weight(1f),
@@ -5679,7 +5679,7 @@ private fun MutateCard(
         // opens on any audio; once one is held the button reads its name.
         val held = partner as? MutateSheet.Partner.Wav
         ActionButton(
-            held?.let { "A FILE ▸ ${it.label.uppercase(java.util.Locale.ROOT)}" } ?: "A FILE ▸ PICK ONE OFF THE PHONE",
+            held?.let { "A FILE · ${it.label.uppercase(java.util.Locale.ROOT)}" } ?: "A FILE · PICK ONE OFF THE PHONE",
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -5820,7 +5820,7 @@ private fun OutsideCard(
         )
 
         ActionButton(
-            stage ?: "SEND ▸ SPEAKER OUT, MIC BACK IN",
+            stage ?: "SEND · SPEAKER OUT, MIC BACK IN",
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -5829,7 +5829,7 @@ private fun OutsideCard(
         // The room the last ROOM trip measured, onto the shelf for any pad.
         // The row stays, dimmed, so the card never jumps when a room lands.
         ActionButton(
-            "KEEP ROOM ▸ ON THE SHELF, FOR ANY PAD",
+            "KEEP ROOM · ON THE SHELF, FOR ANY PAD",
             scheme,
             enabled = !busy && canKeep,
             dimmed = !canKeep,
