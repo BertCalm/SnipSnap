@@ -223,7 +223,7 @@ Sources: Backroom's accepted SKIN kick and snare, rendered by the app, dry and t
 
 | Gate | Applies | BREAKER's plan |
 |---|---|---|
-| Drum synth: multiple distinct genre kits on the shelf | yes | Three kits from one engine, each in `StarterKits.ALL` and one `StarterShelf.GROUPS` group: Breaker (surf x boom bap, the 16 pads agreed), Dub Tank (one-drop dub: long slap, wet spring, rimshot), Garage (60s garage and surf punk: loud amp, forward glue, little dust). Proposed; the owner may swap genres |
+| Drum synth: multiple distinct genre kits on the shelf | yes | Three kits from one engine, each in `StarterKits.ALL` and one `StarterShelf.GROUPS` group: Breaker (surf x boom bap, the 16 pads agreed), Dub Tank (one-drop dub: long slap, wet spring, rimshot) and Trip hop (a crushed spring, heavy and dark). The owner picked the two genres on 2026-11-09 |
 | Percussion: authored roll/riser, not identical repeated hits | yes | Two authored finite articulations: a snare roll riser into the spring (each hit a fresh re-strike at rising velocity, the tank accumulating, the crush pumping) and a surf tom fill (high to floor). Proposed placement: A15 becomes the riser (the shaker leaves the Breaker kit) |
 | All instruments: velocity levels and round robin through render, recipe, player and export | yes | Velocity and take pass into the SKIN sources (native strike velocity, `Restrike` re-strikes); the chain keeps them. Kit pads use the shared paths (`Velocity.variantsAt`, Robin); no private RR system (the programme forbids per-engine RR). Known shared limit: `ArrangedPad` refuses soft variants with takes (SC-02); record verified/partial per path |
 | Melodic engine (six voices, keygroups, chords) | no | a drum engine |
@@ -260,7 +260,7 @@ Sources: Backroom's SKIN kick, snare, hats, cross stick and shaker; SKIN toms an
 tambourine. New: a crash (no drum engine has one) and Bump (the tank alone). Every pad gets two softer
 velocity layers and re-struck takes.
 
-## Genre kits (candidates on the owner's page, not yet answered)
+## Genre kits (the owner picked Dub Tank and Trip hop, 2026-11-09)
 
 Page: https://claude.ai/artifact/WjH9MpC2i8dnbsLZ2jmzjg. One engine and Backroom's drums; only the
 controls and the groove change. Two of the four become kits 2 and 3.
@@ -271,6 +271,9 @@ controls and the groove change. Two of the four become kits 2 and 3.
 | Garage | straight eighths, 150 BPM | AMP .8, CRUSH .35, DRIP .3, SLAP .15, DUST .1 |
 | Lo-fi | swung sixteenths, 82 BPM, the snare late | DUST .8, pitched 2 semitones down, CRUSH .55, DRIP .2 |
 | Trip hop | heavy break, 92 BPM | CRUSH .85, DRIP .55, SLAP .3, DUST .5, pitched 1 semitone down |
+
+**Heard (2026-11-09).** Dub Tank: "Pick it". Trip hop: "Pick it". Garage and Lo-fi: "Maybe". Kits
+2 and 3 are Dub Tank and Trip hop. Garage and Lo-fi stay here as candidates for a later kit.
 
 SLAP gained a time law for the dub reading: a 90 ms slapback up to 0.5, growing to 375 ms at 1.
 

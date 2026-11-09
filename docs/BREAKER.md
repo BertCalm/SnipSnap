@@ -13,7 +13,7 @@ Round 1, a prototype outside the factory presets (`PatchTypes.PROTOTYPES`). Two 
 SNARE, built from the owner's round-0 picks. Not in the phone picker yet; the picker entry waits for
 a session with an Android SDK, as the house rule says. Still to come:
 - the rest of the 16-pad kit;
-- two more genre kits, which the owner picks from four candidates;
+- two more genre kits, Dub Tank and Trip hop (the owner's picks);
 - the snare riser and the surf tom fill;
 - the audition page.
 
