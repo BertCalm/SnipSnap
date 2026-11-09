@@ -134,7 +134,7 @@ object LandingNote {
     )
 
     /** The label on [dubbed]'s way on: the same door as OUT's ALSO row, which says what it shares. */
-    const val SHARE_ROUTE = "SHARE ▸"
+    const val SHARE_ROUTE = "SHARE"
 
     /**
      * A dub threw — storage pulled, disk full, permission yanked. A box

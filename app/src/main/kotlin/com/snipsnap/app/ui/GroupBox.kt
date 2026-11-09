@@ -61,6 +61,29 @@ fun GroupBox(
     also: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    GroupBoxCore(legend, summary, open, onToggle, scheme, enabled, summaryColor, modifier, also, Modifier, content)
+}
+
+/**
+ * [GroupBox] with [toggleModifier] on the strip that toggles it: where a test tag or a
+ * semantic click belongs. Its own function, not a parameter of [GroupBox], so the
+ * many call sites of [GroupBox] keep their shape (a new defaulted parameter changed
+ * the dex of every composable that draws one).
+ */
+@Composable
+internal fun GroupBoxCore(
+    legend: String,
+    summary: String,
+    open: Boolean,
+    onToggle: () -> Unit,
+    scheme: Scheme,
+    enabled: Boolean,
+    summaryColor: Color,
+    modifier: Modifier,
+    also: String?,
+    toggleModifier: Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Box(modifier.fillMaxWidth()) {
         Column(
             Modifier
@@ -73,6 +96,7 @@ fun GroupBox(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .then(toggleModifier)
                     // Always clickable, `enabled` forwarded rather than
                     // dropped: a screen reader is told this control is
                     // temporarily unavailable instead of it silently

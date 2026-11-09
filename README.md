@@ -436,7 +436,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 79 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 80 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1676,3 +1676,7 @@ recipes, with versioned rendering to preserve saved sounds.
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.
 See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).
+
+**Cosmic Breaks** is a fixed 16-pad FRESH TAPE drum starter preserving the approved
+cosmic audition: eight core drums, four glitches, two rides, an alternate kick
+and snare. [Source provenance, kit export and limits](docs/COSMIC_BREAKS.md).

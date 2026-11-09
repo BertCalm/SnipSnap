@@ -2152,7 +2152,7 @@ fun GrooveScreen(
                                 // J19: the same words as EDIT STEPS ▸ below -
                                 // it is the same fork, from the take rather than
                                 // from the program on screen.
-                                if (forkArmed) "REPLACE YOURS?" else "EDIT STEPS ▸",
+                                if (forkArmed) "REPLACE YOURS?" else "EDIT STEPS",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -2171,7 +2171,7 @@ fun GrooveScreen(
                         // find. Hidden whenever the post-take row is showing
                         // (`justLanded`) so there is never a second, redundant
                         // "edit this by hand" button on screen at the same time.
-                        GrooveActionButton("EDIT STEPS ▸", scheme, Modifier.fillMaxWidth(), enabled = !busy) { forkToE() }
+                        GrooveActionButton("EDIT STEPS", scheme, Modifier.fillMaxWidth(), enabled = !busy) { forkToE() }
                     }
 
                     // Batch 3, Task 1: EXPORT's own shape (named section
