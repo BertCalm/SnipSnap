@@ -1,0 +1,323 @@
+{
+  "engine": "HALOBAR",
+  "voice": "CROTALES",
+  "audioModel": 1,
+  "recordedUtc": "2026-11-09T06:16:53.630219+00:00",
+  "status": "Built and measured; crotales listening pending; four studies remain outside the twelve accepted factory recipes",
+  "baselineCommit": "49d3f3013b8e0a0cb1d9fa5fd2e37e7d4eff9d53",
+  "localValidationCommit": "a3ad10f27ea731b8f93af34dab0ef2fe756dd9e9",
+  "testedCodeTree": "e5a653f2c88239053d4c617b6675955ed11750f6",
+  "publishedCodeCommit": "045e17a6817c537baed118ba192304a82d47058d",
+  "followupBranch": "claude/halobar-crotales",
+  "dependsOnPullRequest": "https://github.com/BertCalm/SnipSnap/pull/1003",
+  "sharedRenderAndReturnUnchanged": true,
+  "sharedRenderAndReturnSha256": "a3ca77c46941e801f2cc05a4dd6c6672e44522024ba3d1a4e722ee760e219d84",
+  "pitchRangeMidi": [
+    84,
+    108
+  ],
+  "pitchMidpointMidi": 96,
+  "remainingPlannedVoices": [
+    "TUBULAR_BELLS"
+  ],
+  "sourceSha256": {
+    "cli/src/main/kotlin/com/snipsnap/cli/SynthCommand.kt": "a8def65341fba7bf02baddc1a539048a930d2709a5c335105e238c7b9b409dde",
+    "cli/src/test/kotlin/com/snipsnap/cli/HalobarCommandTest.kt": "eebc67bacec4cf904900eac4d225f1b0b9840b3ea45cd17c900ebc41f0ab2d8d",
+    "shell/src/test/kotlin/com/snipsnap/shell/SynthRootTest.kt": "77ec4fca4d4a6a73108558d13f64727e6da3a97ababf014d6ae58232eba06a38",
+    "synth/build.gradle.kts": "f427cb205b2e4a0dd946d3a7b8a1130ce2fedee911d81980591dd5362f76e32c",
+    "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt": "a03be2eba9010462fa9fd5ecd8a19c7f455a3a521838d75e57155f6d1af5931c",
+    "synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt": "ba9b395baf287314aa23b9b35f0ad741ac26d00694b977c5dab236f0eb76e215",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarCrotalesAuditionGenerator.kt": "f2e22a4e413c382ee752412505e81ebde2605fe1406bf60313c78b7cdc7e4bb0",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarCrotalesTest.kt": "904f87a60430f510e79145f936fa4a7c5dde7ff0b56adfe0a40677eeccf5f91c",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarPresetsTest.kt": "17b206c70afab55b3d4d7d2cff08de97c6e8b1afd818de33b8dc7c4e2cbc2a76",
+    "synth/src/test/kotlin/com/snipsnap/synth/HalobarTest.kt": "e356383685c944de366943baad3784a94058ed1a746c95900e471eb8b81a595c",
+    "synth/src/test/kotlin/com/snipsnap/synth/PatchTypes.kt": "70cd2dd93527011c059e19eed7480cd53d25c83753272200300f76dfaa01bc89",
+    "synth/src/test/resources/audition/halobar-audition.html": "8b90309b1a6e3fab110c296772e2d00ee2d4f19de6681428ff035f8ecab9dc6b",
+    "synth/src/test/resources/audition/halobar-crotales.html": "583ba2a0e19289baf3ce3633f43e7154a2fb0758182385624d64294c40b4d360"
+  },
+  "initialProbes": {
+    "first": {
+      "exitCode": 1,
+      "tests": 24,
+      "failures": 2,
+      "reason": "Crotales TOUCH at C7 reached the contact floor above midpoint; C8 4x/8x residual was 0.15696120587615195, above 0.1",
+      "correctiveChange": "Crotales-only wider 1500-to-200 microsecond contact law with an 80 microsecond minimum; original four voices retain the existing 65 microsecond minimum"
+    },
+    "secondContactFloor": {
+      "microseconds": 80,
+      "exitCode": 1,
+      "tests": 2,
+      "failures": 1,
+      "relativeRmsResidual": 0.11206554871381835
+    },
+    "final": {
+      "exitCode": 0,
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "highRateCorner": {
+      "voice": "CROTALES",
+      "midi": 108,
+      "controls": {
+        "TUNE": 1,
+        "TOUCH": 1,
+        "RETURN": 1,
+        "SPACE": 1,
+        "HOLD": 0
+      },
+      "relativeRmsResidual": 0.06934591885375942,
+      "threshold": 0.1
+    }
+  },
+  "jvm": {
+    "command": "./gradlew --no-daemon test",
+    "exitCode": 0,
+    "tests": 9227,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": {
+      "json": 16,
+      "xpm": 51,
+      "audio": 457,
+      "kit": 622,
+      "mpc3": 95,
+      "synth": 4982,
+      "loop": 439,
+      "cli": 307,
+      "shell": 2258
+    },
+    "scope": "Complete nine-module JVM command without exclusions, repeated after relocating only the unchanged audition task. Unchanged Test inputs may reuse the completed full execution; focused runs are not added to this count."
+  },
+  "android": {
+    "command": "./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin",
+    "exitCode": 0,
+    "builtSourceCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+    "bytes": 82343565,
+    "sha256": "7901aa18d85809f00576166e039352198832ca8d52183a44de76017fc893ccfe",
+    "signature": "APK v2 signature verified",
+    "onDeviceExecution": "unverified"
+  },
+  "compatibility": {
+    "approvedFloat32Cases": 195,
+    "approvedFactoryRecipes": 12,
+    "approvedAuditionWavs": 179,
+    "approvedAuditionRecipes": 153,
+    "foundationFilesBytesIdentical": true,
+    "previousGlockenspielFloat32Cases": 69,
+    "previousGlockenspielAssetsExact": 163,
+    "newAuditionFloat32Cases": 71,
+    "newCrotalesCases": 63,
+    "comparisonCases": 8,
+    "studyKitRecipeReplays": 16,
+    "studyKitWavsBytesIdentical": true,
+    "allReplayExitCode": 0,
+    "provisionalFixture": "crotales-native-parity.tsv",
+    "provisionalFixtureSha256": "f45058f5873f833d30f625740addbe5a1dd5b85705b204f37870561b04648383"
+  },
+  "measurements": {
+    "clips": 71,
+    "crotalesPitchChecks": 10,
+    "maximumRootErrorCents": 1.5032059674673035,
+    "minimumPitchConfidence": 0.9565860033035278,
+    "freshPerformance": {
+      "samples": [
+        280.175476,
+        282.175541,
+        282.320933,
+        282.624644,
+        282.734284,
+        283.333461,
+        283.858387,
+        284.325035,
+        284.370758,
+        284.495069,
+        285.556121,
+        285.672984,
+        285.771253,
+        285.819818,
+        286.266511,
+        286.845472,
+        286.981909,
+        287.796973,
+        289.613029,
+        290.283465,
+        291.005428,
+        291.098819,
+        292.940663,
+        293.895883,
+        293.942442,
+        296.286199,
+        308.951244,
+        311.757464,
+        315.38659,
+        335.864683
+      ],
+      "medianMs": 286.845472,
+      "p95Ms": 315.38659,
+      "budgetMs": 50,
+      "budgetMet": false,
+      "preparedStemCache": false,
+      "completedAudioCache": false
+    },
+    "spacePerformance": {
+      "samples": [
+        12.277384,
+        12.339755,
+        12.344672,
+        12.376885,
+        12.394169,
+        12.415346,
+        12.511192,
+        12.585342,
+        12.626098,
+        12.643921,
+        12.701269,
+        12.800307,
+        12.812559,
+        12.826664,
+        12.897903,
+        12.970925,
+        12.974532,
+        13.001382,
+        13.024735,
+        13.063412,
+        13.0675,
+        13.186617,
+        13.289268,
+        13.327031,
+        13.523968,
+        13.586754,
+        13.72955,
+        14.073292,
+        14.459709,
+        14.819968
+      ],
+      "medianMs": 12.970925,
+      "p95Ms": 14.459709,
+      "budgetMs": 50,
+      "budgetMet": true,
+      "preparedStemCache": true,
+      "completedAudioCache": false
+    },
+    "runtime": "21.0.13+9-LTS",
+    "processors": 4
+  },
+  "audition": {
+    "url": "https://halobar-native-audition.bertcalm.chatgpt.site/crotales/",
+    "siteSourceCommit": "cf6dc030d39526df5799580724197f9289c7094f",
+    "deploymentId": "appgdep_6af14c242e7c8191bab6c80ccda1b108",
+    "versionId": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_bc89940f5a988191aa593d3620b4b582",
+    "deploymentStatus": "succeeded",
+    "browserQA": "unverified; managed browser helper unavailable",
+    "hostedEncoding": "71 lossless FLAC clips; decoded PCM16 exact against native WAVs; phrase and MPC downloads remain WAV",
+    "expandedArchiveBytes": 225805797,
+    "hostedPcmFixture": "crotales-hosted-pcm.tsv",
+    "hostedPcmFixtureSha256": "ba17de11486b2d746ef36a14a5fb2cc68e7be3518de9b72463edbb1fa71e4870",
+    "hostingLimitResolution": "Removed unlinked duplicate unpacked MPC folders and losslessly encoded new individual clips; original audition files remain exact"
+  },
+  "configurationValidation": {
+    "originalFullCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+    "originalFullTree": "0358894bacdad9f8cea7c24be893e389285600b6",
+    "finalCommit": "a3ad10f27ea731b8f93af34dab0ef2fe756dd9e9",
+    "finalTree": "e5a653f2c88239053d4c617b6675955ed11750f6",
+    "onlyChangedPath": "synth/build.gradle.kts",
+    "compiledSourcesUnchanged": true,
+    "developmentHead": "18378ec94fd2dec1787d00388a92d05a01fbbe7a",
+    "mergePreviewExitCode": 0,
+    "mergePreviewTree": "7c5d603bb5a985cdad75d14c61c2224a0d7873da",
+    "canonicalCommandExitCode": 0,
+    "scope": "Full command repeated after moving only the unchanged audition-task registration. Unchanged Test inputs may reuse the completed full execution."
+  },
+  "checks": [
+    {
+      "stage": "native-audition",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":synth:generateHalobarCrotalesAudition"
+      ],
+      "sourceCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+      "sourceTree": "0358894bacdad9f8cea7c24be893e389285600b6",
+      "started": 1794196209.922951,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794196260.295651
+    },
+    {
+      "stage": "compatibility",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/halobar-crotales/verify.py"
+      ],
+      "sourceCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+      "sourceTree": "0358894bacdad9f8cea7c24be893e389285600b6",
+      "started": 1794196260.296772,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794196332.737997
+    },
+    {
+      "stage": "android",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        ":app:assembleDebug",
+        ":app:compileDebugAndroidTestKotlin"
+      ],
+      "sourceCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+      "sourceTree": "0358894bacdad9f8cea7c24be893e389285600b6",
+      "started": 1794196332.7414682,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794196411.1763458
+    },
+    {
+      "stage": "full-jvm-source",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "test"
+      ],
+      "sourceCommit": "13786c6e9d8e3a97e63abcb678f1c5d0b808d304",
+      "sourceTree": "0358894bacdad9f8cea7c24be893e389285600b6",
+      "started": 1794196411.1793053,
+      "state": "passed",
+      "exitCode": 0,
+      "ended": 1794204803.1615624
+    },
+    {
+      "stage": "full-jvm",
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "test"
+      ],
+      "sourceCommit": "a3ad10f27ea731b8f93af34dab0ef2fe756dd9e9",
+      "sourceTree": "e5a653f2c88239053d4c617b6675955ed11750f6",
+      "started": 1794204864.2324011,
+      "state": "passed",
+      "reason": "Unchanged audition-task block relocated; all production and test Kotlin/Java sources remain byte-identical to the completed full execution.",
+      "exitCode": 0,
+      "ended": 1794204896.1989496
+    }
+  ],
+  "allChecksPassed": true,
+  "heard": {
+    "originalThree": "owner approved earlier native audition",
+    "crotales": "pending owner listening"
+  },
+  "limits": [
+    "Proposed disc spectrum; no measured crotale geometry or material constants",
+    "Fixed 72 BPM reference",
+    "Finite notes and HOLD, no seamless sampler loop",
+    "Fresh render p95 is 315.4 ms on this desktop, above the 50 ms target",
+    "Phone performance and physical MPC loading unverified"
+  ]
+}

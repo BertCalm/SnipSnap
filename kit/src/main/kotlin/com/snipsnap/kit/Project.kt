@@ -75,6 +75,18 @@ data class Project(
         return copy(kits = rest, activeKit = if (activeKit == kitFolderName) rest.firstOrNull() else activeKit)
     }
 
+    /**
+     * The project after the kit in [from] was renamed to [to] on the shelf:
+     * the same place in [kits], and still the active kit if it was. A
+     * project not holding [from] is unchanged; one already holding [to]
+     * keeps that entry and drops [from], so it never holds a kit twice.
+     */
+    fun withKitRenamed(from: String, to: String): Project {
+        if (from == to || !holds(from)) return this
+        val renamed = if (holds(to)) kits - from else kits.map { if (it == from) to else it }
+        return copy(kits = renamed, activeKit = if (activeKit == from) to else activeKit)
+    }
+
     /** The kit switcher above the grid: [kitFolderName] becomes the active kit. Must be held. */
     fun activated(kitFolderName: String): Project {
         require(holds(kitFolderName)) { "cannot activate '$kitFolderName': not held by '$name'" }
@@ -289,6 +301,45 @@ object ProjectStore {
         release(shelfRoot, project.kits.filter { it !in others })
         if (!moveDir(projectDir, dest)) throw IOException("could not move $projectDir to $dest")
         return dest
+    }
+
+    /** What [followKitRename] changed: the live projects it rewrote, and the project folders it could not. */
+    class KitRenameFollowed(val updated: List<Project>, val failed: List<File>)
+
+    /**
+     * A kit's folder renamed on the shelf from [from] to [to]: every project
+     * that held it holds it under the new name ([Project.withKitRenamed]),
+     * in the same place and still active if it was, so the kit does not
+     * read as gone (left out of [kitDirs], named by [missingKits], refused
+     * by an export). The song kept for it in each project moves too
+     * ([SongPlanStore.rename]). Projects asleep in the bin are rewritten
+     * where they lie, so a restore finds the kit; a released kit stays
+     * released under its new name.
+     *
+     * One project that cannot be read or written does not stop the rest;
+     * its folder comes back in [KitRenameFollowed.failed].
+     */
+    fun followKitRename(shelfRoot: File, from: String, to: String): KitRenameFollowed {
+        if (from == to) return KitRenameFollowed(emptyList(), emptyList())
+        val updated = mutableListOf<Project>()
+        val failed = mutableListOf<File>()
+        val binDirs = File(shelfRoot, BIN_DIR).listFiles { f: File -> f.isDirectory && File(f, FILE_NAME).isFile }?.toList() ?: emptyList()
+        for ((dir, live) in list(shelfRoot).map { it to true } + binDirs.map { it to false }) {
+            try {
+                val project = load(dir)
+                if (project.holds(from)) {
+                    val renamed = project.withKitRenamed(from, to)
+                    AtomicFile.writeText(File(dir, FILE_NAME), Json.write(toJson(renamed)) + "\n")
+                    if (live) updated += renamed
+                }
+                SongPlanStore.rename(dir, from, to)
+            } catch (e: Exception) {
+                failed += dir
+            }
+        }
+        val released = released(shelfRoot)
+        if (from in released) writeReleased(shelfRoot, released - from + to)
+        return KitRenameFollowed(updated, failed)
     }
 
     /** The projects asleep in the bin, most recently binned first; a folder with no readable `project.json` is skipped. */

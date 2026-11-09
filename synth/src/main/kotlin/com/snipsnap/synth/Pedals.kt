@@ -39,7 +39,8 @@ enum class PedalSide(val id: String) {
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
  * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
  * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
- * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07.
+ * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07; SUB, the octave down,
+ * gated on 2026-11-09.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -166,6 +167,12 @@ object Pedals {
         // and a hat a stub. Gated on 2026-11-07 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3,
         // idea 5, which called it CHOKE; a choke is a choke group here). Behind MORE.
         Entry("HUSH", "hushed", character("hushed"), PedalSide.POST, movable = false, gated = true),
+        // An octave down: the `octaved` character, the OCTAVER section, whose tap (AMT 0.7) mixes a half-speed copy of the hit
+        // under it at DEPTH 0.5, driven to Grit. In front of the amp, where the rack puts it and an octave pedal sits on a board;
+        // not movable, since the owner heard it only there. For snares and toms: a kick's octave lands under 40 Hz, weight a
+        // phone does not play. Gated on 2026-11-09 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 11).
+        // Behind MORE.
+        Entry("SUB", "octaved", character("octaved"), PedalSide.PRE, movable = false, gated = true),
     )
 
     init {
