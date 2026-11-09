@@ -8,7 +8,7 @@ import kotlin.math.ln
  * Single-hit audition studies retain recipes; shelf grids retain complete audio and provenance. */
 object SporeStation {
     const val BPM = 170
-    const val VERSION = 4
+    const val VERSION = 5
     data class Part(val name: String, val patch: Patch, val kind: DrumClass, val level: Float = .7f)
     data class Controls(val body: Float = .5f, val bite: Float = .35f, val dust: Float = .15f,
                         val twist: Float = .1f, val space: Float = .2f) {
@@ -53,7 +53,7 @@ object SporeStation {
     ) + parts().drop(10)
 
     /** Big accented break drums; keep the ghost strokes as the quiet reference. */
-    fun jungleParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
+    fun previousJungleParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
         val values = when (index) {
             0 -> m("TUNE" to .35f, "DECAY" to .23f, "TONE" to .75f, "CLICK" to .85f, "DROP" to .38f, "PUNCH" to .88f)
             2 -> m("TUNE" to .40f, "DECAY" to .55f, "SNAP" to .52f, "RATTLE" to .42f, "SIZZLE" to .50f, "PUNCH" to .90f)
@@ -67,12 +67,26 @@ object SporeStation {
         part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
     }
 
+    /** Sound-system accents: deeper sweep, sustained shell weight and tearing wires. */
+    fun jungleParts(): List<Part> = previousJungleParts().mapIndexed { index, part ->
+        val values = when (index) {
+            0 -> m("TUNE" to .16f, "DECAY" to .48f, "TONE" to .90f, "CLICK" to 1f, "DROP" to .88f, "PUNCH" to .92f)
+            2 -> m("TUNE" to .20f, "DECAY" to .86f, "SNAP" to .48f, "RATTLE" to .68f, "SIZZLE" to .62f, "PUNCH" to .92f)
+            4 -> m("TUNE" to .92f, "DECAY" to .52f, "SNAP" to .86f, "RATTLE" to .55f, "SIZZLE" to .88f, "PUNCH" to .95f)
+            7 -> m("DECAY" to .44f, "TONE" to .78f, "RING" to .30f, "PUNCH" to .48f)
+            9 -> m("DECAY" to .53f, "TONE" to .72f, "SIZZLE" to .55f, "PUNCH" to .45f)
+            else -> emptyMap()
+        }
+        val level = when(index) { 0 -> 1f; 4 -> .96f; 7 -> .64f; 9 -> .60f; else -> part.level }
+        part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
+    }
+
     /** Invert ECHO's exponential time map; the baked delay is tied to this kit's documented tempo. */
     fun echoTime(beats: Float): Float = (ln((60f / BPM * beats) / .06f) / ln(.35f / .06f)).coerceIn(0f, 1f)
 
-    fun recipe(index: Int, mutation: Boolean = false, controls: Controls = Controls(), jungle: Boolean = false, restrained: Boolean = false): PadRecipe {
+    fun recipe(index: Int, mutation: Boolean = false, controls: Controls = Controls(), jungle: Boolean = false, previousJungle: Boolean = false): PadRecipe {
         require(index in 0..15)
-        val part = (if (restrained) restrainedParts() else if (jungle) jungleParts() else parts())[index]
+        val part = (if (previousJungle) previousJungleParts() else if (jungle) jungleParts() else parts())[index]
         val old = part.patch.macros
         val changes = mutableMapOf<String, Float>()
         // BODY is explicitly a source balance/decay control, not a physical simulation.
@@ -95,12 +109,12 @@ object SporeStation {
                 "REPEAT" to .25f + space * .25f, "TONE" to .28f, "MIX" to space * .55f, "HEAD" to .8f) else null,
             tape = if (mutation) m("WOBBLE" to .12f, "DRIVE" to .12f, "AGE" to .22f) else null,
         )
-        return PadRecipe(patch, if ((jungle || restrained) && !mutation && index < 10) null else fx, terminalFadeMs = 4f)
+        return PadRecipe(patch, if ((jungle || previousJungle) && !mutation && index < 10) null else fx, terminalFadeMs = 4f)
     }
 
     /** Original single-hit audition comparisons; shelf/export callers use [performance]. */
-    fun arranged(mutation: Boolean = false, jungle: Boolean = false, restrained: Boolean = false): List<ArrangedPad> = (if (restrained) restrainedParts() else if (jungle) jungleParts() else parts()).mapIndexed { index, part ->
-        val recipe = recipe(index, mutation, jungle = jungle, restrained = restrained)
+    fun arranged(mutation: Boolean = false, jungle: Boolean = false, previousJungle: Boolean = false): List<ArrangedPad> = (if (previousJungle) previousJungleParts() else if (jungle) jungleParts() else parts()).mapIndexed { index, part ->
+        val recipe = recipe(index, mutation, jungle = jungle, previousJungle = previousJungle)
         val hard = recipe.render()
         val soft = listOf(.3f, .6f).map { velocity ->
             // Match layer peaks once, retaining velocity-dependent timbre. The sampler applies velocity gain.

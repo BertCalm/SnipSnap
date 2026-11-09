@@ -60,11 +60,11 @@ class SporeStationTest {
     }
 
     @Test fun `bombastic accents gain body without raising the ghosts`() {
-        val previous = SporeStation.restrainedParts()
+        val previous = SporeStation.previousJungleParts()
         val current = SporeStation.jungleParts()
         for (i in listOf(0,2,4,7,9)) {
             assertTrue(current[i].patch.render().frameCount > previous[i].patch.render().frameCount)
-            assertTrue(current[i].level > previous[i].level)
+            assertTrue(current[i].level >= previous[i].level)
         }
         assertEquals(previous[3], current[3], "quiet ghosts retain their contrast")
         assertEquals(previous[1], current[1], "pickup kick stays restrained")

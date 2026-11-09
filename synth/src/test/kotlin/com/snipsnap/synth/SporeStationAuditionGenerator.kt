@@ -117,7 +117,7 @@ object SporeStationAuditionGenerator {
         }
         val core=bank(false); val mutations=bank(true)
         val jungle=SporeStation.arranged(jungle=true)
-        val restrained=SporeStation.arranged(restrained=true)
+        val restrained=SporeStation.arranged(previousJungle=true)
         val dry=SporeStation.parts().mapIndexed { i,p ->
             val begin=System.nanoTime();val source=p.patch.render();timings["source${i+1}Ms"]=(System.nanoTime()-begin)/1e6
             core[i].copy(snip=source,softVariants=listOf(.3f,.6f).map { Velocity.peakMatch(source,Velocity.atVelocity(p.patch,it)) })
@@ -147,13 +147,13 @@ object SporeStationAuditionGenerator {
             clip("jungle-${i+1}", p.displayName ?: "Jungle ${i+1}", "Jungle", p.snip, SporeStation.recipe(i,jungle=true),i+1)
         }
         restrained.forEachIndexed { i,p ->
-            clip("restrained-${i+1}", p.displayName ?: "Previous ${i+1}", "Restrained", p.snip, SporeStation.recipe(i,restrained=true),i+1)
+            clip("restrained-${i+1}", p.displayName ?: "Previous ${i+1}", "Restrained", p.snip, SporeStation.recipe(i,previousJungle=true),i+1)
         }
         val comparison = listOf(groove(restrained,coreOnly=true),groove(jungle,coreOnly=true))
         val compareGain = minOf(1f,.92f/comparison.maxOf { it.peak() })
         val compareMatch = minOf(.03f/comparison.maxOf { Loudness.of(it) },.99f/comparison.maxOf { it.peak() })
         comparison.forEachIndexed { i,s ->
-            clip("dry-compare-$i", if(i==0) "Previous restrained core" else "Bombastic jungle core", "Dry comparison",
+            clip("dry-compare-$i", if(i==0) "Previous bombastic core" else "Sound-system jungle core", "Dry comparison",
                 scale(s,compareGain),matchedGain=compareMatch/compareGain)
         }
         val grooves=listOf(groove(dry),groove(core),groove(mutations),groove(core,mutations))
@@ -203,7 +203,7 @@ object SporeStationAuditionGenerator {
         }
 
         val manifest=linkedMapOf<String,Any?>("title" to "Spore Station","version" to SporeStation.VERSION,"bpm" to SporeStation.BPM,
-            "baseline" to "bb41eee1a324854fedd83bd1ae5dba8ed2c08f91","status" to "candidate-awaiting-owner-listen",
+            "baseline" to "9e033cdd5717e94ee9f5c66be91d593a9fb00eae","status" to "candidate-awaiting-owner-listen",
             "sourceSha256" to listOf("synth/src/main/kotlin/com/snipsnap/synth/SporeStation.kt", "synth/src/test/kotlin/com/snipsnap/synth/SporeStationAuditionGenerator.kt").associateWith { hash(File(it)) },
             "sampleRate" to Dsp.RATE,"clips" to clips,"downloads" to downloads,"timings" to timings,
             "renderEnvironment" to "Kotlin/JVM 21 cloud container; not phone timing",
