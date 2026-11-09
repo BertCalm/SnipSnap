@@ -33,6 +33,7 @@ class HalobarTest {
 
     @Test fun `voices retain the root across three registers dry and processed`() {
         for(v in HalobarVoice.entries) for(note in when(v) {
+            HalobarVoice.CROTALES -> listOf(84,96,108)
             HalobarVoice.GLOCKENSPIEL -> listOf(65,77,89)
             HalobarVoice.XYLOPHONE -> listOf(57,65,77)
             else -> listOf(53,65,77)
@@ -41,10 +42,11 @@ class HalobarTest {
             val p=Halobar.renderProbe(v,m,normalize=true)
             assertEquals(note,p.plan.midi,"register comparison must play the requested note")
             val snip=Snip(p.samples,1,Halobar.RATE)
-            // The house detector stops at 1.2 kHz. Analyze high glockenspiel
-            // PCM at half its clock, then rescale the estimate; no resampling
+            // The house detector stops at 1.2 kHz. Analyze high metal voices
+            // at a slower clock, then rescale the estimate; no resampling
             // or expected-frequency search can force the requested note.
-            val factor=if(p.plan.hz>1100)2 else 1
+            var factor=1
+            while(p.plan.hz/factor>1100)factor*=2
             val pitch=assertNotNull(Pitch.detect(Snip(p.samples,1,Halobar.RATE/factor),
                 fromSec=.05f*factor,windowSec=.25f*factor),"$v MIDI $note SPACE $space has no root")
             val cents=1200*log2(pitch.hz*factor/p.plan.hz)
