@@ -112,3 +112,10 @@ The v2 audition was published from Site source commit
 `b977c791edc9289a92a93c96c96919b1f955d5e1`. Its 36-render harness passed,
 and eight-hit trains at maximum Space, HOLD and Drive stayed below a 0.462 peak.
 Browser interaction and physical hardware playback remain unverified.
+
+Final local verification passed 99 targeted JVM tests after merging the current base,
+including factory loading, all velocity boundaries and nine-hit cycle selection,
+chain assembly/persistence, shelf registration and repository conventions. The
+MPC generator and independent grid inspector passed again. A full local JVM run
+was attempted without observed failures, then stopped during the long synth
+regression; it is not counted as a full-suite pass. Complete regression runs in CI.
