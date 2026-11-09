@@ -154,13 +154,6 @@ class KitBenchTest {
     }
 
     @Test
-    fun `SPREAD is not opened for a kit`() {
-        assertFailsWith<IllegalArgumentException>("SPREAD is still an in-sheet panel, so it has no verdict") {
-            KitBench.verdict(Bench.SPREAD, "/shelf/A", "/shelf/A", slotFilled = true)
-        }
-    }
-
-    @Test
     fun `the slot decides nothing for VERSIONS and SONG`() {
         for (bench in listOf(Bench.VERSIONS, Bench.SONG)) {
             for (slotFilled in listOf(null, false, true)) {

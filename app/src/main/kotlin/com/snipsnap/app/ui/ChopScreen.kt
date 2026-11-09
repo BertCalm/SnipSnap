@@ -1052,7 +1052,7 @@ private fun ChopContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TapeText(Copy.CHOP_NO_HITS_FOUND, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 2)
-                ActionButton("TRY GRID ▸", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
+                ActionButton("TRY GRID", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
             }
         } else {
             GridPreview(placed, scheme)

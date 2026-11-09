@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * A staged PAD editor. Sound/context changes leave through [onEditorChange]; the host owns
+ * A staged PAD editor, drawn inside the pad editor's AQUARIUM section (its CLOSE folds the section). Sound/context changes leave through [onEditorChange]; the host owns
  * source validation, background preview, persistence and audition lifetime. Tabs and folds
  * are presentation state only. A preview never blocks another edit or a return to BEFORE.
  */
@@ -83,7 +83,7 @@ internal fun AquariumPanel(
                 )
                 Spacer(Modifier.width(8.dp))
                 ActionButton(
-                    "◄ PAD", scheme, enabled = enabled,
+                    "CLOSE", scheme, enabled = enabled,
                     accessibilityLabel = "Close Aquarium",
                     modifier = Modifier.testTag("aquarium-cancel"), onClick = onCancel,
                 )

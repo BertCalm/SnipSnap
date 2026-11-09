@@ -204,7 +204,7 @@ class OrbitScreenTest : ComposeScreenTest() {
     fun clip_to_kit_writes_the_rings_into_the_kits_grooves() {
         val entry = kit()
         show(entry)
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("CLIP TO KIT")
         waitFor("the groove written", timeoutMillis = 30_000) { groovesWritten.get() == 1 }
         assertTrue("a clip in groove.json", GrooveStore.load(entry.dir).isNotEmpty())
@@ -215,10 +215,10 @@ class OrbitScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val before = builtRings(entry)
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("CLIP TO KIT")
         waitFor("the groove written", timeoutMillis = 30_000) { groovesWritten.get() == 1 }
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("GROOVE TO RINGS")
         waitFor("the groove's rings saved beside the first", timeoutMillis = 30_000) { (ringsOnDisk(entry) ?: 0) > before }
         assertTrue("the screen said what it read: $toasts", toasts.any { "IS ON THE RINGS" in it || "RING" in it })

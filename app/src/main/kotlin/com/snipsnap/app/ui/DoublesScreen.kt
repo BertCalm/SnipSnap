@@ -213,7 +213,7 @@ private fun MemberRow(e: Crate.Entry, onShelf: Boolean, scheme: Scheme, onGo: ()
     ) {
         TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         ActionButton(
-            "GO ▸",
+            "GO",
             scheme,
             enabled = true,
             dimmed = !onShelf,
