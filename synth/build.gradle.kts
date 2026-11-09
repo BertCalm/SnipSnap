@@ -3466,3 +3466,12 @@ tasks.register<JavaExec>("generateTriadAudition") {
     maxHeapSize = "1g"
     args("testkit/triad-audition")
 }
+
+tasks.register<JavaExec>("generateTriadHandsAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadHandsAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-hands-r2")
+}

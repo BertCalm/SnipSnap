@@ -1,5 +1,7 @@
 # TRIAD: shared drum bus audition
 
+The current hand-drum revision is [R2](TRIAD_HANDS_R2.md), following the owner’s report that the original conga and bongo were weak and flat. The record below describes the preserved first audition.
+
 Status: native Kotlin listening candidate, not an approved factory bank or phone instrument.
 Repository baseline: c00edb997 (2026-11-09). Job: CONCEIVE, distilling the supplied gear chains.
 

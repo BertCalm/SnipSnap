@@ -6,7 +6,7 @@ import kotlin.math.*
 
 /**
  * TRIAD: an audition-stage groove composer with a shared processing bus.
- * Existing generated drum voices supply all hits; no recordings of the references.
+ * Existing drum voices and versioned hand-drum candidates supply the hits; no reference recordings.
  * Not a Patch engine: tempo and finite bars belong to this arrangement, not HOLD.
  * Reuse a Source when changing treatments so expensive hit synthesis happens once.
  */
@@ -14,9 +14,10 @@ object Triad {
     const val MODEL_VERSION = 1
     enum class Rig { DRY, WAREHOUSE, SUBMERGED, FRACTURE }
     data class Settings(val bpm: Int = 124, val bars: Int = 4, val tune: Float = .5f,
-        val weight: Float = .65f, val swing: Float = .38f, val density: Float = .7f) {
+        val weight: Float = .65f, val swing: Float = .38f, val density: Float = .7f,
+        val handRevision: Int = TriadHands.VERSION) {
         init {
-            require(bpm in 90..150 && bars in 1..8)
+            require(bpm in 90..150 && bars in 1..8 && handRevision in 1..2)
             require(listOf(tune, weight, swing, density).all { it.isFinite() && it in 0f..1f })
         }
     }
@@ -65,7 +66,9 @@ object Triad {
         val stems = hits.mapValues { FloatArray(frames) }
         val sorted = events.sortedBy { it.frame }
         for ((idx, e) in sorted.withIndex()) {
-            val sample = hits.getValue(e.lane)
+            val sample = if(s.handRevision == 2 && e.lane in setOf("conga","bongo"))
+                TriadHands.render(e.lane == "bongo",s.tune,e.velocity,idx % 4)
+            else hits.getValue(e.lane)
             val hat = e.lane.endsWith("hat")
             val next = if (hat) sorted.drop(idx + 1).firstOrNull { it.lane.endsWith("hat") }?.frame
                 ?: Int.MAX_VALUE else Int.MAX_VALUE

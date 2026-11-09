@@ -7,7 +7,7 @@ out=Path(sys.argv[1] if len(sys.argv)>1 else '/workspace/sites/triad-audition/di
 out.mkdir(parents=True,exist_ok=True)
 for f in src.glob('*'):
     if f.is_file(): shutil.copy2(f,out/f.name)
-files=['synth/src/main/kotlin/com/snipsnap/synth/Triad.kt','synth/src/test/kotlin/com/snipsnap/synth/TriadAuditionGenerator.kt','synth/src/test/kotlin/com/snipsnap/synth/TriadTest.kt','docs/TRIAD.md']
+files=['synth/src/main/kotlin/com/snipsnap/synth/TriadHands.kt','synth/src/main/kotlin/com/snipsnap/synth/Triad.kt','synth/src/test/kotlin/com/snipsnap/synth/TriadAuditionGenerator.kt','synth/src/test/kotlin/com/snipsnap/synth/TriadTest.kt','docs/TRIAD.md']
 for f in files: shutil.copy2(repo/f,out/Path(f).name)
 metrics=list(csv.DictReader((src/'metrics.csv').open()))
 assert len(metrics)==22

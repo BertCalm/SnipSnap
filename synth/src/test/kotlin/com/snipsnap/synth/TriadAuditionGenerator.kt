@@ -49,7 +49,7 @@ object TriadAuditionGenerator {
         }
         File(root,"matching.csv").writeText(matching.toString())
         File(root,"metrics.csv").writeText(rows.toString())
-        File(root,"settings.json").writeText("""{"model":1,"bpm":124,"bars":4,"tune":0.5,"weight":0.65,"swing":0.38,"density":0.7,"tailSeconds":3,"loopClaim":false,"nativeTransportGain":0.5,"settings":{"light":[0.25,0.25],"main":[0.55,0.55],"heavy":[0.9,0.9]},"status":"Kotlin listening candidates, not approved presets"}""")
+        File(root,"settings.json").writeText("""{"model":1,"handRevision":${source.settings.handRevision},"bpm":124,"bars":4,"tune":0.5,"weight":0.65,"swing":0.38,"density":0.7,"tailSeconds":3,"loopClaim":false,"nativeTransportGain":0.5,"settings":{"light":[0.25,0.25],"main":[0.55,0.55],"heavy":[0.9,0.9]},"status":"Kotlin listening candidates, not approved presets"}""")
         println("TRIAD audition: ${root.absolutePath}")
     }
 }
