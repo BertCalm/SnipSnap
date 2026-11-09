@@ -264,3 +264,15 @@ is a sound-design candidate awaiting listening, not a claim of heard improvement
 - More source punch and beater energy aim for explosive hits without adding reverb.
 - Unchanged quiet ghosts make the louder accents a musical contrast.
 - A shared-gain A/B exposes the actual balance change instead of normalizing it away.
+
+
+## V5: sound-system accents
+
+Push the dry jungle source design further: kick DROP .38→.88 and DECAY .23→.48; main snare DECAY .55→.86 and RATTLE .42→.68 with a lower shell; alternate snare gains brighter, longer wires. Open hat and ride sustain and program levels increase. Quiet ghost, pickup and closed hat stay unchanged. Core A01–A10 still have no finishing rack. The audition compares v4 and v5 at shared gain, with v4 preserved as the previous bank. All three shelf kits retain three velocity zones and three round robins.
+
+### Why it is built this way
+
+- Bigger accents against unchanged ghosts make the break more forceful.
+- The kick sweep and shell/wire envelopes supply weight without reverb.
+- A bright alternate snare contrasts with the low main backbeat.
+- The immediately previous version remains available for an honest comparison.
