@@ -957,6 +957,82 @@ class ArrangerTest {
         assertEquals(plan.sections.map { it.bass to it.pullUp }, Arranger.toPlan(resolved.arrangement).sections.map { it.bass to it.pullUp })
     }
 
+    private val full = setOf(ClipRef.CAPTURED, ClipRef.TIGHT, ClipRef.GHOSTED)
+    private val light = setOf(ClipRef.SPARSE, ClipRef.HALF)
+
+    @Test
+    fun `REROLL redraws an unlocked section's clip within its family and keeps the order`() {
+        val m = model("RedrawFamily", clip = dynamicGrooveClip())
+        val base = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val draws = (1..40).map { Arranger.rerolled(m.kit, m.kitDir, base, it) }
+        for (r in draws) {
+            assertEquals(base.sections.map { it.name }, r.plan.sections.map { it.name }, "the order and names stay")
+            for ((was, now) in base.sections.zip(r.plan.sections)) {
+                when (was.clip) {
+                    in full -> assertTrue(now.clip in full, "${was.name}: ${was.clip} redrew to ${now.clip}, not a full beat")
+                    in light -> assertTrue(now.clip in light, "${was.name}: ${was.clip} redrew to ${now.clip}, not a light one")
+                    else -> assertEquals(was.clip, now.clip, "${was.name}: a fill stays a fill")
+                }
+            }
+            // Every section it laid out resolves: nothing was drawn that the kit cannot make.
+            assertTrue(Arranger.resolve(m.kit, m.kitDir, r.plan).refused.isEmpty())
+        }
+        // It actually redraws: across seeds the theme is not always the capture, nor the intro always sparse.
+        val theme = base.sections.indexOfFirst { it.name == "theme" }
+        val intro = base.sections.indexOfFirst { it.name == "intro" }
+        assertTrue(draws.map { it.plan.sections[theme].clip }.toSet().size > 1, "the theme never changed clip")
+        assertTrue(draws.map { it.plan.sections[intro].clip }.toSet().size > 1, "the intro never changed clip")
+        // The same reroll of the same plan is the same song.
+        assertEquals(draws[4], Arranger.rerolled(m.kit, m.kitDir, base, 5))
+    }
+
+    @Test
+    fun `REROLL leaves locked sections and your own programs alone`() {
+        val m = model("RedrawKeeps", clip = dynamicGrooveClip())
+        GrooveStore.save(m.kitDir, listOf(dynamicGrooveClip(), yoursClip("Dynamic Groove")))
+        val base = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val variation = base.sections.indexOfFirst { it.name == "variation" }
+        val theme = base.sections.indexOfFirst { it.name == "theme" }
+        assertTrue(ClipRef.yoursId(base.sections[variation].clip) != null, "the variation is the person's program")
+        val locked = base.withLock(theme, true)!!
+        for (seed in 1..20) {
+            val r = Arranger.rerolled(m.kit, m.kitDir, locked, seed)
+            assertEquals(locked.sections[theme], r.plan.sections[theme], "locked: untouched, seed and all")
+            assertEquals(locked.sections[variation].clip, r.plan.sections[variation].clip, "yours is never swapped out")
+            assertEquals(seed, r.plan.seed)
+        }
+        // A song whose unlocked sections are all the person's own has nothing to redraw, and says so.
+        val onlyYours = SongPlan(0, listOf(base.sections[variation], base.sections[theme].copy(locked = true)))
+        assertEquals(0, Arranger.rerolled(m.kit, m.kitDir, onlyYours, 1).redrawn)
+    }
+
+    @Test
+    fun `REROLL never draws ghosts a kit cannot make, and keeps a section's length`() {
+        val m = model("RedrawNoSnare", withSnare = false, clip = dynamicGrooveClip())
+        val base = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0))
+        val before = Arranger.resolve(m.kit, m.kitDir, base).arrangement
+        for (seed in 1..30) {
+            val r = Arranger.rerolled(m.kit, m.kitDir, base, seed)
+            assertTrue(r.plan.sections.none { it.clip == ClipRef.GHOSTED }, "no snare, so no ghosts")
+            val after = Arranger.resolve(m.kit, m.kitDir, r.plan)
+            assertTrue(after.refused.isEmpty())
+            for ((b, a) in before.sections.zip(after.arrangement.sections)) {
+                assertEquals(b.bars, a.bars, "${b.name}: ${b.bars} bars became ${a.bars}")
+            }
+        }
+    }
+
+    @Test
+    fun `REROLL avoids playing the same clip twice in a row when the family has another`() {
+        val m = model("RedrawNeighbours", clip = dynamicGrooveClip())
+        // Theme, theme, theme: three full sections side by side, all unlocked.
+        val plan = SongPlan(0, List(3) { com.snipsnap.kit.PlanSection("body ${it + 1}", ClipRef.CAPTURED, repeats = 4) })
+        for (seed in 1..30) {
+            val clips = Arranger.rerolled(m.kit, m.kitDir, plan, seed).plan.sections.map { it.clip }
+            assertTrue(clips.zipWithNext().none { (a, b) -> a == b }, "seed $seed drew $clips")
+        }
+    }
+
     @Test
     fun `repeats are cut to what one sequence holds, and the picker offers only what resolves`() {
         val m = model("Reach")

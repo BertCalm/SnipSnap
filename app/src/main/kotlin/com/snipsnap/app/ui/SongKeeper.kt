@@ -202,26 +202,49 @@ internal class SongKeeper(
         edit(if (now) Copy.SONG_LOCK else Copy.SONG_UNLOCK, k.withLock(selected, now) ?: return)
     }
 
+    /** True while a reroll is being drawn; a second tap meanwhile is dropped. */
+    var rerolling by mutableStateOf(false)
+        private set
+
     /**
-     * Redraws the unlocked sections with a new seed and says what it did.
-     * The seed moves only the ghosts and the fill, as REROLL always has, so
-     * when no unlocked section uses either, nothing would change and it
-     * says that instead of pretending.
+     * Redraws the unlocked sections with a new seed ([Arranger.rerolled]:
+     * each derived clip drawn again from its family, a fill re-taken, your
+     * own programs and the order kept) and says what it did. When nothing
+     * unlocked can change (every one plays your own program), it says that
+     * instead of pretending. The draw reads the kit's grooves, so it runs
+     * off the main thread; an edit made meanwhile wins and the draw is dropped.
      */
     fun reroll() {
         val k = kept ?: return
-        val unlocked = k.sections.filter { !it.locked }
-        if (unlocked.isEmpty()) {
+        if (rerolling) return
+        val unlocked = k.sections.count { !it.locked }
+        if (unlocked == 0) {
             toast(Copy.SONG_ALL_LOCKED)
             return
         }
-        val redrawn = unlocked.count { it.clip == ClipRef.GHOSTED || it.clip == ClipRef.FILL }
-        if (redrawn == 0) {
-            toast(Copy.SONG_REROLL_NOTHING)
-            return
+        rerolling = true
+        scope.launch {
+            try {
+                val drawn = withContext(Dispatchers.IO) {
+                    runCatching { Arranger.rerolled(kit, kitDir, k, k.seed + 1, swingPercent, feel, feelTemplate) }
+                }
+                if (kept !== k) return@launch
+                drawn.onSuccess { r ->
+                    if (r.redrawn == 0) {
+                        toast(Copy.SONG_REROLL_NOTHING)
+                    } else {
+                        edit(Copy.SONG_VERB_REROLL, r.plan)
+                        toast(Copy.songRerolled(r.redrawn, k.sections.size - unlocked))
+                    }
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    Log.e(TAG, "reroll: failed", e)
+                    toast(e.message ?: Copy.ARRANGE_NEEDS_GROOVE)
+                }
+            } finally {
+                rerolling = false
+            }
         }
-        edit(Copy.SONG_VERB_REROLL, k.rerolled(k.seed + 1))
-        toast(Copy.songRerolled(redrawn, k.sections.size - unlocked.size))
     }
 
     /** Puts back the song before the last edit. */

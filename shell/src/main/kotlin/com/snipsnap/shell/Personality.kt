@@ -1714,8 +1714,8 @@ object Copy {
     const val SONG_CAPTION_NOT_KEPT = "NO PROJECT IS OPEN, SO THIS SONG IS NOT KEPT. OPEN A PROJECT TO KEEP IT."
     /** REROLL with every section locked. */
     const val SONG_ALL_LOCKED = "EVERY SECTION IS LOCKED. UNLOCK ONE TO REROLL IT."
-    /** REROLL where nothing unlocked uses a seeded clip: the seed moves only the ghosts and the fill, so say so. */
-    const val SONG_REROLL_NOTHING = "NO UNLOCKED SECTION USES GHOSTS OR A FILL, SO A REROLL CHANGES NOTHING."
+    /** REROLL where every unlocked section plays the person's own pattern, which a reroll never swaps out: say so. */
+    const val SONG_REROLL_NOTHING = "EVERY UNLOCKED SECTION PLAYS YOUR OWN PATTERN, AND A REROLL LEAVES THOSE ALONE."
     /** The write behind an edit failed; the edit is on screen and not on disk. */
     const val SONG_NOT_KEPT = "COULDN'T KEEP THE SONG. YOUR EDITS ARE ON SCREEN ONLY."
     /** UNDO's button while something can be undone: `UNDO REORDER`, `UNDO DELETE`. */
