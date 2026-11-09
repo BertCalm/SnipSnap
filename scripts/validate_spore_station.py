@@ -12,8 +12,8 @@ import zipfile
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else 'testkit/spore-station')
 m = json.loads((root / 'manifest.json').read_text())
-assert len(m['clips']) == 115
-assert len({c['id'] for c in m['clips']}) == 115
+assert len(m['clips']) == 131
+assert len({c['id'] for c in m['clips']}) == 131
 wav_count = 0
 for clip in m['clips']:
     for kind in ('raw', 'matched'):
@@ -81,7 +81,7 @@ for href in re.findall(r'href="([^"]+)"', (root / 'index.html').read_text()):
         assert (root / href).is_file(), href
 with zipfile.ZipFile(root / 'spore-listening-pack.zip') as z:
     assert z.testzip() is None
-    assert sum(n.endswith('.wav') for n in z.namelist()) == 230
+    assert sum(n.endswith('.wav') for n in z.namelist()) == 262
 space_tail_energy = []
 for step in (1, 5, 9):
     with wave.open(str(root / f'audio/sweep-space-{step}.wav')) as w:

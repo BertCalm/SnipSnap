@@ -242,3 +242,25 @@ WAVs are byte-identical. Browser decoding and owner listening remain unverified.
 - Separating snare head, wire length and ghost settings leaves room between fast hits.
 - Short, low-ring hats make the subdivisions articulate without a metallic wash.
 - Keeping effects on the colour pads lets the break remain dry while the canopy moves.
+
+## Version 4: bombastic accents
+
+Owner correction: jungle is more bombastic. Version 3 pushed dry articulation too
+far toward restraint. Keep its sources as the previous restrained comparison.
+The new main kick adds lower shell tuning, more beater, pitch drop and body life.
+The main snare adds head weight, longer body and wires, and stronger source punch;
+the alternate crack and open cymbal accents also gain body. Raise the accent-pad
+mixer levels while preserving the quiet ghost and pickup-kick settings exactly.
+A01–A10 remain free of a finishing rack. The existing Jungle grids, roll, shelf
+entry and exports take the new sources. Dub and Electro remain unchanged.
+
+The opening A/B now compares version 3 against version 4 using the same events
+and a shared gain. The previous restrained single hits have their own tab. This
+is a sound-design candidate awaiting listening, not a claim of heard improvement.
+
+### Why it is built this way
+
+- Longer shell and snare-body envelopes give the accents weight beyond their attack.
+- More source punch and beater energy aim for explosive hits without adding reverb.
+- Unchanged quiet ghosts make the louder accents a musical contrast.
+- A shared-gain A/B exposes the actual balance change instead of normalizing it away.

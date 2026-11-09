@@ -136,3 +136,20 @@ The prior PR head passed JVM, Android build and native CI; its emulator job
 failed and the log download returns HTTP 403 in this environment. Device
 verification is unresolved. This sound-design revision passed its local
 render/replay, grid integration, asset and mocked page-control checks.
+
+## Version 4: bombastic accents
+
+The owner corrected the restrained direction. The new Jungle core adds kick
+shell weight, beater/drop, longer and harder snare accents, and bigger cymbal
+accents. Ghosts and pickup kicks retain their exact version-3 settings. Core
+pads remain dry. The opening shared-gain A/B compares the previous restrained
+core against the bombastic revision; a separate tab retains all version-3 hits.
+
+V4 validation: nine synth tests and the three-kit save/playback/SFZ integration
+test passed. Asset checks passed for 131 clips / 262 WAVs and all 486 SFZ
+regions. The raw kick and main-snare energy in the 30–150 ms body window is
+1.90× and 2.80× the restrained version respectively, before pad mixer gains.
+All sixteen previous restrained hits and Dub/Electro exported WAVs remain
+byte-identical. Owner listening and device verification remain pending.
+
+V4 published Site source: `8d64ab4ecce0a65dc2d5f9e706380def36890ced`.
