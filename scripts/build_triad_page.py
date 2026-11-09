@@ -2,7 +2,7 @@
 from pathlib import Path
 import csv, json, shutil, hashlib, zipfile, sys, subprocess
 repo=Path(__file__).resolve().parents[1]
-src=repo/'testkit/triad-audition'
+src=Path(sys.argv[2]) if len(sys.argv)>2 else repo/'testkit/triad-audition'
 out=Path(sys.argv[1] if len(sys.argv)>1 else '/workspace/sites/triad-audition/dist')
 out.mkdir(parents=True,exist_ok=True)
 for f in src.glob('*'):
@@ -12,7 +12,7 @@ for f in files: shutil.copy2(repo/f,out/Path(f).name)
 metrics=list(csv.DictReader((src/'metrics.csv').open()))
 assert len(metrics)==22
 assert all(float(r['peak'])<2 for r in metrics), 'Native PCM would clip; increase the fixed native transport headroom before publishing'
-manifest={'baseline':'c00edb997','renderer':'native Kotlin','settings':json.loads((src/'settings.json').read_text()),'files':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*') if p.suffix in ('.wav','.kt','.md','.csv','.json') and p.name != 'manifest.json'}}
+manifest={'baseline':'c00edb997','sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'renderer':'native Kotlin','settings':json.loads((src/'settings.json').read_text()),'files':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*') if p.suffix in ('.wav','.kt','.md','.csv','.json') and p.name != 'manifest.json'}}
 (out/'manifest.json').write_text(json.dumps(manifest,indent=2))
 for archive,native in [('triad-audition.zip',False),('triad-native.zip',True)]:
     with zipfile.ZipFile(out/archive,'w',zipfile.ZIP_DEFLATED) as z:

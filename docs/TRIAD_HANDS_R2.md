@@ -36,3 +36,7 @@ The modal poles decay with positive RT60; there is no feedback between banks. No
 Seven focused Kotlin tests passed (Gradle exit 0). The generator verified identical event lists and seven unchanged non-hand stems. Independent Python inspection verified all twelve mono PCM24 44.1 kHz WAVs, finite samples, peak below full scale, and absolute DC below .005. All 56 original audio, source and download files were retained byte for byte; the original page is archived as `r1.html`.
 
 For the first isolated stroke, mean energy over 30–100 ms relative to 1–20 ms rose from -15.77 to -6.53 dB for conga, and -23.71 to -9.05 dB for bongo. This measures stronger body relative to contact, independently of audition gain; it is not a claim that the assistant heard an improvement. The comparison pairs are loudness matched. No complete repository-wide regression pass or new browser playback check is claimed.
+
+## Owner verdict
+
+The owner heard R2 and replied “Much better, continue.” Hand revision 2 is now the accepted source. See [complete rig pack](TRIAD_ACCEPTANCE.md). Earlier verification and first-listen notes above are historical.

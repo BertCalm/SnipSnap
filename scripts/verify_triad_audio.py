@@ -1,10 +1,10 @@
 """Independent inspection of delivered PCM, not a listening verdict or hardware match."""
 from pathlib import Path
-import json
+import json, sys
 import numpy as np
 from scipy.io import wavfile
 from scipy.signal import welch
-root=Path(__file__).resolve().parents[1]/'testkit/triad-audition'
+root=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]/'testkit/triad-audition'
 rows=[]
 for p in sorted(root.glob('*.wav')):
     sr,pcm=wavfile.read(p)
