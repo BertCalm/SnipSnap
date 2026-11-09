@@ -579,7 +579,7 @@ object StarterKits {
         ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
         Starter(
             "cosmic-breaks", "COSMIC BREAKS",
-            "Sixteen printed cosmic drums, glitches and rides. The approved Low Orbit sample kit.",
+            "Sixteen cosmic drums, glitches and rides. Three strike layers, four takes each.",
             seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
         ) { SynthKits.cosmicBreaks() },
     )

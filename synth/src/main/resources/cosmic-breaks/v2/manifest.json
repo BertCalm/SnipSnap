@@ -1,0 +1,1314 @@
+{
+  "version": 2,
+  "sourceSha256": "fc811f743657c3779143eacef1096dc8ee896a940b76b506d17755ad95f84ea8",
+  "approval": "Velocity and round-robin expansion requested; listening candidates.",
+  "macros": {
+    "tune": 0.5,
+    "punch": 0.58,
+    "space": 0.42,
+    "drift": 0.42,
+    "drive": 0.35,
+    "hold": 0.4
+  },
+  "sampleRate": 44100,
+  "channels": 1,
+  "bits": 16,
+  "frames": 176400,
+  "zones": [
+    [
+      0,
+      41
+    ],
+    [
+      42,
+      84
+    ],
+    [
+      85,
+      127
+    ]
+  ],
+  "takes": 4,
+  "pads": [
+    {
+      "slot": 1,
+      "name": "Kick",
+      "file": "01-kick-v3-r1.wav",
+      "sha256": "ab9022c8031079d1b99673728cf02eca8d71aa791e7cb71153df829cd4005435",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "01-kick-v1-r1.wav",
+          "sha256": "2a362056cd39d223b5432ffc1870e38a3bc52386fe08342aa7bb9a57fe662015"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "01-kick-v1-r2.wav",
+          "sha256": "88af04a5c3a72de7b5e8f1e08413f95fadbfdb8ede8ba492c1e06f5744de2803"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "01-kick-v1-r3.wav",
+          "sha256": "7aab8456661b7441707797a022d66cda4eb13896da0512890f8f7a09cf806706"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "01-kick-v1-r4.wav",
+          "sha256": "0a71a65d05b61036d773ddc06090f4b2fdcd2cd73d76c50a8f2aefa5146d8c4a"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "01-kick-v2-r1.wav",
+          "sha256": "8272c4b21ee681d85836c160c135875aacd4b50bb100c3ab843ade4fbc08e582"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "01-kick-v2-r2.wav",
+          "sha256": "1decb311b2682b8009bb0206678ef50c0dd8a2ac1fe3e8057732c60526c6aee5"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "01-kick-v2-r3.wav",
+          "sha256": "46e6dc441aa8970bb34f9eee228344087bfbcd3884a933b3eabef2c426c17238"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "01-kick-v2-r4.wav",
+          "sha256": "691fd3981d01066074f5c69d0ba421ff85ee9b3440f7a80b165260c2816292b8"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "01-kick-v3-r1.wav",
+          "sha256": "ab9022c8031079d1b99673728cf02eca8d71aa791e7cb71153df829cd4005435"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "01-kick-v3-r2.wav",
+          "sha256": "cb08608e65a8c0dc41dcb59ece8bafa364523ffdc0b465f04bf97ec6d85d7ba5"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "01-kick-v3-r3.wav",
+          "sha256": "ca89361acac0c41b2869dd7d938c2e8042ca22ae49cfa7bc39dbd8343657003b"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "01-kick-v3-r4.wav",
+          "sha256": "7f3df6d315e4a099d95c187283c62128dbf5617e0afc510b46b91f8a59652c69"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "Snare",
+      "file": "02-snare-v3-r1.wav",
+      "sha256": "6d0a174ebead136ba6e5b2f94a323abf085caeebf8d736ec2d226ed413a81a4b",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "02-snare-v1-r1.wav",
+          "sha256": "96077efe0dc8a7d1ab44d79a4b68384a5466bc92324a6db99b79be63492a7d48"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "02-snare-v1-r2.wav",
+          "sha256": "96f783c848a4fc7105f7ef9cc78a4c17f0d4acba1fa293da430f8ad52544b7db"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "02-snare-v1-r3.wav",
+          "sha256": "8a1f508e6dea4a3a6fbcf400ebdb2aa278de9ba9e346469f6c1bbe3eb197faf5"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "02-snare-v1-r4.wav",
+          "sha256": "49b8d68cd7020b5c0dcc24a777d9d22d0e3fabbcc74508b52f4b2edbb816f984"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "02-snare-v2-r1.wav",
+          "sha256": "2b984a32b7e59f095b4a418d7a1b80d1225608d0919d5f1c23921e46301fc348"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "02-snare-v2-r2.wav",
+          "sha256": "09b3a18e4fc967f94927e60dde7428f1105fe100e130f176506ea9ef301351e7"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "02-snare-v2-r3.wav",
+          "sha256": "60f47aa7292616bbc5ba558c1689535b90fb454c646c20816c9707586516113e"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "02-snare-v2-r4.wav",
+          "sha256": "6366afd551c04ee6d97aa91aa24f37918dedcc5883040cdff5a0bb98dc3c5011"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "02-snare-v3-r1.wav",
+          "sha256": "6d0a174ebead136ba6e5b2f94a323abf085caeebf8d736ec2d226ed413a81a4b"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "02-snare-v3-r2.wav",
+          "sha256": "6564c3974877345a5a507024df3d7c1b06a374a1d153617b43afc1d85fd62bc1"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "02-snare-v3-r3.wav",
+          "sha256": "32d93b00378e301e88a9e61ee4b1e354f4e8c5a8f51ae2b2f3a49228b2b91e45"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "02-snare-v3-r4.wav",
+          "sha256": "032450c394990eb34add09f7d94e41368ac6e41eebd63c4524b4f20559e79066"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "Closed hat",
+      "file": "03-closed-hat-v3-r1.wav",
+      "sha256": "9bb34003bf145156ec5867360d4050ae501e9ae6b8542f57de07f16266b979d5",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "03-closed-hat-v1-r1.wav",
+          "sha256": "aae36986aabbf6f37634995050aad525d2b0f6aaa8965f00f7797b16ce9d48e2"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "03-closed-hat-v1-r2.wav",
+          "sha256": "05f90ca7d065be1e7b122692f418d7f0a8f6d8fc0581f87ce843110dd92bb663"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "03-closed-hat-v1-r3.wav",
+          "sha256": "225d76854fb8d600a395b9855ded779a7d095afc7d556d3a75b77c3e557d512a"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "03-closed-hat-v1-r4.wav",
+          "sha256": "766b5af41203ea99d0957c36bc06488ba99c7633c13039fc21d100b3c2502ae3"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "03-closed-hat-v2-r1.wav",
+          "sha256": "8ac6b387777ab10f052cb36e816c1b2f0f22d402ab0a33200f7115406b00114b"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "03-closed-hat-v2-r2.wav",
+          "sha256": "7cf4042d278f3960f6f0fe0a1b05b7f1bf38a26dbb0e44de5608515b3a19abea"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "03-closed-hat-v2-r3.wav",
+          "sha256": "147689a0c1279efbeb769ea2b6a7b56a83ce367d45605acf0587f45dec30d83a"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "03-closed-hat-v2-r4.wav",
+          "sha256": "a6049fbaa04b21872f5d83a317ca7d009449a436d24dd8a972b1a11bd089321d"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "03-closed-hat-v3-r1.wav",
+          "sha256": "9bb34003bf145156ec5867360d4050ae501e9ae6b8542f57de07f16266b979d5"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "03-closed-hat-v3-r2.wav",
+          "sha256": "0e2f59984275c3e5e05908168016fab9d38542e5a66431b73f5fbe9bf5b85609"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "03-closed-hat-v3-r3.wav",
+          "sha256": "5462cc67cb097c9ff9d057b3f791610f86d09c4daf01c3fbdd194223e70f3a2b"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "03-closed-hat-v3-r4.wav",
+          "sha256": "ef18fcf0d45a5732a286ac78eb0dc27c8897a8191e850d05c69a26825d347209"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "Open hat",
+      "file": "04-open-hat-v3-r1.wav",
+      "sha256": "a2de94b9d6c3a60448ca38a13d232d26b34c6594927d6109d0f0dc436d2dd86a",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "04-open-hat-v1-r1.wav",
+          "sha256": "844ed52faf1b356a2723828d70d03e2cbd5dfa973943a1657e2f0bc14ecd7d92"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "04-open-hat-v1-r2.wav",
+          "sha256": "63d543dc9dd0b585a3fcd54978d0d95bef20827144f142d2de2c8f8514604843"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "04-open-hat-v1-r3.wav",
+          "sha256": "aa4647c2391bfb675c716fe81e73b57bdf28553d265a490d9f2e86a4fa6af1c6"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "04-open-hat-v1-r4.wav",
+          "sha256": "c598430b1d78001f91929164b0f7a249eba08b28a07f278870cca9d7623a646a"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "04-open-hat-v2-r1.wav",
+          "sha256": "4d62e1bbc34c0131d39d311d7f688d03cce6368f612957d3518eebc5c242163f"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "04-open-hat-v2-r2.wav",
+          "sha256": "aac9c1ea551a79134b4878465d1ef943e287ac6696997d359c60a92885838167"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "04-open-hat-v2-r3.wav",
+          "sha256": "7ee7193af9c46fcc07991a87cb865228ee4daab734c4f4dd55bc36bcbe47f11e"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "04-open-hat-v2-r4.wav",
+          "sha256": "d7991dfd9666f2d57ecc69274eba8e54d55fa21d329170ea8c11407de4068bcb"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "04-open-hat-v3-r1.wav",
+          "sha256": "a2de94b9d6c3a60448ca38a13d232d26b34c6594927d6109d0f0dc436d2dd86a"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "04-open-hat-v3-r2.wav",
+          "sha256": "dd60e8a7ff4b6a927cd31122589fa692df6e4a4d0c72a4b8bba9aed0ada813b6"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "04-open-hat-v3-r3.wav",
+          "sha256": "77e1deab452c2f357e93030f34ad7ff36dc6b3d6f04d68a6081b26e6cf067e87"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "04-open-hat-v3-r4.wav",
+          "sha256": "8d8cc1292dd0310f4bc17f07b99cc4c23567c90a64d24c3f7f3c3702d04a37b2"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "Low tom",
+      "file": "05-low-tom-v3-r1.wav",
+      "sha256": "eca1503a9e12b58664e19d41757dd1aa08f931363666bd058ad012e692235b99",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "05-low-tom-v1-r1.wav",
+          "sha256": "6e28885c850e7a02ca9bf73f6a258761f7bc663b108aae6f60ed99d7a9f70d00"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "05-low-tom-v1-r2.wav",
+          "sha256": "22d4efb0bbba3a410f8b860e778caa2b6465af02362ae8dd0a562b89128334d0"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "05-low-tom-v1-r3.wav",
+          "sha256": "3e339f1c0faffee7a83b9783d0ea980b2f5c74c9d42ff0701df2d47317341e6e"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "05-low-tom-v1-r4.wav",
+          "sha256": "02eaa2629c580636d825d24ca36faaafe6f13fade22ff1cab2cb021f7408d8d7"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "05-low-tom-v2-r1.wav",
+          "sha256": "002c22bde800d58f54dcb48c9c912830e853bd18561d8b1630e5368ccb715093"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "05-low-tom-v2-r2.wav",
+          "sha256": "06a81de67a79b1fd3f8744bf2cb00ba210e3642ac58c08c421a286f7a02e16d5"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "05-low-tom-v2-r3.wav",
+          "sha256": "eac2e01d7dfd9f9af97ccef97c2c8b128cdb2a35d3145df6515691e7e328536d"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "05-low-tom-v2-r4.wav",
+          "sha256": "49131f470962f0f7a295ce25670ee854d7b3db6700cc321ce9b9309254d9aa4d"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "05-low-tom-v3-r1.wav",
+          "sha256": "eca1503a9e12b58664e19d41757dd1aa08f931363666bd058ad012e692235b99"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "05-low-tom-v3-r2.wav",
+          "sha256": "7c03969f670e97aa74e1ac91acfccea9ff8b9157546b55002e4daef5c106d0dd"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "05-low-tom-v3-r3.wav",
+          "sha256": "74e673a6a474195faeda554e57d8e41d50a76d83966757815bb525aed8fb6933"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "05-low-tom-v3-r4.wav",
+          "sha256": "6bc1b9a08761188544fbf9703b2c11f1c77c3784c7833fec411e4138ea828b02"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "High tom",
+      "file": "06-high-tom-v3-r1.wav",
+      "sha256": "8bcee3c672f72254bfa01bebbf848b57e5d5c323185a4fb76f7e26777714a269",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "06-high-tom-v1-r1.wav",
+          "sha256": "250dc6e698763b04dd8b42befe074dc9093bdc22123d2c09f40309f1e9e09491"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "06-high-tom-v1-r2.wav",
+          "sha256": "1dc4aeaeadc8c3ba901c91d427718ae8bca0ba02837813fe234fca668b2ec571"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "06-high-tom-v1-r3.wav",
+          "sha256": "ef6157b755a847cb2bb9ad812ff572f8dcd1dd5d3f86f8b81632bf5b2de07bc3"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "06-high-tom-v1-r4.wav",
+          "sha256": "ef220429880182f36c4f9d29eb129e2838f561bde4663e0c6d6f733d054821b3"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "06-high-tom-v2-r1.wav",
+          "sha256": "a30555b8111a36eeed35a91faf4fb61b9e70e124a59eac6931e516be02017895"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "06-high-tom-v2-r2.wav",
+          "sha256": "aca78d5c3e0d82fe3676adf14ca9868c2cb12fafe36f513bcb80d1af3e1e1488"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "06-high-tom-v2-r3.wav",
+          "sha256": "904b3a6a209c2999f77d74f7faf53aa6b5f8763b738df529c0fc49efbe357d0a"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "06-high-tom-v2-r4.wav",
+          "sha256": "7e451407184ac6b08210a6e865c45cf0a887eb3c412f47ce86a71f271c9ef64c"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "06-high-tom-v3-r1.wav",
+          "sha256": "8bcee3c672f72254bfa01bebbf848b57e5d5c323185a4fb76f7e26777714a269"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "06-high-tom-v3-r2.wav",
+          "sha256": "d4c35ae61b505515727c0683e8ae8e9fdecdc966d6e0180bdb34b764f0cb324e"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "06-high-tom-v3-r3.wav",
+          "sha256": "e0f1efa5ac2a85bb2dcae5f0ef1d2aea80eb366a27427e723b85fe996a155f78"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "06-high-tom-v3-r4.wav",
+          "sha256": "4fb6ad892500933bbfbb1c26e552d6fd1187668170fe727792a95aac0a89e787"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "Rim",
+      "file": "07-rim-v3-r1.wav",
+      "sha256": "cb36621097961816fcd430050d55fc497612717bf7e67f9ec0d721baf4d85d7d",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "07-rim-v1-r1.wav",
+          "sha256": "b634d7cb2b231a1ea95114d491d64abef18f5a6b65df07521d2147b55dd16bf1"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "07-rim-v1-r2.wav",
+          "sha256": "3c901ae9b535431da99bd4a22d660dcbf30a3a3407aaa5b1c10ad5baf7007166"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "07-rim-v1-r3.wav",
+          "sha256": "60b77e9b5a8d986f6cc5bef5e73abb1e37bdb4193b95c363c1f4d350d03430ff"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "07-rim-v1-r4.wav",
+          "sha256": "12a6b15c897240bb315a5e595edf7ab68a356cf63ce32b06cb383c0cdbfdcbec"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "07-rim-v2-r1.wav",
+          "sha256": "2230ac567956be5b75d6a6d7c5fe0d2548f048b32437383c04896bbe4d466017"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "07-rim-v2-r2.wav",
+          "sha256": "2913e0f8812663b09f48be1922c93ca460c320175ff6beae3fcecfe84ba72f5c"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "07-rim-v2-r3.wav",
+          "sha256": "0857597f632f24a3615b6bd48e237b9def3ca0afc4cf72d6f943c84a6f3b28b7"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "07-rim-v2-r4.wav",
+          "sha256": "fdad1ccbc7ffadfe29a053172cc80fd68afe88e779f2ce5b8fcaee7159379315"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "07-rim-v3-r1.wav",
+          "sha256": "cb36621097961816fcd430050d55fc497612717bf7e67f9ec0d721baf4d85d7d"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "07-rim-v3-r2.wav",
+          "sha256": "9de43fea4163d9acda39a4b14c57e32b3529a9b3fe3eaa80606c704eaaa60a43"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "07-rim-v3-r3.wav",
+          "sha256": "9888b392aaa8838be6621ba50064eac72b580a7130676a938262f002475a9410"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "07-rim-v3-r4.wav",
+          "sha256": "25fef6b12dc347eb348d63b4afa706564d4dff5a7d10ae7bd1f3673965f3a075"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "Metal",
+      "file": "08-metal-v3-r1.wav",
+      "sha256": "224f0508ccfd7cd3c35ca5f688973c2e9649f16a691ebe2cf8b6368b07f793ed",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "08-metal-v1-r1.wav",
+          "sha256": "d57dbd0a3a1f847191cae884588ada72cb3b0130e77b99edeb7cdec05dba89d0"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "08-metal-v1-r2.wav",
+          "sha256": "606f416d8b40ff4adfbad323d098992bd7914e04a15c03faeaea14ffbb03338f"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "08-metal-v1-r3.wav",
+          "sha256": "01287d789403cefd4f802c9e422a36bb140c5411af839c4d1d5420e9282a20ea"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "08-metal-v1-r4.wav",
+          "sha256": "8ac86e2059b60d655243545af5eed2d743a1c387b836728d2554535acc7128a3"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "08-metal-v2-r1.wav",
+          "sha256": "bc84b544560bcc7af2fc9bc55a610a1582f03647745180463d1f81e0d3df776a"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "08-metal-v2-r2.wav",
+          "sha256": "11f386710cf603ba50f77f402a7ca266332279d8a03d75deeed748b9bf4eb3af"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "08-metal-v2-r3.wav",
+          "sha256": "6c7e82edb75d00a1fbfa0f81acf32066af19a9bf2be0febb2df6584faa1d12d1"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "08-metal-v2-r4.wav",
+          "sha256": "48904d618984871cc676911e43bac4a9f1bd0bee7f7883e3201c933f8bebfe9f"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "08-metal-v3-r1.wav",
+          "sha256": "224f0508ccfd7cd3c35ca5f688973c2e9649f16a691ebe2cf8b6368b07f793ed"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "08-metal-v3-r2.wav",
+          "sha256": "219669b860c27fc6fae81fb5457e50f98e7a62b93db2bb36846c7230c88ca6cc"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "08-metal-v3-r3.wav",
+          "sha256": "4b6b9808f1fcac5251c1b917c7715e05351307444c9f7c7c292b9eacef3127ee"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "08-metal-v3-r4.wav",
+          "sha256": "2fe2d09ae31d248e147667a45607d859b48903159726f9da1dfeeae34fa7b2e0"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "Data tick",
+      "file": "09-data-tick-v3-r1.wav",
+      "sha256": "bc25835cea504b0d26b20f0b8d243b7324011a59ca8d65b586f1fe476d2ddc4b",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "09-data-tick-v1-r1.wav",
+          "sha256": "78a35eb69a986ed011cae587bc1575c5007f87609b9e4aae8eb12f47e47316d2"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "09-data-tick-v1-r2.wav",
+          "sha256": "18033c0a0f2069540900f90a918f7d7581e64bb869d60899baeeddf27de039c2"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "09-data-tick-v1-r3.wav",
+          "sha256": "2cfdd6c1ecfc687755e41dbbc2b5419fa51d51323fc30728aed628ac31ab3042"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "09-data-tick-v1-r4.wav",
+          "sha256": "4915294ab431e603f74d371eaa84a334676144a3f0c47f9aee92d24c7361c10b"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "09-data-tick-v2-r1.wav",
+          "sha256": "204cfa8ba31677ed80a668a887625d82e9cea169773a657895fce01b5649534d"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "09-data-tick-v2-r2.wav",
+          "sha256": "7e871fb33b69f001fca59b37565ce1cf0f777bbec6475e69a66d516456ecab56"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "09-data-tick-v2-r3.wav",
+          "sha256": "5e342590e4bcfdbcec060242a4026720ef56ded03778f87010bfb315da55f058"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "09-data-tick-v2-r4.wav",
+          "sha256": "5762098b96de245e33569ee1fe01fd84277208090eb0ee89c7a1beb2b6f42284"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "09-data-tick-v3-r1.wav",
+          "sha256": "bc25835cea504b0d26b20f0b8d243b7324011a59ca8d65b586f1fe476d2ddc4b"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "09-data-tick-v3-r2.wav",
+          "sha256": "4dd0e18b89d7b8d9b3df33b74176ea83be481b70c6b77dca2e8caea2ee55d872"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "09-data-tick-v3-r3.wav",
+          "sha256": "3fd84f26213b0ae0cd586186f27d0e57bf50b5b892d3a2d3b9012648fbf22e53"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "09-data-tick-v3-r4.wav",
+          "sha256": "2bb68c675ca3df6cccd4b03ef61943182c35760b24235328f17dee3224277db7"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "Packet roll",
+      "file": "10-packet-roll-v3-r1.wav",
+      "sha256": "14d22a36c50fc95f74a374612348f3806e571c27436ac85deccc86ebd7cad1e8",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "10-packet-roll-v1-r1.wav",
+          "sha256": "98cfb9786190c63ba0720740cf76013a404c9b56ab0112edd3ef40042cea730c"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "10-packet-roll-v1-r2.wav",
+          "sha256": "d47f327bdad1206b7ab60b5838b092edf2b7a285d5175506f6e40d89187ae8ae"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "10-packet-roll-v1-r3.wav",
+          "sha256": "02a0b5b604c5b10d39686862ba95728900050b7315de7f1b9f3784b19d9b3d4b"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "10-packet-roll-v1-r4.wav",
+          "sha256": "d0430fdb0dfcdf3008b9f322f58c0867aa1e9e515ac093873f05ce06ab93a9ab"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "10-packet-roll-v2-r1.wav",
+          "sha256": "a87cbcae55463ed9fe374c4d344cd1f8f101649b20018e715743c34c95070681"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "10-packet-roll-v2-r2.wav",
+          "sha256": "896bc9c292c51ef0657c6b8eacff1d39556b44240bb4bfe51653fc02d0214fd0"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "10-packet-roll-v2-r3.wav",
+          "sha256": "7ff61870b51de2f717cdd30b52beb73949303e5ab7005328ec1656e83272ccbb"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "10-packet-roll-v2-r4.wav",
+          "sha256": "f44254d011d1cdeb3bf910a4d600bb0925cb198a8aeb4927b9ad709a6835c586"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "10-packet-roll-v3-r1.wav",
+          "sha256": "14d22a36c50fc95f74a374612348f3806e571c27436ac85deccc86ebd7cad1e8"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "10-packet-roll-v3-r2.wav",
+          "sha256": "3259e5f3e67bcb50e2075542349aa7505df66ab6a29d2cbe698099072dc9a46f"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "10-packet-roll-v3-r3.wav",
+          "sha256": "a7a9aada184bf4a2019b2e2025f004cb4546515d4d3df48551e8985d25f8379e"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "10-packet-roll-v3-r4.wav",
+          "sha256": "1bfcbc3bed98276801cbb3570af20c465e38520931815bfc980be4d8501aa8e8"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "Laser chip",
+      "file": "11-laser-chip-v3-r1.wav",
+      "sha256": "5c0d6c0bf237f26e8b005898170760d96452411a152bc605a96fe15d306f72f7",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "11-laser-chip-v1-r1.wav",
+          "sha256": "c5e7866fa3cd156027910bebc96059b256d65e5ccf57fc5fe93e3d6f25e004b1"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "11-laser-chip-v1-r2.wav",
+          "sha256": "71aa478997f8589a164d71d9087a8dfe79128baf49ed0e7319144a6dc01e1843"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "11-laser-chip-v1-r3.wav",
+          "sha256": "38969b99c38298fabb9b91c6df7fbd5ce4f33946c580fe77994531788e9abb1c"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "11-laser-chip-v1-r4.wav",
+          "sha256": "82b9cbd4a5512c36808d6db117be206d22e5d2a792d5a8c18c25600893926539"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "11-laser-chip-v2-r1.wav",
+          "sha256": "40bc7d45f9897214c72df7fbd3a018296c8a2caa0592eedb9982f8ae3d808fe8"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "11-laser-chip-v2-r2.wav",
+          "sha256": "f43ca24405dca5162ff59d7b7c77ad515339055af91bd4a2ec87c2330afb44e8"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "11-laser-chip-v2-r3.wav",
+          "sha256": "3e3aa66c6482eafe0e1cc3409f956c65430ad190f9668d6b76d7c9cd37bd6ec3"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "11-laser-chip-v2-r4.wav",
+          "sha256": "2062d9fbc3bf9860b8c31c63fa23b2b57ae12aeb8988ab17ef68f28759b789a8"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "11-laser-chip-v3-r1.wav",
+          "sha256": "5c0d6c0bf237f26e8b005898170760d96452411a152bc605a96fe15d306f72f7"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "11-laser-chip-v3-r2.wav",
+          "sha256": "7c4625641e3d662df5f019febe7991b642a70ae685fcb8aa61ee57555e2dc571"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "11-laser-chip-v3-r3.wav",
+          "sha256": "c490ac277cb916bd94f10a07317f332b23e0575fe143920043178b2197d8b65f"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "11-laser-chip-v3-r4.wav",
+          "sha256": "6775abbfd77941caf02b1acbe1f8e1e652223c8219724cc4fbca44600a946cc0"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "Relay rattle",
+      "file": "12-relay-rattle-v3-r1.wav",
+      "sha256": "bc2f4f8ac9264502522dd9a95e1b18de2b76e7d292ead4c58dd78f9db585917a",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "12-relay-rattle-v1-r1.wav",
+          "sha256": "ca378aaa33fc642a5dfdda82f3b355e5a2dcc59b15d547f913e5a039ed32f17e"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "12-relay-rattle-v1-r2.wav",
+          "sha256": "c4a2bad5e1a791bac487ae47b53a2973eb472e00292902aa1ef1a72fe537a14d"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "12-relay-rattle-v1-r3.wav",
+          "sha256": "349d6a6614d0667c0aadf2b07755dee5a4f3c40fe232359c3741c75058deb403"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "12-relay-rattle-v1-r4.wav",
+          "sha256": "3ab6041cc6e2219b8818d1525dc4176f8d0df37ddf69095ede3fdfdb9d11fe48"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "12-relay-rattle-v2-r1.wav",
+          "sha256": "ff0a2ce23adb03f1e9da5a9e58e9b24d3af62ebef756311cc9cafa49a92709ae"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "12-relay-rattle-v2-r2.wav",
+          "sha256": "194c6df4b7c04b293b0dd68df56ccdd1fa5476d31622b3f68cb9688b393092a7"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "12-relay-rattle-v2-r3.wav",
+          "sha256": "31be4b739229c85b2496fa849ad9023fa19d710f193a47197b56d4505da499fd"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "12-relay-rattle-v2-r4.wav",
+          "sha256": "c168a62c748f491ce80899e33039b0b94bd4b5b759e4170e650f6361e38af1b5"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "12-relay-rattle-v3-r1.wav",
+          "sha256": "bc2f4f8ac9264502522dd9a95e1b18de2b76e7d292ead4c58dd78f9db585917a"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "12-relay-rattle-v3-r2.wav",
+          "sha256": "118108a8d67de395dce9772c2a4c93ceb0eccce8521f69d3309610cec32f84cd"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "12-relay-rattle-v3-r3.wav",
+          "sha256": "0c05dd7cb5552b17cbfde7b53a74d3a1e7a878d378c321aa0dde3cfeba4e6ae5"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "12-relay-rattle-v3-r4.wav",
+          "sha256": "c109bf7c196134095c5c100b9bda24ba874df0f189e5f2e1a5013c050e6184ee"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "Ride bell",
+      "file": "13-ride-bell-v3-r1.wav",
+      "sha256": "e3b99033b8440297dfc5595268bfcfae17aca6118d915367e3666e56b0a5a412",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "13-ride-bell-v1-r1.wav",
+          "sha256": "97a8d1bd84533c4347ee64dcc5f8c11282008591e5b0b528f5f8d0fb4b5fcc84"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "13-ride-bell-v1-r2.wav",
+          "sha256": "946478a2ce063e92e7e23ac62cd5d994a218c31d8918c7b7febb64a4a9d411f2"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "13-ride-bell-v1-r3.wav",
+          "sha256": "ff557f0882e56186a36b9c049db6ad8bb1b15a567a42a02477a7bd56d63e0d61"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "13-ride-bell-v1-r4.wav",
+          "sha256": "aa7bb3501b01a17431248af08a2894f2d4047d0b22ea70872ce6b55ddb86f9d5"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "13-ride-bell-v2-r1.wav",
+          "sha256": "fc3759827f341bac259bb4ea2f12b563dd2f1d326d72188de3796904897b5efb"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "13-ride-bell-v2-r2.wav",
+          "sha256": "285950ec0f7c1adbc5a44b63d8d0bbe540d0be5100ea20e4157c4dfb74e50f3c"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "13-ride-bell-v2-r3.wav",
+          "sha256": "97a86bf849588ca1d690292844689a244e0249305fc40fbbe68d6e8a6b4a4a9d"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "13-ride-bell-v2-r4.wav",
+          "sha256": "c81e99638f7e6feab50fabc1b912cb072c25cd4629449862b1d7c0c6f0f4f538"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "13-ride-bell-v3-r1.wav",
+          "sha256": "e3b99033b8440297dfc5595268bfcfae17aca6118d915367e3666e56b0a5a412"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "13-ride-bell-v3-r2.wav",
+          "sha256": "3e7db60ddda2fafbd4d1964783d65d1629a93fff0268402b9362f09c22815a7c"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "13-ride-bell-v3-r3.wav",
+          "sha256": "f3464365b874a0a58b79b3e9be4ddffce502b7c1aaa162b1dc5f439b126ddee2"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "13-ride-bell-v3-r4.wav",
+          "sha256": "359bbc21e16e77d318c53ea8e7b254a68422cee422256ebdc4867ad901b42b9f"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "Ride cymbal",
+      "file": "14-ride-cymbal-v3-r1.wav",
+      "sha256": "b973a009909e6d5dc020e27e396197cdead29e02bd73a7aa65b4351e5ec65199",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "14-ride-cymbal-v1-r1.wav",
+          "sha256": "85039cc8804b4544653d21442ac10e8dc240d8cb1c342c8312ec662cb9723d57"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "14-ride-cymbal-v1-r2.wav",
+          "sha256": "d8015033d00a5852fdead3fcd32a2d1e71d3bce8d1c2935ac86d8755e7c050f1"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "14-ride-cymbal-v1-r3.wav",
+          "sha256": "c48b8057c81f7889f291ad69c271c145e07783b7d055e87af133a7a89fce8e93"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "14-ride-cymbal-v1-r4.wav",
+          "sha256": "d935db3438ef4adc3f025a56902e7ed9fb4bc183b4096593d9c501b522e01878"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "14-ride-cymbal-v2-r1.wav",
+          "sha256": "04d39c481f0a7a0d116b22fdba88ce77f7d45c4a3dc2f0cd4b5023ef5d6e1c57"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "14-ride-cymbal-v2-r2.wav",
+          "sha256": "1e380568d6f431a99b7b2088f428075221e563da073c2d8faefe0b5d71990928"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "14-ride-cymbal-v2-r3.wav",
+          "sha256": "8f7a4a75b4b8527fbf38f147a34a78fe1ad2030a4bf136865f415b48a34100e0"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "14-ride-cymbal-v2-r4.wav",
+          "sha256": "58afc56ba6d6d97bd9d029175e9cf09dacb0d96cbdf74c5222068258582b6114"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "14-ride-cymbal-v3-r1.wav",
+          "sha256": "b973a009909e6d5dc020e27e396197cdead29e02bd73a7aa65b4351e5ec65199"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "14-ride-cymbal-v3-r2.wav",
+          "sha256": "f7ab9ddc26b426b5de4d9668bb43a4f1d405ccf27303568a4014da38a13946e1"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "14-ride-cymbal-v3-r3.wav",
+          "sha256": "294f0704924f08bb384996d869882a34edcb4df0d6e156ba5f4ce73f6677c97b"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "14-ride-cymbal-v3-r4.wav",
+          "sha256": "507fbc97b8dfa27d303f5e3ab20b285cd498391580ed15f66d6cf7ac14c108e8"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "Sub kick",
+      "file": "15-sub-kick-v3-r1.wav",
+      "sha256": "6a0e022325f4167479806d82c71399ded697d074d2f93d6a243b0419e213ad25",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "15-sub-kick-v1-r1.wav",
+          "sha256": "8dcf13466f9f198e5e725ded4beff2cfb9f5e09bfed5e2376d507cd365e5798c"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "15-sub-kick-v1-r2.wav",
+          "sha256": "136c759137a89045cc6fe1d19095c40fc6b4471ddea1658954b6f76f50f71623"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "15-sub-kick-v1-r3.wav",
+          "sha256": "c32a9eb2c0a97b262ddbbe3acb10950e2536eb75c7a39751239021ba328b4c01"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "15-sub-kick-v1-r4.wav",
+          "sha256": "6479afaea5e6d6da7840f69450ebb7b690ccaae5eacdcdcecbf9ddcb043b716b"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "15-sub-kick-v2-r1.wav",
+          "sha256": "e84032a073122d09c9caf58beaffd4a8de3235de91795681ed6ece9d3a6f542c"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "15-sub-kick-v2-r2.wav",
+          "sha256": "2ad951dd382234a285c5af38c5be7482ed855cf1ac544da66206c437a3181b94"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "15-sub-kick-v2-r3.wav",
+          "sha256": "a5ff16882d23c0163ca85dff50011727ea012aed3e53084cd9cef3751aa4a649"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "15-sub-kick-v2-r4.wav",
+          "sha256": "eaa83d7258558bdc9e0fced1df0e3d5b9365680d70f47a60a7dce05c540a40c5"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "15-sub-kick-v3-r1.wav",
+          "sha256": "6a0e022325f4167479806d82c71399ded697d074d2f93d6a243b0419e213ad25"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "15-sub-kick-v3-r2.wav",
+          "sha256": "9b312c634547ea75a5f4c17f37f889ee11b80f87b35f3ae59daa8290938ee520"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "15-sub-kick-v3-r3.wav",
+          "sha256": "06b0081056f5f7628016c8227f4961fc8d66e1ffddd11eb2da84b69fca33e89a"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "15-sub-kick-v3-r4.wav",
+          "sha256": "ccc37b68b3ffb2e101d042985f8bb8e10228e1aa736cf3a83d834304830efe16"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "Crack snare",
+      "file": "16-crack-snare-v3-r1.wav",
+      "sha256": "7fc10c38f8fd3f982fe81425171f31e59b6b152c05e33559a864990c6b711e08",
+      "variants": [
+        {
+          "layer": 0,
+          "take": 0,
+          "file": "16-crack-snare-v1-r1.wav",
+          "sha256": "4843a068291d68ab92687aff486882d4c56431dfbecf1670c927d7004430738f"
+        },
+        {
+          "layer": 0,
+          "take": 1,
+          "file": "16-crack-snare-v1-r2.wav",
+          "sha256": "2517c8dd068843bec2d548767c38eb928d4161c3b646fce69c7cd99818547b04"
+        },
+        {
+          "layer": 0,
+          "take": 2,
+          "file": "16-crack-snare-v1-r3.wav",
+          "sha256": "aa4bb990b755278e46f3a391c155167692366a98b458fd0218c06ed64d87c779"
+        },
+        {
+          "layer": 0,
+          "take": 3,
+          "file": "16-crack-snare-v1-r4.wav",
+          "sha256": "336c988a948e9145cfc674b02c70487bd3a773eaf0a209d383d4c0feb76852cd"
+        },
+        {
+          "layer": 1,
+          "take": 0,
+          "file": "16-crack-snare-v2-r1.wav",
+          "sha256": "8639ba01e55fa3ab1361fe7b8e0ea271068b6d1658fc6dd91dfa2eade728b3e1"
+        },
+        {
+          "layer": 1,
+          "take": 1,
+          "file": "16-crack-snare-v2-r2.wav",
+          "sha256": "2d86d3fca32fd546175add63d2cbb1351c23eae2c81dfc57c716672890759162"
+        },
+        {
+          "layer": 1,
+          "take": 2,
+          "file": "16-crack-snare-v2-r3.wav",
+          "sha256": "3197945e9c795abcaf5c2d73c20bb8d6823b2e578c292cff655b73c80be5470d"
+        },
+        {
+          "layer": 1,
+          "take": 3,
+          "file": "16-crack-snare-v2-r4.wav",
+          "sha256": "fbf8b9c459df382226ace17f07e0891ce8d8502fe8e27cbdd9d3ce256f048a01"
+        },
+        {
+          "layer": 2,
+          "take": 0,
+          "file": "16-crack-snare-v3-r1.wav",
+          "sha256": "7fc10c38f8fd3f982fe81425171f31e59b6b152c05e33559a864990c6b711e08"
+        },
+        {
+          "layer": 2,
+          "take": 1,
+          "file": "16-crack-snare-v3-r2.wav",
+          "sha256": "9b74f3117c0535a1aebc457e0c1940235585074fa5c8735c37117104fc3eb1d0"
+        },
+        {
+          "layer": 2,
+          "take": 2,
+          "file": "16-crack-snare-v3-r3.wav",
+          "sha256": "573d1d4579d44070b8dce29005aa58d7d55c7c6701be76049bc0e940b7668a38"
+        },
+        {
+          "layer": 2,
+          "take": 3,
+          "file": "16-crack-snare-v3-r4.wav",
+          "sha256": "aa93cd8f9939f8ee0e15062872f1880627ccde1e315013946a60908cbaf61951"
+        }
+      ]
+    }
+  ]
+}
