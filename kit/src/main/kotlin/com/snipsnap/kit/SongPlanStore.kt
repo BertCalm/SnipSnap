@@ -109,6 +109,8 @@ object SongPlanStore {
                             "repeats" to JsonValue.Num(s.repeats.toDouble()),
                             "locked" to JsonValue.Bool(s.locked),
                             "seed" to JsonValue.Num(s.seed.toDouble()),
+                            "bass" to JsonValue.Bool(s.bass),
+                            "pullUp" to JsonValue.Bool(s.pullUp),
                         ),
                     )
                 },
@@ -120,12 +122,16 @@ object SongPlanStore {
         val obj = value.obj()
         val sections = obj["sections"]!!.arr().map { v ->
             val s = v.obj()
+            val name = s["name"]!!.str()
             PlanSection(
-                name = s["name"]!!.str(),
+                name = name,
                 clip = s["clip"]!!.str(),
                 repeats = s["repeats"]?.int() ?: 1,
                 locked = (s["locked"] as? JsonValue.Bool)?.value ?: false,
                 seed = s["seed"]?.int() ?: 0,
+                // A plan kept before these fields existed: what its names meant then. Same VERSION, so an older build reads this file too.
+                bass = (s["bass"] as? JsonValue.Bool)?.value ?: SectionNames.bassUnder(name),
+                pullUp = (s["pullUp"] as? JsonValue.Bool)?.value ?: SectionNames.pullsUpInto(name),
             )
         }
         return SongPlan(seed = obj["seed"]?.int() ?: 0, sections = sections)

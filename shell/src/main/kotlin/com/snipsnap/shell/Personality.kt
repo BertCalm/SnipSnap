@@ -1680,6 +1680,16 @@ object Copy {
     const val SONG_UNLOCK = "UNLOCK"
     const val SONG_ADD = "+ SECTION"
     const val SONG_REROLL = "REROLL ⚄"
+    /** The selected section's two toggles, each naming its state in words (a lit edge alone is colour only). UNDO names them by these too. */
+    const val SONG_BASS_ON = "BASS ON"
+    const val SONG_BASS_OFF = "BASS OFF"
+    const val SONG_PULL_UP_ON = "PULL-UP ON"
+    const val SONG_PULL_UP_OFF = "PULL-UP OFF"
+    /** The words a section's row prints for them. */
+    const val SONG_ROW_BASS = "BASS"
+    const val SONG_ROW_PULL_UP = "PULL-UP IN"
+    /** BASS turned on in a kit with no Answer bassline: kept for when there is one, and said. */
+    const val SONG_BASS_NONE_YET = "BASS IS ON, BUT THIS KIT HAS NO ANSWER BASSLINE YET. MAKE ONE AND IT PLAYS HERE."
     /** What UNDO names for the edits that have no button label of their own ([songUndo]); the others are named by theirs. */
     const val SONG_VERB_REORDER = "REORDER"
     const val SONG_VERB_REPEATS = "REPEATS"

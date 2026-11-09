@@ -4,7 +4,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -12,6 +14,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.LocalReduceMotion
+import com.snipsnap.shell.Copy
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.WavReader
@@ -191,5 +194,39 @@ class ArrangeScreenTest : ComposeScreenTest() {
         val row2 = "SECTION 2: ${first.name.uppercase()}"
         compose.onNodeWithContentDescription(row1, substring = true).assertExists()
         compose.onNodeWithContentDescription(row2, substring = true).assertExists()
+    }
+    @Test
+    fun bass_and_pull_up_are_the_selected_sections_own_and_are_kept() {
+        val entry = grooveKit("SONG FLAGS TEST")
+        val projectDir = File(entry.dir.parentFile, "project").apply { mkdirs() }
+        setPhoneContent {
+            CompositionLocalProvider(LocalReduceMotion provides true) {
+                ArrangeScreen(entry = entry, backLabel = "◄ BEAT", onBack = {}, onToast = {}, projectDir = projectDir)
+            }
+        }
+        waitFor("the plan and its edit buttons", timeoutMillis = 30_000) {
+            runCatching { button(Copy.SONG_BASS_OFF).assertIsEnabled() }.isSuccess
+        }
+        waitFor("the first plan to be kept", timeoutMillis = 30_000) { SongPlanStore.load(projectDir, entry.dir.name) != null }
+        // The intro is selected: no bass, and no pull-up to offer (nothing plays before it).
+        button(Copy.SONG_PULL_UP_OFF).assertIsNotEnabled()
+        button(Copy.SONG_BASS_OFF).performClick()
+        waitFor("the intro's bass to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.bass == true
+        }
+        // The rows and buttons read the song as laid out again in the background.
+        waitFor("the button to say BASS ON", timeoutMillis = 30_000) { runCatching { button(Copy.SONG_BASS_ON).assertExists() }.isSuccess }
+        compose.onNodeWithContentDescription("SECTION 1:", substring = true).assertContentDescriptionContains(Copy.SONG_ROW_BASS, substring = true)
+
+        // The second section takes a pull-up, kept as its own.
+        compose.onNodeWithContentDescription("SECTION 2:", substring = true).performClick()
+        pump()
+        button(Copy.SONG_PULL_UP_OFF).assertIsEnabled().performClick()
+        waitFor("the pull-up to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(1)?.pullUp == true
+        }
+        waitFor("the row to say PULL-UP IN", timeoutMillis = 30_000) {
+            runCatching { compose.onNodeWithContentDescription("SECTION 2:", substring = true).assertContentDescriptionContains(Copy.SONG_ROW_PULL_UP, substring = true) }.isSuccess
+        }
     }
 }

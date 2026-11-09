@@ -418,6 +418,12 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
                 modifier = Modifier.weight(1f),
             ) { keeper.toggleLock() }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val bass = section?.bass == true
+            val pullUp = section?.pullUp == true
+            ActionButton(if (bass) Copy.SONG_BASS_ON else Copy.SONG_BASS_OFF, scheme, enabled = !busy && section != null, lit = bass, modifier = Modifier.weight(1f)) { keeper.toggleBass() }
+            ActionButton(if (pullUp) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, scheme, enabled = !busy && section != null && index > 0, lit = pullUp, modifier = Modifier.weight(1f)) { keeper.togglePullUp() }
+        }
         if (picking && section != null && !busy) {
             ClipPicker(keeper.picks, current = section.ref, names = keeper.names) { ref ->
                 picking = false
@@ -489,7 +495,9 @@ private fun SectionRow(
             .tapeClick(
                 label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.songClipLabel(section.ref, names)}, " +
                     "${Copy.countOf(section.repeats, "TIME", "TIMES")}, ${Copy.countOf(section.bars, "BAR", "BARS")}" +
-                    if (section.locked) ", ${Copy.SONG_LOCKED}" else "",
+                    (if (section.locked) ", ${Copy.SONG_LOCKED}" else "") +
+                    (if (section.bass) ", ${Copy.SONG_ROW_BASS}" else "") +
+                    (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else ""),
             ) { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -503,7 +511,12 @@ private fun SectionRow(
                 // grows only when it is the chosen one. A lock is a word
                 // too, never a colour alone.
                 TapeText(
-                    listOfNotNull("SELECTED".takeIf { selected }, Copy.SONG_LOCKED.takeIf { section.locked }).joinToString(" · "),
+                    listOfNotNull(
+                        "SELECTED".takeIf { selected },
+                        Copy.SONG_LOCKED.takeIf { section.locked },
+                        Copy.SONG_ROW_BASS.takeIf { section.bass },
+                        Copy.SONG_ROW_PULL_UP.takeIf { section.pullUp && index > 0 },
+                    ).joinToString(" · "),
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                 )

@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
@@ -81,6 +82,10 @@ internal class SongKeeper(
     var undoStack by mutableStateOf<List<Undo>>(emptyList())
         private set
 
+    /** Whether the kit has an Answer bassline for a section's BASS to play. */
+    var hasBass by mutableStateOf(false)
+        private set
+
     /** The row the editor is on. */
     var selected by mutableIntStateOf(0)
 
@@ -89,7 +94,7 @@ internal class SongKeeper(
 
     private var layout: Job? = null
 
-    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>)
+    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>, val hasBass: Boolean)
 
     /**
      * Reads the kept song, or drafts one: the first open of a kit with
@@ -106,6 +111,7 @@ internal class SongKeeper(
             plan = o.plan
             picks = o.picks
             names = o.names
+            hasBass = o.hasBass
             refusal = null
             if (o.refused.isNotEmpty()) toast(Copy.songRefused(o.refused))
             if (o.save) persist(o.kept)
@@ -121,12 +127,13 @@ internal class SongKeeper(
     private fun read(): Opened {
         val stored = projectDir?.let { SongPlanStore.load(it, kitDir.name) }
         val picks = Arranger.available(kit, kitDir, swingPercent, feel, feelTemplate)
+        val bass = AnswerStore.load(kitDir) != null
         if (stored == null) {
             val draft = Arranger.arrange(kit, kitDir, 0, swingPercent, feel, feelTemplate)
-            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null, names = GrooveEdit.namesById(kitDir))
+            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null, names = GrooveEdit.namesById(kitDir), hasBass = bass)
         }
         val resolved = Arranger.resolve(kit, kitDir, stored, swingPercent, feel, feelTemplate)
-        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty(), names = GrooveEdit.namesById(kitDir))
+        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty(), names = GrooveEdit.namesById(kitDir), hasBass = bass)
     }
 
     // ---- edits ----
@@ -171,6 +178,22 @@ internal class SongKeeper(
     fun add() {
         val k = kept ?: return
         edit(Copy.SONG_ADD, k.added(ClipRef.CAPTURED) ?: return, k.sections.size)
+    }
+
+    /** The selected section's bass under it, on or off; the change is named by the state it lands in. */
+    fun toggleBass() {
+        val k = kept ?: return
+        val now = !(k.sections.getOrNull(selected)?.bass ?: return)
+        edit(if (now) Copy.SONG_BASS_ON else Copy.SONG_BASS_OFF, k.withBass(selected, now) ?: return)
+        if (now && !hasBass) toast(Copy.SONG_BASS_NONE_YET)
+    }
+
+    /** The pull-up into the selected section, on or off. The first section has nothing before it to pull up. */
+    fun togglePullUp() {
+        val k = kept ?: return
+        if (selected == 0) return
+        val now = !(k.sections.getOrNull(selected)?.pullUp ?: return)
+        edit(if (now) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, k.withPullUp(selected, now) ?: return)
     }
 
     fun toggleLock() {
