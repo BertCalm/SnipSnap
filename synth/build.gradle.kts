@@ -3382,6 +3382,16 @@ tasks.register<JavaExec>("generateHalobarAudition") {
     args("${rootDir}/testkit/halobar-audition")
 }
 
+tasks.register<JavaExec>("generateHalobarGlockenspielAudition") {
+    group = "distribution"
+    description = "Render the provisional HALOBAR glockenspiel audition and separate MPC study kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarGlockenspielAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition/glockenspiel")
+}
+
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"
     description = "Render the reference-informed dry revision without altering the rejected first study."
@@ -3485,4 +3495,13 @@ tasks.register<JavaExec>("generateBackwashPercussionReference") {
     dependsOn(tasks.testClasses)
     workingDir(rootDir)
     args("${rootDir}/testkit/backwash-percussion-revision-3")
+}
+
+tasks.register<JavaExec>("generateCosmicBreaksKit") {
+    group = "distribution"
+    description = "Export the approved sixteen-pad Cosmic Breaks sample kit in both MPC formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CosmicBreaksKitGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("cosmicBreaksOutput").orNull ?: "testkit/cosmic-breaks-kit")
 }

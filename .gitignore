@@ -715,3 +715,6 @@ testkit/backwash-percussion-revision-2/
 testkit/backwash-percussion-revision-3/
 
 testkit/backwash-acoustic-integration/
+
+# Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
+/testkit/cosmic-breaks-kit/

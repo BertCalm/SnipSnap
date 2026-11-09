@@ -257,7 +257,6 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
     SPLICE(Place.PROJECT, "SPLICE"),
     STACK(Place.PROJECT, "STACK THE TAKES", backName = "STACK"),
-    SPREAD(Place.PROJECT, "SPREAD"),
     SPLIT(Place.PROJECT, "SPLIT"),
     VERSIONS(Place.PROJECT, "VERSIONS + BIN", backName = "VERSIONS"),
     PAD_CAPTURE(Place.PROJECT, "PAD CAPTURE"),

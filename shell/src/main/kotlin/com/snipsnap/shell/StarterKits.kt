@@ -29,7 +29,7 @@ import java.io.File
  * and VELOCITY qualify that. CONFLUENCE's eight wordless pads are finite rendered
  * recordings; their checked source bank and exact arrangement metadata travel
  * beside the kit, rather than pretending to be asset-free synth recipes.
- * VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
+ * COSMIC BREAKS, VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
  * their printed wet pads do not pretend to have dry-source synth recipes.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
@@ -576,6 +576,11 @@ object StarterKits {
             "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers.",
             seeded = false, tempoBpm = 96f,
         ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
+        Starter(
+            "cosmic-breaks", "COSMIC BREAKS",
+            "Sixteen printed cosmic drums, glitches and rides. The approved Low Orbit sample kit.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
+        ) { SynthKits.cosmicBreaks() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

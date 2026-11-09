@@ -247,7 +247,7 @@ internal fun PrismMotionPanel(
         open = expanded, onToggle = { expanded = !expanded }, scheme = scheme,
     ) {
         TapeText("SOURCE · ${source?.title ?: "SAVED TONE"}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        LabButton("SOURCE ▸", scheme, enabled = true, accessibilityLabel = "CHOOSE MOTION SOURCE",
+        LabButton("SOURCE ▾", scheme, enabled = true, accessibilityLabel = "CHOOSE MOTION SOURCE",
             modifier = Modifier.fillMaxWidth()) { pickingSource = true }
         if (motion == null) {
             LabButton("ADD MOTION", scheme, enabled = true, accessibilityLabel = "ADD PRISM MOTION",
