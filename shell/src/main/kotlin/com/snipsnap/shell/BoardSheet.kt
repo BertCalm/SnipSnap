@@ -12,7 +12,11 @@ import java.io.File
 /** Editable compound boards, backed by the shared immutable printed-pad store. */
 object BoardSheet {
     const val DEFAULT_AMOUNT = .7f
-    fun defaultAmount(type: BoardType): Float = if (type == BoardType.OBLITERATE) ObliterateBoard.DEFAULT_AMOUNT else DEFAULT_AMOUNT
+    fun defaultAmount(type: BoardType): Float = when (type) {
+        BoardType.OBLITERATE -> ObliterateBoard.DEFAULT_AMOUNT
+        BoardType.VELOUR, BoardType.VELOUR_BLOOM -> 1f
+        else -> DEFAULT_AMOUNT
+    }
     data class Applied(val amount: Float, val type: BoardType = BoardType.WIDE,
         val obliterate: ObliterateBoard.Settings? = if (type == BoardType.OBLITERATE) ObliterateBoard.Settings() else null) {
         val recipe: BoardRecipe get() = BoardRecipe(type, amount, obliterate)

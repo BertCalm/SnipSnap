@@ -25,7 +25,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_KEYS,
             listOf(
                 "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "melodic", "rime", "rime-complete", "origami", "prism",
-                "stoop", "lacquer", "crease", "opensky", "otis",
+                "stoop", "lacquer", "crease", "opensky", "otis", "halobar",
             ),
         ),
         Group(
@@ -50,7 +50,7 @@ object StarterShelf {
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
             ),
         ),
-        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "rivet-workshop", "rivet-factory", "rivet-warehouse")),
+        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "fired-bronze")),
         Group(
             Copy.STARTER_HEADING_MOVING,
             listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),

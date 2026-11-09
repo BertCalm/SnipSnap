@@ -1,0 +1,1049 @@
+{
+  "model_version": "halobar-r0.2",
+  "status": "R1 Python proof; not Kotlin; R1 awaiting owner audition",
+  "owner_feedback": [
+    {
+      "revision": "R0",
+      "quote": "That sounds great",
+      "scope": "General positive response; no voice-specific listening findings recorded"
+    }
+  ],
+  "environment": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "numpy": "2.3.5"
+  },
+  "source_files_sha256": {
+    "make_proof.py": "04c2cb21494a8d74e6a5b0d4b587b59f4b32a6b7c3fcab427fd477b13fc635af",
+    "halobar.py": "3226c38e1d42b7d9c64d974dbcfc4af772a25ede2f3b53d48baeb88ba50f4977"
+  },
+  "sources": [
+    {
+      "url": "https://documentacion.sea-acustica.es/storage/publicaciones/AMS-0_010.pdf",
+      "supports": "Typical first three bar-mode ratios 1:4:10; not our decay, gain or contact constants"
+    },
+    {
+      "url": "https://www.yamaha.com/en/musical_instrument_guide/marimba/trivia/trivia004.html",
+      "supports": "Rotating fans modulate resonator opening; vibraphone damper and longer ringing"
+    },
+    {
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S0003682X2400001X",
+      "supports": "Selected 1:3:6 xylophone tuning family; publisher-indexed search excerpt, full page returned HTTP 403"
+    },
+    {
+      "url": "https://www.yamaha.com/en/musical_instrument_guide/marimba/structure/structure003.html",
+      "supports": "Quint versus octave tuning distinction; xylophone tuning differs among manufacturers"
+    }
+  ],
+  "defaults": {
+    "TUNE": 0.5,
+    "TOUCH": 0.4,
+    "RATE": 0.45,
+    "RETURN": 0.45,
+    "SPACE": 0.35,
+    "MOTION": 0.25,
+    "HOLD": 0.3
+  },
+  "reference_bpm": 72.0,
+  "checks": [
+    {
+      "name": "determinism/vibraphone-F3",
+      "passed": true
+    },
+    {
+      "name": "output/vibraphone-F3",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5789150650439903,
+          "mean": -7.940570219645377e-08,
+          "active_rms": 0.1834,
+          "root_hz": 174.6140908646105,
+          "root_error_cents": -0.0002463972833334493,
+          "period_correlation": 0.9998346257555736,
+          "attack_centroid_hz": 243.19763529844042,
+          "t60_from_t20_seconds": 6.932972715935122,
+          "energy_t95_seconds": 1.4870068027210885,
+          "late_to_attack_energy_db": -15.12843671165079,
+          "last_100ms_rms_dbfs": -72.8323070814567,
+          "finite": true,
+          "id": "vibraphone-F3",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5658217576239315,
+          "mean": -7.561141160778192e-08,
+          "active_rms": 0.1834,
+          "root_hz": 174.61409086461043,
+          "root_error_cents": -0.0002463972837178605,
+          "period_correlation": 0.9998346257548407,
+          "attack_centroid_hz": 243.19763572471723,
+          "t60_from_t20_seconds": 6.627369801559478,
+          "energy_t95_seconds": 1.7536961451247166,
+          "late_to_attack_energy_db": -12.296019446700008,
+          "last_100ms_rms_dbfs": -70.50108781718991,
+          "finite": true,
+          "id": "vibraphone-F3",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/vibraphone-F3",
+      "passed": true,
+      "worst_cents": 0.0002463972837178605
+    },
+    {
+      "name": "determinism/vibraphone-F4",
+      "passed": true
+    },
+    {
+      "name": "output/vibraphone-F4",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5622123112017341,
+          "mean": -3.369512870107362e-08,
+          "active_rms": 0.1834,
+          "root_hz": 349.2282176290504,
+          "root_error_cents": -6.843053517373398e-05,
+          "period_correlation": 0.9998139354056521,
+          "attack_centroid_hz": 458.0642468646322,
+          "t60_from_t20_seconds": 6.117927125933601,
+          "energy_t95_seconds": 1.2999092970521542,
+          "late_to_attack_energy_db": -17.701284187155856,
+          "last_100ms_rms_dbfs": -80.41348600580604,
+          "finite": true,
+          "id": "vibraphone-F4",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5598338962638975,
+          "mean": -3.32282587159969e-08,
+          "active_rms": 0.18340000000000004,
+          "root_hz": 349.2282176290504,
+          "root_error_cents": -6.843053517373398e-05,
+          "period_correlation": 0.99981393540589,
+          "attack_centroid_hz": 458.0642471206468,
+          "t60_from_t20_seconds": 6.339419545021798,
+          "energy_t95_seconds": 1.2096598639455782,
+          "late_to_attack_energy_db": -17.484785474257855,
+          "last_100ms_rms_dbfs": -80.45329172647193,
+          "finite": true,
+          "id": "vibraphone-F4",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/vibraphone-F4",
+      "passed": true,
+      "worst_cents": 6.843053517373398e-05
+    },
+    {
+      "name": "determinism/vibraphone-F5",
+      "passed": true
+    },
+    {
+      "name": "output/vibraphone-F5",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5499014485016346,
+          "mean": -1.809342836864365e-08,
+          "active_rms": 0.18339999999999998,
+          "root_hz": 698.4564403481916,
+          "root_error_cents": -5.5813945276946835e-05,
+          "period_correlation": 0.9998450529430104,
+          "attack_centroid_hz": 860.3442267119424,
+          "t60_from_t20_seconds": 5.399623793870049,
+          "energy_t95_seconds": 1.1668934240362812,
+          "late_to_attack_energy_db": -20.553679888430963,
+          "last_100ms_rms_dbfs": -89.05530156362346,
+          "finite": true,
+          "id": "vibraphone-F5",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.5581268734862829,
+          "mean": -1.8172182903579372e-08,
+          "active_rms": 0.1834,
+          "root_hz": 698.4564403481916,
+          "root_error_cents": -5.5813945276946835e-05,
+          "period_correlation": 0.9998450529430467,
+          "attack_centroid_hz": 860.3442268028205,
+          "t60_from_t20_seconds": 5.652756768575259,
+          "energy_t95_seconds": 1.0382539682539682,
+          "late_to_attack_energy_db": -21.91865142820788,
+          "last_100ms_rms_dbfs": -92.04621927065398,
+          "finite": true,
+          "id": "vibraphone-F5",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/vibraphone-F5",
+      "passed": true,
+      "worst_cents": 5.5813945276946835e-05
+    },
+    {
+      "name": "determinism/marimba-F3",
+      "passed": true
+    },
+    {
+      "name": "output/marimba-F3",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.916288561042638,
+          "mean": -1.1280558550437388e-07,
+          "active_rms": 0.1834,
+          "root_hz": 174.61411190607842,
+          "root_error_cents": -3.777893329617247e-05,
+          "period_correlation": 0.9998658272516227,
+          "attack_centroid_hz": 221.79419679943683,
+          "t60_from_t20_seconds": 1.845164337884114,
+          "energy_t95_seconds": 0.3938548752834467,
+          "late_to_attack_energy_db": -65.0110108346616,
+          "last_100ms_rms_dbfs": -233.09556388499118,
+          "finite": true,
+          "id": "marimba-F3",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.9029083162789617,
+          "mean": -1.0996103039665538e-07,
+          "active_rms": 0.18340000000000004,
+          "root_hz": 174.61411190607845,
+          "root_error_cents": -3.777893291176128e-05,
+          "period_correlation": 0.9998658272516548,
+          "attack_centroid_hz": 221.79419690058123,
+          "t60_from_t20_seconds": 4.5617732929113926,
+          "energy_t95_seconds": 0.6659863945578232,
+          "late_to_attack_energy_db": -29.34713038863872,
+          "last_100ms_rms_dbfs": -93.25665846931138,
+          "finite": true,
+          "id": "marimba-F3",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/marimba-F3",
+      "passed": true,
+      "worst_cents": 3.777893329617247e-05
+    },
+    {
+      "name": "determinism/marimba-F4",
+      "passed": true
+    },
+    {
+      "name": "output/marimba-F4",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.899264503949479,
+          "mean": -6.133554205937522e-08,
+          "active_rms": 0.18340000000000004,
+          "root_hz": 349.22822215671425,
+          "root_error_cents": -4.598548233976086e-05,
+          "period_correlation": 0.9998730743872956,
+          "attack_centroid_hz": 404.5388738820859,
+          "t60_from_t20_seconds": 1.628868886150668,
+          "energy_t95_seconds": 0.349297052154195,
+          "late_to_attack_energy_db": -73.66158479838161,
+          "last_100ms_rms_dbfs": -262.4608810990065,
+          "finite": true,
+          "id": "marimba-F4",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.8926870406657698,
+          "mean": -6.103740307700347e-08,
+          "active_rms": 0.1834,
+          "root_hz": 349.22822215671425,
+          "root_error_cents": -4.598548233976086e-05,
+          "period_correlation": 0.9998730743874151,
+          "attack_centroid_hz": 404.53887394966904,
+          "t60_from_t20_seconds": 4.822532514865051,
+          "energy_t95_seconds": 0.44746031746031745,
+          "late_to_attack_energy_db": -30.164886716050443,
+          "last_100ms_rms_dbfs": -92.13267904218958,
+          "finite": true,
+          "id": "marimba-F4",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/marimba-F4",
+      "passed": true,
+      "worst_cents": 4.598548233976086e-05
+    },
+    {
+      "name": "determinism/marimba-F5",
+      "passed": true
+    },
+    {
+      "name": "output/marimba-F5",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.8662671517976221,
+          "mean": -3.342895450740227e-08,
+          "active_rms": 0.1834,
+          "root_hz": 698.456444910169,
+          "root_error_cents": -4.4506367256787065e-05,
+          "period_correlation": 0.9998938142851672,
+          "attack_centroid_hz": 744.0888813063176,
+          "t60_from_t20_seconds": 1.4379102557406847,
+          "energy_t95_seconds": 0.31047619047619046,
+          "late_to_attack_energy_db": -83.41437515248735,
+          "last_100ms_rms_dbfs": -295.81785296019086,
+          "finite": true,
+          "id": "marimba-F5",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.8646086889859874,
+          "mean": -3.3299935304111016e-08,
+          "active_rms": 0.1834,
+          "root_hz": 698.456444910169,
+          "root_error_cents": -4.4506367256787065e-05,
+          "period_correlation": 0.9998938142851793,
+          "attack_centroid_hz": 744.0888813275818,
+          "t60_from_t20_seconds": 4.447860838786881,
+          "energy_t95_seconds": 0.3357823129251701,
+          "late_to_attack_energy_db": -33.536389201360244,
+          "last_100ms_rms_dbfs": -96.01839608353929,
+          "finite": true,
+          "id": "marimba-F5",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/marimba-F5",
+      "passed": true,
+      "worst_cents": 4.4506367256787065e-05
+    },
+    {
+      "name": "determinism/xylophone-F3",
+      "passed": true
+    },
+    {
+      "name": "output/xylophone-F3",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.9499999999999998,
+          "mean": -1.0661397346759661e-07,
+          "active_rms": 0.10110789982119246,
+          "root_hz": 174.61411509400844,
+          "root_error_cents": -6.171791668291369e-06,
+          "period_correlation": 0.9994365079023676,
+          "attack_centroid_hz": 239.90906894841712,
+          "t60_from_t20_seconds": 0.6908970433041554,
+          "energy_t95_seconds": 0.135578231292517,
+          "late_to_attack_energy_db": -174.33303247029426,
+          "last_100ms_rms_dbfs": -300.0,
+          "finite": true,
+          "id": "xylophone-F3",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.9500000000000001,
+          "mean": -1.0455465418978872e-07,
+          "active_rms": 0.10247903953086146,
+          "root_hz": 174.61411509400804,
+          "root_error_cents": -6.171795704608779e-06,
+          "period_correlation": 0.9994365079031502,
+          "attack_centroid_hz": 239.90907048199364,
+          "t60_from_t20_seconds": 6.192665806910873,
+          "energy_t95_seconds": 0.23317460317460317,
+          "late_to_attack_energy_db": -31.28435475775552,
+          "last_100ms_rms_dbfs": -96.42509131224767,
+          "finite": true,
+          "id": "xylophone-F3",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/xylophone-F3",
+      "passed": true,
+      "worst_cents": 6.171795704608779e-06
+    },
+    {
+      "name": "determinism/xylophone-F4",
+      "passed": true
+    },
+    {
+      "name": "output/xylophone-F4",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.9500000000000001,
+          "mean": -5.34152476954628e-08,
+          "active_rms": 0.09529290649487526,
+          "root_hz": 349.2282259590551,
+          "root_error_cents": -2.713608383028201e-05,
+          "period_correlation": 0.9997454087022752,
+          "attack_centroid_hz": 456.4328879991423,
+          "t60_from_t20_seconds": 0.6099748942850703,
+          "energy_t95_seconds": 0.11968253968253968,
+          "late_to_attack_energy_db": -197.33645530127598,
+          "last_100ms_rms_dbfs": -300.0,
+          "finite": true,
+          "id": "xylophone-F4",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.95,
+          "mean": -5.265467924558982e-08,
+          "active_rms": 0.09669238994875111,
+          "root_hz": 349.22822595905495,
+          "root_error_cents": -2.713608459910438e-05,
+          "period_correlation": 0.9997454087063217,
+          "attack_centroid_hz": 456.4328888130337,
+          "t60_from_t20_seconds": 6.167488535755548,
+          "energy_t95_seconds": 0.24312925170068028,
+          "late_to_attack_energy_db": -31.036148207556792,
+          "last_100ms_rms_dbfs": -96.88203759506976,
+          "finite": true,
+          "id": "xylophone-F4",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/xylophone-F4",
+      "passed": true,
+      "worst_cents": 2.713608459910438e-05
+    },
+    {
+      "name": "determinism/xylophone-F5",
+      "passed": true
+    },
+    {
+      "name": "output/xylophone-F5",
+      "passed": true,
+      "measurements": [
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.95,
+          "mean": -2.7593235596624167e-08,
+          "active_rms": 0.09102709026522053,
+          "root_hz": 698.4564549181706,
+          "root_error_cents": -1.969996293105695e-05,
+          "period_correlation": 0.99984725674182,
+          "attack_centroid_hz": 870.139256394561,
+          "t60_from_t20_seconds": 0.5385709304903293,
+          "energy_t95_seconds": 0.10625850340136055,
+          "late_to_attack_energy_db": -223.3179022299012,
+          "last_100ms_rms_dbfs": -300.0,
+          "finite": true,
+          "id": "xylophone-F5",
+          "kind": "dry"
+        },
+        {
+          "frames": 308700,
+          "seconds": 7.0,
+          "peak": 0.9499999999999998,
+          "mean": -2.7447623345064e-08,
+          "active_rms": 0.09237666890283568,
+          "root_hz": 698.4564549181706,
+          "root_error_cents": -1.969996293105695e-05,
+          "period_correlation": 0.9998472567418804,
+          "attack_centroid_hz": 870.1392565406204,
+          "t60_from_t20_seconds": 6.683626465274434,
+          "energy_t95_seconds": 0.1946031746031746,
+          "late_to_attack_energy_db": -32.43881417957596,
+          "last_100ms_rms_dbfs": -100.14135073559417,
+          "finite": true,
+          "id": "xylophone-F5",
+          "kind": "dub"
+        }
+      ]
+    },
+    {
+      "name": "pitch/xylophone-F5",
+      "passed": true,
+      "worst_cents": 1.969996293105695e-05
+    },
+    {
+      "name": "decay-separation/F3",
+      "passed": true,
+      "note": "F3",
+      "dry": {
+        "vibraphone_t20_t60": 6.932972715935122,
+        "marimba_t20_t60": 1.845164337884114,
+        "xylophone_t20_t60": 0.6908970433041554,
+        "vibraphone_energy_t95": 1.4870068027210885,
+        "marimba_energy_t95": 0.3938548752834467,
+        "xylophone_energy_t95": 0.135578231292517
+      },
+      "dub": {
+        "vibraphone_t20_t60": 6.627369801559478,
+        "marimba_t20_t60": 4.5617732929113926,
+        "xylophone_t20_t60": 6.192665806910873,
+        "vibraphone_energy_t95": 1.7536961451247166,
+        "marimba_energy_t95": 0.6659863945578232,
+        "xylophone_energy_t95": 0.23317460317460317
+      }
+    },
+    {
+      "name": "xylophone-articulation/F3",
+      "passed": true,
+      "dry_t60_seconds": 0.6908970433041554,
+      "attack_centroid_hz": 239.90906894841712,
+      "marimba_centroid_hz": 221.79419679943683,
+      "contact_ms": 0.40722188615868476
+    },
+    {
+      "name": "xylophone-echo-sustain/F3",
+      "passed": true,
+      "processed_to_dry_tail_db": 42.55740681243411,
+      "window_seconds": [
+        0.65,
+        2.0
+      ]
+    },
+    {
+      "name": "decay-separation/F4",
+      "passed": true,
+      "note": "F4",
+      "dry": {
+        "vibraphone_t20_t60": 6.117927125933601,
+        "marimba_t20_t60": 1.628868886150668,
+        "xylophone_t20_t60": 0.6099748942850703,
+        "vibraphone_energy_t95": 1.2999092970521542,
+        "marimba_energy_t95": 0.349297052154195,
+        "xylophone_energy_t95": 0.11968253968253968
+      },
+      "dub": {
+        "vibraphone_t20_t60": 6.339419545021798,
+        "marimba_t20_t60": 4.822532514865051,
+        "xylophone_t20_t60": 6.167488535755548,
+        "vibraphone_energy_t95": 1.2096598639455782,
+        "marimba_energy_t95": 0.44746031746031745,
+        "xylophone_energy_t95": 0.24312925170068028
+      }
+    },
+    {
+      "name": "xylophone-articulation/F4",
+      "passed": true,
+      "dry_t60_seconds": 0.6099748942850703,
+      "attack_centroid_hz": 456.4328879991423,
+      "marimba_centroid_hz": 404.5388738820859,
+      "contact_ms": 0.25951449134027316
+    },
+    {
+      "name": "xylophone-echo-sustain/F4",
+      "passed": true,
+      "processed_to_dry_tail_db": 50.12054745812752,
+      "window_seconds": [
+        0.65,
+        2.0
+      ]
+    },
+    {
+      "name": "decay-separation/F5",
+      "passed": true,
+      "note": "F5",
+      "dry": {
+        "vibraphone_t20_t60": 5.399623793870049,
+        "marimba_t20_t60": 1.4379102557406847,
+        "xylophone_t20_t60": 0.5385709304903293,
+        "vibraphone_energy_t95": 1.1668934240362812,
+        "marimba_energy_t95": 0.31047619047619046,
+        "xylophone_energy_t95": 0.10625850340136055
+      },
+      "dub": {
+        "vibraphone_t20_t60": 5.652756768575259,
+        "marimba_t20_t60": 4.447860838786881,
+        "xylophone_t20_t60": 6.683626465274434,
+        "vibraphone_energy_t95": 1.0382539682539682,
+        "marimba_energy_t95": 0.3357823129251701,
+        "xylophone_energy_t95": 0.1946031746031746
+      }
+    },
+    {
+      "name": "xylophone-articulation/F5",
+      "passed": true,
+      "dry_t60_seconds": 0.5385709304903293,
+      "attack_centroid_hz": 870.139256394561,
+      "marimba_centroid_hz": 744.0888813063176,
+      "contact_ms": 0.1653834764405489
+    },
+    {
+      "name": "xylophone-echo-sustain/F5",
+      "passed": true,
+      "processed_to_dry_tail_db": 57.90965553519557,
+      "window_seconds": [
+        0.65,
+        2.0
+      ]
+    },
+    {
+      "name": "echo-clock/impulse",
+      "passed": true,
+      "observations": [
+        {
+          "rate": 0.0,
+          "division": "dotted quarter",
+          "onset_seconds": 1.25,
+          "expected_seconds": 1.25,
+          "error_frames": 0.0
+        },
+        {
+          "rate": 0.2,
+          "division": "quarter",
+          "onset_seconds": 0.8333333333333334,
+          "expected_seconds": 0.8333333333333334,
+          "error_frames": 0.0
+        },
+        {
+          "rate": 0.45,
+          "division": "dotted eighth",
+          "onset_seconds": 0.625,
+          "expected_seconds": 0.625,
+          "error_frames": 0.0
+        },
+        {
+          "rate": 0.6,
+          "division": "eighth",
+          "onset_seconds": 0.4166666666666667,
+          "expected_seconds": 0.4166666666666667,
+          "error_frames": 0.0
+        },
+        {
+          "rate": 0.8,
+          "division": "dotted sixteenth",
+          "onset_seconds": 0.3125,
+          "expected_seconds": 0.3125,
+          "error_frames": 0.0
+        },
+        {
+          "rate": 1.0,
+          "division": "sixteenth",
+          "onset_seconds": 0.20833333333333334,
+          "expected_seconds": 0.20833333333333334,
+          "error_frames": 0.0
+        }
+      ]
+    },
+    {
+      "name": "feedback-decay/guard-and-negative-control",
+      "passed": true,
+      "bounded_last_to_first_db": -23.903944370335775,
+      "negative_control_last_to_first_db": 8.839396376113728
+    },
+    {
+      "name": "macro-moves/vibraphone/TUNE",
+      "passed": true,
+      "relative_differences": [
+        1.3181264706002835,
+        1.3416123804504112
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/TOUCH",
+      "passed": true,
+      "relative_differences": [
+        0.9828245833566936,
+        0.39462023893353015
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/RATE",
+      "passed": true,
+      "relative_differences": [
+        0.23245910391265884,
+        0.17829231545127772
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/RETURN",
+      "passed": true,
+      "relative_differences": [
+        0.06837688783664368,
+        0.14362666841719798
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/SPACE",
+      "passed": true,
+      "relative_differences": [
+        0.23349562033924795,
+        0.14431724003590504
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/MOTION",
+      "passed": true,
+      "relative_differences": [
+        0.21587548393904646,
+        0.3713952400193074
+      ]
+    },
+    {
+      "name": "macro-moves/vibraphone/HOLD",
+      "passed": true,
+      "relative_differences": [
+        0.8973344052965149,
+        0.38989389097013366
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/TUNE",
+      "passed": true,
+      "relative_differences": [
+        1.352735622848574,
+        1.3477014344560385
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/TOUCH",
+      "passed": true,
+      "relative_differences": [
+        1.6296507695257634,
+        0.6264599007719222
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/RATE",
+      "passed": true,
+      "relative_differences": [
+        0.240065309085485,
+        0.20745303729055067
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/RETURN",
+      "passed": true,
+      "relative_differences": [
+        0.06745514733627474,
+        0.17121277674797006
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/SPACE",
+      "passed": true,
+      "relative_differences": [
+        0.22891891080147253,
+        0.13880586679932425
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/MOTION",
+      "passed": true,
+      "relative_differences": [
+        0.09373526286526905,
+        0.09959947872657719
+      ]
+    },
+    {
+      "name": "macro-moves/marimba/HOLD",
+      "passed": true,
+      "relative_differences": [
+        0.9212989738382823,
+        0.3890241093222084
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/TUNE",
+      "passed": true,
+      "relative_differences": [
+        1.3293175827430197,
+        1.3298329412498133
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/TOUCH",
+      "passed": true,
+      "relative_differences": [
+        0.9015644900521701,
+        0.30785389062360985
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/RATE",
+      "passed": true,
+      "relative_differences": [
+        0.29505035033069066,
+        0.2599477275691222
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/RETURN",
+      "passed": true,
+      "relative_differences": [
+        0.08056375284826793,
+        0.18520701951512128
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/SPACE",
+      "passed": true,
+      "relative_differences": [
+        0.28154907038300225,
+        0.16305002746300457
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/MOTION",
+      "passed": true,
+      "relative_differences": [
+        0.09613414949395466,
+        0.10422718101825536
+      ]
+    },
+    {
+      "name": "macro-moves/xylophone/HOLD",
+      "passed": true,
+      "relative_differences": [
+        0.948317632692225,
+        0.4018875971304644
+      ]
+    },
+    {
+      "name": "pair-interaction/TOUCH/SPACE",
+      "passed": true,
+      "mixed_difference_ratio": 0.5013639374371058
+    },
+    {
+      "name": "pair-interaction/RETURN/SPACE",
+      "passed": true,
+      "mixed_difference_ratio": 0.36382722345624163
+    },
+    {
+      "name": "pair-interaction/RATE/RETURN",
+      "passed": true,
+      "mixed_difference_ratio": 0.24783563713052714
+    },
+    {
+      "name": "pair-interaction/MOTION/RETURN",
+      "passed": true,
+      "mixed_difference_ratio": 0.13959009743872447
+    },
+    {
+      "name": "pair-interaction/HOLD/RETURN",
+      "passed": true,
+      "mixed_difference_ratio": 0.19990318776335614
+    },
+    {
+      "name": "macro-validation/nonfinite-and-unknown",
+      "passed": true
+    },
+    {
+      "name": "higher-rate-reference/vibraphone",
+      "passed": true,
+      "voice": "vibraphone",
+      "alignment_lag_frames": 0,
+      "residual_db": -30.13090156674164,
+      "high_band_residual_db": -108.9025136125177
+    },
+    {
+      "name": "higher-rate-reference/marimba",
+      "passed": true,
+      "voice": "marimba",
+      "alignment_lag_frames": 0,
+      "residual_db": -32.87714012496802,
+      "high_band_residual_db": -104.15394046507102
+    },
+    {
+      "name": "higher-rate-reference/xylophone",
+      "passed": true,
+      "voice": "xylophone",
+      "alignment_lag_frames": 0,
+      "residual_db": -28.32864080338581,
+      "high_band_residual_db": -106.45422780293374
+    }
+  ],
+  "voice_separation": [
+    {
+      "note": "F3",
+      "dry": {
+        "vibraphone_t20_t60": 6.932972715935122,
+        "marimba_t20_t60": 1.845164337884114,
+        "xylophone_t20_t60": 0.6908970433041554,
+        "vibraphone_energy_t95": 1.4870068027210885,
+        "marimba_energy_t95": 0.3938548752834467,
+        "xylophone_energy_t95": 0.135578231292517
+      },
+      "dub": {
+        "vibraphone_t20_t60": 6.627369801559478,
+        "marimba_t20_t60": 4.5617732929113926,
+        "xylophone_t20_t60": 6.192665806910873,
+        "vibraphone_energy_t95": 1.7536961451247166,
+        "marimba_energy_t95": 0.6659863945578232,
+        "xylophone_energy_t95": 0.23317460317460317
+      }
+    },
+    {
+      "note": "F4",
+      "dry": {
+        "vibraphone_t20_t60": 6.117927125933601,
+        "marimba_t20_t60": 1.628868886150668,
+        "xylophone_t20_t60": 0.6099748942850703,
+        "vibraphone_energy_t95": 1.2999092970521542,
+        "marimba_energy_t95": 0.349297052154195,
+        "xylophone_energy_t95": 0.11968253968253968
+      },
+      "dub": {
+        "vibraphone_t20_t60": 6.339419545021798,
+        "marimba_t20_t60": 4.822532514865051,
+        "xylophone_t20_t60": 6.167488535755548,
+        "vibraphone_energy_t95": 1.2096598639455782,
+        "marimba_energy_t95": 0.44746031746031745,
+        "xylophone_energy_t95": 0.24312925170068028
+      }
+    },
+    {
+      "note": "F5",
+      "dry": {
+        "vibraphone_t20_t60": 5.399623793870049,
+        "marimba_t20_t60": 1.4379102557406847,
+        "xylophone_t20_t60": 0.5385709304903293,
+        "vibraphone_energy_t95": 1.1668934240362812,
+        "marimba_energy_t95": 0.31047619047619046,
+        "xylophone_energy_t95": 0.10625850340136055
+      },
+      "dub": {
+        "vibraphone_t20_t60": 5.652756768575259,
+        "marimba_t20_t60": 4.447860838786881,
+        "xylophone_t20_t60": 6.683626465274434,
+        "vibraphone_energy_t95": 1.0382539682539682,
+        "marimba_energy_t95": 0.3357823129251701,
+        "xylophone_energy_t95": 0.1946031746031746
+      }
+    }
+  ],
+  "higher_rate_reference": [
+    {
+      "voice": "vibraphone",
+      "alignment_lag_frames": 0,
+      "residual_db": -30.13090156674164,
+      "high_band_residual_db": -108.9025136125177
+    },
+    {
+      "voice": "marimba",
+      "alignment_lag_frames": 0,
+      "residual_db": -32.87714012496802,
+      "high_band_residual_db": -104.15394046507102
+    },
+    {
+      "voice": "xylophone",
+      "alignment_lag_frames": 0,
+      "residual_db": -28.32864080338581,
+      "high_band_residual_db": -106.45422780293374
+    }
+  ],
+  "performance": {
+    "primary_renders": [
+      {
+        "voice": "vibraphone",
+        "note": "F3",
+        "ms": 397.1473799992964
+      },
+      {
+        "voice": "vibraphone",
+        "note": "F4",
+        "ms": 345.7217760005733
+      },
+      {
+        "voice": "vibraphone",
+        "note": "F5",
+        "ms": 354.26482200091414
+      },
+      {
+        "voice": "marimba",
+        "note": "F3",
+        "ms": 314.64873899858503
+      },
+      {
+        "voice": "marimba",
+        "note": "F4",
+        "ms": 327.5840240003163
+      },
+      {
+        "voice": "marimba",
+        "note": "F5",
+        "ms": 323.1932879989472
+      },
+      {
+        "voice": "xylophone",
+        "note": "F3",
+        "ms": 371.3179219994345
+      },
+      {
+        "voice": "xylophone",
+        "note": "F4",
+        "ms": 330.7117290005408
+      },
+      {
+        "voice": "xylophone",
+        "note": "F5",
+        "ms": 334.21220499985793
+      }
+    ],
+    "warm_render_ms": [
+      510.150389998671,
+      422.59724299947266,
+      318.10872799906065,
+      325.9340790009446,
+      323.1882769996446
+    ],
+    "warm_median_ms": 325.9340790009446,
+    "target_ms": 50.0,
+    "budget_met": false,
+    "scope": "Python/SciPy in this Linux container; not Kotlin, not phone performance"
+  },
+  "limitations": [
+    "No SnipSnap checkout or API verification; no Kotlin changes or integration.",
+    "Bundled skill Python template/helpers could not be read; this standalone harness substitutes for them.",
+    "Hann contact, gains, modal decay laws and processing constants are proposed shapes, not calibrated measurements of real instruments.",
+    "No physical tube coupling, mallet collision, pedal mechanism, tape transport or stereo field is simulated.",
+    "Output kernels, RMS level matching and deterministic PCG64 noise differ from the house implementation.",
+    "HOLD top is reserved; these are finite seven-second probes, not seamless loops. Extreme HOLD/RETURN settings may have audible truncation.",
+    "Time-varying phase mixing and halo sit outside the feedback loop. Higher-rate residual is not an exhaustive aliasing proof.",
+    "Numerical distinction is not perceptual validation. Only the owner can judge the audition."
+  ],
+  "archive_note": "Summary of frozen R1 report. Per-clip measurements, hashes, traces and HTML regenerate with make_proof.py; original report remains in the approved Python audition archive.",
+  "full_report_sha256": "25b471daf397d84ebe13c0474277bd33472f1d0355cc99d09cebdce006a1cbe6"
+}

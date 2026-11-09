@@ -1191,6 +1191,13 @@ object Copy {
     // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
     /** The heading of the MIDI OUT section of SETUP. */
     const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"
+
+    /** The door in SETTINGS to the MIDI devices screen; it used to sit behind the title bar's gear. */
+    const val SETUP_MIDI_DEVICES = "MIDI DEVICES ▸"
+
+    /** The title bar's two buttons: their accessible names (clarity spec §7.3). */
+    const val TITLE_HELP = "HELP"
+    const val TITLE_SETTINGS = "SETTINGS"
     /** Under the MIDI OUT heading: where the notes go, and the port other apps can always open. */
     const val SETUP_MIDI_OUT_NOTE = "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN ALWAYS OPEN SNIPSNAP OUT."
     /** In place of the device list when nothing is plugged in. */

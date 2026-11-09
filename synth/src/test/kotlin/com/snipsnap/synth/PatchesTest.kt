@@ -41,6 +41,8 @@ class PatchesTest {
      * note and velocity beside its first factory preset (the set of engines below ignores the repeat).
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
+        BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
+        HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
         RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),

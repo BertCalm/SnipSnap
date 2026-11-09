@@ -1,0 +1,25 @@
+{
+  "model": 1,
+  "source": "Synthetic Python C source selected by owner; no video samples.",
+  "approval": "Both round-3 treatments approved; new kit extensions remain listening candidates.",
+  "source_settings": {
+    "kick": 62,
+    "kt": 0.29,
+    "contact": 0.33,
+    "snare": 195,
+    "st": 0.17,
+    "wire": 0.11,
+    "bright": 5900
+  },
+  "files": {
+    "bloom-room.f32": "9afe418cdd7988084d84f60e1b682bea492e25faab2d94711860bbd8a22f4812",
+    "grain-draws.f64": "49996c6ef8dccfbd9abdb89a6d945dfe3eb1dd36d346bc6e31c1b45fb831cc82",
+    "kick-hard.wav": "851bc070f8831dd05d936e1ff2553ef5454017a612f4004324c0bc673ebe1e7d",
+    "kick-mid.wav": "18e59ba86e97e7a6a25345d55a6be006f729ec67357080716c984a055aa4fcbf",
+    "kick-soft.wav": "643cdd1d3bfc42fbcf4df9cf88727b28ee85396c710c8426415c952d9548c956",
+    "snare-hard.wav": "2edb30c37d16edfe873532143de270e08a1e93086ba44c0b8f9f48ab24163610",
+    "snare-mid.wav": "d96aebcdc0398e757e76a8803ee1ae774e2650ae53f67f61eafa6a22d74150e6",
+    "snare-soft.wav": "1a5e8b2055e0ef87e037c1fb823e28c3b83416eb7cea42f40eb4d3e37c544f64",
+    "velour-room.f32": "b424df7814c525eb169097a71a4a93588e718a5863674364c7247b914df876d3"
+  }
+}

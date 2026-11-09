@@ -1,0 +1,35 @@
+Fired Bronze dry study, model version 2
+
+TIN, TUN, NA, TE and GA spectral profiles are adaptations of recordings by
+ajaysm, "Tabla Strokes", Freesound/CompMusic, December 17, 2012.
+License: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+Source pack: https://freesound.org/people/ajaysm/packs/10737/
+Individual source URLs and SHA-256 hashes are in each profile's reference field.
+
+Changes: publicly available HQ MP3 previews decoded to mono 44.1 kHz;
+45 Hz highpass; peak selection; complex partial envelopes at 400 Hz;
+six residual-noise RMS envelopes. These are derived synthesis parameters,
+not original recordings or original PCM. The generator synthesizes oscillators
+and stochastic residuals. It does not play back the reference waveform.
+No endorsement by the recording author is implied.
+
+The short reference files do not establish natural decay times. Off-reference
+velocity, damping and tuning are authored transformations, not measured strokes.
+The source previews are included only in the audition reference folder with
+credit. Their inclusion is not evidence of performer approval.
+
+Published kettle frequency data: William A. Sethares, Tuning, Timbre, Spectrum,
+Scale, section 10.3.3, Figure 10.6 (second kettle): 595, 904, 2030, 2326 Hz.
+https://sethares.engr.wisc.edu/paperspdf/ttss.pdf
+
+Published gong frequency data: M. H. W. Budhiantho and D. Salim (2018),
+Acoustic signal of Javanese 56 cm brass kempul,
+Journal of Physics: Conference Series 1075 012021, Table 1.
+https://doi.org/10.1088/1742-6596/1075/1/012021
+Paper license: CC BY 3.0. Only numerical frequencies are transcribed here;
+amplitudes, decay constants and the upward pitch trajectory are authored shapes.
+
+Pot shell/cavity and pressure candidates are uncalibrated mechanism studies.
+No claim of measured ghatam mode shapes, validated pressure law, or exact
+traditional-instrument reproduction is made.

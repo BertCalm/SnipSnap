@@ -4934,13 +4934,15 @@ private fun BoardCard(
         },
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (choice in BoardType.entries) {
-                ActionButton(
-                    choice.name, scheme, enabled = !busy, lit = type == choice,
-                    accessibilityLabel = "Choose ${choice.name}",
-                    modifier = Modifier.weight(1f), onClick = { onTypeChange(choice) },
-                )
+        for (choices in BoardType.entries.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (choice in choices) {
+                    ActionButton(
+                        choice.name.replace('_', ' '), scheme, enabled = !busy, lit = type == choice,
+                        accessibilityLabel = "Choose ${choice.name.replace('_', ' ')}",
+                        modifier = Modifier.weight(1f), onClick = { onTypeChange(choice) },
+                    )
+                }
             }
         }
         TapeText(
@@ -4948,6 +4950,8 @@ private fun BoardCard(
                 BoardType.WIDE -> "WIDE · STEREO CHARACTER"
                 BoardType.RUSH -> "RUSH · SWELL & MOTION"
                 BoardType.OBLITERATE -> "OBLITERATE · HALO & DESTRUCTION"
+                BoardType.VELOUR -> "VELOUR · DRUMS IN SPACE"
+                BoardType.VELOUR_BLOOM -> "VELOUR BLOOM · DEEPER SPACE"
             },
             TapeType.pixel, scheme.ink.tape, maxLines = 2,
         )
@@ -4959,6 +4963,7 @@ private fun BoardCard(
                 applied != null -> "${applied.type.name} is active. KEEP replaces it from the original."
                 type == BoardType.WIDE -> "Hear a wider sound before keeping it"
                 type == BoardType.OBLITERATE -> "Hear the octave halo, fuzz and chopped fragments before keeping them"
+                type == BoardType.VELOUR || type == BoardType.VELOUR_BLOOM -> "Hear the fragments and ambience through an amp before keeping them"
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,

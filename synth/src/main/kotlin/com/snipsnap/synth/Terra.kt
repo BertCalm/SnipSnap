@@ -59,7 +59,7 @@ import kotlin.math.tanh
  * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
  * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN }
+enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN, TUN }
 
 object Terra {
 
@@ -120,15 +120,15 @@ object Terra {
         )
         TerraVoice.BOX -> TerraBox.macros()
         TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> TerraHands.macros(voice)
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> TerraHands.macros(voice)
     }
 
     /** The hand drums ([TerraHands], and [TerraFitted]'s): their own render and output stage, like BOX. */
     internal val HAND_DRUMS = setOf(TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN)
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN)
 
-    /** The hand drums fitted to the owner's reference recordings ([TerraFitted]). */
-    internal val FITTED_HANDS = setOf(TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN)
+    /** The hand drums fitted to reference recordings ([TerraFitted]). */
+    internal val FITTED_HANDS = setOf(TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN)
 
     /** The factory macro settings for [voice]. */
     fun defaults(voice: TerraVoice): Map<String, Float> =
@@ -210,7 +210,7 @@ object Terra {
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity, take)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> error("$voice returned above")
+            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> error("$voice returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -267,7 +267,7 @@ object Terra {
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, bankOnly = true, velocity = velocity)
             TerraVoice.BOX -> box(m, renderRate, inputsFor, velocity, plateOnly = true)
             TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
+            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
         }
     }
 
@@ -279,6 +279,10 @@ object Terra {
         TerraVoice.DJEMBE -> 83 to 89
         TerraVoice.DHOLAK -> 97 to 101
         TerraVoice.BAYAN -> 103 to 107
+        // the tun's noise: of 24 seeds (113 to 159), the one whose first take is nearest the owner's pick in
+        // the attack (2.8 dB rms over third octaves) and body (2.9 dB) windows. Narrow bands over 30 ms
+        // add to the knock at a random phase, so takes differ by up to 12 dB at 448 Hz, as the real tuns do
+        TerraVoice.TUN -> 109 to 141
         else -> 67 to 71
     }
 

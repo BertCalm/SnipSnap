@@ -434,7 +434,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 75 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 79 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -492,6 +492,15 @@ edits individual hits; FRESH TAPE supplies WORKSHOP, FACTORY and WAREHOUSE kits,
 each with sixteen pads, three strike layers and choking hats. The
 [audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/RIVET.md) include the pending hardware check.
+
+VELOUR and VELOUR BLOOM preserve the selected synthetic C kick/snare sources
+in two fixed sixteen-pad, three-touch-zone kits. Their reusable boards place
+chorus, finite echoes, grains and room before a sagging amp surrogate. Added
+hats, toms, stick, shaker and ride remain listening candidates. The
+[private audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/native/)
+and [implementation notes](docs/VELOUR.md) separate reference parity, printed
+pad behavior and pending hardware checks. Run `./gradlew :synth:generateVelourKit`
+to reproduce both kits and the native/reference comparisons.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1094,9 +1103,9 @@ render-time limits. Build its MPC program and replay files with:
 ./gradlew :synth:generateOtisIntegrationKit
 ```
 
-ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET and GRAINS round out the lineup —
-78 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH and GRAINS round out the lineup —
+81 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1326,12 +1335,12 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
-TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
+TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT,
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1653,3 +1662,15 @@ itself writes. Procedure in [`reference/README.md`](reference/README.md).
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
 — nobody here owns an MPC One or a 2.x Live II. Both writers are shipping
 paths the Live III has already loaded, and MPC 3 loads MPC 2 content.
+
+BACKWASH is a five-voice drum engine: a dedicated damped acoustic-style source
+through chorus, parallel compression and amp coloration. Its sixteen heard
+model-3 kit recipes are now factory presets in the picker and CLI. The MPC
+trial exports 48 strike layers in MPC 3 and MPC 2 formats with hat choking.
+The bank now includes 20 stronger processing presets alongside the 16 original
+recipes, with versioned rendering to preserve saved sounds.
+[Design, listening history and verification](docs/BACKWASH.md).
+
+Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
+strike layers, a driven processor and amp, and editable source/drive controls.
+See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).
