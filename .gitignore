@@ -708,3 +708,6 @@ testkit/octaver-audition/
 # Velour source experiments regenerate caches and native listening/export evidence.
 experiments/velour/__pycache__/
 /testkit/velour-kit/
+
+# Spore Station's rendered audio, MPC programs and audition assets regenerate.
+/testkit/spore-station/

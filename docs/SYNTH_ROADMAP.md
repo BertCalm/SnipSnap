@@ -1,3 +1,7 @@
+> Spore Station candidate jungle kit: two corresponding 16-pad banks at 170 BPM,
+> three velocity layers, raw/matched comparisons and editable MPC exports.
+> Listening and hardware acceptance remain pending. See [Spore Station](SPORE_STATION.md).
+
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
 > FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md).

@@ -3456,3 +3456,14 @@ tasks.register<JavaExec>("generateVelourKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
+
+
+tasks.register<JavaExec>("generateSporeStationAudition") {
+    group = "distribution"
+    description = "Render Spore Station's two banks, comparisons, grooves and editable MPC kits."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SporeStationAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("sporeOutput").orNull ?: "${rootDir}/testkit/spore-station")
+}

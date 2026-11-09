@@ -23,6 +23,10 @@ renderer and original audition recipes are preserved. The broader
 remaining voice, articulation, kit, round-robin and chord requirements;
 [Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
 
+[Spore Station](docs/SPORE_STATION.md) is a candidate psychedelic jungle kit: two 16-pad
+banks at 170 BPM, with a rendered audition and editable MPC programs. Owner listening
+and hardware checks are pending.
+
 ## The loop
 
 ```
