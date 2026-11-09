@@ -1288,16 +1288,9 @@ fun SurfaceScreen(
             // destination as "TA..." and never found → PAD. BARS sits here
             // with the print it sizes, not on VOICE beside LATCH.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(2f)) { printToPad = it }
+                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(1.9f)) { printToPad = it }
                 // BARS needs a tempo; a kit without one prints free.
-                val printBpm = entry?.kit?.tempoBpm
-                ActionButton(
-                    if (printBpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
-                    scheme,
-                    enabled = printBpm != null && !printing,
-                    dimmed = barsIndex == 0,
-                    modifier = Modifier.weight(1.2f),
-                ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
+                PrintBarsOpener(barsIndex, entry?.kit?.tempoBpm, printing, scheme, Modifier.weight(1.3f)) { barsIndex = it }
                 ActionButton(
                     label = if (printing) "STOP PRINT" else "PRINT",
                     scheme = scheme,

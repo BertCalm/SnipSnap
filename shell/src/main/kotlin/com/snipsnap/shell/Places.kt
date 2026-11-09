@@ -168,6 +168,16 @@ object Places {
         return if (active) "● $upper · ACTIVE" else upper
     }
 
+    /**
+     * A control that opens a sheet: its label, then `▾` (the arrow rule, clarity
+     * spec 7.3). The label is the control's current value where it has one, so
+     * the closed control says what is chosen and the sheet says what else there is.
+     */
+    fun opener(label: String): String = "$label ▾"
+
+    /** A row of a picking sheet: the chosen one is marked `● `, in words' reach and never colour alone. */
+    fun pickedRow(name: String, picked: Boolean): String = if (picked) "● $name" else name
+
     /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
