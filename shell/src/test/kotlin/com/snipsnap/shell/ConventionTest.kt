@@ -5832,6 +5832,7 @@ class ConventionTest {
         "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
         "REOPEN PAD · EDIT ITS RECIPE ▾", // SYNTH's pad picker dialog
         "SPREAD · SCALE ACROSS PADS ▾", // the pad editor's and SYNTH's door to the SPREAD sheet (root, scale, pads, bank)
+        "KEY ▾", // THIS KIT's key picker (Places.KEY_OPEN)
         "${'$'}{engine.displayName} ▾", "▾", // the engine picker sheet, and a BEAT lane's pad picker
     )
 
