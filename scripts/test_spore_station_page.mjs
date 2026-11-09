@@ -19,7 +19,8 @@ const document={getElementById:id=>{assert.ok(ids[id],id);return ids[id]},create
 const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 vm.runInNewContext(script,{document,fetch:async()=>({ok:true,json:async()=>manifest}),console});
 await new Promise(resolve=>setImmediate(resolve));
-assert.equal(ids.grooves.children.length,4);assert.equal(ids.pads.children.length,16);assert.equal(ids.sweeps.children.length,5);assert.equal(ids.pairs.children.length,3);assert.equal(ids.downloads.children.length,2);
+assert.equal(ids.grooves.children.length,4);assert.equal(ids.pads.children.length,16);assert.equal(ids.sweeps.children.length,5);assert.equal(ids.pairs.children.length,3);assert.equal(ids.downloads.children.length,3);
+assert.equal(ids.performance.children.length,18);ids.performance.children[0].onclick();assert.equal(ids.audio.src,'audio/rr-jungle-0-matched.wav');
 ids.pads.children[0].onclick();assert.equal(ids.audio.src,'audio/core-1-matched.wav');assert.equal(ids.audio.paused,false);
 ids.level.value='raw';ids.level.onchange();assert.equal(ids.audio.src,'audio/core-1.wav');assert.equal(ids.audio.paused,true);
 tabs[1].onclick();assert.equal(ids.pads.children.length,16);ids.pads.children[15].onclick();assert.equal(ids.audio.src,'audio/mutation-16.wav');

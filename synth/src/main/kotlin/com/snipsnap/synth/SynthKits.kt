@@ -11,7 +11,7 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
-    fun sporeStation(mutation: Boolean = false) = SporeStation.arranged(mutation)
+    fun sporeStation(mutation: Boolean = false) = SporeStation.performance(mutation = mutation)
 
     /** The approved printed sixteen-pad cosmic drum bank. */
     fun cosmicBreaks(): List<ArrangedPad> = CosmicBreaksKits.build()

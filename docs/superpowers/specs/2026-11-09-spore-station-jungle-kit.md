@@ -159,3 +159,54 @@ full audition regeneration and both MPC exports. All 158 audition WAVs and all
 96 exported velocity WAVs are byte-identical to the published build. The full
 9,239-test result above is from before this upstream merge; the complete suite
 was not repeated on the merged head. Browser and MPC hardware checks remain pending.
+
+## Version 2: completion gates
+
+Baseline inspected: `e4f207da` (2026-11-09). The user's completion gates
+supersede the initial audition scope. This remains a drum recipe family,
+not a new melodic engine: six pitched voices, keygroups, chord tools and
+picked-string STRUM are not applicable. All hits remain finite one-shots.
+
+Three FRESH TAPE entries now cover distinct genres: SPORE JUNGLE (170 BPM),
+SPORE DUB (85 BPM), SPORE ELECTRO (130 BPM). Dub uses darker source balance,
+reduced attack and quieter hats; Electro changes source decay, blend, snap
+and metallic ring. Core and Mutations remain useful original comparisons,
+not the evidence for multiple genres.
+
+Every shelf pad carries a three-velocity by three-take grid. Struck SKIN
+voices use Restrike; remaining voices vary a timbral macro by ±0.035 without
+changing TUNE. All choices are deterministic. Each zone is peak matched;
+the sampler still applies velocity gain. B01 adds an accented four-beat
+snare roll; B02 adds a four-beat reverse-metal rise, doubling event density
+halfway while increasing force and gain. Both end with a four-ms fade.
+They are authored finite gestures, not seamless HOLD loops.
+
+`ArrangedPad.velocityTakes` feeds existing `ChainInfo` grids. Saving preserves
+slice boundaries and velocity windows. `PadHit.resolve` selects the same
+zone and take after reloading. A whole grid carries provenance rather than
+a single-hit recipe that would discard its other eight takes on replay.
+The native kit folder travels with each download for exact reopening.
+
+### Export gate and unresolved hardware dependency
+
+SFZ exports all nine takes using explicit region offsets, ends, velocity
+windows and sequence positions. The round-trip test imports these grids and
+compares their boundaries and every PCM sample. MPC 2 XPM uses only the first
+take per zone. MPC 3 XTD writes cycle parameters, but the existing writer
+explicitly lacks the chain-WAV slice-map chunk (HH1.4, bench-blocked).
+Consequently **MPC round-robin hardware acceptance remains incomplete**.
+The extra formats do not turn that missing evidence into a passed gate.
+No proprietary slice map is invented or claimed verified.
+
+The audition adds 18 clips: three velocity/repeat tests, two performance
+phrases and an all-hit pass for each genre. The original 79 comparisons stay
+available. Repeated-hit tests cycle takes 0,1,2 twice. Raw mode preserves
+velocity gain; matched mode is for timbre comparisons.
+
+### Why it is built this way
+
+- Existing slice-grid playback gives saving, playback and SFZ one articulation model.
+- Timbre changes across takes avoid detuning the kick and tom roots.
+- Separate roll/riser pads keep individual hits useful for sequencing.
+- Native kits preserve the complete grid when MPC import cannot reconstruct it.
+- MPC hardware acceptance stays open until the actual slice-map contract is proven.

@@ -44,7 +44,7 @@ are intentionally restricted by pad role to protect the kick and hats.
 - Echo times are baked for 170 BPM. The rack retains its one-second tail budget.
 - Sources and treatments are mono; groove bounces support stereo. No stereo-width claim.
 - Owner listening, phone timings and physical MPC loading remain pending.
-- Android factory UI registration is deferred until the sound-design audition is accepted.
+- Three genre starters are registered in FRESH TAPE; Android device verification remains pending.
 
 See the [full specification](superpowers/specs/2026-11-09-spore-station-jungle-kit.md)
 for the pad map, macro contract, risks and evidence ledger.
@@ -77,3 +77,26 @@ full audition regeneration and both MPC exports. All 158 audition WAVs and all
 96 exported velocity WAVs are byte-identical to the published build. The full
 9,239-test result above is from before this upstream merge; the complete suite
 was not repeated on the merged head. Browser and MPC hardware checks remain pending.
+
+## Version 2 gate update
+
+Three shelf kits: Jungle (170), Dub (85), Electro (130). Each has 16 hits
+and B01 roll/B02 riser, with three velocity zones and three takes per zone.
+SnipSnap saving/playback and SFZ export preserve the complete grids. Downloads
+include a native kit folder. Grids carry provenance rather than a single-hit
+recipe that cannot regenerate all their takes.
+
+MPC round robin is **not accepted**: XPM uses the first take of each zone;
+XTD has cycle settings but the existing chain-WAV slice-map implementation
+is bench-blocked. Hardware loading/listening and browser decoding remain
+pending. The earlier validation history above describes v1, not v2.
+
+Published v2 Site source: `ef2a566b569eb02f0071ef83e9966b235f5dbac8`.
+The asset validator passed 97 clips / 194 WAVs, all download hashes, and
+486 SFZ region windows and sequence positions across three kits. The
+original 79 raw clips remain byte-identical to v1. Page controls passed the
+mock-DOM smoke test; this does not verify browser audio decoding.
+
+Cloud JVM full-grid build times were 4,674.5 ms (Jungle), 4,985.2 ms (Dub)
+and 3,782.3 ms (Electro), each including 18 pads × 9 takes and the authored
+phrases. These are full-kit generation costs, not single-knob or phone timings.

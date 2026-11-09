@@ -561,6 +561,21 @@ object StarterKits {
             seeded = false, tempoBpm = 96f,
         ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
         Starter(
+            "spore-jungle", "SPORE JUNGLE",
+            "Psychedelic breaks, tight ghosts and canopy echoes. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 170f,
+        ) { SynthKits.sporeStation() },
+        Starter(
+            "spore-dub", "SPORE DUB",
+            "Low, rounded drums with dark half-time space. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 85f,
+        ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.DUB) },
+        Starter(
+            "spore-electro", "SPORE ELECTRO",
+            "Short synthetic drums, bright wires and metallic accents. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 130f,
+        ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.ELECTRO) },
+        Starter(
             "cosmic-breaks", "COSMIC BREAKS",
             "Sixteen printed cosmic drums, glitches and rides. The approved Low Orbit sample kit.",
             seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
