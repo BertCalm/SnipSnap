@@ -6192,7 +6192,7 @@ private enum class Engine {
         SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
         FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
-        BACKWASH -> Backwash.render(voice as BackwashVoice, macros)
+        BACKWASH -> BackwashPatch("Backwash", voice as BackwashVoice, macros).render()
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)

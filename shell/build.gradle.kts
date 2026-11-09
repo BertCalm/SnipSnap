@@ -503,3 +503,13 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
+
+tasks.register<JavaExec>("generateBackwashAcousticKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BackwashAcousticKitGenerator")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/backwash-acoustic-integration")
+}

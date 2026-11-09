@@ -31,7 +31,7 @@ object Restrike {
 
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
-        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch
+        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch || (patch is BackwashPatch && patch.model == 5)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -51,6 +51,7 @@ object Restrike {
     fun take(patch: Patch, velocity: Float, seed: Int, take: Int): Snip? {
         require(take >= 0) { "a take is 0 or more, got $take" }
         if (!canRestrike(patch)) return null
+        if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is SkinPatch -> patch.render(velocity = v, take = take)
