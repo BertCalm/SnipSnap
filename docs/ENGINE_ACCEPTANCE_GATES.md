@@ -29,3 +29,15 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 - Sound character: the acoustic integration and processed comparisons require the owner's audition; no automated test establishes musical approval.
 
 Old model-3 and model-4 recipes retain their original renderers. Source selection, build success and a website demo must not be reported as all engine gates passing.
+
+## BREAKER (round 1, 2026-11-09)
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
+- **Articulation:** finite hits, with no HOLD. The authored snare roll and riser, and the surf tom fill, are not yet built.
+- **Drum shelf:** not yet built. The owner picked Dub Tank and Trip hop on 2026-11-09 to join the BREAKER kit. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
+- **Velocity and round robin:**
+  - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
+  - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
+  - **Playback and export: not yet verified.**
+- **Sound character:** the owner chose the round-0 settings by ear. The round-1 Kotlin renders are waiting for the owner's listen.
+- **Overall: incomplete.** This is a prototype with two voices.

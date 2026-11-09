@@ -26,6 +26,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
+        for (voice in BreakerVoice.entries) {
+            val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
     @Test fun `Velour approved source and both saved boards replay byte for byte`() {
         val source = VelourKits.source(VelourKits.roles[0])
         for (type in listOf(BoardType.VELOUR, BoardType.VELOUR_BLOOM)) {

@@ -42,6 +42,7 @@ class PatchesTest {
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
+        BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
         RivetPatch("Industrial kick", RivetVoice.KICK),
