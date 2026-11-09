@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -98,6 +99,8 @@ import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.OrbitPanels
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.ProjectTempo
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -260,16 +263,9 @@ fun OrbitScreen(
     var selected by remember(kitDir) { mutableIntStateOf(selected) }
     var solo by remember(kitDir) { mutableStateOf(solo) }
     var snips by remember(kitDir) { mutableStateOf<List<File>>(emptyList()) }
-    /** + SNIP RING opens the shelf as a list to pick from — no arrow-cycling through a long shelf. */
-    var snipPickerOpen by remember(kitDir) { mutableStateOf(false) }
-    /** Tapping the step count opens a picker of ring sizes: eight taps on + is not a way to reach 24. */
-    var stepsPickerOpen by remember(kitDir) { mutableStateOf(false) }
-    /** Long-pressing the SPAN chip opens the five spans as chips; a tap just cycles. */
-    var spanPickerOpen by remember(kitDir) { mutableStateOf(false) }
-    /** SPREAD asks how many hits before it fills the ring. */
-    var spreadOpen by remember(kitDir) { mutableStateOf(false) }
-    /** ARP ▸ swaps the panel for the arpeggiator: shape, octaves and gate over this ring's own PLAYS chord. */
-    var arpOpen by remember(kitDir) { mutableStateOf(false) }
+    /** Which picker sheet and which fold is open: see [OrbitOpen]. */
+    val panels = remember(kitDir) { OrbitOpen() }
+    /** ARP's fold: shape, octaves and gate over this ring's own PLAYS chord. */
     var arpShape by remember(kitDir) { mutableStateOf(Arp.Shape.UP) }
     var arpOctaves by remember(kitDir) { mutableStateOf(1) }
     var arpGate by remember(kitDir) { mutableStateOf(1f) }
@@ -281,12 +277,6 @@ fun OrbitScreen(
     // this function's own KDoc — so a from-scratch screen (App's hoisted
     // copy still at its default) shows exactly what it always showed.
     var brush by remember(kitDir) { mutableStateOf(brush) }
-    /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
-    var outOpen by remember(kitDir) { mutableStateOf(false) }
-    /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
-    var setPanelOpen by remember(kitDir) { mutableStateOf(false) }
-    /** SECTIONS ▸ swaps the panel for the arrangement: what plays, and for how long. */
-    var sectionsOpen by remember(kitDir) { mutableStateOf(false) }
     /** REC: while armed and playing, a rail tap writes a hit on the ring's nearest step. A listening choice, never saved. */
     var recording by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
@@ -770,7 +760,7 @@ fun OrbitScreen(
     }
 
     fun spreadRing(index: Int, k: Int) {
-        spreadOpen = false
+        panels.close(OrbitSheet.SPREAD)
         updateRing(index) { ring -> OrbitPatterns.spread(ring, ring.pads.first(), k) }
     }
 
@@ -782,11 +772,11 @@ fun OrbitScreen(
     fun applyArp(index: Int) {
         val s = set ?: return
         updateRing(index) { ring -> Arp.run(s, ring, ring.pads, arpShape, arpOctaves, arpGate, seed = scrambleSeed) }
-        arpOpen = false
+        panels.close(OrbitFold.ARP)
     }
 
     fun setSteps(index: Int, steps: Int) {
-        stepsPickerOpen = false
+        panels.close(OrbitSheet.STEPS)
         val clamped = steps.coerceIn(1, Orbit.MAX_STEPS)
         updateRing(index) { ring ->
             // Shrinking a ring drops the hits past its new end rather than
@@ -822,7 +812,7 @@ fun OrbitScreen(
 
     fun addSnipRing(file: File) {
         val s = set ?: return
-        snipPickerOpen = false
+        panels.close(OrbitSheet.SNIP)
         if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         scope.launch {
             // The header alone says how long the snip is — no decode, no
@@ -998,7 +988,7 @@ fun OrbitScreen(
             OrbitAquarium.bounceFrames(OrbitClock.transportFrames(what), route.tailFrames, what.sampleRate)
         }.getOrElse { onToast(it.message ?: Copy.ORBIT_BOUNCE_FAILED); return }
         bouncing = true
-        outOpen = false
+        panels.close(OrbitFold.OUT)
         scope.launch {
             val result = offMain {
                 runCatching {
@@ -1047,7 +1037,7 @@ fun OrbitScreen(
         val s = set ?: return
         val room = OrbitSet.MAX_ORBITS - s.orbits.size
         if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
-        outOpen = false
+        panels.close(OrbitFold.OUT)
         scope.launch {
             val result = offMain {
                 runCatching {
@@ -1121,7 +1111,7 @@ fun OrbitScreen(
     fun clipIntoKit() {
         val s = set ?: return
         OrbitClip.clipRefusal(s)?.let { onToast(it); return }
-        outOpen = false
+        panels.close(OrbitFold.OUT)
         scope.launch {
             val result = offMain { runCatching { OrbitClip.save(kitDir, s) } }
             result.onSuccess { clip ->
@@ -1196,17 +1186,12 @@ fun OrbitScreen(
             playing = playing,
             preparing = preparing,
             frame = frame,
-            setPanelOpen = setPanelOpen,
+            setPanelOpen = panels.fold == OrbitFold.SET,
             backLabel = backLabel,
             onBack = onBack,
             onStopPlayback = { stopPlayback() },
             onStartPlayback = { startPlayback() },
-            onToggleSetPanel = {
-                setPanelOpen = !setPanelOpen
-                snipPickerOpen = false
-                outOpen = false
-                sectionsOpen = false
-            },
+            onToggleSetPanel = { panels.toggle(OrbitFold.SET) },
         )
 
         if (current == null) {
@@ -1264,7 +1249,7 @@ fun OrbitScreen(
             )
 
             // The picked ring's panel — or, while + SNIP RING is choosing, the shelf.
-            if (setPanelOpen) aquariumRoute?.let { route ->
+            if (panels.fold == OrbitFold.SET) aquariumRoute?.let { route ->
                 OrbitAquariumPanel(current, route, scheme, preparing || bouncing, playing,
                     aquariumFaulted, aquariumLimited,
                     auditionUp = playerUp, auditionFaulted = auditionFaulted, auditionPending = auditionPending,
@@ -1292,42 +1277,26 @@ fun OrbitScreen(
                 arpShape = arpShape,
                 arpOctaves = arpOctaves,
                 arpGate = arpGate,
-                snipPickerOpen = snipPickerOpen,
-                setPanelOpen = setPanelOpen,
-                sectionsOpen = sectionsOpen,
-                outOpen = outOpen,
-                stepsPickerOpen = stepsPickerOpen,
-                spanPickerOpen = spanPickerOpen,
-                spreadOpen = spreadOpen,
-                arpOpen = arpOpen,
+                panels = panels,
                 onAddSnipRing = { file -> addSnipRing(file) },
-                onCloseSnipPicker = { snipPickerOpen = false },
                 onCommit = { next -> commit(next) },
-                onOpenSections = { sectionsOpen = true; setPanelOpen = false },
-                onCloseSetPanel = { setPanelOpen = false },
                 onEditSection = { index, edit -> editSection(index, edit) },
                 onDeleteSection = { index -> deleteSection(index) },
                 onAddSection = { addSection() },
                 onClearSections = { clearSections() },
-                onCloseSections = { sectionsOpen = false },
                 onBounceToSnips = { bounceToSnips() },
                 onClipIntoKit = { clipIntoKit() },
                 onRingsFromGroove = { ringsFromGroove() },
-                onCloseOut = { outOpen = false },
                 onSetSteps = { n -> setSteps(selected, n) },
-                onCloseStepsPicker = { stepsPickerOpen = false },
                 onPickSpan = { span ->
-                    spanPickerOpen = false
+                    panels.close(OrbitSheet.SPAN)
                     updateRing(selected) { it.copy(span = span) }
                 },
-                onCloseSpanPicker = { spanPickerOpen = false },
                 onSpread = { k -> spreadRing(selected, k) },
-                onCloseSpread = { spreadOpen = false },
                 onShapeChange = { shape -> arpShape = shape },
                 onOctavesChange = { n -> arpOctaves = n },
                 onGateChange = { g -> arpGate = g },
                 onApplyArp = { applyArp(selected) },
-                onCloseArp = { arpOpen = false },
                 onToggleRecording = { recording = !recording },
                 onUpdateRing = { edit -> updateRing(selected, edit) },
                 onUndo = { undo() },
@@ -1336,33 +1305,19 @@ fun OrbitScreen(
                 onDuplicateRing = { duplicateRing(selected) },
                 onScrambleRing = { scrambleRing(selected) },
                 onToggleVoicePad = { slot -> toggleVoicePad(selected, slot) },
-                onOpenSpread = { spreadOpen = true },
-                onOpenArp = { arpOpen = true },
-                onOpenStepsPicker = { stepsPickerOpen = true },
-                onOpenSpanPicker = { spanPickerOpen = true },
             )
 
             OrbitFooterRow(
                 scheme = scheme,
                 snips = snips,
-                snipPickerOpen = snipPickerOpen,
-                outOpen = outOpen,
+                snipPickerOpen = panels.sheet == OrbitSheet.SNIP,
+                outOpen = panels.fold == OrbitFold.OUT,
                 playing = playing,
                 onRewind = { engine?.rewind() },
                 bpm = current.bpm,
                 onAddPatternRing = { addPatternRing() },
-                onToggleSnipPicker = {
-                    snipPickerOpen = !snipPickerOpen
-                    outOpen = false
-                    setPanelOpen = false
-                    sectionsOpen = false
-                },
-                onToggleOut = {
-                    outOpen = !outOpen
-                    snipPickerOpen = false
-                    setPanelOpen = false
-                    sectionsOpen = false
-                },
+                onToggleSnipPicker = { panels.open(OrbitSheet.SNIP) },
+                onToggleOut = { panels.toggle(OrbitFold.OUT) },
             )
         }
     }
@@ -1457,7 +1412,6 @@ private fun RingDetailPanel(
     onScrambleRing: () -> Unit,
     onToggleVoicePad: (Int) -> Unit,
     onOpenSpread: () -> Unit,
-    onOpenArp: () -> Unit,
     onOpenStepsPicker: () -> Unit,
     onOpenSpanPicker: () -> Unit,
 ) {
@@ -1490,17 +1444,12 @@ private fun RingDetailPanel(
                 .tapeClick(label = "EDIT STEPS") { onOpenStepsPicker() },
             contentAlignment = Alignment.CenterStart,
         ) {
-            TapeText(
-                "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)}",
-                TapeType.pixel,
-                scheme.ink.tape,
-            )
+            val stepsLine = "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)}"
+            TapeText(Places.opener(stepsLine), TapeType.pixel, scheme.ink.tape)
         }
         SmallChip("+", scheme, description = "ONE STEP MORE") { onSetSteps(ring.steps + 1) }
-        // Tap for the next span, hold to pick one of the five.
-        SpanChip(ring.span, scheme, onNext = { onUpdateRing { it.copy(span = it.span.next) } }) {
-            onOpenSpanPicker()
-        }
+        // A tap opens the five spans as a sheet.
+        SpanChip(ring.span, scheme, onOpenSpanPicker)
     }
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -1513,10 +1462,9 @@ private fun RingDetailPanel(
         SmallChip("SOLO", scheme, accent = solo == selected) { onToggleSolo() }
         SmallChip("DEL", scheme) { onDeleteRing() }
         if (ring.content is PatternOrbit) {
-            SmallChip("SPREAD", scheme) { onOpenSpread() }
+            SmallChip(Places.opener("SPREAD"), scheme, description = "SPREAD") { onOpenSpread() }
             SmallChip("CLEAR", scheme) { onUpdateRing { OrbitPatterns.clear(it) } }
             SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { onScrambleRing() }
-            SmallChip("ARP", scheme) { onOpenArp() }
             SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
             SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
         }
@@ -1605,12 +1553,7 @@ private fun ArpPanel(
     onOctavesChange: (Int) -> Unit,
     onGateChange: (Float) -> Unit,
     onApply: () -> Unit,
-    onClose: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("ARPEGGIATE ${ring.name}", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
     TapeText(
         "THE CHORD IS WHATEVER PADS PLAY ON THIS RING — PICK THEM ON PLAYS, BELOW.",
         TapeType.pixelSmall,
@@ -1665,12 +1608,7 @@ private fun OutPanel(
     onBounceToSnips: () -> Unit,
     onClipIntoKit: () -> Unit,
     onRingsFromGroove: () -> Unit,
-    onClose: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("ONE TURN OUT — ${transportLabel(current)}", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
     // The two ways out are asked SEPARATELY, because
     // they no longer refuse together. A clip has reasons a
     // bounce has not - the snips, the mutes, the ring with
@@ -1777,13 +1715,7 @@ private fun TheSetPanel(
     current: OrbitSet,
     scheme: Scheme,
     onCommit: (OrbitSet) -> Unit,
-    onOpenSections: () -> Unit,
-    onClose: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("THE SET", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1807,32 +1739,6 @@ private fun TheSetPanel(
                 if (n != current.swing) onCommit(current.copy(swing = n))
             }
         }
-    }
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TapeText("PLAN", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
-        SmallChip(
-            if (current.sections.isEmpty()) "SECTIONS" else "SECTIONS · ${current.sections.size}",
-            scheme,
-            accent = current.sections.isNotEmpty(),
-            description = "THE ARRANGEMENT — WHICH RINGS PLAY, AND FOR HOW LONG",
-        ) {
-            onOpenSections()
-        }
-        TapeText(
-            if (current.sections.isEmpty()) {
-                "NO ARRANGEMENT — EVERY RING TURNS FOREVER."
-            } else {
-                "${OrbitClock.arrangementFrames(current) / OrbitClock.lapFrames(current)} BARS ROUND THE PLAN."
-            },
-            TapeType.pixelSmall,
-            scheme.ink2.tape,
-            Modifier.weight(1f),
-            maxLines = 2,
-        )
     }
     // The take. A set with a rolled hit on it sounds the
     // same every time it is played, bounced or clipped;
@@ -1881,12 +1787,7 @@ private fun SectionsPanel(
     onDeleteSection: (Int) -> Unit,
     onAddSection: () -> Unit,
     onClearSections: () -> Unit,
-    onClose: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("SECTIONS", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
     if (current.sections.isEmpty()) {
         TapeText(
             "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
@@ -1958,106 +1859,11 @@ private fun SectionsPanel(
     )
 }
 
-@Composable
-private fun SnipPickerPanel(
-    snips: List<File>,
-    scheme: Scheme,
-    onAddSnipRing: (File) -> Unit,
-    onClose: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("WHICH SNIP GOES ROUND A RING?", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
-    Column(
-        Modifier.fillMaxWidth().heightIn(max = 200.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for (file in snips) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                    .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-                    .tapeClick(label = "ADD RING ${SnipStore.displayName(file).uppercase()}") { onAddSnipRing(file) }
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                TapeText(SnipStore.displayName(file).uppercase(), TapeType.pixel, scheme.amber.tape)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StepsPickerPanel(
-    ring: Orbit,
-    scheme: Scheme,
-    onSetSteps: (Int) -> Unit,
-    onClose: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("HOW MANY STEPS ROUND ${ring.name}?", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for (n in OrbitPatterns.STEP_CHOICES) {
-            SmallChip(n.toString(), scheme, accent = n == ring.steps) { onSetSteps(n) }
-        }
-    }
-    TapeText("16 IS A BAR · 20 IS FIVE BEATS · 12 IS THREE · ODD NUMBERS DRIFT FURTHEST", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-}
-
-@Composable
-private fun SpanPickerPanel(
-    ring: Orbit,
-    scheme: Scheme,
-    onPickSpan: (OrbitSpan) -> Unit,
-    onClose: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("HOW MANY BARS IS ONE TURN OF ${ring.name}?", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for (span in OrbitSpan.entries) {
-            SmallChip(span.label, scheme, accent = span == ring.span) {
-                onPickSpan(span)
-            }
-        }
-    }
-    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
-}
-
-@Composable
-private fun SpreadPanel(
-    ring: Orbit,
-    scheme: Scheme,
-    onSpread: (Int) -> Unit,
-    onClose: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("SPREAD HOW MANY HITS ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")}?", TapeType.pixel, scheme.ink.tape)
-        SmallChip("CLOSE", scheme) { onClose() }
-    }
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for (k in 1..minOf(ring.steps, 12)) {
-            SmallChip(k.toString(), scheme) { onSpread(k) }
-        }
-    }
-    TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-}
-
+/**
+ * The picked ring's controls, then the folds that hold several controls each (ARP,
+ * THE SET, SECTIONS, ONE TURN OUT), then whichever picker sheet is open. A picker is
+ * a sheet and a fold is a fold, so nothing swaps in for the ring's controls any more.
+ */
 @Composable
 private fun OrbitControlPanel(
     current: OrbitSet,
@@ -2077,39 +1883,23 @@ private fun OrbitControlPanel(
     arpShape: Arp.Shape,
     arpOctaves: Int,
     arpGate: Float,
-    snipPickerOpen: Boolean,
-    setPanelOpen: Boolean,
-    sectionsOpen: Boolean,
-    outOpen: Boolean,
-    stepsPickerOpen: Boolean,
-    spanPickerOpen: Boolean,
-    spreadOpen: Boolean,
-    arpOpen: Boolean,
+    panels: OrbitOpen,
     onAddSnipRing: (File) -> Unit,
-    onCloseSnipPicker: () -> Unit,
     onCommit: (OrbitSet) -> Unit,
-    onOpenSections: () -> Unit,
-    onCloseSetPanel: () -> Unit,
     onEditSection: (Int, (OrbitSection) -> OrbitSection) -> Unit,
     onDeleteSection: (Int) -> Unit,
     onAddSection: () -> Unit,
     onClearSections: () -> Unit,
-    onCloseSections: () -> Unit,
     onBounceToSnips: () -> Unit,
     onClipIntoKit: () -> Unit,
     onRingsFromGroove: () -> Unit,
-    onCloseOut: () -> Unit,
     onSetSteps: (Int) -> Unit,
-    onCloseStepsPicker: () -> Unit,
     onPickSpan: (OrbitSpan) -> Unit,
-    onCloseSpanPicker: () -> Unit,
     onSpread: (Int) -> Unit,
-    onCloseSpread: () -> Unit,
     onShapeChange: (Arp.Shape) -> Unit,
     onOctavesChange: (Int) -> Unit,
     onGateChange: (Float) -> Unit,
     onApplyArp: () -> Unit,
-    onCloseArp: () -> Unit,
     onToggleRecording: () -> Unit,
     onUpdateRing: ((Orbit) -> Orbit) -> Unit,
     onUndo: () -> Unit,
@@ -2118,118 +1908,141 @@ private fun OrbitControlPanel(
     onDuplicateRing: () -> Unit,
     onScrambleRing: () -> Unit,
     onToggleVoicePad: (Int) -> Unit,
-    onOpenSpread: () -> Unit,
-    onOpenArp: () -> Unit,
-    onOpenStepsPicker: () -> Unit,
-    onOpenSpanPicker: () -> Unit,
 ) {
-    Column(
-        Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (snipPickerOpen) {
-            SnipPickerPanel(
-                snips = snips,
-                scheme = scheme,
-                onAddSnipRing = onAddSnipRing,
-                onClose = onCloseSnipPicker,
-            )
-        } else if (setPanelOpen) {
-            TheSetPanel(
-                current = current,
-                scheme = scheme,
-                onCommit = onCommit,
-                onOpenSections = onOpenSections,
-                onClose = onCloseSetPanel,
-            )
-        } else if (sectionsOpen) {
-            SectionsPanel(
-                current = current,
-                playing = playing,
-                frame = frame,
-                scheme = scheme,
-                onEditSection = onEditSection,
-                onDeleteSection = onDeleteSection,
-                onAddSection = onAddSection,
-                onClearSections = onClearSections,
-                onClose = onCloseSections,
-            )
-        } else if (outOpen) {
-            OutPanel(
-                current = current,
-                bouncing = bouncing,
-                scheme = scheme,
-                onBounceToSnips = onBounceToSnips,
-                onClipIntoKit = onClipIntoKit,
-                onRingsFromGroove = onRingsFromGroove,
-                onClose = onCloseOut,
-            )
-        } else if (stepsPickerOpen && ring != null) {
-            StepsPickerPanel(
-                ring = ring,
-                scheme = scheme,
-                onSetSteps = onSetSteps,
-                onClose = onCloseStepsPicker,
-            )
-        } else if (spanPickerOpen && ring != null) {
-            SpanPickerPanel(
-                ring = ring,
-                scheme = scheme,
-                onPickSpan = onPickSpan,
-                onClose = onCloseSpanPicker,
-            )
-        } else if (spreadOpen && ring != null) {
-            SpreadPanel(
-                ring = ring,
-                scheme = scheme,
-                onSpread = onSpread,
-                onClose = onCloseSpread,
-            )
-        } else if (arpOpen && ring != null && ring.content is PatternOrbit) {
-            ArpPanel(
-                ring = ring,
-                scheme = scheme,
-                arpShape = arpShape,
-                arpOctaves = arpOctaves,
-                arpGate = arpGate,
-                onShapeChange = onShapeChange,
-                onOctavesChange = onOctavesChange,
-                onGateChange = onGateChange,
-                onApply = onApplyArp,
-                onClose = onCloseArp,
-            )
-        } else if (ring == null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
-                SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { onUndo() }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (ring == null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
+                    SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { onUndo() }
+                }
+            } else {
+                RingDetailPanel(
+                    ring = ring,
+                    current = current,
+                    history = history,
+                    solo = solo,
+                    selected = selected,
+                    scheme = scheme,
+                    kit = kit,
+                    bank = bank,
+                    refitting = refitting,
+                    recording = recording,
+                    onToggleRecording = onToggleRecording,
+                    onSetSteps = onSetSteps,
+                    onUpdateRing = onUpdateRing,
+                    onUndo = onUndo,
+                    onToggleSolo = onToggleSolo,
+                    onDeleteRing = onDeleteRing,
+                    onDuplicateRing = onDuplicateRing,
+                    onScrambleRing = onScrambleRing,
+                    onToggleVoicePad = onToggleVoicePad,
+                    onOpenSpread = { panels.open(OrbitSheet.SPREAD) },
+                    onOpenStepsPicker = { panels.open(OrbitSheet.STEPS) },
+                    onOpenSpanPicker = { panels.open(OrbitSheet.SPAN) },
+                )
             }
-        } else {
-            RingDetailPanel(
-                ring = ring,
-                current = current,
-                history = history,
-                solo = solo,
-                selected = selected,
-                scheme = scheme,
-                kit = kit,
-                bank = bank,
-                refitting = refitting,
-                recording = recording,
-                onToggleRecording = onToggleRecording,
-                onSetSteps = onSetSteps,
-                onUpdateRing = onUpdateRing,
-                onUndo = onUndo,
-                onToggleSolo = onToggleSolo,
-                onDeleteRing = onDeleteRing,
-                onDuplicateRing = onDuplicateRing,
-                onScrambleRing = onScrambleRing,
-                onToggleVoicePad = onToggleVoicePad,
-                onOpenSpread = onOpenSpread,
-                onOpenArp = onOpenArp,
-                onOpenStepsPicker = onOpenStepsPicker,
-                onOpenSpanPicker = onOpenSpanPicker,
-            )
         }
+        OrbitFolds(
+            current = current,
+            ring = ring,
+            playing = playing,
+            frame = frame,
+            bouncing = bouncing,
+            scheme = scheme,
+            arpShape = arpShape,
+            arpOctaves = arpOctaves,
+            arpGate = arpGate,
+            panels = panels,
+            onCommit = onCommit,
+            onEditSection = onEditSection,
+            onDeleteSection = onDeleteSection,
+            onAddSection = onAddSection,
+            onClearSections = onClearSections,
+            onBounceToSnips = onBounceToSnips,
+            onClipIntoKit = onClipIntoKit,
+            onRingsFromGroove = onRingsFromGroove,
+            onShapeChange = onShapeChange,
+            onOctavesChange = onOctavesChange,
+            onGateChange = onGateChange,
+            onApplyArp = onApplyArp,
+        )
+        OrbitSheets(panels, ring, snips, onAddSnipRing, onSetSteps, onPickSpan, onSpread)
+    }
+}
+
+/**
+ * ARP, THE SET, SECTIONS and ONE TURN OUT as folds (clarity spec 7.3, "Section"). One
+ * opens at a time, the way OUT and the header's readout always closed each other. Each
+ * closed line says what is inside, never that nothing has been touched.
+ */
+@Composable
+private fun OrbitFolds(
+    current: OrbitSet,
+    ring: Orbit?,
+    playing: Boolean,
+    frame: Long,
+    bouncing: Boolean,
+    scheme: Scheme,
+    arpShape: Arp.Shape,
+    arpOctaves: Int,
+    arpGate: Float,
+    panels: OrbitOpen,
+    onCommit: (OrbitSet) -> Unit,
+    onEditSection: (Int, (OrbitSection) -> OrbitSection) -> Unit,
+    onDeleteSection: (Int) -> Unit,
+    onAddSection: () -> Unit,
+    onClearSections: () -> Unit,
+    onBounceToSnips: () -> Unit,
+    onClipIntoKit: () -> Unit,
+    onRingsFromGroove: () -> Unit,
+    onShapeChange: (Arp.Shape) -> Unit,
+    onOctavesChange: (Int) -> Unit,
+    onGateChange: (Float) -> Unit,
+    onApplyArp: () -> Unit,
+) {
+    val fold = panels.fold
+    if (ring != null && ring.content is PatternOrbit) {
+        GroupBox(
+            legend = "ARP",
+            summary = OrbitPanels.arpSummary(arpShape.label, arpShape == Arp.Shape.CHORD, arpOctaves, arpGate),
+            open = fold == OrbitFold.ARP,
+            onToggle = { panels.toggle(OrbitFold.ARP) },
+            scheme = scheme,
+        ) {
+            ArpPanel(ring, scheme, arpShape, arpOctaves, arpGate, onShapeChange, onOctavesChange, onGateChange, onApplyArp)
+        }
+    }
+    GroupBox(
+        legend = "THE SET",
+        summary = OrbitPanels.setSummary(current.lapSteps, current.swing, current.bpm),
+        open = fold == OrbitFold.SET,
+        onToggle = { panels.toggle(OrbitFold.SET) },
+        scheme = scheme,
+    ) {
+        TheSetPanel(current, scheme, onCommit)
+    }
+    GroupBox(
+        legend = "SECTIONS",
+        summary = OrbitPanels.sectionsSummary(current.sections),
+        open = fold == OrbitFold.SECTIONS,
+        onToggle = { panels.toggle(OrbitFold.SECTIONS) },
+        scheme = scheme,
+    ) {
+        SectionsPanel(current, playing, frame, scheme, onEditSection, onDeleteSection, onAddSection, onClearSections)
+    }
+    GroupBox(
+        legend = "ONE TURN OUT",
+        summary = OrbitPanels.outSummary(transportLabel(current)),
+        open = fold == OrbitFold.OUT,
+        onToggle = { panels.toggle(OrbitFold.OUT) },
+        scheme = scheme,
+        also = OrbitPanels.outAlso(OrbitClip.refusal(current) == null, OrbitClip.clipRefusal(current) == null),
+    ) {
+        OutPanel(current, bouncing, scheme, onBounceToSnips, onClipIntoKit, onRingsFromGroove)
     }
 }
 
@@ -2397,7 +2210,7 @@ private fun OrbitFooterRow(
             TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
         }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
-        ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
+        ActionButton(Places.opener("+ SNIP"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SNIP") {
             onToggleSnipPicker()
         }
         ActionButton("OUT", scheme, Modifier.weight(1f), accent = outOpen) {
@@ -3083,33 +2896,29 @@ internal fun SmallChip(
 }
 
 /**
- * The SPAN chip: what a ring's turn is measured in. A tap moves to the
- * next span round the five; a long-press opens them as a picker. Both
- * gestures are accessibility actions, as the strip's cells do it.
+ * The SPAN chip: what a ring's turn is measured in. A tap opens the five spans as a
+ * sheet; a screen reader gets the same action, named for what it does.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SpanChip(span: OrbitSpan, scheme: Scheme, onNext: () -> Unit, onPick: () -> Unit) {
+private fun SpanChip(span: OrbitSpan, scheme: Scheme, onPick: () -> Unit) {
     val spanned = span != OrbitSpan.FREE
+    val chip = if (spanned) "SPAN ${span.label}" else "SPAN FREE"
     Box(
         Modifier
             .heightIn(min = 36.dp)
             .background(scheme.field.tape, RoundedCornerShape(4.dp))
             .border(1.dp, if (spanned) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
             .semantics { contentDescription = "SPAN: ${span.label}" }
-            .combinedClickable(
+            .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClickLabel = "NEXT SPAN",
-                // twin: the tap on this same SPAN chip, which steps through all five spans, so the picker opens nothing a tap cannot reach
-                onLongClickLabel = "PICK A SPAN",
-                onLongClick = onPick,
-                onClick = onNext,
+                onClickLabel = "PICK A SPAN",
+                onClick = onPick,
             )
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(if (spanned) "SPAN ${span.label}" else "SPAN FREE", TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(Places.opener(chip), TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
     }
 }
 

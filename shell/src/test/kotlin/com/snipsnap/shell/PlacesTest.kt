@@ -71,6 +71,20 @@ class PlacesTest {
     }
 
     @Test
+    fun `the SCULPT and STRETCH sections read what is inside, then what GO would render`() {
+        assertEquals("CLOUD · SCRUB · SWARM", Places.textureLine(TextureKits.modesFor("SCULPT"), "CLOUD", "8 s", null))
+        assertEquals("SLOW · FREEZE", Places.textureLine(TextureKits.modesFor("STRETCH"), "SLOW", "×8", null))
+        assertEquals("CLOUD · 8 S · FROM A07", Places.textureLine(TextureKits.modesFor("SCULPT"), "CLOUD", "8 s", "A07"))
+        assertEquals("SLOW · ×8 · FROM A01", Places.textureLine(TextureKits.modesFor("STRETCH"), "SLOW", "×8", "A01"))
+        for (kind in TextureKits.KINDS) {
+            val line = Places.textureLine(TextureKits.modesFor(kind), TextureKits.modesFor(kind).first(), "8 s", null)
+            assertFalse("UNTOUCHED" in line, "a closed line says what is inside, never UNTOUCHED: $line")
+        }
+        assertTrue(Places.KEY_OPEN.endsWith("▾"), "KEY opens a sheet, so it ends in the sheet glyph")
+        assertFalse("▸" in Places.KEY_OPEN)
+    }
+
+    @Test
     fun `the kit chip keeps the project count in its name, and the sheet marks the active kit in words`() {
         val line = Places.switcher(Project("P", listOf("Kitchen", "Funk Room"), activeKit = "Funk Room"))
         assertEquals("SWITCH KIT · FUNK ROOM · 2 KITS IN THIS PROJECT", Places.switchKitName(line))

@@ -709,5 +709,13 @@ testkit/octaver-audition/
 experiments/velour/__pycache__/
 /testkit/velour-kit/
 
+# TRIAD listening assets regenerate from native Kotlin.
+/testkit/triad-audition/
+
+/testkit/triad-hands-r2/
+
+/testkit/triad-accepted/
+
+/testkit/triad-kits/
 # Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
 /testkit/cosmic-breaks-kit/

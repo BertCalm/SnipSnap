@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `TRIAD shared bus phrase replays byte for byte`() {
+        val source = Triad.source(Triad.Settings(bars = 1)).mix()
+        for (rig in Triad.Rig.entries) assertContentEquals(
+            Triad.process(source, 124, rig).output,
+            Triad.process(source, 124, rig).output)
+    }
+
     @Test fun `BACKWASH replays every saved drum byte for byte`() {
         for (voice in BackwashVoice.entries) {
             val patch = BackwashPatch("Canary", voice, Backwash.defaults(voice))
