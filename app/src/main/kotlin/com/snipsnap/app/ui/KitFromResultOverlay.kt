@@ -40,7 +40,7 @@ internal class KitFromMade(
 
 /**
  * KIT FROM ANYTHING's result, drawn instead of whatever is under it, as
- * [SpreadOverlay] is: the kit's name, key and tempo, the gate every pad was
+ * [SpreadSheet] is: the kit's name, key and tempo, the gate every pad was
  * held to and what the gate said, each blended pad's partner, the count,
  * and OPEN KIT. Back, and CLOSE, just close it; the kit is already on the
  * shelf either way.

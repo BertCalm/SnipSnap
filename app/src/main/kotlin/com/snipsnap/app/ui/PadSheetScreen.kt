@@ -105,6 +105,7 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
+import com.snipsnap.shell.AquariumSummary
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.shell.Robin
 import com.snipsnap.synth.BoardType
@@ -3397,26 +3398,8 @@ fun PadSheetScreen(
         applyDust(m, p, pendingAmt, p.displayName, from = tape)
     }
 
-    spreadSource?.let { src ->
-        // Drawn instead of the sheet, the way the loading shell above is:
-        // a full-screen panel needs no parent Box to sit on top of. Its
-        // BackHandler, composed after the sheet's own, is the one Back reaches.
-        val cancelSpread = { if (!busy) spreadSource = null }
-        SpreadOverlay(
-            kit = model?.kit,
-            source = src,
-            colorHex = pad.colorHex ?: AutoPlace.colorFor(pad.drumClass),
-            scheme = scheme,
-            busy = busy,
-            onSpread = ::spread,
-            onCancel = cancelSpread,
-        )
-        BackHandler(onBack = cancelSpread)
-        return
-    }
-
     confirmStrikeReplace?.let { kind ->
-        // Drawn instead of the sheet, as SpreadOverlay above is; Back and the
+        // Drawn instead of the sheet, the way the loading shell above is; Back and the
         // scrim cancel, only KEEP writes.
         val cancelReplace = { confirmStrikeReplace = null }
         ReplaceLayersConfirmDialog(
@@ -3686,7 +3669,25 @@ fun PadSheetScreen(
                 scheme = scheme,
                 enabled = !busy,
             ) {
-            if (aquariumOpen) {
+            // AQUARIUM is a section of this box (clarity spec 7.3): its closed line says
+            // what the pad carries from it, and while it is open it is all the box shows.
+            AquariumSection(
+                summary = AquariumSummary.line(aquariumApplied, aquariumMarker),
+                open = aquariumOpen,
+                onToggle = {
+                    if (aquariumOpen) {
+                        closeAquarium()
+                    } else {
+                        stopAquariumPreview()
+                        aquariumError = null
+                        pedalMoreOpen = false
+                        pedalPlacing = null
+                        aquariumOpen = true
+                    }
+                },
+                enabled = !busy,
+                scheme = scheme,
+            ) {
                 AquariumPanel(
                     editor = aquariumEditor,
                     applied = aquariumApplied != null,
@@ -3720,19 +3721,8 @@ fun PadSheetScreen(
                     onUndo = { if (robinOn) onToast(Copy.ROBIN_NO_UNDO) else commitAquarium("UNDO") },
                     onCancel = ::closeAquarium,
                 )
-            } else {
-            ActionButton(
-                "AQUARIUM", scheme, enabled = !busy,
-                accessibilityLabel = "AQUARIUM",
-                modifier = Modifier.fillMaxWidth().testTag("aquarium-open"),
-                onClick = {
-                    stopAquariumPreview()
-                    aquariumError = null
-                    pedalMoreOpen = false
-                    pedalPlacing = null
-                    aquariumOpen = true
-                },
-            )
+            }
+            if (!aquariumOpen) {
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
@@ -4202,7 +4192,7 @@ fun PadSheetScreen(
                 onClick = ::onMakeInstrument,
             )
             ActionButton(
-                if (spreadOpening) "…" else "SPREAD · SCALE ACROSS PADS",
+                if (spreadOpening) "…" else "SPREAD · SCALE ACROSS PADS ▾",
                 scheme,
                 enabled = !busy && !spreadOpening && snip != null,
                 accessibilityLabel = "SPREAD ACROSS PADS",
@@ -4263,6 +4253,9 @@ fun PadSheetScreen(
             )
         }
     }
+    // SPREAD is a sheet over the editor (SpreadSheet): it needs no early return,
+    // and its own Back, scrim and pull-down are the way out.
+    PadSpreadSheet(spreadSource, model?.kit, pad, scheme, busy, ::spread) { spreadSource = null }
 }
 
 // ---------- fresh-kit writes (Law 5) ----------

@@ -3751,7 +3751,7 @@ fun SynthScreen(
                 // One sound, a whole bank of notes: its own row, since the
                 // three above already fill theirs at the pixel face.
                 LabButton(
-                    if (spreadState.opening) "…" else "SPREAD · SCALE ACROSS PADS",
+                    if (spreadState.opening) "…" else "SPREAD · SCALE ACROSS PADS ▾",
                     scheme,
                     enabled = kit != null && !padChooser.sendBusy && !spreadState.opening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
@@ -3902,9 +3902,9 @@ fun SynthScreen(
 
         spreadState.source?.let { src ->
             // Self-guarded like the chooser's CANCEL: a write in flight
-            // keeps the panel up until it lands.
+            // keeps the sheet up until it lands.
             val cancelSpread = { if (!spreadState.busy) spreadState.source = null }
-            SpreadOverlay(
+            SpreadSheet(
                 kit = kit,
                 source = src,
                 colorHex = AutoPlace.colorFor(spreadState.drumClass),
@@ -3913,7 +3913,6 @@ fun SynthScreen(
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
-            SynthOverlayBackHandler(onBack = cancelSpread)
         }
 
         if (presets.namingPreset) {
