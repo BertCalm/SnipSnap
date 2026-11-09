@@ -23,6 +23,7 @@ internal object BackwashDrums {
             BackwashVoice.TOM -> Dsp.lin(damp, .70f, .30f)
             BackwashVoice.HAT_CLOSED -> Dsp.lin(damp, .22f, .065f)
             BackwashVoice.HAT_OPEN -> Dsp.lin(damp, .62f, .20f)
+            else -> error("new percussion uses BackwashPercussion")
         }
         val n = ((decay + .06f) * rate).toInt()
         val noise = Dsp.Noise(Dsp.seedFor("BACKWASH", "DRUMS", 3, voice.name))

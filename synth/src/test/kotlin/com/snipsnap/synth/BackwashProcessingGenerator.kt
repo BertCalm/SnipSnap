@@ -15,7 +15,7 @@ object BackwashProcessingGenerator {
             val dir=File(root,treatment.name.lowercase()).apply{mkdirs()}
             BackwashGroove.write(dir,renderWet={v,m,vel->BackwashProcessingStudy.render(v,m,vel,treatment)})
             raw.getOrPut("groove"){linkedMapOf()}[treatment]=WavReader.read(File(dir,"groove-processed.wav"))
-            for((i,patch) in BackwashPresets.kitOrder().withIndex()){
+            for((i,patch) in BackwashPresets.legacyKitOrder().withIndex()){
                 val start=System.nanoTime();val s=BackwashProcessingStudy.render(patch.voice,patch.macros,1f,treatment)
                 val ms=(System.nanoTime()-start)/1e6
                 check(s.samples.all{it.isFinite()&&abs(it)<=1f}&&s.peak()>.01f)

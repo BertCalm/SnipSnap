@@ -31,7 +31,7 @@ class BackwashPromotionTest {
     }
 
     @Test fun `factory treatments reproduce the approved study at all source velocities`() {
-        for (voice in BackwashVoice.entries) {
+        for (voice in BackwashVoice.entries.filter { it.legacy }) {
             val presets = BackwashPresets.forVoice(voice)
             for ((prefix, treatment) in listOf("Seasick" to BackwashTreatment.SEASICK,
                 "Clamped" to BackwashTreatment.CLAMPED, "Overloaded" to BackwashTreatment.OVERLOADED,

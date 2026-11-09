@@ -28,6 +28,7 @@ with zipfile.ZipFile(app) as z:
  fixture=json.loads((repo/'testkit/backwash-pushed-kit/factory-presets.json').read_text())
  names=sorted({x['name'] for x in fixture})
  assert len(names)==36
+ assert len({x["voice"] for x in fixture})==9
  assert {x['model'] for x in fixture}=={3,4}
  # New names are composed from a treatment prefix and voice suffix in Kotlin.
  # The exported registry and JVM tests verify the full names; DEX keeps their parts.
