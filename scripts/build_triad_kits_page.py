@@ -14,6 +14,15 @@ def read_audio(path):
 
 root = pathlib.Path(sys.argv[1] if len(sys.argv)>1 else 'testkit/triad-kits')
 site = pathlib.Path(sys.argv[2] if len(sys.argv)>2 else '/workspace/sites/triad-audition/dist')
+# Original native WAVs are delivered in this existing ZIP. Remove only exact,
+# unlinked standalone duplicates to keep the combined site below the host's 256 MiB cap.
+legacy_archive=site/'triad-native.zip'
+if legacy_archive.exists():
+    pages=''.join(p.read_text() for p in site.rglob('*.html'))
+    with zipfile.ZipFile(legacy_archive) as z:
+        for p in site.glob('*-native.wav'):
+            assert p.name not in pages and p.read_bytes()==z.read(p.name)
+            p.unlink()
 dest = site/'kits'
 dest.mkdir(exist_ok=True)
 roles = ['Thud','Sub','Clap','Open hat','Closed hat','Shaker','Conga','Bongo','Rim','Low conga','High bongo','Clap roll','Hand roll','Shaker riser','Full groove','Percussion break']
