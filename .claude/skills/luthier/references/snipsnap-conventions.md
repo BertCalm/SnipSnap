@@ -1,5 +1,7 @@
 # SnipSnap conventions, verified against the repo
 
+Owner acceptance gates: see `docs/ENGINE_ACCEPTANCE_GATES.md` at the repository root. Apply them in addition to this older contract, especially six distinct melodic voices, genre kits, and velocity/round robin through rendering, saving, playback and export.
+
 Everything here was read from `github.com/BertCalm/SnipSnap` at commit `565551e` on 2026-10-21. The tree moves
 fast. Treat each line as "true on that day, re-grep before you lean on it." Where a line says
 VERIFY, a grep is cheap and a wrong API name in a spec is expensive: the three engine specs

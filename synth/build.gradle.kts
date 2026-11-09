@@ -3478,6 +3478,36 @@ tasks.register<JavaExec>("generateVelourKit") {
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
 
+tasks.register<JavaExec>("generateBackwashPercussionComparison") {
+    group = "verification"
+    description = "Compare dry percussion with lower-drive and previous processing at matched levels."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionComparison")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-comparison")
+}
+
+tasks.register<JavaExec>("generateBackwashPercussionRevision") {
+    group = "verification"
+    description = "Audition sharper cross-stick, larger bell, rattling jingles and a ringing ride."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionRevisionAudition")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-revision-2")
+}
+
+tasks.register<JavaExec>("generateBackwashPercussionReference") {
+    group = "verification"
+    description = "Audition reference-guided percussion source revision 3."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionReferenceAudition")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-revision-3")
+}
+
 tasks.register<JavaExec>("generateTriadAudition") {
     group = "distribution"
     description = "Render the shared-bus TRIAD groove, dry stems and three rig comparisons."

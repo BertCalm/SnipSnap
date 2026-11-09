@@ -20,7 +20,7 @@ enum class BackwashVoice(val drumClass: DrumClass, val legacy: Boolean = true) {
  * No bus state is shared between pads and no repeating/HOLD output is promised.
  */
 object Backwash {
-    const val MODEL_VERSION = 4
+    const val MODEL_VERSION = 5
     internal const val TAIL_SECONDS = .65f
     private val controls = listOf(
         MacroSpec("TUNE", .5f), MacroSpec("DAMP", .75f), MacroSpec("SWAY", .3f),
@@ -34,10 +34,11 @@ object Backwash {
             BackwashVoice.TOM -> .35f
             else -> .5f
         }) else if (!voice.legacy) it.copy(default = when (it.name) {
-            "SWAY" -> .55f
-            "TRAIL" -> .55f
-            "PRESS" -> .75f
-            "DRIVE" -> .65f
+            "DAMP" -> 0f
+            "SWAY" -> .35f
+            "TRAIL" -> .25f
+            "PRESS" -> .45f
+            "DRIVE" -> .15f
             else -> it.default
         }) else it
     }
@@ -141,5 +142,6 @@ object Backwash {
     }
 
     fun render(voice: BackwashVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
-        inspect(voice, macros, velocity).output
+        if (voice.legacy) inspect(voice, macros, velocity).output
+        else BackwashAcoustic.render(voice, macros, velocity, 0, "HIT")
 }

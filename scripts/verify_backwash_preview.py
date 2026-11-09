@@ -23,13 +23,16 @@ assert "native-code: 'arm64-v8a'" in badging
 with zipfile.ZipFile(app) as z:
  assert z.testzip() is None
  assert 'lib/arm64-v8a/libsnipsnap_surface.so' in z.namelist()
+ bank=repo/'synth/src/main/resources/backwash/v5'
+ for resource in bank.iterdir():
+  assert z.read('backwash/v5/'+resource.name)==resource.read_bytes(), resource.name
  dex=b''.join(z.read(p) for p in z.namelist() if re.fullmatch(r'classes\d*\.dex',p))
  assert b'Lcom/snipsnap/synth/BackwashPresets;' in dex
  fixture=json.loads((repo/'testkit/backwash-pushed-kit/factory-presets.json').read_text())
  names=sorted({x['name'] for x in fixture})
  assert len(names)==36
  assert len({x["voice"] for x in fixture})==9
- assert {x['model'] for x in fixture}=={3,4}
+ assert {x['model'] for x in fixture}=={3,4,5}
  # New names are composed from a treatment prefix and voice suffix in Kotlin.
  # The exported registry and JVM tests verify the full names; DEX keeps their parts.
  assert all(name.encode() in dex or all(part.encode() in dex for part in name.split()) for name in names)
@@ -38,6 +41,6 @@ with zipfile.ZipFile(test) as z:
  assert b'backwashRestoresItsDrumVoiceAndSixControls' in dex
 out=args.output;out.mkdir(parents=True,exist_ok=True)
 copy=out/'snipsnap-backwash-preview.apk';shutil.copy2(app,copy)
-report={'package':'com.snipsnap.app.backwashpreview','label':'SnipSnap Backwash Preview','minAndroid':10,'abi':'arm64-v8a','buildType':'development preview','apkBytes':copy.stat().st_size,'apkSha256':hashlib.sha256(copy.read_bytes()).hexdigest(),'certificateSha256':certs[0],'processingModel':4,'factoryPresets':names,'checks':{'apkSignaturesVerified':True,'testSigningIdentityMatches':True,'nativeAudioLibraryPresent':True,'factoryClassAndNamingPartsPresent':True,'targetedUiTestPackaged':True},'deviceUiTestRun':False,'phoneRenderTimingMeasured':False}
+report={'package':'com.snipsnap.app.backwashpreview','label':'SnipSnap Backwash Preview','minAndroid':10,'abi':'arm64-v8a','buildType':'development preview','apkBytes':copy.stat().st_size,'apkSha256':hashlib.sha256(copy.read_bytes()).hexdigest(),'certificateSha256':certs[0],'processingModel':4,'acousticModel':5,'factoryPresets':names,'checks':{'apkSignaturesVerified':True,'testSigningIdentityMatches':True,'nativeAudioLibraryPresent':True,'acousticBankBytesVerified':True,'factoryClassAndNamingPartsPresent':True,'targetedUiTestPackaged':True},'deviceUiTestRun':False,'phoneRenderTimingMeasured':False}
 (out/'backwash-preview-verification.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report,indent=2))
