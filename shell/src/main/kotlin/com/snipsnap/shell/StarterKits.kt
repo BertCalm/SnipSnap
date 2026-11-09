@@ -31,6 +31,8 @@ import java.io.File
  * beside the kit, rather than pretending to be asset-free synth recipes.
  * COSMIC BREAKS, VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
  * their printed wet pads do not pretend to have dry-source synth recipes.
+ * TRIAD starters are versioned rendered banks: three velocity zones and four takes
+ * per zone, including finite bus phrases, with source provenance on every pad.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -69,7 +71,17 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            return KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
+            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
+            if (id.startsWith("backwash-")) {
+                val model = KitBuilderModel.open(dir)
+                for (pad in kit.pads) {
+                    Robin.apply(model, pad.slot, takes=3, zones=3)
+                    model.update(pad.slot) { it.copy(recipe=pad.recipe) }
+                }
+                model.save(accrueWear=false)
+                return model.kit
+            }
+            return kit
         }
     }
 
@@ -531,6 +543,21 @@ object StarterKits {
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
         Starter(
+            "triad-techno", "TRIAD WAREHOUSE TECHNO",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 128f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.TECHNO) },
+        Starter(
+            "triad-house", "TRIAD SUBMERGED HOUSE",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 118f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.DEEP_HOUSE) },
+        Starter(
+            "triad-minimal", "TRIAD FRACTURE MINIMAL",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 126f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.MINIMAL) },
+        Starter(
             "rivet-workshop", "RIVET WORKSHOP",
             "Industrial drums in a small room. Sixteen pads, three strike strengths and choking metal hats.",
             seeded = false,
@@ -555,6 +582,12 @@ object StarterKits {
             "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
             seeded = false,
         ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
+        Starter("backwash-soul", "BACKWASH SOUL", "Tight soul drums, cross-stick pocket and acoustic percussion. Native recorded alternates and a tambourine roll/riser.", seeded=false, tempoBpm=94f) {
+            com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.SOUL_POCKET)
+        },
+        Starter("backwash-psych", "BACKWASH PSYCH", "Low rock kick, open snare, ringing toms and cowbell accents. Acoustic percussion, alternate takes and roll/riser.", seeded=false, tempoBpm=108f) {
+            com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.PSYCH_ROCK)
+        },
         Starter(
             "fired-bronze", "FIRED BRONZE",
             "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers.",
@@ -577,7 +610,7 @@ object StarterKits {
         ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.ELECTRO) },
         Starter(
             "cosmic-breaks", "COSMIC BREAKS",
-            "Sixteen printed cosmic drums, glitches and rides. The approved Low Orbit sample kit.",
+            "Sixteen cosmic drums, glitches and rides. Three strike layers, four takes each.",
             seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
         ) { SynthKits.cosmicBreaks() },
     )

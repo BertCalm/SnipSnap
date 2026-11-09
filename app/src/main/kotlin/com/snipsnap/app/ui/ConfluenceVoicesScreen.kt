@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -29,13 +31,13 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MixVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.ConfluenceSelectedWorkshop
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.Places
 import com.snipsnap.xpm.PadNoteMap
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -241,20 +243,14 @@ fun ConfluenceVoicesScreen(
                     val previous = choices[(index - 1 + choices.size) % choices.size]
                     change(selected.copy(voiceId = previous.id))
                 })
-                ActionButton("PASSAGE ${index + 1} / ${choices.size}", scheme, enabled = !saving,
+                ActionButton(Places.opener("PASSAGE ${index + 1} / ${choices.size}"), scheme, enabled = !saving,
                     accessibilityLabel = "Choose voice passage", modifier = Modifier.weight(1f), onClick = { chooserOpen = !chooserOpen })
                 ActionButton("►", scheme, enabled = !saving, accessibilityLabel = "Next voice passage", onClick = {
                     change(selected.copy(voiceId = choices[(index + 1) % choices.size].id))
                 })
             }
-            if (chooserOpen) for (choice in choices) {
-                Column(Modifier.fillMaxWidth().raisedBevel(scheme)
-                    .tapeClick(label = "Choose passage ${choice.title}", enabled = !saving, onClick = {
-                        change(selected.copy(voiceId = choice.id)); chooserOpen = false
-                    }).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TapeText(choice.title, TapeType.pixel, scheme.ink.tape, maxLines = Int.MAX_VALUE)
-                    TapeText(choice.tradition, TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-                }
+            if (chooserOpen) PassageSheet(choices, index, saving, onDismiss = { chooserOpen = false }) { choice ->
+                change(selected.copy(voiceId = choice.id)); chooserOpen = false
             }
             TapeText(passage.title, TapeType.markerBig, scheme.ink.tape, maxLines = Int.MAX_VALUE)
             TapeText(passage.tradition, TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
@@ -309,6 +305,27 @@ fun ConfluenceVoicesScreen(
             TapeText("SAVED VOICE PADS", TapeType.pixelSmall, scheme.ink2.tape)
             for (pad in saved) ActionButton(pad.displayName, scheme, enabled = !saving && choices.isNotEmpty(),
                 accessibilityLabel = "Open voice pad ${PadNoteMap.labelForPad(pad.slot)}", modifier = Modifier.fillMaxWidth(), onClick = { openPad(pad) })
+        }
+    }
+}
+
+/**
+ * The recorded passages as a sheet (clarity spec 7.3): the choice used to unfold in
+ * place under the button. Each row is the passage's title with its tradition under it,
+ * the chosen one marked, and spoken as it always was: "Choose passage" and its title.
+ */
+@Composable
+private fun PassageSheet(choices: List<PassageChoice>, index: Int, saving: Boolean, onDismiss: () -> Unit, onPick: (PassageChoice) -> Unit) {
+    SheetMenu("WHICH RECORDED PASSAGE?", onDismiss) {
+        for ((i, choice) in choices.withIndex()) {
+            SheetRow(
+                Places.pickedRow(choice.title, i == index),
+                choice.tradition,
+                onClick = { onPick(choice) },
+                modifier = Modifier.semantics { selected = i == index },
+                enabled = !saving,
+                accessibilityLabel = "Choose passage ${choice.title}",
+            )
         }
     }
 }

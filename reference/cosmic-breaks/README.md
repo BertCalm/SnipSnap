@@ -22,5 +22,8 @@ factory source of truth. Tests verify those WAVs and native export read-back.
 The one-shots already include compression, reverb and amp coloration. No second
 finishing rack is applied, and no PadRecipe pretends to regenerate this bank
 from a different Kotlin engine. The original shared-bus groove can sound
-different from mixing independently processed one-shots. One velocity layer is
-intentional; no new timbre layers have been auditioned.
+different from mixing independently processed one-shots. V1 preserves the original one-layer audition. The requested v2 expansion adds
+three velocity timbres with four takes each; these remain listening candidates.
+Run `node reference/cosmic-breaks/freeze-v2.mjs` and then
+`node reference/cosmic-breaks/verify-v2.mjs`. The first hard take matches v1
+byte-for-byte. See `docs/COSMIC_BREAKS.md` for MPC export limitations.

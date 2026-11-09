@@ -3392,6 +3392,17 @@ tasks.register<JavaExec>("generateHalobarGlockenspielAudition") {
     args("${rootDir}/testkit/halobar-audition/glockenspiel")
 }
 
+/** Isolated listening gate for the provisional bronze-disc voice. */
+tasks.register<JavaExec>("generateHalobarCrotalesAudition") {
+    group = "distribution"
+    description = "Render HALOBAR crotales studies, diagnostics and a separate sixteen-pad MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarCrotalesAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition/crotales")
+}
+
+
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"
     description = "Render the reference-informed dry revision without altering the rejected first study."
@@ -3467,6 +3478,54 @@ tasks.register<JavaExec>("generateVelourKit") {
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
 
+tasks.register<JavaExec>("generateBackwashPercussionComparison") {
+    group = "verification"
+    description = "Compare dry percussion with lower-drive and previous processing at matched levels."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionComparison")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-comparison")
+}
+
+tasks.register<JavaExec>("generateBackwashPercussionRevision") {
+    group = "verification"
+    description = "Audition sharper cross-stick, larger bell, rattling jingles and a ringing ride."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionRevisionAudition")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-revision-2")
+}
+
+tasks.register<JavaExec>("generateBackwashPercussionReference") {
+    group = "verification"
+    description = "Audition reference-guided percussion source revision 3."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionReferenceAudition")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-revision-3")
+}
+
+tasks.register<JavaExec>("generateTriadAudition") {
+    group = "distribution"
+    description = "Render the shared-bus TRIAD groove, dry stems and three rig comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-audition")
+}
+
+tasks.register<JavaExec>("generateTriadHandsAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TriadHandsAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("testkit/triad-hands-r2")
+}
 
 tasks.register<JavaExec>("generateSporeStationAudition") {
     group = "distribution"

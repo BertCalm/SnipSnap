@@ -5824,6 +5824,7 @@ class ConventionTest {
     /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
     private val SHEET_OPENERS = setOf(
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
+        "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
         "${'$'}{active.uppercase(Locale.ROOT)} · ${'$'}n ${'$'}kits IN THIS PROJECT ▾", // the kit switcher's line: the chip opens the kit sheet
         "CHANGE ART ▾", "EXPANSION ▾", // the expansion sheet's picker and the door to the sheet
@@ -5831,6 +5832,7 @@ class ConventionTest {
         "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
         "REOPEN PAD · EDIT ITS RECIPE ▾", // SYNTH's pad picker dialog
         "SPREAD · SCALE ACROSS PADS ▾", // the pad editor's and SYNTH's door to the SPREAD sheet (root, scale, pads, bank)
+        "KEY ▾", // THIS KIT's key picker (Places.KEY_OPEN)
         "${'$'}{engine.displayName} ▾", "▾", // the engine picker sheet, and a BEAT lane's pad picker
     )
 

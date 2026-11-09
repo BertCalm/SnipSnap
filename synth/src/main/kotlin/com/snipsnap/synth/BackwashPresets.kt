@@ -48,7 +48,7 @@ object BackwashPresets {
     /** Historical audition source only; retired Double recipes remain replayable from JSON. */
     internal fun legacyKitOrder(): List<BackwashPatch> = originalBank
 
-    /** Core row combined, second row clamped, toms overloaded, last row seasick. */
+    /** Core row combined, second row clamped, four tom treatments, acoustic percussion row. */
     fun processingKitOrder(): List<BackwashPatch> = listOf(
         "Pushed Kick", "Pushed Snare", "Pushed Closed", "Pushed Open",
         "Clamped Kick", "Clamped Snare", "Clamped Closed", "Clamped Open",

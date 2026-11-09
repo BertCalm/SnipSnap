@@ -142,12 +142,14 @@ class SurfaceScreenTest : ComposeScreenTest() {
     @Test
     fun the_print_row_reads_in_full_while_a_print_could_run() {
         show(entry = tempoKit())
-        // With a tempo the bars button is live and its longest word is on it
-        // after two taps; → PAD is on screen beside → TAPE.
-        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        tap("FREE")
+        // With a tempo the bars button is live and its longest word, with its arrow, is on it
+        // after two picks from its sheet; → PAD is on screen beside → TAPE.
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE ▾", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        tap("FREE ▾")
         tap(PrintLength.label(PrintLength.BARS[1]))
-        assertReadsInFull(PrintLength.label(PrintLength.BARS[2]))
+        tap("${PrintLength.label(PrintLength.BARS[1])} ▾")
+        tap(PrintLength.label(PrintLength.BARS[2]))
+        assertReadsInFull("${PrintLength.label(PrintLength.BARS[2])} ▾")
         assertReadsInFull("→ TAPE")
         assertReadsInFull("→ PAD")
     }
@@ -185,17 +187,20 @@ class SurfaceScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun with_a_tempo_the_bars_button_cycles_the_print_lengths() {
+    fun with_a_tempo_the_bars_button_opens_a_sheet_of_the_print_lengths() {
         show(entry = tempoKit())
-        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE ▾", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         val labels = PrintLength.BARS.map { PrintLength.label(it) }
         assertEquals("FREE", labels.first())
-        for (i in labels.indices) {
-            button(labels[i]).assertExists()
-            tap(labels[i])
+        var now = labels.first()
+        for (picked in labels) {
+            // The button names the length it holds and opens every length at once.
+            tap("$now ▾")
+            for (label in labels) button(label).assertExists()
+            tap(picked)
+            button("$picked ▾").assertExists()
+            now = picked
         }
-        // Round the loop: back at FREE.
-        button(labels.first()).assertExists()
     }
 
     @Test

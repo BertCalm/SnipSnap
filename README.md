@@ -28,6 +28,8 @@ Dub (85) and Electro (130), each with 18 pads and three velocity zones × three 
 The published audition includes SFZ, native kits and MPC programs. MPC round robin
 remains blocked on slice-map/hardware verification. Owner listening is pending.
 
+TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
+
 ## The loop
 
 ```
@@ -439,7 +441,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 83 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 88 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1304,7 +1306,7 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), VOLUME (the pad fades in: a raised-cosine rise over the first RISE x 800 ms, at most 70 percent of the pad, with the peak restored up to 12 dB, so a pad that is loudest at its start, a snare most of all, comes out quieter; the FADE IN pedal, the `eased` character, rises over 448 ms at a tap (AMT 70), 640 ms at AMT 100), FORGE (a hit formed against a die: a low shock, an all-pass
+transient), VOLUME (the pad fades in: a raised-cosine rise over the first RISE x 800 ms, at most 70 percent of the pad, with the peak restored up to 12 dB, so a pad that is loudest at its start, a snare most of all, comes out quieter; the FADE IN pedal, the `eased` character, rises over 448 ms at a tap (AMT 70), 640 ms at AMT 100), SUB (an octave down, right after VOLUME: a half-speed copy of the hit, aligned at its onset and faded at the pad's length, mixed under it and squashed into its peak; DEPTH how much, TONE how dark, HANG whether it rings on, DRIVE clean, then Fuzz, then Grit; the SUB pedal, the `octaved` character, adds it at DEPTH 0.5 driven to Grit at a tap (AMT 70); for snares and toms, since a kick's octave lands under 40 Hz), FORGE (a hit formed against a die: a low shock, an all-pass
 sweep as deep as DEPTH asks, the fast part folded and the slow part left,
 then a ceiling that closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
 on the pedal row since its listening gate, see
