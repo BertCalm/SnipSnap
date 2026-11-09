@@ -390,9 +390,11 @@ fun PadSheetScreen(
         robinDraft.amountMoved = false
     }
     var robinAmountMoved by remember(entry.dir, slot, pad.robin) { mutableStateOf(false) }
-    var aquariumOpen by remember(entry.dir, slot) { mutableStateOf(false) }
-    var aquariumEditor by remember(entry.dir, slot, pad.sampleFile, pad.recipe, pad.velocityLayers) {
-        mutableStateOf(AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0)))
+    var aquariumOpen by rememberKeptFlag(entry.dir, slot)
+    var aquariumEditor by rememberKeptAquariumEditor(
+        listOf(entry.dir, slot, pad.sampleFile, pad.recipe, pad.velocityLayers).hashCode(),
+    ) {
+        AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0))
     }
     var aquariumUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var aquariumPreviewing by remember(entry.dir, slot) { mutableStateOf(false) }
@@ -1123,7 +1125,7 @@ fun PadSheetScreen(
     // waiting, which a change of pad ends. [pedalRefusals] counts refused pedal changes, so the AMT
     // stepper lets go of a value that never landed.
     var pedalLastTapped by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
-    var pedalMoreOpen by remember(entry.dir) { mutableStateOf(false) }
+    var pedalMoreOpen by rememberKeptFlag(entry.dir, null)
     var pedalPlacing by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
     var pedalRefusals by remember(entry.dir, slot) { mutableIntStateOf(0) }
 
@@ -1973,7 +1975,7 @@ fun PadSheetScreen(
     }
 
     // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
-    var mutateMode by remember(slot) { mutableStateOf(MutateSheet.MODES.first()) }
+    var mutateMode by rememberKeptName(slot, null, MutateSheet.MODES.first())
     var partner by remember(slot) { mutableStateOf<MutateSheet.Partner?>(null) }
     // Each ROULETTE tap is a new seed, so every spin is a new deal and each one reproducible.
     var spins by remember(slot) { mutableIntStateOf(0) }
@@ -2031,7 +2033,7 @@ fun PadSheetScreen(
     // `AT` to 400 ms, tap MORPH to hear the difference, tap back: 40 ms.
     // A map keyed on the move's own name gives each one its own memory, and
     // a move never touched still opens on its own default.
-    val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val mutateKnobs = rememberKeptKnobs(slot, null)
     val pendingMutateKnob =
         mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
     // MORPH's second knob, BECOME: how long the hit takes to turn from the
@@ -2040,7 +2042,7 @@ fun PadSheetScreen(
     // per pad, not one per move, and it sits beside `mutateKnobs` rather
     // than inside it, so J24's law reads that map exactly as before. It
     // opens OFF, and DRIFT puts it back there (`onDrift`).
-    var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }
+    var pendingBecome by rememberKeptFraction(slot, null, MutateSheet.BECOME.defaultFraction)
 
     /**
      * KEEP, the card's commit (it read `MUTATE ▸` before the redesign). The
@@ -2583,11 +2585,11 @@ fun PadSheetScreen(
     }
 
     // ---- OUTSIDE: the world as an effect (OutsideSheet over Outside) ----
-    var outsideMove by remember(slot) { mutableStateOf(OutsideSheet.MOVES.first()) }
+    var outsideMove by rememberKeptName(slot, null, OutsideSheet.MOVES.first())
     val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
     // One dialled value per move (J24), for the same reason as MUTATE's
     // knob above: REAMP and ROOM are compared by switching between them.
-    val outsideKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val outsideKnobs = rememberKeptKnobs(slot, null)
     val pendingOutsideKnob = outsideKnobs[outsideMove] ?: outsideKnob.defaultFraction
     // What the trip is doing right now — LISTENING…, SENDING… — for the
     // SEND button's own label; null when nothing is out.
@@ -2834,8 +2836,8 @@ fun PadSheetScreen(
     // to LEVEL/PAN/TUNE two rows above, which do write — is a question
     // about what the control should *say* it is, and belongs with the words
     // and IA work, not here.
-    var pendingDepth by remember(entry.dir) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
-    var pendingBloom by remember(entry.dir) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
+    var pendingDepth by rememberKeptFraction(entry.dir, null, PadMaker.DEPTH.defaultFraction)
+    var pendingBloom by rememberKeptFraction(entry.dir, null, PadMaker.BLOOM.defaultFraction)
 
     // A gathering is edited from its saved source recipe, never from this pad's treated WAV.
     // Local controls survive a metadata refresh, but changing the source/slot opens a new draft.
@@ -3372,7 +3374,7 @@ fun PadSheetScreen(
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
     // the DUST door at the card's AMT with that tape, and since the recipe
     // carries the tape, AMT moves after that keep the borrowed dust.
-    var dustFromOpen by remember(slot) { mutableStateOf(false) }
+    var dustFromOpen by rememberKeptFlag(slot, null)
     var dustFromTapes by remember { mutableStateOf<List<File>>(emptyList()) }
     fun openDustFrom() {
         if (busy) return
@@ -5017,7 +5019,7 @@ private fun ObliterateBoardControls(
     color: Color,
     scheme: Scheme,
 ) {
-    var clockOpen by remember { mutableStateOf(false) }
+    var clockOpen by rememberKeptFlag(null, null)
     StepperSlider(
         label = "SHIMMER", labelWidth = 76.dp,
         fraction = (settings.shimmerMix * 2).toFloat(),

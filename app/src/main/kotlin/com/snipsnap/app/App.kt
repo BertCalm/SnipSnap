@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -99,6 +100,7 @@ import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
+import com.snipsnap.app.ui.ReleasePadEditorWhenGone
 import com.snipsnap.app.ui.PREF_CARD_TREE
 import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
 import com.snipsnap.app.ui.PrimaryAction
@@ -168,6 +170,8 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadEditorKeep
+import com.snipsnap.shell.PadEditorKeys
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PadSheetPage
@@ -539,6 +543,12 @@ fun App(shelf: KitShelf) {
     // history holds more than one editor entry, and that is accepted.
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
     var padSheetKitDir by remember { mutableStateOf<File?>(null) }
+    // The pad editor's state, parked while GRAIN FIELD, SPLICE or STACK is on top of it
+    // (spec §7.3.1): the editor draws inside `padEditorHolder`, and `padEditorKeys` drops
+    // what it holds when the editor leaves the stack for good or another pad is opened.
+    val padEditorHolder = rememberSaveableStateHolder()
+    val padEditorKeys = remember(padEditorHolder) { PadEditorKeys(padEditorHolder::removeState) }
+    ReleasePadEditorWhenGone(PadEditorKeep.inStack(location), padEditorKeys)
 
     /**
      * Open PAD SHEET on [slot]: the one door, for every way in — the pad
@@ -552,6 +562,7 @@ fun App(shelf: KitShelf) {
      * what the bench needs: the pad, the kit it is on, and the bench.
      */
     fun openPadSheet(slot: Int) {
+        padEditorKeys.opened(open?.dir?.path.orEmpty(), slot)
         padSheetSlot = slot
         padSheetKitDir = open?.dir
         nav.open(Bench.PAD_SHEET)
@@ -565,6 +576,7 @@ fun App(shelf: KitShelf) {
      * press for every pad stepped through.
      */
     fun retargetPadSheet(slot: Int) {
+        padEditorKeys.retarget(slot)
         padSheetSlot = slot
     }
 
@@ -4048,6 +4060,7 @@ fun App(shelf: KitShelf) {
                                 if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
                             }
                             if (verdict == KitBench.Verdict.DRAW && sheetEntry != null && sheetSlot != null) {
+                                padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(sheetEntry.dir.path)) {
                                 PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
@@ -4155,6 +4168,7 @@ fun App(shelf: KitShelf) {
                                     onShelfAssetWritten = { roomsRevision++ },
                                     onKitFrom = ::kitFrom,
                                 )
+                                }
                             }
                         }
                         top == null && location.stage == Stage.PADS -> KitLoading(pendingKit) {
