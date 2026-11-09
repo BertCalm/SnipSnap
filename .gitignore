@@ -711,3 +711,6 @@ experiments/velour/__pycache__/
 
 # Spore Station's rendered audio, MPC programs and audition assets regenerate.
 /testkit/spore-station/
+
+# Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
+/testkit/cosmic-breaks-kit/

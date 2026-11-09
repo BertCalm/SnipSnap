@@ -1491,7 +1491,7 @@ private fun RingDetailPanel(
             contentAlignment = Alignment.CenterStart,
         ) {
             TapeText(
-                "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)} ▾",
+                "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)}",
                 TapeType.pixel,
                 scheme.ink.tape,
             )
@@ -1516,7 +1516,7 @@ private fun RingDetailPanel(
             SmallChip("SPREAD", scheme) { onOpenSpread() }
             SmallChip("CLEAR", scheme) { onUpdateRing { OrbitPatterns.clear(it) } }
             SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { onScrambleRing() }
-            SmallChip("ARP ▸", scheme) { onOpenArp() }
+            SmallChip("ARP", scheme) { onOpenArp() }
             SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
             SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
         }
@@ -1654,7 +1654,7 @@ private fun ArpPanel(
         Modifier.fillMaxWidth(),
         maxLines = 3,
     )
-    ActionButton("APPLY ARP ▸", scheme, Modifier.fillMaxWidth(), accent = true) { onApply() }
+    ActionButton("APPLY ARP", scheme, Modifier.fillMaxWidth(), accent = true) { onApply() }
 }
 
 @Composable
@@ -1815,7 +1815,7 @@ private fun TheSetPanel(
     ) {
         TapeText("PLAN", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
         SmallChip(
-            if (current.sections.isEmpty()) "SECTIONS ▸" else "SECTIONS ▸ ${current.sections.size}",
+            if (current.sections.isEmpty()) "SECTIONS" else "SECTIONS · ${current.sections.size}",
             scheme,
             accent = current.sections.isNotEmpty(),
             description = "THE ARRANGEMENT — WHICH RINGS PLAY, AND FOR HOW LONG",
@@ -2400,7 +2400,7 @@ private fun OrbitFooterRow(
         ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
             onToggleSnipPicker()
         }
-        ActionButton("OUT ▸", scheme, Modifier.weight(1f), accent = outOpen) {
+        ActionButton("OUT", scheme, Modifier.weight(1f), accent = outOpen) {
             onToggleOut()
         }
     }

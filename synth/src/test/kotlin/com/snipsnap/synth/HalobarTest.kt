@@ -31,14 +31,23 @@ class HalobarTest {
         return weighted/sum
     }
 
-    @Test fun `three voices retain the root across three registers dry and processed`() {
-        for(v in HalobarVoice.entries) for(note in listOf(if(v==HalobarVoice.XYLOPHONE)57 else 53,65,77)) for(space in listOf(0f,.35f)) {
+    @Test fun `voices retain the root across three registers dry and processed`() {
+        for(v in HalobarVoice.entries) for(note in when(v) {
+            HalobarVoice.GLOCKENSPIEL -> listOf(65,77,89)
+            HalobarVoice.XYLOPHONE -> listOf(57,65,77)
+            else -> listOf(53,65,77)
+        }) for(space in listOf(0f,.35f)) {
             val m=mapOf("TUNE" to Halobar.tuneForMidi(v,note),"SPACE" to space)
             val p=Halobar.renderProbe(v,m,normalize=true)
             assertEquals(note,p.plan.midi,"register comparison must play the requested note")
             val snip=Snip(p.samples,1,Halobar.RATE)
-            val pitch=assertNotNull(Pitch.detect(snip),"$v MIDI $note SPACE $space has no root")
-            val cents=1200*log2(pitch.hz/p.plan.hz)
+            // The house detector stops at 1.2 kHz. Analyze high glockenspiel
+            // PCM at half its clock, then rescale the estimate; no resampling
+            // or expected-frequency search can force the requested note.
+            val factor=if(p.plan.hz>1100)2 else 1
+            val pitch=assertNotNull(Pitch.detect(Snip(p.samples,1,Halobar.RATE/factor),
+                fromSec=.05f*factor,windowSec=.25f*factor),"$v MIDI $note SPACE $space has no root")
+            val cents=1200*log2(pitch.hz*factor/p.plan.hz)
             assertTrue(abs(cents)<5,"$v MIDI $note SPACE $space root error $cents cents")
             assertTrue(pitch.confidence>=.3,"$v MIDI $note root confidence ${pitch.confidence}")
             assertTrue(p.rawPeak in .001f..4f,"$v raw peak ${p.rawPeak}")
@@ -230,7 +239,7 @@ class HalobarTest {
     }
 
     @Test fun `TUNE round trips every note and one clock plans every delay head`() {
-        for(v in HalobarVoice.entries)for(note in Halobar.minimumMidi(v)..Halobar.MAX_MIDI)
+        for(v in HalobarVoice.entries)for(note in Halobar.minimumMidi(v)..Halobar.maximumMidi(v))
             assertEquals(note,Halobar.midiFor(v,Halobar.tuneForMidi(v,note)))
         val expected=listOf(1.25,5.0/6,.625,5.0/12,.3125,5.0/24)
         for(i in expected.indices) {

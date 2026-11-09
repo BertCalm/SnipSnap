@@ -91,7 +91,7 @@ object Copy {
      * the note's own words ("OR START FROM A KIT."), where the old label named
      * the list.
      */
-    const val START_FROM_KIT = "START FROM A KIT ▸"
+    const val START_FROM_KIT = "START FROM A KIT ▾"
 
     /**
      * The empty panel's last line, amber: what the loop ends as, so a new user
@@ -316,7 +316,7 @@ object Copy {
      */
     const val BUBBLE_WHY = "THE BUBBLE FLOATS OVER OTHER APPS, SO YOU CAN SNIP WITHOUT COMING BACK. ANDROID ASKS YOU TO ALLOW THAT ONCE."
     /** [BUBBLE_WHY]'s door: the one tap that opens Android's "Display over other apps" page. A label, not a toast. */
-    const val BUBBLE_ALLOW = "ALLOW ▸"
+    const val BUBBLE_ALLOW = "ALLOW"
     const val CAPTURE_BLOCKED =
         "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER; THE AUDIO PULLS OUT OF THAT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
@@ -641,7 +641,7 @@ object Copy {
 
     // Expansions on the phone: born from a held kit, gathered on the shelf.
     /** The armed kit row's third door. */
-    const val EXPANSION_DOOR = "EXPANSION ▸"
+    const val EXPANSION_DOOR = "EXPANSION ▾"
     /** The sheet the door opens. */
     const val EXPANSION_SHEET_TITLE = "ADD TO EXPANSION"
     /** The sheet's first row: start an expansion with this kit. */
@@ -710,7 +710,7 @@ object Copy {
     /** The instruments row heading: what MAKE INSTRUMENT made, packed as keygroups beside the kits. */
     const val EXPANSION_INSTRUMENTS = "INSTRUMENTS IN IT"
     /** The last look at the tile, and its door back into the picker. */
-    const val CHANGE_ART = "CHANGE ART ▸"
+    const val CHANGE_ART = "CHANGE ART ▾"
     /** The two forms an expansion writes in. */
     const val EXPANSION_FORM_FOLDER = "ON-CARD FOLDER"
     const val EXPANSION_FORM_XPN = "ONE FILE (.XPN)"
@@ -1281,7 +1281,7 @@ object Copy {
      * destination is constant, so the label just names it. What used to
      * vary here (the recipe-pad count) now lives in [breedSubtitle].
      */
-    const val BREED_BUTTON = "BREED ▸ MIX TWO KITS"
+    const val BREED_BUTTON = "BREED · MIX TWO KITS ▸"
 
     /**
      * The line under the BREED button: how many of this kit's pads carry
@@ -1430,7 +1430,7 @@ object Copy {
 
     // ---- Pattern names (BEAT's YOURS programs, and what SONG calls them) ----
     /** The hint on the editor's name line. A label. */
-    const val PATTERN_RENAME_HINT = "RENAME ▸"
+    const val PATTERN_RENAME_HINT = "RENAME"
     /** The list's button for the pattern that is open, and the name slip's title. Labels. */
     const val PATTERN_RENAME = "RENAME"
     const val PATTERN_NAME_TITLE = "NAME THIS PATTERN"
@@ -2590,7 +2590,7 @@ object Copy {
     /** The completion stage's own location line, sitting above the raw path. No claim about which file browser can see it — just that it's on the phone. */
     const val EXPORT_SAVED_TO = "SAVED ON THIS PHONE:"
     /** EXPORT's SHARE action label, next to WRITE ANOTHER ✓ on the completion stage — offered only when the write produced one self-contained file. */
-    const val EXPORT_SHARE_LABEL = "SHARE ▸ SEND THIS FILE"
+    const val EXPORT_SHARE_LABEL = "SHARE · SEND THIS FILE"
     /** EXPORT's own share toast once the chooser is up — the same tail SHARE and BACKUP use. */
     const val EXPORT_SHARE_SENT = "PICK WHERE IT GOES."
     /**
@@ -2651,7 +2651,7 @@ object Copy {
      * button rather than only in a toast for the reason that one exists:
      * a toast is gone in seconds and the decision is not.
      */
-    fun putOnCardOver(what: String): String = "CARD ▸ REPLACE $what?"
+    fun putOnCardOver(what: String): String = "CARD · REPLACE $what?"
 
     /** The card leg went ahead after [dubCardWouldReplace] held it, and the old export is gone. */
     fun dubCardReplacedOne(what: String): String =
@@ -2706,7 +2706,7 @@ object Copy {
      */
     const val CARD_NONE = "SAVES TO THIS PHONE. NO CARD."
     /** The CARD row: the door to the card picker. The picked card's own name follows it, when there is one. */
-    const val CARD_PICKED = "CARD ▸"
+    const val CARD_PICKED = "CARD"
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."
     /**
