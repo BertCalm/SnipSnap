@@ -8,21 +8,23 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE }
+enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE, GLOCKENSPIEL, CROTALES }
 
 /**
  * A clear mallet strike hands its body to rhythmic echoes, then a moving halo.
  *
- * Three independently damped bar modes, with separate contact noise and a body
+ * Independently damped bar modes, with separate contact noise and a body
  * send. The send reduces the root so coherent mono echoes do not cancel a long
  * vibraphone note. Returns never re-excite the bars. The fixed-delay feedback
  * path contracts: its Butterworth low-pass has gain <= 1, tanh(d*x)/d has slope
  * <= 1, and the loop gain never exceeds .84. Phase motion and the finite FIR
  * halo sit outside that loop. No limiter supplies the stability argument.
  *
- * Ratios reuse Modes' sourced tuned-bar tables (1:4:10 and 1:3:6). Contact,
- * gains, decays and processing laws are musical shapes from the Python proof,
- * not measured materials. The motor is amplitude modulation, not fan geometry.
+ * Ratios reuse Modes' sourced tuned-bar tables (1:4:10 and 1:3:6), plus its
+ * free-free metal bar (1:2.756:5.404:8.933) for glockenspiel. Crotales
+ * uses a separate five-mode, center-weighted-disc inspired musical shape.
+ * Contact, gains, decays and processing laws are musical shapes, not measured
+ * materials. The first three voices began in the Python proof. The motor is amplitude modulation, not fan geometry.
  * HOLD is finite, including its reserved top; a long filed LOOP is not a wrap.
  */
 object Halobar {
@@ -51,17 +53,34 @@ object Halobar {
     fun defaults(voice: HalobarVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
     internal fun settled(macros: Map<String, Float>, voice: HalobarVoice): Map<String, Float> =
         defaults(voice).mapValues { (name, fallback) -> macros[name]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback }
-    fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: HalobarVoice) = ROOT_MIDI
-    fun minimumMidi(voice: HalobarVoice) = if (voice == HalobarVoice.XYLOPHONE) 57 else MIN_MIDI
+    fun rootMidi(voice: HalobarVoice) = when(voice) {
+        HalobarVoice.CROTALES -> 96
+        HalobarVoice.GLOCKENSPIEL -> 72
+        else -> ROOT_MIDI
+    }
+    fun minimumMidi(voice: HalobarVoice) = when(voice) {
+        HalobarVoice.CROTALES -> 84
+        HalobarVoice.GLOCKENSPIEL -> 60
+        HalobarVoice.XYLOPHONE -> 57
+        else -> MIN_MIDI
+    }
+    fun maximumMidi(voice: HalobarVoice) = when(voice) {
+        HalobarVoice.CROTALES -> 108
+        HalobarVoice.GLOCKENSPIEL -> 96
+        else -> MAX_MIDI
+    }
     fun midiFor(voice: HalobarVoice, tune: Float): Int {
         val t = if (tune.isFinite()) tune.coerceIn(0f, 1f) else .5f
         val bottom = minimumMidi(voice)
-        return (if (t < .5f) bottom + 2f*(ROOT_MIDI-bottom)*t else ROOT_MIDI + 48f*(t-.5f)).roundToInt()
+        val root = rootMidi(voice)
+        return (if (t < .5f) bottom + 2f*(root-bottom)*t else root + 2f*(maximumMidi(voice)-root)*(t-.5f)).roundToInt()
     }
     fun tuneForMidi(voice: HalobarVoice, midi: Int): Float {
         val bottom = minimumMidi(voice)
-        require(midi in bottom..MAX_MIDI) { "HALOBAR MIDI must be $bottom..$MAX_MIDI for $voice" }
-        return if (midi <= ROOT_MIDI) (midi-bottom)/(2f*(ROOT_MIDI-bottom)) else .5f+(midi-ROOT_MIDI)/48f
+        val root = rootMidi(voice)
+        val top = maximumMidi(voice)
+        require(midi in bottom..top) { "HALOBAR MIDI must be $bottom..$top for $voice" }
+        return if (midi <= root) (midi-bottom)/(2f*(root-bottom)) else .5f+(midi-root)/(2f*(top-root))
     }
     fun frequencyFor(voice: HalobarVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
     fun isLoop(@Suppress("UNUSED_PARAMETER") hold: Float) = false
@@ -74,7 +93,7 @@ object Halobar {
     }
 
     private data class Material(val ratios: DoubleArray, val gains: DoubleArray,
-        val t60: DoubleArray, val soft: Double, val hard: Double)
+        val t60: DoubleArray, val soft: Double, val hard: Double, val contactFloor: Double = .000065)
     private fun material(voice: HalobarVoice): Material = when (voice) {
         HalobarVoice.VIBRAPHONE -> Material(ratios(Modes.Material.WOOD_MARIMBA),
             doubleArrayOf(1.0,.47,.20), doubleArrayOf(6.2,1.8,.65), .0014,.00012)
@@ -82,6 +101,16 @@ object Halobar {
             doubleArrayOf(1.0,.66,.34), doubleArrayOf(1.65,.43,.16), .0023,.00018)
         HalobarVoice.XYLOPHONE -> Material(ratios(Modes.Material.WOOD_XYLO),
             doubleArrayOf(1.0,1.10,.55), doubleArrayOf(.62,.18,.075), .00085,.00007)
+        // A compact steel-bar approximation: four inharmonic modes and a hard
+        // contact, without the vibraphone motor or wooden tuned harmonics.
+        // Ratios are sourced by Modes; weights, losses and contact are shapes.
+        HalobarVoice.GLOCKENSPIEL -> Material(ratios(Modes.Material.METAL_BAR),
+            doubleArrayOf(1.0,.50,.26,.12), doubleArrayOf(3.8,1.5,.60,.28), .0010,.00009)
+        // A center-weighted bronze-disc inspired spectrum, not a thin-plate
+        // solver or measured crotale. Ratios, weights, decays and contact are
+        // musical shapes; the near octave and longer ring distinguish bars.
+        HalobarVoice.CROTALES -> Material(doubleArrayOf(1.0,2.01,3.94,6.10,8.60),
+            doubleArrayOf(1.0,.38,.23,.13,.07), doubleArrayOf(8.0,4.8,2.8,1.6,.9), .0018,.00025,.000094)
     }
     private fun ratios(type: Modes.Material) = Modes.tableFor(type).map { it.ratio.toDouble() }.toDoubleArray()
 
@@ -119,7 +148,7 @@ object Halobar {
         val frames = ceil(seconds*RATE).toInt().coerceAtMost((MAX_SECONDS*RATE).toInt())
         val u = .78*velocityValue(velocity)
         val touch = (m.getValue("TOUCH")+.35*(u-.78)).coerceIn(0.0,1.0)
-        val contact = (mat.soft*(mat.hard/mat.soft).pow(touch)*(261.625565/hz).pow(.65)).coerceIn(.000065,.004)
+        val contact = (mat.soft*(mat.hard/mat.soft).pow(touch)*(261.625565/hz).pow(.65)).coerceIn(mat.contactFloor,.004)
         return Plan(midi,hz,frames,sourceFrames,delay,heads,gain,
             5700.0*(1900.0/5700.0).pow(m.getValue("RETURN").toDouble()),hold,
             contact,t60,hasReturn && (desiredTail>MAX_TAIL_SECONDS || sourceFrames.toDouble()/RATE+desiredTail>MAX_SECONDS),

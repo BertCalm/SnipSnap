@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HALOBAR • Crotales audition</title>
+<style>
+body{font:17px/1.6 system-ui,sans-serif;max-width:980px;margin:auto;padding:28px 20px;background:#111a1d;color:#e4e8e0}
+a{color:#9cd5c5}audio{width:100%;max-width:640px}details,article{padding:12px;border-top:1px solid #42504e}
+summary{cursor:pointer;font-size:1.2rem}table{border-collapse:collapse}td,th{padding:8px;text-align:left;border-bottom:1px solid #42504e}
+</style>
+<nav><a href="../index.html">← Accepted three-voice audition</a></nav>
+<h1>HALOBAR • Crotales</h1>
+<p>A fine bronze strike → a long disc ring → dark rhythmic answers → a moving halo.</p>
+<p>The fifth voice is ready for listening. These are provisional studies; the original twelve factory presets retain their approval. Tubular bells remain the next planned voice. <a href="../glockenspiel/">Compare glockenspiel</a>.</p>
+<h2>Dry, then cosmic dub</h2>
+<p>The same six-note phrase, with a common gain across the dry/dub pair. Listen for a fine metal attack, a clear pitched ring and echoes that keep the source recognizable.</p>
+<audio controls preload="none" src="START-HERE.wav"></audio>
+<p><a href="phrases/crotales-dry.wav">Dry phrase WAV</a> · <a href="phrases/crotales-dub.wav">Dub phrase WAV</a></p>
+<p><a href="Crotales-Study-Kit.zip">Download the sixteen-pad MPC study kit</a>. Extract the whole folder and open its XPM. Eight notes are repeated dry and with dub; editable source recipes are included. Hardware loading remains unverified.</p>
+<p>The bronze-disc inspired approximation uses five musical shape modes at 1:2.01:3.94:6.10:8.60, with a longer root and near-octave ring than glockenspiel. These are proposed sound-design values, not measurements of a real crotale. TUNE spans sounding C6–C8 with C7 at its midpoint. TOUCH changes the mallet contact; MOTION moves the return without a vibraphone motor.</p>
+<h2>Registers and controls</h2>
+<p>Compare C6, C7 and C8 dry/dub, then the four preceding voices at the same C6. The study recipes are followed by control sweeps, interacting pairs, range limits and strike strengths.</p>
+{{CARDS}}
+<h2>Desktop render timing</h2>
+<table><tr><th>Calculation</th><th>Median ms</th><th>p95 ms</th></tr>
+<tr><td>Full fresh render</td><td>{{FRESH_MEDIAN}}</td><td>{{FRESH_P95}}</td></tr>
+<tr><td>Positive SPACE edit</td><td>{{SPACE_MEDIAN}}</td><td>{{SPACE_P95}}</td></tr></table>
+<p>Thirty measurements after eight warm-ups on the recorded JVM. SPACE values differ on every measurement; completed-output cache hits cannot satisfy it. Other controls require fresh preparation. These are desktop measurements, not phone timings.</p>
+<p>Mono 44.1 kHz, 4x nonlinear core, 72 BPM reference. Each note and its tail are finite, at most twelve seconds; HOLD never creates a seamless sampler loop. Native listening, phone performance and MPC hardware loading remain unverified.</p>
+<p><a href="manifest.json">Recipes, measurements and audio hashes</a> · <a href="metrics.csv">Metrics CSV</a></p>
+<script>const players=[...document.querySelectorAll('audio')];players.forEach(p=>p.addEventListener('play',()=>players.forEach(q=>{if(p!==q)q.pause()})));</script>
+</html>

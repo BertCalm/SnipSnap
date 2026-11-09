@@ -38,3 +38,31 @@ as its first argument. Add `render` as the second argument to exercise normal
 rendering and cache reuse for the 192 4x cases; the three 8x cases always use
 the diagnostic entry point. `generateHalobarAudition` independently rebuilds
 the 153 native audition recipes, WAVs, phrases and both timing measurements.
+
+## Provisional glockenspiel expansion
+
+`glockenspiel-native-validation.json` records the fourth voice's complete
+nine-module JVM gate, Android compilation, measured native audition and
+compatibility checks. It does not confer a listening verdict on the new voice.
+`glockenspiel-native-parity.tsv` contains the 69 provisional clip fingerprints;
+the original `native-parity.tsv` retains the 195 approved reference cases.
+Run `NativeReplay <glockenspiel TSV path> render "provisional glockenspiel audition"`
+with the synth runtime classpath to replay the new set without labelling it
+accepted. See [the glockenspiel guide](../../docs/HALOBAR_GLOCKENSPIEL.md).
+
+## Provisional crotales expansion
+
+`crotales-native-validation.json` records the fifth voice's complete JVM command,
+Android build and native audition. `crotales-native-parity.tsv` has 71 clip
+fingerprints: 63 crotales cases and eight same-note comparisons to earlier
+voices. These are replay cases, not a claim of 71 distinct source timbres or
+an owner listening verdict. Replay with `NativeReplay <crotales TSV path> render
+"provisional crotales audition"` on the synth runtime classpath. The 195-case
+accepted foundation and 69-case glockenspiel fixtures remain unchanged.
+
+The hosted Site uses lossless FLAC for the new individual streamed clips after
+checking decoded PCM16 against native WAVs. `crotales-hosted-pcm.tsv` maps each
+native WAV and hosted FLAC to file hashes and their common decoded PCM16 hash.
+Fingerprints in the native parity TSV describe
+Float32 engine output, before WAV quantization and either delivery container.
+The phrase and MPC downloads retain WAV. See [the crotales guide](../../docs/HALOBAR_CROTALES.md).

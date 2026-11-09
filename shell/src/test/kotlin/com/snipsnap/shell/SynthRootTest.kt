@@ -16,6 +16,8 @@ import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
 import com.snipsnap.synth.HalobarPresets
+import com.snipsnap.synth.HalobarPatch
+import com.snipsnap.synth.HalobarVoice
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
@@ -97,6 +99,8 @@ class SynthRootTest {
                 NacrePresets.all().first(),
                 FerryPresets.all().first(),
                 *HalobarPresets.all().toTypedArray(),
+                HalobarPatch("Glockenspiel Study", HalobarVoice.GLOCKENSPIEL, emptyMap()),
+                HalobarPatch("Crotales Study", HalobarVoice.CROTALES, emptyMap()),
             )
         }
 

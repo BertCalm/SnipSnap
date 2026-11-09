@@ -65,6 +65,7 @@ internal object PatchTypes {
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(
+        HalobarPatch.ENGINE to setOf(HalobarVoice.GLOCKENSPIEL.name,HalobarVoice.CROTALES.name),
         VentPatch.ENGINE to setOf(VentVoice.ROUND.name, VentVoice.WIRE.name, VentVoice.TEAR.name),
         ThumpPatch.ENGINE to setOf(ThumpVoice.SPARK.name),
     )

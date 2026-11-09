@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HALOBAR • Glockenspiel audition</title>
+<style>
+body{font:17px/1.6 system-ui,sans-serif;max-width:980px;margin:auto;padding:28px 20px;background:#111a1d;color:#e4e8e0}
+a{color:#9cd5c5}audio{width:100%;max-width:640px}details,article{padding:12px;border-top:1px solid #42504e}
+summary{cursor:pointer;font-size:1.2rem}table{border-collapse:collapse}td,th{padding:8px;text-align:left;border-bottom:1px solid #42504e}
+</style>
+<nav><a href="../index.html">← Accepted three-voice audition</a></nav>
+<h1>HALOBAR • Glockenspiel</h1>
+<p>A bright metal strike → inharmonic ringing → dark rhythmic answers → a moving halo.</p>
+<p>The fourth voice is ready for listening. These are provisional studies; the original twelve factory presets retain their approval. Crotales and tubular bells are the next planned voices.</p>
+<h2>Dry, then cosmic dub</h2>
+<p>The same six-note phrase, with a common gain across the dry/dub pair. Listen for a compact metal attack, a clear pitched ring and echoes that keep the source recognizable.</p>
+<audio controls preload="none" src="START-HERE.wav"></audio>
+<p><a href="phrases/glockenspiel-dry.wav">Dry phrase WAV</a> · <a href="phrases/glockenspiel-dub.wav">Dub phrase WAV</a></p>
+<p><a href="Glockenspiel-Study-Kit.zip">Download the sixteen-pad MPC study kit</a>. Extract the whole folder and open its XPM. Eight notes are repeated dry and with dub; editable source recipes are included. Hardware loading remains unverified.</p>
+<p>The steel-bar approximation uses four modes at 1:2.756:5.404:8.933, distinct from the vibraphone's tuned 1:4:10 spectrum. TUNE spans C4–C7 with C5 at its midpoint. TOUCH changes the mallet contact; MOTION moves the return without a vibraphone motor.</p>
+<h2>Registers and controls</h2>
+<p>Compare F4, F5 and F6 dry/dub, then the original voices at the same F5. The study recipes are followed by control sweeps, interacting pairs, range limits and strike strengths.</p>
+{{CARDS}}
+<h2>Desktop render timing</h2>
+<table><tr><th>Calculation</th><th>Median ms</th><th>p95 ms</th></tr>
+<tr><td>Full fresh render</td><td>{{FRESH_MEDIAN}}</td><td>{{FRESH_P95}}</td></tr>
+<tr><td>Positive SPACE edit</td><td>{{SPACE_MEDIAN}}</td><td>{{SPACE_P95}}</td></tr></table>
+<p>Thirty measurements after eight warm-ups on the recorded JVM. SPACE values differ on every measurement; completed-output cache hits cannot satisfy it. Other controls require fresh preparation. These are desktop measurements, not phone timings.</p>
+<p>Mono 44.1 kHz, 4x nonlinear core, 72 BPM reference. Each note and its tail are finite, at most twelve seconds; HOLD never creates a seamless sampler loop. Native listening, phone performance and MPC hardware loading remain unverified.</p>
+<p><a href="manifest.json">Recipes, measurements and audio hashes</a> · <a href="metrics.csv">Metrics CSV</a></p>
+<script>const players=[...document.querySelectorAll('audio')];players.forEach(p=>p.addEventListener('play',()=>players.forEach(q=>{if(p!==q)q.pause()})));</script>
+</html>
