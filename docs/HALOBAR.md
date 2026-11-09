@@ -109,7 +109,7 @@ checks passed. After the metadata correction, all 4,219 other-module JVM
 checks and 53 affected synth/recipe checks passed. The full synth
 suite was not repeated after that source-only correction; the DSP and twelve
 accepted recipe settings remain identical.
-The APK build and device-test compilation also passed. The latest
+The APK build and device-test compilation also passed. The accepted-foundation
 [acceptance ledger](../reference/halobar/native-acceptance.json) records the
 source tree, hashes and measurement samples.
 

@@ -104,6 +104,63 @@ cost to measure; no phone timing follows from a desktop result.
 - Heard: the original three-voice native audition has owner approval.
   Glockenspiel listening, phone performance and MPC hardware loading are open.
 
+## As built, 2026-11-09
+
+The native audition and separate sixteen-pad kit were generated from the fixed
+source snapshot and published at [the glockenspiel audition](https://halobar-native-audition.bertcalm.chatgpt.site/glockenspiel/).
+The accepted foundation remains available at the parent page. Static links,
+WAV headers and the MPC ZIP CRC passed checks. Browser QA was unavailable.
+
+| Measurement | Native result |
+|---|---:|
+| Individual audition clips | 69 |
+| Glockenspiel measured pitch cases | 10 |
+| Largest absolute glockenspiel root error | 0.095 cents |
+| Minimum glockenspiel pitch confidence | 0.917 |
+| Fresh render median / p95 | 232.1 / 246.0 ms |
+| Positive SPACE edit median / p95 | 11.0 / 13.2 ms |
+
+Timing used Temurin 21.0.13 with four visible processors, thirty measurements
+after eight warm-ups. Fresh calculation remains above 50 ms. SPACE edits reuse
+preparation and meet that target; no completed-output hit satisfies the test.
+The measurements do not establish phone performance.
+
+The complete `./gradlew --no-daemon test` command passed 9,221 cases across
+all nine JVM modules, with zero failures, errors or skips and no test exclusions.
+The first attempt found an outdated starter fixture that expected the new
+provisional voice in the accepted three-voice kit. The expected roster was
+corrected and a separate study-kit recipe test added before the passing full
+rerun. The glockenspiel DSP and audition audio did not change. While that attempt
+ran, the foundation PR merged; the expansion was integrated with development
+base `33788b3ba` before the final full run, with Android rebuilt afterward.
+Unchanged modules may be UP-TO-DATE. The separate 27-case focused source/preset
+run, 2-case CLI check and 120-case shelf/root integration check also passed.
+The separate four-case glockenspiel suite passed after the study-kit test was
+added. All sixteen exported study-kit WAVs regenerate byte-identically
+from their saved recipes.
+Android assembly and device-test compilation exited zero, and the APK's v2
+signature verified. No on-device tests or physical MPC loading are claimed.
+
+All 195 earlier Float32 reference cases still match. The 179 approved audition
+WAVs and 153 recipes are byte-identical, and all twelve factory parameter maps
+match their accepted references. Each of the 69 new audition clips also replays
+exactly through the production renderer. The original sixteen-pad starter is
+unchanged; the new glockenspiel kit is a separate study.
+
+The [build ledger](../reference/halobar/glockenspiel-native-validation.json)
+records the exact scopes, source hashes, APK, two timing distributions and
+publication. The tested code tree is `82c5a0148d92c73bba1c09c5d3667137ce8008bb`, published as
+[`c61d9f6fa`](https://github.com/BertCalm/SnipSnap/commit/c61d9f6fad7ab4d83d7ef2896903fb25d7b86e5e).
+The original [foundation ledger](../reference/halobar/native-acceptance.json)
+retains its earlier full-run failure and correction history; those counts are
+not added to this new full run. The provisional
+[Float32 fixture](../reference/halobar/glockenspiel-native-parity.tsv) can be
+replayed with `NativeReplay.java`, passing `render` and the label
+`"provisional glockenspiel audition"` after the TSV path.
+
+Glockenspiel remains pending the owner's listening verdict. Crotales and
+tubular bells remain planned, with no implementation claimed here.
+
 ## Why it is built this way
 
 - Inharmonic steel modes give glockenspiel its own ring before effects.

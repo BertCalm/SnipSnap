@@ -8,10 +8,11 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 
-/** Replays the accepted native Float32 fixture; use the synth runtime classpath. */
+/** Replays a native Float32 fixture; use the synth runtime classpath. */
 public class NativeReplay {
     public static void main(String[] args) throws Exception {
         boolean publicRender = args.length > 1 && args[1].equals("render");
+        String label = args.length > 2 ? args[2] : "accepted";
         var lines = Files.readAllLines(Path.of(args[0]));
         int cases = 0;
         for (String line : lines.subList(1, lines.size())) {
@@ -37,6 +38,6 @@ public class NativeReplay {
                 throw new AssertionError(fields[0] + " changed: " + samples.length + " frames, " + sha);
             }
         }
-        System.out.println("All " + cases + " native cases match the accepted Float32 fixture.");
+        System.out.println("All " + cases + " native cases match the " + label + " Float32 fixture.");
     }
 }
