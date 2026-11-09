@@ -36,6 +36,31 @@ class HalobarCommandTest {
         } finally { dir.deleteRecursively() }
     }
 
+    @Test fun `crotales study renders and replays a saved high note without factory promotion`() {
+        val dir=kotlin.io.path.createTempDirectory("crotales-cli").toFile()
+        val voice=HalobarVoice.CROTALES
+        try {
+            val out=dir.resolve("first")
+            assertEquals(0,SynthCommand.run(listOf("HALOBAR",voice.name,"--midi","108","--velocity","0.4",
+                "--macros","SPACE=.6,RETURN=.7","--out",out.path),PrintStream(ByteArrayOutputStream())))
+            val recipe=out.listFiles { f -> f.extension=="patch" }!!.single()
+            val saved=assertIs<HalobarPatch>(Patches.fromJsonText(recipe.readText()))
+            assertEquals(108,Halobar.midiFor(voice,saved.macros.getValue("TUNE")))
+            assertEquals("Crotales Study",saved.name)
+            assertTrue(HalobarPresets.forVoice(voice).isEmpty())
+            val replay=dir.resolve("replay")
+            assertEquals(0,SynthCommand.run(listOf("HALOBAR",voice.name,"--patch",recipe.path,
+                "--velocity","0.4","--out",replay.path),PrintStream(ByteArrayOutputStream())))
+            assertContentEquals(out.listFiles { f -> f.extension=="wav" }!!.single().readBytes(),
+                replay.listFiles { f -> f.extension=="wav" }!!.single().readBytes())
+            for(note in listOf(83,109)) {
+                val error=assertFailsWith<CliError> { SynthCommand.run(listOf("HALOBAR",voice.name,
+                    "--midi",note.toString(),"--out",dir.resolve("bad").path),PrintStream(ByteArrayOutputStream())) }
+                assertTrue(error.message.orEmpty().contains("84..108"))
+            }
+        } finally { dir.deleteRecursively() }
+    }
+
     @Test fun `native auditions retain note edits recipes and strike velocity across the family`() {
         val dir=kotlin.io.path.createTempDirectory("halobar-cli").toFile()
         try {

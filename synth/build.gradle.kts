@@ -3341,6 +3341,17 @@ tasks.register<JavaExec>("generateHalobarGlockenspielAudition") {
     args("${rootDir}/testkit/halobar-audition/glockenspiel")
 }
 
+/** Isolated listening gate for the provisional bronze-disc voice. */
+tasks.register<JavaExec>("generateHalobarCrotalesAudition") {
+    group = "distribution"
+    description = "Render HALOBAR crotales studies, diagnostics and a separate sixteen-pad MPC kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarCrotalesAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/halobar-audition/crotales")
+}
+
+
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"
     description = "Render the reference-informed dry revision without altering the rejected first study."
