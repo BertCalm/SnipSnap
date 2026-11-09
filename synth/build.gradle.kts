@@ -3466,3 +3466,13 @@ tasks.register<JavaExec>("generateBackwashPercussionComparison") {
     workingDir(rootDir)
     args("${rootDir}/testkit/backwash-percussion-comparison")
 }
+
+tasks.register<JavaExec>("generateBackwashPercussionRevision") {
+    group = "verification"
+    description = "Audition sharper cross-stick, larger bell, rattling jingles and a ringing ride."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BackwashPercussionRevisionAudition")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    args("${rootDir}/testkit/backwash-percussion-revision-2")
+}
