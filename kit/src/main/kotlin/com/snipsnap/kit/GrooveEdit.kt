@@ -261,9 +261,10 @@ object GrooveEdit {
      * How many programs YOURS still steps through with a tap on the live
      * segment. Past this, the same tap opens the list: the number of taps
      * to reach a program IS its place in the cycle, and nobody taps
-     * thirty times.
+     * thirty times. Three, because a tap-to-cycle control with more than
+     * three options is a sheet (clarity spec 7.3, "Removed patterns").
      */
-    const val CYCLE_UP_TO = 4
+    const val CYCLE_UP_TO = 3
 
     /** The longest a display name can be, so it fits the sub-line and a SONG row. */
     const val NAME_MAX = 12
