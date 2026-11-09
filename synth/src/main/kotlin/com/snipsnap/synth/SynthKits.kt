@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** The approved printed sixteen-pad cosmic drum bank. */
+    fun cosmicBreaks(): List<ArrangedPad> = CosmicBreaksKits.build()
+
     /** Candidate RIVET bank; not a factory starter until the expanded kit is heard. */
     fun rivet(size: Float? = null) = RivetKits.build(size)
 

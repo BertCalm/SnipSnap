@@ -3456,3 +3456,13 @@ tasks.register<JavaExec>("generateVelourKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("velourOutput").orNull ?: "${rootDir}/testkit/velour-kit")
 }
+
+
+tasks.register<JavaExec>("generateCosmicBreaksKit") {
+    group = "distribution"
+    description = "Export the approved sixteen-pad Cosmic Breaks sample kit in both MPC formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CosmicBreaksKitGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("cosmicBreaksOutput").orNull ?: "testkit/cosmic-breaks-kit")
+}

@@ -3373,3 +3373,11 @@ preview accompany the promotion; hardware validation remains pending.
 Backroom update: the user-accepted More Snap recipes now feed the six-pad candidate and its velocity layers. A separate four-bar phrase adds a second-bar variation and turnaround; the accepted two-bar render is retained. Factory promotion awaits MPC checks. See `docs/BOOM_BAP.md`.
 
 Backroom controls: an explicit SKIN SNARE model 2 maps Attack, Body, Wire and Brightness around the accepted More Snap midpoint. Original SKIN patches remain model 1. The two heard pair surfaces have 150 PCM24 regression pins; all-four interactions resolve centrally. See `docs/BOOM_BAP.md`.
+
+### Cosmic Breaks sample starter (2026-11-09)
+
+The approved browser Low orbit bank lands as a 16-pad fixed sample starter,
+not a new synth engine. Assets and checksums retain the printed source and FX;
+FRESH TAPE registration, MPC 2/3 generator and native read-back checks accompany
+it. One velocity layer; no editable synth recipe or shared-bus equivalence.
+See [COSMIC_BREAKS.md](COSMIC_BREAKS.md). Hardware acceptance remains open.
