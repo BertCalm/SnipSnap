@@ -9,7 +9,7 @@ GATECRASH is a kit family, not a SYNTH engine: there are no knobs to turn. The o
 two phrases per kit. The hits are SKIN, THUMP and ONSET drums as those engines already make them. What is new
 is one treatment stage, `Gatecrash`, which prints each pad through its own space.
 
-**Status: candidate, round 3. Rounds 1 and 2 were heard; round 3 is not yet heard.** Phone and MPC
+**Status: candidate, round 4. Rounds 1, 2 and 3 were heard; round 4 is not yet heard.** Phone and MPC
 hardware playback have not been exercised.
 
 **Round 1 (2026-11-10): rejected.** The owner's words: "That is harsh and doesn't sound like 80s drums at
@@ -29,7 +29,16 @@ closed in 10 to 25 ms.
 
 **Round 3:** every room now closes over 45 to 130 ms on a raised cosine (130 ms on the stone toms, 110 on the
 wall snare, 70 to 90 in Machine Pop, 45 to 60 in Electro Funk). The listening page adds the old sharp cut
-(15 ms) and a fade twice as long on the same three pads per kit. The
+(15 ms) and a fade twice as long on the same three pads per kit.
+
+**Round 3 heard (2026-11-10).** The owner's words: "I think we are missing some brightness." Round 2 had
+low-passed every return at 1.5 to 3.5 kHz and lowered the machine snares' SNAP and TONE, to keep round 1's
+static away. That was an over-correction: the static was mostly level.
+
+**Round 4:** the returns open to 2.2 to 6 kHz (the snares' rooms at 5.5 to 6 kHz, the toms' at 4 to 4.5), the
+machine snares get part of their SNAP and TONE back, the stone snare has more SNAP and the concert toms more
+TONE and CLICK. Room energy is unchanged. The listening page adds a darker room (about where round 3 was) and
+a brighter one on the same three pads per kit, at the same room energy. The
 [engineering specification](superpowers/specs/2026-11-10-gatecrash-gated-drum-kits.md) has the model, the
 measurements and what changed while building.
 
@@ -93,7 +102,8 @@ cut, and its peak against the dry hit. `verification.csv` lists what was checked
 - On the six concert toms the held room moves less than 4 dB from 30 ms to the end of a 340 ms hold.
 - Every room's energy is within 0.3 dB of its authored amount against the drum, and none is authored over
   +4 dB. In the first 15 ms the dry drum outweighs its room on every pad.
-- Every room that is within 7 dB of its drum has under 0.6 of the drum's share of energy above 4 kHz.
+- No room that is within 7 dB of its drum has a larger share of energy above 4 kHz than the drum has. (Round 2
+  held this at 0.6 of the drum's share; the owner then heard round 3 as lacking brightness.)
 - The gate takes the room to exact silence within 5 ms of the close time, and on the way down the room never
   falls more than 3 dB in a millisecond. No room closes in under 45 ms.
 - A ringing drum is one attack. The stone fill is twelve, the builds sixteen.

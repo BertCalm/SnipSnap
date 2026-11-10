@@ -317,3 +317,30 @@ is now "strike → the room stands level behind it → rounds off to silence".
 **Audition:** the three trial pads per kit gain "Sharp cut" (15 ms) and "Longer fade" (twice the authored
 close). Whether 110 to 130 ms is the roundness the owner means is not known; that is what the two buttons are
 for. Round 3 is not heard.
+
+## Round 4 (2026-11-10, after the third listen)
+
+**Heard, on round 3:** "I think we are missing some brightness."
+
+Round 2 fixed round 1's static with two moves at once: it cut the rooms' level by 12 to 16 dB and it
+low-passed them at 1.5 to 3.5 kHz, and it also lowered the machine snares' SNAP and TONE. The level was the
+larger fault (rooms at 97 to 99 percent of the pad). The tone cut went further than the fault needed, and the
+probe written for it (a room under 0.6 of its drum's share above 4 kHz) then held the kits dull.
+
+**Changed:**
+
+- `toneHz`: stone kick 1.5 to 2.2 kHz, wall snare 3.2 to 5.5, concert toms 2.4 to 4.0, cross stick 2.0 to 3.5,
+  ride 2.5 to 4.0; Machine Pop snare 3.5 to 6.0, toms 3.0 to 4.5, clap 2.5 to 5.0; Electro Funk snare 4.0 to
+  6.0, toms 2.8 to 4.2, clap 2.5 to 4.5.
+- Sources: Machine Pop's two snares get about half of the SNAP and TONE back that round 2 took; the wall
+  snare's SNAP is 0.68 (was 0.60); the concert toms' TONE is 0.62 and CLICK 0.55 (were 0.55 and 0.45).
+- Room energy (`roomDb`), close times and everything else are unchanged. `GatecrashKits.VERSION` is 4.
+
+**Probe changed, disclosed:** "every room is darker than its drum" (under 0.6 of the drum's share above
+4 kHz) is now "no room is brighter than its drum" (under 1.0). The owner's ear overruled the stricter number.
+The level probes that hold round 1's fault away are untouched. 22 of 22 pass.
+
+**Audition:** the three trial pads per kit gain "Darker room" (tone at 0.55 times, about round 3) and
+"Brighter room" (1.7 times). Each is re-calibrated to the same room energy, so the comparison is colour, not
+amount. Whether the missing brightness was in the rooms or in the drums themselves is not known; the page asks.
+Round 4 is not heard.

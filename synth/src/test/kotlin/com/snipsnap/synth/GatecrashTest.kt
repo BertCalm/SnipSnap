@@ -159,9 +159,11 @@ class GatecrashTest {
         assertTrue(runCatching { Gatecrash.Space(Gatecrash.Mode.STONE, roomDb = 12f) }.isFailure)
     }
 
-    @Test fun `every room is darker than its drum`() {
-        // A return as bright as a snare, held flat for 300 ms, is a burst of noise. Each room's share of
-        // energy above 4 kHz must be well under its drum's, wherever the drum has any top to speak of.
+    @Test fun `no room is brighter than its drum`() {
+        // Round 2 required every room to have under 0.6 of its drum's share above 4 kHz, to keep round 1's
+        // static away. The owner then heard round 3 as missing brightness, so that ratio was too strict:
+        // the static was mostly level, which `every room carries its authored energy` holds. What stays is
+        // the direction: a far microphone never hears more top than the drum has.
         for (kit in Kit.entries) for (role in 0 until GatecrashKits.HITS) {
             val space = GatecrashKits.spaceOf(kit, role) ?: continue
             // A room 7 dB or more under its drum cannot colour the pad, whatever its tone.
@@ -169,7 +171,7 @@ class GatecrashTest {
             val drum = brightness(GatecrashKits.dryRaw(kit, role, 1f, 0), 4_000f)
             if (drum < .05) continue
             val room = brightness(assertNotNull(GatecrashKits.stages(kit, role, 1f, 0)).ret, 4_000f)
-            assertTrue(room < drum * .6, "${kit.name} role $role: room $room against drum $drum above 4 kHz")
+            assertTrue(room < drum, "${kit.name} role $role: room $room against drum $drum above 4 kHz")
         }
     }
 

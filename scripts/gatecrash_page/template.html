@@ -78,7 +78,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
     <h1>GATECRASH</h1>
     <p class="gesture">strike → the room stands level behind it → rounds off to silence</p>
     <p>Three 1980s drum kits for the FRESH TAPE shelf. Each drum's room is held level behind it, then rounds off on the drum's own timing. Tap a pad to hear it.</p>
-    <p class="status"><strong>Round 3, not yet heard.</strong> Round 1 you heard as harsh static: its rooms were far louder and brighter than the drums, and that is fixed. On round 2 you said 80s drums round off at the end instead of cutting abruptly. The rooms now fade over 45 to 130 ms where they used to chop in 10 to 25 ms.</p>
+    <p class="status"><strong>Round 4, not yet heard.</strong> Round 1: harsh static (rooms far too loud). Round 2: endings cut too abruptly. Round 3: missing brightness. To kill the static I had dulled every room and the machine snares too far. Round 4 opens the rooms up from 1.5–3.5 kHz to 2.2–6 kHz and gives the snares and toms some snap back, with the room level left where it was.</p>
   </header>
 
   <div class="kits" id="kits" role="group" aria-label="Kit"></div>
@@ -100,6 +100,8 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <button class="act" id="bMore" type="button">More room (+6 dB)</button>
         <button class="act" id="bSharp" type="button">Sharp cut (15 ms)</button>
         <button class="act" id="bLong" type="button">Longer fade (×2)</button>
+        <button class="act" id="bDark" type="button">Darker room</button>
+        <button class="act" id="bBright" type="button">Brighter room</button>
         <button class="act" id="bStop" type="button">Stop</button>
       </div>
       <dl id="dNums"></dl>
@@ -118,6 +120,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
     <div>
       <h2>What to listen for</h2>
       <ol class="listen">
+        <li><strong>Is the brightness right now, and is it in the right place?</strong> On A02, A09 and A15, "Darker room" is about where round 3 was and "Brighter room" goes further. If "Play dry" already sounds dull, the missing brightness is in the drum itself and not the room, and I need to know that.</li>
         <li><strong>Does it sound like a drum now?</strong> Start with "Play dry" on a few pads. If the dry drum itself is wrong, the room cannot fix it, and I need to change the source.</li>
         <li><strong>How much room?</strong> The Wall Snare (A02), one tom (A09) and the fill (A15) each have "Less room" and "More room" buttons, 6 dB either side of what I built. Tell me which of the three you would keep.</li>
         <li><strong>Is it still harsh?</strong> If so, say which pad. Hats and crashes are now completely dry.</li>
@@ -147,7 +150,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <tr><td>Export: MPC 3</td><td class="ok">Verified by read-back</td><td>Velocity ranges, slice starts and cycle lengths read back from the exported track.</td></tr>
         <tr><td>Export: MPC 2</td><td class="open">Does not pass</td><td>MPC 2's format keeps only the first take of each zone.</td></tr>
         <tr><td>Phone and MPC hardware</td><td class="open">Not verified</td><td>Nothing has been played on a device.</td></tr>
-        <tr><td>Sound character</td><td class="open">Round 1 rejected</td><td>Heard as harsh, loud static. Round 2: ends cut too abruptly. Round 3 is waiting for you.</td></tr>
+        <tr><td>Sound character</td><td class="open">Round 1 rejected</td><td>Heard as harsh, loud static. Round 2: ends cut too abruptly. Round 3: missing brightness. Round 4 is waiting for you.</td></tr>
         <tr><td>Melodic voices, keygroups, chord tools, HOLD</td><td>Not applicable</td><td>These are drum kits with finite hits.</td></tr>
       </tbody>
     </table></div>
@@ -236,7 +239,7 @@ function drawDetail() {
   $("dNote").textContent = pad.slot > 14 ? "A phrase: every note re-opens one shared space, which shuts once after the last note."
     : pad.space === "DRY" ? "This pad is left dry on purpose." : "";
   $("bDry").disabled = !pad.dry; $("bTouch").disabled = !pad.touch;
-  $("bLess").hidden = !pad.trial; $("bMore").hidden = !pad.trial; $("bSharp").hidden = !pad.trial; $("bLong").hidden = !pad.trial;
+  $("bLess").hidden = !pad.trial; $("bMore").hidden = !pad.trial; $("bSharp").hidden = !pad.trial; $("bLong").hidden = !pad.trial; $("bDark").hidden = !pad.trial; $("bBright").hidden = !pad.trial;
 }
 function render() {
   document.documentElement.style.setProperty("--accent", accents[kit.id]);
@@ -250,6 +253,8 @@ $("bLess").onclick = () => play(url(kit, "less", pad.slot));
 $("bMore").onclick = () => play(url(kit, "more", pad.slot));
 $("bSharp").onclick = () => play(url(kit, "sharp", pad.slot));
 $("bLong").onclick = () => play(url(kit, "long", pad.slot));
+$("bDark").onclick = () => play(url(kit, "dark", pad.slot));
+$("bBright").onclick = () => play(url(kit, "bright", pad.slot));
 $("bStop").onclick = stop;
 $("bGroove").onclick = () => play(url(kit, "groove"));
 $("bFill").onclick = () => play(url(kit, "pad", 15));
