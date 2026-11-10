@@ -1,6 +1,6 @@
 # Vocabulary ledger
 
-**Status: draft for owner review. No label in the app has been renamed by this document.** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. Nothing here is law until the owner rules on Sections B, C and F. After that, the renames and a `ConventionTest` law that checks Section D come in a second pull request.
+**Status: owner has ruled on Section F (2026-11-09). Names in Sections A, B and C are final unless a row says open. This document renames nothing by itself; the renames land in PR 5b (navigation) and PR 5c (tools).** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. The rulings in Section F make the proposed names final. The renames and a `ConventionTest` law that checks Section D come in the pull requests after this one.
 
 This is part 1 of clarity PR 5 (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` section 7.2). Every `file:line` below was taken from this branch (origin/claude/mobile-mpc-drum-sampler-t58x74 at the time of writing), and a sample of 28 was re-read against the file. The spec's own line references (`ChopScreen.kt:1602`, `OrbitScreen.kt:1389`, `SnapScreen.kt:1439`) have drifted and are not reused.
 
@@ -45,24 +45,24 @@ Status values: **live** (drawn that way now), **partly** (some surfaces say the 
 | `MAKE` (place) | `CREATE` | not yet | `Navigation.kt:218`, `Places.kt:254` (HELP key) |
 | `SETUP` (bench) | `SETTINGS` | partly | The gear chip is already named `SETTINGS`: `Personality.kt:1200`, drawn at `Chrome.kt:264`. The bench label is still `SETUP`: `Navigation.kt:286`, `Chrome.kt:88` |
 | `TAPE PROPERTIES` (screen title) | `SETTINGS` | not yet | `PropertiesScreen.kt:101` |
-| `SNIPS` (bench) | `SAMPLES` | not yet | `Navigation.kt:268`, `SnipsScreen.kt:331`. Related words `SNIP`, `SNIPPED`, `BOUNCE TO SNIPS` are open in Section F |
+| `SNIPS` (bench) | `SAVED SAMPLES` (ruling 3) | not yet | `Navigation.kt:268`, `SnipsScreen.kt:331`. `SNIP` and `SNIPPED` stay as the verb (ruling 2). `BOUNCE TO SNIPS` becomes `BOUNCE TO SAMPLES` |
 | `PROJECT ▸ PADS`, `BEAT` | unchanged | live | `Navigation.kt:225,226`. The spec row only changes `OUT` |
 
 Notes:
 
 - The approved places become `LIBRARY`, `SAMPLE`, `PROJECT`, `CREATE`. The approved stages become `RECORD` and `CHOP` under SAMPLE, and `PADS`, `BEAT`, `EXPORT` under PROJECT.
-- Two collisions come from these approvals, `RECORD` (four meanings) and `SAMPLE` against `SAMPLES`. They are in Section C and Section F.
+- Two collisions come from these approvals, `RECORD` (four meanings) and `SAMPLE` against `SAMPLES`. Rulings 1 and 3 settle them: the dock keeps `LISTEN`, the bench is `SAVED SAMPLES`.
 
 ---
 
 ## Section B: Proposed renames for the owner
 
-Starts from the spec's Proposed table, then adds every other jargon or brand-ish name found. "Where" cites the label's definition or first drawn site. A `Keep` row gives the description the opening control would carry.
+Starts from the spec's Proposed table, then adds every other jargon or brand-ish name found. "Where" cites the label's definition or first drawn site. A `Keep` row for a brand-ish name (ruling 9) gives the description the opening control must carry. Those lines are required copy.
 
 | Today | Where | What it does | Proposed | Why |
 |---|---|---|---|---|
 | `PAD SHEET` | `Navigation.kt:248` | The screen where one pad is edited. | `PAD EDITOR` | The spec's word. The editor header already reads `PAD A01` (`PadSheetScreen.kt:3428`) and its back chip reads `PAD`. Only help text, a toast and spoken names say PAD SHEET: `KitScreen.kt:794`, `KitScreen.kt:1720`, `MakeScreen.kt:208`. |
-| `LISTEN · MIC` (dock) | `Places.kt:34`, `Places.kt:42` | Keeps a rolling 60 seconds of the mic or app audio so SNIP can save it. Nothing is recorded until SNIP. | Spec says `RECORD · MIC` and `RECORD · APP AUDIO`. Recommended: Keep `LISTEN` with the source shown. | See Section F, call 1. It already shows the source (`LISTEN · APP AUDIO`). |
+| `LISTEN · MIC` (dock) | `Places.kt:34`, `Places.kt:42` | Keeps a rolling 60 seconds of the mic or app audio so SNIP can save it. Nothing is recorded until SNIP. | Keep `LISTEN` with the source shown (ruling 1). | The spec said `RECORD · MIC`; the owner ruled against it. It already shows the source (`LISTEN · APP AUDIO`). |
 | `WRITE KIT` | `ExportWizard.kt:245` | Writes the kit's files to the card or phone. | `EXPORT KIT` | Spec. One verb for the whole export path. |
 | `WRITE SESSION` | `ExportScreen.kt:1232` | Writes the whole project as an MPC session. | `EXPORT PROJECT` | Spec. |
 | `WRITING — DO NOT EJECT` | `ExportWizard.kt:246`, `ExportScreen.kt:1232` | Busy label while files are written. | `EXPORTING…` | Spec. If the card warning is still needed it is a sentence, not the button label. |
@@ -72,27 +72,27 @@ Starts from the spec's Proposed table, then adds every other jargon or brand-ish
 | `BIN` | `Navigation.kt:269`, `BinScreen.kt:93` | Where deleted kits and samples wait before they are gone for good. | `TRASH` | Spec. Also removes the second BIN (Section C). |
 | `VERSIONS + BIN` | `Navigation.kt:261`, `KitScreen.kt:1047` | Earlier versions of a pad, with restore. | `VERSIONS` | Spec. |
 | `X-RAY` | `Places.kt:138`, `Navigation.kt:270`, `XRayScreen.kt:71` | Reads an MPC file and shows what is inside. Never imports it. | `INSPECT FILE` | Spec. The tool row already carries the line `INSPECT A FILE` (`Places.kt:139`). |
-| `DOUBLES` | `Places.kt:140`, `Navigation.kt:271`, `DoublesScreen.kt:123` | Finds pads across kits that sound nearly the same. Shows the distance, never a verdict (`Personality.kt:2582`). | `FIND SIMILAR SOUNDS` (spec: `FIND DUPLICATES`) | Section F, call 6. The tool never claims a pad is a duplicate. |
+| `DOUBLES` | `Places.kt:140`, `Navigation.kt:271`, `DoublesScreen.kt:123` | Finds pads across kits that sound nearly the same. Shows the distance, never a verdict (`Personality.kt:2582`). | `FIND SIMILAR SOUNDS` (spec: `FIND DUPLICATES`) | ruling 6. The tool never claims a pad is a duplicate. |
 | `BREED · MIX TWO KITS ▸` | `Personality.kt:1284`, `Personality.kt:1253` | Crosses this kit's recipes with a second kit to make a child kit. | `COMBINE KITS` | Spec. The button already carries the plain line. |
 | `REMIX BANK B` | `KitScreen.kt:977`, `Places.kt:192` | Fills an empty bank B with a varied twin of every bank A pad. | `MAKE BANK B VARIATIONS` | Spec. Related prose uses `EVIL TWIN` (`Personality.kt:1218`, `Personality.kt:1239`). |
-| `OUTSIDE` (box) | `PadSheetBoxes.kt:30`, `PadSheetScreen.kt:3988` | Plays the pad out of the speaker or through a pedal and records it back over the pad. | `RE-AMP AND ROOM` | Spec. Section F, call 7. |
-| `SNAP` (Create tool) | `Navigation.kt:274`, `Personality.kt:3408` | Turns a picture into a sound. | `PHOTO TO SOUND` (spec: `IMAGE TO SOUND`) | Section F, call 5. Frees `SNAP` for the Chop row. |
+| `OUTSIDE` (box) | `PadSheetBoxes.kt:30`, `PadSheetScreen.kt:3988` | Plays the pad out of the speaker or through a pedal and records it back over the pad. | `RE-AMP AND ROOM` | Spec. ruling 7. |
+| `SNAP` (Create tool) | `Navigation.kt:274`, `Personality.kt:3408` | Turns a picture into a sound. | `PHOTO TO SOUND` (spec: `IMAGE TO SOUND`) | ruling 5. Frees `SNAP` for the Chop row. |
 | `SURFACE` | `Navigation.kt:275`, `Personality.kt:3409` | A touch surface you play with a finger. It can print what you play. | `TOUCH SURFACE` | Spec. |
 | `GROOVE` (screen header) | `GrooveScreen.kt:3184`, `Chrome.kt:86` | The header of the BEAT stage. | `BEAT` | One name per screen. The stage is already `BEAT` (`Navigation.kt:226`). |
 | `ARRANGE` (screen header) | `ArrangeScreen.kt:248` | The header of the SONG bench. | `SONG` | One name per screen. The bench is `SONG` (`Navigation.kt:265`) and its door says `SONG ▸` (`GrooveScreen.kt:1962`). |
 | `GRV` | not found | The spec lists it. No `GRV` string exists in `app/` or `shell/` main code. | none | Could not verify. May be a short form on a surface not in this tree. |
 | `KIT` (AppScreen label) | `Chrome.kt:83` | The routing id for the pads screen. The `◄ KIT` back label only appears in comments (`Chrome.kt:164,194`). | `PADS` | The spec row (`PADS, KIT` back labels) looks already resolved on screen: back chips come from `Navigation.backChip` (`Navigation.kt:192-200`) and say `PADS`. Change the enum label so it cannot leak. Whether the `AppScreen` labels are drawn anywhere was not confirmed. |
-| `STACK THE TAKES` | `Navigation.kt:259`, `PadSheetScreen.kt:3617` | Layers a pad's earlier versions as soft-to-hard hit zones. | `STACK VERSIONS` | The things stacked are the versions (`VERSIONS`). Section F, call 10. |
+| `STACK THE TAKES` | `Navigation.kt:259`, `PadSheetScreen.kt:3617` | Layers a pad's earlier versions as soft-to-hard hit zones. | `STACK VERSIONS` | The things stacked are the versions (`VERSIONS`). ruling 10. |
 | `SOFT HITS` | `PadSheetScreen.kt:1821` | Adds quieter layers to a pad so soft taps sound different. | Keep. Line: `QUIETER LAYERS FOR SOFT TAPS` | Plain enough. Its toast says `GHOST LAYERS ON.` (`Personality.kt:1899`), which is renamed in Section C. |
-| `STRIKE STRIP` and `STRIKE ON/OFF`, `STAY`, `RETURN`, `VOL ON/OFF` | `StrikeStrip.kt:162,170,173` | A thumb strip on the pad grid. Where the thumb sits picks soft or hard layers. | `VELOCITY STRIP` | `STRIKE` names four things today (strip, FX, level, a starter). Section F, call 12. |
+| `STRIKE STRIP` and `STRIKE ON/OFF`, `STAY`, `RETURN`, `VOL ON/OFF` | `StrikeStrip.kt:162,170,173` | A thumb strip on the pad grid. Where the thumb sits picks soft or hard layers. | `VELOCITY STRIP` | `STRIKE` names four things today (strip, FX, level, a starter). ruling 12. |
 | `STRIKE FX` | `PadSheetScreen.kt:1858`, `PadSheetScreen.kt:4651` | Gives a pad dry, echo and room layers chosen by hit strength. | `FX BY VELOCITY` | Same call. |
-| `MUTATE` (box, button, toast) | `PadSheetBoxes.kt:31`, `PadSheetScreen.kt:4021`, `Personality.kt:2130` | Combines this pad with a partner sound to make a new hit. | `COMBINE SOUNDS` | Section F, call 4. The closed strip already says `MIX WITH ANOTHER SOUND` (`PadSheetBoxes.kt:194`). Undo becomes `UNDO COMBINE`. |
+| `MUTATE` (box, button, toast) | `PadSheetBoxes.kt:31`, `PadSheetScreen.kt:4021`, `Personality.kt:2130` | Combines this pad with a partner sound to make a new hit. | `COMBINE SOUNDS` | ruling 4. The closed strip already says `MIX WITH ANOTHER SOUND` (`PadSheetBoxes.kt:194`). Undo becomes `UNDO COMBINE`. |
 | `MORPH` (MUTATE mode) | `Mutate.kt:42`, `MutateSheet.kt:49` | The sound between the pad and the partner, with a MIX amount. | `BLEND` | SURFACE also has a MORPH (Section C). |
 | `TRANSPLANT` (MUTATE mode) | `Mutate.kt:42`, `MutateSheet.kt:51` | The pad's hit timing wearing the partner's overall tone. | `BORROW TONE` | Plain. A medical metaphor says nothing about sound. |
 | `DRIFT` | `PadSheetScreen.kt:2420`, `MutateSheet.kt:87` | One tap: picks a neighbouring sound from the shelf and blends toward it. | `RANDOM BLEND` | Says what it does. |
 | `ROULETTE` | `PadSheetScreen.kt:2298` | Deals a random partner from the shelf. | `RANDOM PARTNER` | Plain. |
-| `AQUARIUM` | `AquariumSection.kt:28`, `AquariumPanel.kt:81`, `KitScreen.kt:925`, `OrbitAquariumPanel.kt:27`, `SplitAquariumPanel.kt:34`, `SurfaceAquariumPanel.kt:25` | A six-effect rack with presets and 52 controls, on a pad, a kit's live mix, ORBIT, SPLIT and SURFACE. | Keep. Line: `SIX EFFECTS WITH PRESETS` | The pad editor strip already says `SIX EFFECTS · PRESETS · 52 CONTROLS` (`AquariumSummary.kt:14`). The other four panels carry no line. Section F, call 9. |
-| `ORBIT` / `ORBIT ▸` | `Navigation.kt:264`, `GrooveScreen.kt:1958`, `OrbitScreen.kt:2080` | A circular sequencer: loops of different lengths run against each other. | Keep. Line: `LOOP RINGS OF DIFFERENT LENGTHS AGAINST EACH OTHER` | The door `ORBIT ▸` has no line today. Section F, call 9. |
+| `AQUARIUM` | `AquariumSection.kt:28`, `AquariumPanel.kt:81`, `KitScreen.kt:925`, `OrbitAquariumPanel.kt:27`, `SplitAquariumPanel.kt:34`, `SurfaceAquariumPanel.kt:25` | A six-effect rack with presets and 52 controls, on a pad, a kit's live mix, ORBIT, SPLIT and SURFACE. | Keep. Line: `SIX EFFECTS WITH PRESETS` | The pad editor strip already says `SIX EFFECTS · PRESETS · 52 CONTROLS` (`AquariumSummary.kt:14`). The other four panels carry no line. ruling 9. |
+| `ORBIT` / `ORBIT ▸` | `Navigation.kt:264`, `GrooveScreen.kt:1958`, `OrbitScreen.kt:2080` | A circular sequencer: loops of different lengths run against each other. | Keep. Line: `LOOP RINGS OF DIFFERENT LENGTHS AGAINST EACH OTHER` | The door `ORBIT ▸` has no line today. ruling 9. |
 | `LOOP ▸` / `LOOP` (bench) | `Navigation.kt:266`, `GrooveScreen.kt:1966`, `Personality.kt:3150` | A six-track grid where samples are laid down as loops. | Keep. Line: `SIX TRACKS OF LOOPED SAMPLES` | The door has no line today. |
 | `SONG ▸` | `GrooveScreen.kt:1962`, `Navigation.kt:265` | Lays the beat out as a song you keep and edit. | Keep. Line: `ARRANGE THIS BEAT AS A SONG` | Door has no line. |
 | `GRAIN ▸` / `GRAIN FIELD` | `PadSheetScreen.kt:4181`, `Navigation.kt:257`, `GrainFieldScreen.kt:635` | Plays a pad as a cloud of tiny grains by dragging or tilting. | Keep. Line: `PLAY THIS SOUND AS GRAINS. DRAG OR TILT` | Hints exist on screen (`Personality.kt:3093`, `Personality.kt:3095`) but not on the door. |
@@ -114,7 +114,7 @@ Starts from the spec's Proposed table, then adds every other jargon or brand-ish
 | `TAIL` (chip) | `PadSheet.kt:76` | Removes the attack and keeps the wash. | Keep | Character names stay. |
 | `INSTANT KIT` | `TapeScreen.kt:1129`, `KitFromCard.kt:10` | One tap: chops the recording with defaults and puts the cuts on pads. | Keep | Plain. |
 | `CATCH A HIT` | `TapeScreen.kt:1166`, `KitFromCard.kt:47` | Lets you play the pad grid as the chopper. | Keep. Line: `PLAY THE PADS TO CUT AS YOU HEAR` | Brand-ish. Check `docs/CATCH.md` for the exact promise before the line is final. |
-| `READ AS GROOVE ▸`, `COPY GROOVE ▸` | `TapeScreen.kt:1184`, `TapeScreen.kt:1191` | Reads a recording's rhythm into a beat pattern / copies its feel. | Section F, call 11 | One name for pattern and groove. |
+| `READ AS GROOVE ▸`, `COPY GROOVE ▸` | `TapeScreen.kt:1184`, `TapeScreen.kt:1191` | Reads a recording's rhythm into a beat pattern / copies its feel. | ruling 11 | One name for pattern and groove. |
 | `FIND BREAK` | `TapeScreen.kt:1224` | Finds the drum break inside a long recording and sets IN and OUT around it. | Keep | Producer word. |
 | `GHOSTS` (CHOP) | `ChopScreen.kt:1488`, `Personality.kt:2506` | Cuts the gaps between the hits, each named for the hit before. | `BETWEEN HITS` | `GHOST` is also a treatment chip (Section C). |
 | `FOLD` (CHOP) | `ChopScreen.kt:1099`, `Personality.kt:2500` | One pad per sound, with repeated hits cycling under it. | Keep. Line: `ONE PAD PER SOUND` | Toast already says it (`Personality.kt:2500`). |
@@ -160,36 +160,36 @@ Each row is a name with more than one meaning. The primary use keeps the name; t
 |---|---|---|---|---|
 | 1 | `STACK` | Pad tool `STACK THE TAKES`: `Navigation.kt:259`, `PadSheetScreen.kt:3617` | MUTATE mode: `Mutate.kt:42`, `MutateSheet.kt:40` | `LAYER` |
 | 2 | `SPLICE` | Pad tool `TAPE SPLICE`, joins two takes at one cut: `Navigation.kt:258`, `TapeSpliceScreen.kt:313`, `PadSheetScreen.kt:3642` | MUTATE mode, the pad's attack plus the partner's body: `Mutate.kt:42`, `MutateSheet.kt:47` | `JOIN` |
-| 3 | `SPLIT` | Pad tool that takes a pad apart into sines, transient and air: `Navigation.kt:260`, `SplitScreen.kt:566`, `KitScreen.kt:1027` | (a) MUTATE mode, pad below a crossover and partner above: `MutateSheet.kt:48`. (b) CHOP row `SPLIT AT ITS NEXT HIT`: `ChopScreen.kt:1316`, `Personality.kt:2483`. (c) `AppScreen.SPLIT`: `Chrome.kt:100` (id only) | (a) `CROSSOVER` (spec: `SEPARATE`, see Section F, call 4). (b) `CHOP AT NEXT HIT` |
-| 4 | `ROOM` | A measured room kept on the shelf: `PadSheetBoxes.kt:56` (OUTSIDE), `PadSheetScreen.kt:5586` | (a) MUTATE mode: `Mutate.kt:42`, `MutateSheet.kt:50`. (b) Pedal `ROOM` (a drum-room reverb): `Pedals.kt:149`. (c) STRIKE FX slider: `PadSheetScreen.kt:4643`. (d) CONFLUENCE slider: `ConfluenceVoicesScreen.kt:273`. (e) Clock line `OCTAVE` or `ROOM`: `PadSheetScreen.kt:5031,5049`. (f) `RE-AMP AND ROOM`, if proposed in Section B is taken | (a) `ROOM TONE` (b) `REVERB` (c) `REVERB` (d) `REVERB` (e) `UNPITCHED`. Section F, call 8 |
+| 3 | `SPLIT` | Pad tool that takes a pad apart into sines, transient and air: `Navigation.kt:260`, `SplitScreen.kt:566`, `KitScreen.kt:1027` | (a) MUTATE mode, pad below a crossover and partner above: `MutateSheet.kt:48`. (b) CHOP row `SPLIT AT ITS NEXT HIT`: `ChopScreen.kt:1316`, `Personality.kt:2483`. (c) `AppScreen.SPLIT`: `Chrome.kt:100` (id only) | (a) `CROSSOVER` (spec: `SEPARATE`, see ruling 4). (b) `CHOP AT NEXT HIT` |
+| 4 | `ROOM` | A measured room kept on the shelf: `PadSheetBoxes.kt:56` (OUTSIDE), `PadSheetScreen.kt:5586` | (a) MUTATE mode: `Mutate.kt:42`, `MutateSheet.kt:50`. (b) Pedal `ROOM` (a drum-room reverb): `Pedals.kt:149`. (c) STRIKE FX slider: `PadSheetScreen.kt:4643`. (d) CONFLUENCE slider: `ConfluenceVoicesScreen.kt:273`. (e) Clock line `OCTAVE` or `ROOM`: `PadSheetScreen.kt:5031,5049`. (f) `RE-AMP AND ROOM`, if proposed in Section B is taken | (a) `ROOM TONE` (b) `REVERB` (c) `REVERB` (d) `REVERB` (e) `UNPITCHED`. ruling 8 |
 | 5 | `SNAP` | Chop row that pulls cuts onto the beat: `ChopScreen.kt:1550`, `Personality.kt:2498` | (a) Create tool: `Navigation.kt:274`. (b) Toast `SNAPPED TO THE HIT.`: `Personality.kt:475` (same meaning as the Chop row, fine). (c) Synth control `BACKROOM · MORE SNAP`: `BackroomSnareControls.kt:26` (a snare sound, fine). (d) Brand lockup SNIP and SNAP: `MarkLockup.kt:55,74` (brand, stays) | (a) `PHOTO TO SOUND`. The rest stay |
 | 6 | `SPREAD` | Pad tool, one sound across a bank in a scale: `PadSheetScreen.kt:4197`, `Personality.kt:1014` | ORBIT chip, even spacing of hits: `OrbitScreen.kt:1465`, `OrbitPanels.kt:84-86` | `SPACE EVENLY` |
 | 7 | `TAPE` | The place that holds recording and chopping: `Navigation.kt:216` (becomes `SAMPLE` by D5) | (a) Treatment chip, tape wear: `PadSheet.kt:67`. (b) Noun for any recording: `Places.kt:93`, `Personality.kt:284`, `Personality.kt:2773`. (c) Counter mode: `TapeScreen.kt:1296`. (d) Title `TAPE PROPERTIES`: `PropertiesScreen.kt:101` (D5 renames it) | After D5 only (a) remains, and it keeps its name as a character. Rename the noun uses in (b) and (c) as in Section B |
 | 8 | `CUT` | The Tape stage: `Navigation.kt:224`, `Places.kt:29` (becomes `CHOP` by D5) | (a) Cutoff abbreviation in the SHAPE strip: `PadSheetBoxes.kt:97` (`CUT 1.2K`). (b) Slider `CUT · AGAINST THE ATTACK`: `ChopScreen.kt:1538`. (c) Box legend: `ChopScreen.kt:1479` | (a) `CUTOFF` (b) `CHOP POINT` (c) `CHOP` |
 | 9 | `ORBIT` | The beat tool: `Navigation.kt:264`, `GrooveScreen.kt:1958` | SNAP line voice `ORBIT`: code only. The screen already says `AROUND`: `SnapScreen.kt:1528`; the enum is documented at `SnapScreen.kt:1499` | Already resolved on screen. Optionally rename the enum |
-| 10 | `RECORD` (created by D5) | `RECORD` stage, the sampling place: `Navigation.kt:223` (after D5) | (a) Dock `LISTEN` if renamed to `RECORD`: `Places.kt:34`. (b) BEAT recording of pad hits: `Personality.kt:175`, `GrooveScreen.kt:1930`. (c) `PAD CAPTURE` `RECORD`: `PadCaptureScreen.kt:553`. (d) MY VOICE `RECORD 6 SECONDS`: `MyVoiceScreen.kt:374` | Keep `LISTEN` on the dock (Section F, call 1). Rename (c) as `RECORD ON PAD` in the title. (b) and (d) are plain verbs inside one screen and stay |
-| 11 | `SAMPLE` and `SAMPLES` (created by D5) | `SAMPLES` bench, the list of saved sounds (today `SNIPS`): `Navigation.kt:268` | `SAMPLE` place (D5). Also `CAPTURE A SAMPLE`: `KitScreen.kt:1611`, `ONE SAMPLE`: `Personality.kt:1901`, `SAMPLED RANGE`: `SynthScreen.kt:5373`, `SIDE B: SAMPLES`: `ExportWizard.kt:66` | Section F, call 3 |
-| 12 | `SNIP` | The dock verb, saves the last 60 s: `Places.kt:60` | Noun `SNIP`, `SNIPS`, `SNIPPED`: `Navigation.kt:268`, `Places.kt:53`, `Personality.kt:2995` | Nouns become `SAMPLE`. Verb: Section F, call 2 |
+| 10 | `RECORD` (created by D5) | `RECORD` stage, the sampling place: `Navigation.kt:223` (after D5) | (a) Dock `LISTEN` if renamed to `RECORD`: `Places.kt:34`. (b) BEAT recording of pad hits: `Personality.kt:175`, `GrooveScreen.kt:1930`. (c) `PAD CAPTURE` `RECORD`: `PadCaptureScreen.kt:553`. (d) MY VOICE `RECORD 6 SECONDS`: `MyVoiceScreen.kt:374` | Keep `LISTEN` on the dock (ruling 1). Rename (c) as `RECORD ON PAD` in the title. (b) and (d) are plain verbs inside one screen and stay |
+| 11 | `SAMPLE` and `SAVED SAMPLES` (created by D5 and ruling 3) | `SAVED SAMPLES` bench, the list of saved sounds (today `SNIPS`): `Navigation.kt:268` | `SAMPLE` place (D5). Also `CAPTURE A SAMPLE`: `KitScreen.kt:1611`, `ONE SAMPLE`: `Personality.kt:1901`, `SAMPLED RANGE`: `SynthScreen.kt:5373`, `SIDE B: SAMPLES`: `ExportWizard.kt:66` | Settled by ruling 3 |
+| 12 | `SNIP` | The dock verb, saves the last 60 s: `Places.kt:60` | Noun `SNIP`, `SNIPS`, `SNIPPED`: `Navigation.kt:268`, `Places.kt:53`, `Personality.kt:2995` | Nouns become `SAMPLE`. Verb `SNIP` stays (ruling 2) |
 | 13 | `DUB` | Treatment chip, generation loss: `PadSheet.kt:79` | Export words `DUBBING…`, `READY TO DUB`: `ExportWizard.kt:257-259`; `DUB DONE`, `DUBBED.`: `Personality.kt:2615`, `Personality.kt:2607` | Export words become `EXPORT…` (Section B) |
 | 14 | `GHOST`, `GHOSTS` | CHOP segment, the gaps between hits: `ChopScreen.kt:1488`, `Personality.kt:2506` | (a) Treatment chip `GHOST`: `PadSheet.kt:76`. (b) `GHOST LAYERS ON.` in the SOFT HITS toast: `Personality.kt:1899`, `PadSheetScreen.kt:1821`. (c) `GHOSTS ON. MUTATE WANTS ONE SAMPLE`: `Personality.kt:2079` | The chip keeps its name (characters stay). CHOP becomes `BETWEEN HITS`. Toasts say `SOFT HITS` |
 | 15 | `CONTOUR` | Engine `CONTOUR`: `EngineCatalog.kt:94` | Treatment chip `CONTOUR`: `PadSheet.kt:79` | `FILTER SWEEP` (engines win) |
 | 16 | `FORK` | Engine `FORK`: `EngineCatalog.kt:74` | `FORK TO YOURS`: `GrooveScreen.kt:2166` | `COPY TO YOURS` |
 | 17 | `RING` | An ORBIT ring: `OrbitScreen.kt:1465` region | (a) Treatment chip `RING`: `PadSheet.kt:79`. (b) SNAP `RING ▸`: `SnapScreen.kt:1788` (a ring, same meaning). (c) OHM `RING`: `OhmControls.kt:121` | Chip becomes `RING MOD`. (b) is a real ORBIT ring and stays |
-| 18 | `SECTION` | A song section: `Personality.kt:1681`, `ArrangeScreen.kt:251` | Treatment chip `SECTION` (six independent players): `PadSheet.kt:88` | `SIX PLAYERS` |
+| 18 | `SECTION` | A song section: `Personality.kt:1681`, `ArrangeScreen.kt:251` | Treatment chip `SECTION` (six independent players): `PadSheet.kt:88` | Not renamed (ruling 14). The chip stays `SECTION`. Open: needs a sound check for a better name |
 | 19 | `MAKE` | The place (becomes `CREATE`): `Navigation.kt:218` | Box `MAKE` in the pad editor: `PadSheetBoxes.kt:32`. Synth button `MAKE`: `SynthScreen.kt:5399`. `MAKE_A_SOUND` heading: `Personality.kt:3392` | Box becomes `MAKE FROM THIS PAD` (Section B). The others are verbs inside a screen |
 | 20 | `◄ PAD` | The back chip over the pad editor: `Navigation.kt:248` (`backName = "PAD"`) | Stepper `◄ PAD` on SURFACE: `SurfaceScreen.kt:1350`. `◄ A01` stepper: `PadSheetScreen.kt:4240`. `PAD ◄`: `SplitScreen.kt:558` | Steppers say `PREVIOUS PAD`. The `◄` arrow is reserved for Back |
-| 21 | `TAKE`, `TAKES` | An earlier version of a pad: `TapeSpliceScreen.kt:313`, `StackTakesScreen.kt:339`, `Personality.kt:2278` | (a) Round robin count `TAKES`: `PadSheetScreen.kt:3589`, `KitRobinRow.kt:124`. (b) A recorded BEAT pass, `UNDO TAKE`: `GrooveScreen.kt:2161` | (a) `ALTERNATES`. (b) stays `TAKE`, it is the musician's word. Section F, call 10 |
+| 21 | `TAKE`, `TAKES` | An earlier version of a pad: `TapeSpliceScreen.kt:313`, `StackTakesScreen.kt:339`, `Personality.kt:2278` | (a) Round robin count `TAKES`: `PadSheetScreen.kt:3589`, `KitRobinRow.kt:124`. (b) A recorded BEAT pass, `UNDO TAKE`: `GrooveScreen.kt:2161` | (a) `ALTERNATES`. (b) stays `TAKE`, it is the musician's word. ruling 10 |
 | 22 | `BIN` | The trash: `Navigation.kt:269` | `VERSIONS + BIN` and prose `THE BIN HOLDS NO EARLIER TAKE`: `Navigation.kt:261`, `Personality.kt:2278` | Both go away under `TRASH` and `VERSIONS` |
 | 23 | `CATCH` | Tape tool `CATCH A HIT`: `TapeScreen.kt:1166` | First-run `CATCH YOUR FIRST SOUND`: `Places.kt:49` | `LISTEN FOR YOUR FIRST SOUND` |
-| 24 | `SNIP`, `GRAB`, `CATCH`, `LISTEN` | Four words for keeping what was just heard: `Places.kt:60`, `KeysScreen.kt:437`, `Places.kt:49`, `Places.kt:34` | Same action, different words | One verb family: `LISTEN` arms, `SNIP` saves (Section F, call 2). `GRAB` becomes `SAVE LAST 16 S` |
+| 24 | `SNIP`, `GRAB`, `CATCH`, `LISTEN` | Four words for keeping what was just heard: `Places.kt:60`, `KeysScreen.kt:437`, `Places.kt:49`, `Places.kt:34` | Same action, different words | One verb family: `LISTEN` arms, `SNIP` saves (ruling 2). `GRAB` becomes `SAVE LAST 16 S` |
 | 25 | `KEY` and `KEYS` | `KEY`, the kit's musical key: `Places.kt:201` | Bench `KEYS`, an on-screen keyboard: `Navigation.kt:277`. Synth heading `KEYS AND CHORDS`: `Personality.kt:676` | Bench becomes `KEYBOARD` |
 | 26 | `LIVE` | The kit's `LIVE` mix state: `KitScreen.kt:926` | Bench `LIVE` (camera): `Navigation.kt:278`. `LIVE ON`: `AquariumPerformancePanel.kt:79` | Bench becomes `LIVE CAMERA` |
 | 27 | `PAD` | The drum pad | A sustained pad sound: `PadSheetScreen.kt:4107`, `PadSheetScreen.kt:4129`. Engine kind `PADS & FX`: `EngineCatalog.kt:25` | `SUSTAIN ANY SOUND`. The engine kind can stay |
 | 28 | `MORPH` | SURFACE mode blending four corners: `TouchSurface.kt:23`, `SurfaceScreen.kt:1501` | MUTATE mode: `Mutate.kt:42` | `BLEND` |
 | 29 | `GATE` | Synth `GATE` and ORBIT `GATE LONGER`: `SynthScreen.kt:3631`, `OrbitScreen.kt:1584` (note length) | Treatment chip `GATE` (hit chopped on the grid): `PadSheet.kt:88`. Pedal `HUSH`, which is a noise gate: `Pedals.kt:169` | Chip becomes `TRANCE GATE`. `HUSH` becomes `NOISE GATE` |
 | 30 | `TOUCH` | Synth `TOUCH LAYERS`: `SynthScreen.kt:5382` | Pedal `TOUCH`, a touch-controlled wah: `Pedals.kt:126`. `TOUCH SURFACE` if proposed | Pedal becomes `TOUCH WAH` |
-| 31 | `GROOVE` | The rhythm read from a recording: `TapeScreen.kt:1184,1191`, `Personality.kt:1358` | Screen header `GROOVE`: `GrooveScreen.kt:3184`. `SHAPE THE GROOVE`: `GrooveScreen.kt:2559` | Header becomes `BEAT`. Section F, call 11 |
-| 32 | `STRIKE` | Strip that picks soft to hard layers: `StrikeStrip.kt:162` | `STRIKE FX` (`PadSheetScreen.kt:1858`), a starter named STRIKE FX (`docs/STRIKE_STRIP.md`), `STRIKE STRENGTH` (`StrikeStrip.kt:199`) | `VELOCITY STRIP`, `FX BY VELOCITY`. Section F, call 12 |
+| 31 | `GROOVE` | The rhythm read from a recording: `TapeScreen.kt:1184,1191`, `Personality.kt:1358` | Screen header `GROOVE`: `GrooveScreen.kt:3184`. `SHAPE THE GROOVE`: `GrooveScreen.kt:2559` | Header becomes `BEAT`. ruling 11 |
+| 32 | `STRIKE` | Strip that picks soft to hard layers: `StrikeStrip.kt:162` | `STRIKE FX` (`PadSheetScreen.kt:1858`), a starter named STRIKE FX (`docs/STRIKE_STRIP.md`), `STRIKE STRENGTH` (`StrikeStrip.kt:199`) | `VELOCITY STRIP`, `FX BY VELOCITY`. ruling 12 |
 | 33 | `VOICE`, `VOICES` | A synth engine's voice (kick, snare, ...): `Personality.kt:666` | `MY VOICE` (a person's voice): `Navigation.kt:282`. `CONFLUENCE VOICES`: `Navigation.kt:284`. SURFACE `VOICES`: `SurfaceScreen.kt:123` | Keep. All three are described on their rows. SURFACE `VOICES` needs a plain line. Not verified what it counts |
 | 34 | `INSTRUMENT` | A playable 16-pad sound made by you: `Navigation.kt:276` | Engines are described as instrument identities (`docs/` and spec). Expansion contents `INSTRUMENTS IN IT`: `Personality.kt:711` | Same meaning in practice. Keep |
 | 35 | `EXPORT` (spec rows) | The `EXPORT` stage after D5 | `OUT`, `EXPORT SONG` (`ArrangeScreen.kt:422`), `EXPORT ▸` door (`Personality.kt:590`), `MIDI EXPORT` (`GrooveScreen.kt:1359`) | Same verb, different object. Each says its object. Keep |
@@ -237,7 +237,7 @@ Every label in `Navigation.kt`. The last column says where the name goes next.
 | `ORBIT` | `ORBIT` | PROJECT | Circular sequencer. | Keep with line (B) |
 | `SONG` | `SONG` | PROJECT | Lay the beat out as a song. | Keep |
 | `LOOP` | `LOOP` | PROJECT | Six-track loop grid. | Keep with line (B) |
-| `SNIPS` | `SNIPS` | SHELF | The list of saved sounds. | Approved rename to `SAMPLES` |
+| `SNIPS` | `SNIPS` | SHELF | The list of saved sounds. | Final: `SAVED SAMPLES` (ruling 3) |
 | `BIN` | `BIN` | SHELF | Deleted kits and samples. | Proposed `TRASH` (B) |
 | `X-RAY` | `X-RAY` | SHELF | Inspect an MPC file. | Proposed `INSPECT FILE` (B) |
 | `DOUBLES` | `DOUBLES` | SHELF | Find similar-sounding pads. | Proposed (B, F6) |
@@ -478,86 +478,21 @@ Character names keep their names. Descriptions come from the comments beside eac
 
 ---
 
-## Section F: Decisions for the owner
+## Section F: Rulings (owner, 2026-11-09)
 
-Only the calls that are genuinely open. Each lists options with the recommendation first.
+The owner took the recommended option (A) on all 14 decisions, with one exception in ruling 14. Rulings 1 to 14 are law for the renames in clarity PR 5. Engine descriptions in Section E are still a draft and need a sound check.
 
-**1. Dock chip: `LISTEN` or `RECORD`** (`Places.kt:34,42`)
-
-- A. Keep `LISTEN · MIC` and `LISTEN · APP AUDIO` (recommended). The chip arms a rolling 60 seconds and nothing is saved until SNIP, so RECORD would say something untrue. It also avoids a fourth `RECORD` after the new `RECORD` stage, BEAT's record and PAD CAPTURE's record.
-- B. `RECORD · MIC` and `RECORD · APP AUDIO` (the spec's proposal).
-- C. `BUFFER · MIC`.
-
-**2. Dock verb `SNIP` once `SNIPS` becomes `SAMPLES`** (`Places.kt:60`, `Places.kt:53`, `Personality.kt:2995`)
-
-- A. Keep `SNIP` and `SNIPPED` as the verb, since the logo is built on it (`MarkLockup.kt:55`). Every noun says `SAMPLE`: `BOUNCE TO SAMPLES`. The toast `SNIPPED` stays.
-- B. `SAVE LAST 60 S` and the toast `SAVED.` Removes the last SNIP word and costs the brand link.
-- C. `KEEP`.
-
-**3. The place `SAMPLE` and the bench `SAMPLES`**
-
-- A. Name the bench `SAVED SAMPLES` everywhere (recommended). Singular and plural for two different things is the kind of collision the rule forbids.
-- B. Keep `SAMPLES` as approved and accept singular against plural.
-
-**4. MUTATE mode names** (`MutateSheet.kt:40-51`)
-
-- A. `LAYER`, `JOIN`, `CROSSOVER`, `ROOM TONE`, `BLEND`, `BORROW TONE` (recommended). The spec's `SEPARATE` for the SPLIT mode would read like the SPLIT tool, which takes one pad apart. The mode does the opposite: pad lows with the partner's highs.
-- B. The spec's four: `LAYER`, `JOIN`, `SEPARATE`, `ROOM TONE`, leaving `MORPH` and `TRANSPLANT`.
-- C. Plain action phrases: `ADD ON TOP`, `JOIN AT THE HIT`, `LOWS + HIGHS`, `ROOM TONE`, `BLEND`, `BORROW TONE`.
-
-**5. The name `MUTATE` itself** (`PadSheetBoxes.kt:31`, `Personality.kt:2130`)
-
-- A. `COMBINE SOUNDS`, undo is `UNDO COMBINE` (recommended). It pairs with `COMBINE KITS` for the kit level.
-- B. Keep `MUTATE` and always show the line `MIX WITH ANOTHER SOUND` on the box. Today the line shows only while nothing is applied (`PadSheetBoxes.kt:194`).
-- C. `MIX SOUNDS`. `MIX` is also the name of a knob in the same box.
-
-**6. `DOUBLES`** (`Places.kt:140`)
-
-- A. `FIND SIMILAR SOUNDS` (recommended). The tool shows a distance and never says a pad is a duplicate (`Personality.kt:2582`).
-- B. `FIND DUPLICATES` (the spec's proposal). Clearer at a glance, but it overclaims.
-
-**7. The Create tool `SNAP`** (`Navigation.kt:274`)
-
-- A. `PHOTO TO SOUND` (recommended). The tool already says PHOTO on its buttons (`PHOTO KIT`, `PHOTO CHORD`, `TAKE PHOTO`).
-- B. `IMAGE TO SOUND` (the spec's proposal).
-- C. Keep `SNAP` with the line `A PICTURE INTO A SOUND` (already on its Create row), and rename the Chop row to `SNAP TO BEAT`.
-
-**8. `OUTSIDE` and the word `ROOM`** (`PadSheetBoxes.kt:56`, Section C row 4)
-
-- A. `RE-AMP AND ROOM`, and `ROOM` means one thing, a measured room kept on the shelf. Every amount slider and the pedal say `REVERB` (recommended).
-- B. Keep `OUTSIDE` with the line `PLAY THE PAD OUT A SPEAKER AND RECORD IT BACK`, and leave the ROOM sliders.
-- C. `RE-RECORD`. Plain, but loses `RE-AMP`, which a guitarist knows.
-
-**9. Brand-ish names that stay** (`AQUARIUM`, `ORBIT`, `LOOP`, `SONG`, `GRAIN FIELD`, `SCULPT`, `CONFLUENCE VOICES`, `MY VOICE`)
-
-- A. Keep all of them and add the one-line description to every control that opens one (recommended). Section B gives the lines. `ORBIT ▸`, `LOOP ▸`, `SONG ▸`, `GRAIN ▸` and four of the five AQUARIUM panels have no line today.
-- B. Rename `AQUARIUM` to `EFFECTS RACK` and `ORBIT` to `RING SEQUENCER`, keep the rest.
-- C. Rename all of them to descriptions.
-
-**10. `TAKES` and `VERSIONS`** (Section C rows 21 and 22)
-
-- A. Earlier states of a pad are `VERSIONS` everywhere (`STACK VERSIONS`). `TAKE` stays for a recorded BEAT pass. The round robin count becomes `ALTERNATES` (recommended).
-- B. Keep `TAKES` for pad history and rename the bench `VERSIONS` to `TAKES`.
-- C. Leave it.
-
-**11. `GROOVE` and `PATTERN`** (Section C row 31)
-
-- A. `PATTERN` is the notes in a beat. `GROOVE` is only a rhythm read from a recording. The screen header becomes `BEAT`. `READ AS GROOVE` and `COPY GROOVE` stay (recommended).
-- B. One word, `PATTERN`: `READ AS PATTERN`, `COPY PATTERN`.
-- C. One word, `GROOVE`.
-
-**12. `STRIKE`** (`StrikeStrip.kt:162`, `PadSheetScreen.kt:1858`)
-
-- A. `VELOCITY STRIP` and `FX BY VELOCITY` (recommended). Producers know velocity, and the pad editor already says `PAD VELOCITY` (`PadVelocityGroup.kt:43`).
-- B. Keep `STRIKE` and add the line `PICK SOFT OR HARD LAYERS WITH A THUMB`.
-- C. `STRENGTH STRIP` and `FX BY STRENGTH`.
-
-**13. Tape metaphors in prose** (`Places.kt:93`, `Personality.kt:284`, `Personality.kt:2773`, `TapeScreen.kt:1296`)
-
-- A. Rewrite them in the same pull request as the approved `SAMPLE` rename: `LISTENING`, `NEW SAMPLE`, `SHOW COUNTER` (recommended). After `SAMPLE` is approved, "on tape" names nothing the player can see.
-- B. Leave them until the approved renames have landed, then sweep.
-
-**14. Chips that clash with an engine or another tool** (`CONTOUR`, `RING`, `SECTION`, `GATE`, pedal `HUSH`; Section C rows 15, 17, 18, 29)
-
-- A. Rename the chip and keep the other use (recommended): `FILTER SWEEP`, `RING MOD`, `SIX PLAYERS`, `TRANCE GATE`, `NOISE GATE`. This follows "engines win" and the rule that each name means one thing.
-- B. Keep the chips, as the spec says character chips keep their names, and accept the duplicates because each sits on a different screen from the thing it clashes with. Rename only the non-chip uses (`FORK TO YOURS`, CHOP `GHOSTS`).
+1. **Dock chip.** Keep `LISTEN · MIC` and `LISTEN · APP AUDIO`.
+2. **Dock verb.** Keep `SNIP` and `SNIPPED` as the verb. Every noun says `SAMPLE`, for example `BOUNCE TO SAMPLES`.
+3. **Bench name.** The bench is `SAVED SAMPLES` everywhere. The place is `SAMPLE`.
+4. **MUTATE modes.** `LAYER`, `JOIN`, `CROSSOVER`, `ROOM TONE`, `BLEND`, `BORROW TONE`.
+5. **MUTATE itself.** `COMBINE SOUNDS`, undo is `UNDO COMBINE`.
+6. **DOUBLES.** `FIND SIMILAR SOUNDS`.
+7. **SNAP (Create tool).** `PHOTO TO SOUND`. The Chop row keeps `SNAP`.
+8. **OUTSIDE and ROOM.** `RE-AMP AND ROOM`. `ROOM` means only a measured room kept on the shelf. Amount sliders and the pedal say `REVERB`.
+9. **Brand-ish names.** Keep `AQUARIUM`, `ORBIT`, `LOOP`, `SONG`, `GRAIN FIELD`, `SCULPT`, `CONFLUENCE VOICES`, `MY VOICE`. Every control that opens one carries the one-line description from Section B. These lines are required copy.
+10. **TAKES and VERSIONS.** Earlier states of a pad are `VERSIONS` (`STACK VERSIONS`). `TAKE` stays for a recorded BEAT pass. The round robin count is `ALTERNATES`.
+11. **GROOVE and PATTERN.** The screen header is `BEAT`. `READ AS GROOVE` and `COPY GROOVE` stay.
+12. **STRIKE.** `VELOCITY STRIP` and `FX BY VELOCITY`.
+13. **Tape metaphors in prose.** Rewritten with the `SAMPLE` rename: `LISTENING`, `NEW SAMPLE`, `SHOW COUNTER`, and the other "on tape" prose.
+14. **Chips that clash.** `CONTOUR` becomes `FILTER SWEEP`, `RING` becomes `RING MOD`, `GATE` becomes `TRANCE GATE`, and the pedal `HUSH` becomes `NOISE GATE`. **Exception: the chip `SECTION` is not renamed to `SIX PLAYERS`.** It stays `SECTION` for now. Open: needs a sound check for a better name. The song and ARRANGE uses of `SECTION` keep their name, as does everything else that clashes outside the chip row. `FORK TO YOURS` becomes `COPY TO YOURS` and CHOP `GHOSTS` becomes `BETWEEN HITS` under the same rule.
