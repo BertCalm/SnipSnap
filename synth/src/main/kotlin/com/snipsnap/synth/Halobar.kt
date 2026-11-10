@@ -8,7 +8,7 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE, GLOCKENSPIEL, CROTALES }
+enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE, GLOCKENSPIEL, CROTALES, TUBULAR_BELLS }
 
 /**
  * A clear mallet strike hands its body to rhythmic echoes, then a moving halo.
@@ -23,6 +23,7 @@ enum class HalobarVoice { VIBRAPHONE, MARIMBA, XYLOPHONE, GLOCKENSPIEL, CROTALES
  * Ratios reuse Modes' sourced tuned-bar tables (1:4:10 and 1:3:6), plus its
  * free-free metal bar (1:2.756:5.404:8.933) for glockenspiel. Crotales
  * uses a separate five-mode, center-weighted-disc inspired musical shape.
+ * Tubular bells adds a lower, long root-led bell shape.
  * Contact, gains, decays and processing laws are musical shapes, not measured
  * materials. The first three voices began in the Python proof. The motor is amplitude modulation, not fan geometry.
  * HOLD is finite, including its reserved top; a long filed LOOP is not a wrap.
@@ -61,6 +62,7 @@ object Halobar {
     fun minimumMidi(voice: HalobarVoice) = when(voice) {
         HalobarVoice.CROTALES -> 84
         HalobarVoice.GLOCKENSPIEL -> 60
+        HalobarVoice.TUBULAR_BELLS -> 48
         HalobarVoice.XYLOPHONE -> 57
         else -> MIN_MIDI
     }
@@ -111,6 +113,11 @@ object Halobar {
         // musical shapes; the near octave and longer ring distinguish bars.
         HalobarVoice.CROTALES -> Material(doubleArrayOf(1.0,2.01,3.94,6.10,8.60),
             doubleArrayOf(1.0,.38,.23,.13,.07), doubleArrayOf(8.0,4.8,2.8,1.6,.9), .0018,.00025,.000094)
+        // Root-led tubular-bell shape: octave/chime pair over a low, long body.
+        // Not a measured tube or a virtual-pitch reconstruction. Keeping an
+        // explicit root makes chord voicings and keygroup roots unambiguous.
+        HalobarVoice.TUBULAR_BELLS -> Material(doubleArrayOf(1.0,2.0,2.756,4.0,5.404,8.933),
+            doubleArrayOf(1.0,.28,.12,.10,.06,.03), doubleArrayOf(9.0,6.0,4.5,3.0,2.0,1.0), .0030,.00040,.00012)
     }
     private fun ratios(type: Modes.Material) = Modes.tableFor(type).map { it.ratio.toDouble() }.toDoubleArray()
 
@@ -228,6 +235,24 @@ object Halobar {
         return Snip(samples,1,RATE)
     }
 
+    /** A fresh mallet landing; take zero preserves every existing model-1 byte. */
+    fun renderTake(voice: HalobarVoice, macros: Map<String, Float>, velocity: Float,
+        seed: Int, take: Int, model: Int = MODEL_VERSION): Snip {
+        require(take >= 0) { "a take is 0 or more" }
+        require(model == MODEL_VERSION) { "unsupported HALOBAR model $model" }
+        if (take == 0) return render(voice, macros, velocity, model)
+        cancelCheck()
+        val m = settled(macros, voice)
+        val v = velocityValue(velocity).toFloat()
+        val identity = Dsp.seedFor("HALOBAR_LANDING_V1", seed, take)
+        val rng = Random(identity)
+        val p = plan(voice, m, v).let { it.copy(contactSeconds = it.contactSeconds * (1.0 + .14 * rng.nextDouble())) }
+        if (v == 0f) return Snip(FloatArray(p.frames), 1, RATE)
+        // Bypass both caches: a nonreference landing must never reuse take zero.
+        return Snip(finish(prepare(voice, m, p, v, Dsp.OVERSAMPLE, identity),
+            m.getValue("SPACE"), normalize = true).samples, 1, RATE)
+    }
+
     /** Fresh calculation for diagnostics and timing; never satisfied by completed-audio cache. */
     internal fun renderProbe(voice: HalobarVoice, macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f, normalize: Boolean = false, oversample: Int = Dsp.OVERSAMPLE): Probe {
@@ -239,13 +264,13 @@ object Halobar {
     }
 
     private fun prepare(voice: HalobarVoice,m: Map<String,Float>,p: Plan,velocity: Float,
-        oversample: Int): Stems {
+        oversample: Int, landing: Int? = null): Stems {
         val rate=RATE*oversample
         // A finite source needs only a short filter flush. Processing seconds of
         // exact zero through Float IIRs enters subnormal arithmetic on the JVM.
         val dry=FloatArray(min(p.frames*oversample,p.sourceFrames*oversample+256))
         val send=if(m.getValue("SPACE")>0f) FloatArray(p.frames*oversample) else null
-        val kernelNorm=bars(voice,m,p,velocity,rate,oversample,dry,send)
+        val kernelNorm=bars(voice,m,p,velocity,rate,oversample,dry,send,landing)
         val loopPeak=if(send!=null) echoes(send,m,p,rate,oversample) else 0.0
         // Only nonlinear audio needs 4x. The allpasses and finite convolution
         // are linear at the delivery rate, with ample Nyquist guard for the LFO.
@@ -300,7 +325,7 @@ object Halobar {
     }
 
     private fun bars(voice: HalobarVoice,m: Map<String,Float>,p: Plan,v: Float,
-        rate: Int,oversample: Int,dry: FloatArray,send: FloatArray?): Double {
+        rate: Int,oversample: Int,dry: FloatArray,send: FloatArray?,landing: Int? = null): Double {
         val material=material(voice)
         val length=max(5,(p.contactSeconds*rate).roundToInt())
         val force=FloatArray(length+(.002*rate).roundToInt())
@@ -311,11 +336,12 @@ object Halobar {
         val norm=force.sumOf { abs(it.toDouble()) }
         val u=.78*velocityValue(v)
         val amplitude=.63*u
+        val landingRng = landing?.let { Random(it) }
         val states=Array(material.ratios.size) { index ->
             val hz=p.hz*material.ratios[index]
             val r=exp(-LOG_1000/(p.modeT60[index]*rate))
             val theta=TWO_PI*hz/rate
-            doubleArrayOf(2*r*cos(theta),-r*r,material.gains[index]*r*sin(theta),0.0,0.0,
+            doubleArrayOf(2*r*cos(theta),-r*r,(material.gains[index] * (landingRng?.let { .96 + .08 * it.nextDouble() } ?: 1.0))*r*sin(theta),0.0,0.0,
                 if(hz<.44*RATE)1.0 else 0.0)
         }
         val end=min(dry.size,p.sourceFrames*oversample)
@@ -343,7 +369,8 @@ object Halobar {
             closed*=openDecay
             val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
         }
-        val noise=Dsp.Noise(Dsp.seedFor("HALOBAR_SOURCE_V1",voice.name,p.midi))
+        val noise=Dsp.Noise(if (landing == null) Dsp.seedFor("HALOBAR_SOURCE_V1",voice.name,p.midi)
+            else Dsp.seedFor("HALOBAR_SOURCE_TAKE_V1",voice.name,p.midi,landing))
         val hitFrames=(RATE*.009).toInt()
         val hit=FloatArray(hitFrames)
         val lp1=Dsp.FixedOnePole(min(8500.0,p.hz*9).toFloat(),RATE)

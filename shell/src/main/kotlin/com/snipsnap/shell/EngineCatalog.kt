@@ -72,7 +72,7 @@ object EngineCatalog {
         "GLINT" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.VOICES), "Buzzy synth tones with a sweeping, vowel-like peak"),
         "SIREN" to EngineEntry(listOf(EngineCategory.PADS), "Dub siren: wails, trills, lasers and bird chirps"),
         "FORK" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Electric piano and vibraphone-style bars"),
-        "HALOBAR" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Vibraphone, marimba and xylophone with rhythmic dub echoes"),
+        "HALOBAR" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Six mallet voices with rhythmic dub echoes"),
         "FLOTILLA" to EngineEntry(listOf(EngineCategory.PADS), "Slow looping textures of soft pulses and wooden knocks"),
         "AEROSTAT" to EngineEntry(listOf(EngineCategory.WINDS, EngineCategory.DRUMS), "Tube knock followed by a rising, whistling air tone"),
         "TREMOR" to EngineEntry(listOf(EngineCategory.DRUMS), "Low drum hits with rattling beads and ringing strings"),

@@ -1,0 +1,9 @@
+{
+  "programs": 3,
+  "midiScores": 3,
+  "softwareReferenceClips": 9,
+  "hardwareVerified": false,
+  "bytes": 1666653,
+  "sha256": "7dd049bb308cbc8276b756020d3f332b61a6907abc35eb49608bd2c149ded36a",
+  "productionMpcAndMidiReadersPassed": true
+}

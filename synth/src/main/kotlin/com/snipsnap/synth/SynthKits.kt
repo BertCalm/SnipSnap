@@ -480,6 +480,19 @@ object SynthKits {
         } }
     }
 
+    /** Six-voice candidate shelf: paired dry/dub roots, then four melodic answers. */
+    fun halobarCompleteStudy(): List<ArrangedPad?> {
+        fun landed(voice: HalobarVoice, midi: Int, dub: Boolean): ArrangedPad {
+            val family = voice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+            val patch = HalobarPatch("$family ${Scales.nameOf(midi)} ${if (dub) "Dub" else "Dry"}", voice,
+                Halobar.defaults(voice) + mapOf("TUNE" to Halobar.tuneForMidi(voice, midi),
+                    "SPACE" to if (dub) .6f else 0f, "RETURN" to .62f))
+            return pad(patch, Halobar.drumClassFor(voice, patch.macros)).copy(displayName = patch.name, oneShot = true)
+        }
+        return HalobarVoice.entries.flatMap { voice -> listOf(false, true).map { landed(voice, Halobar.rootMidi(voice), it) } } +
+            listOf(63, 65, 67, 70).map { landed(HalobarVoice.TUBULAR_BELLS, it, true) }
+    }
+
     /** Eight vibraphone notes followed by eight native listening references. All tails are finite. */
     fun halobar(): List<ArrangedPad?> {
         fun landed(patch: HalobarPatch) = pad(patch, Halobar.drumClassFor(patch.voice, patch.macros))

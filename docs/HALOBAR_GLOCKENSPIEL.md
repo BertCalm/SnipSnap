@@ -8,7 +8,9 @@ dark rhythmic answers → a moving halo.
 GLOCKENSPIEL is HALOBAR's fourth voice. It is a native steel-bar approximation
 for listening, with provisional studies rather than a promoted factory bank.
 The existing twelve vibraphone, marimba and xylophone presets retain their
-approval. CROTALES and TUBULAR BELLS are the remaining planned additions.
+approval. Crotales and tubular bells are now built in the
+[subsequent six-voice expansion](HALOBAR_SIX_VOICES.md); new bell banks remain
+provisional.
 
 ## Source and controls
 
@@ -158,8 +160,9 @@ not added to this new full run. The provisional
 replayed with `NativeReplay.java`, passing `render` and the label
 `"provisional glockenspiel audition"` after the TSV path.
 
-Glockenspiel remains pending the owner's listening verdict. Crotales and
-tubular bells remain planned, with no implementation claimed here.
+Glockenspiel remains pending the owner's listening verdict. This ledger
+preserves the fourth-voice build; the [six-voice guide](HALOBAR_SIX_VOICES.md)
+records the later crotales, tubular bells and performance-key implementation.
 
 ## Why it is built this way
 

@@ -30,6 +30,52 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 
 Old model-3 and model-4 recipes retain their original renderers. Source selection, build success and a website demo must not be reported as all engine gates passing.
 
+Prototype rounds with fewer voices or provisional listening studies remain in
+progress until the applicable completion gates have evidence. There is no fixed
+preset count beyond voices having presets.
+
+## HALOBAR status at the crotales build
+
+Reviewed against source `cadcad2c26a020607df06c27a016b4781f73c2b5`.
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Six melodic voices | Vibraphone, marimba, xylophone, glockenspiel and crotales are built. Tubular bells remain planned. | Open: five of six |
+| Presets | Twelve accepted recipes cover the original three voices. Glockenspiel and crotales each have four provisional studies. | Open: complete six-voice preset coverage |
+| Playable keygroups | Existing deliveries are a sixteen-pad starter and separate study kits. They do not establish playable keygroups. | Open: implementation and workflow verification |
+| Premade kit | The original three-voice starter is on the shelf; the two new voices have separate study kits. | Evidence exists; review final engine coverage |
+| Chord-tool compatibility | Not established by the current audition, kit or build checks. | Open: verification |
+| Appropriate HOLD | Finite decay is implemented and tested; the top is a long note rather than a seamless loop. | Record the final articulation decision per voice |
+| Velocity and round robin | Native velocity rendering, recipe replay and exported study-sample evidence exist. No complete velocity/RR demonstration across rendering, saving, playback and export has been recorded. | Open: full workflow evidence |
+
+Tubular bells would reach the minimum voice count. It would not, by itself,
+close the remaining engine-completion gates. See [HALOBAR](HALOBAR.md) for the
+sound design and the existing build evidence.
+
+
+## HALOBAR six-voice build
+
+See [implementation and evidence](HALOBAR_SIX_VOICES.md). Software validation
+for this build is recorded with the delivered artifacts; this table keeps
+unverified completion gates explicit.
+
+| Gate | Implemented behavior | Remaining acceptance |
+|---|---|---|
+| Six melodic voices | Original five plus tubular bells, with different spectral/decay/contact shapes. | Owner listening for the new bell voices. |
+| Presets | Four starting recipes per voice are available in MAKE and CLI. Original twelve accepted presets retain their factory identity. | New bell banks remain provisional. |
+| Playable keygroups | Six finite instruments, sampled roots, two touch levels and three strikes per touch. Saved phone sidecars retain all captures. | On-device playability and MPC loading. |
+| Premade kit | Separate HALOBAR SIX STUDY shelf kit, six dry/dub pairs and four tubular answers. | Owner listening. |
+| Chord tools | Existing diatonic, modal and borrowed voicings can be mapped into every voice's range. Polyphonic keygroups and exported-sample chord auditions. | Owner listening and device playback. |
+| Articulation | Finite HOLD, retained onset, key-up fade. No picked/thumbed strings. | Owner articulation review; STRUM does not apply. |
+| Percussion | Authored finite accelerating rolls and pentatonic risers, with event scores. Individual voices remain finite. | Owner review of the authored examples. |
+| Velocity/RR rendering | Native velocity changes contact; repeat identities vary contact, modal balance, force and noise without detuning. | Device render-time measurements. |
+| Velocity/RR saving/playback | Saved PCM captures and version-4 sidecars retain two touch windows and three cycling takes; phone and reference player share selection. | Physical device execution. |
+| Velocity/RR export | All captures travel with the phone instrument. MPC keygroups export velocity levels using each level's first take. Pad grid exports keep the existing corpus-derived descriptors. | **Combined MPC keygroup velocity × round robin is open**, as is the existing Slice Motion WAV-map/hardware bench gate. |
+| Genre drum kits | HALOBAR is melodic percussion, not a drum engine. | Not applicable. |
+
+The engine remains in progress. Voice count, green tests and export file
+presence do not close the outstanding gates above.
+
 ## BREAKER (round 1, 2026-11-09)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.

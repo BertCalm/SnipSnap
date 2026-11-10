@@ -9,8 +9,19 @@ GLOCKENSPIEL is the new fourth voice, with four inharmonic steel-bar modes and
 a C4–C7 register centered on C5. Its [separate audition and study kit](HALOBAR_GLOCKENSPIEL.md)
 await listening; the twelve accepted factory recipes and original starter stay
 fixed. [CROTALES](HALOBAR_CROTALES.md) now adds a fifth voice: a longer bronze-disc
-inspired ring, sounding C6–C8, with its own audition and study kit. Tubular bells
-remain planned.
+inspired ring, sounding C6–C8, with its own audition and study kit. [Tubular bells](HALOBAR_SIX_VOICES.md) adds the sixth voice, playable finite
+keygroups and performance studies.
+
+## Engine completion status
+
+HALOBAR remains in progress against the owner's
+[engine acceptance gates](ENGINE_ACCEPTANCE_GATES.md). The six-voice build adds
+keygroups, provisional preset coverage, chord voicings and native repeat strikes.
+New-voice listening, device verification and combined velocity/round-robin MPC
+keygroup export remain open. The
+existing starter, provisional study kits and passing build/DSP checks have
+their own evidence; they do not close those remaining gates. Finite mallet
+articulation is documented below for the final per-voice HOLD decision.
 
 Select HALOBAR in the synth picker, or open its sixteen-pad FRESH TAPE kit in
 the keys shelf. The first eight pads play a C minor pentatonic vibraphone walk;
@@ -139,3 +150,16 @@ it is not the production renderer.
 - Finite releases make every exported pad usable without pretending it sustains
   seamlessly. Prepared stems make SPACE editing inexpensive while preserving
   the approved audio; full fresh rendering remains the main engineering cost.
+
+
+## Six-voice performance build
+
+[Tubular bells and the performance path](HALOBAR_SIX_VOICES.md) add the sixth
+voice, four provisional starting recipes, a separate six-voice shelf kit,
+finite MAKE INSTRUMENT keygroups with two touch levels and three strikes per
+level, and chord-tool voicings. The accepted bank remains unchanged.
+
+The phone keygroups save and cycle all six captures. MPC keygroups currently
+retain velocity selection with the first take per touch; combined MPC keygroup
+round robin remains an open acceptance gate. The new auditions reload exported
+PCM24 samples and include chord progressions, authored rolls and risers.

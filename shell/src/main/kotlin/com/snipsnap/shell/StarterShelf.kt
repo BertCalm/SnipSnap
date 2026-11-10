@@ -25,7 +25,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_KEYS,
             listOf(
                 "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "melodic", "rime", "rime-complete", "origami", "prism",
-                "stoop", "lacquer", "crease", "opensky", "otis", "halobar",
+                "stoop", "lacquer", "crease", "opensky", "otis", "halobar", "halobar-six",
             ),
         ),
         Group(

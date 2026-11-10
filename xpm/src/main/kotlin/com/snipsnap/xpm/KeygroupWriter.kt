@@ -18,10 +18,12 @@ data class Keygroup(
      * inside the range is legal.
      */
     val rootNote: Int,
-    /** 1..8 velocity zones, soft first. Keygroup instruments carry 8 layer slots. */
+    /** 1..8 layers, soft first; cycle takes are contiguous within a velocity window. */
     val layers: List<VelocityLayer>,
     /** Optional per-zone amp release, in the same units as the program release. */
     val volumeRelease: Float? = null,
+    /** Cycle matching samples within each velocity window. */
+    val cycleLayers: Boolean = false,
 ) {
     init {
         require(lowNote in 0..127 && highNote in 0..127 && lowNote <= highNote) {
@@ -29,8 +31,20 @@ data class Keygroup(
         }
         require(rootNote in 0..127) { "rootNote out of range: $rootNote" }
         require(layers.size in 1..8) { "a keygroup has 1..8 layers, got ${layers.size}" }
+        if (cycleLayers) {
+            val groups = layers.groupBy { it.velStart to it.velEnd }
+            require(groups.values.all { it.size in 2..4 }) { "each cycle window needs 2..4 takes" }
+            require(groups.values.flatten() == layers) { "cycle takes must be contiguous" }
+            require(groups.keys.zipWithNext().all { (a,b) -> a.second < b.first }) { "cycle windows must ascend without overlap" }
+        }
         require(volumeRelease == null || (volumeRelease.isFinite() && volumeRelease in 0f..30f))
     }
+    /** MPC layer cycle and velocity switching are separate modes. Combined phone grids
+     * export an honest first take per velocity window until a Slice Motion keygroup is proven. */
+    val mpcLayers: List<VelocityLayer> get() =
+        if (cycleLayers && layers.map { it.velStart to it.velEnd }.distinct().size > 1)
+            layers.distinctBy { it.velStart to it.velEnd } else layers
+    val mpcCycle: Boolean get() = cycleLayers && mpcLayers.size == layers.size
 }
 
 /**
@@ -162,13 +176,14 @@ class KeygroupWriter {
             // Other packages keep their established legacy serialization.
             sb.append("        <TriggerMode>2</TriggerMode>\n")
         }
+        if (kg.mpcCycle) sb.append("        <ZonePlay>0</ZonePlay>\n")
         sb.append("        <TuneCoarse>0</TuneCoarse>\n")
         sb.append("        <TuneFine>0</TuneFine>\n")
         sb.append("        <LowNote>").append(kg.lowNote).append("</LowNote>\n")
         sb.append("        <HighNote>").append(kg.highNote).append("</HighNote>\n")
         sb.append("        <Layers>\n")
         for (layer in 1..8) {
-            val zone = kg.layers.getOrNull(layer - 1)
+            val zone = kg.mpcLayers.getOrNull(layer - 1)
             sb.append("          <Layer number=\"").append(layer).append("\">\n")
             sb.append("            <Active>").append(if (zone != null) "True" else "False").append("</Active>\n")
             sb.append("            <Volume>").append(1f.f()).append("</Volume>\n")

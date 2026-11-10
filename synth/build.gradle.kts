@@ -3402,6 +3402,17 @@ tasks.register<JavaExec>("generateHalobarCrotalesAudition") {
     args("${rootDir}/testkit/halobar-audition/crotales")
 }
 
+/** The sixth mallet voice, kept beside the other HALOBAR auditions. */
+tasks.register<JavaExec>("generateHalobarTubularAudition") {
+    group = "distribution"
+    description = "Render the sixth HALOBAR voice and the separate six-voice study kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.HalobarTubularAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/halobar-audition/tubular-bells")
+}
+
 
 tasks.register<JavaExec>("generateFiredBronzeR2Audition") {
     group = "distribution"

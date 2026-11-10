@@ -1,5 +1,11 @@
 # SnipSnap agent entry points
 
+Engine completion follows the owner's
+[acceptance gates](docs/ENGINE_ACCEPTANCE_GATES.md). Apply the melodic,
+articulation, percussion and drum gates where relevant, and verify velocity
+and round robin through rendering, saving, playback and export for every
+instrument. Smaller prototype rounds remain in progress.
+
 For DSP and sound-design work, including an explicit Luthier request, read
 [Luthier](.claude/skills/luthier/SKILL.md). The complete, versioned bundle lives
 in `.claude/skills/luthier/`; its `references/`, `scripts/`, and `evals/` paths

@@ -1,0 +1,292 @@
+{
+  "engine": "HALOBAR",
+  "audioModel": 1,
+  "engineAcceptanceComplete": false,
+  "allAutomatedChecksPassed": true,
+  "voices": [
+    "VIBRAPHONE",
+    "MARIMBA",
+    "XYLOPHONE",
+    "GLOCKENSPIEL",
+    "CROTALES",
+    "TUBULAR_BELLS"
+  ],
+  "acceptedFactoryRecipes": 12,
+  "newBellRecipesProvisional": true,
+  "jvm": {
+    "tests": 9343,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": {
+      "json": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 2
+      },
+      "xpm": {
+        "tests": 51,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 6
+      },
+      "audio": {
+        "tests": 457,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 62
+      },
+      "kit": {
+        "tests": 634,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 81
+      },
+      "mpc3": {
+        "tests": 95,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 11
+      },
+      "synth": {
+        "tests": 5035,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 611
+      },
+      "loop": {
+        "tests": 439,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 37
+      },
+      "cli": {
+        "tests": 308,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 57
+      },
+      "shell": {
+        "tests": 2308,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 313
+      }
+    },
+    "sourceCommit": "057e1bed7ef6f14be3c062440f8fadc2ac1e1b5b",
+    "sourceTree": "34efd8a7a82ca8e423dc3453eadc413d18e5a8c9",
+    "command": [
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "-Dkotlin.daemon.options=autoshutdownIdleSeconds=30",
+        "test",
+        "-x",
+        ":synth:test",
+        "--parallel"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "-Dkotlin.daemon.options=autoshutdownIdleSeconds=30",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=0"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "-Dkotlin.daemon.options=autoshutdownIdleSeconds=30",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=1"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/run-snipsnap-gradle.py",
+        "--no-daemon",
+        "-Dkotlin.daemon.options=autoshutdownIdleSeconds=30",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=2"
+      ]
+    ],
+    "exitCode": 0,
+    "validationMode": "Repository CI gate",
+    "classCoverage": {
+      "expectedTopLevelClasses": 611,
+      "executedTopLevelClasses": 611,
+      "missingClasses": [],
+      "duplicateClasses": [],
+      "shards": {
+        "0": {
+          "classes": 194,
+          "suites": 194
+        },
+        "1": {
+          "classes": 208,
+          "suites": 208
+        },
+        "2": {
+          "classes": 209,
+          "suites": 209
+        }
+      },
+      "method": "Repository CI class-hash partition; union compared with concrete compiled JUnit test classes including inherited and nested tests"
+    }
+  },
+  "android": {
+    "sha256": "de17a5a4fd51e1dbd0b34b2343fac46652496da5d174f702d6313bff135db16f",
+    "bytes": 176671658,
+    "signatureVerified": true,
+    "v2Verified": true,
+    "sourceCommit": "057e1bed7ef6f14be3c062440f8fadc2ac1e1b5b",
+    "sourceTree": "34efd8a7a82ca8e423dc3453eadc413d18e5a8c9",
+    "deviceTestsCompiled": true,
+    "deviceTestsExecuted": false
+  },
+  "nativeHost": [
+    {
+      "command": [
+        "python3",
+        "scripts/check_native_sources.py"
+      ],
+      "exitCode": 0,
+      "started": 1794240931.8357203,
+      "ended": 1794240932.205215
+    },
+    {
+      "command": [
+        "/workspace/android-sdk/cmake/3.22.1/bin/cmake",
+        "-S",
+        "app/src/main/cpp/test",
+        "-B",
+        "build/native-tests"
+      ],
+      "exitCode": 0,
+      "started": 1794240932.2056098,
+      "ended": 1794240932.27039
+    },
+    {
+      "command": [
+        "/workspace/android-sdk/cmake/3.22.1/bin/cmake",
+        "--build",
+        "build/native-tests",
+        "-j",
+        "2"
+      ],
+      "exitCode": 0,
+      "started": 1794240932.2707937,
+      "ended": 1794240932.3919032
+    },
+    {
+      "command": [
+        "/workspace/android-sdk/cmake/3.22.1/bin/ctest",
+        "--test-dir",
+        "build/native-tests",
+        "--output-on-failure"
+      ],
+      "exitCode": 0,
+      "started": 1794240932.3921645,
+      "ended": 1794240953.2074723
+    }
+  ],
+  "nativeHostTestedCommit": "b1f23b88ccf4df87def9e3a4d25eedfa6b4cc9b1",
+  "nativeHostProductionSourcesMatch": true,
+  "native": {
+    "previousFloat32Cases": 335,
+    "tubularClips": 73,
+    "keygroups": 6,
+    "captures": 426,
+    "performanceClips": 16,
+    "ownerListeningVerified": false,
+    "devicePlaybackVerified": false,
+    "mpcKeygroupRoundRobinVerified": false,
+    "mpcHardwareLoadingVerified": false
+  },
+  "pcmUniqueness": {
+    "captures": 426,
+    "distinctPcm24Payloads": 426,
+    "allDistinct": true
+  },
+  "tubularMeasurements": {
+    "tubePitchCases": 10,
+    "maxRootErrorCents": 2.7584967753499914,
+    "minPitchConfidence": 0.9634779095649719,
+    "freshMedianMs": 329.444734,
+    "freshP95Ms": 337.96596,
+    "spaceMedianMs": 13.553728,
+    "spaceP95Ms": 15.661654
+  },
+  "site": {
+    "project_id": "appgprj_6aeff45f943881919e9b885aa356bfa6",
+    "expandedBytes": 254274655,
+    "maxExpandedBytes": 268435456,
+    "newEncodedClips": 68,
+    "reusedComparisonAndDuplicateClips": 21,
+    "priorFilesPreserved": 627,
+    "navigationFilesChanged": [
+      "index.html",
+      "crotales/index.html",
+      "glockenspiel/index.html"
+    ],
+    "browserQA": "unavailable; managed profile has no supported browser helper",
+    "mpcBenchDownload": "https://halobar-native-audition.bertcalm.chatgpt.site/tubular-bells/performance/HALOBAR-MPC-Velocity-RR-Bench.zip",
+    "benchHardwareVerified": false
+  },
+  "deployment": {
+    "id": "appgdep_6af1e5e3f10c8191a5b018a8ba969666",
+    "project_id": "appgprj_6aeff45f943881919e9b885aa356bfa6",
+    "title": "HALOBAR Native Audition",
+    "version_id": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_09a0a249a0388191a754c5a74e23a01c",
+    "type": "publish",
+    "status": "succeeded",
+    "url": "https://halobar-native-audition.bertcalm.chatgpt.site",
+    "has_mcp": false,
+    "screenshot_asset_pointer": null,
+    "provider_deployment_id": "site---6aeff45f943881919e9b885aa356bfa6",
+    "failure_message": null,
+    "env_set_revision": 0,
+    "updated_at": "2026-11-09T15:25:38.370509+00:00"
+  },
+  "mpcDiagnosticBench": {
+    "programs": 3,
+    "midiScores": 3,
+    "softwareReferenceClips": 9,
+    "hardwareVerified": false,
+    "bytes": 1666653,
+    "sha256": "7dd049bb308cbc8276b756020d3f332b61a6907abc35eb49608bd2c149ded36a",
+    "productionMpcAndMidiReadersPassed": true
+  },
+  "focusedTests": 113,
+  "focusedFailures": 0,
+  "phoneKeygroupVelocityLevels": 2,
+  "phoneKeygroupTakesPerLevel": 3,
+  "mpcCombinedKeygroupVelocityRoundRobin": false,
+  "ownerListeningVerified": false,
+  "devicePlaybackVerified": false,
+  "mpcHardwareLoadingVerified": false,
+  "remainingGates": [
+    "Owner listening for provisional bell banks",
+    "Phone playback and device instrumentation",
+    "MPC hardware loading",
+    "Combined MPC keygroup velocity and round robin"
+  ],
+  "freshRenderPerformanceTargetMet": false,
+  "preparedSpaceEditPerformanceTargetMet": true,
+  "timingNote": "Desktop only; fresh render exceeds the 50 ms target; prepared SPACE edit passes it. No phone latency measured.",
+  "fixtureNote": "Same-runtime Float32 replay before quantization; hosted FLAC is decoded-PCM16 exact to native WAV. Pitch probes do not substitute for listening."
+}

@@ -25,6 +25,21 @@ import kotlin.math.roundToInt
  * The phone's live keyboard still plays through its native voice.
  */
 object KeyHit {
+    class CycleCursor {
+        private val next = mutableMapOf<Triple<Int, Int, Int>, Int>()
+        fun clear() = next.clear()
+        internal fun take(note: Int, zoneIndex: Int, zone: InstrumentStore.Zone, velocity: Float): Int {
+            if (!zone.cycleLayers) return 0
+            val midi = (velocity * 127).roundToInt().coerceIn(1, 127)
+            val matches = zone.playableLayers.filter { midi in it.velStart..it.velEnd }
+            if (matches.isEmpty()) return 0
+            val key = Triple(note, zoneIndex, matches.first().velStart)
+            val take = next[key] ?: 0
+            next[key] = (take + 1) % matches.size
+            return take
+        }
+    }
+
 
     data class Hit(
         val sampleFile: String,
@@ -54,7 +69,7 @@ object KeyHit {
     fun resolve(instrument: InstrumentStore.Instrument, note: Int, velocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
         val zone = instrument.zoneFor(note) ?: return null
-        return resolveZone(zone, note, velocity, framesOf)
+        return resolveZone(zone, note, velocity, framesOf = framesOf)
     }
 
     data class Component(val hit: Hit, val zoneIndex: Int, val releaseSeconds: Float)
@@ -65,18 +80,21 @@ object KeyHit {
      * At most four components leave room for eight held keys in the native 32-voice bank.
      */
     fun resolveAll(instrument: InstrumentStore.Instrument, note: Int, velocity: Float,
-                   framesOf: (String) -> Long?): List<Component> =
-        resolveAllByZone(instrument, note, velocity) { file, _ -> framesOf(file) }
+                   framesOf: (String) -> Long?): List<Component> = resolveAll(instrument, note, velocity, null, framesOf)
+
+    fun resolveAll(instrument: InstrumentStore.Instrument, note: Int, velocity: Float,
+                   cursor: CycleCursor?, framesOf: (String) -> Long?): List<Component> =
+        resolveAllByZone(instrument, note, velocity, cursor) { file, _ -> framesOf(file) }
 
     /** The reference player's legacy per-zone sample list may reuse a filename. */
     internal fun resolveAllByZone(instrument: InstrumentStore.Instrument, note: Int, velocity: Float,
-                                 framesOf: (String, Int) -> Long?): List<Component> {
+                                 cursor: CycleCursor? = null, framesOf: (String, Int) -> Long?): List<Component> {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
         val zones = instrument.zones.withIndex().filter { note in it.value.lowNote..it.value.highNote }
             .let { if (instrument.stackZones) it else it.take(1) }
         if (zones.size > 4) return emptyList()
         val components = zones.map { (index, zone) ->
-            val hit = resolveZone(zone, note, velocity) { file -> framesOf(file, index) } ?: return emptyList()
+            val hit = resolveZone(zone, note, velocity, cursor?.take(note, index, zone, velocity) ?: 0) { file -> framesOf(file, index) } ?: return emptyList()
             Component(hit, index, instrument.releaseFor(zone))
         }
         val first = components.firstOrNull()?.hit ?: return emptyList()
@@ -86,10 +104,10 @@ object KeyHit {
     }
 
     private fun resolveZone(zone: InstrumentStore.Zone, note: Int, velocity: Float,
-                            framesOf: (String) -> Long?): Hit? {
+                            take: Int = 0, framesOf: (String) -> Long?): Hit? {
         // MIDI velocity zero is note-off; a zero-gain touch still resolves the softest positive zone.
         val midiVelocity = (velocity * 127).roundToInt().coerceIn(1, 127)
-        val layer = zone.layerFor(midiVelocity) ?: return null
+        val layer = zone.layerFor(midiVelocity, take) ?: return null
         val frames = framesOf(layer.sample)?.takeIf { it > 0 } ?: return null
         val loop = if (layer.loopStartFrame > 0 && layer.loopStartFrame < frames - 1) layer.loopStartFrame else -1L
         return Hit(

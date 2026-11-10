@@ -125,6 +125,7 @@ import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
+import com.snipsnap.shell.HalobarPadMaker
 import com.snipsnap.shell.CausticPadMaker
 import com.snipsnap.shell.CausticPad
 import com.snipsnap.shell.CausticEditing
@@ -2426,7 +2427,7 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -2473,6 +2474,8 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.HALOBAR -> HeldSpec.Halobar(HalobarPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as HalobarPatch, heldSheet.holdRelease))
         Engine.LATTICE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch
             if (LatticePadMaker.supports(patch))
@@ -4957,6 +4960,18 @@ internal sealed interface HeldSpec {
     fun previewPlayback(cancelled: () -> Boolean): HeldPreviewPlayback = HeldPreviewPlayback(preview(cancelled))
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
+    class Halobar(private val spec: HalobarPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = HalobarPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val progressPerZone get() = HalobarPadMaker.LAYERS
+        override val knobLabel get() = "RELEASE ${HalobarPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "FINITE MALLET RING · TWO TOUCH LEVELS · THREE TAKES PER TOUCH. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = HalobarPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = HalobarPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            HalobarPadMaker.export(name, spec, notes, destRoot)
+    }
+
     class Lattice(private val spec: LatticePadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = LatticePadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -6456,7 +6471,8 @@ private enum class Engine {
 
 /** Starting recipes supplied directly by a provisional engine remain available in MAKE. */
 private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
-    if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
+    if (engine == Engine.HALOBAR) com.snipsnap.synth.HalobarPresets.auditionFor(voice as HalobarVoice)
+    else if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
     else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
     else Presets.forVoice(engine.name, voice.name)
 

@@ -12,6 +12,20 @@ import java.io.PrintStream
 import kotlin.test.*
 
 class HalobarCommandTest {
+    @Test fun `provisional bell studies can be selected explicitly without changing the default recipe`() {
+        val dir=kotlin.io.path.createTempDirectory("halobar-study-choice").toFile()
+        try {
+            for (voice in listOf(HalobarVoice.GLOCKENSPIEL, HalobarVoice.CROTALES, HalobarVoice.TUBULAR_BELLS)) {
+                val out=dir.resolve(voice.name)
+                assertEquals(0, SynthCommand.run(listOf("HALOBAR",voice.name,"--preset","2","--out",out.path),
+                    PrintStream(ByteArrayOutputStream())))
+                val patch=assertIs<HalobarPatch>(Patches.fromJsonText(out.listFiles { f -> f.extension=="patch" }!!.single().readText()))
+                assertEquals(HalobarPresets.auditionFor(voice)[1],patch)
+                assertTrue(HalobarPresets.forVoice(voice).isEmpty())
+            }
+        } finally { dir.deleteRecursively() }
+    }
+
     @Test fun `glockenspiel study renders and replays a saved high note without factory promotion`() {
         val dir=kotlin.io.path.createTempDirectory("glockenspiel-cli").toFile()
         val voice=HalobarVoice.GLOCKENSPIEL

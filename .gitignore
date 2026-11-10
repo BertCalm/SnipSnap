@@ -719,6 +719,8 @@ testkit/backwash-percussion-revision-3/
 
 testkit/backwash-acoustic-integration/
 
+/testkit/halobar-performance/
+
 # TRIAD listening assets regenerate from native Kotlin.
 /testkit/triad-audition/
 
