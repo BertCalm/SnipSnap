@@ -1,3 +1,8 @@
+> GATECRASH candidate kits (2026-11-10): three 1980s gated drum kits on the shelf, Stone Room, Machine Pop
+> and Electro Funk. A new treatment stage crushes each pad's room flat and cuts it on the drum's own timing.
+> Velocity × round robin is proven through save, playback and MPC 3 export in software. Not heard; no
+> hardware. See [GATECRASH](GATECRASH.md).
+
 > Spore Station candidate jungle kit: Jungle, Dub and Electro shelf kits, with 18 pads each,
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).

@@ -28,6 +28,8 @@ Dub (85) and Electro (130), each with 18 pads and three velocity zones × three 
 The published audition includes SFZ, native kits and MPC programs. MPC round robin
 remains blocked on slice-map/hardware verification. Owner listening is pending.
 
+[GATECRASH](docs/GATECRASH.md) is a candidate family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. Measured, not yet heard.
+
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
 ## The loop
