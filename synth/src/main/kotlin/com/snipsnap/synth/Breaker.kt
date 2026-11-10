@@ -6,8 +6,18 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.random.Random
 
-/** BREAKER's drums. Round one ships the two the owner heard at round 0; the rest of the kit waits for its own listen. */
-enum class BreakerVoice(val drumClass: DrumClass) { KICK(DrumClass.KICK), SNARE(DrumClass.SNARE) }
+/**
+ * BREAKER's drums: the kick and snare the owner accepted (rounds 0 to 1b), and round 2's hats, cross
+ * stick, shaker, tambourine, three toms and ride (docs/BREAKER.md). The ride has no drum class of its
+ * own in the classifier; it files as PERC, as BACKWASH's does.
+ */
+enum class BreakerVoice(val drumClass: DrumClass) {
+    KICK(DrumClass.KICK), SNARE(DrumClass.SNARE),
+    HAT_CLOSED(DrumClass.HAT_CLOSED), HAT_OPEN(DrumClass.HAT_OPEN),
+    STICK(DrumClass.PERC), SHAKER(DrumClass.PERC), TAMBOURINE(DrumClass.PERC),
+    TOM_FLOOR(DrumClass.TOM), TOM_RACK(DrumClass.TOM), TOM_HIGH(DrumClass.TOM),
+    RIDE(DrumClass.PERC),
+}
 
 /**
  * BREAKER: surf rock by way of boom bap. Drums as if sampled off a surf record,
@@ -57,8 +67,28 @@ object Breaker {
         MacroSpec("SLAP", .2f), MacroSpec("CRUSH", .9f), MacroSpec("AMP", .35f),
     )
 
-    fun macrosFor(voice: BreakerVoice): List<MacroSpec> = controls.map {
-        if (it.name == "DRIP") it.copy(default = if (voice == BreakerVoice.KICK) .2f else .6f) else it
+    /**
+     * Each drum's place in the rig (shape; round 2's are proposals for the owner's listen). The hats
+     * barely touch the spring and do not slap; the cross stick is the slap; the toms drip, the floor
+     * most; the ride washes; the shaker and tambourine sit lightly in the tank.
+     */
+    private val voiceDefaults: Map<BreakerVoice, Map<String, Float>> = mapOf(
+        BreakerVoice.KICK to mapOf("DRIP" to .2f),
+        BreakerVoice.SNARE to mapOf("DRIP" to .6f),
+        BreakerVoice.HAT_CLOSED to mapOf("DRIP" to .1f, "SLAP" to 0f, "CRUSH" to .6f),
+        BreakerVoice.HAT_OPEN to mapOf("DRIP" to .15f, "SLAP" to 0f, "CRUSH" to .6f),
+        BreakerVoice.STICK to mapOf("DRIP" to .3f, "SLAP" to .45f, "CRUSH" to .7f),
+        BreakerVoice.SHAKER to mapOf("DRIP" to .15f, "SLAP" to .1f, "CRUSH" to .4f),
+        BreakerVoice.TAMBOURINE to mapOf("DUST" to .3f, "DRIP" to .35f, "CRUSH" to .5f),
+        BreakerVoice.TOM_FLOOR to mapOf("DRIP" to .6f, "CRUSH" to .8f),
+        BreakerVoice.TOM_RACK to mapOf("DRIP" to .45f, "CRUSH" to .8f),
+        BreakerVoice.TOM_HIGH to mapOf("DRIP" to .4f, "CRUSH" to .8f),
+        BreakerVoice.RIDE to mapOf("DUST" to .3f, "DRIP" to .45f, "SLAP" to 0f, "CRUSH" to .6f),
+    )
+
+    fun macrosFor(voice: BreakerVoice): List<MacroSpec> {
+        val own = voiceDefaults.getValue(voice)
+        return controls.map { spec -> own[spec.name]?.let { spec.copy(default = it) } ?: spec }
     }
 
     fun defaults(voice: BreakerVoice) = macrosFor(voice).associate { it.name to it.default }
@@ -73,20 +103,75 @@ object Breaker {
     fun drumClassFor(voice: BreakerVoice): DrumClass = voice.drumClass
 
     /**
-     * Backroom's kick and snare as accepted (BoomBapKits.parts(): each SKIN default, its preset, its
-     * overrides), written out so a later SKIN preset edit cannot recolour a saved BREAKER hit.
+     * The SKIN sources, every control written out so a later SKIN preset edit cannot recolour a saved
+     * BREAKER hit:
+     * - the kick, snare, hats, cross stick and shaker are Backroom's as accepted (BoomBapKits.parts():
+     *   each SKIN default, its preset, its overrides);
+     * - the toms are one SKIN shell (a little bend, a stick on the head) at about 124, 154 and 188 Hz,
+     *   near a major third apart;
+     * - the ride is SKIN's LONG RIDE with its rivets sizzling, for the wash.
      */
     private val SOURCES: Map<BreakerVoice, Pair<SkinVoice, Map<String, Float>>> = mapOf(
         BreakerVoice.KICK to (SkinVoice.KICK to mapOf("TUNE" to .38f, "DECAY" to .32f, "TONE" to .30f, "PUNCH" to .70f, "CLICK" to .40f, "DROP" to .20f)),
         BreakerVoice.SNARE to (SkinVoice.SNARE to mapOf("TUNE" to .47f, "SNAP" to .70f, "DECAY" to .40f, "PUNCH" to .76f, "RATTLE" to .62f, "SIZZLE" to .44f)),
+        BreakerVoice.HAT_CLOSED to (SkinVoice.HAT_CLOSED to mapOf("TUNE" to .54f, "DECAY" to .18f, "TONE" to .40f, "PUNCH" to .55f, "RING" to .27f)),
+        BreakerVoice.HAT_OPEN to (SkinVoice.HAT_OPEN to mapOf("TUNE" to .54f, "DECAY" to .32f, "TONE" to .42f, "PUNCH" to .55f, "RING" to .28f)),
+        BreakerVoice.STICK to (SkinVoice.STICK to mapOf("TUNE" to .35f, "DECAY" to .44f, "PUNCH" to .55f, "BODY" to .60f, "CLICK" to .22f)),
+        BreakerVoice.SHAKER to (SkinVoice.SHAKER to mapOf("TONE" to .55f, "DECAY" to .44f, "PUNCH" to .35f, "SWELL" to .18f, "GRAIN" to .62f)),
+        BreakerVoice.TOM_FLOOR to (SkinVoice.TOM to tom(.35f, .65f)),
+        BreakerVoice.TOM_RACK to (SkinVoice.TOM to tom(.60f, .55f)),
+        BreakerVoice.TOM_HIGH to (SkinVoice.TOM to tom(.82f, .50f)),
+        BreakerVoice.RIDE to (SkinVoice.RIDE to mapOf("TUNE" to .68f, "DECAY" to .89f, "TONE" to .48f, "PUNCH" to .45f, "SIZZLE" to .35f)),
     )
 
-    /** The dry drum: TUNE moves the source's own TUNE by up to a quarter of its range either way (shape). */
+    /** One tom shell, tuned (SKIN's TOM maps TUNE 0..1 onto 90..220 Hz, exponentially) and damped. */
+    private fun tom(tune: Float, decay: Float) =
+        mapOf("TUNE" to tune, "DECAY" to decay, "TONE" to .50f, "PUNCH" to .55f, "DROP" to .15f, "CLICK" to .25f)
+
+    /**
+     * The dry drum. TUNE moves the source's own TUNE by up to a quarter of its range either way
+     * (shape); on the shaker, which has none, it moves the band (TONE).
+     *
+     * The velocity is the hit's strength:
+     * - SKIN's struck voices (kick, snare, toms) take it as their own contact law.
+     * - SKIN does not strike the hats, ride, shaker and cross stick, so their sources are always the
+     *   full hit. [render] darkens the finished hit instead ([UNSTRUCK_SOFTEN] says why).
+     * - The tambourine is BACKWASH's CC0 recordings, and the velocity picks the recorded dynamic layer.
+     *
+     * [take] re-strikes it: a fresh noise seed in the SKIN source, or the next recorded alternate on
+     * the tambourine (it has two).
+     */
     internal fun source(voice: BreakerVoice, m: Map<String, Float>, velocity: Float, take: Int): Snip {
+        val shift = (m.getValue("TUNE") - .5f) * .5f
+        if (voice == BreakerVoice.TAMBOURINE) {
+            val tamb = BackwashVoice.TAMBOURINE
+            return BackwashAcoustic.source(tamb, Backwash.defaults(tamb) + ("TUNE" to (.5f + shift).coerceIn(0f, 1f)), velocity, take)
+        }
         val (skin, macros) = SOURCES.getValue(voice)
-        val tune = (macros.getValue("TUNE") + (m.getValue("TUNE") - .5f) * .5f).coerceIn(0f, 1f)
-        return SkinPatch("Breaker source", skin, Skin.defaults(skin) + macros + ("TUNE" to tune)).render(velocity, take)
+        var own = Skin.defaults(skin) + macros
+        // The shaker has no TUNE: its pitch is its band, so TUNE moves TONE (shape).
+        val pitch = if ("TUNE" in own) "TUNE" else "TONE"
+        own = own + (pitch to (own.getValue(pitch) + shift).coerceIn(0f, 1f))
+        // SKIN reads the velocity only on its struck voices; the unstruck ones soften after the rig.
+        // Every BREAKER source re-seeds per take, the unstruck ones included.
+        return Skin.render(skin, own, if (skin in Skin.STRUCK) velocity else 1f, take, reseedUnstruck = true)
     }
+
+    /** The hats, ride, shaker and cross stick: SKIN does not strike them, so they soften after the rig. */
+    private fun unstruck(voice: BreakerVoice) = SOURCES[voice]?.first?.let { it !in Skin.STRUCK } ?: false
+
+    /**
+     * How far [Velocity.soften] darkens an unstruck drum's finished hit at velocity 0 (shape): at 40%
+     * its corner is near 4.8 kHz.
+     *
+     * Why after the rig. Measured at round 2, a 40% closed hat darkened at the source came out of the
+     * rig with more energy above 6 kHz than a full one: +1.4 dB with SKIN's TONE scaled down (a hat's
+     * TONE spreads its partials, and spreading them less pulls the top ones under DUST's filter), and
+     * +1.8 dB low-passed near 2.3 kHz. The rig levels every hit into the tube, so DUST, the tube and
+     * the crush set the top end, not the input. A softer hand on these drums is the finished hit
+     * with its top rolled off, as [Velocity.soften] does for captured audio.
+     */
+    private const val UNSTRUCK_SOFTEN = .6f
 
     /**
      * DUST (shape): 0 transparent; .35 Backroom's accepted crunch with a light record; 1 a sampler
@@ -120,6 +205,7 @@ object Breaker {
         model: Int = MODEL_VERSION,
     ): Snip {
         require(model in 1..MODEL_VERSION) { "unsupported breaker model $model" }
+        require(model >= 2 || voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) { "breaker model 1 has no $voice" }
         val m = settled(voice, macros)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
         val dry = source(voice, m, v, take)
@@ -141,8 +227,9 @@ object Breaker {
         for (i in out.indices) { val s = out[i] - mean; out[i] = s - dc.lp(s) }
         val fade = (FADE_SECONDS * rate).toInt()
         for (k in 0 until fade) out[frames - fade + k] *= (0.5 + 0.5 * cos(PI * k / fade)).toFloat()
-        Dsp.levelTo(out, rate, Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
-        return Snip(out, 1, rate)
+        val done = if (unstruck(voice)) Velocity.soften(Snip(out, 1, rate), (1f - v) * UNSTRUCK_SOFTEN).samples else out
+        Dsp.levelTo(done, rate, Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(done)
+        return Snip(done, 1, rate)
     }
 }

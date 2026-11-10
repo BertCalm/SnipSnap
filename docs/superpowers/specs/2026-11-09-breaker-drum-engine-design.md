@@ -392,3 +392,76 @@ kick; the snare at 95 and 90 ms; the re-fit kick's takes and a half-strength hit
 
 The kick and the snare are accepted by ear on model 2, with their takes and their half-strength hits.
 
+## As built: round 2 (2026-11-10)
+
+Ten drums join the kick and snare. They go through the same rig and stay on model 2. The kick
+alone uses tank A; every new drum uses tank B. Their settings are proposals for the owner's listen,
+and the per-drum defaults are in `docs/BREAKER.md`.
+
+**Sources** (written out in `Breaker.kt`):
+- **Backroom's closed and open hats, cross stick and shaker,** as accepted (`BoomBapKits.parts()`).
+- **Toms:** one SKIN shell (DECAY .65/.55/.50, TONE .50, PUNCH .55, DROP .15, CLICK .25) at TUNE .35,
+  .60 and .82. That is about 124, 154 and 188 Hz, near a major third apart.
+- **Ride:** SKIN's LONG RIDE with SIZZLE .35.
+- **Tambourine:** BACKWASH's CC0 recordings (`BackwashAcoustic`): two dynamic layers, two takes each.
+
+**Round robin.** SKIN re-seeded noise per take only on its struck voices. `Skin.render` gains
+`reseedUnstruck`: asked, the hats, ride, shaker and stick re-seed their metal, beads or click for any
+take above 0. It is off by default, and only BREAKER asks, so nothing else changes.
+
+That matters for FIRED BRONZE: its hats already pass takes into SKIN. Unasked, those takes still
+render identically, so its saved kits keep their sound. **Finding, not fixed here:** FIRED BRONZE's
+hat round robin is therefore copies of one strike. `docs/ENGINE_ACCEPTANCE_GATES.md` says that does
+not pass, and turning `reseedUnstruck` on there would fix it under a new model.
+
+**Velocity on the unstruck drums.** SKIN does not strike the hats, ride, shaker or stick, so BREAKER
+softens them itself. Measured on a 40% closed hat (the first 20 ms):
+
+| What softened it | Energy above 6 kHz, re the full hit | Attack centroid (0 to 100 ms) |
+|---|---|---|
+| The house law, TONE scaled toward 0.28 of itself | +1.4 dB | +11% |
+| The source low-passed, corner near 2.3 kHz | +1.8 dB | |
+| The finished hit low-passed, corner near 4.8 kHz (`UNSTRUCK_SOFTEN` 0.6) | -3.4 dB | -18% (0 to 30 ms) |
+
+Why the first two get brighter:
+- **TONE does not darken a SKIN hat.** It spreads the hat's partials. Spreading them less pulls the
+  top ones under DUST's filter, so the hit gets brighter.
+- **The rig levels every hit into the tube.** DUST, the tube and the crush therefore set the top end,
+  whatever the input.
+
+So these four drums soften after the rig, as `Velocity.soften` does for captured audio. On the
+others, velocity comes from the source:
+- **The snare and toms** get darker through SKIN's contact law.
+- **The kick's** 50% hit has a higher attack centroid (1332 to 1772 Hz) because it loses body. The
+  owner heard it as a softer hand at round 1.
+- **The tambourine's** soft recorded layer is slightly brighter (+1.5 dB above 4 kHz): lighter
+  shakes are mostly jingle.
+
+**Measured** (`BreakerTest`):
+- **Tail against hit at CRUSH .2 / .5 / .9 (DRIP .6), in dB:**
+  - closed hat -10.0 / -5.6 / -5.3;
+  - open hat -8.4 / -3.9 / -5.3;
+  - stick -10.0 / -6.2 / -7.9;
+  - shaker -9.9 / -7.1 / -4.8;
+  - tambourine -4.1 / -2.9 / -3.9;
+  - floor tom -5.1 / -2.1 / -1.9;
+  - rack tom -9.5 / -7.8 / -6.3;
+  - high tom -7.4 / -5.1 / -5.1;
+  - ride -4.6 / -1.9 / -4.7.
+
+  A short drum is held down hard by the first half of the crush already. So the swell past
+  halfway, which the owner heard, is asserted on the kick and snare only.
+- **2 kHz after the hit, DRIP 0 to .6:** from +2.6 dB (the ride) to +54 dB (the closed hat).
+- **Classes:** every new drum files as PERC through the rig, the hats included. Their declared
+  classes (HAT_CLOSED, HAT_OPEN, TOM, PERC) go on the pads.
+- **Render, warm:** 70 to 151 ms (the ride is the slowest).
+
+Page: https://claude.ai/artifact/RxgQg4dtArMiGkuKMateCS. It asks:
+- hats nearly dry or in the spring;
+- the long or short slap on the stick;
+- whether the tambourine and shaker belong;
+- drippy or drier toms;
+- a washy or drier ride;
+- the repeat and 40% hits;
+- A15: the shaker or the riser.
+

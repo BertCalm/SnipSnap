@@ -374,4 +374,22 @@ class SkinTest {
             )
         }
     }
+
+    @Test
+    fun `asked to, a later take re-seeds the hats', ride's, shaker's and stick's noise; unasked, the take changes nothing`() {
+        // Backroom's own settings, where the stick's click and the shaker's beads are on.
+        val settings = mapOf(
+            SkinVoice.HAT_CLOSED to emptyMap(), SkinVoice.HAT_OPEN to emptyMap(),
+            SkinVoice.RIDE to mapOf("SIZZLE" to .35f), SkinVoice.SHAKER to mapOf("GRAIN" to .62f),
+            SkinVoice.STICK to mapOf("BODY" to .6f, "CLICK" to .22f),
+        )
+        for ((voice, m) in settings) {
+            val reference = Skin.render(voice, m).samples
+            kotlin.test.assertContentEquals(reference, Skin.render(voice, m, take = 0, reseedUnstruck = true).samples, "$voice take 0")
+            kotlin.test.assertContentEquals(reference, Skin.render(voice, m, take = 1).samples, "$voice: unasked, a take changes nothing (FIRED BRONZE's saves)")
+            val take1 = Skin.render(voice, m, take = 1, reseedUnstruck = true).samples
+            kotlin.test.assertFalse(reference.contentEquals(take1), "$voice: take 1 is a fresh hit")
+            kotlin.test.assertContentEquals(take1, Skin.render(voice, m, take = 1, reseedUnstruck = true).samples, "$voice: takes are deterministic")
+        }
+    }
 }
