@@ -29,23 +29,68 @@ object SporeStationAuditionGenerator {
         add(Event(7.5,10,.7f)); add(Event(7.75,12,.6f))
     }.sortedBy { it.beat }
 
-    fun groove(pads: List<ArrangedPad>, hybrid: List<ArrangedPad>? = null, coreOnly: Boolean = false): Snip {
-        val ev = (events() + if(hybrid!=null) listOf(Event(3.5,14,.6f),Event(6.75,13,.7f)) else emptyList()).filter { !coreOnly || it.pad < 10 }
-        val frames = (8*60.0/SporeStation.BPM*Dsp.RATE).roundToInt() +
-            (pads + hybrid.orEmpty()).maxOf { it.snip.frameCount }
+    /** Original phrases, informed by the supplied 160/170/175 BPM references, not transcriptions. */
+    fun breakEvents(style: Int = 1, color: Boolean = false): List<Event> = buildList {
+        require(style in 0..2)
+        for (bar in 0..1) {
+            val b = bar * 4.0
+            val kicks = when(style) {
+                0 -> listOf(0.0, 1.75, 2.5)
+                1 -> listOf(0.0, .75, 2.5, 3.75)
+                else -> listOf(0.0, 1.5, 2.25, 3.5)
+            }
+            kicks.forEachIndexed { i,t -> add(Event(b+t, if(i==1) 1 else 0, if(i==0) .96f else .72f)) }
+            add(Event(b+1, 2, 1f)); add(Event(b+3, if(bar==0) 2 else 4, .96f))
+            listOf(.68, 1.5, 2.68, 3.5).forEachIndexed { i,t ->
+                add(Event(b+t, 3, listOf(.35f,.57f,.43f,.61f)[(i+bar)%4]))
+            }
+            for(i in 0..15) {
+                if (bar==1 && i>=13 || style==0 && i%4==3 && i!=11) continue
+                val open = i==11
+                add(Event(b+i*.25+if(i%2==1) .018 else 0.0, if(open) 7 else 6,
+                    if(open) .76f else listOf(.74f,.30f,.53f,.38f)[i%4]))
+            }
+            if(style==2) add(Event(b+.5, 9, .72f))
+            add(Event(b+2.25, 5, .48f))
+        }
+        // Grace strokes use the snare's soft strike zones, not echoes of the accent.
+        add(Event(2.945,2,.29f)) // 19 ms flam at 170 BPM
+        add(Event(6.78,4,.25f)); add(Event(6.87,4,.39f)) // two-stroke drag into beat 7
+        add(Event(7.25,2,.55f)); add(Event(7.5,4,.72f)); add(Event(7.75,2,.93f))
+        if(color) {
+            add(Event(3.5,14,.55f)); add(Event(5.75,13,.48f))
+            add(Event(7.375,10,.65f)); add(Event(7.625,12,.50f))
+        }
+    }.sortedBy { it.beat }
+
+    fun groove(pads: List<ArrangedPad>, hybrid: List<ArrangedPad>? = null, coreOnly: Boolean = false, phrase: List<Event> = events(), bpm: Int = SporeStation.BPM): Snip {
+        require(bpm in 40..300)
+        val ev = (phrase + if(hybrid!=null) listOf(Event(3.5,14,.6f),Event(6.75,13,.7f)) else emptyList()).filter { !coreOnly || it.pad < 10 }
+        val frames = (8*60.0/bpm*Dsp.RATE).roundToInt() +
+            (pads + hybrid.orEmpty()).maxOf { p ->
+                (listOf(p.snip) + p.softVariants + p.velocityTakes.flatten()).maxOf { it.frameCount }
+            }
         val out = FloatArray(frames*2)
         val programLevel = DrumProgram("gain",emptyList()).level
         val fade = (.005*Dsp.RATE).roundToInt()
+        val counters = mutableMapOf<Pair<Int,Int>,Int>()
         ev.sortedBy { it.beat }.forEachIndexed { _, event ->
             val bank = if(hybrid != null && event.pad >= 10) hybrid else pads
             val pad = bank[event.pad]
             val midiVelocity = (event.velocity * 127).roundToInt().coerceIn(1,127)
-            val snip = when { midiVelocity < 42 && pad.softVariants.isNotEmpty() -> pad.softVariants[0]
+            val snip = if(pad.velocityTakes.isNotEmpty()) {
+                val zone = pad.velocityTakes.indices.first { midiVelocity < 128 * (it+1) / pad.velocityTakes.size }
+                val key = event.pad to zone
+                val row = pad.velocityTakes[zone]
+                val count = counters.getOrDefault(key,0)
+                counters[key] = count+1
+                row[count % row.size]
+            } else when { midiVelocity < 42 && pad.softVariants.isNotEmpty() -> pad.softVariants[0]
                 midiVelocity < 85 && pad.softVariants.size>1 -> pad.softVariants[1]
                 else -> pad.snip }
-            val start = (event.beat*60.0/SporeStation.BPM*Dsp.RATE).roundToInt()
+            val start = (event.beat*60.0/bpm*Dsp.RATE).roundToInt()
             val chokeBeat = if(pad.muteGroup==1) ev.filter { it.beat>event.beat && pads[it.pad].muteGroup==1 }.minOfOrNull { it.beat } else null
-            val choke = chokeBeat?.let { (it*60.0/SporeStation.BPM*Dsp.RATE).roundToInt()-start }
+            val choke = chokeBeat?.let { (it*60.0/bpm*Dsp.RATE).roundToInt()-start }
             for(f in 0 until snip.frameCount) {
                 if(start+f>=frames || choke!=null && f>=choke+fade) break
                 val envelope = if(choke!=null && f>=choke) (1f-(f-choke).toFloat()/fade) else 1f
@@ -73,7 +118,7 @@ object SporeStationAuditionGenerator {
         try {
             val kit = KitAssembler.assembleArranged(name,pads,work,tempoBpm=bpm.toFloat())
             val dest = File(root,name)
-            val notes=events().map { Mpc3Note(Mpc3Note.noteFor(it.pad+1), (it.beat*Mpc3Clip.PULSES_PER_BEAT).roundToLong(),it.velocity) }
+            val notes=(if(bank=="Jungle") breakEvents() else events()).map { Mpc3Note(Mpc3Note.noteFor(it.pad+1), (it.beat*Mpc3Clip.PULSES_PER_BEAT).roundToLong(),it.velocity) }
             val result = Mpc3Exporter.exportTrack(kit,work,dest,overwrite=true,mpc2Twin=true,
                 clip=Mpc3Clip("Spore Station Two Bars",2,notes))
             val data = File(dest,Mpc3TrackWriter.trackDataDirName(name))
@@ -149,18 +194,22 @@ object SporeStationAuditionGenerator {
         restrained.forEachIndexed { i,p ->
             clip("restrained-${i+1}", p.displayName ?: "Previous ${i+1}", "Restrained", p.snip, SporeStation.recipe(i,previousJungle=true),i+1)
         }
-        val comparison = listOf(groove(restrained,coreOnly=true),groove(jungle,coreOnly=true))
+        val comparison = listOf(groove(restrained,coreOnly=true,phrase=breakEvents()),groove(jungle,coreOnly=true,phrase=breakEvents()))
         val compareGain = minOf(1f,.92f/comparison.maxOf { it.peak() })
         val compareMatch = minOf(.03f/comparison.maxOf { Loudness.of(it) },.99f/comparison.maxOf { it.peak() })
         comparison.forEachIndexed { i,s ->
-            clip("dry-compare-$i", if(i==0) "Previous bombastic core" else "Sound-system jungle core", "Dry comparison",
+            clip("dry-compare-$i", if(i==0) "Previous sound-system core" else "Articulated jungle core", "Dry comparison",
                 scale(s,compareGain),matchedGain=compareMatch/compareGain)
         }
-        val grooves=listOf(groove(dry),groove(core),groove(mutations),groove(core,mutations))
+        val performanceJungle = SporeStation.performance()
+        val grooveBpms = listOf(160,170,175,170)
+        val grooves = grooveBpms.mapIndexed { i,bpm ->
+            groove(performanceJungle, phrase=breakEvents(if(i==3) 1 else i,color=i==3), bpm=bpm)
+        }
         val busGain=minOf(1f,.92f/grooves.maxOf { it.peak() })
         val bounces=grooves.map { scale(it,busGain) }
         val matchGain=minOf(.03f/bounces.maxOf { Loudness.of(it) },.99f/bounces.maxOf { it.peak() })
-        listOf("Dry sources","Core groove","Mutation groove","Hybrid performance").forEachIndexed { i,n ->
+        listOf("Cutback · 160 BPM","Ghostwork · 170 BPM","Razor edits · 175 BPM","Orbital breaks · 170 BPM").forEachIndexed { i,n ->
             clip("groove-$i",n,"Grooves",bounces[i],matchedGain=matchGain)
         }
         for(control in listOf("BODY","BITE","DUST","TWIST","SPACE")) for(value in listOf(.1f,.5f,.9f)) {
@@ -203,13 +252,13 @@ object SporeStationAuditionGenerator {
         }
 
         val manifest=linkedMapOf<String,Any?>("title" to "Spore Station","version" to SporeStation.VERSION,"bpm" to SporeStation.BPM,
-            "baseline" to "9e033cdd5717e94ee9f5c66be91d593a9fb00eae","status" to "candidate-awaiting-owner-listen",
+            "baseline" to "ae1ad9b3","status" to "candidate-awaiting-owner-listen",
             "sourceSha256" to listOf("synth/src/main/kotlin/com/snipsnap/synth/SporeStation.kt", "synth/src/test/kotlin/com/snipsnap/synth/SporeStationAuditionGenerator.kt").associateWith { hash(File(it)) },
             "sampleRate" to Dsp.RATE,"clips" to clips,"downloads" to downloads,"timings" to timings,
             "renderEnvironment" to "Kotlin/JVM 21 cloud container; not phone timing",
             "groove" to mapOf("bars" to 2,"rawBusGain" to busGain,"matchedGain" to matchGain,"hatChokeMs" to 5,"programLevel" to DrumProgram("gain",emptyList()).level,
-                "events" to events().map { mapOf("beat" to it.beat,"pad" to it.pad+1,"velocity" to it.velocity) },
-                "hybridExtraEvents" to listOf(mapOf("beat" to 3.5,"pad" to 15,"velocity" to .6),mapOf("beat" to 6.75,"pad" to 14,"velocity" to .7))),
+                "events" to breakEvents().map { mapOf("beat" to it.beat,"pad" to it.pad+1,"velocity" to it.velocity) },
+                "performances" to grooveBpms.mapIndexed { i,bpm -> mapOf("id" to "groove-$i", "bpm" to bpm, "roundRobin" to true, "events" to breakEvents(if(i==3) 1 else i,color=i==3).map { mapOf("beat" to it.beat,"pad" to it.pad+1,"velocity" to it.velocity) }) }),
             "checks" to mapOf("recipeReplay" to true,"finite" to true,"pcmPeak" to true,"kitReadback" to true, "sfzGridRegions" to true, "mpcHardwareRoundRobin" to "blocked-missing-slice-map"),
             "totalGenerationMs" to (System.nanoTime()-started)/1e6)
         File(root,"manifest.json").writeText(Json.write(json(manifest)))
