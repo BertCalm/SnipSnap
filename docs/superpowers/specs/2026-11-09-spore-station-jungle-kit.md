@@ -276,3 +276,22 @@ Push the dry jungle source design further: kick DROP .38→.88 and DECAY .23→.
 - The kick sweep and shell/wire envelopes supply weight without reverb.
 - A bright alternate snare contrasts with the low main backbeat.
 - The immediately previous version remains available for an honest comparison.
+
+
+## V6: break articulation from the owner's references
+
+Characteristic gesture: tight kick → cracked backbeat → quiet grace strokes → chopped turnaround. This is a preset and performance revision of the existing drum family, not a new engine. The three supplied screen recordings identify 160 BPM old-school breaks, a 170 BPM live drummer and a 175 BPM drum loop. Frames and audio envelopes were inspected; no listening judgment or exact transcription is claimed. Their source audio is not included in the kit or website.
+
+The source change reduces the v5 kick's pitch sweep and tail; the main snare moves up from a low sustained shell to a shorter cracked backbeat, with a brighter short alternate. Open hats and ride retain accents but release sooner. Ghost and pickup patches and accent levels stay unchanged. Core A01–A10 remain dry SKIN model 1 with no rack. The existing five recipe controls and three genre shelves remain intact.
+
+Four original two-bar performances cover 160, 170 and 175 BPM, plus psychedelic colour at 170 BPM. They use the exported Jungle kit's three velocity zones and three round robins, independent zone counters, authored grace strokes, a flam, a drag and a chopped turnaround. A07/A08 choke with a 5 ms fade. The Jungle MPC clip includes the same 170 BPM event list; hardware RR remains unverified. Same-pattern A/B uses single-take velocity layers to isolate the source change and preserves v5 exactly.
+
+No new solver or render stage is introduced; source timing is measured by the generator. Pattern playback uses cached rendered grids. Finite hits and the existing roll/riser are appropriate; melodic/keygroup/chord-tool gates are not applicable. Native/SFZ velocity and RR require regression checks; MPC slice-map and hardware acceptance remain open.
+
+### Why it is built this way
+
+- Shorter tails leave audible gaps for fast cuts and ghost strokes.
+- Grace strokes use softer strikes rather than delayed copies of loud hits.
+- Alternating takes keeps repeated notes from being identical waveforms.
+- Dry drums carry the rhythm while colour pads provide the space.
+- A fixed-pattern comparison separates source changes from arrangement changes.

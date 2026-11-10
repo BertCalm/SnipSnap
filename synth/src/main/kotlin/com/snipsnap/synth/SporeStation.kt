@@ -8,7 +8,7 @@ import kotlin.math.ln
  * Single-hit audition studies retain recipes; shelf grids retain complete audio and provenance. */
 object SporeStation {
     const val BPM = 170
-    const val VERSION = 5
+    const val VERSION = 6
     data class Part(val name: String, val patch: Patch, val kind: DrumClass, val level: Float = .7f)
     data class Controls(val body: Float = .5f, val bite: Float = .35f, val dust: Float = .15f,
                         val twist: Float = .1f, val space: Float = .2f) {
@@ -53,7 +53,7 @@ object SporeStation {
     ) + parts().drop(10)
 
     /** Big accented break drums; keep the ghost strokes as the quiet reference. */
-    fun previousJungleParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
+    private fun bombasticParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
         val values = when (index) {
             0 -> m("TUNE" to .35f, "DECAY" to .23f, "TONE" to .75f, "CLICK" to .85f, "DROP" to .38f, "PUNCH" to .88f)
             2 -> m("TUNE" to .40f, "DECAY" to .55f, "SNAP" to .52f, "RATTLE" to .42f, "SIZZLE" to .50f, "PUNCH" to .90f)
@@ -68,7 +68,7 @@ object SporeStation {
     }
 
     /** Sound-system accents: deeper sweep, sustained shell weight and tearing wires. */
-    fun jungleParts(): List<Part> = previousJungleParts().mapIndexed { index, part ->
+    fun previousJungleParts(): List<Part> = bombasticParts().mapIndexed { index, part ->
         val values = when (index) {
             0 -> m("TUNE" to .16f, "DECAY" to .48f, "TONE" to .90f, "CLICK" to 1f, "DROP" to .88f, "PUNCH" to .92f)
             2 -> m("TUNE" to .20f, "DECAY" to .86f, "SNAP" to .48f, "RATTLE" to .68f, "SIZZLE" to .62f, "PUNCH" to .92f)
@@ -78,6 +78,21 @@ object SporeStation {
             else -> emptyMap()
         }
         val level = when(index) { 0 -> 1f; 4 -> .96f; 7 -> .64f; 9 -> .60f; else -> part.level }
+        part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
+    }
+
+    /** Short shell response leaves room for ghost strokes, drags and chopped retriggers. */
+    fun jungleParts(): List<Part> = previousJungleParts().mapIndexed { index, part ->
+        val values = when (index) {
+            0 -> m("TUNE" to .52f, "DECAY" to .13f, "TONE" to .82f, "CLICK" to .88f, "DROP" to .20f, "PUNCH" to .82f)
+            2 -> m("TUNE" to .62f, "DECAY" to .32f, "SNAP" to .62f, "RATTLE" to .22f, "SIZZLE" to .52f, "PUNCH" to .82f)
+            4 -> m("TUNE" to .90f, "DECAY" to .16f, "SNAP" to .78f, "RATTLE" to .17f, "SIZZLE" to .74f, "PUNCH" to .85f)
+            6 -> m("DECAY" to .035f, "TONE" to .66f, "RING" to .06f, "PUNCH" to .18f)
+            7 -> m("DECAY" to .24f, "TONE" to .68f, "RING" to .16f, "PUNCH" to .24f)
+            9 -> m("DECAY" to .28f, "TONE" to .62f, "SIZZLE" to .32f, "PUNCH" to .24f)
+            else -> emptyMap()
+        }
+        val level = when(index) { 6 -> .44f; 7 -> .54f; 9 -> .46f; else -> part.level }
         part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
     }
 
