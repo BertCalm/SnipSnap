@@ -245,7 +245,7 @@ class StarterKitsTest {
                 if (starter.id in setOf("triad-techno", "triad-house", "triad-minimal")) {
                     for (pad in kit.pads) {
                         assertEquals("TRIAD", pad.source["engine"])
-                        assertEquals("1", pad.source["kitVersion"])
+                        assertEquals("2", pad.source["kitVersion"])
                         assertEquals(3, pad.chain?.zones?.size)
                         assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
                         assertEquals(12, pad.chain?.boundaries?.size)

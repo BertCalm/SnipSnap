@@ -25,7 +25,7 @@ if legacy_archive.exists():
             p.unlink()
 dest = site/'kits'
 dest.mkdir(exist_ok=True)
-roles = ['Thud','Sub','Clap','Open hat','Closed hat','Shaker','Conga','Bongo','Rim','Low conga','High bongo','Clap roll','Hand roll','Shaker riser','Full groove','Percussion break']
+roles = ['Thud','Sub','Clap','Open hat','Closed hat','Shaker','Conga','Bongo','Rim','Low conga','High bongo','Clap roll','Snare roll','Shaker riser','Full groove','Percussion break']
 profiles = [('techno','Warehouse Techno',128),('deep_house','Submerged House',118),('minimal','Fracture Minimal',126)]
 assert (root/'verification.csv').read_text().count('verified')==48
 shutil.copy2(root/'verification.csv',dest/'verification.csv')
@@ -87,11 +87,13 @@ for slug,title,bpm in profiles:
         with zipfile.ZipFile(dest/name,'w',zipfile.ZIP_DEFLATED) as z:
             for f in group:z.write(f,pathlib.Path('Triad '+title)/f.relative_to(src/'mpc'))
         assert (dest/name).stat().st_size<25*1024**2
-        downloads.append(f'<a download href="{name}">Part {i+1} of {len(groups)} · {(dest/name).stat().st_size/1024**2:.1f} MB</a>')
-    def player(file):return f'<audio controls preload="none" src="{slug}/{file}.flac"></audio>'
+        downloads.append(f'<a download href="{name}?v=2">Part {i+1} of {len(groups)} · {(dest/name).stat().st_size/1024**2:.1f} MB</a>')
+    def player(file):return f'<audio controls preload="none" src="{slug}/{file}.flac?v=2"></audio>'
     cards=[]
     for i,name in enumerate(roles,1):
         extra=''
+        if i == 13 and (out/'hand-roll-v1.flac').exists():
+            extra=f'<details open><summary>Compare the previous hand roll</summary><p>Previous alternating conga/bongo roll; the main player above is the new snare roll.</p>{player("hand-roll-v1")}</details>'
         if i in (7,8): extra=f'<details><summary>Three touch levels × four takes</summary><p>Four soft hits, four medium hits, four hard hits. One strike each second.</p>{player(f"touch-{i}")}</details>'
         cards.append(f'<article><span class="pad">A{i:02}</span><h3>{name}</h3>{player(f"pad-{i}")}{extra}</article>')
     sections.append(f'''<section id="{slug}"><div class="label">{bpm} BPM · 16 pads · 3 velocity zones · 4 takes per zone</div><h2>{title}</h2>
@@ -106,12 +108,12 @@ for f in files:shutil.copy2(f,source/pathlib.Path(f).name)
 page='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TRIAD · Kit trial</title><style>
 *{box-sizing:border-box}body{background:#111714;color:#eeeae0;font:16px/1.55 system-ui,sans-serif;margin:0}main{max-width:1100px;margin:auto;padding:46px 24px}a{color:#d5efa8}h1{font-size:clamp(48px,8vw,88px);line-height:1;letter-spacing:-.04em;margin:20px 0}h2{font-size:34px;line-height:1.2}h3{margin:5px 0 14px;font-size:20px}header>p{max-width:770px;font-size:19px;color:#bac6bb}.label,.pad{color:#a6c785;font:12px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}nav{display:flex;gap:16px;flex-wrap:wrap;margin:26px 0}section{border-top:1px solid #3c4a40;padding:38px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,.download{background:#1d2720;border:1px solid #3c4a40;border-radius:12px;padding:18px}.download{margin:24px 0}.download a{display:inline-block;margin:8px 18px 0 0}.download p,details p{font-size:14px;color:#bbc8bd}audio{display:block;width:100%;margin:8px 0 14px}summary{cursor:pointer;color:#d5efa8}footer{border-top:1px solid #3c4a40;color:#bac6bb;padding:24px 0}html{scroll-behavior:smooth}a:focus-visible,summary:focus-visible{outline:2px solid #e5f4b3;outline-offset:4px}</style></head><body><main>
 <header><div class="label">SnipSnap · TRIAD · Kit completion trial</div><h1>Three rigs.<br>Now under your fingers.</h1>
-<p>The hand drums you accepted, carried into three playable genre kits. Test soft strikes, cycling takes, accelerating rolls and complete shared-bus phrases.</p>
+<p>Revision 2: A13 now plays an accelerating snare roll. Expand its comparison to hear the previous hand roll. The accepted individual conga and bongo pads are unchanged. Test soft strikes, cycling takes, accelerating rolls and complete shared-bus phrases.</p>
 <nav><a href="#techno">Warehouse Techno</a><a href="#deep_house">Submerged House</a><a href="#minimal">Fracture Minimal</a><a href="../">Accepted rig comparison</a></nav>
 <p>Pads 1–14 are dry voices and authored builds. Pads 15–16 print the whole ensemble through the rig, preserving how overlapping drums drive its effects. Every pad is finite; the two phrase pads choke each other.</p></header>'''+''.join(sections)+'''
 <footer><strong>What to test on the MPC</strong><p>Play conga and bongo softly, then harder. Repeat each level to check the four takes. Trigger the rolls and riser, then switch between the two phrase pads. Save, reload and repeat.</p>
 <p>Software previews use saved samples with fixed audition headroom; they are not recordings of MPC playback.</p><p>Automated checks verified all 576 slices after saving and export, playback selection across two complete cycles per velocity zone, and MPC 3 velocity/slice fields. Hardware playback and listening to these new kits remain pending. This download is MPC 3; MPC 2 does not retain the full velocity-and-round-robin grid.</p>
-<p>The focused kit tests passed. The full repository regression is separate and its status is recorded on <a href="https://github.com/BertCalm/SnipSnap/pull/1005">the PR</a>. No Android build or browser playback check is claimed.</p>
+<p>The focused kit tests passed. The full repository regression is separate and its status is recorded on <a href="https://github.com/BertCalm/SnipSnap/pull/1022">the PR</a>. No Android build or browser playback check is claimed.</p>
 <p><a href="verification.csv">Export verification</a> · <a href="measurements.json">Audio measurements</a> · <a href="grid-proof.json">576-slice proof</a> · <a href="source/TRIAD_KITS.md">Design and gate notes</a></p></footer></main>
 <script>document.addEventListener('play',function(e){if(e.target.tagName==='AUDIO')document.querySelectorAll('audio').forEach(function(a){if(a!==e.target)a.pause()})},true)</script></body></html>'''
 (dest/'index.html').write_text(page)
