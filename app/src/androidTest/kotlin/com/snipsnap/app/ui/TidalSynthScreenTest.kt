@@ -377,7 +377,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
 
     @Test
     fun missingNamedPresetReleasesTheRestoreGate() {
-        settings["preset.TIDAL.PAIR"] = "NO LONGER ON SHELF"
+        settings["preset.TIDAL.PAIR"] = "NO LONGER IN LIBRARY"
         show()
         waitFor("missing TIDAL preset cleared") { !settings.containsKey("preset.TIDAL.PAIR") }
         currentRoot()

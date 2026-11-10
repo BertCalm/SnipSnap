@@ -629,7 +629,7 @@ private fun SplitDesk(
                 modifier = Modifier.weight(1f),
             ) { if (playing) stopAll() else startAll() }
             ActionButton(
-                if (printToPad) "→ PAD" else "→ TAPE",
+                if (printToPad) "→ PAD" else "→ SAMPLE",
                 scheme,
                 enabled = !working,
                 modifier = Modifier.weight(1f),

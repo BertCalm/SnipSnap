@@ -358,12 +358,12 @@ fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> U
                     Modifier
                         .background(scheme.lcd.tape)
                         .border(width = 1.dp, color = scheme.ink2.tape)
-                        .tapeClick(label = "SNIPS", onClick = onGoToSnips)
+                        .tapeClick(label = "SAVED SAMPLES", onClick = onGoToSnips)
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.material3.Text(
-                        text = "SNIPS \u25b8",
+                        text = "SAVED SAMPLES \u25b8",
                         color = scheme.lcdInk.tape,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,

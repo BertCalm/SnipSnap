@@ -5331,7 +5331,7 @@ private fun DustFromRow(
                 onClick = { if (open) onClose() else onOpen() },
             )
             TapeText(
-                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
+                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO SAMPLE YET",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.weight(1f),
@@ -5583,7 +5583,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -5829,7 +5829,7 @@ private fun OutsideCard(
         // The room the last ROOM trip measured, onto the shelf for any pad.
         // The row stays, dimmed, so the card never jumps when a room lands.
         ActionButton(
-            "KEEP ROOM · ON THE SHELF, FOR ANY PAD",
+            "KEEP ROOM · IN THE LIBRARY, FOR ANY PAD",
             scheme,
             enabled = !busy && canKeep,
             dimmed = !canKeep,

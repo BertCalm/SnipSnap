@@ -71,7 +71,7 @@ class NavigationTest {
     fun `the gear's benches name where back goes, not BACK`() {
         val nav = Navigation()
         nav.open(Bench.SETUP)
-        assertEquals("◄ SHELF", nav.backChip, "the shelf has no stage: its place")
+        assertEquals("◄ LIBRARY", nav.backChip, "the shelf has no stage: its place")
         nav.closeBench()
         assertFalse(nav.canGoBack, "open then close from a fresh root leaves nothing to go back to")
         nav.go(Place.PROJECT)
@@ -86,7 +86,7 @@ class NavigationTest {
         nav.closeBench()
         nav.open(Bench.SETUP)
         nav.open(Bench.HELP)
-        assertEquals("◄ SETUP", nav.backChip, "HELP from SETUP goes back to SETUP")
+        assertEquals("◄ SETTINGS", nav.backChip, "HELP from SETTINGS goes back to SETTINGS")
         nav.closeBench()
         nav.closeBench()
         nav.open(Bench.MIDI)
@@ -309,19 +309,19 @@ class NavigationTest {
         fun chip(place: Place, stage: Stage?, vararg benches: Bench) =
             Navigation(Location(place, stage, benches.toList())).backChip
 
-        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SNIPS), "SNIPS over PADS")
-        assertEquals("◄ DECK", chip(Place.TAPE, Stage.DECK, Bench.SNIPS), "SNIPS over DECK")
-        assertEquals("◄ LOOP", chip(Place.PROJECT, Stage.BEAT, Bench.LOOP, Bench.SNIPS), "SNIPS over LOOP, which is over BEAT")
+        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SNIPS), "SAVED SAMPLES over PADS")
+        assertEquals("◄ RECORD", chip(Place.TAPE, Stage.DECK, Bench.SNIPS), "SAVED SAMPLES over DECK")
+        assertEquals("◄ LOOP", chip(Place.PROJECT, Stage.BEAT, Bench.LOOP, Bench.SNIPS), "SAVED SAMPLES over LOOP, which is over BEAT")
         assertEquals("◄ INSTRUMENTS", chip(Place.MAKE, null, Bench.INSTRUMENTS, Bench.KEYS), "KEYS over INSTRUMENTS")
         assertEquals("◄ BEAT", chip(Place.PROJECT, Stage.BEAT, Bench.ORBIT), "ORBIT over BEAT")
         assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SPLIT), "SPLIT over PADS")
         assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SPLICE), "SPLICE over PAD_SHEET")
-        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SETUP), "SETUP over PADS")
-        assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SETUP), "SETUP over PAD_SHEET")
-        assertEquals("◄ SETUP", chip(Place.SHELF, null, Bench.SETUP, Bench.HELP), "HELP over SETUP")
+        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SETUP), "SETTINGS over PADS")
+        assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SETUP), "SETTINGS over PAD_SHEET")
+        assertEquals("◄ SETTINGS", chip(Place.SHELF, null, Bench.SETUP, Bench.HELP), "HELP over SETTINGS")
 
-        assertEquals("◄ MAKE", chip(Place.MAKE, null, Bench.SYNTH), "a lab on bare MAKE: the place, which has no stage")
-        assertEquals("◄ SHELF", chip(Place.SHELF, null, Bench.SNIPS), "SNIPS over the shelf")
+        assertEquals("◄ CREATE", chip(Place.MAKE, null, Bench.SYNTH), "a lab on bare MAKE: the place, which has no stage")
+        assertEquals("◄ LIBRARY", chip(Place.SHELF, null, Bench.SNIPS), "SAVED SAMPLES over the shelf")
         assertEquals("◄ STACK", chip(Place.PROJECT, Stage.PADS, Bench.STACK, Bench.HELP), "a long label gives its short name")
         assertEquals("◄ VERSIONS", chip(Place.PROJECT, Stage.PADS, Bench.VERSIONS, Bench.HELP), "a long label gives its short name")
         assertNull(chip(Place.PROJECT, Stage.PADS), "a bare stage has nothing to go back from")
@@ -361,7 +361,7 @@ class NavigationTest {
     @Test
     fun `BIN opened over SNIPS returns to SNIPS, and SNIPS then names the stage it is over`() {
         val over = Location(Place.PROJECT, Stage.PADS, listOf(Bench.SNIPS))
-        assertChipAndBackAgree(over, "◄ SNIPS") {
+        assertChipAndBackAgree(over, "◄ SAMPLES") {
             go(Place.PROJECT)
             open(Bench.SNIPS)
             open(Bench.BIN)
@@ -372,7 +372,7 @@ class NavigationTest {
             open(Bench.BIN)
             closeBench()
         }
-        assertEquals("◄ PADS", nav.backChip, "SNIPS over PADS, not the shelf it is usually reached from")
+        assertEquals("◄ PADS", nav.backChip, "SAVED SAMPLES over PADS, not the shelf it is usually reached from")
     }
 
     // Room for a screen that opens after an await: one already showing is never opened twice,
@@ -394,7 +394,7 @@ class NavigationTest {
 
         nav.open(Bench.XRAY)
         assertEquals("◄ LOOP", nav.backChip)
-        assertEquals(beatWith(Bench.LOOP, Bench.XRAY).walkBack(), nav.walkBack(), "the history is as if SNIPS had never been opened")
+        assertEquals(beatWith(Bench.LOOP, Bench.XRAY).walkBack(), nav.walkBack(), "the history is as if SAVED SAMPLES had never been opened")
     }
 
     @Test
@@ -402,7 +402,7 @@ class NavigationTest {
         val nav = beatWith(Bench.LOOP, Bench.SNIPS, Bench.HELP)
 
         assertTrue(nav.roomFor(Bench.XRAY))
-        assertEquals(listOf(Bench.LOOP), nav.location.benches, "HELP closed (two screens were still showing) and then SNIPS")
+        assertEquals(listOf(Bench.LOOP), nav.location.benches, "HELP closed (two screens were still showing) and then SAVED SAMPLES")
     }
 
     @Test
@@ -474,7 +474,7 @@ class NavigationTest {
         doubles.goTo(Location(Place.PROJECT, Stage.PADS))
         assertTrue(doubles.back())
         assertEquals(Location(Place.SHELF, null, listOf(Bench.DOUBLES)), doubles.location, "Back from the pad lands on the list GO came from")
-        assertEquals("◄ SHELF", doubles.backChip)
+        assertEquals("◄ LIBRARY", doubles.backChip)
     }
 
     // The kit-bound screens (PR 3c): VERSIONS and PAD CAPTURE over PADS, SONG over BEAT. The app closes one
@@ -585,8 +585,8 @@ class NavigationTest {
             assertEquals("◄ BEAT", Navigation(Location(Place.PROJECT, Stage.BEAT, listOf(bench))).backChip, "${bench.name}: over BEAT")
         }
         for (bench in listOf(Bench.SNIPS, Bench.BIN, Bench.XRAY, Bench.DOUBLES)) {
-            assertEquals(Place.SHELF, bench.home, "${bench.name}: filed under SHELF")
-            assertEquals("◄ SHELF", Navigation(Location(Place.SHELF, null, listOf(bench))).backChip, "${bench.name}: over the shelf")
+            assertEquals(Place.SHELF, bench.home, "${bench.name}: filed under LIBRARY")
+            assertEquals("◄ LIBRARY", Navigation(Location(Place.SHELF, null, listOf(bench))).backChip, "${bench.name}: over the shelf")
         }
     }
 

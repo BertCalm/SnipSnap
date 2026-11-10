@@ -178,7 +178,7 @@ class RoomsTest {
         assertTrue("BIN" in gone && "30 DAYS" in gone, gone)
         val back = Copy.roomRestored("FUNK ROOM")
         assertEquals(back.uppercase(), back)
-        assertTrue(back.startsWith("FUNK ROOM ") && "SHELF" in back, back)
+        assertTrue(back.startsWith("FUNK ROOM ") && "LIBRARY" in back, back)
         for (l in listOf(Copy.ROOM_FORGET_BUSY, Copy.ROOM_RESTORE_BUSY)) assertEquals(l.uppercase(), l, "TapeOS shouts: '$l'")
         val packed = Copy.roomPacked("FUNK ROOM")
         assertEquals(packed.uppercase(), packed)

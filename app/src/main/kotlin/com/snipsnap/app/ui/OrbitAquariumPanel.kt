@@ -61,7 +61,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
         }
         TapeText("Saved KIT → PERFORMANCE sound at ORBIT tempo. Mix and tapped pads have separate FX history. BOUNCE starts fresh for one turn plus the chosen zero-input tail; taps are excluded. The ending can cut a long tail, and a wet bounce can have a loop seam. CLIP TO KIT carries notes only.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        TapeText("SNIPS keeps the stereo file; TAPE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
+        TapeText("SAVED SAMPLES keeps the stereo file; SAMPLE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (set.aquariumFromKit) TapeText("MIX PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
     }

@@ -3668,7 +3668,7 @@ fun App(shelf: KitShelf) {
                         top == Bench.SNIPS -> SnipsScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
-                            backLabel = checkNotNull(nav.backChip) { "SNIPS is a bench, so it has something to go back to" },
+                            backLabel = checkNotNull(nav.backChip) { "SAVED SAMPLES is a bench, so it has something to go back to" },
                             onBack = { pendingSnipTarget = null; nav.closeBench() },
                             // BIN opens over SNIPS, wherever SNIPS is (the
                             // shelf, PADS, DECK): Back from BIN returns here,
@@ -4246,7 +4246,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onEmptyTapHint = {
-                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
+                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SAMPLE" else "LONG-PRESS TO CAPTURE")
                                 },
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,

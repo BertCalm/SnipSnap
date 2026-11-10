@@ -116,9 +116,9 @@ class ExpansionBackupTest {
 
     @Test
     fun `the landing line counts the expansions that came back`() {
-        assertEquals("2 KITS LANDED ON THE SHELF. 1 EXPANSION BACK ON THE SHELF.", Copy.landed(2, 0, expansions = 1))
-        assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS. 2 EXPANSIONS BACK ON THE SHELF. 1 SKIPPED.", Copy.landed(1, 1, presets = 1, expansions = 2))
-        assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0), "a restore with none reads as it always did")
+        assertEquals("2 KITS LANDED IN THE LIBRARY. 1 EXPANSION BACK IN THE LIBRARY.", Copy.landed(2, 0, expansions = 1))
+        assertEquals("1 KIT LANDED IN THE LIBRARY. 1 PRESET UNDER YOURS. 2 EXPANSIONS BACK IN THE LIBRARY. 1 SKIPPED.", Copy.landed(1, 1, presets = 1, expansions = 2))
+        assertEquals("1 KIT LANDED IN THE LIBRARY.", Copy.landed(1, 0), "a restore with none reads as it always did")
     }
 
     @Test

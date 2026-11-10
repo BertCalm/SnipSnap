@@ -182,7 +182,7 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
     fun a_working_action_button_keeps_its_label_and_says_it_is_working() {
         show(settleMillis = RING_DUE_MS) {
             ActionButton(
-                "SCULPT · NEW TAPE",
+                "SCULPT · NEW SAMPLE",
                 LocalScheme.current,
                 enabled = false,
                 working = true,
@@ -191,7 +191,7 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
             )
         }
 
-        compose.onNodeWithText("SCULPT · NEW TAPE").assertExists().assertIsNotEnabled()
+        compose.onNodeWithText("SCULPT · NEW SAMPLE").assertExists().assertIsNotEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, Copy.WORKING_BUSY))
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
     }
@@ -347,7 +347,7 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
 
     private companion object {
         const val GRID = "grid"
-        const val RING_LABEL = "SCULPT · NEW TAPE"
+        const val RING_LABEL = "SCULPT · NEW SAMPLE"
 
         /** One frame of the compose test clock, which `advanceTimeBy` rounds up to a whole number of. */
         const val FRAME_MS = 16L

@@ -493,13 +493,13 @@ object MutateSheet {
     const val DRIFT_LABEL = "DRIFT · BLEND & SAVE"
 
     /** ROULETTE at rest: it only picks a partner, and writes nothing. */
-    const val ROULETTE_LABEL = "ROULETTE · PICK A PARTNER OFF THE SHELF"
+    const val ROULETTE_LABEL = "ROULETTE · PICK A PARTNER FROM THE LIBRARY"
 
     /** The partner panel's room row with no room kept (drawn from round M2). It avoids KEEP ROOM: KEEP is the card's commit verb. */
     const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN OUTSIDE ▸ ROOM"
 
     /** The partner panel's other-kit row on a one-kit shelf (drawn from round M2). */
-    const val NO_OTHER_KIT_LINE = "NO OTHER KIT ON THE SHELF"
+    const val NO_OTHER_KIT_LINE = "NO OTHER KIT IN THE LIBRARY"
 
     /** STACK's knob row, where the bar would be: `design/mutate-v2/Moves.dc.html:45`, verbatim. */
     const val deadKnobLine = "NO KNOB — THEY LINE UP ON THE HIT"

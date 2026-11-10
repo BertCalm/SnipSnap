@@ -12,16 +12,16 @@ class BenchNotesTest {
 
     private val onPlay = BenchNotes.Note("2026-09-19 2107", "PLAY", "Break Kit", null, "hats feel late at 92, maybe the choke fade")
     private val onSheet = BenchNotes.Note("2026-09-19 2112", "KIT", "Break Kit", "A03", "the open hat rings past the bar")
-    private val onShelf = BenchNotes.Note("2026-09-19 2115", "SHELF", null, null, "first dub took about eight seconds")
+    private val onShelf = BenchNotes.Note("2026-09-19 2115", "LIBRARY", null, null, "first dub took about eight seconds")
 
     @Test
     fun `a note carries its context in one line, the parts that are known in order`() {
         assertEquals("PLAY · Break Kit", onPlay.context)
         assertEquals("KIT · Break Kit · A03", onSheet.context)
-        assertEquals("SHELF", onShelf.context, "no kit and no pad is just the screen")
+        assertEquals("LIBRARY", onShelf.context, "no kit and no pad is just the screen")
         assertEquals(onSheet.context, BenchNotes.context("KIT", "Break Kit", "A03"), "the dialog's stamp is the note's own")
         assertEquals("→ 2026-09-19 2112 · KIT · Break Kit · A03: the open hat rings past the bar", BenchNotes.render(onSheet))
-        assertTrue(BenchNotes.render(onShelf).startsWith("→ 2026-09-19 2115 · SHELF: "), BenchNotes.render(onShelf))
+        assertTrue(BenchNotes.render(onShelf).startsWith("→ 2026-09-19 2115 · LIBRARY: "), BenchNotes.render(onShelf))
     }
 
     @Test
@@ -29,7 +29,7 @@ class BenchNotesTest {
         val stamp = BenchNotes.Stamp("2026-09-19 2112", "KIT", "Break Kit", "A03")
         assertEquals(onSheet.context, stamp.context, "the dialog shows exactly what the note will be filed under")
         assertEquals(onSheet, stamp.note("the open hat rings past the bar"))
-        assertEquals("SHELF", BenchNotes.Stamp("2026-09-19 2115", "SHELF", null, null).context)
+        assertEquals("LIBRARY", BenchNotes.Stamp("2026-09-19 2115", "LIBRARY", null, null).context)
     }
 
     @Test

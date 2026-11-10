@@ -39,7 +39,7 @@ class OrbitPanelsTest {
     @Test
     fun `ONE TURN OUT says how long a turn is and names only the ways out that are open`() {
         assertEquals("ONE TURN IS 4 BARS", OrbitPanels.outSummary("4 BARS"))
-        assertEquals("BOUNCE TO SNIPS · CLIP TO KIT · GROOVE TO RINGS", OrbitPanels.outAlso(canBounce = true, canClip = true))
+        assertEquals("BOUNCE TO SAMPLES · CLIP TO KIT · GROOVE TO RINGS", OrbitPanels.outAlso(canBounce = true, canClip = true))
         assertEquals("CLIP TO KIT · GROOVE TO RINGS", OrbitPanels.outAlso(canBounce = false, canClip = true))
         assertEquals("GROOVE TO RINGS", OrbitPanels.outAlso(canBounce = false, canClip = false))
     }

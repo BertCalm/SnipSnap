@@ -68,7 +68,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             TapeText("PRINT starts fresh for one pass plus the chosen FX tail. It does not capture a running loop’s history. Hot mixes clip before KIT FX; wet output is protected. Long tails can be cut and a wet print can have a loop seam.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-            TapeText("The SNIPS file and PAD keep stereo; TAPE edits in mono. A wet print already contains FX. KIT FX applies them again on playback.",
+            TapeText("The SAVED SAMPLES file and PAD keep stereo; SAMPLE edits in mono. A wet print already contains FX. KIT FX applies them again on playback.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             if (settings.fromKit) TapeText("PROTECTION · $limitedFrames FRAMES THIS STREAM", TapeType.pixelSmall, scheme.ink2.tape)
             ActionButton("DONE", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onClose)
