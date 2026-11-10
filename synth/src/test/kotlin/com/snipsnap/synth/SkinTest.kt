@@ -376,7 +376,7 @@ class SkinTest {
     }
 
     @Test
-    fun `asked to, a later take re-seeds the hats', ride's, shaker's and stick's noise; unasked, the take changes nothing`() {
+    fun `asked to, a later take re-seeds the hats', ride's, shaker's and stick's noise, and unasked it changes nothing`() {
         // Backroom's own settings, where the stick's click and the shaker's beads are on.
         val settings = mapOf(
             SkinVoice.HAT_CLOSED to emptyMap(), SkinVoice.HAT_OPEN to emptyMap(),
