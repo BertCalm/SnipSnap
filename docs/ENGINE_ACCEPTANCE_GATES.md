@@ -46,5 +46,5 @@ Old model-3 and model-4 recipes retain their original renderers. Source selectio
   - **Velocity: verified in rendering.** Every drum's 40% hit differs from its full hit in character, not only in level, because every render is levelled. The hats, ride, shaker and stick measurably darken.
   - **Round robin: verified in rendering.** Each take is a fresh strike (re-seeded SKIN noise, or the tambourine's two recorded takes).
   - **Saving, playback and export:** not yet verified.
-  - **Sound character:** waiting for the owner's listen.
+  - **Sound character, heard 2026-11-10:** the hats, stick (short slap), tambourine, shaker and toms accepted, and the repeat and 40% hits too. The ride was heard as a crash and is re-voiced at round 3.
 - **Overall: incomplete.** This is a prototype with twelve voices and no kit yet.

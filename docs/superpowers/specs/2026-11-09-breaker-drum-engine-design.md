@@ -441,7 +441,7 @@ others, velocity comes from the source:
 - **Tail against hit at CRUSH .2 / .5 / .9 (DRIP .6), in dB:**
   - closed hat -10.0 / -5.6 / -5.3;
   - open hat -8.4 / -3.9 / -5.3;
-  - stick -10.0 / -6.2 / -7.9;
+  - stick -9.1 / -5.5 / -7.6 with the short slap (-10.0 / -6.2 / -7.9 with the long one);
   - shaker -9.9 / -7.1 / -4.8;
   - tambourine -4.1 / -2.9 / -3.9;
   - floor tom -5.1 / -2.1 / -1.9;
@@ -464,4 +464,22 @@ Page: https://claude.ai/artifact/RxgQg4dtArMiGkuKMateCS. It asks:
 - a washy or drier ride;
 - the repeat and 40% hits;
 - A15: the shaker or the riser.
+
+## Heard: round 2 (2026-11-10)
+
+| Question | Owner's answer |
+|---|---|
+| Hats: crunchy and nearly dry, or into the spring? | **Nearly dry** |
+| Cross stick: the long slap or the short one? | **Short slap** (SLAP .45 to .20) |
+| Tambourine and shaker: do they belong in this kit? | **Both** |
+| Floor, rack and high tom: a surf tom set? Drippy or drier? | **Drippy** |
+| Ride: washy or drier? | **Neither: "sounds like a crash"** |
+| Hit again and at 40% strength: the same drum each time, a softer hand? | **Yes** |
+| Pad A15: keep the shaker, or swap in a snare riser? | **Swap in the riser** |
+
+What follows from the answers:
+- **The ride.** The long ride with its rivets sizzling, through the spring and the crush, is all
+  wash and no stick. Round 3 re-voices it with a defined ping, and offers this sound as the A14
+  crash.
+- **The shaker** still belongs, but no longer has A15. Where it goes is the owner's call.
 

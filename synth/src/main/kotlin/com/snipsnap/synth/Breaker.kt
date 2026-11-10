@@ -68,16 +68,17 @@ object Breaker {
     )
 
     /**
-     * Each drum's place in the rig (shape; round 2's are proposals for the owner's listen). The hats
-     * barely touch the spring and do not slap; the cross stick is the slap; the toms drip, the floor
-     * most; the ride washes; the shaker and tambourine sit lightly in the tank.
+     * Each drum's place in the rig (shape). Round 2, as the owner heard it (2026-11-10): the hats
+     * nearly dry, unslapped; the cross stick with the short slap; the toms drippy, the floor most;
+     * the shaker and tambourine light in the tank. The ride was heard as a crash and is re-voiced
+     * at round 3.
      */
     private val voiceDefaults: Map<BreakerVoice, Map<String, Float>> = mapOf(
         BreakerVoice.KICK to mapOf("DRIP" to .2f),
         BreakerVoice.SNARE to mapOf("DRIP" to .6f),
         BreakerVoice.HAT_CLOSED to mapOf("DRIP" to .1f, "SLAP" to 0f, "CRUSH" to .6f),
         BreakerVoice.HAT_OPEN to mapOf("DRIP" to .15f, "SLAP" to 0f, "CRUSH" to .6f),
-        BreakerVoice.STICK to mapOf("DRIP" to .3f, "SLAP" to .45f, "CRUSH" to .7f),
+        BreakerVoice.STICK to mapOf("DRIP" to .3f, "SLAP" to .2f, "CRUSH" to .7f),
         BreakerVoice.SHAKER to mapOf("DRIP" to .15f, "SLAP" to .1f, "CRUSH" to .4f),
         BreakerVoice.TAMBOURINE to mapOf("DUST" to .3f, "DRIP" to .35f, "CRUSH" to .5f),
         BreakerVoice.TOM_FLOOR to mapOf("DRIP" to .6f, "CRUSH" to .8f),

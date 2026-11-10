@@ -21,7 +21,15 @@ keeps round 1's sound. On 2026-11-10 the owner heard the re-fit kick as the same
 (with the slap back at 95 ms), the takes and the half-strength hits as theirs.
 
 Round 2 adds ten drums through the same rig: the closed and open hats, cross stick, shaker,
-tambourine, three toms and ride. Their settings are proposals, waiting for the owner's listen.
+tambourine, three toms and ride. On 2026-11-10 the owner heard them:
+- **The hats:** nearly dry.
+- **The cross stick:** the short slap.
+- **The tambourine and shaker:** both belong.
+- **The toms:** drippy.
+- **The repeat and 40% hits:** the same drum, played by a softer hand.
+- **The ride:** sounds like a crash. Round 3 re-voices it, and its sound is a candidate for the crash.
+
+Pad A15 becomes the snare riser.
 
 Not in the phone picker yet; the picker entry waits for a session with an Android SDK, as the house
 rule says. Still to come:
@@ -81,7 +89,7 @@ The hit is capped at 1.49 s with a fade, so it stays a one-shot.
 
 On the shaker, which has no tuning of its own, TUNE moves its band.
 
-Per-drum defaults (round 2's are proposals):
+Per-drum defaults (the ride's waits for round 3):
 
 | Drum | DUST | DRIP | SLAP | CRUSH | Tank |
 |---|---:|---:|---:|---:|---|
@@ -89,7 +97,7 @@ Per-drum defaults (round 2's are proposals):
 | SNARE | .35 | .60 | .20 | .90 | B |
 | HAT_CLOSED | .35 | .10 | 0 | .60 | B |
 | HAT_OPEN | .35 | .15 | 0 | .60 | B |
-| STICK | .35 | .30 | .45 | .70 | B |
+| STICK | .35 | .30 | .20 | .70 | B |
 | SHAKER | .35 | .15 | .10 | .40 | B |
 | TAMBOURINE | .30 | .35 | .20 | .50 | B |
 | TOM_FLOOR | .35 | .60 | .20 | .80 | B |
