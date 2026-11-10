@@ -8,7 +8,7 @@ import kotlin.math.*
 /** Finite drum kits and printed shared-bus phrases, not a new pitched Patch engine.
  * The accepted Triad.source and TriadHands v2 remain unchanged. */
 object TriadKits {
-    const val VERSION = 1
+    const val VERSION = 2
     enum class Genre(val title: String, val bpm: Int, val rig: Triad.Rig, val tune: Float) {
         TECHNO("Warehouse Techno", 128, Triad.Rig.WAREHOUSE, .42f),
         DEEP_HOUSE("Submerged House", 118, Triad.Rig.SUBMERGED, .34f),
@@ -17,7 +17,7 @@ object TriadKits {
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
     val roles = listOf("Thud", "Sub", "Clap", "Open Hat", "Closed Hat", "Shaker",
-        "Conga", "Bongo", "Rim", "Low Conga", "High Bongo", "Clap Roll", "Hand Roll",
+        "Conga", "Bongo", "Rim", "Low Conga", "High Bongo", "Clap Roll", "Snare Roll",
         "Shaker Riser", "Full Groove", "Percussion Break")
 
     /** Each zone has four actual strikes. No random state survives a render. */
@@ -73,6 +73,10 @@ object TriadKits {
                 "SWELL" to .25f)).samples
             6, 7, 9, 10 -> TriadHands.render(role == 7 || role == 10,
                 (g.tune + if(role == 9) -.2f else if(role == 10) .2f else 0f).coerceIn(0f,1f), v, take)
+            // A short snare body and velocity-sensitive wire snap keep accelerating hits legible.
+            12 -> th(ThumpVoice.SNARE, "TUNE" to .4f+t, "DECAY" to .22f,
+                "SNAP" to .4f+.3f*v, "TONE" to .35f+.3f*v,
+                "STRIKE" to .28f+(take-1.5f)*.025f, "PUNCH" to .45f)
             else -> th(ThumpVoice.RIM, "TUNE" to .5f+t, "DECAY" to .15f)
         }
         // A softer contact loses upper partials as well as level. This is outside the accepted source.
@@ -87,7 +91,7 @@ object TriadKits {
         val positions = listOf(0.0,.5,1.0,1.5,2.0,2.25,2.5,2.75) + List(8) { 3.0+it*.125 }
         for ((i, pos) in positions.withIndex()) {
             val progress = i.toFloat()/positions.lastIndex
-            val lane = when(role) { 11 -> 2; 12 -> if(i%2 == 0) 6 else 7; else -> 5 }
+            val lane = when(role) { 11 -> 2; 12 -> 12; else -> 5 }
             val sample = hit(g, lane, v*(.35f+.65f*progress), (take+i)%TAKES, progress)
             val start = (pos*beat).roundToInt()
             for (j in 0 until min(sample.size, out.size-start)) out[start+j] += sample[j] * .55f
