@@ -29,11 +29,11 @@ tambourine, three toms and ride. On 2026-11-10 the owner heard them:
 - **The repeat and 40% hits:** the same drum, played by a softer hand.
 - **The ride:** sounds like a crash. Round 3 re-voices it, and its sound is a candidate for the crash.
 
-Pad A15 becomes the snare riser.
+Pad A15 becomes the snare riser, and the shaker moves to A16 (Bump moves to the genre kits).
 
 Not in the phone picker yet; the picker entry waits for a session with an Android SDK, as the house
 rule says. Still to come:
-- the crash and Bump, and the 16 pads assembled into a kit;
+- the crash and the re-voiced ride (round 3), and the 16 pads assembled into a kit;
 - two more genre kits, Dub Tank and Trip hop (the owner's picks);
 - the snare riser and the surf tom fill;
 - the audition page.

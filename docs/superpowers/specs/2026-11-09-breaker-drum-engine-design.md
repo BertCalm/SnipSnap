@@ -481,5 +481,24 @@ What follows from the answers:
 - **The ride.** The long ride with its rivets sizzling, through the spring and the crush, is all
   wash and no stick. Round 3 re-voices it with a defined ping, and offers this sound as the A14
   crash.
-- **The shaker** still belongs, but no longer has A15. Where it goes is the owner's call.
+- **The shaker** still belongs, but no longer has A15.
+
+**Decided after round 2 (2026-11-10):**
+- **The shaker** takes A16. Bump, the tank kicked on its own, moves to the genre kits, where the dub
+  kit can use it.
+- **The ride:** round 3 offers two candidates for the owner to pick from:
+  - SKIN's ride re-voiced with a defined ping and little wash, mostly out of the spring;
+  - BACKWASH's CC0 ride-bell recordings (3 layers × 3 takes) through the rig.
+- **The crash (A14):** the round-2 ride sound, offered beside one brighter, longer variant through
+  the amp.
+- **FIRED BRONZE's hat round robin** gets fixed after BREAKER, in its own PR with a listen.
+
+The kit, as of round 2:
+
+| | | | |
+|---|---|---|---|
+| A13 Ride (round 3 picks) | A14 Crash (round 3) | A15 Snare riser (round 3) | A16 Shaker |
+| A09 Floor Tom (drippy) | A10 Rack Tom | A11 High Tom | A12 Crushed Snare |
+| A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick (short slap) | A08 Tambourine |
+| A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
 
