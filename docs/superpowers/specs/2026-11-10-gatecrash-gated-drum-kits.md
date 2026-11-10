@@ -1,7 +1,9 @@
 # GATECRASH: 1980s gated drum kits, engineering specification
 
 Version 1.0 · 2026-11-10
-Status: built as a candidate. Measured in Kotlin; nothing heard. Android and MPC hardware not exercised.
+Status: built as a candidate. Round 1 was heard and rejected on 2026-11-10; round 2 is measured, not heard.
+Android and MPC hardware not exercised. Sections 1 to 12 record the round-1 design; "Round 2" at the end
+records what the listen changed, and wins where they differ.
 Repository truth: read at `a90049ce`. Grepped before naming: `Room.plan`, `Room.bloom`, `Room.lateGain`,
 `Valve.upsample`, `Tide.bandLimit`, `Dsp.decimate`, `Dsp.seedFor`, `Dsp.Noise`, `Skin.render(voice, macros,
 velocity, take)`, `Thump.render(voice, macros, velocity)`, `Onset.render(voice, macros, modelVersion,
@@ -238,3 +240,60 @@ Research text only; no name here appears in the product.
     band-limiter's states were decaying through denormals. The clip now runs only on the live part.
 - **Not done:** MPC 2, SFZ and DecentSampler exports (MPC 2's projection keeps only the first take per zone);
   parallel kit building (the source engines' thread safety was not checked); stereo.
+
+## Round 2 (2026-11-10, after the first listen)
+
+**Heard:** "Yikes. That is harsh and doesn't sound like 80s drums at all. More like loud static."
+
+**Measured after the listen** (Kotlin, round-1 code):
+
+| Pad | Room energy against the drum | Share above 4 kHz: drum / room |
+|---|---:|---|
+| Stone Room, Wall Snare | +19.8 dB | 24.3% / 22.1% |
+| Stone Room, Concert Tom 1 | +19.4 dB | 1.6% / 2.1% |
+| Stone Room, Tom Fill | +15.8 dB | 0.7% / 1.1% |
+| Machine Pop, Burst Snare | +13.6 dB | 75.3% / 72.1% |
+| Machine Pop, Burst Clap | +15.2 dB | 47.0% / 48.4% |
+| Electro Funk, Snap Snare | +16.4 dB | 27.2% / 22.2% |
+
+A pad that is 97 to 99 percent room, where the room is as bright as a snare and held flat for 300 ms, is a
+burst of noise. Three more things made it worse: `dryCut` 0.5 to 0.7 gated away the drum's own body, `drive`
+0.5 put a level-1 plateau through `tanh(2x)`, and THUMP's snare at SNAP 0.75 had 75% of its own energy above
+4 kHz before any room.
+
+**What was wrong in the design, not just the settings.** Section 6.3 and the `room` control set the return
+against the dry hit's *peak*. A peak says nothing about how much of the pad is room: a plateau at the drum's
+peak level for 340 ms carries about 80 times a tom's energy. The probe "the stone room stands about as loud
+as the drum" then enforced the fault. That probe is removed.
+
+**Changed:**
+
+- `Space.roomDb`: the return's whole energy against the dry hit's, in dB, for a full hit. `Gatecrash.calibrated`
+  measures the pad once and sets the linear send. `MAX_ROOM_DB` is +6; the kits use at most +4 (snare, toms),
+  0 to +3 on claps and the tight snares, -2 to -3 on the synth toms, -6 to -12 elsewhere.
+- `Space.toneHz` and `lowHz`: a 12 dB per octave low-pass (1.5 to 3.5 kHz by pad) and a 120 Hz high-pass on
+  every return, before the crush.
+- `drive` defaults to 0.15 (was 0.3 to 0.6). `dryCut` is 0 to 0.3 (was up to 0.7).
+- Hats in Stone Room and Machine Pop and the Machine Crash have no space.
+- Machine Pop's snares: SNAP and TONE lowered. The Burst Snare's own share above 4 kHz went from 75% to 29%.
+- The gesture line is now "strike → the room stands level behind it → cut to black".
+- `Gatecrash.VERSION` and `GatecrashKits.VERSION` are 2.
+
+**Measured, round 2:** Wall Snare +4.1 dB with 2.4% of the room above 4 kHz (drum 24.3%). Concert toms +4.2 dB.
+Burst Snare +3.1 dB, room 3.9% above 4 kHz (drum 28.9%). Snap Snare +1.4 dB, room 4.8% (drum 27.2%).
+
+**New probes:** every room within 0.3 dB of its authored energy and none over +4 dB; every audible room under
+0.6 of its drum's share above 4 kHz; the dry drum outweighs its room in the first 15 ms on every pad; no hat
+has a space. 21 of 21 pass.
+
+**Two measurement changes, disclosed.** The held-level probe now uses a 50 ms window: 20 ms held two cycles of
+a 115 Hz tom and read its beating as a 4.4 dB level change. The take-distinctness floor went from 0.01 to
+0.005: with a quieter room the stone kick's soft takes measure 0.009 apart. Identical audio measures 0, so
+the probe still fails on a copied take, but that pair is a weak round robin.
+
+**Lesson for the ledger.** Round 1 passed 19 of 19 probes and sounded like static. Every one of those probes
+tested that the mechanism did what the design said. None tested whether the design's amounts were sane. The
+three new probes are the ones that would have failed round 1.
+
+**Audition:** the page adds "Less room" and "More room" (6 dB either side) on the main snare, one tom and the
+fill of each kit, so the amount can be chosen by ear. Round 2 is not heard.

@@ -24,6 +24,9 @@ import kotlin.math.roundToInt
 object GatecrashKitGenerator {
     private const val RATE = 44100
 
+    /** Pads that get a less-room and a more-room comparison: the main snare, a tom, and the fill. */
+    private val TRIALS = setOf(1, 8, 14)
+
     /** One groove note: beat, pad slot (1..16), velocity. */
     private class Hit(val beat: Double, val slot: Int, val velocity: Float)
 
@@ -96,6 +99,12 @@ object GatecrashKitGenerator {
                 write("pad-$n.wav", wet)
                 val space = GatecrashKits.spaceOf(g, role)
                 if (space != null) write("dry-$n.wav", GatecrashKits.dry(g, role, 1f, 0).samples)
+                // Not part of the kit: the same strike with 6 dB less and 6 dB more room, for the owner to steer by.
+                val trial = space != null && role in TRIALS
+                if (trial) {
+                    write("less-$n.wav", GatecrashKits.roomTrial(g, role, -6f).samples)
+                    write("more-$n.wav", GatecrashKits.roomTrial(g, role, 6f).samples)
+                }
                 // Soft, medium, hard: four takes each, in the order the pad deals them.
                 val clips = GatecrashKits.velocities.flatMap { v -> List(GatecrashKits.TAKES) { t -> play(pad.slot, v, t).first } }
                 val stride = clips.maxOf { it.size } + RATE / 8
@@ -110,7 +119,7 @@ object GatecrashKitGenerator {
                     .append(",${m?.attacks ?: ""},${f(m?.earlyDb)},${f(m?.lateDb)},${f(m?.afterDb)},${f(m?.roomPeakDb)},$buildMs\n")
                 manifest.append("      {\"slot\": ${pad.slot}, \"name\": \"${pad.displayName}\", \"class\": \"${pad.drumClass}\", ")
                     .append("\"space\": \"${space?.mode?.name ?: "DRY"}\", \"seconds\": ${String.format(Locale.ROOT, "%.3f", wet.size / RATE.toDouble())}, ")
-                    .append("\"dry\": ${space != null}, \"touch\": ${role < GatecrashKits.HITS}, ")
+                    .append("\"dry\": ${space != null}, \"touch\": ${role < GatecrashKits.HITS}, \"trial\": $trial, \"roomDb\": ${space?.roomDb ?: "null"}, ")
                     .append("\"holdMs\": ${space?.holdMs?.roundToInt() ?: 0}, \"closeMs\": ${space?.closeMs?.roundToInt() ?: 0}, ")
                     .append("\"roomPeakDb\": ${f(m?.roomPeakDb).ifEmpty { "null" }}, \"earlyDb\": ${f(m?.earlyDb).ifEmpty { "null" }}, \"lateDb\": ${f(m?.lateDb).ifEmpty { "null" }}, ")
                     .append("\"wet\": ${envelope(wet, wet.size)}, \"dryEnv\": ${if (space != null) envelope(GatecrashKits.dry(g, role, 1f, 0).samples, wet.size) else "null"}}")

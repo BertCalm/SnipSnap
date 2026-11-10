@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
  */
 object GatecrashKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         STONE_ROOM("gatecrash-stone", "Stone Room", 96),
@@ -98,13 +98,34 @@ object GatecrashKits {
     }
 
     /** The space [role] is printed in, or null for a dry pad. */
-    fun spaceOf(kit: Kit, role: Int): Space? =
-        if (role < HITS) parts(kit)[role].space else phrases(kit)[role - HITS].space
+    fun spaceOf(kit: Kit, role: Int): Space? {
+        val authored = (if (role < HITS) parts(kit)[role].space else phrases(kit)[role - HITS].space) ?: return null
+        // The send that gives this pad its authored room energy depends on the drum, so it is measured once
+        // on the pad's own full-strength first take and kept.
+        return spaces.getOrPut(kit to role) { Gatecrash.calibrated(dryRaw(kit, role, 1f, 0), authored, seedOf(kit, role)) }
+    }
+
+    private val spaces = ConcurrentHashMap<Pair<Kit, Int>, Space>()
+
+    private fun seedOf(kit: Kit, role: Int) = Dsp.seedFor(kit.name, role)
 
     /** The finished pad at one velocity and take. Pure: the same arguments give the same bytes. */
     fun render(kit: Kit, role: Int, velocity: Float, take: Int): Snip {
         require(role in 0 until PADS && velocity.isFinite() && velocity in 0f..1f && take in 0 until TAKES)
         return finish(raw(kit, role, velocity, take), zoneGain(kit, role, velocity))
+    }
+
+    /**
+     * The hard first take with its room moved by [roomOffsetDb], levelled on its own. Not part of any kit:
+     * the audition page uses it to let the owner hear less and more room around the authored amount.
+     */
+    fun roomTrial(kit: Kit, role: Int, roomOffsetDb: Float): Snip {
+        require(role in 0 until PADS && roomOffsetDb.isFinite() && roomOffsetDb in -24f..12f)
+        val space = requireNotNull(spaceOf(kit, role)) { "a dry pad has no room to move" }
+        val moved = space.copy(room = space.room * Math.pow(10.0, roomOffsetDb / 20.0).toFloat())
+        val x = Gatecrash.process(dryRaw(kit, role, 1f, 0), moved, 1f, seedOf(kit, role)).out
+        val peak = finish(x.copyOf(), 1f, ceiling = Float.MAX_VALUE).peak()
+        return finish(x, if (peak > 1e-9f) PAD_PEAK / peak else 1f)
     }
 
     /** The same strike with no space, levelled by the same pad gain: the audition's dry comparison. */
@@ -116,7 +137,7 @@ object GatecrashKits {
     /** Each stage of one pad's space, for the tests that measure the gesture. Null for a dry pad. */
     internal fun stages(kit: Kit, role: Int, velocity: Float, take: Int): Gatecrash.Stages? {
         val space = spaceOf(kit, role) ?: return null
-        return Gatecrash.process(dryRaw(kit, role, velocity, take), space, touch(velocity), Dsp.seedFor(kit.name, role))
+        return Gatecrash.process(dryRaw(kit, role, velocity, take), space, touch(velocity), seedOf(kit, role))
     }
 
     /** The gesture as numbers, for the audition's metrics table: levels in dB against a full-scale dry hit. */
@@ -296,14 +317,20 @@ object GatecrashKits {
         Kit.ELECTRO_FUNK -> electroPhrases
     }
 
+    // Round 2. The owner heard round 1 as harsh, loud static. Measured, its rooms carried 14 to 20 dB more
+    // energy than their drums, were as bright as the drums, were clipped hard, and the dry drum was cut by
+    // the gate. Now: roomDb is the room's energy against the drum's and never passes +4, every return is
+    // low-passed well under the drum's own top, the clip is gentle, and the drum is left nearly whole.
+
+    // Hats and the crash get no space at all: a held room on a cymbal is hiss.
+
     // STONE ROOM. One hard room, heard three ways: the kick opens it briefly, the snare holds it, and the
     // toms get the longest hold and the deepest crush, because the tom run is what this sound is known for.
-    private val stoneKick = Space(STONE, size = .55f, walls = .85f, crush = .70f, holdMs = 170f, closeMs = 25f, room = .50f, drive = .35f)
-    private val stoneSnare = Space(STONE, size = .62f, walls = .90f, crush = .90f, holdMs = 300f, closeMs = 16f, room = .95f, drive = .50f, dryCut = .6f)
-    private val stoneTom = Space(STONE, size = .70f, walls = .90f, crush = .95f, holdMs = 340f, closeMs = 20f, room = 1.0f, drive = .55f, dryCut = .7f)
-    private val stoneTight = stoneSnare.copy(holdMs = 180f, room = .75f)
-    private val stoneAir = Space(STONE, size = .30f, walls = .60f, crush = .40f, holdMs = 60f, closeMs = 30f, room = .18f, drive = .2f)
-    private val stoneWash = Space(STONE, size = .62f, walls = .80f, crush = .60f, holdMs = 520f, closeMs = 140f, room = .35f, drive = .3f)
+    private val stoneKick = Space(STONE, size = .55f, walls = .85f, crush = .70f, holdMs = 170f, closeMs = 25f, roomDb = -6f, toneHz = 1_500f)
+    private val stoneSnare = Space(STONE, size = .62f, walls = .90f, crush = .85f, holdMs = 300f, closeMs = 18f, roomDb = 4f, dryCut = .25f, toneHz = 3_200f)
+    private val stoneTom = Space(STONE, size = .70f, walls = .90f, crush = .95f, holdMs = 340f, closeMs = 22f, roomDb = 4f, dryCut = .3f, toneHz = 2_400f)
+    private val stoneTight = stoneSnare.copy(holdMs = 180f, roomDb = 1f)
+    private val stoneWash = Space(STONE, size = .62f, walls = .80f, crush = .60f, holdMs = 520f, closeMs = 140f, roomDb = -12f, drive = .1f, toneHz = 2_500f)
 
     private fun concertTom(tune: Float, decay: Float) = Part("", DrumClass.TOM, stoneTom,
         // Single-headed toms: a hard attack, a short body and a pitch that sags after the hit (DROP).
@@ -316,11 +343,11 @@ object GatecrashKits {
             strike = skin(SkinVoice.KICK, "TUNE" to .30f, "DECAY" to .50f, "TONE" to .45f, "PUNCH" to .65f, "CLICK" to .62f, "DROP" to .2f)),
         Part("Wall Snare", DrumClass.SNARE, stoneSnare,
             strike = skin(SkinVoice.SNARE, "TUNE" to .30f, "SNAP" to .60f, "DECAY" to .50f, "PUNCH" to .60f, "RATTLE" to .55f)),
-        Part("Closed Hat", DrumClass.HAT_CLOSED, stoneAir, mute = 1,
+        Part("Closed Hat", DrumClass.HAT_CLOSED, null, mute = 1,
             strike = skinTouched(SkinVoice.HAT_CLOSED, mapOf("TUNE" to .45f, "DECAY" to .30f, "TONE" to .45f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
-        Part("Open Hat", DrumClass.HAT_OPEN, stoneAir.copy(holdMs = 220f, closeMs = 60f), mute = 1,
+        Part("Open Hat", DrumClass.HAT_OPEN, null, mute = 1,
             strike = skinTouched(SkinVoice.HAT_OPEN, mapOf("TUNE" to .45f, "DECAY" to .50f, "TONE" to .45f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
-        Part("Cross Stick", DrumClass.PERC, stoneTight.copy(room = .6f),
+        Part("Cross Stick", DrumClass.PERC, stoneTight.copy(roomDb = 0f, toneHz = 2_000f),
             strike = skinTouched(SkinVoice.STICK, mapOf("TUNE" to .45f, "DECAY" to .40f, "BODY" to .4f)) { v -> mapOf("CLICK" to .25f + .4f * v, "PUNCH" to .4f + .3f * v) }),
         Part("Crack Snare", DrumClass.SNARE, stoneTight,
             strike = skin(SkinVoice.SNARE, "TUNE" to .62f, "SNAP" to .75f, "DECAY" to .30f, "PUNCH" to .70f, "RATTLE" to .45f)),
@@ -332,7 +359,7 @@ object GatecrashKits {
         named("Floor Tom", concertTom(.10f, .62f)),
         Part("Dark Ride", DrumClass.PERC, stoneWash,
             strike = skinTouched(SkinVoice.RIDE, mapOf("TUNE" to .35f, "DECAY" to .60f, "TONE" to .40f)) { v -> mapOf("PUNCH" to .3f + .4f * v, "SIZZLE" to .2f * v) }),
-        Part("Gated Shaker", DrumClass.PERC, stoneTight.copy(holdMs = 120f, room = .5f),
+        Part("Gated Shaker", DrumClass.PERC, stoneTight.copy(holdMs = 120f, roomDb = -6f, toneHz = 2_200f),
             strike = skinTouched(SkinVoice.SHAKER, mapOf("DECAY" to .30f, "TONE" to .5f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("GRAIN" to .2f + .3f * v, "PUNCH" to .4f + .3f * v) }),
     )
 
@@ -346,11 +373,11 @@ object GatecrashKits {
     )
 
     // MACHINE POP. No room at all: every space here is a burst of reflections that does not decay.
-    private val popKick = Space(BURST, walls = .40f, holdMs = 110f, closeMs = 20f, room = .32f, drive = .3f)
-    private val popSnare = Space(BURST, walls = .75f, holdMs = 240f, closeMs = 14f, room = .90f, drive = .5f, tilt = .5f, dryCut = .5f)
-    private val popTom = Space(BURST, walls = .65f, holdMs = 260f, closeMs = 16f, room = .80f, drive = .45f, tilt = .3f)
-    private val popClap = Space(BURST, walls = .85f, holdMs = 200f, closeMs = 12f, room = .85f, drive = .4f, tilt = .8f, dryCut = .5f)
-    private val popAir = Space(BURST, walls = .90f, holdMs = 70f, closeMs = 30f, room = .15f, drive = .2f)
+    private val popKick = Space(BURST, holdMs = 110f, closeMs = 20f, roomDb = -10f, drive = .1f, toneHz = 1_500f)
+    private val popSnare = Space(BURST, holdMs = 240f, closeMs = 14f, roomDb = 3f, tilt = .5f, dryCut = .2f, toneHz = 3_500f)
+    private val popTom = Space(BURST, holdMs = 260f, closeMs = 16f, roomDb = -2f, tilt = .3f, toneHz = 3_000f)
+    private val popClap = Space(BURST, holdMs = 200f, closeMs = 12f, roomDb = 2f, tilt = .8f, dryCut = .2f, toneHz = 2_500f)
+    private val popAir = Space(BURST, holdMs = 70f, closeMs = 30f, roomDb = -8f, drive = .1f, toneHz = 2_500f)
 
     private fun hexTom(name: String, tune: Float) = Part(name, DrumClass.TOM, popTom,
         // The pad-kit tom: a sine that dives a long way (SWEEP) quickly (BEND), with a noisy click on top.
@@ -361,23 +388,23 @@ object GatecrashKits {
         Part("Punch Kick", DrumClass.KICK, popKick,
             strike = thumpKick("TUNE" to .50f, "SWEEP" to .60f, "DECAY" to .30f, "CLICK" to .50f, "DRIVE" to .35f, "PUNCH" to .6f)),
         Part("Burst Snare", DrumClass.SNARE, popSnare,
-            strike = thump(ThumpVoice.SNARE, mapOf("TUNE" to .45f, "DECAY" to .40f, "PUNCH" to .6f)) { v -> mapOf("SNAP" to .45f + .3f * v, "TONE" to .4f + .25f * v) }),
-        Part("Closed Hat", DrumClass.HAT_CLOSED, popAir, mute = 1,
+            strike = thump(ThumpVoice.SNARE, mapOf("TUNE" to .45f, "DECAY" to .40f, "PUNCH" to .6f)) { v -> mapOf("SNAP" to .25f + .25f * v, "TONE" to .2f + .2f * v) }),
+        Part("Closed Hat", DrumClass.HAT_CLOSED, null, mute = 1,
             strike = thump(ThumpVoice.HAT_CLOSED, mapOf("TUNE" to .5f, "DECAY" to .30f, "METAL" to .6f)) { v -> mapOf("NOISE" to .05f + .12f * v) }),
-        Part("Open Hat", DrumClass.HAT_OPEN, popAir.copy(holdMs = 200f), mute = 1,
+        Part("Open Hat", DrumClass.HAT_OPEN, null, mute = 1,
             strike = thump(ThumpVoice.HAT_OPEN, mapOf("TUNE" to .5f, "DECAY" to .45f, "METAL" to .6f)) { v -> mapOf("NOISE" to .05f + .12f * v) }),
         Part("Burst Clap", DrumClass.CLAP, popClap,
             strike = thump(ThumpVoice.CLAP, mapOf("SPREAD" to .45f, "DECAY" to .40f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .35f + .3f * v) }),
-        Part("Rim", DrumClass.PERC, popSnare.copy(holdMs = 120f, room = .5f),
+        Part("Rim", DrumClass.PERC, popSnare.copy(holdMs = 120f, roomDb = -8f, toneHz = 1_800f),
             strike = thump(ThumpVoice.RIM, mapOf("TUNE" to .55f, "DECAY" to .25f), vary = listOf("TUNE", "DECAY", "RING"))),
         hexTom("Hex Tom 1", .85f), hexTom("Hex Tom 2", .62f), hexTom("Hex Tom 3", .40f), hexTom("Hex Tom 4", .18f),
-        Part("Cowbell", DrumClass.PERC, popAir.copy(holdMs = 130f, room = .3f),
+        Part("Cowbell", DrumClass.PERC, popAir.copy(holdMs = 130f),
             strike = thump(ThumpVoice.COWBELL, mapOf("TUNE" to .5f, "DECAY" to .35f)) { v -> mapOf("TONE" to .35f + .3f * v) }),
-        Part("Spark", DrumClass.PERC, popTom.copy(holdMs = 160f, room = .55f),
+        Part("Spark", DrumClass.PERC, popTom.copy(holdMs = 160f, roomDb = -4f),
             strike = thump(ThumpVoice.SPARK, mapOf("TUNE" to .5f, "DECAY" to .35f, "COLOR" to .5f)) { v -> mapOf("METAL" to .1f + .3f * v) }),
-        Part("Tight Snare", DrumClass.SNARE, popSnare.copy(holdMs = 120f, room = .7f, tilt = 0f),
-            strike = thump(ThumpVoice.SNARE, mapOf("TUNE" to .70f, "DECAY" to .25f, "PUNCH" to .65f)) { v -> mapOf("SNAP" to .55f + .3f * v, "TONE" to .5f + .25f * v) }),
-        Part("Machine Crash", DrumClass.PERC, popAir.copy(holdMs = 420f, closeMs = 120f, room = .3f),
+        Part("Tight Snare", DrumClass.SNARE, popSnare.copy(holdMs = 120f, roomDb = 0f, tilt = 0f),
+            strike = thump(ThumpVoice.SNARE, mapOf("TUNE" to .70f, "DECAY" to .25f, "PUNCH" to .65f)) { v -> mapOf("SNAP" to .35f + .25f * v, "TONE" to .3f + .2f * v) }),
+        Part("Machine Crash", DrumClass.PERC, null,
             strike = thump(ThumpVoice.HAT_OPEN, mapOf("TUNE" to .30f, "DECAY" to 1f, "METAL" to .75f)) { v -> mapOf("NOISE" to .3f + .3f * v) }),
     )
 
@@ -393,9 +420,9 @@ object GatecrashKits {
 
     // ELECTRO FUNK. The kick is long, low and dry; everything else is short, and the room is small, bright
     // and shut almost at once, so the kit stays out of the way of a bass line.
-    private val funkSnare = Space(STONE, size = .28f, walls = .95f, crush = .75f, holdMs = 110f, closeMs = 10f, room = .70f, drive = .6f, dryCut = .5f)
-    private val funkTom = funkSnare.copy(holdMs = 140f, room = .6f, dryCut = .3f)
-    private val funkSmall = funkSnare.copy(holdMs = 80f, room = .3f, dryCut = 0f)
+    private val funkSnare = Space(STONE, size = .28f, walls = .95f, crush = .75f, holdMs = 110f, closeMs = 10f, roomDb = 1f, dryCut = .2f, toneHz = 4_000f)
+    private val funkTom = funkSnare.copy(holdMs = 140f, roomDb = -3f, dryCut = .1f, toneHz = 2_800f)
+    private val funkSmall = funkSnare.copy(holdMs = 80f, roomDb = -8f, dryCut = 0f, toneHz = 2_200f)
 
     private fun synthTom(name: String, tune: Float) = Part(name, DrumClass.TOM, funkTom,
         strike = thump(ThumpVoice.TOM, mapOf("TUNE" to tune, "SWEEP" to .50f, "DECAY" to .40f, "PUNCH" to .55f)) { v ->
@@ -411,11 +438,11 @@ object GatecrashKits {
             strike = thump(ThumpVoice.HAT_CLOSED, mapOf("TUNE" to .55f, "DECAY" to .20f, "METAL" to .8f)) { v -> mapOf("NOISE" to .04f + .1f * v) }),
         Part("Open Hat", DrumClass.HAT_OPEN, null, mute = 1,
             strike = thump(ThumpVoice.HAT_OPEN, mapOf("TUNE" to .55f, "DECAY" to .40f, "METAL" to .8f)) { v -> mapOf("NOISE" to .04f + .1f * v) }),
-        Part("Room Clap", DrumClass.CLAP, funkSnare.copy(holdMs = 130f),
+        Part("Room Clap", DrumClass.CLAP, funkSnare.copy(holdMs = 130f, toneHz = 2_500f),
             strike = thump(ThumpVoice.CLAP, mapOf("SPREAD" to .65f, "DECAY" to .35f, "CLAPS" to .7f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .45f + .3f * v) }),
         Part("Rim Click", DrumClass.PERC, funkSmall,
             strike = thump(ThumpVoice.RIM, mapOf("TUNE" to .70f, "DECAY" to .15f), vary = listOf("TUNE", "DECAY", "RING"))),
-        Part("Cowbell", DrumClass.PERC, funkSmall.copy(room = .4f),
+        Part("Cowbell", DrumClass.PERC, funkSmall.copy(roomDb = -8f),
             strike = thump(ThumpVoice.COWBELL, mapOf("TUNE" to .55f, "DECAY" to .45f)) { v -> mapOf("TONE" to .4f + .3f * v) }),
         Part("Thud Kick", DrumClass.KICK, funkSmall,
             strike = thumpKick("TUNE" to .50f, "SWEEP" to .55f, "DECAY" to .20f, "CLICK" to .60f, "DRIVE" to .45f)),

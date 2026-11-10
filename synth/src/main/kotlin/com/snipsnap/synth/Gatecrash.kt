@@ -10,51 +10,63 @@ import kotlin.math.sqrt
 import kotlin.math.tanh
 
 /**
- * GATECRASH: the drum's room, crushed until it stands as loud as the drum, then cut off.
+ * GATECRASH: the drum's room, crushed so it stands level for as long as the gate is open, then cut off.
  *
- * The characteristic gesture is **strike → the room rises to meet it → held flat → cut to black**.
+ * The characteristic gesture is **strike → the room stands level behind it → cut to black**.
  *
  * This is a treatment stage for the GATECRASH kits ([GatecrashKits]), not a Patch engine. It takes one dry
  * mono hit (or a dry phrase of hits) at [Dsp.RATE] and returns the hit with its space. Two mechanisms, chosen
  * per pad by [Mode], because the 1980s reached this sound two different ways:
  *
- * **[Mode.STONE]: a live room heard through an overdriven listen microphone, then a keyed gate.**
+ * **[Mode.STONE]: a live room heard through a hard-compressed listen microphone, then a keyed gate.**
  * 1. The room's answer alone (no direct sound): [Room]'s image-source taps and its sixteen-line bloom, heard
- *    from the far end of the room.
+ *    from the far end of the room, then darkened ([Space.toneHz]): a far microphone hears less top.
  * 2. The crush: a fast, steep compressor whose threshold sits far below the room's first level. While the
  *    room is above the threshold the compressor's gain rises as the room decays, so the level stays flat.
- *    This, not the gate, is what makes the room as loud as the drum.
- * 3. A soft clip, run at 4x like [Valve] and [Forge], for the microphone amplifier's overload.
+ * 3. A gentle soft clip, run at 4x like [Valve] and [Forge].
  * 4. The gate, opened by the *dry* drum's attack, not by the room's level: it holds for a set time after the
  *    last attack and then closes in a few milliseconds. Keying from the attack is what lets a fill retrigger
  *    one shared room, and why a ringing tom does not hold its own gate open.
  *
- * **[Mode.BURST]: a nonlinear reverb program.** No room and no gate: the hit is convolved with a burst of
- * sparse, randomly signed reflections (velvet noise) whose level is flat or rising for a set time and then
- * stops. Nothing decays, so nothing needs gating. It is linear up to the same soft clip.
+ * **[Mode.BURST]: a nonlinear reverb program.** No room and no gate: the front of the hit is convolved with a
+ * burst of sparse, randomly signed reflections (velvet noise) whose level is flat or rising for a set time and
+ * then stops. Nothing decays, so nothing needs gating. It is linear up to the same soft clip.
+ *
+ * **How much room.** [Space.roomDb] is the return's energy against the drum's, and [calibrated] finds the
+ * send that gives it. Round 1 had no such measure. Its rooms were set against the drum's peak, as bright as
+ * the drum, clipped hard, and 14 to 20 dB over the drum in energy; the owner heard "loud static", which is
+ * what a bright noise held flat for 300 ms is. The cap ([MAX_ROOM_DB]) and the tone filter are that lesson.
  *
  * A compressor evens levels out, so on its own the crush would give a tap nearly the room a full hit gets.
  * The send law undoes that on purpose: the return is sent at the hit's level to the power [SEND_POWER], so
  * a softer hit is drier as well as quieter. [touch] tells the stage how hard the hit was against a full one,
  * and keeps the crush threshold where a full hit put it rather than letting it follow the hit down.
  *
- * Every numeric constant here is a shape value: chosen to make the gesture measurable, not yet heard.
+ * Every numeric constant here is a shape value. Round 1 was heard and rejected; round 2 is not yet heard.
  */
 object Gatecrash {
 
     /** Bump when a change alters rendered audio: saved kits name the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Mode { STONE, BURST }
 
     /**
      * One pad's space.
      *
-     * [size] and [walls] are [Room]'s SIZE and WALLS for [Mode.STONE]; for [Mode.BURST] only [walls] is read,
-     * as the burst's brightness. [crush] is how far under the room's first level the compressor's threshold
-     * sits (0 is 6 dB, 1 is 40 dB). [holdMs] is how long the space stays open after the last attack and
-     * [closeMs] how long it takes to shut. [room] is the return's level against a full-scale dry hit.
-     * [drive] is the soft clip. [tilt] (BURST only) leans the burst from flat (0) to rising (1).
+     * [size] and [walls] are [Room]'s SIZE and WALLS ([Mode.STONE] only). [crush] is how far under the room's
+     * first level the compressor's threshold sits (0 is 6 dB, 1 is 40 dB). [holdMs] is how long the space
+     * stays open after the last attack and [closeMs] how long it takes to shut.
+     *
+     * [roomDb] is the authored amount of space: the return's whole energy against the dry hit's whole
+     * energy, in dB, for a full hit. 0 is "as much room as drum". [room] is the linear send that produces
+     * it, which depends on the drum and is found by [calibrated]; nobody writes it by hand. The first round
+     * set the send by hand against the hit's *peak*, and the owner heard the result as loud static: measured,
+     * those rooms carried 14 to 20 dB more energy than their drums.
+     *
+     * [toneHz] is a 12 dB per octave low-pass on the return and [lowHz] a high-pass under it. A far
+     * microphone hears less top than a close one, and a return as bright as the drum, held flat, is a burst
+     * of noise. [drive] is the soft clip. [tilt] (BURST only) leans the burst from flat (0) to rising (1).
      * [dryCut] gates the dry drum with the room, 0 leaving it to ring and 1 cutting it fully.
      */
     data class Space(
@@ -64,15 +76,38 @@ object Gatecrash {
         val crush: Float = 0.8f,
         val holdMs: Float = 280f,
         val closeMs: Float = 18f,
-        val room: Float = 0.8f,
-        val drive: Float = 0.4f,
+        val roomDb: Float = 0f,
+        val drive: Float = 0.15f,
         val tilt: Float = 0f,
         val dryCut: Float = 0f,
+        val toneHz: Float = 3_000f,
+        val lowHz: Float = 120f,
+        val room: Float = 1f,
     ) {
         init {
-            require(listOf(size, walls, crush, room, drive, tilt, dryCut).all { it.isFinite() && it in 0f..1.5f })
+            require(listOf(size, walls, crush, drive, tilt, dryCut).all { it.isFinite() && it in 0f..1f })
+            require(roomDb.isFinite() && roomDb in -40f..MAX_ROOM_DB) { "roomDb $roomDb: a room over $MAX_ROOM_DB dB buries its drum" }
+            require(room.isFinite() && room >= 0f)
+            require(toneHz.isFinite() && toneHz in 300f..20_000f && lowHz.isFinite() && lowHz in 20f..1_000f)
             require(holdMs.isFinite() && holdMs in 10f..1200f && closeMs.isFinite() && closeMs in 2f..400f)
         }
+    }
+
+    /** The most room a pad may be given: four times the drum's own energy. */
+    const val MAX_ROOM_DB = 6f
+
+    /**
+     * [space] with its send set so that, for this full-strength [dry] hit, the return carries [Space.roomDb]
+     * of energy against the hit. The return is linear in the send, so one measurement at a send of 1 fixes it.
+     */
+    fun calibrated(dry: FloatArray, space: Space, seed: Int = 0): Space {
+        val unit = process(dry, space.copy(room = 1f), 1f, seed)
+        var room = 0.0
+        var drum = 0.0
+        for (v in unit.ret) room += v.toDouble() * v
+        for (v in dry) drum += v.toDouble() * v
+        if (room <= 1e-18 || drum <= 1e-18) return space.copy(room = 0f)
+        return space.copy(room = sqrt(drum / room * 10.0.pow(space.roomDb / 10.0)).toFloat())
     }
 
     /** What the stage made, kept apart so a test can measure each claim rather than the sum. */
@@ -133,7 +168,7 @@ object Gatecrash {
         val full = dry.size + holdFrames + closeFrames + (0.03f * RATE).toInt()
         val gate = gate(attacks, full, holdFrames, closeFrames)
         val raw = when (space.mode) {
-            Mode.STONE -> crushed(roomReturn(dry, space, full), space, touch)
+            Mode.STONE -> crushed(toned(roomReturn(dry, space, full), space), space, touch)
             Mode.BURST -> burst(dry, attacks, space, full, touch, seed)
         }
         // The crush has already pulled a soft hit's room nearly up to a hard hit's. The send takes it back
@@ -150,6 +185,15 @@ object Gatecrash {
             out[i] = d + ret[i]
         }
         return Stages(out, ret, if (space.mode == Mode.STONE) gate else FloatArray(full) { 1f }, attacks)
+    }
+
+    /** The return's tone, in place: a one-pole high-pass at [Space.lowHz], two one-pole low-passes at [Space.toneHz]. */
+    private fun toned(x: FloatArray, space: Space): FloatArray {
+        val low = Dsp.FixedOnePole(space.lowHz, RATE)
+        val a = Dsp.FixedOnePole(space.toneHz, RATE)
+        val b = Dsp.FixedOnePole(space.toneHz, RATE)
+        for (i in x.indices) { val v = x[i]; x[i] = b.lp(a.lp(v - low.lp(v))) }
+        return x
     }
 
     /** Where the dry signal has an attack: the frames the gate is keyed from. */
@@ -290,10 +334,7 @@ object Gatecrash {
             val n = min(live, frames - off)
             for (i in 0 until n) out[off + i] += dry[i] * g
         }
-        // The box's converters and filters: no sub, and a top set by WALLS.
-        val low = Dsp.FixedOnePole(180f, RATE)
-        val high = Dsp.FixedOnePole(Dsp.expMap(space.walls, 3_500f, 12_000f), RATE)
-        for (i in out.indices) { val v = out[i]; out[i] = high.lp(v - low.lp(v)) }
+        toned(out, space)
         // Scale by the burst's loudest 5 ms for a full hit, so `room` means the same thing in both modes.
         val span = (0.005f * RATE).toInt()
         var sum = 0.0
