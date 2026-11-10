@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
  */
 object GatecrashKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         STONE_ROOM("gatecrash-stone", "Stone Room", 96),
@@ -117,12 +117,13 @@ object GatecrashKits {
 
     /**
      * The hard first take with its room moved by [roomOffsetDb], levelled on its own. Not part of any kit:
-     * the audition page uses it to let the owner hear less and more room around the authored amount.
+     * the audition page uses it to let the owner hear less and more room around the authored amount, or the
+     * same room with a different close time ([closeMs]).
      */
-    fun roomTrial(kit: Kit, role: Int, roomOffsetDb: Float): Snip {
+    fun roomTrial(kit: Kit, role: Int, roomOffsetDb: Float, closeMs: Float? = null): Snip {
         require(role in 0 until PADS && roomOffsetDb.isFinite() && roomOffsetDb in -24f..12f)
         val space = requireNotNull(spaceOf(kit, role)) { "a dry pad has no room to move" }
-        val moved = space.copy(room = space.room * Math.pow(10.0, roomOffsetDb / 20.0).toFloat())
+        val moved = space.copy(room = space.room * Math.pow(10.0, roomOffsetDb / 20.0).toFloat(), closeMs = closeMs ?: space.closeMs)
         val x = Gatecrash.process(dryRaw(kit, role, 1f, 0), moved, 1f, seedOf(kit, role)).out
         val peak = finish(x.copyOf(), 1f, ceiling = Float.MAX_VALUE).peak()
         return finish(x, if (peak > 1e-9f) PAD_PEAK / peak else 1f)
@@ -324,12 +325,16 @@ object GatecrashKits {
 
     // Hats and the crash get no space at all: a held room on a cymbal is hiss.
 
+    // Round 3. The owner, on round 2: "It seems like 80s drums round off at the end rather than cut
+    // abruptly." A hardware gate has a release time. The close was 10 to 25 ms, a chop; it is now 45 to
+    // 130 ms on a raised cosine, so the room leans over and falls instead of stopping.
+
     // STONE ROOM. One hard room, heard three ways: the kick opens it briefly, the snare holds it, and the
     // toms get the longest hold and the deepest crush, because the tom run is what this sound is known for.
-    private val stoneKick = Space(STONE, size = .55f, walls = .85f, crush = .70f, holdMs = 170f, closeMs = 25f, roomDb = -6f, toneHz = 1_500f)
-    private val stoneSnare = Space(STONE, size = .62f, walls = .90f, crush = .85f, holdMs = 300f, closeMs = 18f, roomDb = 4f, dryCut = .25f, toneHz = 3_200f)
-    private val stoneTom = Space(STONE, size = .70f, walls = .90f, crush = .95f, holdMs = 340f, closeMs = 22f, roomDb = 4f, dryCut = .3f, toneHz = 2_400f)
-    private val stoneTight = stoneSnare.copy(holdMs = 180f, roomDb = 1f)
+    private val stoneKick = Space(STONE, size = .55f, walls = .85f, crush = .70f, holdMs = 170f, closeMs = 70f, roomDb = -6f, toneHz = 1_500f)
+    private val stoneSnare = Space(STONE, size = .62f, walls = .90f, crush = .85f, holdMs = 300f, closeMs = 110f, roomDb = 4f, dryCut = .25f, toneHz = 3_200f)
+    private val stoneTom = Space(STONE, size = .70f, walls = .90f, crush = .95f, holdMs = 340f, closeMs = 130f, roomDb = 4f, dryCut = .3f, toneHz = 2_400f)
+    private val stoneTight = stoneSnare.copy(holdMs = 180f, closeMs = 90f, roomDb = 1f)
     private val stoneWash = Space(STONE, size = .62f, walls = .80f, crush = .60f, holdMs = 520f, closeMs = 140f, roomDb = -12f, drive = .1f, toneHz = 2_500f)
 
     private fun concertTom(tune: Float, decay: Float) = Part("", DrumClass.TOM, stoneTom,
@@ -373,11 +378,11 @@ object GatecrashKits {
     )
 
     // MACHINE POP. No room at all: every space here is a burst of reflections that does not decay.
-    private val popKick = Space(BURST, holdMs = 110f, closeMs = 20f, roomDb = -10f, drive = .1f, toneHz = 1_500f)
-    private val popSnare = Space(BURST, holdMs = 240f, closeMs = 14f, roomDb = 3f, tilt = .5f, dryCut = .2f, toneHz = 3_500f)
-    private val popTom = Space(BURST, holdMs = 260f, closeMs = 16f, roomDb = -2f, tilt = .3f, toneHz = 3_000f)
-    private val popClap = Space(BURST, holdMs = 200f, closeMs = 12f, roomDb = 2f, tilt = .8f, dryCut = .2f, toneHz = 2_500f)
-    private val popAir = Space(BURST, holdMs = 70f, closeMs = 30f, roomDb = -8f, drive = .1f, toneHz = 2_500f)
+    private val popKick = Space(BURST, holdMs = 110f, closeMs = 50f, roomDb = -10f, drive = .1f, toneHz = 1_500f)
+    private val popSnare = Space(BURST, holdMs = 240f, closeMs = 80f, roomDb = 3f, tilt = .5f, dryCut = .2f, toneHz = 3_500f)
+    private val popTom = Space(BURST, holdMs = 260f, closeMs = 90f, roomDb = -2f, tilt = .3f, toneHz = 3_000f)
+    private val popClap = Space(BURST, holdMs = 200f, closeMs = 70f, roomDb = 2f, tilt = .8f, dryCut = .2f, toneHz = 2_500f)
+    private val popAir = Space(BURST, holdMs = 70f, closeMs = 50f, roomDb = -8f, drive = .1f, toneHz = 2_500f)
 
     private fun hexTom(name: String, tune: Float) = Part(name, DrumClass.TOM, popTom,
         // The pad-kit tom: a sine that dives a long way (SWEEP) quickly (BEND), with a noisy click on top.
@@ -420,8 +425,8 @@ object GatecrashKits {
 
     // ELECTRO FUNK. The kick is long, low and dry; everything else is short, and the room is small, bright
     // and shut almost at once, so the kit stays out of the way of a bass line.
-    private val funkSnare = Space(STONE, size = .28f, walls = .95f, crush = .75f, holdMs = 110f, closeMs = 10f, roomDb = 1f, dryCut = .2f, toneHz = 4_000f)
-    private val funkTom = funkSnare.copy(holdMs = 140f, roomDb = -3f, dryCut = .1f, toneHz = 2_800f)
+    private val funkSnare = Space(STONE, size = .28f, walls = .95f, crush = .75f, holdMs = 110f, closeMs = 45f, roomDb = 1f, dryCut = .2f, toneHz = 4_000f)
+    private val funkTom = funkSnare.copy(holdMs = 140f, closeMs = 60f, roomDb = -3f, dryCut = .1f, toneHz = 2_800f)
     private val funkSmall = funkSnare.copy(holdMs = 80f, roomDb = -8f, dryCut = 0f, toneHz = 2_200f)
 
     private fun synthTom(name: String, tune: Float) = Part(name, DrumClass.TOM, funkTom,

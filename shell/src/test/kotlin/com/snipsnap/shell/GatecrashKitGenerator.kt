@@ -104,6 +104,9 @@ object GatecrashKitGenerator {
                 if (trial) {
                     write("less-$n.wav", GatecrashKits.roomTrial(g, role, -6f).samples)
                     write("more-$n.wav", GatecrashKits.roomTrial(g, role, 6f).samples)
+                    // The same room with round 2's chop and with twice the authored fade.
+                    write("sharp-$n.wav", GatecrashKits.roomTrial(g, role, 0f, closeMs = 15f).samples)
+                    write("long-$n.wav", GatecrashKits.roomTrial(g, role, 0f, closeMs = space!!.closeMs * 2f).samples)
                 }
                 // Soft, medium, hard: four takes each, in the order the pad deals them.
                 val clips = GatecrashKits.velocities.flatMap { v -> List(GatecrashKits.TAKES) { t -> play(pad.slot, v, t).first } }

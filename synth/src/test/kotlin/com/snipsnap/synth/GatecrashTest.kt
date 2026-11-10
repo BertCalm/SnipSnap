@@ -173,6 +173,22 @@ class GatecrashTest {
         }
     }
 
+    @Test fun `every room rounds off rather than chops`() {
+        // The owner on round 2: 80s drums round off at the end rather than cut abruptly. Round 2 closed in
+        // 10 to 25 ms. No space may now close faster than 45 ms, and the fall is smooth: the return never
+        // drops more than 3 dB in a millisecond on the way down.
+        for (kit in Kit.entries) for (role in 0 until GatecrashKits.HITS) {
+            val space = GatecrashKits.spaceOf(kit, role) ?: continue
+            assertTrue(space.closeMs >= 45f, "${kit.name} role $role closes in ${space.closeMs} ms")
+            if (space.mode != Gatecrash.Mode.STONE) continue
+            val gate = assertNotNull(GatecrashKits.stages(kit, role, 1f, 0)).gate
+            val step = frames(1f)
+            for (i in step until gate.size) if (gate[i] > .05f) {
+                assertTrue(gate[i] >= gate[i - step] * .708f, "${kit.name} role $role: the gate fell ${gate[i - step]} to ${gate[i]} in 1 ms")
+            }
+        }
+    }
+
     @Test fun `the drum is still most of what a pad starts with`() {
         // In the first 15 ms after the attack the dry drum must outweigh its room on every pad.
         for (kit in Kit.entries) for (role in 0 until GatecrashKits.HITS) {

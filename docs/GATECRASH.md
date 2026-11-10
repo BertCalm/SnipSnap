@@ -1,15 +1,15 @@
 # GATECRASH
 
-Three 1980s drum kits whose room stands level behind each drum, then is cut off.
+Three 1980s drum kits whose room stands level behind each drum, then rounds off.
 
-The characteristic gesture is **strike → the room stands level behind it → cut to black**.
+The characteristic gesture is **strike → the room stands level behind it → rounds off to silence**.
 
 GATECRASH is a kit family, not a SYNTH engine: there are no knobs to turn. The owner asked for "the ultimate
 80s drum kit, turned to 11" on 2026-11-10 and chose a kit family, these three kits, and fourteen hits plus
 two phrases per kit. The hits are SKIN, THUMP and ONSET drums as those engines already make them. What is new
 is one treatment stage, `Gatecrash`, which prints each pad through its own space.
 
-**Status: candidate, round 2. Round 1 was heard and rejected; round 2 is not yet heard.** Phone and MPC
+**Status: candidate, round 3. Rounds 1 and 2 were heard; round 3 is not yet heard.** Phone and MPC
 hardware playback have not been exercised.
 
 **Round 1 (2026-11-10): rejected.** The owner's words: "That is harsh and doesn't sound like 80s drums at
@@ -21,7 +21,15 @@ drum. The brief's "turned to 11" had been read as "room as loud as the drum's pe
 **Round 2:** the amount of room is now its energy against the drum's (`roomDb`), found by measurement per
 pad and capped at +6 dB; the kits use at most +4. Every return is low-passed well under its drum's top. The
 clip is gentle. The dry drum is left nearly whole. Hats and the crash have no space at all. The machine
-snares have less hiss. The listening page adds 6 dB less and 6 dB more room on three pads per kit. The
+snares have less hiss. The listening page adds 6 dB less and 6 dB more room on three pads per kit.
+
+**Round 2 heard (2026-11-10).** The owner's words: "It seems like 80s drums round off at the end rather than
+cut abruptly." Nothing further was said about harshness, which is not the same as approval. Round 2's rooms
+closed in 10 to 25 ms.
+
+**Round 3:** every room now closes over 45 to 130 ms on a raised cosine (130 ms on the stone toms, 110 on the
+wall snare, 70 to 90 in Machine Pop, 45 to 60 in Electro Funk). The listening page adds the old sharp cut
+(15 ms) and a fade twice as long on the same three pads per kit. The
 [engineering specification](superpowers/specs/2026-11-10-gatecrash-gated-drum-kits.md) has the model, the
 measurements and what changed while building.
 
@@ -86,7 +94,8 @@ cut, and its peak against the dry hit. `verification.csv` lists what was checked
 - Every room's energy is within 0.3 dB of its authored amount against the drum, and none is authored over
   +4 dB. In the first 15 ms the dry drum outweighs its room on every pad.
 - Every room that is within 7 dB of its drum has under 0.6 of the drum's share of energy above 4 kHz.
-- The gate takes the room to exact silence within 5 ms of the close time.
+- The gate takes the room to exact silence within 5 ms of the close time, and on the way down the room never
+  falls more than 3 dB in a millisecond. No room closes in under 45 ms.
 - A ringing drum is one attack. The stone fill is twelve, the builds sixteen.
 - The soft clip's folded harmonics are under −60 dB.
 - All 42 hits are duller at the soft zone. The toms are at least 1.5 dB drier for their level.

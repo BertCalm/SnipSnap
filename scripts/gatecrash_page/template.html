@@ -76,9 +76,9 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
 <div class="wrap">
   <header>
     <h1>GATECRASH</h1>
-    <p class="gesture">strike → the room stands level behind it → cut to black</p>
-    <p>Three 1980s drum kits for the FRESH TAPE shelf. Each drum's room is held level behind it, then cut off on the drum's own timing. Tap a pad to hear it.</p>
-    <p class="status"><strong>Round 2, not yet heard.</strong> You heard round 1 as harsh, loud static. Measured, its rooms carried 14 to 20 dB more energy than the drums and were just as bright. Round 2 puts each room at about the drum's own energy, makes it much darker than the drum, removes the hard clipping, leaves the drum intact, and gives the cymbals no room at all.</p>
+    <p class="gesture">strike → the room stands level behind it → rounds off to silence</p>
+    <p>Three 1980s drum kits for the FRESH TAPE shelf. Each drum's room is held level behind it, then rounds off on the drum's own timing. Tap a pad to hear it.</p>
+    <p class="status"><strong>Round 3, not yet heard.</strong> Round 1 you heard as harsh static: its rooms were far louder and brighter than the drums, and that is fixed. On round 2 you said 80s drums round off at the end instead of cutting abruptly. The rooms now fade over 45 to 130 ms where they used to chop in 10 to 25 ms.</p>
   </header>
 
   <div class="kits" id="kits" role="group" aria-label="Kit"></div>
@@ -98,6 +98,8 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <button class="act" id="bTouch" type="button">Play all 12 strikes</button>
         <button class="act" id="bLess" type="button">Less room (−6 dB)</button>
         <button class="act" id="bMore" type="button">More room (+6 dB)</button>
+        <button class="act" id="bSharp" type="button">Sharp cut (15 ms)</button>
+        <button class="act" id="bLong" type="button">Longer fade (×2)</button>
         <button class="act" id="bStop" type="button">Stop</button>
       </div>
       <dl id="dNums"></dl>
@@ -119,7 +121,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <li><strong>Does it sound like a drum now?</strong> Start with "Play dry" on a few pads. If the dry drum itself is wrong, the room cannot fix it, and I need to change the source.</li>
         <li><strong>How much room?</strong> The Wall Snare (A02), one tom (A09) and the fill (A15) each have "Less room" and "More room" buttons, 6 dB either side of what I built. Tell me which of the three you would keep.</li>
         <li><strong>Is it still harsh?</strong> If so, say which pad. Hats and crashes are now completely dry.</li>
-        <li><strong>Does the cut click?</strong> The room shuts in 10 to 25 ms. Listen on the Floor Tom (A12).</li>
+        <li><strong>Does the ending round off the way you meant?</strong> The Wall Snare (A02), one tom (A09) and the fill (A15) have "Sharp cut" (the old chop) and "Longer fade" (twice the new one) next to "Play pad". Tell me which is closest, or if it should be longer still.</li>
         <li><strong>Do soft strikes sound like the same drum?</strong> Use "Play all 12 strikes": four soft, four medium, four hard.</li>
         <li><strong>Are these three kits or one?</strong> They use different drums and two different ways of making the space.</li>
       </ol>
@@ -145,7 +147,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <tr><td>Export: MPC 3</td><td class="ok">Verified by read-back</td><td>Velocity ranges, slice starts and cycle lengths read back from the exported track.</td></tr>
         <tr><td>Export: MPC 2</td><td class="open">Does not pass</td><td>MPC 2's format keeps only the first take of each zone.</td></tr>
         <tr><td>Phone and MPC hardware</td><td class="open">Not verified</td><td>Nothing has been played on a device.</td></tr>
-        <tr><td>Sound character</td><td class="open">Round 1 rejected</td><td>Heard as harsh, loud static on 2026-11-10. Round 2 is waiting for you.</td></tr>
+        <tr><td>Sound character</td><td class="open">Round 1 rejected</td><td>Heard as harsh, loud static. Round 2: ends cut too abruptly. Round 3 is waiting for you.</td></tr>
         <tr><td>Melodic voices, keygroups, chord tools, HOLD</td><td>Not applicable</td><td>These are drum kits with finite hits.</td></tr>
       </tbody>
     </table></div>
@@ -213,7 +215,7 @@ function drawDetail() {
   if (pad.space === "STONE" && pad.slot <= 14) {
     const x = Math.min(W, (pad.holdMs + pad.closeMs) / (pad.seconds * 1000) * W);
     s += '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + H + '" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3"/>';
-    gate = '<i style="border-left:2px dashed var(--warn);width:2px"></i>gate shut';
+    gate = '<i style="border-left:2px dashed var(--warn);width:2px"></i>faded out';
   }
   s += "</g>";
   const ticks = pad.seconds > 1.2 ? 0.5 : 0.1;
@@ -225,7 +227,7 @@ function drawDetail() {
   $("plot").innerHTML = s; $("lgGate").innerHTML = gate;
   const rows = [];
   if (pad.space !== "DRY") {
-    rows.push(["Stays open", pad.holdMs + " ms after the last hit"], ["Shuts in", pad.closeMs + " ms"]);
+    rows.push(["Stays open", pad.holdMs + " ms after the last hit"], ["Fades out over", pad.closeMs + " ms"]);
     if (pad.roomDb !== null) rows.push(["Room energy vs the drum's", (pad.roomDb > 0 ? "+" : "") + pad.roomDb.toFixed(0) + " dB"]);
     if (pad.earlyDb !== null) rows.push(["Space level, start → end of hold", pad.earlyDb.toFixed(1) + " → " + pad.lateDb.toFixed(1) + " dB"]);
   }
@@ -234,7 +236,7 @@ function drawDetail() {
   $("dNote").textContent = pad.slot > 14 ? "A phrase: every note re-opens one shared space, which shuts once after the last note."
     : pad.space === "DRY" ? "This pad is left dry on purpose." : "";
   $("bDry").disabled = !pad.dry; $("bTouch").disabled = !pad.touch;
-  $("bLess").hidden = !pad.trial; $("bMore").hidden = !pad.trial;
+  $("bLess").hidden = !pad.trial; $("bMore").hidden = !pad.trial; $("bSharp").hidden = !pad.trial; $("bLong").hidden = !pad.trial;
 }
 function render() {
   document.documentElement.style.setProperty("--accent", accents[kit.id]);
@@ -246,6 +248,8 @@ $("bDry").onclick = () => play(url(kit, "dry", pad.slot));
 $("bTouch").onclick = () => play(url(kit, "touch", pad.slot));
 $("bLess").onclick = () => play(url(kit, "less", pad.slot));
 $("bMore").onclick = () => play(url(kit, "more", pad.slot));
+$("bSharp").onclick = () => play(url(kit, "sharp", pad.slot));
+$("bLong").onclick = () => play(url(kit, "long", pad.slot));
 $("bStop").onclick = stop;
 $("bGroove").onclick = () => play(url(kit, "groove"));
 $("bFill").onclick = () => play(url(kit, "pad", 15));

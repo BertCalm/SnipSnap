@@ -297,3 +297,23 @@ three new probes are the ones that would have failed round 1.
 
 **Audition:** the page adds "Less room" and "More room" (6 dB either side) on the main snare, one tom and the
 fill of each kit, so the amount can be chosen by ear. Round 2 is not heard.
+
+## Round 3 (2026-11-10, after the second listen)
+
+**Heard, on round 2:** "It seems like 80s drums round off at the end rather than cut abruptly."
+
+The owner is right about the hardware. A gate has a release time, and the nonlinear programs' own description
+is that the sound holds "before it falls away". Round 2's `closeMs` was 10 to 25 ms: a chop, not a release.
+The round-1 design called the gesture "cut to black" and section 10 asked only whether the cut clicked.
+
+**Changed:** `closeMs` is 130 ms on the stone toms, 110 on the wall snare, 90 on the tight stone pads, 70 on
+the stone kick; 50 to 90 across Machine Pop; 45 to 60 in Electro Funk. The shape is unchanged (a raised
+cosine on the gate, the burst's own envelope in Machine Pop). `GatecrashKits.VERSION` is 3. The gesture line
+is now "strike → the room stands level behind it → rounds off to silence".
+
+**New probe:** no space closes in under 45 ms, and a STONE gate never falls more than 3 dB in a millisecond.
+22 of 22 pass.
+
+**Audition:** the three trial pads per kit gain "Sharp cut" (15 ms) and "Longer fade" (twice the authored
+close). Whether 110 to 130 ms is the roundness the owner means is not known; that is what the two buttons are
+for. Round 3 is not heard.
