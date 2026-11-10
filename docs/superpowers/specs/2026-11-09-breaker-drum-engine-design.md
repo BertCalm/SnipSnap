@@ -314,17 +314,81 @@ the first echo, 300 Hz peaks at 43.9 ms and 2.5 kHz at 57.7 ms: the chirp rises.
 
 **Against the round-0 prototypes** (third-octave rms, attack 0 to 30 ms and body 30 to 300 ms):
 - **The snare** (tank B, CRUSH .5, DRIP .6): 1.2 dB and 0.8 dB.
-- **The kick** (CRUSH .9, DRIP .2): 15.2 dB and 3.3 dB. The kick's first 30 ms carry 10 to 25 dB
-  less from 450 Hz to 3 kHz in the app.
-  - **The cause, traced stage by stage.** The source matches the prototype's to 1.6e-7, and the
-    crush is the same code (2e-7 on the same input). The harness's stand-in decimator, a 63-tap
-    FIR, made the prototype's saturated onset start 0.6 ms later and steeper. The crush passed
-    that sharper spike, and the amp turned it into a click.
-  - **What the app does instead.** It uses the house resampler and keeps the smoother onset.
-  - **What next.** Disclosed, not matched. If the owner hears the click missing, the fix is a
-    deliberate onset control, not a copy of the stand-in's ringing.
+- **The kick** (CRUSH .9, DRIP .2): reported here at round 1 as 15.2 dB in the attack, with the cause
+  put down to the harness's stand-in decimator. **That was wrong; see "As built: round 1b".**
+  - **What happened.** The stand-in delays the prototype by about 1 ms, and the measuring windows
+    were fixed in time, so the 0 to 5 ms burst landed differently in them.
+  - **Lined up on their peaks,** the two attacks agree within 1 dB.
+  - **The real difference** was the kick's tank and the slap time.
 
 **Classes.** The snare files as PERC, as BACKWASH's dark snare did. Its SNARE role is nominal, for
 the pad sheet and choke groups, and is declared honestly here.
 
 Page: https://claude.ai/artifact/6yjYWB6dy8awTe12LEyCDK (the app against the picks, takes, a soft hit).
+
+## Heard: round 1 (2026-11-09)
+
+| Question | Owner's answer |
+|---|---|
+| Kick: the app against your pick. The same kick? | **Close, but not it** |
+| Snare: the app joins your tank pick and your crush pick. Is it what you picked? | **Yes, both** |
+| Three hits in a row from the app: still the same drum each time? | **Yes, each time** |
+| A half-strength hit: a softer hand on the same drum? | **Yes** |
+
+## As built: round 1b (2026-11-09)
+
+**Why the kick was not it.** Each measurement here compares the kick lined up on its peak, in
+third-octave bands, re the pick, at matched rms. Re-running the round-0 prototype on the app's
+own source (they agree to 1.3e-7) with one thing changed at a time gives:
+
+| Change from the pick | Tail 300 to 1400 ms | Body 30 to 300 ms |
+|---|---|---|
+| The harness's stand-in decimator swapped for a delay-compensated one | within 0.2 dB | within 0.1 dB |
+| Tank B in place of tank A | 125 Hz -3.2, 250 Hz -3.0, 2.5 kHz -2.7 dB | 125 Hz -1.2, 2.5 kHz -1.6 dB |
+| The slap at 90 ms in place of 95 ms | 63 Hz +4.9 dB | 63 Hz +0.6 dB |
+
+So the onset was never the difference. Two settings changed between rounds were:
+- **The tank.** The kick pick rang through tank A. Round 1 put every voice through tank B, the tank
+  picked on the snare.
+- **The slap time.** Round 1 moved it to 90 ms. On the kick, the first repeat lands on a body still
+  ringing near 60 Hz. At 90 ms its lows add to that body; at 95 ms they partly cancel.
+
+Stage by stage, each app stage given the app's previous stage agrees with the prototype within
+0.4 dB everywhere, except the amp: 0.8 to 1.0 dB less at 450 Hz (Kotlin's VALVE against its Python
+port).
+
+**The change: renderer model 2.**
+- The kick rings through tank A; the snare stays on tank B.
+- The slap is 95 ms on both voices.
+- A model-1 save keeps tank B and 90 ms on both.
+
+**Measured, model 2 against the pick** (lined up as above):
+- within 1.1 dB in every band and window;
+- except 450 Hz, 0.6 to 2.2 dB lower, from the amp;
+- and 10 kHz in the first 30 ms, 3 dB lower, 70 dB down.
+
+Before, model 1 was up to 5.6 dB off in the tail. The snare moves at most 1.2 dB from model 1
+(63 Hz, 30 to 300 ms).
+
+**Tests.**
+- The tank test now runs both tanks, and times each echo with zero-phase band-passes. A narrow
+  band-pass's own delay is longer at 300 Hz than at 2.5 kHz. Tank B's bend hides that bias; tank A's
+  lighter bend does not.
+- Zero-phase first echoes:
+  - tank A: 300 Hz at 39.5 ms, 2.5 kHz at 41.2 ms;
+  - tank B: 300 Hz at 40.7 ms, 2.5 kHz at 60.6 ms.
+- Kick tail against hit at CRUSH .2 / .5 / .9 (DRIP .6): -10.8 / -10.1 / -8.5 dB.
+
+Page: https://claude.ai/artifact/FD1uDKgAhotz1BsV4wn1cJ (the re-fit kick, the pick and round 1's
+kick; the snare at 95 and 90 ms; the re-fit kick's takes and a half-strength hit).
+
+## Heard: round 1b (2026-11-10)
+
+| Question | Owner's answer |
+|---|---|
+| Kick: the re-fit against your pick. The same kick now? | **Same kick** |
+| Snare: the slap back at 95 ms. Still your snare? | **Yes** |
+| The re-fit kick, hit again and at half strength: the same drum, a softer hand? | **Yes** |
+
+The kick and the snare are accepted by ear on model 2, with their takes and their half-strength hits.
+

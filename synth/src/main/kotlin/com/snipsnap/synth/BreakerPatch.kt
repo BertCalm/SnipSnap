@@ -18,7 +18,7 @@ data class BreakerPatch(
 ) : Patch {
     init {
         Patches.validateMacros(this, Breaker.macrosFor(voice))
-        require(model == Breaker.MODEL_VERSION) { "unsupported breaker model $model" }
+        require(model in 1..Breaker.MODEL_VERSION) { "unsupported breaker model $model" }
     }
 
     override val engine get() = ENGINE
@@ -26,7 +26,7 @@ data class BreakerPatch(
     override fun render() = render(1f)
 
     /** [take] re-strikes the drum (a fresh SKIN strike); take 0 is the reference hit. */
-    fun render(velocity: Float, take: Int = 0) = Breaker.render(voice, macros, velocity, take)
+    fun render(velocity: Float, take: Int = 0) = Breaker.render(voice, macros, velocity, take, model)
 
     override fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap(Patches.toJsonValue(this).entries)
