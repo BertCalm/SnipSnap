@@ -87,8 +87,8 @@ class KitDiffTest {
 
     @Test
     fun `recipes no card reads back still get a short honest word`() {
-        assertEquals("MUTATED: MORPH", KitDiff.recipeName(obj("mutate" to obj("mode" to JsonValue.Str("morph")))))
-        assertEquals("OUTSIDE: REAMP", KitDiff.recipeName(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
+        assertEquals("COMBINED: BLEND", KitDiff.recipeName(obj("mutate" to obj("mode" to JsonValue.Str("morph")))))
+        assertEquals("RE-AMP AND ROOM: REAMP", KitDiff.recipeName(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
         assertEquals("ROUND ROBIN ×4", KitDiff.recipeName(obj("robin" to obj("takes" to JsonValue.Num(4.0)))))
         assertEquals("SPLICED", KitDiff.recipeName(obj("splice" to obj("crossfaded" to JsonValue.Bool(false)))))
         assertEquals("DOCTORED: SUB-CARVE", KitDiff.recipeName(obj("doctor" to JsonValue.Str("sub-carve"))))

@@ -90,7 +90,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
             WavWriter.write(File(dir, "hit1.wav"), one)
             KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.KICK)
         }
-        val kit = Kit(name = "PAD SHEET ROBIN TEST", pads = listOf(pad), tempoBpm = 92f)
+        val kit = Kit(name = "PAD EDITOR ROBIN TEST", pads = listOf(pad), tempoBpm = 92f)
         KitStore.save(kit, dir)
         return KitShelf.Entry(dir, kit)
     }
@@ -226,7 +226,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)))
         assertEquals("60", stateText("ROUND ROBIN AMOUNT"))
-        assertEquals("6", stateText("ROUND ROBIN TAKES"))
+        assertEquals("6", stateText("ROUND ROBIN ALTERNATES"))
 
         dial("ROUND ROBIN AMOUNT", 1f)
         waitForToast(Copy.ROBIN_OWN)
@@ -236,7 +236,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
         assertEquals(6, own.chain!!.cycle)
 
         toasts.clear()
-        dial("ROUND ROBIN TAKES", 1f)
+        dial("ROUND ROBIN ALTERNATES", 1f)
         waitForToast(Copy.ROBIN_OWN)
         assertEquals(8, savedPad(entry).chain!!.cycle)
 
@@ -257,7 +257,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)))
         assertEquals("CUSTOM", stateText("ROUND ROBIN AMOUNT"))
-        assertEquals("3", stateText("ROUND ROBIN TAKES"))
+        assertEquals("3", stateText("ROUND ROBIN ALTERNATES"))
         assertTrue("the chip reads ON", nodes("ROUND ROBIN, ON").isNotEmpty())
     }
 

@@ -171,11 +171,11 @@ class RoomsTest {
     fun `the copy shouts`() {
         val line = Copy.roomKept("FUNK ROOM")
         assertEquals(line.uppercase(), line)
-        assertTrue(line.startsWith("FUNK ROOM ") && "MUTATE" in line, line)
+        assertTrue(line.startsWith("FUNK ROOM ") && "COMBINE SOUNDS" in line, line)
         assertEquals(Copy.ROOM_NONE_TO_KEEP.uppercase(), Copy.ROOM_NONE_TO_KEEP)
         val gone = Copy.roomForgotten("FUNK ROOM")
         assertEquals(gone.uppercase(), gone)
-        assertTrue("BIN" in gone && "30 DAYS" in gone, gone)
+        assertTrue("TRASH" in gone && "30 DAYS" in gone, gone)
         val back = Copy.roomRestored("FUNK ROOM")
         assertEquals(back.uppercase(), back)
         assertTrue(back.startsWith("FUNK ROOM ") && "LIBRARY" in back, back)
@@ -185,6 +185,6 @@ class RoomsTest {
         assertTrue(packed.startsWith("FUNK ROOM ") && packed.endsWith("."), packed)
         val landed = Copy.roomLanded("FUNK ROOM")
         assertEquals(landed.uppercase(), landed)
-        assertTrue(landed.startsWith("FUNK ROOM ") && "MUTATE" in landed && landed.endsWith("."), landed)
+        assertTrue(landed.startsWith("FUNK ROOM ") && "COMBINE SOUNDS" in landed && landed.endsWith("."), landed)
     }
 }

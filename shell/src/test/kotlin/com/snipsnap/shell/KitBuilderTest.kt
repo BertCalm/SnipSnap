@@ -986,7 +986,7 @@ class KitBuilderTest {
         assertTrue(m.binHolds().all { it.keptFor == null }, "a plain synth pad needs nothing from the bin")
 
         m.desamplePad(1, evenIfFar = true)
-        assertTrue(m.pad(1)!!.source["desampled"] != null, "a fresh DE-SAMPLE stamps again")
+        assertTrue(m.pad(1)!!.source["desampled"] != null, "a fresh FIND NEAREST SYNTH stamps again")
     }
 
     @Test
@@ -1083,8 +1083,8 @@ class KitBuilderTest {
         val mutated = spliced("UnspliceMutate")
         mutated.assign(2, DrumSynth.snare(), DrumClass.SNARE)
         Mutate.apply(mutated, 2, listOf(Mutate.Source("UnspliceMutate:A01", DrumSynth.kick())), Mutate.Mode.SPLICE)
-        assertEquals("SPLICE", MutateSheet.read(mutated.pad(2)!!.recipe)?.mode, "test setup: MUTATE's SPLICE move")
-        assertFalse(PadSheet.isSpliced(mutated.pad(2)!!.recipe), "MUTATE's SPLICE is not TAPE SPLICE")
+        assertEquals("SPLICE", MutateSheet.read(mutated.pad(2)!!.recipe)?.mode, "test setup: COMBINE SOUNDS's SPLICE move")
+        assertFalse(PadSheet.isSpliced(mutated.pad(2)!!.recipe), "COMBINE SOUNDS's SPLICE is not TAPE SPLICE")
         refusal(mutated, 2, Copy.SPLICE_UNDO_NOTHING)
 
         val ghosted = spliced("UnspliceGhosts")
@@ -1504,7 +1504,7 @@ class KitBuilderTest {
         Robin.apply(m, 9, takes = 2, seed = 1)
         m.update(9) { it.copy(recipe = null) }
         m.save()
-        val named = mapOf(1 to "era", 2 to "character", 3 to "SMEAR", 4 to "DUST", 5 to "pedals", 6 to "MUTATE", 7 to "fx-only", 8 to "chain", 9 to "bare chain")
+        val named = mapOf(1 to "era", 2 to "character", 3 to "SMEAR", 4 to "DUST", 5 to "pedals", 6 to "COMBINE SOUNDS", 7 to "fx-only", 8 to "chain", 9 to "bare chain")
         val holds = m.binHolds()
         for ((slot, what) in named) {
             assertEquals(slot, holds.single { it.entry.originalName == m.pad(slot)!!.sampleFile }.keptFor, "the $what pad keeps its original")
@@ -1814,7 +1814,7 @@ class KitBuilderTest {
         assertEquals(2, kept.keptFor)
         assertNull(kept.purgeAtMillis)
         assertNull(kept.daysLeft(at + 365 * dayMs), "a kept entry has no countdown")
-        assertEquals("KEPT FOR A02", Copy.binKeptFor("A02"), "what THE BIN draws in place of its day count")
+        assertEquals("KEPT FOR A02", Copy.binKeptFor("A02"), "what THE TRASH draws in place of its day count")
 
         assertEquals(1, KitBuilderModel.open(dir).purgeBin(nowMillis = at + 30 * dayMs + 1), "the eject goes; the kept original stays")
         assertEquals(listOf(kept.entry.file), m.binContents().map { it.file })

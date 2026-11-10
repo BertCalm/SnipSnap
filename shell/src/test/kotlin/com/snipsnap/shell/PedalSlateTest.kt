@@ -653,7 +653,7 @@ class PedalSlateTest {
         PedalSlate.land(m, 1, PedalSlate.Gesture.On("wahed"))
         val landed = PedalSlate.land(m, 1, PedalSlate.Gesture.On("touchwahed"))
         assertEquals(PedalSlate.Landed.Applied(board(PedalBoard.Pick("touchwahed", 0.7f)), stacked = false, replaced = listOf("wahed")), landed)
-        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE BIN.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), landed, "A01"))
+        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE TRASH.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), landed, "A01"))
         m.pedalPad(2, board(PedalBoard.Pick("touchwahed", 0.7f)))
         m.save()
         assertContentEquals(samples(m, dir, 2), samples(m, dir, 1), "TOUCH alone, from the original")
@@ -715,12 +715,12 @@ class PedalSlateTest {
         assertEquals("DELAY OFF A01. AMT NOW MOVES DRIVE.", PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0f), withoutDelay, "A01"))
         assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0.4f), withDelay, "A01"))
         val touch = PedalSlate.Landed.Applied(board(PedalBoard.Pick("touchwahed", 0.7f)), stacked = false, replaced = listOf("wahed"))
-        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE BIN.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), touch, "A01"))
+        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE TRASH.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), touch, "A01"))
         val flip = PedalSlate.Gesture.Flip("wahed", PedalSide.POST)
         assertEquals("WAH NOW AFTER THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false), "A01"))
         assertEquals("WAH NOW BEFORE THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f)), false), "A01"))
         assertEquals(
-            "WAH NOW AFTER THE AMP ON A01, IN PLACE OF TOUCH. ORIGINAL SLEEPS IN THE BIN.",
+            "WAH NOW AFTER THE AMP ON A01, IN PLACE OF TOUCH. ORIGINAL SLEEPS IN THE TRASH.",
             PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false, listOf("touchwahed")), "A01"),
         )
         assertEquals(Copy.unTreated("A01"), PedalSlate.toast(on, PedalSlate.Landed.Cleared, "A01"))

@@ -1462,9 +1462,9 @@ private fun RingDetailPanel(
         SmallChip("SOLO", scheme, accent = solo == selected) { onToggleSolo() }
         SmallChip("DEL", scheme) { onDeleteRing() }
         if (ring.content is PatternOrbit) {
-            SmallChip(Places.opener("SPREAD"), scheme, description = "SPREAD") { onOpenSpread() }
+            SmallChip(Places.opener("SPACE EVENLY"), scheme, description = "SPACE EVENLY") { onOpenSpread() }
             SmallChip("CLEAR", scheme) { onUpdateRing { OrbitPatterns.clear(it) } }
-            SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { onScrambleRing() }
+            SmallChip("⚄ RANDOM FILL", scheme, description = "RANDOM FILL") { onScrambleRing() }
             SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
             SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
         }

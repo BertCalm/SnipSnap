@@ -269,7 +269,7 @@ object Copy {
      * that pins its words (`PersonalityTest`), for a caller that has to
      * say it from outside CUT.
      */
-    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR RECORD SOMETHING ELSE."
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CHOP AND TRY GRID, OR RECORD SOMETHING ELSE."
     /**
      * CUT's page when the chop has no slices, in place of the pad preview:
      * the sentence beside a TRY GRID ▸ button that makes the chop in place,
@@ -715,7 +715,7 @@ object Copy {
     const val EXPANSION_FORM_FOLDER = "ON-CARD FOLDER"
     const val EXPANSION_FORM_XPN = "ONE FILE (.XPN)"
     /** The expansion side's write button. */
-    const val EXPANSION_WRITE = "WRITE EXPANSION"
+    const val EXPANSION_WRITE = "EXPORT EXPANSION"
     const val EXPANSION_NONE = "NO EXPANSIONS YET. HOLD A KIT IN THE LIBRARY TO START ONE."
     const val EXPANSION_TO_PHONE = "GOES TO THE PHONE. PICK A CARD ON THE KIT SIDE TO SEND IT THERE."
     fun expansionToCard(card: String): String = "GOES TO THE CARD: $card."
@@ -859,7 +859,7 @@ object Copy {
      */
     fun dubChip(status: DubStamp.Status): String = when (status) {
         DubStamp.Status.DRAFT -> "DRAFT"
-        DubStamp.Status.DUBBED -> "DUBBED"
+        DubStamp.Status.DUBBED -> "EXPORTED"
         DubStamp.Status.ON_CARD -> "ON CARD"
     }
 
@@ -888,21 +888,21 @@ object Copy {
      * it to. Its header, WORTH KNOWING, was drawn by nothing either and went.
      */
     val HELP_MORE = listOf(
-        "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
-        "· HOLD A KIT IN THE LIBRARY TO RENAME IT, OR TO BIN IT.",
-        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
-        "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
+        "· HOLD A PAD: SHAPE, TUNE, TREAT, COMBINE, LAYERS, VERSIONS, GRAIN.",
+        "· HOLD A KIT IN THE LIBRARY TO RENAME IT, OR TO TRASH IT.",
+        "· THE TRASH KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
+        "· PLAY FEELS LIKE DRUMS. TOUCH SURFACE IS THE ONE THAT PRINTS.",
         "· TILT THE PHONE ON SURFACE FOR RESONANCE, EVEN IN MORPH.",
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: CHOP OPENS ON ITS SAMPLE. BACK ONTO LANDS IT.",
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
-        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
-        "· BREED ▸ PICK A KIT TO CROSS RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· MAKE BANK B VARIATIONS ▸ FILLS AN EMPTY BANK B.",
+        "· COMBINE KITS ▸ CROSS A KIT'S RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
-        "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
+        "· THE CHOP BOX: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
-        "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
+        "· BETWEEN HITS ON CHOP: THE GAPS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON SAMPLE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
         // P3.2's real gap. The finding names INSTANT KIT and CATCH A HIT
         // together as the unadvertised record-to-pad path; CATCH has had
@@ -918,7 +918,7 @@ object Copy {
         // mentioned. Built from [Ladder.ROW_LABELS] rather than retyped,
         // so a rung added to the ladder cannot go unlisted here.
         "· ZOOM ON CHOP: ${Ladder.ROW_LABELS.joinToString(", ")}. ◀ ▶ MOVES THE ONE.",
-        "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
+        "· KEYBOARD PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETTINGS AND HELP SIT OFF ITS RIGHT EDGE.",
     )
 
@@ -938,7 +938,7 @@ object Copy {
      * law, which scans constants, does not need an exemption for a
      * progress indicator.
      */
-    fun treatmentBusy(label: String): String = "TREATMENT · $label…"
+    fun treatmentBusy(label: String): String = "EFFECTS · $label…"
 
     // ---- SYNTH: SEND TO PAD (a rendered patch lands on a pad) ----
     /**
@@ -949,7 +949,7 @@ object Copy {
      */
     fun synthSent(pad: String, name: String, replaced: Boolean): String =
         if (replaced) {
-            "PAD $pad REPLACED WITH ${name.uppercase(java.util.Locale.ROOT)}. ORIGINAL SLEEPS IN THE BIN."
+            "PAD $pad REPLACED WITH ${name.uppercase(java.util.Locale.ROOT)}. ORIGINAL SLEEPS IN THE TRASH."
         } else {
             "PAD $pad ADDED: ${name.uppercase(java.util.Locale.ROOT)}."
         }
@@ -981,7 +981,7 @@ object Copy {
      * that follows ([madeNamed]) names the same thing this promised.
      */
     fun heldInstrumentNote(name: String): String =
-        "EVERY KEY HOLDS WHILE IT IS DOWN. LANDS IN THE LIBRARY AS ${name.uppercase(java.util.Locale.ROOT)}, PLAYABLE ON KEYS."
+        "EVERY KEY HOLDS WHILE IT IS DOWN. LANDS IN THE LIBRARY AS ${name.uppercase(java.util.Locale.ROOT)}, PLAYABLE ON KEYBOARD."
     /**
      * MAKE INSTRUMENT's progress indicator, [done] of [total] zones rendered.
      * A function for [treatmentBusy]'s reason: a render that runs longer than
@@ -1032,7 +1032,7 @@ object Copy {
         append("$root $scale ACROSS ${countOf(pads, "PAD", "PADS")} FROM $firstPad.")
         if (keptFull > 0) append(" ${countOf(keptFull, "FULL PAD", "FULL PADS")} KEPT.")
         if (outOfReach > 0) append(" ${countOf(outOfReach, "NOTE", "NOTES")} OUT OF TUNE RANGE.")
-        if (replaced > 0) append(if (replaced == 1) " 1 ORIGINAL SLEEPS IN THE BIN." else " $replaced ORIGINALS SLEEP IN THE BIN.")
+        if (replaced > 0) append(if (replaced == 1) " 1 ORIGINAL SLEEPS IN THE TRASH." else " $replaced ORIGINALS SLEEP IN THE TRASH.")
         if (chokeGroup > 0) append(" CHOKE GROUP $chokeGroup: ONE NOTE AT A TIME.")
         if (noFreeChoke) append(" NO FREE CHOKE GROUP, SO NOTES OVERLAP.")
     }
@@ -1072,7 +1072,7 @@ object Copy {
     /** The forget threw; the preset is where it was. */
     const val PRESET_FORGET_FAILED = "FORGET FAILED. THE PRESET STAYS IN YOUR STRIP."
     /** The restore threw; the preset is where it was. */
-    const val PRESET_RESTORE_FAILED = "RESTORE FAILED. IT IS STILL IN THE BIN."
+    const val PRESET_RESTORE_FAILED = "RESTORE FAILED. IT IS STILL IN THE TRASH."
 
     // ---- SNAP: a photo lands on a pad ----
     /**
@@ -1215,7 +1215,7 @@ object Copy {
 
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
-    const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
+    const val BANK_B_LIT = "BANK B VARIATIONS MADE: ONE FOR EVERY PAD. RECIPES KEPT."
     const val TWINS_REROLLED = "BANK B REROLLED."
     /**
      * Flipping to an empty bank on the KIT screen. The row is always
@@ -1228,7 +1228,7 @@ object Copy {
      * the bank letter rides in, so the laws leave it be.
      */
     fun bankEmpty(bank: Char): String {
-        val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
+        val twins = if (bank == 'B') " MAKE BANK B VARIATIONS ▸ FILLS IT HERE TOO." else ""
         return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SAMPLE FROM SAVED SAMPLES. A CHOP CAN LAND HERE.$twins"
     }
     /**
@@ -1236,7 +1236,7 @@ object Copy {
      * refusal, and it says so in the reversal law's terms — the pads stay
      * untouched; nothing here destroyed anything (`ReversalTest`).
      */
-    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — REMIX ONLY DEALS ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — VARIATIONS ONLY GO ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
     /**
      * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
      * empty bank, and how many did not fit when the chop was wider than
@@ -1250,7 +1250,7 @@ object Copy {
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
-    const val BREEDING_BUSY = "BREEDING…"
+    const val BREEDING_BUSY = "COMBINING…"
     /**
      * The shelf's header while BREED is mid-pick (`App.kt`'s
      * `pendingBreedWith`) — names the kit the pick is FOR, the same way
@@ -1264,7 +1264,7 @@ object Copy {
     /** The hint line under [breedPickHeader] once the shelf actually has a second kit to tap. */
     const val BREED_PICK_HINT = "TAP A KIT TO CROSS WITH THIS ONE."
     /** Refused: tapping the very kit BREED was pressed from during the pick — breeding needs two different kits. */
-    const val BREED_SAME_KIT = "THAT'S THE KIT YOU'RE BREEDING FROM — PICK A DIFFERENT ONE."
+    const val BREED_SAME_KIT = "THAT'S THE KIT YOU'RE COMBINING FROM — PICK A DIFFERENT ONE."
     /**
      * Refused at the pick: `Breed.crossable` found no slot the coin could
      * work on, so the child would be a copy of A with "0 PADS CROSSED".
@@ -1274,14 +1274,14 @@ object Copy {
      * a partner's patch alone is not enough, since a captured pad has no
      * engine to render it through. The fix is the same in every case.
      */
-    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
+    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR EFFECT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
     /**
      * The BREED button's own label. BREED always opens the kit picker
      * (`App.kt`'s `pendingBreedWith`), so `▸` is earned — but the
      * destination is constant, so the label just names it. What used to
      * vary here (the recipe-pad count) now lives in [breedSubtitle].
      */
-    const val BREED_BUTTON = "BREED · MIX TWO KITS ▸"
+    const val BREED_BUTTON = "COMBINE KITS · MIX TWO KITS ▸"
 
     /**
      * The line under the BREED button: how many of this kit's pads carry
@@ -1322,12 +1322,12 @@ object Copy {
 
     // ---- TAKES + BIN (X2.3) ----
     fun takeRestored(take: String): String = "$take RESTORED."
-    const val BACK_FROM_BIN = "BACK FROM THE BIN."
-    const val BIN_EMPTIED = "BIN EMPTIED."
+    const val BACK_FROM_BIN = "BACK FROM THE TRASH."
+    const val BIN_EMPTIED = "TRASH EMPTIED."
     /** No archived takes yet — the TAKES card holds only the current (NOW) state. */
     const val TAKES_EMPTY = "NOTHING TO ROLL BACK TO YET."
     /** The bin's own empty state (the artboard's literal copy — `binEmpty` in `TapeOS Oilslick.dc.html`). */
-    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
+    const val BIN_EMPTY_STATE = "THE TRASH IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
     const val BIN_ITEM_GONE = "ALREADY GONE."
     /** THE BIN's row for an original a pad still needs, in place of its day count; [pad] is the pad that keeps it. */
@@ -1335,13 +1335,13 @@ object Copy {
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
-        "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST."
+        "EVERY SAVE ARCHIVES A VERSION. EVERY DELETE GOES TO THE TRASH FIRST."
 
     // ---- SINCE T3: the TAKES card's expander (Spec Sheet II #03) ----
     /** The expander's one honest limit: `KitDiff` reads `kit.json`, and a rewrite that touched no recipe leaves no mark there. */
     const val TAKES_DIFF_CAVEAT = "SETTINGS AND RECIPES ONLY. AUDIO REDRAWN UNDER THE SAME NAME LEAVES NO MARK HERE."
     /** The take's path changed hands between `takes()` listing it and the diff reading it (a rotation racing the refresh) — the row stays, RESTORE's own identity check decides. */
-    const val TAKES_DIFF_UNREADABLE = "THIS TAKE WON'T READ. NOTHING TO COMPARE."
+    const val TAKES_DIFF_UNREADABLE = "THIS VERSION WON'T READ. NOTHING TO COMPARE."
 
     // ---- GROOVE ----
     // HUMANIZE ⚄ (and Copy.HUMANIZED, its toast) is gone — the feel axis
@@ -1479,7 +1479,7 @@ object Copy {
      * they are recomputed from the take rather than stored.
      */
     fun stepEditFooter(steps: Int, source: String): String =
-        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE · HOLD OR TAP · EDIT FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
+        "${countOf(steps, "STEP", "STEPS")} · COPIED FROM $source · TAP TO TOGGLE · HOLD OR TAP · EDIT FOR VELOCITY, ROLL, NUDGE, LENGTH — THE OTHER FOUR STAY UNTOUCHED"
     /** The step editor's pad picker: heading over the sixteen pads, said about the lane whose name is [lane]. */
     fun stepPadPickTitle(lane: String): String = "$lane PLAYS PAD"
 
@@ -1590,7 +1590,7 @@ object Copy {
 
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
+    const val FORKED_TO_E = "COPIED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "YOURS REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
     /**
@@ -1776,7 +1776,7 @@ object Copy {
     /** RE-TRIM ▸ when the named tape isn't on this phone's SNIPS shelf any more. */
     const val RETRIM_TAPE_GONE = "THAT SAMPLE'S GONE. THE PAD KEEPS WHAT IT HAS."
     /** RE-TRIM ▸ on a pad with GHOSTS or STACK THE TAKES layers: they were rendered from, or are, the old file. */
-    const val RETRIM_LAYERED = "CLEAR GHOSTS (OR THE STACK) FIRST. LAYERS RIDE ON THE OLD FILE."
+    const val RETRIM_LAYERED = "CLEAR SOFT HITS (OR THE STACK) FIRST. LAYERS RIDE ON THE OLD FILE."
     /** RE-TRIM ▸ on a round-robin chain: its boundaries index the old file. */
     const val RETRIM_CHAINED = "THIS PAD IS A ROUND-ROBIN CHAIN. UNDO THE ROBIN FIRST."
     /** The cut lies beyond TAPE's load cap; the deck opens at the top instead. */
@@ -1813,7 +1813,7 @@ object Copy {
      * old file in the bin rather than being silently re-applied to the cut.
      */
     fun retrimLanded(pad: String, treatment: String?): String =
-        "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+        "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE TRASH." } ?: "")
 
     // ---- THE ZOOM LADDER: a pad per sixteenth, beat, bar or phrase (docs/CHOP_CONTROLS.md §11) ----
     /** The ladder row's caption: where the one sits on the source, and how long a phrase runs. */
@@ -1896,15 +1896,15 @@ object Copy {
     const val CATCH_FAILED = "THAT CATCH DIDN'T LAND. THE PAD IS AS IT WAS."
 
     // ---- PAD SHEET ----
-    const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
-    const val STRIKE_FX_ON = "STRIKE FX ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."
-    const val STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."
-    const val STRIKE_FX_KEEPS_HISTORY = "THIS PAD KEEPS AN ERA, MUTATE OR SPLICE HISTORY. REMOVE IT BEFORE STRIKE FX."
+    const val GHOSTS_ON ="SOFT HITS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val STRIKE_FX_ON = "FX BY VELOCITY ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."
+    const val STRIKE_FX_OFF = "FX BY VELOCITY OFF. ONE SAMPLE AGAIN."
+    const val STRIKE_FX_KEEPS_HISTORY = "THIS PAD KEEPS AN ERA, COMBINE SOUNDS OR SPLICE HISTORY. REMOVE IT BEFORE FX BY VELOCITY."
     /** KEEP on a pad with soft hits asks first: what goes, and where it waits. The dialog's KEEP is the question; the soft files go to the bin after the write. */
-    const val STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. THEY WAIT IN THE BIN FOR ${Reversal.DAYS} DAYS."
+    const val STRIKE_FX_REPLACES_LAYERS = "FX BY VELOCITY REPLACES THIS PAD'S SOFT HITS. THEY WAIT IN THE TRASH FOR ${Reversal.DAYS} DAYS."
     /** SOFT HITS on a banked pad asks first: the bank's ROOM and ECHO renders go, the DRY hit is the pad again, and a KEEP rebuilds the bank. */
-    const val SOFT_HITS_REPLACE_STRIKE_FX = "SOFT HITS REPLACE THIS PAD'S STRIKE FX BANK. THE DRY HIT STAYS AS THE PAD. KEEP STRIKE FX AGAIN TO REBUILD IT."
-    fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    const val SOFT_HITS_REPLACE_STRIKE_FX = "SOFT HITS REPLACE THIS PAD'S FX BY VELOCITY BANK. THE DRY HIT STAYS AS THE PAD. KEEP FX BY VELOCITY AGAIN TO REBUILD IT."
+    fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE TRASH."
     /**
      * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
      * pad carried a treatment with no original in the bin behind it (a
@@ -1913,7 +1913,7 @@ object Copy {
      * lights one segment while the sound carries two; the fix is named.
      */
     fun treatedStacked(segment: String, pad: String): String =
-        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
+        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE TRASH TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
 
@@ -1935,11 +1935,11 @@ object Copy {
     fun pedalOff(pedal: String, pad: String, next: String): String = "$pedal OFF $pad. AMT NOW MOVES $next."
     /** A pedal on in place of the ones it silenced: the same wah section (WAH, TOUCH, ROCK) or the same amp on one side. */
     fun pedalReplaced(pedal: String, replaced: List<String>, pad: String): String =
-        "$pedal ON $pad IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN."
+        "$pedal ON $pad IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE TRASH."
     /** A movable pedal flipped to the other side of the amp, in place of any pedal it silenced there. */
     fun pedalSide(pedal: String, beforeAmp: Boolean, pad: String, replaced: List<String> = emptyList()): String =
         "$pedal NOW ${if (beforeAmp) "BEFORE" else "AFTER"} THE AMP ON $pad" +
-            (if (replaced.isEmpty()) "." else ", IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN.")
+            (if (replaced.isEmpty()) "." else ", IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE TRASH.")
     /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
     const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
     /**
@@ -1950,7 +1950,7 @@ object Copy {
      * Refused; the pedals are part of the sound now.
      */
     const val PEDALS_NOT_BINNED =
-        "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
+        "THE TRASH NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
     /** A printed board pad ([PrintedPads]: WIDE, RUSH, AQUARIUM) takes no pedals; [label] names it. */
     fun pedalsPrinted(label: String): String = "REMOVE $label BEFORE ADDING PEDALS."
 
@@ -2002,13 +2002,13 @@ object Copy {
         return pads + rest + bare
     }
     const val NO_PITCH = "NO CONFIDENT PITCH."
-    const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    const val RETREAT_REFUSED = "SOFT HITS CAME AFTER THE EFFECT. CLEAR THEM FIRST."
     /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
-    fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE BIN GAVE THE ORIGINAL BACK."
+    fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE TRASH GAVE THE ORIGINAL BACK."
     /** NONE, when the bin cannot help: a twin's copied recipe, a treatment performed elsewhere, or a bin since emptied. */
-    const val UNTREAT_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE TREATMENT STAYS."
+    const val UNTREAT_NOT_BINNED = "THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE EFFECT STAYS."
     /** Row five and TUNE: [key] is the kit's key label, or what the treatment did without one ("THE NEAREST SEMITONES", "A, THE HIT'S OWN NOTE"). */
-    fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
+    fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE TRASH."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
     /**
@@ -2019,7 +2019,7 @@ object Copy {
      */
     fun mutated(move: String, pad: String, partner: String, flipped: List<String> = emptyList(), lengthNote: String = ""): String =
         buildString {
-            append("$move: $pad × $partner. THE TAKE BEFORE IT SLEEPS IN THE BIN.")
+            append("$move: $pad × $partner. THE VERSION BEFORE IT SLEEPS IN THE TRASH.")
             for (f in flipped) append(" $f WAS FLIPPED: IT WAS CANCELLING THE PAD.")
             if (lengthNote.isNotEmpty()) append(" $lengthNote")
         }
@@ -2050,35 +2050,35 @@ object Copy {
      * the answer and read as complete.
      */
     fun desampled(pad: String, engine: String, voice: String, distance: Float): String =
-        "$pad IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+        "$pad IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE TRASH.".format(java.util.Locale.ROOT, distance)
     /**
      * DE-SAMPLE's UNDO on the pad sheet (and `snipsnap desample --undo`). It restores the newest take
      * of the pad's file from the bin, which after two de-samples is the first one's render, and the
      * take before a de-sample may itself have been treated; so the line says the take, not the
      * capture.
      */
-    const val UNDESAMPLED = "UNDONE. THE TAKE BEFORE THE LAST DE-SAMPLE IS BACK FROM THE BIN."
+    const val UNDESAMPLED = "UNDONE. THE VERSION BEFORE THE LAST FIND NEAREST SYNTH IS BACK FROM THE TRASH."
     /**
      * DE-SAMPLE's UNDO when the de-sample is not what sits on top: never de-sampled, already undone,
      * a later audio replacement over it, pedals riding it (NONE comes first), or a print over it.
      */
-    const val DESAMPLE_UNDO_NOTHING = "THIS PAD CARRIES NO DE-SAMPLE. NOTHING TO UNDO HERE."
+    const val DESAMPLE_UNDO_NOTHING = "THIS PAD CARRIES NO FIND NEAREST SYNTH. NOTHING TO UNDO HERE."
     /** DE-SAMPLE's UNDO when the bin holds no earlier take of the pad. */
-    const val DESAMPLE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE PATCH STAYS."
+    const val DESAMPLE_UNDO_NOT_BINNED = "THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE PATCH STAYS."
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
     /** DRIFT: the pad drifted toward the partner the shelf picked. */
-    fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
+    fun drifted(pad: String, toward: String): String = "$pad BLENDED TOWARD $toward. ORIGINAL SLEEPS IN THE TRASH."
     /**
      * MUTATE's UNDO. It restores the newest take of the pad's file from the
      * bin, which after two mutates is the first mutate's result, not the
      * original; so the line says exactly what came back.
      */
-    const val UNMUTATED = "UNDONE. THE TAKE BEFORE THE LAST MUTATE IS BACK FROM THE BIN."
-    const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    const val UNMUTATED = "UNDONE. THE VERSION BEFORE THE LAST COMBINE IS BACK FROM THE TRASH."
+    const val MUTATE_NEEDS_ONE = "SOFT HITS ON. COMBINE SOUNDS WANTS ONE SAMPLE - CLEAR THEM FIRST."
     /** ROULETTE or DRIFT on a shelf with no other pad. The name stays (PersonalityTest lists it); the words say PARTNER's way. */
-    const val CRATE_EMPTY = "THE LIBRARY HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK."
+    const val CRATE_EMPTY = "THE LIBRARY HOLDS NO OTHER PAD. RANDOM PARTNER HAS NOTHING TO PICK."
     /** MUTATE's HEAR, KEEP or the like with no partner picked yet. */
     const val MUTATE_PICK_PARTNER = "PICK A PARTNER FIRST."
     /**
@@ -2087,22 +2087,22 @@ object Copy {
      * ones and STACK THE TAKES' copies alike, so the line points at a safe
      * act for both. [MUTATE_NEEDS_ONE] stays, for DE-SAMPLE.
      */
-    const val MUTATE_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. MUTATE WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
+    const val MUTATE_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. COMBINE SOUNDS WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
     /**
      * MUTATE on a pad that plays a chain of slices in turn. No phone
      * control unchains a pad, so the line names the phone's way to pads of
      * one sample instead (the redesign's Decision 3).
      */
     const val MUTATE_CHAINED =
-        "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE."
+        "THIS PAD PLAYS ITS SLICES IN TURN. COMBINE SOUNDS WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE."
     /** ROULETTE or DRIFT when every other sound on the shelf is a near-double of this pad. */
     const val ROULETTE_ONLY_COPIES = "EVERY OTHER SOUND IN THE LIBRARY IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF."
     /** The picked partner is no longer there: a pad deleted, a kit removed, a room or a file gone. */
     const val MUTATE_PARTNER_GONE = "THAT PARTNER IS GONE. PICK ANOTHER."
     /** MUTATE's UNDO on a pad that carries no mutate. */
-    const val UNDO_NOTHING = "THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE."
+    const val UNDO_NOTHING = "THIS PAD CARRIES NO COMBINE. NOTHING TO UNDO HERE."
     /** MUTATE's UNDO when the bin holds no earlier take of the pad. */
-    const val UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS."
+    const val UNDO_NOT_BINNED = "THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE COMBINE STAYS."
     /**
      * The pad sheet's UNDO SPLICE and DE-SAMPLE's UNDO, when the pad has soft hits on (GHOSTS or
      * STACK THE TAKES, added after the splice or the de-sample). Their own sibling of
@@ -2127,60 +2127,60 @@ object Copy {
      * per tool), so a bare UNDO would not say whose it is. There is no single undo for the sheet; each
      * tool's walks back its own last keep. The words are also the tool's failure word ([actionFailed]).
      */
-    const val UNDO_MUTATE = "UNDO MUTATE"
+    const val UNDO_MUTATE = "UNDO COMBINE"
     const val UNDO_SPLICE = "UNDO SPLICE"
-    const val UNDO_DESAMPLE = "UNDO DE-SAMPLE"
-    const val UNDO_OUTSIDE = "UNDO OUTSIDE"
+    const val UNDO_DESAMPLE = "UNDO NEAREST SYNTH"
+    const val UNDO_OUTSIDE = "UNDO RE-AMP AND ROOM"
     const val UNDO_BOARD = "UNDO BOARD"
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- TAPE SPLICE: two takes of one pad, joined at one chosen frame ----
     const val SPLICE_NEEDS_HISTORY =
-        "SPLICE WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
+        "SPLICE WANTS AT LEAST ONE PRIOR VERSION. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE TRASH."
     const val SPLICE_KIT_GONE = "THIS PAD ISN'T THERE ANY MORE."
     /** The slot was reassigned while SPLICE was open: the takes belong to a pad that no longer lives here, so nothing is written. */
     const val SPLICE_PAD_CHANGED = "THIS SLOT HOLDS A DIFFERENT PAD NOW. NOTHING WAS TOUCHED."
-    const val SPLICE_TAKE_UNREADABLE = "ONE OF THOSE TAKES WON'T READ ANY MORE. PICK ANOTHER PAIR."
+    const val SPLICE_TAKE_UNREADABLE = "ONE OF THOSE VERSIONS WON'T READ ANY MORE. PICK ANOTHER PAIR."
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
-        "THOSE TWO TAKES DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
+        "THOSE TWO VERSIONS DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
     // ---- DO IT AGAIN: COPY LAST TREATMENT off one pad, PASTE it on another ----
     const val REPLAY_NOTHING = "THIS PAD CARRIES NO RECIPE. NOTHING TO COPY."
-    const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."
+    const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST EFFECT OFF A PAD FIRST."
     /** The honest limit, under the buttons: the recipe is the last step, never the stack. */
-    const val REPLAY_LAST_ONLY = "COPIES THE LAST TREATMENT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
+    const val REPLAY_LAST_ONLY = "COPIES THE LAST EFFECT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
     /** MUTATE's recipe names its partners by label; the bytes never rode along. The CLI's `recipe` prints it lower-cased. */
     fun replayNeedsPartner(move: String, partners: List<String>): String =
-        "MUTATE ($move WITH ${partners.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARTNER - NOT CARRIED."
-    const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
-    const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
+        "COMBINE SOUNDS ($move WITH ${partners.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARTNER - NOT CARRIED."
+    const val REPLAY_SPLICE = "JOIN NAMES NO VERSIONS - NOT REPLAYABLE."
+    const val REPLAY_OUTSIDE = "RE-AMP AND ROOM WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
     const val REPLAY_KITFROM = "KIT FROM ANYTHING BELONGS TO ITS OWN SOURCE - MAKE A KIT FROM THE SOUND INSTEAD."
     /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
     fun replayMeasured(what: String): String = "$what WAS A MEASUREMENT OF THAT SOUND, NOT A SETTING - NOT REPLAYABLE."
     const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
     fun copied(word: String, from: String): String = "$word COPIED FROM $from. PASTE IT ON ANY PAD."
-    fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE TRASH."
     fun replayedBoard(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL KEPT."
     const val WIDE_REMOVE_BEFORE_SOFT_HITS = "REMOVE WIDE BEFORE CHANGING SOFT HITS."
-    const val WIDE_REMOVE_BEFORE_STACK = "REMOVE WIDE BEFORE STACK THE TAKES."
+    const val WIDE_REMOVE_BEFORE_STACK = "REMOVE WIDE BEFORE STACK VERSIONS."
     const val WIDE_REMOVE_BEFORE_SPREAD = "REMOVE WIDE BEFORE SPREAD."
     fun boardRemoveBeforeSoftHits(board: String): String = "REMOVE $board BEFORE CHANGING SOFT HITS."
-    fun boardRemoveBeforeStack(board: String): String = "REMOVE $board BEFORE STACK THE TAKES."
+    fun boardRemoveBeforeStack(board: String): String = "REMOVE $board BEFORE STACK VERSIONS."
     fun boardRemoveBeforeSpread(board: String): String = "REMOVE $board BEFORE SPREAD."
     /**
      * TAPE SPLICE and DE-SAMPLE on a printed pad (2026-11-02): each writes its own recipe where the
      * print's sits, so REMOVE could not bring the print's source back afterwards.
      */
     fun boardRemoveBeforeSplice(board: String): String = "REMOVE $board BEFORE SPLICE."
-    fun boardRemoveBeforeDesample(board: String): String = "REMOVE $board BEFORE DE-SAMPLE."
+    fun boardRemoveBeforeDesample(board: String): String = "REMOVE $board BEFORE FIND NEAREST SYNTH."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word DONE AGAIN ON $pad, IN $key" +
             (if (sourceKey != null) " - THE SOURCE WAS $sourceKey" else "") +
-            ". ORIGINAL SLEEPS IN THE BIN."
+            ". ORIGINAL SLEEPS IN THE TRASH."
     /** A patch recipe replaces the sound outright, and the toast says so. */
-    fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN."
+    fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE TRASH."
     fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
 
     // ---- ROUND ROBIN, WHOLE KIT ----
@@ -2201,10 +2201,10 @@ object Copy {
     const val ROBIN_OWN = "THIS PAD KEEPS ITS OWN ROUND ROBIN."
 
     /** Soft hits, STRIKE FX and stacked takes are velocity layers; a layered pad cannot also cycle takes. */
-    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS, STRIKE FX OR STACKED TAKES. TURN ROUND ROBIN OFF FIRST."
+    const val ROBIN_NO_LAYERS = "A ROUND-ROBIN PAD CAN'T TAKE SOFT HITS, FX BY VELOCITY OR STACKED TAKES. TURN ROUND ROBIN OFF FIRST."
 
     /** The other way round: the pad already has velocity layers, so it cannot cycle takes. */
-    const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR STRIKE FX. CLEAR THEM FIRST TO USE ROUND ROBIN."
+    const val ROBIN_LAYERED = "THIS PAD HAS SOFT HITS OR FX BY VELOCITY. CLEAR THEM FIRST TO USE ROUND ROBIN."
 
     /**
      * The one line under the LAYERS heading, and what the code enforces: soft hits, STRIKE FX and stacked
@@ -2224,14 +2224,14 @@ object Copy {
 
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =
-        "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
+        "STACK WANTS AT LEAST ONE PRIOR VERSION. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE TRASH."
     /** The pad grew layers (GHOSTS, or another STACK) while this screen was open, or was already layered when it opened. */
     const val STACK_ALREADY_LAYERED = "THIS PAD IS LAYERED ALREADY. CLEAR SOFT HITS FIRST, THEN STACK."
     const val STACK_MAX_THREE = "THREE SOFT ZONES IS THE STACK. THE MPC 2 HAS FOUR LAYER SLOTS AND LIVE TAKES ONE."
     const val STACK_TAKE_UNREADABLE = "THAT TAKE WON'T READ ANY MORE. IT STAYS OUT OF THE STACK."
     /** The screen's standing caveat: layers lock every single-sample door until cleared, and clearing deletes the copies. */
     const val STACK_LOCKS =
-        "A STACKED PAD IS LAYERED. TREAT, MUTATE, SPLICE AND OUTSIDE WAIT UNTIL SOFT HITS IS CLEARED - AND CLEARING DELETES THE COPIES."
+        "A STACKED PAD IS LAYERED. TREAT, COMBINE SOUNDS, SPLICE AND RE-AMP AND ROOM WAIT UNTIL SOFT HITS IS CLEARED - AND CLEARING DELETES THE COPIES."
     /** Shown, not fixed: no auto-gain, ever. */
     const val STACK_NO_GAIN = "LEVELS ARE SHOWN, NOT FIXED. NO AUTO-GAIN - THE MPC'S VELOCITY CURVE OWNS LOUDNESS."
     /** KEEP: how many real takes now sit under LIVE, and what that costs. */
@@ -2254,9 +2254,9 @@ object Copy {
      */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {
-            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF OVERLAP WENT IN. THE TAKE BEFORE IT SLEEPS IN THE BIN."
+            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF OVERLAP WENT IN. THE VERSION BEFORE IT SLEEPS IN THE TRASH."
         } else {
-            "SPLICED CLEAN. NO OVERLAP NEEDED. THE TAKE BEFORE IT SLEEPS IN THE BIN."
+            "SPLICED CLEAN. NO OVERLAP NEEDED. THE VERSION BEFORE IT SLEEPS IN THE TRASH."
         }
     /**
      * Said after SPLICE's KEEP, beside [spliced]: where the undo lives. It is on the pad editor, in the
@@ -2268,14 +2268,14 @@ object Copy {
      * after two splices is the first splice's result, not the original; so the line says exactly
      * what came back, as [UNMUTATED] does.
      */
-    const val UNSPLICED = "UNDONE. THE TAKE BEFORE THE LAST SPLICE IS BACK FROM THE BIN."
+    const val UNSPLICED = "UNDONE. THE VERSION BEFORE THE LAST SPLICE IS BACK FROM THE TRASH."
     /**
      * UNDO SPLICE on a pad that carries no TAPE SPLICE: never spliced, already undone, MUTATE's own
      * SPLICE move (whose UNDO is on the MUTATE card), or a print over the splice.
      */
     const val SPLICE_UNDO_NOTHING = "THIS PAD CARRIES NO SPLICE. NOTHING TO UNDO HERE."
     /** UNDO SPLICE when the bin holds no earlier take of the pad (EMPTY THE BIN NOW, or a BACK spent it). */
-    const val SPLICE_UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE SPLICE STAYS."
+    const val SPLICE_UNDO_NOT_BINNED = "THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE SPLICE STAYS."
 
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. NEW SAMPLE IN THE LIBRARY."
@@ -2285,31 +2285,31 @@ object Copy {
     // ---- PAD SHEET: outside ----
     /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
     fun outside(move: String, pad: String, lagMs: Float, confidence: Float): String =
-        "$move: $pad WENT OUT AND CAME BACK ${Math.round(lagMs)} MS LATER, ${Math.round(confidence * 100)}% SURE. ORIGINAL SLEEPS IN THE BIN."
+        "$move: $pad WENT OUT AND CAME BACK ${Math.round(lagMs)} MS LATER, ${Math.round(confidence * 100)}% SURE. ORIGINAL SLEEPS IN THE TRASH."
     /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
-    fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
-    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. PRESS LISTEN ONCE IN LIBRARY TO GRANT IT."
-    const val OUTSIDE_TAPE_ROLLING = "LISTENING IS ON. STOP LISTENING FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
-    const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    fun outsideRefused(reason: String): String = "RE-AMP AND ROOM REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE TRASH."
+    const val OUTSIDE_NEEDS_MIC = "RE-AMP AND ROOM NEEDS THE MIC. PRESS LISTEN ONCE IN LIBRARY TO GRANT IT."
+    const val OUTSIDE_TAPE_ROLLING = "LISTENING IS ON. STOP LISTENING FIRST - RE-AMP AND ROOM WANTS THE MIC TO ITSELF."
+    const val OUTSIDE_NEEDS_ONE = "SOFT HITS ON. RE-AMP AND ROOM WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
     const val OUTSIDE_LISTENING = "LISTENING FOR THE ROOM…"
     /** KEEP ROOM: the measured room is on the shelf under [name], for any pad through MUTATE ▸ ROOM. */
-    fun roomKept(name: String): String = "$name IS IN THE LIBRARY. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
+    fun roomKept(name: String): String = "$name IS IN THE LIBRARY. ANY PAD CAN PLAY IN IT - COMBINE SOUNDS ▸ ROOM TONE."
     const val ROOM_NONE_TO_KEEP = "NO ROOM MEASURED YET. SEND A SWEEP OUT FIRST - ROOM ▸ SEND."
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
-    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Reversal.MIND}"
+    fun roomForgotten(name: String): String = "$name IS IN THE TRASH. ${Reversal.MIND}"
     /** RESTORE on a binned room: back on the shelf under [name]. */
     fun roomRestored(name: String): String = "$name IS BACK IN THE LIBRARY."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
     const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
     /** EMPTY THE BIN NOW on the rooms bin, confirmed — `kitBinEmptied`/`snipBinEmptied`'s own no-count reasoning applies here too: the bin may hold a stray file the list never showed. */
-    val roomBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+    val roomBinEmptied: String = "THE TRASH IS EMPTY. GONE FOR GOOD."
     /** SHARE on a room row: the room is one `.snip-room` file now and the chooser is up. */
     fun roomPacked(name: String): String = "$name PACKED AS ONE FILE. PICK WHERE IT GOES."
     /** A `.snip-room` landed through the share door: [name] on the shelf, ready for MUTATE ▸ ROOM. */
-    fun roomLanded(name: String): String = "$name LANDED IN THE LIBRARY. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
+    fun roomLanded(name: String): String = "$name LANDED IN THE LIBRARY. ANY PAD CAN PLAY IN IT - COMBINE SOUNDS ▸ ROOM TONE."
 
     // ---- KIT: delete (restorable from DELETED KITS for 30 days) + rename from the shelf (Task 4) ----
     /**
@@ -2335,11 +2335,11 @@ object Copy {
      * and the kits it held stay on the shelf (`ProjectStore.trash` touches
      * nothing outside the project's own folder).
      */
-    fun projectDeleted(name: String): String = "$name IS IN THE BIN. ITS KITS STAY IN THE LIBRARY. ${Reversal.MIND}"
+    fun projectDeleted(name: String): String = "$name IS IN THE TRASH. ITS KITS STAY IN THE LIBRARY. ${Reversal.MIND}"
     /** The confirm over DELETE: says what is lost, what is not, and how to get it back. */
     val PROJECT_DELETE_CONFIRM: String = "DELETE THIS PROJECT? ITS KITS STAY IN THE LIBRARY. " + Reversal.BIN
     /** The move to the bin threw or the project was already gone; nothing moved. */
-    const val PROJECT_DELETE_FAILED = "COULDN'T MOVE THAT PROJECT TO THE BIN. IT IS STILL IN THE LIBRARY."
+    const val PROJECT_DELETE_FAILED = "COULDN'T MOVE THAT PROJECT TO THE TRASH. IT IS STILL IN THE LIBRARY."
     /** RENAME refused: another project already answers to [name], compared without case. */
     fun projectNameTaken(name: String): String = "THERE IS ALREADY A PROJECT CALLED $name. PICK ANOTHER NAME."
     /** RENAME failed for any other reason; the project keeps its name. */
@@ -2364,7 +2364,7 @@ object Copy {
      * ever saw — reading as unexplained data loss. They just looked at the
      * list; what they need told is that it's empty now, and that it's final.
      */
-    val kitBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+    val kitBinEmptied: String = "THE TRASH IS EMPTY. GONE FOR GOOD."
 
     // ---- SNIPS: rename, delete → bin (name-and-find task) ----
     /** RENAME on a SNIPS row; [name] is what it actually landed under — a collision refuses instead of guessing, so this is always the typed name verbatim. */
@@ -2383,7 +2383,7 @@ object Copy {
     /** RESTORE on a binned snip; [name] is what it actually landed under — `SnipStore.restore`'s own collision fallback may have freshened it, never the name the row showed. */
     fun snipRestored(name: String): String = "$name IS BACK IN SAVED SAMPLES."
     /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
-    val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+    val snipBinEmptied: String = "THE TRASH IS EMPTY. GONE FOR GOOD."
 
     // ---- SHELF SORT (name-and-find followups): the KitsScreen header toggle ----
     /** The shelf's own header chip while sorted `KitShelf.ShelfSort.RECENT` — tapping switches to [SHELF_SORT_ALPHA]. */
@@ -2503,9 +2503,9 @@ object Copy {
         "FOLD: $slices ${if (slices == 1) "SLICE" else "SLICES"} → $pads ${if (pads == 1) "PAD" else "PADS"}. TAP A PAD, HEAR ITS TAKES IN TURN."
     // ---- GHOST CHOP (docs/CHOP_CONTROLS.md §9) ----
     /** The GHOSTS segment's toast: what the rows are now. */
-    const val CHOP_GHOSTS_ON = "GHOSTS: THE SPACES BETWEEN THE HITS, EACH NAMED FOR THE HIT BEFORE IT. HOLD A PAD, HOLD THE ROOM."
+    const val CHOP_GHOSTS_ON = "BETWEEN HITS: THE SPACES BETWEEN THE HITS, EACH NAMED FOR THE HIT BEFORE IT. HOLD A PAD, HOLD THE ROOM."
     /** GHOSTS on a tape with nothing between its hits: the strip says so instead of showing an empty grid in silence. */
-    const val CHOP_GHOSTS_NONE = "NOTHING BETWEEN THE HITS IN THIS SAMPLE. A GATED BREAK HAS NO GHOSTS."
+    const val CHOP_GHOSTS_NONE = "NOTHING BETWEEN THE HITS IN THIS SAMPLE. A GATED BREAK HAS NOTHING BETWEEN HITS."
     /** SEND TO PADS' toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
     fun foldedToPads(slices: Int, pads: Int, chokeSet: Boolean): String =
         "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
@@ -2583,7 +2583,7 @@ object Copy {
     const val DOUBLES_BUSY = "MEASURING…"
     /** The empty state names the ring, not a verdict — a clean bill is not something a distance can give. */
     fun noDoubles(within: Float): String =
-        "NO DOUBLES WITHIN ${String.format(java.util.Locale.ROOT, "%.2f", within)}. NOT A CLEAN BILL - JUST NONE THIS CLOSE."
+        "NOTHING SIMILAR WITHIN ${String.format(java.util.Locale.ROOT, "%.2f", within)}. NOT A CLEAN BILL - JUST NONE THIS CLOSE."
     /** The screen's standing rule, on screen: what the number is, and what this screen never does. */
     const val DOUBLES_RULE = "THE NUMBER IS A FEATURE DISTANCE, NOT A VERDICT. NOTHING HERE DELETES, MOVES OR MERGES."
     /** The one known blind spot, said out loud: the head of the hit is what's measured, so two trims of one take can read as strangers. */
@@ -2604,7 +2604,7 @@ object Copy {
     const val CHIP_OVERRIDDEN = "YOU ✓"
 
     // Export.
-    const val EXPORT_DONE = "DUBBED."
+    const val EXPORT_DONE = "EXPORTED."
     /**
      * WRITE KIT landed with no card picked, so the file is on the phone
      * only. Used to claim "SOUNDS 3% WARMER NOW" — a fabricated
@@ -2612,7 +2612,7 @@ object Copy {
      * measured. States what really happened: the file is on the phone,
      * the same fact [DUB_DONE_CARD] states for the card.
      */
-    const val DUB_DONE = "DUB DONE. IT'S ON THE PHONE."
+    const val DUB_DONE = "EXPORT DONE. IT'S ON THE PHONE."
     /**
      * WRITE ANOTHER ✓ (`ExportWizardModel.writeLabel`'s COMPLETE-stage
      * label — no longer "EJECT CARD ✓", which claimed an eject that never
@@ -2621,7 +2621,7 @@ object Copy {
      * exactly where it landed; this button doesn't touch it, so the toast
      * doesn't claim it moved anywhere.
      */
-    const val CARD_EJECTED = "RESET. WRITE ANOTHER, OR SWITCH KITS."
+    const val CARD_EJECTED = "RESET. EXPORT ANOTHER, OR SWITCH KITS."
     /** The completion stage's own location line, sitting above the raw path. No claim about which file browser can see it — just that it's on the phone. */
     const val EXPORT_SAVED_TO = "SAVED ON THIS PHONE:"
     /** EXPORT's SHARE action label, next to WRITE ANOTHER ✓ on the completion stage — offered only when the write produced one self-contained file. */
@@ -2635,7 +2635,7 @@ object Copy {
      * and isn't actionable, and law 3 means saying what happened, not
      * quoting Java at somebody.
      */
-    const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
+    const val DUB_FAILED = "EXPORT FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
     /** DUST threw mid-run: the box's title, with the reason under it. Pads dusted before it threw are kept. */
     const val DUST_FAILED = "DUST FAILED."
     /**
@@ -2647,7 +2647,7 @@ object Copy {
      * It says what the next tap will do, so the confirmation is a decision
      * rather than a dare: nothing has been written when this appears.
      */
-    fun dubWouldOverwrite(what: String): String = "$what IS ALREADY THERE. DUB AGAIN TO WRITE OVER IT."
+    fun dubWouldOverwrite(what: String): String = "$what IS ALREADY THERE. EXPORT AGAIN TO WRITE OVER IT."
 
     /**
      * The WRITE button's own label once a dub is armed to replace
@@ -2677,7 +2677,7 @@ object Copy {
      * write is an armed one that leaves the reader thinking the dub
      * failed outright.
      */
-    fun dubCardWouldReplace(what: String): String = "DUB DONE, ON THE PHONE. THE CARD ALREADY HOLDS $what."
+    fun dubCardWouldReplace(what: String): String = "EXPORT DONE, ON THE PHONE. THE CARD ALREADY HOLDS $what."
 
     /**
      * The completion stage's own button for the card leg that
@@ -2703,8 +2703,8 @@ object Copy {
      * which is the whole defect this line exists to close.
      */
     fun dubDoneCardReplaced(n: Int): String =
-        if (n == 1) "DUB DONE. 1 FILE ON THE CARD WAS REPLACED — THE OLD ONE IS GONE FOR GOOD."
-        else "DUB DONE. $n FILES ON THE CARD WERE REPLACED — THE OLD ONES ARE GONE FOR GOOD."
+        if (n == 1) "EXPORT DONE. 1 FILE ON THE CARD WAS REPLACED — THE OLD ONE IS GONE FOR GOOD."
+        else "EXPORT DONE. $n FILES ON THE CARD WERE REPLACED — THE OLD ONES ARE GONE FOR GOOD."
 
     /**
      * The card held same-named files the provider would not let go of, so
@@ -2713,15 +2713,15 @@ object Copy {
      * write: the whole point of this line is that the app does not know.
      */
     fun dubDoneCardContested(n: Int): String =
-        if (n == 1) "DUB DONE, BUT 1 FILE ON THE CARD WOULD NOT BUDGE. CHECK FOR DOUBLES."
-        else "DUB DONE, BUT $n FILES ON THE CARD WOULD NOT BUDGE. CHECK FOR DOUBLES."
+        if (n == 1) "EXPORT DONE, BUT 1 FILE ON THE CARD WOULD NOT BUDGE. CHECK FOR DUPLICATES."
+        else "EXPORT DONE, BUT $n FILES ON THE CARD WOULD NOT BUDGE. CHECK FOR DUPLICATES."
     /**
      * The dub landed *and* went onto the card the user picked. Said apart
      * from [DUB_DONE] because it is a different promise: that one means
      * the file is on the phone, this one means it is on the thing you are
      * about to carry to the MPC.
      */
-    const val DUB_DONE_CARD = "DUB DONE. IT'S ON THE CARD."
+    const val DUB_DONE_CARD = "EXPORT DONE. IT'S ON THE CARD."
     /**
      * The title of the box a finished dub opens ([LandingNote.dubbed]) when
      * the card has it: the same fact as [DUB_DONE_CARD], with the thing's
@@ -2828,8 +2828,8 @@ object Copy {
     // several buttons on one screen) and a fixed constant genuinely cannot
     // name it in advance.
     const val KEY_FAILED = "KEY FAILED. TRY AGAIN."
-    const val TWINS_FAILED = "EVIL TWINS FAILED. TRY AGAIN."
-    const val BREED_FAILED = "BREED FAILED. TRY AGAIN."
+    const val TWINS_FAILED = "VARIATIONS FAILED. TRY AGAIN."
+    const val BREED_FAILED = "COMBINE FAILED. TRY AGAIN."
     const val PLACE_FAILED = "PLACE FAILED. TRY AGAIN."
     const val RETRIM_FAILED = "RE-TRIM FAILED. TRY AGAIN."
     const val READ_GROOVE_FAILED = "READ FAILED. TRY AGAIN."
@@ -2839,7 +2839,7 @@ object Copy {
     const val SHARE_FAILED = "SHARE FAILED. TRY AGAIN."
     const val ROOM_FORGET_FAILED = "FORGET FAILED. TRY AGAIN."
     const val ROOM_RESTORE_FAILED = "RESTORE FAILED. TRY AGAIN."
-    const val ROOM_BIN_EMPTY_FAILED = "EMPTY BIN FAILED. TRY AGAIN."
+    const val ROOM_BIN_EMPTY_FAILED = "EMPTY TRASH FAILED. TRY AGAIN."
     const val BACKUP_FAILED = "BACKUP FAILED. TRY AGAIN."
     const val IN_KEY_FAILED = "IN KEY FAILED. TRY AGAIN."
     const val RECHOP_FAILED = "RE-CHOP FAILED. TRY AGAIN."
@@ -2898,10 +2898,10 @@ object Copy {
     const val PRINT_LANDING_FAILED = "LANDING FAILED. THE PRINT IS STILL HERE."
     /** SPLIT's own → PAD landing: [replaced] is true when a taken slot's old sample went to the bin; false when the split landed fresh on an empty one. */
     fun splitPrintedToPad(pad: String, replaced: Boolean): String =
-        if (replaced) "PAD $pad REPLACED WITH THE SPLIT. ORIGINAL SLEEPS IN THE BIN." else "SPLIT PRINTED TO PAD $pad."
+        if (replaced) "PAD $pad REPLACED WITH THE SPLIT. ORIGINAL SLEEPS IN THE TRASH." else "SPLIT PRINTED TO PAD $pad."
     /** SURFACE's own → PAD landing - same shape as [splitPrintedToPad], SURFACE's own words. */
     fun surfacePrintedToPad(pad: String, replaced: Boolean): String =
-        if (replaced) "PAD $pad REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE BIN." else "PRINTED TO PAD $pad."
+        if (replaced) "PAD $pad REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE TRASH." else "PRINTED TO PAD $pad."
 
     // ---- SURFACE ----
     // The one-fact caption under each SURFACE panel tab that is not open: what
@@ -3025,6 +3025,18 @@ object Copy {
     const val ORBIT_NO_PADS = "NO PADS ON THIS KIT."
     fun orbitFileUnreadable(name: String): String = "COULD NOT READ $name."
     const val ORBIT_NOTHING_TO_UNDO = "NOTHING TO UNDO."
+    /**
+     * The plain line under each kept brand name (vocabulary ledger, ruling 9): a control that opens ORBIT, LOOP, SONG,
+     * GRAIN FIELD or an AQUARIUM panel says what it is in words a producer already knows. No arrow in any of them:
+     * the door beside it carries the glyph, and these are read, not pressed.
+     */
+    const val ORBIT_DOOR_LINE = "ORBIT: LOOP RINGS OF DIFFERENT LENGTHS AGAINST EACH OTHER"
+    const val LOOP_DOOR_LINE = "LOOP: SIX TRACKS OF LOOPED SAMPLES"
+    const val SONG_DOOR_LINE = "SONG: ARRANGE THIS BEAT AS A SONG"
+    const val GRAIN_DOOR_LINE = "GRAIN: PLAY THIS SOUND AS GRAINS. DRAG OR TILT"
+    const val AQUARIUM_LINE = "SIX EFFECTS WITH PRESETS"
+    const val SCULPT_LINE = "GROW GRAIN TEXTURES FROM THIS SOUND"
+
     /** ORBIT's BOUNCE button - the same destination word as [GROOVE_BOUNCE_BUTTON]; see its KDoc. */
     const val ORBIT_BOUNCE_BUTTON = "BOUNCE TO SAMPLES"
     /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. Names SNIPS, not TAPE (prior #25). */
@@ -3117,7 +3129,7 @@ object Copy {
     /** GRAB/HOLD attempted before LISTEN was ever pressed - `MicSessionService.armed` is false, so there is no ring to snapshot at all. */
     const val PAD_CAPTURE_NOT_LISTENING = "NOT LISTENING YET."
     /** GRAB's own empty snapshot - the ring had nothing in it to cut. */
-    const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
+    const val GRAB_NOTHING_YET = "NOTHING TO SAVE YET."
     /** HOLD's own empty snapshot - released before a single frame landed. */
     const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
     /** GRAB/HOLD found the pad filled when the write took its turn (another capture landed, or a snip was placed, while the user was away), so nothing was written. */
@@ -3140,7 +3152,7 @@ object Copy {
      * draft of this fn.)
      */
     fun padCaptureReady(grabSeconds: Int): String =
-        "GRAB KEEPS WHAT'S BEEN HEARD SINCE LISTEN, UP TO ${grabSeconds}s. HOLD RECORDS WHILE YOU HOLD."
+        "SAVES WHAT'S BEEN HEARD SINCE LISTEN, UP TO ${grabSeconds}s. HOLD RECORDS WHILE YOU HOLD."
     /** GRAB/HOLD's own idle panel before LISTEN has ever been pressed. */
     const val PAD_CAPTURE_NEEDS_MIC = "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING."
 
@@ -3423,7 +3435,7 @@ object Copy {
      * rides in the template - reflection over `Copy`'s declared fields
      * finds it either way.
      */
-    val ROOMS_LEGEND: String = "HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS"
+    val ROOMS_LEGEND: String = "HOLD A ROOM TO FORGET IT · THE TRASH KEEPS IT ${Rooms.BIN_DAYS} DAYS"
     /** ORBIT's SET PROJECT TO ▸ confirm row: what accepting the offered tempo actually does, since SET is otherwise silent about it — the one project tempo moves, BEAT and LOOP with it. */
     const val ORBIT_SET_TEMPO_HINT = "MOVES THE PROJECT'S TEMPO, BEAT AND LOOP WITH IT, AND RE-SIZES THE RING TO FIT."
     /**
@@ -3480,14 +3492,14 @@ object Copy {
     /** The toast when KEYS could not rewrite the instrument's descriptors; the button goes back to the mode it had. */
     const val KEYS_VOICE_FAILED = "COULDN'T SAVE THE VOICE MODE."
     /** The toast when KEYS' GRAB is pressed before anything was played in the last sixteen seconds. */
-    const val KEYS_GRAB_EMPTY = "NOTHING TO GRAB. PLAY SOMETHING FIRST."
+    const val KEYS_GRAB_EMPTY = "NOTHING TO SAVE. PLAY SOMETHING FIRST."
     /** The toast when no app on the phone takes the MIDI file KEYS' GRAB made. */
     const val KEYS_GRAB_NO_APP = "NO APP ON THIS PHONE TAKES A MIDI FILE."
     /** The toast when KEYS' GRAB could not write its MIDI file. */
-    const val KEYS_GRAB_FAILED = "COULDN'T WRITE THE GRAB."
+    const val KEYS_GRAB_FAILED = "COULDN'T SAVE THE LAST 16 S."
     /** KEYS' GRAB handing its MIDI file to the share sheet. */
     fun keysGrabbed(notes: Int, bars: Int): String =
-        "GRABBED $notes ${if (notes == 1) "NOTE" else "NOTES"} OVER $bars ${if (bars == 1) "BAR" else "BARS"}. CHOOSE WHERE IT GOES."
+        "SAVED $notes ${if (notes == 1) "NOTE" else "NOTES"} OVER $bars ${if (bars == 1) "BAR" else "BARS"}. CHOOSE WHERE IT GOES."
     /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
     const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**

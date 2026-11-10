@@ -260,7 +260,7 @@ fun StackTakesScreen(
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         StackHeader(backLabel, busy, onBack, stackTitle(slot), scheme)
         TapeText(
-            "PICK UP TO THREE PRIOR TAKES AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
+            "PICK UP TO THREE PRIOR VERSIONS AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),
@@ -291,7 +291,7 @@ fun StackTakesScreen(
                         TapeText(c.ageLabel(), TapeType.pixelSmall, scheme.lcdInk.tape, maxLines = 1)
                         TapeText(c.factsText(), TapeType.pixelSmall, if (c.facts == null) scheme.warn.tape else scheme.lcdInk2, maxLines = 1)
                     }
-                    ActionButton("▶", scheme, enabled = !busy && c.facts != null, accessibilityLabel = "PREVIEW THIS TAKE", modifier = Modifier.width(48.dp), onClick = { preview(c) })
+                    ActionButton("▶", scheme, enabled = !busy && c.facts != null, accessibilityLabel = "PREVIEW THIS VERSION", modifier = Modifier.width(48.dp), onClick = { preview(c) })
                     ActionButton("▲", scheme, enabled = !busy && index > 0, dimmed = index <= 0, accessibilityLabel = "MOVE SOFTER", modifier = Modifier.width(48.dp), onClick = { moveEarlier(c) })
                     ActionButton(chip, scheme, enabled = !busy, lit = index >= 0, dimmed = c.facts == null, modifier = Modifier.width(72.dp), onClick = { togglePick(c) })
                 }
@@ -324,7 +324,7 @@ fun StackTakesScreen(
             // (`PROG A · THE BREAK`, GrooveScreen.kt).
             when {
                 busy -> "STACKING…"
-                picked.isEmpty() -> "STACK · PICK A TAKE FIRST"
+                picked.isEmpty() -> "STACK · PICK A VERSION FIRST"
                 else -> "STACK · KEEP ${picked.size} UNDER LIVE"
             },
             scheme,
@@ -336,7 +336,7 @@ fun StackTakesScreen(
 }
 
 /** The header's words: the tool and the pad it is working on, as [spliceTitle] says for SPLICE. */
-private fun stackTitle(slot: Int): String = "STACK THE TAKES · ${PadBanks.tag(slot)}"
+private fun stackTitle(slot: Int): String = "STACK VERSIONS · ${PadBanks.tag(slot)}"
 
 @Composable
 private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, title: String, scheme: Scheme) {

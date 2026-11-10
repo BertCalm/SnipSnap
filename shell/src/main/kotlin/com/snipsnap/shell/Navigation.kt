@@ -245,7 +245,7 @@ enum class Stage(val place: Place, val label: String) {
  */
 enum class Bench(val home: Place, val label: String, val backName: String = label) {
     // Under PROJECT ▸ PADS.
-    PAD_SHEET(Place.PROJECT, "PAD SHEET", backName = "PAD"),
+    PAD_SHEET(Place.PROJECT, "PAD EDITOR", backName = "PAD"),
     /**
      * The pad editor's EFFECTS screen (TREATMENT, SHAPE and OUTSIDE), opened by the editor's `EFFECTS ▸` door.
      * Drawn by the pad editor's own composable, not a screen of its own: the editor keeps its state (a trip
@@ -256,28 +256,28 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     PAD_VARIATIONS(Place.PROJECT, "VARIATIONS"),
     GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
     SPLICE(Place.PROJECT, "SPLICE"),
-    STACK(Place.PROJECT, "STACK THE TAKES", backName = "STACK"),
+    STACK(Place.PROJECT, "STACK VERSIONS", backName = "STACK"),
     SPLIT(Place.PROJECT, "SPLIT"),
-    VERSIONS(Place.PROJECT, "VERSIONS + BIN", backName = "VERSIONS"),
-    PAD_CAPTURE(Place.PROJECT, "PAD CAPTURE"),
+    VERSIONS(Place.PROJECT, "VERSIONS", backName = "VERSIONS"),
+    PAD_CAPTURE(Place.PROJECT, "RECORD ON PAD", backName = "RECORD PAD"),
     // Under PROJECT ▸ BEAT.
     ORBIT(Place.PROJECT, "ORBIT"),
     SONG(Place.PROJECT, "SONG"),
     LOOP(Place.PROJECT, "LOOP"),
     // Under SHELF.
     SNIPS(Place.SHELF, "SAVED SAMPLES", backName = "SAMPLES"),
-    BIN(Place.SHELF, "BIN"),
-    XRAY(Place.SHELF, "X-RAY"),
-    DOUBLES(Place.SHELF, "DOUBLES"),
+    BIN(Place.SHELF, "TRASH"),
+    XRAY(Place.SHELF, "INSPECT FILE", backName = "INSPECT"),
+    DOUBLES(Place.SHELF, "FIND SIMILAR SOUNDS", backName = "SIMILAR"),
     // Under MAKE.
     SYNTH(Place.MAKE, "SYNTH"),
-    SNAP(Place.MAKE, "SNAP"),
-    SURFACE(Place.MAKE, "SURFACE"),
+    SNAP(Place.MAKE, "PHOTO TO SOUND", backName = "PHOTO"),
+    SURFACE(Place.MAKE, "TOUCH SURFACE", backName = "SURFACE"),
     INSTRUMENTS(Place.MAKE, "INSTRUMENTS"),
-    KEYS(Place.MAKE, "KEYS"),
-    LIVE_SNAP(Place.MAKE, "LIVE"),
+    KEYS(Place.MAKE, "KEYBOARD"),
+    LIVE_SNAP(Place.MAKE, "LIVE CAMERA"),
     DRAW(Place.MAKE, "DRAW"),
-    FIELD(Place.MAKE, "PHOTO FIELD"),
+    FIELD(Place.MAKE, "PHOTO GRAINS", backName = "GRAINS"),
     /** Record a short vowel into a personal voice; works with or without an open kit. */
     MY_VOICE(Place.MAKE, "MY VOICE"),
     /** Audition selected recorded passages and keep a source-backed finite texture. */

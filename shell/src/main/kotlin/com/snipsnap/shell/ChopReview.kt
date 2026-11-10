@@ -291,7 +291,7 @@ class ChopReviewModel private constructor(
         val hits = hitsOf(mode)
         when (mode) {
             is ChopMode.ByHits -> parts += "BY HITS"
-            is ChopMode.Ghosts -> parts += "GHOSTS"
+            is ChopMode.Ghosts -> parts += "BETWEEN HITS"
             is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
             is ChopMode.Hummed -> parts += "HUMMED"
             is ChopMode.Ladder -> parts += if (pulse != null) "${mode.rung.label} ×$sliceCount" else "${mode.rung.label} (NO TEMPO)"

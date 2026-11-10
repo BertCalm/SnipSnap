@@ -342,7 +342,7 @@ class NavigationTest {
 
     @Test
     fun `ORBIT opened over SNAP returns to SNAP by the chip and by Back, not to a BEAT nobody visited`() {
-        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SNAP)), "◄ SNAP") {
+        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SNAP)), "◄ PHOTO") {
             go(Place.MAKE)
             open(Bench.SNAP)
             open(Bench.ORBIT)
@@ -498,7 +498,7 @@ class NavigationTest {
         assertEquals("◄ PADS", nav.backChip)
         assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
 
-        assertEquals(before, nav.walkBack(), "PAD CAPTURE was opened and closed, so the history is as if it never was")
+        assertEquals(before, nav.walkBack(), "RECORD ON PAD was opened and closed, so the history is as if it never was")
     }
 
     @Test

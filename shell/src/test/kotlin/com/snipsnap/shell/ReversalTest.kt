@@ -54,9 +54,9 @@ class ReversalTest {
         // "BIN EMPTIED" also contains while saying the opposite. That loophole
         // let a genuinely irreversible line satisfy this law with the noun that
         // flagged it, and awaitingWords was quietly masking it.
-        "THE BIN KEEPS", "IN THE BIN", "TO THE BIN", "FROM THE BIN",
+        "THE TRASH KEEPS", "IN THE TRASH", "TO THE TRASH", "FROM THE TRASH",
         // Accept the same direction words without "THE" too.
-        "IN BIN", "TO BIN", "FROM BIN",
+        "IN TRASH", "TO TRASH", "FROM TRASH",
         "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
         "RECOVER", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
         "UNTOUCHED", "STAYS", "WAITS",
@@ -298,7 +298,7 @@ class ReversalTest {
         assertTrue(
             unanswered.isEmpty(),
             "these lines destroy something and do not say whether it can be got back. Add the way " +
-                "back from Reversal (BIN, MIND, UNDO), or say plainly that there is none with " +
+                "back from Reversal (TRASH, MIND, UNDO), or say plainly that there is none with " +
                 "Reversal.goneBut(...) and list it in noWayBack:\n  " + unanswered.joinToString("\n  "),
         )
     }

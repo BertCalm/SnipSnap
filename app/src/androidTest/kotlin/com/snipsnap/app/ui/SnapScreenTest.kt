@@ -210,7 +210,7 @@ class SnapScreenTest : ComposeScreenTest() {
         assertTrue(showing("NO PHOTO"))
         button("TAKE PHOTO").assertIsEnabled()
         button("LIVE CAMERA").assertIsEnabled()
-        for (needsAPhoto in listOf("AS SHOT", "SEND TO PAD", "PHOTO FIELD", "CLOUD TO PAD", "PHOTO KIT", "SPECTRUM TO PAD", "PHOTO CHORD", "TELEPHONE CHAIN")) {
+        for (needsAPhoto in listOf("AS SHOT", "SEND TO PAD", "PHOTO GRAINS", "CLOUD TO PAD", "PHOTO KIT", "SPECTRUM TO PAD", "PHOTO CHORD", "EIGHT COPIES CHAIN")) {
             button(needsAPhoto).assertIsNotEnabled()
         }
     }
@@ -220,10 +220,10 @@ class SnapScreenTest : ComposeScreenTest() {
         show(entry = null)
         takePhoto()
         waitFor("AS SHOT to light") { runCatching { button("AS SHOT").assertIsEnabled() }.isSuccess }
-        button("PHOTO FIELD").assertIsEnabled()
+        button("PHOTO GRAINS").assertIsEnabled()
         button("PHOTO KIT").assertIsEnabled()
         button("PHOTO CHORD").assertIsEnabled()
-        button("TELEPHONE CHAIN").assertIsEnabled()
+        button("EIGHT COPIES CHAIN").assertIsEnabled()
         // With no kit open there is no pad to land on.
         button("SEND TO PAD").assertIsNotEnabled()
         button("SPECTRUM TO PAD").assertIsNotEnabled()
@@ -264,11 +264,11 @@ class SnapScreenTest : ComposeScreenTest() {
         takePhoto()
         // CLOUD needs FIELD's grains, so it stays off until a field is built.
         button("CLOUD TO PAD").assertIsNotEnabled()
-        invokeClick("PHOTO FIELD")
+        invokeClick("PHOTO GRAINS")
         // The field's back chip reads "◄ SNAP" and is named for a screen
         // reader in words (spokenBack): "BACK TO SNAP".
         waitFor("the field over the picture", timeoutMillis = 60_000) { present("BACK TO SNAP") }
-        assertTrue(showing("◄ SNAP"))
+        assertTrue(showing("◄ PHOTO"))
         invokeClick("BACK TO SNAP")
         waitFor("back on SNAP") { !present("BACK TO SNAP") }
         waitFor("CLOUD to light") { runCatching { button("CLOUD TO PAD").assertIsEnabled() }.isSuccess }
@@ -297,9 +297,9 @@ class SnapScreenTest : ComposeScreenTest() {
         val entry = emptyKit()
         show(entry)
         takePhoto()
-        invokeClick("TELEPHONE CHAIN")
+        invokeClick("EIGHT COPIES CHAIN")
         waitFor("the generations", timeoutMillis = 120_000) { present("GENERATION 1") }
-        assertTrue(showing("TELEPHONE — TAP ONE TO HEAR IT"))
+        assertTrue(showing("EIGHT COPIES — TAP ONE TO HEAR IT"))
         invokeClick("GENERATION 2")
         invokeClick("SEND GENERATION TO PAD")
         invokeClick("${PadBanks.tag(1)}, EMPTY")

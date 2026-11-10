@@ -270,7 +270,7 @@ fun ConfluenceVoicesScreen(
             StepperSlider("VARIATION", selected.variation, "${(selected.variation * 100).roundToInt()}%", scheme.accent.tape, scheme,
                 enabled = !saving && adjustable, labelWidth = 104.dp,
                 onFractionChange = { change(selected.copy(variation = (it * 40).roundToInt() / 40f)) }, onFractionCommit = {})
-            StepperSlider("ROOM", selected.room, "${(selected.room * 100).roundToInt()}%", scheme.accent.tape, scheme,
+            StepperSlider("REVERB", selected.room, "${(selected.room * 100).roundToInt()}%", scheme.accent.tape, scheme,
                 enabled = !saving && adjustable, labelWidth = 104.dp,
                 onFractionChange = { change(selected.copy(room = (it * 40).roundToInt() / 40f)) }, onFractionCommit = {})
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

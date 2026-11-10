@@ -46,7 +46,7 @@ object Places {
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.
      */
-    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND"
+    const val CATCH_FIRST = "LISTEN FOR YOUR FIRST SOUND"
 
     /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. No arrow: that page is Android's, not a screen of ours. */
     const val OPEN_SETTINGS = "OPEN SETTINGS"
@@ -135,9 +135,9 @@ object Places {
     const val TOOL_BACKUP_DESC = "EVERY KIT, ONE FILE"
     const val TOOL_CHOP_ALL = "CHOP ALL"
     const val TOOL_CHOP_ALL_DESC = "EVERY FILE, ONE KIT"
-    const val TOOL_XRAY = "X-RAY"
+    const val TOOL_XRAY = "INSPECT FILE"
     const val TOOL_XRAY_DESC = "INSPECT A FILE"
-    const val TOOL_DOUBLES = "DOUBLES"
+    const val TOOL_DOUBLES = "FIND SIMILAR SOUNDS"
     const val TOOL_DOUBLES_DESC = "SAME SOUND, ANY KIT"
 
     /**
@@ -147,7 +147,7 @@ object Places {
     const val PROJECT_RENAME = "RENAME"
     const val PROJECT_RENAME_DESC = "GIVE THE PROJECT A NEW NAME"
     const val PROJECT_DELETE = "DELETE"
-    const val PROJECT_DELETE_DESC = "TO THE BIN, KITS STAY IN THE LIBRARY"
+    const val PROJECT_DELETE_DESC = "TO THE TRASH, KITS STAY IN THE LIBRARY"
     const val PROJECT_DROP = "REMOVE A KIT"
     const val PROJECT_DROP_DESC = "TAKE ONE OUT, IT STAYS IN THE LIBRARY"
 
@@ -186,7 +186,7 @@ object Places {
      * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
      * button's or section's name inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
      */
-    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
+    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
 
     /** THIS KIT's heading over REMIX BANK B. */
     const val KIT_BANK_B = "BANK B"
@@ -235,8 +235,8 @@ object Places {
         "LIBRARY" to listOf(
             "· YOUR PROJECTS, AND THE KITS, SAMPLES AND INSTRUMENTS THEY SHARE.",
             "· A KIT IS AN MPC PROGRAM. A PROJECT IS AN MPC PROJECT. THE CARD READS BOTH.",
-            "· HOLD A KIT TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
-            "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, X-RAY A FILE, FIND DOUBLES.",
+            "· HOLD A KIT TO RENAME IT, OR TO TRASH IT. THE TRASH KEEPS IT ${Reversal.DAYS} DAYS.",
+            "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, INSPECT A FILE, FIND SIMILAR SOUNDS.",
         ),
         "SAMPLE" to listOf(
             "· RECORD: A SOUND FROM THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
@@ -249,11 +249,11 @@ object Places {
             "· BEAT: THE PROJECT'S PATTERNS. RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
             "· EXPORT: WRITE THE KIT, OR THE PROJECT AS A SESSION. THE MPC OPENS BOTH.",
             "· ONE KIT IS ACTIVE AT A TIME. SWAP IT ABOVE THE GRID; ADD MORE FROM LIBRARY.",
-            "· VERSIONS: EVERY SAVE IS A TAKE. EVERY DELETE GOES TO THE BIN FIRST.",
+            "· VERSIONS: EVERY SAVE IS A VERSION. EVERY DELETE GOES TO THE TRASH FIRST.",
         ),
         "CREATE" to listOf(
-            "· SYNTH, SNAP AND SURFACE MAKE A SOUND FROM NOTHING AND SEND IT TO A PAD.",
-            "· SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
+            "· SYNTH, PHOTO TO SOUND, TOUCH SURFACE: A SOUND FROM NOTHING, TO A PAD.",
+            "· TOUCH SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
             "· CONFLUENCE VOICES: HEAR A RECORDED PASSAGE, THEN SAVE IT AS A PAD.",
             "· MY VOICE: A SHORT VOWEL OF YOURS BECOMES A VOICE, KEPT ON THIS PHONE.",

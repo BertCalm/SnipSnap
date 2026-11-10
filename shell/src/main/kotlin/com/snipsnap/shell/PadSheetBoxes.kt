@@ -25,11 +25,11 @@ import kotlin.math.roundToInt
 object PadSheetBoxes {
 
     enum class Box(val legend: String) {
-        TREATMENT("TREATMENT"),
+        TREATMENT("EFFECTS"),
         SHAPE("SHAPE"),
-        OUTSIDE("OUTSIDE"),
-        MUTATE("MUTATE"),
-        MAKE("MAKE"),
+        OUTSIDE("RE-AMP AND ROOM"),
+        MUTATE("COMBINE SOUNDS"),
+        MAKE("MAKE FROM THIS PAD"),
     }
 
     /**
@@ -53,13 +53,13 @@ object PadSheetBoxes {
     const val SHAPE_HOLDS = "ATTACK, DECAY, CUTOFF, RESONANCE"
 
     /** What the OUTSIDE strip reads when the pad has made no trip: the card's two moves. */
-    const val OUTSIDE_HOLDS = "REAMP, ROOM"
+    const val OUTSIDE_HOLDS = "RE-AMP, ROOM"
 
     /** One closed line and whether the pad carries anything from that bench ([text] is for the eye only). */
     data class Line(val text: String, val carried: Boolean)
 
     /** The label budget for one strip: about this many 8 px pixel characters cross a 390 sheet. */
-    const val SUMMARY_CHARS = 44
+    const val SUMMARY_CHARS = 45
 
     fun boxFor(name: String): Box? = Box.values().firstOrNull { it.name == name }
 
@@ -92,10 +92,10 @@ object PadSheetBoxes {
 
     private fun appliedShape(pad: KitPad): String? {
         val parts = listOfNotNull(
-            pad.attack?.let { "ATK %.0f MS".format(Locale.ROOT, PadShape.attackSeconds(it) * 1000f) },
+            pad.attack?.let { "ATK %.0fMS".format(Locale.ROOT, PadShape.attackSeconds(it) * 1000f) },
             pad.decay?.let { "DEC ${(it * 100).roundToInt()}%" },
-            pad.cutoff?.let { "CUT ${cutoffLabel(it)}" },
-            pad.resonance?.let { "RES %.0f DB".format(Locale.ROOT, PadShape.resonanceDb(it)) },
+            pad.cutoff?.let { "CUTOFF ${cutoffLabel(it)}" },
+            pad.resonance?.let { "RES %.0fDB".format(Locale.ROOT, PadShape.resonanceDb(it)) },
         )
         return if (parts.isEmpty()) null else parts.joinToString(" · ")
     }
@@ -110,7 +110,7 @@ object PadSheetBoxes {
     fun mutate(applied: MutateSheet.Applied?): String = appliedMutate(applied) ?: MUTATE_OFFERS
 
     private fun appliedMutate(applied: MutateSheet.Applied?): String? = applied?.let {
-        "${it.word} × ${it.parents.joinToString(" + ") { p -> parentName(p) }}"
+        "${MutateSheet.modeLabel(it.word)} × ${it.parents.joinToString(" + ") { p -> parentName(p) }}"
     }
 
     /** A parent's label as the strip names it: a room by its name, a pad as "KIT A03". */
@@ -129,7 +129,7 @@ object PadSheetBoxes {
     fun make(pad: KitPad): String =
         pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" }
             ?: if (ConfluenceWorkshop.isGathering(pad)) "GATHERING · MAKE VARIATION"
-            else "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT"
+            else "SUSTAIN · NEAREST SYNTH · INSTRUMENT"
 
     /**
      * Which benches this pad actually carries something from (J36).
@@ -183,12 +183,12 @@ object PadSheetBoxes {
      */
     fun variationsLine(pad: KitPad): String {
         val applied = appliedMutate(MutateSheet.read(pad.recipe)) ?: return MUTATE_OFFERS
-        val full = "MUTATE · $applied"
-        return if (full.length <= SUMMARY_CHARS) full else "MUTATE · APPLIED"
+        val full = "COMBINE SOUNDS · $applied"
+        return if (full.length <= SUMMARY_CHARS) full else "COMBINE SOUNDS · APPLIED"
     }
 
     /** What the EFFECTS door reads when the pad carries no treatment, shape or trip: the three benches on the screen. */
-    const val EFFECTS_HOLDS = "TREATMENT, SHAPE, OUTSIDE"
+    const val EFFECTS_HOLDS = "EFFECTS, SHAPE, RE-AMP AND ROOM"
 
     /** What the VARIATIONS door reads when the pad carries no mutate: what the screen holds. */
     const val MUTATE_OFFERS = "MIX WITH ANOTHER SOUND"

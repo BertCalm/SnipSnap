@@ -428,9 +428,9 @@ class MutateSheetTest {
         assertEquals("BECOME", applied.word)
         // The strip, the takes diff and the replay refusal all read the move label (Decision 3).
         assertEquals("BECOME × SOUL A03", PadSheetBoxes.mutate(applied))
-        assertEquals("MUTATED: BECOME", KitDiff.recipeName(ramped))
+        assertEquals("COMBINED: BECOME", KitDiff.recipeName(ramped))
         assertEquals(
-            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARTNER - NOT CARRIED."),
+            RecipeReplay.Plan.Refused("COMBINE SOUNDS (BECOME WITH SOUL A03) NEEDS ITS PARTNER - NOT CARRIED."),
             RecipeReplay.plan(ramped),
         )
 
@@ -534,7 +534,7 @@ class MutateSheetTest {
         val plain = m.pad(1)!!
         assertEquals(MutateSheet.Refusal.NoPartner, MutateSheet.refusalBefore(plain, null, needsPartner = true))
         assertNull(MutateSheet.refusalBefore(plain, MutateSheet.Partner.Pad(2), needsPartner = true))
-        assertNull(MutateSheet.refusalBefore(plain, null, needsPartner = false), "DRIFT and ROULETTE pick their own partner")
+        assertNull(MutateSheet.refusalBefore(plain, null, needsPartner = false), "DRIFT and RANDOM PARTNER pick their own partner")
 
         m.addGhostLayers(2)
         val layered = m.pad(2)!!

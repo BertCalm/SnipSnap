@@ -160,7 +160,7 @@ internal fun DeletedSnipsSection(
                 onToast(Copy.snipBinEmptied)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("EMPTY BIN", e)
+                failure("EMPTY TRASH", e)
             } finally {
                 busy = false
             }
@@ -280,7 +280,7 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
     // Same text the TapeText below shows — it already follows `armed`.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()

@@ -342,7 +342,7 @@ fun SnipsScreen(
             // at all (locked behavior).
             if (binnedCount > 0) {
                 ActionButton(
-                    "BIN · $binnedCount WAITING ▸",
+                    "TRASH · $binnedCount WAITING ▸",
                     scheme,
                     enabled = true,
                     modifier = Modifier.fillMaxWidth(),

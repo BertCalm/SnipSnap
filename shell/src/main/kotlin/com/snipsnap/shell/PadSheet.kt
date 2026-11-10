@@ -196,6 +196,14 @@ object PadSheet {
         "ETERNAL" to "DRONE",
         // The banded smear: click gone, thump kept.
         "SKIM" to "SMOOTH",
+        // Names that clashed with an engine or another tool (vocabulary ledger, ruling 14), and the pedal
+        // words that said two things (ruling 8). The ids are what recipes and tests use; only the drawn word changes.
+        "CONTOUR" to "FILTER SWEEP",
+        "RING" to "RING MOD",
+        "GATE" to "TRANCE GATE",
+        "HUSH" to "NOISE GATE",
+        "TOUCH" to "TOUCH WAH",
+        "ROOM" to "REVERB",
     )
 
     /** What the card draws for [segment] — [DISPLAY_LABELS]'s word, or the segment itself. */
