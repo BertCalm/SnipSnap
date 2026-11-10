@@ -146,8 +146,24 @@ object SporeStationAuditionGenerator {
             check(sfz.readText().lineSequence().count { it.startsWith("<region>") } == 162)
             File(dest, "$name.sfz").writeText(sfz.readText().replace("default_path=Samples/", "default_path=${data.name}/"))
             File(dest,"README.txt").writeText("Candidate $bpm BPM kit. SFZ and the native kit in TrackData retain three velocity zones x three round-robin takes. MPC 3: XTD writes cycle settings but the chain WAV slice map remains bench-blocked; treat it as first-take-only until hardware verification. MPC 2: XPM keeps the first take per zone only, no round robin. SnipSnap: open the TrackData folder (kit.json) to retain the complete grids. A07/A08 choke each other. B01 roll and B02 riser last four beats. Baked echoes do not follow host tempo. Hardware audition pending.\n")
+            if(bank=="Jungle") for(file in listOf("LICENSE.txt","NOTICE.txt","provenance.json","index.csv"))
+                File(dest,"Acoustic-$file").writeBytes(SporeAcoustic.bytes(file))
             val target=File(root,"spore-${bank.lowercase()}-mpc.zip")
-            zip(root,dest.walkTopDown().filter { it.isFile }.toList(),target)
+            val files=dest.walkTopDown().filter { it.isFile }.toList()
+            zip(root,files,target)
+            if(target.length()>24*1024*1024) {
+                // Keep natural acoustic tails; split delivery instead of shortening the source for hosting.
+                File(dest,"README.txt").appendText("This download has two ZIP parts. Extract BOTH into the same parent folder before loading the program. Part 1 contains programs/metadata and the first nine pad WAVs; part 2 contains the remaining nine.\n")
+                val waves=files.filter { it.extension=="wav" }.sortedBy { it.name }
+                val first=File(root,"spore-${bank.lowercase()}-part-1.zip")
+                val second=File(root,"spore-${bank.lowercase()}-part-2.zip")
+                zip(root,files.filter { it.extension!="wav" }+waves.take(9),first)
+                zip(root,waves.drop(9),second)
+                check(first.length()<25*1024*1024 && second.length()<25*1024*1024)
+                target.delete()
+                return mapOf("name" to bank,"href" to first.name,"sha256" to hash(first),"bpm" to bpm,"pads" to pads.size,
+                    "parts" to listOf(first,second).mapIndexed { i,f -> mapOf("label" to "Part ${i+1}","href" to f.name,"sha256" to hash(f)) })
+            }
             return mapOf("name" to bank,"href" to target.name,"sha256" to hash(target), "bpm" to bpm, "pads" to pads.size)
         } finally { work.deleteRecursively() }
     }
@@ -189,7 +205,7 @@ object SporeStationAuditionGenerator {
             clip("mutation-${i+1}",p.name,"Mutations",mutations[i].snip,SporeStation.recipe(i,true),i+1)
         }
         jungle.forEachIndexed { i,p ->
-            clip("jungle-${i+1}", p.displayName ?: "Jungle ${i+1}", "Jungle", p.snip, SporeStation.recipe(i,jungle=true),i+1)
+            clip("jungle-${i+1}", p.displayName ?: "Jungle ${i+1}", "Jungle", p.snip, if(SporeAcoustic.contains(i)) null else SporeStation.recipe(i,jungle=true),i+1)
         }
         restrained.forEachIndexed { i,p ->
             clip("restrained-${i+1}", p.displayName ?: "Previous ${i+1}", "Restrained", p.snip, SporeStation.recipe(i,previousJungle=true),i+1)
@@ -198,7 +214,7 @@ object SporeStationAuditionGenerator {
         val compareGain = minOf(1f,.92f/comparison.maxOf { it.peak() })
         val compareMatch = minOf(.03f/comparison.maxOf { Loudness.of(it) },.99f/comparison.maxOf { it.peak() })
         comparison.forEachIndexed { i,s ->
-            clip("dry-compare-$i", if(i==0) "Previous sound-system core" else "Articulated jungle core", "Dry comparison",
+            clip("dry-compare-$i", if(i==0) "Previous synthesized core" else "Recorded acoustic core", "Dry comparison",
                 scale(s,compareGain),matchedGain=compareMatch/compareGain)
         }
         val performanceJungle = SporeStation.performance()
@@ -251,9 +267,11 @@ object SporeStationAuditionGenerator {
             export(root, pads, name, genre.bpm)
         }
 
+        for(file in listOf("LICENSE.txt","NOTICE.txt","provenance.json","index.csv"))
+            File(root,"Acoustic-$file").writeBytes(SporeAcoustic.bytes(file))
         val manifest=linkedMapOf<String,Any?>("title" to "Spore Station","version" to SporeStation.VERSION,"bpm" to SporeStation.BPM,
-            "baseline" to "ae1ad9b3","status" to "candidate-awaiting-owner-listen",
-            "sourceSha256" to listOf("synth/src/main/kotlin/com/snipsnap/synth/SporeStation.kt", "synth/src/test/kotlin/com/snipsnap/synth/SporeStationAuditionGenerator.kt").associateWith { hash(File(it)) },
+            "baseline" to "078b97c630538913f508395c0b765cebc52ba976","status" to "candidate-awaiting-owner-listen",
+            "sourceSha256" to listOf("synth/src/main/kotlin/com/snipsnap/synth/SporeStation.kt", "synth/src/main/kotlin/com/snipsnap/synth/SporeAcoustic.kt", "synth/src/test/kotlin/com/snipsnap/synth/SporeStationAuditionGenerator.kt").associateWith { hash(File(it)) },
             "sampleRate" to Dsp.RATE,"clips" to clips,"downloads" to downloads,"timings" to timings,
             "renderEnvironment" to "Kotlin/JVM 21 cloud container; not phone timing",
             "groove" to mapOf("bars" to 2,"rawBusGain" to busGain,"matchedGain" to matchGain,"hatChokeMs" to 5,"programLevel" to DrumProgram("gain",emptyList()).level,
@@ -265,7 +283,10 @@ object SporeStationAuditionGenerator {
         File(root,"metrics.csv").writeText("id,peak,dc,loudness,seconds,sha256\n"+clips.joinToString("\n") { c -> listOf("id","peak","dc","loudness","seconds","sha256").joinToString(",") { c[it].toString() } })
         File("docs/superpowers/specs/2026-11-09-spore-station-jungle-kit.md").copyTo(File(root,"spec.md"),overwrite=true)
         File("synth/src/test/resources/audition/spore-station.html").copyTo(File(root,"index.html"),overwrite=true)
-        zip(root,root.walkTopDown().filter { it.isFile && (it.parentFile.name in listOf("audio","recipes") || it.name in listOf("manifest.json","metrics.csv","spec.md")) }.toList(),File(root,"spore-listening-pack.zip"))
+        val documents=root.listFiles()!!.filter { it.isFile && (it.name.startsWith("Acoustic-") || it.name in listOf("manifest.json","metrics.csv","spec.md")) } + File(root,"recipes").listFiles()!!.toList()
+        val audio=File(root,"audio").listFiles()!!.toList()
+        zip(root,documents+audio.filterNot { it.name.endsWith("-matched.wav") },File(root,"spore-listening-raw.zip"))
+        zip(root,documents+audio.filter { it.name.endsWith("-matched.wav") },File(root,"spore-listening-matched.zip"))
         println("Spore Station: ${clips.size} clips, three 18-pad/3x3-grid kits. Output: ${root.absolutePath}")
     }
 }

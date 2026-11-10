@@ -40,34 +40,39 @@ class SporeStationTest {
         // Float rounding after a gain-only change must not qualify as a new articulation.
         assertTrue(differenceEnergy > signalEnergy * .0001)
     }
-    @Test fun `jungle core is dry and distinct before any finishing rack`() {
-        for (i in 0..9) {
-            val r = SporeStation.genreRecipe(i, SporeStation.Genre.JUNGLE)
-            assertNull(r.fx, "pad $i must get its identity from the source")
-            val patch = assertIs<SkinPatch>(r.patch)
-            assertEquals(1, patch.model, "no hidden recording rack inside model 2")
-            val fresh = patch.render()
-            val previous = SporeStation.parts()[i].patch.render()
-            val n = minOf(fresh.samples.size, previous.samples.size)
-            val energy = (0 until n).sumOf { previous.samples[it].toDouble() * previous.samples[it] }
-            val difference = (0 until n).sumOf { val d = fresh.samples[it].toDouble() - previous.samples[it]; d*d }
-            assertTrue(difference > energy * .01, "pad $i must change before FX")
-            assertContentEquals(r.render().samples, PadRecipe.fromJsonValue(r.toJsonValue()).render().samples)
-            if (i in listOf(1,3,6)) assertTrue(fresh.frameCount < previous.frameCount, "pad $i has a shorter tail")
+    @Test fun `recorded jungle core bypasses synthesis and finishing racks`() {
+        for(i in 0..10) {
+            assertContentEquals(SporeAcoustic.render(i).samples,SporeStation.take(i,SporeStation.Genre.JUNGLE,1f,0).samples)
+            assertFailsWith<IllegalArgumentException> { SporeStation.genreRecipe(i,SporeStation.Genre.JUNGLE) }
         }
-        assertIs<OnsetPatch>(SporeStation.genreRecipe(0, SporeStation.Genre.DUB).patch)
-        assertIs<OnsetPatch>(SporeStation.genreRecipe(0, SporeStation.Genre.ELECTRO).patch)
+        assertIs<OnsetPatch>(SporeStation.genreRecipe(0,SporeStation.Genre.DUB).patch)
+        assertIs<OnsetPatch>(SporeStation.genreRecipe(0,SporeStation.Genre.ELECTRO).patch)
     }
 
-    @Test fun `articulated core shortens tails while preserving accent and ghost contrast`() {
-        val previous = SporeStation.previousJungleParts()
-        val current = SporeStation.jungleParts()
-        for (i in listOf(0,2,4,7,9)) {
-            assertTrue(current[i].patch.render().frameCount < previous[i].patch.render().frameCount)
-            if(i in listOf(0,2,4)) assertEquals(previous[i].level, current[i].level)
+    @Test fun `recorded source selection follows the saved MIDI velocity bands`() {
+        for(i in 0..10) {
+            assertEquals(SporeAcoustic.sourceId(i,.3f,0),SporeAcoustic.sourceId(i,41f/127,0))
+            assertEquals(SporeAcoustic.sourceId(i,.6f,0),SporeAcoustic.sourceId(i,42f/127,0))
+            assertEquals(SporeAcoustic.sourceId(i,.6f,0),SporeAcoustic.sourceId(i,84f/127,0))
+            assertEquals(SporeAcoustic.sourceId(i,1f,0),SporeAcoustic.sourceId(i,85f/127,0))
         }
-        assertEquals(previous[3], current[3], "quiet ghosts retain their contrast")
-        assertEquals(previous[1], current[1], "pickup kick stays restrained")
     }
 
+    @Test fun `recorded core retains distinct source recordings and natural dynamics`() {
+        for(i in 0..10) {
+            val ids=listOf(.3f,.6f,1f).flatMap { v -> (0..2).map { t -> SporeAcoustic.sourceId(i,v,t) } }
+            assertEquals(9,ids.toSet().size,"pad $i must retain nine real recordings")
+            for(v in listOf(.3f,.6f,1f)) {
+                val takes=(0..2).map { SporeAcoustic.render(i,v,it) }
+                takes.forEach { assertTrue(it.samples.all { x -> x.isFinite() });assertTrue(it.peak() in .00001f..1f) }
+                assertFalse(takes[0].samples.contentEquals(takes[1].samples))
+                assertContentEquals(takes[0].samples,SporeAcoustic.render(i,v,3).samples)
+            }
+        }
+        val soft=SporeAcoustic.render(2,.3f);val hard=SporeAcoustic.render(2,1f)
+        assertTrue(soft.peak()<hard.peak(),"recorded dynamics are not peak-normalized away")
+        val grid=SporeStation.performance()[2]
+        assertContentEquals(soft.samples,grid.velocityTakes[0][0].samples)
+        assertContentEquals(hard.samples,grid.velocityTakes[2][0].samples)
+    }
 }
