@@ -382,3 +382,13 @@ Before, model 1 was up to 5.6 dB off in the tail. The snare moves at most 1.2 dB
 Page: https://claude.ai/artifact/FD1uDKgAhotz1BsV4wn1cJ (the re-fit kick, the pick and round 1's
 kick; the snare at 95 and 90 ms; the re-fit kick's takes and a half-strength hit).
 
+## Heard: round 1b (2026-11-10)
+
+| Question | Owner's answer |
+|---|---|
+| Kick: the re-fit against your pick. The same kick now? | **Same kick** |
+| Snare: the slap back at 95 ms. Still your snare? | **Yes** |
+| The re-fit kick, hit again and at half strength: the same drum, a softer hand? | **Yes** |
+
+The kick and the snare are accepted by ear on model 2, with their takes and their half-strength hits.
+

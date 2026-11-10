@@ -17,7 +17,8 @@ At round 1 the owner heard:
 - the kick as "close, but not it".
 
 Round 1b gives the kick back the tank and the slap time its pick was heard with. A model-1 save
-keeps round 1's sound.
+keeps round 1's sound. On 2026-11-10 the owner heard the re-fit kick as the same kick, and the snare
+(with the slap back at 95 ms), the takes and the half-strength hits as theirs.
 
 Not in the phone picker yet; the picker entry waits for a session with an Android SDK, as the house
 rule says. Still to come:
