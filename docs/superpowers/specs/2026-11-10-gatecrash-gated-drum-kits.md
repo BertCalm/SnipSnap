@@ -154,8 +154,8 @@ the two phrases share group 2.
 ## 9. Render budget
 
 Target: tens of milliseconds for a hit on a phone. Measured on this cloud JVM, warm: a stone tom 24 ms, a
-machine tom 22 ms, a crash 105 ms, a twelve-note fill 206 to 256 ms. A whole kit (192 renders) built in 8 to
-14 s cold in the generator run before the clip fix and is not re-timed per kit after it. Starter creation
+machine tom 22 ms, a crash 105 ms, a twelve-note fill 206 to 256 ms. A whole kit (192 renders) built in 13.2,
+12.1 and 9.6 s in the generator (Machine Pop took 33 s before the clip fix). Starter creation
 renders once; pad playback reads saved slices and synthesises nothing. The room plan and its late gain are
 cached per (SIZE, WALLS). No phone timing exists.
 

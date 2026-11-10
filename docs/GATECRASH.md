@@ -54,6 +54,16 @@ Output goes to `testkit/gatecrash-kits/` (ignored by git). For each kit it:
    strike with no space), `touch-NN.wav` (all twelve slices, soft to hard), and `groove.wav`, a two-bar
    pattern dealt the way the app deals it.
 
+The listening page is built from that output:
+
+```sh
+python3 scripts/gatecrash_page/build_page.py testkit/gatecrash-kits testkit/gatecrash-kits/site
+```
+
+It needs `ffmpeg`. The [published audition](https://claude.ai/artifact/2gJJoipRS6Lw1Ckshh5HE7) is private to
+the owner's account. It plays every pad, its dry comparison, all twelve strikes and a groove per kit, and
+draws each pad's real level over time.
+
 `metrics.csv` has each pad's measured gesture: the return's level early in the hold, at its end, after the
 cut, and its peak against the dry hit. `verification.csv` lists what was checked per pad.
 
@@ -69,7 +79,8 @@ cut, and its peak against the dry hit. `verification.csv` lists what was checked
 - All 42 hits are duller at the soft zone. The toms are at least 1.5 dB drier for their level.
 - Every take differs from every other take of its zone.
 
-Render time, warm: a hit takes 22 to 105 ms and a phrase 206 to 256 ms. These are not phone timings.
+Render time, warm: a hit takes 22 to 105 ms and a phrase 206 to 256 ms. A whole kit (192 renders) built in
+9.6 to 13.2 s in the generator. These are not phone timings.
 
 ## Limits, stated plainly
 
