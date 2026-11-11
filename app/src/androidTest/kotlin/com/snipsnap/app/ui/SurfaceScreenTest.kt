@@ -133,8 +133,8 @@ class SurfaceScreenTest : ComposeScreenTest() {
         assertReadsInFull("SHAPE")
         assertReadsInFull("MOD")
         assertReadsInFull("MIDI")
-        assertReadsInFull("◄ PAD")
-        assertReadsInFull("PAD ►")
+        assertReadsInFull("PREVIOUS PAD")
+        assertReadsInFull("NEXT PAD")
         assertReadsInFull("RING")
         assertReadsInFull("LATCH")
     }

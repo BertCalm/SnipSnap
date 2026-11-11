@@ -110,7 +110,7 @@ class ExpansionBackupTest {
 
     @Test
     fun `the expansion side's overwrite line names its own button`() {
-        assertEquals("NIGHT SHIFT IS ALREADY THERE. WRITE EXPANSION AGAIN TO WRITE OVER IT.", Copy.expansionWouldOverwrite("NIGHT SHIFT"))
+        assertEquals("NIGHT SHIFT IS ALREADY THERE. EXPORT EXPANSION AGAIN TO WRITE OVER IT.", Copy.expansionWouldOverwrite("NIGHT SHIFT"))
         assertTrue(Copy.EXPANSION_WRITE in Copy.expansionWouldOverwrite("X"), "the line names the button it asks for")
     }
 

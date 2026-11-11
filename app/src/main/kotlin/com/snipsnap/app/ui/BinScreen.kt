@@ -90,7 +90,7 @@ fun BinScreen(
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), enabled = !busy, onClick = onBack)
             Spacer(Modifier.weight(1f))
-            TapeText("BIN", TapeType.lcdHeader, scheme.lcdInk.tape)
+            TapeText("TRASH", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
             // Balances the chip so the title stays centred, as on the screens
             // this one replaces (which put a count here; each list's heading

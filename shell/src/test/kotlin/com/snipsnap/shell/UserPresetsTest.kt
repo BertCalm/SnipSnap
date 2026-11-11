@@ -1364,7 +1364,7 @@ class UserPresetsTest {
         assertEquals("MY KICK 2 IS BACK UNDER YOURS.", Copy.presetRestored("MY KICK 2"))
         assertTrue("HOLD ITS CHIP TO FORGET IT" in Copy.PRESET_NAME_NOTE, "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Reversal.BIN in Copy.PRESET_NAME_NOTE, "and for how long the bin keeps it")
-        assertTrue("STAYS" in Copy.PRESET_FORGET_FAILED && "BIN" in Copy.PRESET_RESTORE_FAILED)
+        assertTrue("STAYS" in Copy.PRESET_FORGET_FAILED && "TRASH" in Copy.PRESET_RESTORE_FAILED)
     }
 
     @Test

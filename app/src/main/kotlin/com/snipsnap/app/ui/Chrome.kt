@@ -80,17 +80,17 @@ enum class AppScreen(val label: String) {
      * file-manager screen or kits stay a menu" as open, and it stays open.
      */
     KITS("LIBRARY"),
-    KIT("KIT"),
+    KIT("PADS"),
     TAPE("SAMPLE"),
     CHOP("CHOP"),
-    GROOVE("GROOVE"),
+    GROOVE("BEAT"),
     EXPORT("EXPORT"),
     PROPERTIES("SETTINGS"),
     HELP("HELP"),
     /** Behind the gear with SETUP and HELP: what MIDI is plugged in and what it sends. */
     MIDI("MIDI"),
     /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
-    KEYS("KEYS"),
+    KEYS("KEYBOARD"),
 
     /**
      * A PADS bench: reached from the stage's action row on the pad you

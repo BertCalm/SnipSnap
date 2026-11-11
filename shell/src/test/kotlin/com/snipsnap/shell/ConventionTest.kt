@@ -2619,7 +2619,7 @@ class ConventionTest {
             "the card's status line is not the pairing line read uncut by TalkBack:\n  $status",
         )
         assertTrue(
-            "tapeClick(label = if (selected) \"\$m, SELECTED\" else m" in card,
+            "tapeClick(label = if (selected) \"\${MutateSheet.modeLabel(m)}, SELECTED\" else MutateSheet.modeLabel(m)" in card,
             "a move chip does not say it is selected; its bevel's fill is invisible to TalkBack",
         )
         val call = normalizeSpan(blockAfterList(padSheetScreen.readText(Charsets.UTF_8), "MutateCard("))
@@ -2755,7 +2755,7 @@ class ConventionTest {
             "onClick = ::onUndesample",
         )
         assertTrue(
-            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO DE-SAMPLE",
+            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO NEAREST SYNTH",
             "DE-SAMPLE's UNDO does not read `Copy.UNDO_DESAMPLE` (UNDO DE-SAMPLE, in full: MAKE holds five doors), as MUTATE's and OUTSIDE's header buttons name theirs:\n  $desample",
         )
         val legend = code.indexOf("legend = PadSheetBoxes.Box.MAKE.legend")
@@ -2763,7 +2763,7 @@ class ConventionTest {
         val box = code.lastIndexOf("GroupBox(", legend)
         val args = blockAfterList(code.substring(box), "GroupBox(")
         val make = blockAfter(code.substring(box + "GroupBox".length + args.length), "{")
-        val header = make.indexOf("TapeText(\"DE-SAMPLE · THE NEAREST PATCH\"")
+        val header = make.indexOf("TapeText(\"FIND NEAREST SYNTH\"")
         val rowAt = if (header >= 0) make.lastIndexOf("Row(", header) else -1
         assertTrue(
             rowAt >= 0 && "Copy.UNDO_DESAMPLE" in blockAfter(make.substring(rowAt), "Row("),
@@ -2888,8 +2888,8 @@ class ConventionTest {
         for ((door, word) in listOf(
             "fun onHear() {" to "HEAR",
             "fun onMutate() {" to "KEEP",
-            "fun onRoulette() {" to "ROULETTE",
-            "fun onDrift() {" to "DRIFT",
+            "fun onRoulette() {" to "RANDOM PARTNER",
+            "fun onDrift() {" to "RANDOM BLEND",
         )) {
             val body = codeOnly(blockAfter(src, door))
             val catchAt = body.indexOf("catch (e: Exception)")
@@ -5481,13 +5481,13 @@ class ConventionTest {
      *   they step through pads and presets and go nowhere.
      */
     private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
-        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
-        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
-        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
+        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT VERSIONS", "◄ CHOOSE DIFFERENT VERSIONS"),
+        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
+        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
-        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
+        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 7
+    private val BACK_LABEL_WAIVER_CEILING = 6
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5644,7 +5644,7 @@ class ConventionTest {
             "exactly the three settings behind STRIKE (side, return, volume) wait on it",
         )
         assertTrue(
-            Regex(""""STRIKE STRIP", state\.enabled, false,""").containsMatchIn(controls),
+            Regex(""""VELOCITY STRIP", state\.enabled, false,""").containsMatchIn(controls),
             "STRIKE itself must never wait on the strip it turns on",
         )
         assertTrue(
@@ -5653,8 +5653,8 @@ class ConventionTest {
                 "STRIKE would look as live as STRIKE itself while the strip ignores them",
         )
         assertTrue(
-            "takes effect when STRIKE is on" in controls,
-            "a waiting control no longer tells TalkBack it takes effect when STRIKE is on, so the quiet ink " +
+            "takes effect when the VELOCITY STRIP is on" in controls,
+            "a waiting control no longer tells TalkBack it takes effect when the VELOCITY STRIP is on, so the quiet ink " +
                 "would be the only cue",
         )
         assertFalse(
@@ -5834,7 +5834,7 @@ class ConventionTest {
         assertEquals(1, problemsIn("FORMAT ▴"), "a fold glyph is a fault")
         assertEquals(1, problemsIn("SAVE PRESET ▸"), "an action with an arrow is a fault")
         assertEquals(1, problemsIn("TOOLS ▸"), "a sheet opener with the screen arrow is a fault")
-        assertEquals(0, problemsIn("STACK ▸", "TOOLS ▾", "TRY IT FROM MUTATE ▸ ROOM.", "DUST FROM +"), "listed openers, a path and a fold pass")
+        assertEquals(0, problemsIn("STACK ▸", "TOOLS ▾", "TRY IT FROM COMBINE SOUNDS ▸ ROOM TONE.", "DUST FROM +"), "listed openers, a path and a fold pass")
     }
 
     private val GLYPH_REST = Regex("[▸▾]\\s*\\S")
@@ -5863,15 +5863,15 @@ class ConventionTest {
         "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
         "OPEN ▸", "CAPTURE ▸", "FROM SAVED SAMPLES ▸", // the pad strip's doors, and a project row's OPEN
         "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
-        "BREED · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
+        "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
-        "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYS ▸", // MAKE's rows
+        "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYBOARD ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
-        "STACK ▸", "SPLICE ▸", "GRAIN ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
-        "VERSIONS + BIN · RESTORE ▸", "SPLIT · SINES · TRANSIENT · AIR ▸", // THIS KIT's two screens
+        "STACK ▸", "SPLICE ▸", "GRAIN · PLAY THIS SOUND AS GRAINS ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
+        "VERSIONS · RESTORE ▸", "SPLIT · SINES · TRANSIENT · AIR ▸", // THIS KIT's two screens
         "BEAT WRITERS · BOUNCE · MIDI · CHART ▸", // EXPORT's way to the BEAT stage
-        "BIN · ${'$'}binnedCount WAITING ▸", "LOOP · ${'$'}loopTracks OF ${'$'}{Session.TRACK_COUNT} TRACKS ▸", // the shelf's BIN and LOOP rows
+        "TRASH · ${'$'}binnedCount WAITING ▸", "LOOP · ${'$'}loopTracks OF ${'$'}{Session.TRACK_COUNT} TRACKS ▸", // the shelf's BIN and LOOP rows
         "READ AS GROOVE ▸", "COPY GROOVE ▸", // TAPE's two ways onto GROOVE
         "LIVE ▸", "FIELD ▸", "RING ▸", // SNAP's live camera, the field screen, and the ring on ORBIT
         "OPEN KIT ▸", "HELP ▸", // the kit result's way in, and the setup screen's way to HELP
@@ -5895,8 +5895,8 @@ class ConventionTest {
 
     /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
     private val GLYPH_PATHS = listOf(
-        "RE-TRIM ▸: CHOP", "REMIX BANK B ▸ DEALS EVIL TWINS", "BREED ▸ PICK A KIT", "REMIX BANK B ▸ DEALS TWINS HERE", // HELP lines naming the button then what it does
-        "VERSIONS ▸ ROLLS BACK", "MUTATE ▸ ROOM", "ROOM ▸ SEND", "OUTSIDE ▸ ROOM", // toasts and lines naming a menu path
+        "RE-TRIM ▸: CHOP", "MAKE BANK B VARIATIONS ▸ FILLS AN EMPTY BANK B", "COMBINE KITS ▸ CROSS A KIT'S RECIPES", "MAKE BANK B VARIATIONS ▸ FILLS IT HERE", // HELP lines naming the button then what it does
+        "VERSIONS ▸ ROLLS BACK", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
         "OPEN ▸ FOR ITS BENCH", "CLIP ▸ KIT WRITES ONE", // PADS help, and ORBIT's section line
     )
 }

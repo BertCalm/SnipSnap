@@ -117,7 +117,7 @@ object KitDiff {
         // sheet lights each, so the line says each.
         PadSheet.readPedals(recipe)?.let { board ->
             return board.picks.joinToString(" · ") { p ->
-                "${com.snipsnap.synth.Pedals.byKey(p.key).word} ${(p.amount * 100).roundToInt()}% ${p.side.id.uppercase()}"
+                "${PadSheet.displayLabel(com.snipsnap.synth.Pedals.byKey(p.key).word)} ${(p.amount * 100).roundToInt()}% ${p.side.id.uppercase()}"
             }
         }
         PadSheet.read(recipe)?.let { applied ->
@@ -126,11 +126,11 @@ object KitDiff {
             // prints `roundToInt()`, and this line must agree with it.
             return "$word ${(applied.amount * 100).roundToInt()}%"
         }
-        MutateSheet.read(recipe)?.let { return "MUTATED: ${it.word}" }
+        MutateSheet.read(recipe)?.let { return "COMBINED: ${MutateSheet.modeLabel(it.word)}" }
         runCatching { com.snipsnap.synth.KitFromAnything.Recipe.fromJsonValue(recipe) }.getOrNull()?.let {
             return "KIT FROM ANYTHING ${it.slot.label.uppercase()} (${it.genre.label.uppercase()}, ${it.key.label.uppercase()})"
         }
-        OutsideSheet.read(recipe)?.let { return "OUTSIDE: ${it.move}" }
+        OutsideSheet.read(recipe)?.let { return "RE-AMP AND ROOM: ${it.move}" }
         val e = recipe.entries
         (e["robin"] as? JsonValue.Obj)?.let { r ->
             val takes = (r.entries["takes"] as? JsonValue.Num)?.value?.toInt()

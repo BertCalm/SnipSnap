@@ -232,22 +232,22 @@ class ExportScreenTest : ComposeScreenTest() {
     @Test
     fun writing_a_kit_reaches_complete_and_write_another_resets_it() {
         show(exportKit())
-        tap("WRITE KIT")
+        tap("EXPORT KIT")
         waitForComplete()
-        button("WRITE ANOTHER ✓").assertExists()
+        button("EXPORT ANOTHER").assertExists()
         // COMPLETE is set on IO before the session's busy flag clears on Main.
         // Its message can appear while WRITE ANOTHER is still disabled.
-        waitForEnabled("WRITE ANOTHER ✓")
-        tap("WRITE ANOTHER ✓")
-        waitForEnabled("WRITE KIT")
-        button("WRITE KIT").assertExists()
+        waitForEnabled("EXPORT ANOTHER")
+        tap("EXPORT ANOTHER")
+        waitForEnabled("EXPORT KIT")
+        button("EXPORT KIT").assertExists()
     }
 
     @Test
     fun a_preflight_fail_disables_write_kit() {
         show(blockedKit())
         compose.onNodeWithText("FAIL", useUnmergedTree = true).assertExists()
-        button("WRITE KIT").assertIsNotEnabled()
+        button("EXPORT KIT").assertIsNotEnabled()
     }
 
     @Test
@@ -291,7 +291,7 @@ class ExportScreenTest : ComposeScreenTest() {
         val armed = session!!.model.format
         pickFormat(ExportFormat.entries.first { it != armed })
 
-        button("WRITE KIT").assertExists()
+        button("EXPORT KIT").assertExists()
         compose.onNodeWithText(Copy.replaceWhat(fakeExisting.name), useUnmergedTree = true).assertDoesNotExist()
     }
 
@@ -300,7 +300,7 @@ class ExportScreenTest : ComposeScreenTest() {
         show(exportKit())
         pickFormat(ExportFormat.MIDI)
         assertEquals("pickFormat did not land on MIDI", ExportFormat.MIDI, session!!.model.format)
-        tap("WRITE KIT")
+        tap("EXPORT KIT")
         waitForComplete()
 
         // Pinned explicitly, not just through the SHARE button's presence:
@@ -349,6 +349,6 @@ class ExportScreenTest : ComposeScreenTest() {
         pump()
         button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
         button(Copy.putOnCardOver(what)).assertIsNotEnabled()
-        button("WRITE ANOTHER ✓").assertIsNotEnabled()
+        button("EXPORT ANOTHER").assertIsNotEnabled()
     }
 }

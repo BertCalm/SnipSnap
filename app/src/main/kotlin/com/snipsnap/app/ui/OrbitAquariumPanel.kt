@@ -25,6 +25,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
     val tails = listOf(0f, 1f, 3f, 5f, 10f, 30f)
     Column(Modifier.fillMaxWidth().testTag("orbit-aquarium-panel"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("AQUARIUM · ORBIT", TapeType.lcdHeader, scheme.ink.tape)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(if (set.aquariumFromKit) "KIT FX ON" else "USE KIT FX", scheme,
                 enabled = !busy && (route.warning == null || set.aquariumFromKit), lit = set.aquariumFromKit,

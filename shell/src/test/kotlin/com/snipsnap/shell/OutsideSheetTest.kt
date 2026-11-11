@@ -258,7 +258,7 @@ class OutsideSheetTest {
         val line = Copy.outside("REAMP", "KICK", 23.4f, 0.87f)
         assertEquals(line.uppercase(), line)
         assertTrue("23 MS LATER" in line && "87% SURE" in line, line)
-        assertEquals("OUTSIDE REFUSED: THE ROOM SAID NOTHING BACK.", Copy.outsideRefused("the room said nothing back."))
+        assertEquals("RE-AMP AND ROOM REFUSED: THE ROOM SAID NOTHING BACK.", Copy.outsideRefused("the room said nothing back."))
         for (l in listOf(Copy.OUTSIDE_UNDONE, Copy.OUTSIDE_NEEDS_MIC, Copy.OUTSIDE_TAPE_ROLLING, Copy.OUTSIDE_NEEDS_ONE, Copy.OUTSIDE_SENDING, Copy.OUTSIDE_LISTENING)) {
             assertEquals(l.uppercase(), l, "TapeOS shouts: '$l'")
         }

@@ -388,8 +388,17 @@ class PadSheetTest {
         assertEquals("ECHO", PadSheet.displayLabel("SLAP"))
         assertEquals("DRONE", PadSheet.displayLabel("ETERNAL"))
         assertEquals("SMOOTH", PadSheet.displayLabel("SKIM"))
+        // Ruling 14 and ruling 8: chips that clashed with an engine, another tool, or a second meaning.
+        assertEquals("FILTER SWEEP", PadSheet.displayLabel("CONTOUR"))
+        assertEquals("RING MOD", PadSheet.displayLabel("RING"))
+        assertEquals("TRANCE GATE", PadSheet.displayLabel("GATE"))
+        assertEquals("NOISE GATE", PadSheet.displayLabel("HUSH"))
+        assertEquals("TOUCH WAH", PadSheet.displayLabel("TOUCH"))
+        assertEquals("REVERB", PadSheet.displayLabel("ROOM"))
+        // SECTION is not renamed: open, needs a sound check.
+        assertEquals("SECTION", PadSheet.displayLabel("SECTION"))
         // Every other segment on the card draws its own id unchanged.
-        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM")) {
+        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM", "CONTOUR", "RING", "GATE", "HUSH", "TOUCH", "ROOM")) {
             assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
         }
     }
@@ -502,14 +511,14 @@ class PadSheetTest {
         assertFalse(PadSheet.hasOwnWayBack(treated(ERA), "someone_else.wav", both + "someone_else.wav"), "not one of the pad's files")
 
         val mutate = obj("""{"mutate":{"mode":"morph","with":["B02"]}}""")
-        assertTrue(MutateSheet.read(mutate) != null, "test setup: a MUTATE the sheet reads")
-        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a MUTATE: its UNDO")
+        assertTrue(MutateSheet.read(mutate) != null, "test setup: a COMBINE SOUNDS the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a COMBINE SOUNDS: its UNDO")
         val mutatedLayers = treated(mutate, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
-        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "MUTATE's UNDO restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "COMBINE SOUNDS's UNDO restores the main file only, never a layer")
 
         val outside = obj("""{"outside":{"move":"reamp"}}""")
-        assertTrue(OutsideSheet.read(outside) != null, "test setup: an OUTSIDE the sheet reads")
-        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an RE-AMP AND ROOM the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an RE-AMP AND ROOM: its UNDO")
 
         val splice = obj("""{"splice":{"crossfaded":true}}""")
         assertTrue(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE: UNDO SPLICE")
@@ -518,14 +527,14 @@ class PadSheetTest {
         assertFalse(PadSheet.hasOwnWayBack(splicedLayers, soft, both), "UNDO SPLICE restores the main file only, never a layer")
         assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, setOf(soft)), "nothing binned under the main file, nothing to give back")
         val mutateSplice = obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")
-        assertTrue(PadSheet.hasOwnWayBack(treated(mutateSplice), main, both), "MUTATE's SPLICE move: MUTATE's own UNDO")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutateSplice), main, both), "COMBINE SOUNDS's SPLICE move: COMBINE SOUNDS's own UNDO")
 
         val patch = PATCH
         val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
-        assertTrue(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE: its UNDO")
+        assertTrue(PadSheet.hasOwnWayBack(desampled, main, both), "a FIND NEAREST SYNTH: its UNDO")
         val desampledLayers = treated(patch, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127))).copy(source = mapOf("desampled" to "0.12"))
         assertTrue(PadSheet.hasOwnWayBack(desampledLayers, main, both), "soft hits after the de-sample: SOFT HITS off, then its UNDO")
-        assertFalse(PadSheet.hasOwnWayBack(desampledLayers, soft, both), "a DE-SAMPLE's UNDO restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(desampledLayers, soft, both), "a FIND NEAREST SYNTH's UNDO restores the main file only, never a layer")
         assertFalse(PadSheet.hasOwnWayBack(treated(patch), main, both), "a plain synth send re-renders from its patch: no door reads the bin")
         val withFx = PadRecipe.fromJsonValue(patch).copy(fx = Treatments.chain("washed")).toJsonValue()
         assertFalse(
@@ -544,7 +553,7 @@ class PadSheetTest {
     fun `a pad is spliced only by TAPE SPLICE's own top-level key`() {
         fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
         assertTrue(PadSheet.isSpliced(obj("""{"splice":{"crossfaded":false}}""")))
-        assertFalse(PadSheet.isSpliced(obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")), "MUTATE's SPLICE move has its own UNDO")
+        assertFalse(PadSheet.isSpliced(obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")), "COMBINE SOUNDS's SPLICE move has its own UNDO")
         assertFalse(PadSheet.isSpliced(obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}},"note":"splice"}""")), "the word as a value is not the key")
         assertFalse(PadSheet.isSpliced(ERA))
         assertFalse(PadSheet.isSpliced(null))

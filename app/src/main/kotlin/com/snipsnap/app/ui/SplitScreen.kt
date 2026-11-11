@@ -555,8 +555,8 @@ private fun SplitDesk(
         // ---- the source, and the split itself ----
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(backLabel, scheme, enabled = !working, accessibilityLabel = spokenBack(backLabel), modifier = Modifier.weight(1f)) { onExit() }
-            ActionButton("PAD ◄", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
-            ActionButton("PAD ►", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
+            ActionButton("PREVIOUS PAD", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
+            ActionButton("NEXT PAD", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
         }
         ActionButton(
             // Batch 3, Task 4: no ▸ — SPLIT runs in place on the loaded pad;

@@ -434,7 +434,7 @@ fun KeysScreen(
         }
 
         ActionButton(
-            "GRAB THE LAST 16 SECONDS",
+            "SAVE LAST 16 S",
             scheme,
             enabled = !grabbing,
             working = grabbing,

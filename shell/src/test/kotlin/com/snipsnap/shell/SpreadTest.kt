@@ -338,7 +338,7 @@ class SpreadTest {
             Copy.spreadLanded("C4", "MAJOR", 16, "A01", 0, 0, 0, 0, false),
         )
         assertEquals(
-            "A3 MIN PENT ACROSS 1 PAD FROM B01. 1 FULL PAD KEPT. 2 NOTES OUT OF TUNE RANGE. 1 ORIGINAL SLEEPS IN THE BIN. CHOKE GROUP 3: ONE NOTE AT A TIME.",
+            "A3 MIN PENT ACROSS 1 PAD FROM B01. 1 FULL PAD KEPT. 2 NOTES OUT OF TUNE RANGE. 1 ORIGINAL SLEEPS IN THE TRASH. CHOKE GROUP 3: ONE NOTE AT A TIME.",
             Copy.spreadLanded("A3", "MIN PENT", 1, "B01", 1, 2, 1, 3, false),
         )
         assertTrue(Copy.spreadLanded("C4", "MAJOR", 4, "A01", 0, 0, 0, 0, true).endsWith("NO FREE CHOKE GROUP, SO NOTES OVERLAP."))

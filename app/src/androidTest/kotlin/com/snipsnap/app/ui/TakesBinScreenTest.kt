@@ -115,7 +115,7 @@ class TakesBinScreenTest : ComposeScreenTest() {
      */
     private fun waitForMainScreen() {
         waitFor("the main screen's header") {
-            compose.onAllNodesWithText("VERSIONS + BIN").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("VERSIONS").fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -176,7 +176,7 @@ class TakesBinScreenTest : ComposeScreenTest() {
             KitPad(slot = 3, sampleFile = "hit3.wav", drumClass = DrumClass.SNARE),
             KitPad(slot = 4, sampleFile = "hit4.wav", drumClass = DrumClass.SNARE),
         )
-        KitStore.save(Kit(name = "TAKES BIN TEST", pads = pads, tempoBpm = 92f), dir)
+        KitStore.save(Kit(name = "TAKES TRASH TEST", pads = pads, tempoBpm = 92f), dir)
         val m = KitBuilderModel.open(dir)
         assertTrue("DRIVE landed", PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")) is PedalSlate.Landed.Applied)
         m.clear(2) // an untreated pad ejected: nothing keeps its entry, so it sits on the clock
@@ -221,7 +221,7 @@ class TakesBinScreenTest : ComposeScreenTest() {
             KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.SNARE),
             KitPad(slot = 2, sampleFile = "hit2.wav", drumClass = DrumClass.KICK),
         )
-        KitStore.save(Kit(name = "TAKES BIN PRINT TEST", pads = pads, tempoBpm = 92f), dir)
+        KitStore.save(Kit(name = "TAKES TRASH PRINT TEST", pads = pads, tempoBpm = 92f), dir)
         val m = KitBuilderModel.open(dir)
         m.treatPad(1, "crushed") // the first original: on the clock once a newer one sits on it
         m.treatPad(1, "washed", amount = .6f) // the newest original, kept for A01

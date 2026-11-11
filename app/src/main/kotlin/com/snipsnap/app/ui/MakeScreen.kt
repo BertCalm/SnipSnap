@@ -205,7 +205,7 @@ fun InstrumentsBench(
 }
 
 /** The empty list's one line: where an instrument comes from. */
-private const val NO_INSTRUMENTS = "NO INSTRUMENTS YET. SYNTH'S MAKE INSTRUMENT, OR A PAD SHEET'S, PUTS ONE HERE."
+private const val NO_INSTRUMENTS = "NO INSTRUMENTS YET. SYNTH'S MAKE INSTRUMENT, OR A PAD EDITOR'S, PUTS ONE HERE."
 
 /** One instrument: its name, zones and root, and KEYS ▸; EXPANSION ▸ beside it when [onExpansion] is given. */
 @Composable
@@ -232,7 +232,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
                 val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
                 TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
             }
-            TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
+            TapeText("KEYBOARD ▸", TapeType.pixelSmall, scheme.ink2.tape)
         }
         if (onExpansion != null) {
             Box(

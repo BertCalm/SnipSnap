@@ -120,7 +120,7 @@ fun DoublesScreen(
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                TapeText("DOUBLES", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText("FIND SIMILAR SOUNDS", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(
                     idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
                     TapeType.pixelSmall,
