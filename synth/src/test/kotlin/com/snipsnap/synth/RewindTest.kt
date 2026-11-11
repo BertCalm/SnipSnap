@@ -156,6 +156,36 @@ class RewindTest {
     }
 
     @Test
+    fun `a tap of the REWIND chip is the middle TIME with the repeats the owner chose, and AMT walks the level and the repeats`() {
+        val tap = 0.7f
+        val onsetSnare = Onset.render(OnsetVoice.SNARE)
+        // The gate (2026-11-11): the middle TIME and REPEAT 0.5, every clip at MIX 1. TIME is left at its default, which is
+        // its own neutral, so no AMT moves it.
+        val character = Treatments.chain("rewound").rewind!!
+        assertEquals(setOf("MIX", "REPEAT"), character.keys, "the rewound character set more than MIX and REPEAT")
+        assertEquals(0.5f, Rewind.MACROS.single { it.name == "TIME" }.default, "TIME's default is no longer the middle")
+        val tapped = Treatments.chain("rewound", tap).rewind!!
+        assertEquals(0.5f, tapped.getValue("REPEAT"), 1e-6f, "a tap is not REPEAT 0.5")
+        assertEquals(tap, tapped.getValue("MIX"), 1e-6f, "a tap is not MIX 0.7")
+        assertEquals(1f, character.getValue("MIX"), "AMT 1 is not the MIX every clip was heard at")
+        // The tap is the section at those settings through the rack, as every clip was heard.
+        val expected = FxChain(rewind = mapOf("MIX" to tap, "TIME" to 0.5f, "REPEAT" to 0.5f)).process(onsetSnare).samples
+        val got = Treatments.apply("rewound", onsetSnare, tap).snip.samples
+        assertEquals(expected.size, got.size, "the tap's length differs from the section at the chosen settings")
+        var worst = 0f
+        for (i in expected.indices) worst = maxOf(worst, abs(expected[i] - got[i]))
+        assertTrue(worst < 1e-3f, "the tap is not the section at the chosen settings: worst sample difference $worst")
+        // How far the tap's backwards copy lands under the heard clip's (MIX 1): MIX is a macro, so it tops out at 1 and a
+        // tap at 0.7 cannot reach it. The copy is peak-matched with the dry, so it sits about 3 dB lower against the hit.
+        val w = Rewind.windowFrames(0.5f, onsetSnare.sampleRate)
+        val heard = FxChain(rewind = mapOf("MIX" to 1f, "TIME" to 0.5f, "REPEAT" to 0.5f)).process(onsetSnare).samples
+        val ratio = { x: FloatArray -> peak(x, w, 2 * w) / peak(x, 0, w) }
+        val db = 20f * kotlin.math.log10(ratio(got) / ratio(heard))
+        assertTrue(db in -3.5f..-2.5f, "the tap's backwards copy is ${"%.2f".format(db)} dB from the heard clip's, against the hit")
+        assertContentEquals(onsetSnare.samples, Treatments.apply("rewound", onsetSnare, 0f).snip.samples, "AMT 0 is not a copy")
+    }
+
+    @Test
     fun `the same pad and macros render the same samples`() {
         val m = Rewind.scramble(Random(3))
         assertContentEquals(Rewind.process(snare, m).samples, Rewind.process(snare, m).samples)
