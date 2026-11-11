@@ -3545,3 +3545,13 @@ tasks.register<JavaExec>("generateCosmicBreaksKit") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("cosmicBreaksOutput").orNull ?: "testkit/cosmic-breaks-kit")
 }
+
+tasks.register<JavaExec>("generateCosmicBreaksFamily") {
+    group = "distribution"
+    description = "Export the three Cosmic genre kits with native, SFZ and DecentSampler velocity grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CosmicBreaksFamilyGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("cosmicFamilyOutput").orNull ?: "testkit/cosmic-family")
+}

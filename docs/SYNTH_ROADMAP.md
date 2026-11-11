@@ -1,3 +1,8 @@
+> Cosmic Breaks gate update: DnB, Jungle and Dubstep shelf kits, each with 18 pads
+> and three velocity layers × four takes. Native/SFZ round trips and DecentSampler
+> grid fields are checked; MPC slice-map/hardware acceptance remains open.
+> See [Cosmic Breaks](COSMIC_BREAKS.md) and the [acceptance gates](INSTRUMENT_ACCEPTANCE_GATES.md).
+
 > Spore Station candidate jungle kit: Jungle, Dub and Electro shelf kits, with 18 pads each,
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).

@@ -612,7 +612,11 @@ object StarterKits {
             "cosmic-breaks", "COSMIC BREAKS",
             "Sixteen cosmic drums, glitches and rides. Three strike layers, four takes each.",
             seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
-        ) { SynthKits.cosmicBreaks() },
+        ) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.ORBIT) },
+        Starter("cosmic-jungle", "COSMIC JUNGLE", "Jungle crack, tight hats and restless glitches. Includes a roll and riser.",
+            seeded = false, tempoBpm = 174f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.JUNGLE) },
+        Starter("cosmic-dubstep", "COSMIC DUBSTEP", "Deep kicks, dark snares and spaced echoes. Includes a roll and riser.",
+            seeded = false, tempoBpm = 140f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.DUBSTEP) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
