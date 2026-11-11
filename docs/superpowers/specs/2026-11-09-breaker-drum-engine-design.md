@@ -502,3 +502,90 @@ The kit, as of round 2:
 | A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick (short slap) | A08 Tambourine |
 | A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
 
+
+## Heard: round 3 (2026-11-10 to 11-11)
+
+Round 3 went through six pages in the Python harness:
+
+| Page | What it asked | Owner's answer |
+|---|---|---|
+| [3](https://claude.ai/artifact/Ls4i2FqLtvTVZV4EZS7rWB) | Crash: round 2's ride through the rig, or a brighter, longer SKIN cymbal into the combo. Ride: SKIN's re-voiced with a ping, or BACKWASH's CC0 ride bell. The riser. | "Everything but the bell ride sounds very harsh": too loud next to the kit, fizzy, piercing. "Can't you replicate the recorded sounds with synth??" |
+| [3b](https://claude.ai/artifact/3h2g1p8EdMDVp5cejSCEZs) | Cymbals fitted to the CC0 recordings (third-octave noise plus the ringing partials) in a beat at a kit balance; the riser tamed (half crush, a light amp, less dust, no tube) | Asked to study the cymbals dry: "I want to hear them dry." |
+| [3c](https://claude.ai/artifact/JGg9DojzQtYPJRAfkMxPzS) | The fitted cymbals dry, alone and over BREAKER's kick and snare | "That is dry?? It sounds heavily processed" |
+| [3d](https://claude.ai/artifact/U9mpdFNUJABbG2Q32pebNm) | A: noise in third-octave bands. B: several hundred of the recording's own resonances as decaying tones. | **Ride and crash: B, the modal synth** |
+| [3e](https://claude.ai/artifact/SwxfaJWSTnsTqex5p72rmf) | The modal cymbals with two-stage fades and the measured soft-hit law, alone and in beats | "These don't sound dry when you are listed as dry." Only the cymbals were dry; the next page labels exactly what is dry. |
+| [3f](https://claude.ai/artifact/3Mu5i1Vw8gA4FUTC8VoprP) | The fitted decays against "tight" ones; beats with every combination labelled | **Tight sounds dry: "These are fine."** **In a beat: BREAKER drums with dry cymbals,** "Wouldn't they be adjustable?" |
+
+Decided on 2026-11-11:
+- **A13 Ride:** the tight modal ride.
+- **A14 Crash:** the tight modal crash, left to ring about 3 s. It is the one exception to the
+  one-shot cap.
+- **A15 Riser:** the tamed roll.
+- **The cymbals are adjustable:** dry by default, with every control at 0 a true bypass, so each
+  control dials the rig in.
+
+Why the noise bands sounded processed: a cymbal is hundreds of resonances beating against each
+other. Noise filtered into bands can match each band's level and decay, but it has no partials to
+beat, so it sounds like a cymbal through an effect.
+
+Why "tight": the overhead mic hears the room, which shows up as a second, slower decay on most
+modes. Keeping each mode's steeper slope removes it. The owner heard the result as dry.
+
+## As built: round 3 (2026-11-11, renderer model 3)
+
+**The cymbals** (`BreakerCymbal`, docs/BREAKER.md "The cymbals"). Fitted by
+`scripts/fit_breaker_cymbals.py` to Virtuosity Drums (CC0 1.0) at 9f04cf9a, overhead mic, the
+ride's and crash's hardest and softest layers. Only the fitted numbers ship
+(`resources/breaker/cymbals.json`, 31.7 KB, with `NOTICE.txt`):
+- **Modes:** 400 on the ride and 418 on the crash. Each has a frequency, an amplitude (with its
+  band's level correction folded in), its tight slope and its band's soft-hit tilt.
+- **The script reproduces the auditioned round-3f model exactly** (every number equal).
+- **The Kotlin port against the auditioned Python renders,** compared as band envelopes at 20 ms,
+  80 ms, 320 ms, 1 s and 2.2 s:
+  - in the dense bands (1.6 kHz up), within 1 to 2 dB;
+  - in the bands with a handful of modes (300 Hz to 1.3 kHz), up to about 8 dB apart. That is the
+    beating of different random phases, the same variation a fresh take makes.
+
+**Velocity, measured.** Per band, the soft recording minus the hard one, each relative to its own
+loudness over 80 to 320 ms. The tilts are real, not noise:
+- **The noise check:** every band of both soft recordings sits at least 7 dB over its own floor (the
+  last 2 s). At 7 dB, noise moves a band's level by under 1 dB, and the bands that look odd sit
+  higher still: the crash's 12.7 and 16 kHz bands are 53 and 46 dB over their floor.
+- **The law:**
+  - a softer crash carries more middle (+5 to +14 dB, 315 Hz to 1.3 kHz), less presence (about
+    -3 dB, 4 to 6 kHz) and slightly more air (+4 dB, 12.7 to 16 kHz);
+  - a softer ride carries more low ring (+20 dB at 250 Hz, +11 at 315) and less at 1.3 to 2 kHz
+    (-4 to -6 dB).
+- **Not darker by centroid.** The crash's 40% attack centroid is within 0.1% of its full hit's. So
+  `BreakerTest` asserts the house claim instead: at matched loudness, a 40% hit moves the spectrum's
+  shape by more than 3 dB in some octave. Measured, 40% minus full, by octave from 250 Hz to 8 kHz:
+  - ride: +8.9, +2.0, -2.9, -1.6, -0.6, +0.9 dB;
+  - crash: +4.8, +6.4, +4.3, -0.6, -1.5, -1.0 dB.
+
+**In the rig.** The cymbals skip the tube. On them, AMP crossfades the combo in (0 is no amp), and
+every other control at 0 is already a bypass. So at the defaults (all 0), the hit is the fitted
+synth with the engine's finish only: DC removal, fade and level (`BreakerTest`, within 1e-5).
+
+**The riser:**
+- **The roll:** twenty fresh snare strikes over 2.4 s, accelerating along `1-(1-p)^1.6` from about
+  4 to 25 a second. Velocity rises from 30% to 85% of the pad's, so SKIN's contact law brightens
+  the roll as it builds, and the strikes' gain rises from .35 to 1.
+- **The rig:** it skips the tube. Its defaults are the tamed pick: DUST .2, DRIP .6, SLAP .2,
+  CRUSH .5, AMP .2.
+- **The rise:** after the rig, a fader push from -12 dB to 0 (`p^1.5`), because the crush evens out
+  the crescendo.
+- **Measured:** the first 0.5 s at -28.6 dB, the last 0.5 s of the build at -15.8 dB.
+
+**Lengths.** The crash is 3.2 s and the riser 3.4 s. The classifier files both as LOOP (over
+1.5 s), so both are declared PERC. Render, warm desktop JVM: ride 76 ms, crash 164 ms, riser
+213 ms.
+
+**Saves.** Model 3 changes the ride; model 2 keeps round 2's SKIN ride, and refuses the crash and
+riser. Presets:
+- cymbals: Dry, Through the rig (DUST .3, CRUSH .4, AMP .35), In the spring (DRIP .45, CRUSH .3);
+- riser: Tamed, Pumping (CRUSH .9, AMP .35), Short spring (DRIP .2).
+
+**Still open:**
+- The Kotlin renders wait for the owner's confirming listen.
+- The riser is the percussion gate's authored roll in rendering only. It has not been played, saved
+  in a kit or exported yet.

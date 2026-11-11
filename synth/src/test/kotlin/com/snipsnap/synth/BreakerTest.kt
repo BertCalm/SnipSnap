@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -46,10 +47,12 @@ class BreakerTest {
     fun `every hit is finite, bounded, centred and exactly its length`() {
         for (voice in BreakerVoice.entries) {
             val corners = listOf(emptyMap(), Breaker.macrosFor(voice).associate { it.name to 0f }, Breaker.macrosFor(voice).associate { it.name to 1f })
+            val length = (Breaker.secondsFor(voice) * rate).toInt()
             for (m in corners) {
                 val x = Breaker.render(voice, m).samples
-                assertEquals(frames, x.size, "$voice $m length")
-                assertTrue(frames < (1.5 * rate).toInt(), "a hit stays under the loop threshold")
+                assertEquals(length, x.size, "$voice $m length")
+                // Two declared exceptions ring longer: the crash and the riser.
+                if (voice != BreakerVoice.CRASH && voice != BreakerVoice.RISER) assertTrue(length < (1.5 * rate).toInt(), "$voice stays under the loop threshold")
                 assertTrue(x.all { it.isFinite() }, "$voice $m finite")
                 val peak = x.maxOf { abs(it) }
                 assertTrue(peak in .01f..1f, "$voice $m peak $peak")
@@ -73,9 +76,12 @@ class BreakerTest {
         }
     }
 
+    /** The drums the rig's tail claims are about. The cymbals ring longer than any tail window here, and the riser is all build. */
+    private val struckDrums = BreakerVoice.entries - setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER)
+
     @Test
     fun `CRUSH lifts the tail, and past halfway swells the kick's and snare's back up`() {
-        for (voice in BreakerVoice.entries) {
+        for (voice in struckDrums) {
             val r = listOf(.2f, .5f, .9f).map { tailToHit(Breaker.render(voice, mapOf("CRUSH" to it, "DRIP" to .6f)).samples) }
             println("BREAKER $voice tail-to-hit at CRUSH .2/.5/.9 (DRIP .6): ${r.map { "%.1f".format(it) }} dB")
             // A drum whose tail already sits within 6 dB of its hit (the tambourine's jingles) has no
@@ -91,14 +97,14 @@ class BreakerTest {
 
     @Test
     fun `DRIP puts the spring after the hit`() {
-        for (voice in BreakerVoice.entries) {
+        for (voice in struckDrums) {
             val e = listOf(.0f, .6f).map {
                 val y = band(Breaker.render(voice, mapOf("DRIP" to it, "SLAP" to 0f)).samples, 2000f, .7f)
                 db(rms(y, .05, .4)) - db(rms(y, 0.0, .05))
             }
             println("BREAKER $voice 2 kHz band after the hit against its first 50 ms, DRIP 0 / .6: ${e.map { "%.1f".format(it) }} dB")
-            // 2 dB, not more: the ride's own wash already fills the band after the hit (2.6 dB at
-            // round 2, the smallest; the rest are 5.6 dB and up).
+            // 2 dB, not more: model 2's ride, whose own wash filled the band after the hit, measured
+            // 2.6 dB at round 2; the rest are 5.6 dB and up.
             assertTrue(e[1] > e[0] + 2.0, "$voice: the spring rings after the hit ($e)")
         }
     }
@@ -179,16 +185,90 @@ class BreakerTest {
     }
 
     @Test
-    fun `a softer hit on the hats, ride, shaker and stick is a darker one`() {
-        // SKIN does not strike these, so BREAKER darkens the finished hit (UNSTRUCK_SOFTEN). The rest
-        // take their velocity from their source: SKIN's contact law on the kick, snare and toms (the
-        // owner heard the kick's and snare's as a softer hand), the recorded layers on the tambourine.
-        for (voice in listOf(BreakerVoice.HAT_CLOSED, BreakerVoice.HAT_OPEN, BreakerVoice.RIDE, BreakerVoice.SHAKER, BreakerVoice.STICK)) {
+    fun `a softer hit on the hats, shaker and stick is a darker one`() {
+        // SKIN does not strike the hats, shaker or stick, so BREAKER darkens the finished hit
+        // (UNSTRUCK_SOFTEN). The rest take their velocity from their source: SKIN's contact law on
+        // the kick, snare and toms (the owner heard the kick's and snare's as a softer hand), the
+        // recorded layers on the tambourine, and on the cymbals the difference measured between a soft
+        // and a hard recording (the next test).
+        for (voice in listOf(BreakerVoice.HAT_CLOSED, BreakerVoice.HAT_OPEN, BreakerVoice.SHAKER, BreakerVoice.STICK)) {
             val full = attackCentroid(Breaker.render(voice).samples)
             val soft = attackCentroid(Breaker.render(voice, velocity = .4f).samples)
             println("BREAKER $voice attack centroid, full / 40%: ${"%.0f".format(full)} / ${"%.0f".format(soft)} Hz")
             assertTrue(soft < full * .95, "$voice: a 40% hit is darker, not only quieter ($full Hz, $soft Hz)")
         }
+    }
+
+    @Test
+    fun `a softer cymbal is a different strike, not a quieter copy`() {
+        // The law is measured (resources/breaker/cymbals.json, soft recording minus hard, each re its
+        // own loudness): a softer crash carries more middle (+5 to +14 dB, 315 Hz to 1.3 kHz) and less
+        // presence (-3 dB, 4 to 6 kHz); a softer ride more low ring (+20 dB at 250 Hz, +11 at 315) and
+        // less at 1.3 to 2 kHz (-4 to -6 dB). Neither is simply darker by centroid, so the claim is the
+        // house one: at matched loudness, the spectrum's shape moves.
+        val octaves = listOf(250f, 500f, 1000f, 2000f, 4000f, 8000f)
+        val moved = listOf(BreakerVoice.RIDE, BreakerVoice.CRASH).associateWith { voice ->
+            fun shape(x: FloatArray): List<Double> {
+                val all = db(rms(x, 0.0, .3))
+                return octaves.map { db(rms(band(x, it, 1.4f), 0.0, .3)) - all }
+            }
+            val full = shape(Breaker.render(voice).samples); val soft = shape(Breaker.render(voice, velocity = .4f).samples)
+            println("BREAKER $voice octave shape (250 Hz to 8 kHz), 40% minus full: ${full.indices.map { "%.1f".format(soft[it] - full[it]) }} dB")
+            full.indices.maxOf { abs(full[it] - soft[it]) }
+        }
+        for ((voice, db) in moved) assertTrue(db > 3.0, "$voice: a 40% hit changes its spectrum's shape by more than 3 dB in some octave ($db)")
+    }
+
+    @Test
+    fun `at their defaults the cymbals are the fitted synth with no rig at all, and AMP fades the combo in`() {
+        for ((voice, kind) in listOf(BreakerVoice.RIDE to BreakerCymbal.Kind.RIDE, BreakerVoice.CRASH to BreakerCymbal.Kind.CRASH)) {
+            val seconds = Breaker.secondsFor(voice)
+            val dry = BreakerCymbal.render(kind, 1f, 0, seconds)
+            val n = dry.size
+            // The engine's own finish on the dry synth: mean and 20 Hz high-pass, the fade, the level.
+            val mean = dry.average().toFloat()
+            val dc = Dsp.FixedOnePole(20f, rate)
+            for (i in dry.indices) { val s = dry[i] - mean; dry[i] = s - dc.lp(s) }
+            val fade = (.25f * rate).toInt()
+            for (k in 0 until fade) dry[n - fade + k] *= (0.5 + 0.5 * cos(PI * k / fade)).toFloat()
+            Dsp.levelTo(dry, rate, Dsp.MELODIC_LOUDNESS_TARGET); Dsp.fadeTail(dry)
+            val got = Breaker.render(voice).samples
+            val worst = dry.indices.maxOf { abs(dry[it] - got[it]) }
+            assertTrue(worst < 1e-5f, "$voice at its defaults is the dry fit (max |diff| $worst)")
+            val amped = Breaker.render(voice, mapOf("AMP" to .5f)).samples
+            assertTrue(dry.indices.sumOf { abs(dry[it] - amped[it]).toDouble() } / n > 1e-4, "$voice: AMP brings the combo in")
+        }
+    }
+
+    @Test
+    fun `the cymbals have hundreds of modes, and the crash rings past the one-shot limit`() {
+        assertTrue(BreakerCymbal.modeCount(BreakerCymbal.Kind.RIDE) >= 300 && BreakerCymbal.modeCount(BreakerCymbal.Kind.CRASH) >= 300)
+        val crash = Breaker.render(BreakerVoice.CRASH).samples
+        val ringing = db(rms(crash, 1.6, 2.2)) - db(rms(crash, 0.0, .1))
+        println("BREAKER crash 1.6-2.2 s against its first 100 ms: ${"%.1f".format(ringing)} dB")
+        assertTrue(ringing > -45, "the crash is still ringing after 1.5 s ($ringing dB)")
+        assertEquals(DrumClass.PERC, Breaker.drumClassFor(BreakerVoice.CRASH), "declared, so its length never files it as a LOOP")
+    }
+
+    @Test
+    fun `the riser builds`() {
+        val x = Breaker.render(BreakerVoice.RISER).samples
+        val start = db(rms(x, 0.0, .5)); val top = db(rms(x, 1.9, 2.4))
+        println("BREAKER riser: first 0.5 s ${"%.1f".format(start)} dB, its last 0.5 s of build ${"%.1f".format(top)} dB")
+        assertTrue(top > start + 8, "the riser rises ($start to $top dB)")
+    }
+
+    @Test
+    fun `model 3's new voices refuse model 2, and model 2's ride is its own`() {
+        for (voice in listOf(BreakerVoice.CRASH, BreakerVoice.RISER)) {
+            kotlin.test.assertFailsWith<IllegalArgumentException> { BreakerPatch("Old", voice, emptyMap(), model = 2) }
+        }
+        val old = BreakerPatch("Round two", BreakerVoice.RIDE, emptyMap(), model = 2)
+        assertContentEquals(old.render().samples, BreakerPatch.fromJsonText(old.toJsonText()).render().samples, "model 2's ride replays")
+        // A save holds only the controls it set; model 2 fills the rest with round 2's ride defaults, not the dry ones.
+        val round2 = mapOf("DUST" to .3f, "DRIP" to .45f, "SLAP" to 0f, "CRUSH" to .6f, "AMP" to .35f, "TUNE" to .5f)
+        assertContentEquals(Breaker.render(BreakerVoice.RIDE, round2, model = 2).samples, old.render().samples, "model 2 keeps round 2's ride defaults")
+        assertFalse(old.render().samples.contentEquals(Breaker.render(BreakerVoice.RIDE).samples), "model 3's ride is the fitted one")
     }
 
     @Test
