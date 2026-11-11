@@ -18,11 +18,10 @@ import kotlin.random.Random
  *   (`take` on [Skin.render] and [Terra.render]).
  * The root and the decay are the drum's own on every take.
  *
- * Only the modal drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
- * voices, every TERRA voice, BREAKER (whose source is a struck SKIN drum)
- * and BACKWASH's model 5 (which renders its own next take). Every take is
- * deterministic in (patch, velocity, seed, take); take 0 is the reference
- * itself.
+ * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
+ * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
+ * struck SKIN drum), and BACKWASH's model 5. Every take is deterministic in
+ * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
     /** A take lands up to this much softer than the hit it repeats (a fraction of the velocity). Shape. */
@@ -33,8 +32,8 @@ object Restrike {
 
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
-        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch || patch is BreakerPatch ||
-            (patch is BackwashPatch && patch.model == 5)
+        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
+            patch is HalobarPatch || patch is BreakerPatch || (patch is BackwashPatch && patch.model == 5)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -57,6 +56,7 @@ object Restrike {
         if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
+            is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)
             is SkinPatch -> patch.render(velocity = v, take = take)
             // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
             is BreakerPatch -> patch.render(velocity = v, take = take)

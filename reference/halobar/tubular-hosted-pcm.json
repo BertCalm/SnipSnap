@@ -1,0 +1,614 @@
+[
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C3-dry.wav",
+    "hosted": "registers/tubular-bells-C3-dry.flac",
+    "nativeWavSha256": "64809cb0ecbdac25888aa5e57d28a62acd2f81dd9395f75ea4294c7306e9e2c3",
+    "flacSha256": "a12d56c9fb77adc0a46a3de8ffb9fb8a644746e86a4faf02619572687be2ec36",
+    "decodedPcm16Sha256": "411f9ff41b97e81ec8510bb186d87cf50b1b90995343dc0d392963f4a8ece117",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C3-dub.wav",
+    "hosted": "registers/tubular-bells-C3-dub.flac",
+    "nativeWavSha256": "84d63adcbb872829bd7270724f2cf7e6a79834be2f685eb1abb041f9d01a7ab6",
+    "flacSha256": "ced9911d284fcddae7fc25a5c17e978380a30e951b45d568a19665358842d9b9",
+    "decodedPcm16Sha256": "a46ce058984e9acc62ef5736777586eebbff22aa1a9cc9ee83dd491ba363d740",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C4-dry.wav",
+    "hosted": "registers/tubular-bells-C4-dry.flac",
+    "nativeWavSha256": "97730926e2bda8f3c1faace48d1b23682d9f3cbcc5b770c9d576c312715e050b",
+    "flacSha256": "da778d3ef5b62ad359d97cde605424eacad2a301fe0024b962fe580ba517b9bb",
+    "decodedPcm16Sha256": "17b541750b2bbd4b1be51583b67e9020f14336e97f6402cd66cf5ba0cf8eb86b",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C4-dub.wav",
+    "hosted": "registers/tubular-bells-C4-dub.flac",
+    "nativeWavSha256": "4d0178b969da66a23d5e44a94febe672f7b91b119418672ec3e1a6dfbc931177",
+    "flacSha256": "ddfc97a9a2634770a4408af80ce4c3dda3b602ca7675c51c36a31905add67cff",
+    "decodedPcm16Sha256": "da5cb2188b59e4ee96bec38af9716d6f53288d73c6ffdc826090aa07a5a4c5a5",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C6-dry.wav",
+    "hosted": "registers/tubular-bells-C6-dry.flac",
+    "nativeWavSha256": "94e64e1bcd88f1da9c7ea03256c48d004d277fe41a9baeefe2f37a4ae875f3ea",
+    "flacSha256": "679f0f0f793c30920a132a2e212df315182f902e1fa071e4ffa2fd54062c5408",
+    "decodedPcm16Sha256": "5556d5a5f2fcd2b86af9a7e28b22e45077347b45cc24e0cabb4b472ca939a3c9",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/registers/tubular-bells-C6-dub.wav",
+    "hosted": "registers/tubular-bells-C6-dub.flac",
+    "nativeWavSha256": "da2b8be05afb57b95a6ba8b3fa90f3fb64c52bae18f955386e2ada9fe34cb211",
+    "flacSha256": "98ac2a889ee598e59f1e7993fc4f5a8939a6d6aa013e84987f0d2ca2c23762d2",
+    "decodedPcm16Sha256": "86bbd4e8d8ea0b6022099fa5e3de8474b070f9b0b997f1fea11d07b2f7f998e1",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/touch-0.0.wav",
+    "hosted": "macros/touch-0.0.flac",
+    "nativeWavSha256": "7e8eb0c1c8e582469d311eccadeea695eb740cb47251a475357851afa28ca566",
+    "flacSha256": "6b12272b0126e9a96722663b490cc5f2b1d03075131867702f5c43c60567b9db",
+    "decodedPcm16Sha256": "af25641bc5e0d78593f3de0c9ce04c9b23bb524d215ff504ec3167b3fc3bdb45",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/touch-0.5.wav",
+    "hosted": "macros/touch-0.5.flac",
+    "nativeWavSha256": "44afb2fce53c2fd7feb7ee698d99d0bf5e36fab06939a210c474b27905f43de8",
+    "flacSha256": "f5b68888c29c578266f9483a8138ea34a581478223d082360bfde3660f51d0de",
+    "decodedPcm16Sha256": "de227b072353a3150df9af8a5148f4b9bf033780ffe5eaaf87bd8c75d1ce1d86",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/touch-1.0.wav",
+    "hosted": "macros/touch-1.0.flac",
+    "nativeWavSha256": "50283a4a4a5e1a7a854526252696fa8e8190b77c8766c38891d05087fdf4b723",
+    "flacSha256": "4bd0c63998f34ae44abde466291fa861f50d6446bc9bf1ebc3ec74fb6b18c93d",
+    "decodedPcm16Sha256": "46a652ce2d893c962fc4f444820551466560356bcdb2c166b1f124e7e86b7775",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/rate-0.0.wav",
+    "hosted": "macros/rate-0.0.flac",
+    "nativeWavSha256": "fe3ccfd377b83d55510a579a2384403649c7c97e62e822cb7dad1856a7d977ae",
+    "flacSha256": "ce0812d60d6bb51ca15b7ae8192bee1e354dedbb05405db21593ceac08adebfd",
+    "decodedPcm16Sha256": "886564b056df6f0cdcc3170d04bd05bc8b0fe47ddd2726a46de2c47f296e8135",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/rate-0.5.wav",
+    "hosted": "macros/rate-0.5.flac",
+    "nativeWavSha256": "95e9b2d4aa02022293c3ec873263f007917bf7d8ac2bf9498d48187b317e58c5",
+    "flacSha256": "b294465d3ccea0f5d9e1d04f5cfc78806c373b5b87da0c56a7b711e70cf8ee49",
+    "decodedPcm16Sha256": "83278e307c31c3bff075ae83cf395e187dca8681b2a1d247b07301fef3ecf1bc",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/rate-1.0.wav",
+    "hosted": "macros/rate-1.0.flac",
+    "nativeWavSha256": "84a96dc3495c9088536067c9b836e27f3a1ed76f8b30efbb706fea98aa649c2c",
+    "flacSha256": "d32f993fdd0474b7dc3be69598b6774e67f443aab7f58e6036973b233342ac14",
+    "decodedPcm16Sha256": "43702dffe2e435e9e151bba64c5df77fed4875208bffb0a17df91efa307a5674",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/return-0.0.wav",
+    "hosted": "macros/return-0.0.flac",
+    "nativeWavSha256": "c3987ed5e90cedd21df6f66f7c4d5271d0fffc1f2cca325f7a3bbc110eb5195e",
+    "flacSha256": "947b903fffaf0ddfbea181a6239261dcde53139e130315ec473631c10e8c6d07",
+    "decodedPcm16Sha256": "ee625c4ec4efd45b10106c17cea953cd725d1d8cbce144d02ebe60a700145bc6",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/return-0.5.wav",
+    "hosted": "macros/return-0.5.flac",
+    "nativeWavSha256": "f9025c2ddd323f8cae1da3ea5b40163032078f57d4db4f614bb45395594c96d8",
+    "flacSha256": "2df789fe2870acae403430974a2589133c775f6df4fb453755ea4573c29a580d",
+    "decodedPcm16Sha256": "4ed3eec43183b184c50f9af5571ed3727c4dec5ee6b010c0e65eab547d1f8728",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/return-1.0.wav",
+    "hosted": "macros/return-1.0.flac",
+    "nativeWavSha256": "db6ce3c18e7bf9db4492f6ff153c0d79699f3c974cb111cff14e0eb1bf65c31c",
+    "flacSha256": "09c155dac346a48bb8ff97715e73fd977bfc4ab0e092673876b73d5f0f1e0b3d",
+    "decodedPcm16Sha256": "b77fb2968085cee882c7157a6cf33f543c53f7da505622d33818d7335ec3e19b",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/space-0.5.wav",
+    "hosted": "macros/space-0.5.flac",
+    "nativeWavSha256": "08ebc9b73ceb6cf98c0bcecef6eeb610c5d971f07226362445c983a6331e7a47",
+    "flacSha256": "402d3a2e6000ff6c0daaa77f25a06af670b93cd845352ad74e67ad26b3e2111b",
+    "decodedPcm16Sha256": "3749762299f6b36645d56908062caaf84cc329e651c282c47a8f9b9af4c60c16",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/space-1.0.wav",
+    "hosted": "macros/space-1.0.flac",
+    "nativeWavSha256": "bac15447a88641a1c27781020477468c4bee2b8dbdd31f161895f025696cc16c",
+    "flacSha256": "e03f19d794352c1040b7ac8613e44d3c92b04ce50b2eb926b4fe89071cffe25f",
+    "decodedPcm16Sha256": "a9dbcf9287aecf144902cc2dc3fcf09f0f9d9bd26d64f657334ffecfa347b4f3",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/motion-0.0.wav",
+    "hosted": "macros/motion-0.0.flac",
+    "nativeWavSha256": "80740edd7cd720741562bd7cd727953d297e165035d467e83413e258394438c3",
+    "flacSha256": "c8f0cdb50005044f63d6e2f3abd9a0e2d9dec03b9162d180c18f0de2aac5d184",
+    "decodedPcm16Sha256": "b965ae10855d7be6b71c3b837b3b44b13fdb0ea0ec44b1983b8c02ccea8b889c",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/motion-0.5.wav",
+    "hosted": "macros/motion-0.5.flac",
+    "nativeWavSha256": "97eb800b190e3f6b5449b414eb6e838011e5f1ede766810cfbae51cb66bd98f7",
+    "flacSha256": "e5b04ceb9443b601edcf4d9ac3c820efd3892d63c2754416d4a54e08069983bc",
+    "decodedPcm16Sha256": "ec85ac3d183807c32be5a3029df9af2e0f11af1dc14915d9dcfdba6f1aeefe60",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/motion-1.0.wav",
+    "hosted": "macros/motion-1.0.flac",
+    "nativeWavSha256": "ef09cb49d42459db4dee4d8d8aefface242628b3cf07ca44df584e3cf80b13ca",
+    "flacSha256": "5a8c8298a74c9237eab2b6f4a49136c582286ff5aac9bab48cb6fa6e0795ae18",
+    "decodedPcm16Sha256": "1c285f0305e6389666e8a58105a642bc8270fbab66adf4fa9910ed19fe4ef10f",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/hold-0.0.wav",
+    "hosted": "macros/hold-0.0.flac",
+    "nativeWavSha256": "62cd99121411ddde7f2fa0cfd098c4ef549e74eb2ce6adb3ffa4167325721298",
+    "flacSha256": "71dce8dfe230c3026ea1da8b440c79d827ded094771d970a3b298e994ae7527d",
+    "decodedPcm16Sha256": "982af3ed7d0770d9df391cabf8246b1409fa4dee7737901385ee4b09314a2b94",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/hold-0.5.wav",
+    "hosted": "macros/hold-0.5.flac",
+    "nativeWavSha256": "afa085692defe0de2f5e55b756903b643f476b6ab1faafe505fff51b8307e22c",
+    "flacSha256": "3fe570706adaf81f569a26642de5a93dc512514d783a64cca60efd1a7c1f5d2f",
+    "decodedPcm16Sha256": "afa97100df45578e649e6033278a7f44c521462de0085f33a81606c331dbdbe4",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/macros/hold-1.0.wav",
+    "hosted": "macros/hold-1.0.flac",
+    "nativeWavSha256": "59a3a0074753f081e045276c03db509cdccf0f2bd0ea7cf4dcfe69a10a120c88",
+    "flacSha256": "e63b7465a443dab80e48d5f76bf1bbd8039bde740e5618596fe6f038807b7d3d",
+    "decodedPcm16Sha256": "dae32eb4b5ac6b28788d2b3e14b3945b6d46dce7831a991c96ad4936cda550a6",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/touch-0.0-space-0.0.wav",
+    "hosted": "pairs/touch-0.0-space-0.0.flac",
+    "nativeWavSha256": "a68d21b51581debb0b5c09a5f44815f9e4c86825c757e7f3b65da515cac8b2a7",
+    "flacSha256": "b2355ff2083845f0a41a260b3e75afee2f5b91c7351a54d445eaa36901ed8950",
+    "decodedPcm16Sha256": "c8888f0c0d85f2ca4afe1f170a3d24a5e2acca37601f20bc1d964f00a487a705",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/touch-0.0-space-1.0.wav",
+    "hosted": "pairs/touch-0.0-space-1.0.flac",
+    "nativeWavSha256": "5c116bb2c6caa5b5fda0b46b9c194fec917de845ffb8da5ba1d714c99466ab36",
+    "flacSha256": "919c2198b2b6a2c3d6dc016a366c91fe29829e541da4bbcfc220a9469aedfd36",
+    "decodedPcm16Sha256": "e3c0c9b1758050e6ff8d82ef55ead560fbf4a763ed7727ae36e7c452b50088d6",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/touch-1.0-space-0.0.wav",
+    "hosted": "pairs/touch-1.0-space-0.0.flac",
+    "nativeWavSha256": "2437c9b31aeb4eeb5ab4fe7698abd94575f53720bcf78d6d4c081a1f9cfe8c9f",
+    "flacSha256": "f2fbc19db480812fca501d2ec4ce7d27a663080257454dbc2cf2cf3db308b0cf",
+    "decodedPcm16Sha256": "8f6c8255fb6cd6769646c5b75d7635b3defd004a68755f9d091e08780ca3f775",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/touch-1.0-space-1.0.wav",
+    "hosted": "pairs/touch-1.0-space-1.0.flac",
+    "nativeWavSha256": "7c42c482dee8d868ccc47b54721a54138eeccdd7b40444f8496c943110d89951",
+    "flacSha256": "4c03974c4973486cc4aac96821c421b03ec7144ce8b6fdb1f7138073a51b8a8e",
+    "decodedPcm16Sha256": "f2e44af2db3c31b06a701a387277da9729c0f4533ac5af75cb114d49f5dec8d4",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/return-0.0-space-1.0.wav",
+    "hosted": "pairs/return-0.0-space-1.0.flac",
+    "nativeWavSha256": "ea41a5461816319a5984cf6d299ee325435ba9a5c3ab3103806b5566685a640e",
+    "flacSha256": "777f56e9e6c761caffd9cf8ceb597f1bd9b814d6b38775a6b534dfe817210114",
+    "decodedPcm16Sha256": "c997704ec55cb5563aa82668c46ada4db4a899fd3bad1fc19e34507ff6c5ae93",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/return-1.0-space-1.0.wav",
+    "hosted": "pairs/return-1.0-space-1.0.flac",
+    "nativeWavSha256": "89856817dc211287fe5a9a2c1bdf30623b7bdea5a103760b047d30553164629a",
+    "flacSha256": "0c698ffb110cb2e4804b31df5ca1dc407cdf0cfdee00499e09b7dd9f4ab60a5e",
+    "decodedPcm16Sha256": "8bd018377cfa4ca2b684f2d3d3c18e664d8b5071262c5555816c06f416e3a52c",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/rate-0.0-return-0.0.wav",
+    "hosted": "pairs/rate-0.0-return-0.0.flac",
+    "nativeWavSha256": "c61213e6fcbc54f20bbadecec1a400f4531a812c4112c8d026a3ff7995e7c014",
+    "flacSha256": "ce1561fd3e19715dd323d4daff356e3b68a8702dd80cc69e10817f1e3e353997",
+    "decodedPcm16Sha256": "d84bb592f1999d50c49d15fd249abede2b9feda5e0f60830c5599041e27741a3",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/rate-0.0-return-1.0.wav",
+    "hosted": "pairs/rate-0.0-return-1.0.flac",
+    "nativeWavSha256": "b430147ce3cf46322b97189cd86d5f149c9f3650237c9a2550e7a74c0e9b3ac2",
+    "flacSha256": "ec24111639229d3a09f039e0356bfdf09c1d8d3b535456bcfe75ffd1ea2129fd",
+    "decodedPcm16Sha256": "bfa3d2d4b07613d0a0958ce9a1c2f53c78fc463a1d344f628281719aaf06afcd",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/rate-1.0-return-0.0.wav",
+    "hosted": "pairs/rate-1.0-return-0.0.flac",
+    "nativeWavSha256": "e1f0f642c736841507676cd665ddabe394424e74dabac68248dcda6d8e33dd7c",
+    "flacSha256": "426478fa697a67dca820bc4e76731756d937b24c89603487d7174bef9b69c048",
+    "decodedPcm16Sha256": "ca346fc3b9bd7c662f8d9fcde3a4fd84e46b6213ce103892cfdcba724e269dad",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/rate-1.0-return-1.0.wav",
+    "hosted": "pairs/rate-1.0-return-1.0.flac",
+    "nativeWavSha256": "0eeafffef142c21299b716658f8897ca9437e1aa3edecd0f64e57054f654a1ca",
+    "flacSha256": "c88cd99c00c78addf90e34dc182d1e839ccda941362729c59d0ed63f51a99061",
+    "decodedPcm16Sha256": "2df3d8db39bc93b7e11d8685e8e915de1b13431b36c2de207bced1b1e599cc4b",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/motion-0.0-return-0.0.wav",
+    "hosted": "pairs/motion-0.0-return-0.0.flac",
+    "nativeWavSha256": "cf7d997fd1a0fe0ff61320210d86cbbf841ce7161b19f31701d5f837a00668e8",
+    "flacSha256": "578ad5e920c26adc2246ba96f419688f1bcaf375c6491768383334ec092ad1b0",
+    "decodedPcm16Sha256": "a9c00d64ae1d10e603c3a3882786d50c5c4c78172dada11cb15aa4b9a7ff7b56",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/motion-0.0-return-1.0.wav",
+    "hosted": "pairs/motion-0.0-return-1.0.flac",
+    "nativeWavSha256": "42179bda07002651fa24542d3c83600f8f4d1778fe0bd6462660d3ad19fc8f9e",
+    "flacSha256": "b413cbc371afd291db717be0db67850a963d834519bc58bd710b66955f62e90a",
+    "decodedPcm16Sha256": "27598d27fb4942adbd91b9c32a0df0f7d352626ac46f50c6658cc57c7e091080",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/motion-1.0-return-0.0.wav",
+    "hosted": "pairs/motion-1.0-return-0.0.flac",
+    "nativeWavSha256": "cafbf6d8cdb26018c826e9bada7e7b747f641e644f0f6504d0d705a8211e927b",
+    "flacSha256": "0460de44715f98a59d9e981b0b4b91b86d07f6fc20e59510b7d61511a1195ac7",
+    "decodedPcm16Sha256": "5e237339ae6dfafdbabad3ad2b62041205e131f04cfa9dd89e8f0f0530a6985b",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/motion-1.0-return-1.0.wav",
+    "hosted": "pairs/motion-1.0-return-1.0.flac",
+    "nativeWavSha256": "4b1ca8e2efba3808b25921ae9704337996056f921809ba4a3dfd3cca97f3aa0d",
+    "flacSha256": "5c772d3d4b93c66de156c0cd7da9f16348f2cf50cacabbe12b481d46bacad12d",
+    "decodedPcm16Sha256": "e96dc29a8a8cbc9b7c5b396e99a9f7a26608f7caad6e8392f48a9e62e790759d",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/hold-0.0-return-0.0.wav",
+    "hosted": "pairs/hold-0.0-return-0.0.flac",
+    "nativeWavSha256": "ed5c090fbcbd79eab3f28faf1d62015cf65e5ab43ca42c275b2e5941960c2289",
+    "flacSha256": "b7229246d9fb021b1443b04920f48e12cbb2a0fa07713c0ce344d57a348d7137",
+    "decodedPcm16Sha256": "8fb43f13db2093d67d9fa847a1152caa2ff0d81f2f71a95b911910bce6df88ba",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/hold-0.0-return-1.0.wav",
+    "hosted": "pairs/hold-0.0-return-1.0.flac",
+    "nativeWavSha256": "d78af7ae5a9ef498b65d6258fc6144c23e2ac835c5fc4569888d6d67e4fcee41",
+    "flacSha256": "173ece7ce5af72bbf076cc0aa3e11085717644047a99ac16738598234ff50a9a",
+    "decodedPcm16Sha256": "86bdb80913903907cd513448f82da1f0610d2de4b375a935f7bd104d1c74bdda",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/hold-1.0-return-0.0.wav",
+    "hosted": "pairs/hold-1.0-return-0.0.flac",
+    "nativeWavSha256": "66ad089ec60156783989649f9c2e2861452685f8977e5c1059120a681fda97d0",
+    "flacSha256": "1295902e47c8e06e2168ee90d7805110d4a7c6876a7ec1be57e97c5429a26192",
+    "decodedPcm16Sha256": "b422b84a6c277f82e2ae7b18be4d8db8fd520958b39ddfa1a6b4b0376fa2adbb",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/pairs/hold-1.0-return-1.0.wav",
+    "hosted": "pairs/hold-1.0-return-1.0.flac",
+    "nativeWavSha256": "b12695c2258d664147c1c2a27718c2b90969e043a5a378ed0b44710ca5222215",
+    "flacSha256": "cdce64c8708d1a3ca84778575f9a1c5110d053e8546369e647848661dfbe24a5",
+    "decodedPcm16Sha256": "e2c0da69306c92cad387e35a4286e9d2f92cc33950993bf3b0c26d6ae31af8d4",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/studies/close-strike.wav",
+    "hosted": "studies/close-strike.flac",
+    "nativeWavSha256": "f113f872db7b98dba50df4a9ce0df22e4b5c1192e20d2096607ce75205f92add",
+    "flacSha256": "7f4b15ddacc7bbcd4dd7e1154f0af85cb48efd1b73525f9d674b0cdb7cb37e37",
+    "decodedPcm16Sha256": "8a33b719213f2e7922270f3b35c1130032118f7726f30e761e652212ce525665",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/studies/dub-phrase.wav",
+    "hosted": "studies/dub-phrase.flac",
+    "nativeWavSha256": "7d06e0923653ba479a0c2b3996ac7dd5fbde23fdb18eed8554aaf032aef5ae13",
+    "flacSha256": "5d66a9ed6cd6b2fde867849477e8ebec0db095bb2c79e9dc4d22dfcd8e949e73",
+    "decodedPcm16Sha256": "9bf697aaeb8f5313d155a762eefbadd15e4483ed7cbf9666aa0ae001a4b060bd",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/studies/dark-answers.wav",
+    "hosted": "studies/dark-answers.flac",
+    "nativeWavSha256": "033b6a20be7f23e7ff93f5481143bc81693ef2018e60c031f201d511bfd98f61",
+    "flacSha256": "e0ffa4f9bd72d97897843bd12bfe696603c6d5a8959746d4731f1524eac35aaf",
+    "decodedPcm16Sha256": "7ec02735e9b11565568016acd19e5435940139e73ee2a8324a12669c425ed3f8",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/studies/bright-steps.wav",
+    "hosted": "studies/bright-steps.flac",
+    "nativeWavSha256": "50c7a21315d1837ede2984ac3b2e3feb76e464d6b29acda5c2987fd574ddae53",
+    "flacSha256": "dee29c13a08e8e500fb4effb603ca3cc3ecb5381945617fcbded639f2d312ad5",
+    "decodedPcm16Sha256": "3564d954ca3fc9519b5ace0df5175e146366648e99c80a0173befc43962d34e3",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/edges/all-0.0.wav",
+    "hosted": "edges/all-0.0.flac",
+    "nativeWavSha256": "3304f7bf9d24f405eee4752f21a1daf6098e135fd943b6d361e869d977734eb6",
+    "flacSha256": "879b79c3d19bfa11dd0e40d4ed8614fc86915d10ee43f0cae27094fc937aa74a",
+    "decodedPcm16Sha256": "1d9c48c5a404a77925d76be7595bbc025b905c054bddf0bcde754d5300a3dceb",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/edges/all-0.5.wav",
+    "hosted": "edges/all-0.5.flac",
+    "nativeWavSha256": "ab6bf33b62412906b280a5457aeaf162052f6cce7f3c85ddf476db548d9d9f34",
+    "flacSha256": "8590e092106acd79444c15d3f23c584188ca7369120d9bba6235b24e85746f1a",
+    "decodedPcm16Sha256": "c602265051992a941d73f1cad5a366ac6086ac8f40bdc2de99e3324e4f9592c3",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/edges/all-1.0.wav",
+    "hosted": "edges/all-1.0.flac",
+    "nativeWavSha256": "c60a94b27d0c88b2cf6bdd6e0403b67f942d41a7c9c02f684cb6c825eaa8a6f0",
+    "flacSha256": "14eafe4254f8695813d033ebab40158a5b724f130e456aabf0510454398b1d7a",
+    "decodedPcm16Sha256": "98af6d8023cb9be218de211374fc6b16960d777d8257733fa34bf210980e2ddb",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/velocity/velocity-0.0.wav",
+    "hosted": "velocity/velocity-0.0.flac",
+    "nativeWavSha256": "9998c35bd0d1a852cc89270ae16a5ca891c813d4ece5dd564918b3b12dc82b71",
+    "flacSha256": "577ea6e52d3db65cfe762bd00d6fa672c156385e6761331cc2179bf0e2234e6e",
+    "decodedPcm16Sha256": "49b1a00c63f105edacdc97681f56968e17f6a083e89d6540ff86743159aced1c",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/velocity/velocity-0.25.wav",
+    "hosted": "velocity/velocity-0.25.flac",
+    "nativeWavSha256": "ff1dfe43c9334449280f08a31ffdd20627018c3da9e174df4954c64a12098a31",
+    "flacSha256": "07ae47061df64fef588209dfaf68a01bfa071f49d539ba3bc89f911bafcc905c",
+    "decodedPcm16Sha256": "390ee3721f2eeb07b87268310e813bd66344ae4ac5f5a6ad40a87fff838f0b53",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/velocity/velocity-0.5.wav",
+    "hosted": "velocity/velocity-0.5.flac",
+    "nativeWavSha256": "cf7c9fffec68fe229155ce81c6e467a70b52c8402d5bc83fe797cc1c3f76fb5f",
+    "flacSha256": "c11ed6e040144ad92bddd5c3254b309c61d963db607834600a70ec4f65205266",
+    "decodedPcm16Sha256": "81d7c8f0cbd1846e68a2fa4728b75e54f1c17a87be3c1ef296141bb41dca0aec",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-audition/tubular-bells/velocity/velocity-0.75.wav",
+    "hosted": "velocity/velocity-0.75.flac",
+    "nativeWavSha256": "111dbc33e3a5f0c083c2076e6b425e4820e6c752a67ce07fe568b141b971371d",
+    "flacSha256": "f4c6099a707f29a6f17ae09509def62ad8504e73d53563334700b959608907c2",
+    "decodedPcm16Sha256": "1475a261806182be05cb1fb62b8c10d147f69d1bf4b080154169e8c0c8cea270",
+    "channels": 1,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/vibraphone-touch-cycle.wav",
+    "hosted": "performance/clips/vibraphone-touch-cycle.flac",
+    "nativeWavSha256": "71a4788439ed848b123ff2d0e5feb9177dfae16e3f54c44f18edef5d067e9e5d",
+    "flacSha256": "f2756dd86c93e654534b85500ffa3b9dbc3ccb59efde9fb968369a9adfc3ea06",
+    "decodedPcm16Sha256": "03e5af11fa45481b27482be23a484489dd0c8e8ad24f1f0e956004b41b99d7f3",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/vibraphone-chords.wav",
+    "hosted": "performance/clips/vibraphone-chords.flac",
+    "nativeWavSha256": "32dcf725ee50d73f873ba99cc7b7b392e0980c29b2ce2a94fbfb084471d89bc6",
+    "flacSha256": "06f9f736b44820cb89e3c9a3d9ea6ce59d95d8f608a2b3a212d45a0cfd9e8de0",
+    "decodedPcm16Sha256": "73467624ca514738fdb418db2b4d1812f7218cf0de98f6aa58c57f1dc6d93c72",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/vibraphone-roll.wav",
+    "hosted": "performance/clips/vibraphone-roll.flac",
+    "nativeWavSha256": "33f5e5c99168be623f73796f74170bd7084cb984730ad20b35844ac6c3e59447",
+    "flacSha256": "a41163eab814b480ba64009ab3e36d0853765b425f03cab10cb2530714f32355",
+    "decodedPcm16Sha256": "fec3d8882c939f7e7aa2441fb4627f83bdcc07770b3876b7726df9ab75377ad6",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/vibraphone-riser.wav",
+    "hosted": "performance/clips/vibraphone-riser.flac",
+    "nativeWavSha256": "464b1fdcac768e384558674dc25c4820682267d5505050f987115073a6d89ccf",
+    "flacSha256": "f2bb5d0b78dfc0e2bd151ad71ac7636d470734fea4ec61176304747f29ed4488",
+    "decodedPcm16Sha256": "e8a01e65dea8ddae9f9a2625384e565f80266ba607540a648ce44f4f546a423a",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/marimba-touch-cycle.wav",
+    "hosted": "performance/clips/marimba-touch-cycle.flac",
+    "nativeWavSha256": "a857c01a94155f08b86852879d5134dd21496ffb0cb81e57355895b7fd77d2ec",
+    "flacSha256": "ce9dd18134d4193dfba2c22a848ffec96e6eb8308db170caea8b071fd35daefb",
+    "decodedPcm16Sha256": "f5231733bca1587a2b3d01653a3b201fab612e7036265b02425446c1e7e3253f",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/marimba-chords.wav",
+    "hosted": "performance/clips/marimba-chords.flac",
+    "nativeWavSha256": "91d7accec2a19fb7a51b6c44ded9270677345d22a91bea4e68ed0f5d95f7d840",
+    "flacSha256": "8b984c5a2cabccfda1689db9f3f8886dff9d8a2083ab0dcf87bb2573a6a17803",
+    "decodedPcm16Sha256": "80490e1b51fe44d5c4e4feafc7118b632bea3aebe02fe783b4b2c9a5295a65a4",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/xylophone-touch-cycle.wav",
+    "hosted": "performance/clips/xylophone-touch-cycle.flac",
+    "nativeWavSha256": "f6900f3d0ebe49f16c479aad708930546d4cb4eb6fd1674a93b4ddc74020e25c",
+    "flacSha256": "99bebd96d3064b85a1695e43c5e452ff18848f2b5e96b679f74ac78d446e7651",
+    "decodedPcm16Sha256": "c681ad2aeeccf9476be2417a490c90c12595627e3de7e4947f073506066eca64",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/xylophone-chords.wav",
+    "hosted": "performance/clips/xylophone-chords.flac",
+    "nativeWavSha256": "0b4c3eb43f70288921e0cfa421bf7b435a216ff5d4a7df2f9a27f3ce542f8cc6",
+    "flacSha256": "6b0a2de87e63de778b4fb8f6dc8fa510db0d5e00d7b26b9b2a2a668e074ec5cf",
+    "decodedPcm16Sha256": "66f028511f13ac39fdf2ad4d43b616fb6dbd96fb61e396781c62760e40c6c99c",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/glockenspiel-touch-cycle.wav",
+    "hosted": "performance/clips/glockenspiel-touch-cycle.flac",
+    "nativeWavSha256": "46a5f245d30a880abf77e577d6742bb62fdd2d67d76781575f34dbcca7f5b9f2",
+    "flacSha256": "ff58d18103f4b81c1b3538a758f69c67ba759382dc2da0111ba7c889842c1faa",
+    "decodedPcm16Sha256": "5d9b927de502c65d10f598d55951bfa7285e0666ff490b493b45e8b1659e5f7d",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/glockenspiel-chords.wav",
+    "hosted": "performance/clips/glockenspiel-chords.flac",
+    "nativeWavSha256": "728917fa0ddfefda1895017ab2ade6c0b084363d77aefcc6ff6510197e378794",
+    "flacSha256": "26cae34ea1746f0f968402c2a33d04f18baac1674f405737035a74bf390c9243",
+    "decodedPcm16Sha256": "6b2798100f917f05d284b321df19268d9d786a2fd37d998ee73dd4ab8ebe1a2d",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/crotales-touch-cycle.wav",
+    "hosted": "performance/clips/crotales-touch-cycle.flac",
+    "nativeWavSha256": "4d8cb5026ba85977b0ac2bc336ee3de051e409957d5d1de2f305bdffddebdbdd",
+    "flacSha256": "070c1e6ca256d77d286c22e6075239795c29e1bc63d35f6a814c70a014ced8de",
+    "decodedPcm16Sha256": "fac4dd4cdcfb6056628f13b6bd89b7440e11fd433f0c8c7437cb4d2de398575b",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/crotales-chords.wav",
+    "hosted": "performance/clips/crotales-chords.flac",
+    "nativeWavSha256": "1c9f317aeeb9d1237eec8368ba02ee345807d0846028c552fe3f5f7acd2ba307",
+    "flacSha256": "400f12ac047ce2c85874944025852f3aa00bcbdedd740918fc2934de44ea9c9b",
+    "decodedPcm16Sha256": "b22c6a02d70388281554f62d78e6d08b3f33e443f1ab670b420db1bf967efdbb",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/tubular_bells-touch-cycle.wav",
+    "hosted": "performance/clips/tubular_bells-touch-cycle.flac",
+    "nativeWavSha256": "e1e1a1f42657936a5fb2aa4c3feb6779c6479611845608180a9859065c81840e",
+    "flacSha256": "91d689df05b55ce2d94bdb0892783ad37c582f237ad44c9063085c9137033ae5",
+    "decodedPcm16Sha256": "06d6b1cf77e46763d0ea990785eeae3ecefbc0f6882ce20ca39b63763d3c7ed4",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/tubular_bells-chords.wav",
+    "hosted": "performance/clips/tubular_bells-chords.flac",
+    "nativeWavSha256": "82ae1b2a0c9de0bf7fc22678ec84cb72c940ffeec2f4a63412e6a9a09adee6f4",
+    "flacSha256": "2b39f882cc51115892e6fa5ee30cbd11d8fcd8df6d1a4835fcfc4f414dd8b726",
+    "decodedPcm16Sha256": "3382b0bf97cc8f63cf1d705d862114917dbe14d606e143c814c415eb25e7a693",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/tubular_bells-roll.wav",
+    "hosted": "performance/clips/tubular_bells-roll.flac",
+    "nativeWavSha256": "4a6a45612243b5243466244c329cda8924903cffb25b446ceebdec41f16a22c9",
+    "flacSha256": "ee03899e5216e983398b38badec2b3cb005ea9f57fa7d33bd9a9fecd37974852",
+    "decodedPcm16Sha256": "9bda9a62361db15a57aa1129063ddada3e01410852a9730d1aee02391e10e01d",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  {
+    "native": "testkit/halobar-performance/clips/tubular_bells-riser.wav",
+    "hosted": "performance/clips/tubular_bells-riser.flac",
+    "nativeWavSha256": "6abfd61dd4963509b53c2a208f1eb6c7b0b62b4e540f032bd5b7976476428b13",
+    "flacSha256": "4ea68576888fed77e023d6ef75fd8009351005296d9f12a8854598e125b753a7",
+    "decodedPcm16Sha256": "9d338db72473819266b0722a159c67cf0ad7ee25d104c8ac7235ba88820a513b",
+    "channels": 2,
+    "sampleRate": 44100
+  }
+]

@@ -737,7 +737,7 @@ class Mpc3TrackWriter(
      */
     private fun keygroupZone(kg: Keygroup?, release: Double): J {
         val filled = kg != null
-        val zones = kg?.layers?.asReversed() ?: emptyList()
+        val zones = if (kg?.mpcCycle == true) kg.mpcLayers else kg?.mpcLayers?.asReversed() ?: emptyList()
         return instrumentShell(
             coarseTune = 0,
             fineTune = 0,
@@ -751,6 +751,7 @@ class Mpc3TrackWriter(
                 layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = kg?.rootNote ?: 0)
             },
             keygroupExtras = true,
+            zonePlay = if (kg?.mpcCycle == true) 0 else 1,
             level = if (filled) MPC_LEVEL else MPC_LEVEL_EMPTY,
             pan = 0.5,
         )
@@ -769,6 +770,7 @@ class Mpc3TrackWriter(
         keygroupExtras: Boolean,
         level: Double,
         pan: Double,
+        zonePlay: Int = 1,
     ): J = J.O(
         buildList {
             add("version" to i(15))
@@ -779,7 +781,7 @@ class Mpc3TrackWriter(
             add("lowNote" to i(lowNote.toLong()))
             add("highNote" to i(highNote.toLong()))
             add("ignoreBaseNote" to b(false))
-            add("zonePlayTime" to i(1))
+            add("zonePlayTime" to i(zonePlay.toLong()))
             add("whichMuteGroup" to i(whichMuteGroup.toLong()))
             add("muteTargets" to obj(*(0 until 4).map { "value$it" to i(0) }.toTypedArray()))
             add("simultPlayTargets" to obj(*(0 until 4).map { "value$it" to i(0) }.toTypedArray()))

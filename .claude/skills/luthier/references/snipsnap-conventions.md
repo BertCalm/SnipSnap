@@ -62,6 +62,19 @@ data class XxxPatch(override val name: String, val voice: XxxVoice,
 
 "BorePatch-style sibling patch" in older specs means exactly this: copy the file shape.
 
+### Owner completion gates, 2026-11-09
+
+The owner's [engine acceptance gates](../../../../docs/ENGINE_ACCEPTANCE_GATES.md)
+define completion: melodic engines need at least six distinct musical voices
+with presets, playable keygroups, a premade kit and chord-tool compatibility;
+articulation needs appropriate HOLD and STRUM for picked/thumbed strings, with
+the stated intended-character exception for distinctive repeats; percussion
+needs authored roll/riser where appropriate while individual voices may stay
+finite; drums need multiple distinct genre kits on the shelf. Every instrument
+needs working velocity levels and round robin through rendering, saving,
+playback and export. A smaller prototype or a passing build does not close
+these gates.
+
 ## 3. What a new engine ships (the registration checklist)
 
 The canonical table is the BORE spec's "Data flow and compatibility"
@@ -151,10 +164,11 @@ When you review or implement them, start here:
 - "Standard 4× internal DSP with proper decimation" is real (`Tide.bandLimit` then
   `Dsp.decimate`). "Shared leveling" is `Dsp.levelTo` to `MELODIC_LOUDNESS_TARGET`.
 - "Classifier mapping" is `drumClassFor` plus a test over real renders.
-- The specs' five-macros-plus-HOLD shape fits the house (3 to 6 macros). Six voices and 36
-  presets is heavier than any shipped engine's R1 (Bore shipped 8 per voice for two voices;
-  Mercury 6 per voice). Propose presets per voice only after the voice has been heard; "presets
-  authored blind are disposable" (SILK).
+- The specs' five-macros-plus-HOLD shape fits the house (3 to 6 macros).
+  Prototype rounds can start smaller, but the owner's melodic completion gate
+  is at least six distinct musical voices with presets. Do not infer a fixed
+  36-preset requirement. Propose final presets after listening; "presets authored
+  blind are disposable" (SILK).
 - None of the three states a render-time budget. Rung's 42 rigid bodies with continuous
   collision, Skirl's quaternion rolling solver, and Terrane's per-frame Voronoi all need one, or
   a precompute-and-cache story keyed by the macro values that affect mechanics.

@@ -25,6 +25,7 @@ object InstrumentStore {
     /** Ordinary instruments retain the v2 bytes; independent zone releases opt into v3. */
     const val VERSION = 2
     const val STACK_VERSION = 3
+    const val CYCLE_VERSION = 4
 
     /**
      * The longest release a sidecar may ask for. Every writer in the shop
@@ -56,12 +57,16 @@ object InstrumentStore {
         /** Empty on a v1 sidecar or a legacy code-built zone: its headline sample covers all velocities. */
         val layers: List<Layer> = emptyList(),
         val release: Float? = null,
+        val cycleLayers: Boolean = false,
     ) {
         val playableLayers: List<Layer>
             get() = layers.ifEmpty { listOf(Layer(sample, frameCount, loopStartFrame)) }
 
         /** Gaps stay silent, matching the exported MPC windows. */
-        fun layerFor(midiVelocity: Int): Layer? = playableLayers.firstOrNull { midiVelocity in it.velStart..it.velEnd }
+        fun layerFor(midiVelocity: Int, take: Int = 0): Layer? {
+            val matches = playableLayers.filter { midiVelocity in it.velStart..it.velEnd }
+            return if (matches.isEmpty()) null else matches[if (cycleLayers) Math.floorMod(take, matches.size) else 0]
+        }
     }
 
     data class Instrument(
@@ -113,6 +118,7 @@ object InstrumentStore {
                         )
                     },
                     volumeRelease = zone.release,
+                    cycleLayers = zone.cycleLayers,
                 )
             },
             volumeRelease = playableRelease,
@@ -131,7 +137,8 @@ object InstrumentStore {
 
     /** The sidecar's JSON text for [program], without touching the disk. */
     fun render(program: KeygroupProgram, dataDirName: String): String {
-        val extended = program.stackZones || program.keygroups.any { it.volumeRelease != null }
+        val cycling = program.keygroups.any { it.cycleLayers }
+        val extended = cycling || program.stackZones || program.keygroups.any { it.volumeRelease != null }
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
             JsonValue.Obj(
@@ -152,13 +159,15 @@ object InstrumentStore {
                         ))
                     }),
                 ).apply {
-                    if (extended) put("release", kg.volumeRelease?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Num(program.volumeRelease.toDouble()))
+                    if (cycling) put("cycleLayers", JsonValue.Bool(kg.cycleLayers))
+                    if (extended) put("release", kg.volumeRelease?.let { JsonValue.Num(it.toDouble()) } ?:
+                        if (cycling) JsonValue.Null else JsonValue.Num(program.volumeRelease.toDouble()))
                 },
             )
         }
         val obj = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
-                "version" to JsonValue.Num((if (extended) STACK_VERSION else VERSION).toDouble()),
+                "version" to JsonValue.Num((if (cycling) CYCLE_VERSION else if (extended) STACK_VERSION else VERSION).toDouble()),
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
@@ -170,7 +179,7 @@ object InstrumentStore {
     }
 
     /**
-     * Read v1 single-sample, v2 velocity-layer or v3 synchronized-stack sidecars. Every field in the selected
+     * Read v1 single-sample, v2 velocity-layer, v3 synchronized-stack or v4 cycling sidecars. Every field in the selected
      * version is required, so an interrupted write cannot silently lose its soft layers.
      *
      * And on values no writer here produces, since a sidecar is also a file a
@@ -183,7 +192,7 @@ object InstrumentStore {
     fun read(file: File): Instrument {
         val obj = Json.parse(file.readText()).obj()
         val version = obj["version"]?.int() ?: throw JsonException("instrument has no version")
-        if (version !in 1..STACK_VERSION) throw JsonException("unsupported instrument version $version")
+        if (version !in 1..CYCLE_VERSION) throw JsonException("unsupported instrument version $version")
         val name = obj["name"]?.str() ?: throw JsonException("instrument has no name")
         val releaseRaw = obj["release"]?.num() ?: throw JsonException("instrument has no release")
         if (!releaseRaw.isFinite() || releaseRaw < 0.0 || !releaseRaw.toFloat().isFinite()) {
@@ -191,11 +200,13 @@ object InstrumentStore {
         }
         val release = releaseRaw.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)
         val voiceMode = VoiceMode.parse(obj["voiceMode"]?.str())
-        val stackZones = if (version == STACK_VERSION) obj["stackZones"]?.bool()
+        val stackZones = if (version >= STACK_VERSION) obj["stackZones"]?.bool()
             ?: throw JsonException("instrument has no stackZones") else false
         val folder = file.absoluteFile.parentFile
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
+            val cycling = if (version >= CYCLE_VERSION) o["cycleLayers"]?.bool()
+                ?: throw JsonException("zone has no cycleLayers") else false
             val layers = if (version == 1) emptyList() else {
                 val values = (o["layers"] as? JsonValue.Arr)?.items ?: throw JsonException("zone has no velocity layers")
                 if (values.size !in 1..8) throw JsonException("a keygroup zone has 1..8 velocity layers")
@@ -214,9 +225,16 @@ object InstrumentStore {
                     validateSample(folder, layer.sample, layer.frameCount, layer.loopStartFrame)
                     layer
                 }.also { ordered ->
-                    for (i in 1 until ordered.size) if (ordered[i].velStart <= ordered[i - 1].velEnd) {
+                    if (cycling && ordered.groupBy { it.velStart to it.velEnd }.values.any { it.size !in 2..4 })
+                        throw JsonException("each cycle window needs 2..4 takes")
+                    val windows = if (cycling) ordered.map { it.velStart to it.velEnd }.distinct()
+                        else ordered.map { it.velStart to it.velEnd }
+                    for (i in 1 until windows.size) if (windows[i].first <= windows[i - 1].second) {
                         throw JsonException("velocity layers must ascend without overlap")
                     }
+                    if (cycling && ordered.map { it.velStart to it.velEnd } != windows.flatMap { w ->
+                            ordered.filter { it.velStart == w.first && it.velEnd == w.second }.map { w } })
+                        throw JsonException("cycle takes must be contiguous within each velocity window")
                 }
             }
             val zone = Zone(
@@ -227,7 +245,8 @@ object InstrumentStore {
                 frameCount = o["frames"]?.long() ?: throw JsonException("zone has no frame count"),
                 loopStartFrame = o["loopStart"]?.long() ?: throw JsonException("zone has no loop start"),
                 layers = layers,
-                release = if (version == STACK_VERSION) {
+                cycleLayers = cycling,
+                release = if (version >= CYCLE_VERSION && o["release"] is JsonValue.Null) null else if (version >= STACK_VERSION) {
                     val r = o["release"]?.num() ?: throw JsonException("zone has no release")
                     if (!r.isFinite() || r < 0 || !r.toFloat().isFinite()) throw JsonException("invalid zone release $r")
                     r.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)

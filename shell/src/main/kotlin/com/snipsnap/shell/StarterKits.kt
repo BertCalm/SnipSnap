@@ -128,6 +128,11 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.halobar() },
         Starter(
+            "halobar-six", "HALOBAR SIX STUDY",
+            "Six mallet voices, paired dry and dub. New bell voices are listening studies.",
+            seeded = false, key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.halobarCompleteStudy() },
+        Starter(
             "melodic", "MELODIC",
             "Plucks and organ stabs in A minor pentatonic. Runs, not just hits.",
             seeded = false,

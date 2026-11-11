@@ -10,7 +10,9 @@ dark rhythmic answers → a moving halo.
 CROTALES is the fifth HALOBAR voice. Its sounding range is C6–C8, with C7 at
 TUNE .5. A separate audition and sixteen-pad study kit hold it apart from the
 twelve accepted vibraphone, marimba and xylophone recipes. Glockenspiel remains
-available with its existing sound. Tubular bells are the remaining planned voice.
+available with its existing sound. [Tubular bells and performance
+keys](HALOBAR_SIX_VOICES.md) now bring the planned roster to six voices; engine
+acceptance remains in progress.
 
 ## Source and scope
 
@@ -223,8 +225,8 @@ with `NativeReplay.java`, passing `render` and the label
 `"provisional crotales audition"` after the TSV path. The glockenspiel and
 foundation ledgers remain historical records of their own builds.
 
-Tubular bells remain planned. Crotales listening, phone performance and MPC
-hardware loading remain open.
+The subsequent [six-voice build](HALOBAR_SIX_VOICES.md) adds tubular bells.
+Crotales listening, phone performance and MPC hardware loading remain open.
 
 ## Why it is built this way
 

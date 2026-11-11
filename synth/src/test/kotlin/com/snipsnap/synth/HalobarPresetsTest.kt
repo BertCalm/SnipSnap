@@ -24,7 +24,7 @@ class HalobarPresetsTest {
         assertTrue(HalobarPresets.forVoice(HalobarVoice.GLOCKENSPIEL).isEmpty())
         assertTrue(HalobarPresets.forVoice(HalobarVoice.CROTALES).isEmpty())
         assertEquals(4,HalobarPresets.auditionFor(HalobarVoice.CROTALES).size)
-        assertEquals(setOf("GLOCKENSPIEL","CROTALES"),PatchTypes.PROTOTYPE_VOICES[HalobarPatch.ENGINE])
+        assertEquals(setOf("GLOCKENSPIEL","CROTALES","TUBULAR_BELLS"),PatchTypes.PROTOTYPE_VOICES[HalobarPatch.ENGINE])
         assertEquals(4,HalobarPresets.auditionFor(HalobarVoice.GLOCKENSPIEL).size)
         assertTrue(Presets.forVoice(HalobarPatch.ENGINE,"UNKNOWN").isEmpty())
     }

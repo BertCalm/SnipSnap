@@ -508,6 +508,17 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
 
+
+tasks.register<JavaExec>("generateHalobarPerformance") {
+    group = "distribution"
+    description = "Render six finite mallet keygroups and performances of their saved PCM24 captures."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.HalobarPerformanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("halobarPerformanceOutput").orNull ?: "${rootDir}/testkit/halobar-performance")
+}
+
 tasks.register<JavaExec>("generateBackwashAcousticKits") {
     group = "verification"
     classpath = sourceSets["test"].runtimeClasspath

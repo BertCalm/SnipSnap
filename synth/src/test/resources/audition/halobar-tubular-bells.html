@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HALOBAR • Tubular bells audition</title>
+<style>
+body{font:17px/1.6 system-ui,sans-serif;max-width:980px;margin:auto;padding:28px 20px;background:#111a1d;color:#e4e8e0}
+a{color:#9cd5c5}audio{width:100%;max-width:640px}details,article{padding:12px;border-top:1px solid #42504e}
+summary{cursor:pointer;font-size:1.2rem}table{border-collapse:collapse}td,th{padding:8px;text-align:left;border-bottom:1px solid #42504e}
+</style>
+<nav><a href="../index.html">← Accepted three-voice audition</a></nav>
+<h1>HALOBAR • Tubular bells</h1>
+<p>A padded hammer → a low bell body → dark rhythmic answers → a moving halo.</p>
+<p>The sixth voice is ready for listening. These are provisional studies; the original twelve factory presets retain their approval. All six planned voices are now built. <a href="../glockenspiel/">Compare glockenspiel</a>.</p>
+<h2>Dry, then cosmic dub</h2>
+<p>The same six-note phrase, with a common gain across the dry/dub pair. Listen for a padded bell attack, a clear pitched ring and echoes that keep the source recognizable.</p>
+<audio controls preload="none" src="START-HERE.wav"></audio>
+<p><a href="phrases/tubular-bells-dry.wav">Dry phrase WAV</a> · <a href="phrases/tubular-bells-dub.wav">Dub phrase WAV</a></p>
+<p><a href="Six-Voice-Study-Kit.zip">Download the sixteen-pad MPC study kit</a>. Extract the whole folder and open its XPM. Six voices are paired dry and with dub, followed by four tubular-bell answers; editable source recipes are included. Hardware loading remains unverified.</p>
+<p>The root-led tubular-bell model combines octave and inharmonic partials over a longer low body. Its ratios, contact, weights and decays are musical shapes, not measurements of a real tube. TUNE spans C3–C6 with C4 at the midpoint. TOUCH changes contact; HOLD changes finite ring length.</p>
+<p><a href="performance/">Velocity, round robin, chords and authored gestures</a>. The phone captures two touch levels and three strikes per level. MPC keygroups currently retain velocity switching with the first take per level; combined keygroup round robin on MPC remains open.</p>
+<h2>Registers and controls</h2>
+<p>Compare C3, C4 and C6 dry/dub, then the preceding voices at the same C6. The study recipes are followed by control sweeps, interacting pairs, range limits and strike strengths.</p>
+{{CARDS}}
+<h2>Desktop render timing</h2>
+<table><tr><th>Calculation</th><th>Median ms</th><th>p95 ms</th></tr>
+<tr><td>Full fresh render</td><td>{{FRESH_MEDIAN}}</td><td>{{FRESH_P95}}</td></tr>
+<tr><td>Positive SPACE edit</td><td>{{SPACE_MEDIAN}}</td><td>{{SPACE_P95}}</td></tr></table>
+<p>Thirty measurements after eight warm-ups on the recorded JVM. SPACE values differ on every measurement; completed-output cache hits cannot satisfy it. Other controls require fresh preparation. These are desktop measurements, not phone timings.</p>
+<p>Mono 44.1 kHz, 4x nonlinear core, 72 BPM reference. Each note and its tail are finite, at most twelve seconds; HOLD never creates a seamless sampler loop. Native listening, phone performance and MPC hardware loading remain unverified.</p>
+<p><a href="manifest.json">Recipes, measurements and audio hashes</a> · <a href="metrics.csv">Metrics CSV</a></p>
+<script>const players=[...document.querySelectorAll('audio')];players.forEach(p=>p.addEventListener('play',()=>players.forEach(q=>{if(p!==q)q.pause()})));</script>
+</html>

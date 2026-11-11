@@ -66,3 +66,16 @@ native WAV and hosted FLAC to file hashes and their common decoded PCM16 hash.
 Fingerprints in the native parity TSV describe
 Float32 engine output, before WAV quantization and either delivery container.
 The phrase and MPC downloads retain WAV. See [the crotales guide](../../docs/HALOBAR_CROTALES.md).
+
+## Six voices and performance keys
+
+`six-native-validation.json` records the integrated six-voice software checks,
+APK identity, timing, hosted PCM and remaining acceptance gates. The 73-case
+`tubular-native-parity.tsv` replays with `NativeReplay` like earlier tables.
+`tubular-hosted-pcm.json` maps the 68 new streamed FLAC files to native WAV and
+decoded PCM16 hashes. New bell banks remain provisional.
+
+`mpc-velocity-cycle-bench/` holds diagnostic sources and software validation.
+The published bench ZIP has velocity-only and cycle-only controls plus an
+unverified combined candidate. It does not enable combined MPC production
+export or establish hardware compatibility.
