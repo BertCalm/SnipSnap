@@ -3546,6 +3546,15 @@ tasks.register<JavaExec>("generateCosmicBreaksKit") {
     args(providers.gradleProperty("cosmicBreaksOutput").orNull ?: "testkit/cosmic-breaks-kit")
 }
 
+tasks.register<JavaExec>("generateRewindAudition") {
+    group = "distribution"
+    description = "Render REWIND's listening gate clips under testkit/rewind-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RewindAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/rewind-audition")
+}
+
 tasks.register<JavaExec>("generateCosmicBreaksFamily") {
     group = "distribution"
     description = "Export the three Cosmic genre kits with native, SFZ and DecentSampler velocity grids."
