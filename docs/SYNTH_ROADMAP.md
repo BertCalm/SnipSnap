@@ -3407,3 +3407,11 @@ Round 1b (renderer model 2):
   from 95 to 90 ms. Round 1 had blamed the kick's onset; that was a measuring artefact.
 - **The change:** the kick goes back to tank A, and the slap back to 95 ms. Model-1 saves keep
   round 1's sound.
+
+Round 2 adds ten drums through the same rig:
+- **The drums:** Backroom's hats, stick and shaker; three SKIN toms; a SKIN ride; and BACKWASH's
+  CC0 tambourine.
+- **Repeat hits:** SKIN's unstruck voices can re-seed their noise per take, but only when asked; only BREAKER asks.
+- **Soft hits:** the unstruck drums soften after the rig, since darkening their source came out
+  brighter.
+- **Status:** waiting for the owner's listen.
