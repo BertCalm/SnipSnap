@@ -221,7 +221,8 @@ object Breaker {
     internal fun dustChain(d: Float, voice: BreakerVoice): FxChain? {
         if (d <= 0f) return null
         fun seg(a: Float, b: Float, c: Float): Float = if (d <= .35f) a + (b - a) * (d / .35f) else b + (c - b) * ((d - .35f) / .65f)
-        val tone = if (voice == BreakerVoice.SNARE) .55f else .43f
+        // The riser is a snare roll, and the owner picked it with the snare's tone (round 3).
+        val tone = if (voice == BreakerVoice.SNARE || voice == BreakerVoice.RISER) .55f else .43f
         return FxChain(
             crunch = mapOf("BITS" to seg(0f, .16f, .5f), "RATE" to seg(0f, .29f, .62f), "TONE" to seg(1f, tone, .35f), "GRIT" to seg(0f, .34f, .5f)),
             vinyl = mapOf("CRACKLE" to seg(0f, .15f, .5f), "RUMBLE" to seg(0f, .1f, .25f), "HISS" to seg(0f, .1f, .3f)),
