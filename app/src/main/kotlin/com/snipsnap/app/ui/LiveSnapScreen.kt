@@ -141,7 +141,7 @@ fun LiveSnapScreen(
     DisposableEffect(voice) {
         val started = voice.start()
         if (!started) {
-            onToast(Copy.noLowLatencyStream("LIVE"))
+            onToast(Copy.noLowLatencyStream("LIVE CAMERA"))
         } else if (voice.isShared()) {
             onToast(Copy.SURFACE_SHARED_STREAM)
         }
@@ -224,13 +224,13 @@ fun LiveSnapScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SNAP", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip("◄ PHOTO", scheme, Modifier.width(72.dp), onClick = onBack)
             // The title and, under it, the one fact the player needs on
             // arrival: sound is already running. Inside the header's own
             // 48 dp, between the two chips, so the preview below does not
             // move.
             Column(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                TapeText("LIVE", TapeType.pixel, scheme.titleInk.tape)
+                TapeText("LIVE CAMERA", TapeType.pixel, scheme.titleInk.tape)
                 TapeText(Copy.LIVE_PLAYING_NOTE, TapeType.pixelSmall.copy(textAlign = TextAlign.Center), scheme.lcdInk2, maxLines = 2)
             }
             Spacer(Modifier.width(72.dp))

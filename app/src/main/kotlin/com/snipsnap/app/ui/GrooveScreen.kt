@@ -1955,15 +1955,15 @@ fun GrooveScreen(
                             // where they go: this one starts it from nothing,
                             // the other two fork into it.
                             GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
-                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.ORBIT_DOOR_LINE) {
                                 clearJustLanded()
                                 onOrbit()
                             }
-                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.SONG_DOOR_LINE) {
                                 clearJustLanded()
                                 onArrange(swingPercent, feel / 100f, feelTemplate)
                             }
-                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.LOOP_DOOR_LINE) {
                                 clearJustLanded()
                                 onLoop()
                             }
@@ -2522,24 +2522,27 @@ private fun ColumnScope.BeatGoTo(
         // ORBIT ▸ — the kit on rings of different lengths, one
         // needle speed: polymeter and polyrhythm from the same
         // pads this screen already has loaded.
-        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.ORBIT_DOOR_LINE) {
             clearJustLanded()
             onOrbit()
         }
         // SONG ▸ — the same four programs laid into a structure, not
         // just cycled: intro/theme/variation/the turn/reprise/outro,
         // one tap away from what this screen already has loaded.
-        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.SONG_DOOR_LINE) {
             clearJustLanded()
             onArrange(swingPercent, feel / 100f, feelTemplate)
         }
         // LOOP ▸ — the six-track grid of snips, with its own
         // engine; it used to be the shelf's door and its own
         // Activity, and is a bench inside the frame now.
-        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.LOOP_DOOR_LINE) {
             clearJustLanded()
             onLoop()
         }
+    }
+    for (line in listOf(Copy.ORBIT_DOOR_LINE, Copy.SONG_DOOR_LINE, Copy.LOOP_DOOR_LINE)) {
+        TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }
 
@@ -2556,7 +2559,7 @@ private fun ColumnScope.BeatShape(
     onRecentre: () -> Unit,
     onReseed: () -> Unit,
 ) {
-    TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
+    TapeText("SWING AND FEEL", TapeType.pixelSmall, scheme.ink2.tape)
     Row(
         Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -3181,7 +3184,7 @@ private fun BeatHeader(
         contentAlignment = Alignment.CenterStart,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
+            TapeText("BEAT", TapeType.lcd(23), scheme.lcdInk.tape)
             val bpm = tempoBpm ?: KitPreview.DEFAULT_BPM
             // The meter rides along only when it is not 4/4 —
             // ORBIT's "BAR 12 · 3/4" said it, and this readout

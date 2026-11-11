@@ -1203,7 +1203,7 @@ private fun ProjectCard(
                 readBack = emptyList(),
                 scheme = scheme,
             )
-            PrimaryAction(label = "WRITE ANOTHER ✓", enabled = !busy, onClick = ::writeAnother)
+            PrimaryAction(label = "EXPORT ANOTHER", enabled = !busy, onClick = ::writeAnother)
         } else {
             val shown = read
             // One line of status, as the subtitle already is (`1 KIT · BEAT ON
@@ -1220,7 +1220,7 @@ private fun ProjectCard(
                 }
                 if (shown.missing.isNotEmpty()) {
                     TapeText(
-                        "MISSING FROM THE SHELF: ${shown.missing.joinToString(", ")}",
+                        "MISSING FROM THE LIBRARY: ${shown.missing.joinToString(", ")}",
                         TapeType.pixelSmall,
                         BinRedGlow,
                         Modifier.fillMaxWidth(),
@@ -1229,7 +1229,7 @@ private fun ProjectCard(
                 }
             }
             PrimaryAction(
-                label = if (busy) "WRITING — DO NOT EJECT" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "WRITE SESSION",
+                label = if (busy) "EXPORTING…" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "EXPORT PROJECT",
                 enabled = !busy && shown != null && !shown.blocked,
                 onClick = ::writeSession,
             )

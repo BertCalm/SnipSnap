@@ -106,7 +106,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
                     Modifier.weight(1f).heightIn(min = 28.dp)
                         .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                         .semantics {
-                            contentDescription = "STRIKE LAYER ${index + 1}: $label"
+                            contentDescription = "VELOCITY LAYER ${index + 1}: $label"
                             selected = active
                         }.padding(horizontal = 3.dp),
                     contentAlignment = Alignment.Center,
@@ -146,7 +146,7 @@ internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
                     .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                     .semantics {
                         selected = active
-                        stateDescription = if (waiting) "$text, takes effect when STRIKE is on" else text
+                        stateDescription = if (waiting) "$text, takes effect when the VELOCITY STRIP is on" else text
                     }
                     .tapeClick(label = label, onClick = click)
                     .padding(horizontal = 4.dp),
@@ -159,18 +159,18 @@ internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
     // STRIKE itself is never waiting; the three settings behind it wait on it.
     val waiting = !state.enabled
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Control(Copy.STRIKE_CAPTION_STRIP, if (state.enabled) "STRIKE ON" else "STRIKE OFF", "STRIKE STRIP", state.enabled, false, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_STRIP, if (state.enabled) "STRIP ON" else "STRIP OFF", "VELOCITY STRIP", state.enabled, false, Modifier.weight(1f)) {
             state.releaseTouch()
             state.enabled = !state.enabled
         }
-        Control(Copy.STRIKE_CAPTION_SIDE, if (state.right) "RIGHT" else "LEFT", "STRIKE THUMB SIDE", state.right, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_SIDE, if (state.right) "RIGHT" else "LEFT", "VELOCITY STRIP THUMB SIDE", state.right, waiting, Modifier.weight(1f)) {
             state.releaseTouch()
             state.right = !state.right
         }
-        Control(Copy.STRIKE_CAPTION_RELEASE, if (state.returns) "RETURN" else "STAY", "STRIKE ON RELEASE", state.returns, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_RELEASE, if (state.returns) "RETURN" else "STAY", "VELOCITY STRIP ON RELEASE", state.returns, waiting, Modifier.weight(1f)) {
             state.returns = !state.returns
         }
-        Control(Copy.STRIKE_CAPTION_LEVEL, if (state.volume) "VOL ON" else "VOL OFF", "STRIKE CHANGES VOLUME", state.volume, waiting, Modifier.weight(1f)) {
+        Control(Copy.STRIKE_CAPTION_LEVEL, if (state.volume) "VOL ON" else "VOL OFF", "VELOCITY STRIP CHANGES VOLUME", state.volume, waiting, Modifier.weight(1f)) {
             state.volume = !state.volume
         }
     }
@@ -190,13 +190,13 @@ internal fun StrikePadArea(state: StrikeState, modifier: Modifier = Modifier, pa
 internal fun StrikeFader(state: StrikeState, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("STRIKE", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText("VELOCITY", TapeType.pixelSmall, scheme.ink2.tape)
         TapeText("${(state.strength * 100).roundToInt()}%", TapeType.lcdSmall, scheme.accent.tape)
         Box(
             Modifier.weight(1f).fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .lcdPanel(scheme)
                 .semantics {
-                    contentDescription = "STRIKE STRENGTH"
+                    contentDescription = "VELOCITY"
                     stateDescription = "${(state.strength * 100).roundToInt()} percent, top hard, bottom soft"
                     progressBarRangeInfo = ProgressBarRangeInfo(state.strength, 0f..1f)
                     setProgress { value ->

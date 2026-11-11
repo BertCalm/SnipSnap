@@ -16,7 +16,7 @@ Three shelf entries: **Warehouse Techno (128 BPM)**, **Submerged House (118 BPM)
 10. Low conga
 11. High bongo
 12. Clap roll
-13. Alternating hand roll
+13. Snare roll (kit revision 2; replaces the alternating hand roll)
 14. Shaker riser
 15. Full groove, two bars through the genre's shared bus
 16. Percussion break, two bars through that same bus
@@ -24,6 +24,10 @@ Three shelf entries: **Warehouse Techno (128 BPM)**, **Submerged House (118 BPM)
 Pads 1–14 are dry, playable source material. Pads 15–16 are printed bus performances. Summing separately treated one-shots cannot reproduce a compressor responding to simultaneous kick, sub and percussion, so the shared-bus gesture is retained as a phrase. Hats share choke group 1; the two phrase pads share group 2. All pads are finite one-shots with natural releases. No seamless HOLD loop or STRUM is claimed; melodic/keygroup/chord gates do not apply to this drum family.
 
 Every pad has three rendered velocity zones and four distinct deterministic takes in each zone. Hand velocity changes the contact synthesis; other hits change appropriate source controls and contact brightness. Phrase velocity changes the signal entering the nonlinear bus. The rolls accelerate from eighths through sixteenths to thirty-seconds over one bar; the shaker build increases grain/brightness and strike strength.
+
+Revision 2 validation: 75 focused tests passed (Gradle exit 0), all 576 exported slices verified again, and the other 45 pad WAV chains matched their previous SHA-256 hashes exactly.
+
+Revision 2 replaces only A13 with a short snare and velocity-sensitive wire snap, retaining the one-bar acceleration and all three velocity zones/four takes. The previous hand roll remains on the audition page for comparison.
 
 ## Persistence and export
 

@@ -68,7 +68,7 @@ fun XRayScreen(
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                TapeText("X-RAY", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText("INSPECT FILE", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(fileName.uppercase(), TapeType.pixelSmall, scheme.lcdInk2, maxLines = 1)
             }
             TapeText(reading.kindLabel.uppercase(), TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)

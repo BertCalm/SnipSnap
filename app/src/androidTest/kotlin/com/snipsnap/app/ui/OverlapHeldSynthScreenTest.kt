@@ -165,7 +165,7 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
         activate("OVERLAP HELD")
         button("KNOT").assertDoesNotExist()
         button("RING").assertExists()
-        activate("SCRAMBLE")
+        activate("RANDOMISE")
         assertTrue(OverlapHeld.supports(current(OverlapTopology.SELF)))
         assertEquals(0f, current(OverlapTopology.SELF).macros.getValue("KNOT"))
     }

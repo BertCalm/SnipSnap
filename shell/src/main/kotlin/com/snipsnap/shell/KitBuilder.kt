@@ -155,7 +155,7 @@ class KitBuilderModel private constructor(
     fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
         if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { backOnto(slot, snip, cut) }
         val old = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(old.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - clear GHOSTS (or the stack) before re-trimming" }
+        require(old.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - clear SOFT HITS (or the stack) before re-trimming" }
         requireNotChained(old, "re-trimming")
         val source = old.source - LEFT_WITH_OLD_FILE + cut
         assign(slot, snip, old.drumClass, old.displayName, source)
@@ -471,7 +471,7 @@ class KitBuilderModel private constructor(
      */
     fun strikeFxAudition(slot: Int, room: Float, slap: Float): List<com.snipsnap.audio.Snip> {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNoChain(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying FX BY VELOCITY to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.recipe == null || Breed.recipeOf(pad) != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
         return com.snipsnap.synth.StrikeFxBank.render(com.snipsnap.audio.WavReader.read(strikeFxSource(slot)), room, slap)
@@ -486,7 +486,7 @@ class KitBuilderModel private constructor(
      */
     fun strikeFxLayers(slot: Int, room: Float, slap: Float): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNoChain(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying FX BY VELOCITY to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val padRecipe = Breed.recipeOf(pad)
         require(pad.recipe == null || padRecipe != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
@@ -524,10 +524,10 @@ class KitBuilderModel private constructor(
     /** STRIKE FX, CLEAR: DRY goes back over the pad's file, ROOM and DRY files are deleted, the bank leaves the recipe. */
     fun clearStrikeFxLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        requireNoChain(pad, "applying STRIKE FX to")
+        requireNoChain(pad, "applying FX BY VELOCITY to")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val padRecipe = Breed.recipeOf(pad)
-        require(com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3) { "pad $slot has no STRIKE FX to clear" }
+        require(com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3) { "pad $slot has no FX BY VELOCITY to clear" }
         val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
         File(kitDir, softFiles[0]).copyTo(File(kitDir, pad.sampleFile), overwrite = true)
         val remaining = try {

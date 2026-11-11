@@ -277,7 +277,7 @@ fun TapeSpliceScreen(
                     TapeText(refusal, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
                 }
                 ActionButton(
-                    "◄ CHOOSE DIFFERENT TAKES",
+                    "◄ CHOOSE DIFFERENT VERSIONS",
                     scheme,
                     enabled = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -405,7 +405,7 @@ private fun NeedleStep(
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ActionButton(
-            "◄ CHOOSE DIFFERENT TAKES",
+            "◄ CHOOSE DIFFERENT VERSIONS",
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),

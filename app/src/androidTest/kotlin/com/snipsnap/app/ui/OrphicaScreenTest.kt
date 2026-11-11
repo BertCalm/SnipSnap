@@ -170,7 +170,7 @@ class OrphicaScreenTest : ComposeScreenTest() {
         click("MODE REVERSE")
         click("ROOT UP")
         dial("FRACTURE", .55f)
-        click("SCRAMBLE")
+        click("RANDOMISE")
         val saved = saveAs("EDITED HARP")
         assertEquals(original.config.copy(midi = 68, mode = OrphicaMode.REVERSE), saved.config)
         assertTrue(saved.macros.values.all { it in 0f..1f })

@@ -245,7 +245,7 @@ fun ArrangeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = { stopPlayback(); onBack() })
-            TapeText("ARRANGE", TapeType.lcd(21), scheme.lcdInk.tape)
+            TapeText("SONG", TapeType.lcd(21), scheme.lcdInk.tape)
             val p = plan
             TapeText(
                 if (p != null) "${Copy.countOf(p.totalBars, "BAR", "BARS")} · ${Copy.countOf(p.sections.size, "SECTION", "SECTIONS")}" else "",

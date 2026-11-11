@@ -3299,7 +3299,7 @@ fun SynthScreen(
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
-                        "SCRAMBLE",
+                        "RANDOMISE",
                         scheme,
                         enabled = !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
@@ -4705,7 +4705,7 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FORGET → BIN", TapeType.pixel, BinRedGlow)
+                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedGlow)
                 }
             }
         }

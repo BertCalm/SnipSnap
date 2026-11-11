@@ -237,11 +237,11 @@ class TremorSynthScreenTest : ComposeScreenTest() {
             })
             compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 1 }
             button("CAGE").assertDoesNotExist()
-            button("SCRAMBLE").assertIsNotEnabled()
+            button("RANDOMISE").assertIsNotEnabled()
             button("SAVE PRESET").assertIsNotEnabled()
             button("AUDITION").assertIsNotEnabled()
             button("PRESET DRY CAGE").assertIsEnabled()
-            for (action in listOf("SCRAMBLE", "SAVE PRESET")) press(action)
+            for (action in listOf("RANDOMISE", "SAVE PRESET")) press(action)
             compose.runOnIdle {
                 assertEquals(null, draft(TremorVoice.WIRE))
                 assertEquals(source.name, settings["preset.TREMOR.WIRE"])

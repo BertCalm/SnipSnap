@@ -98,7 +98,7 @@ fun PropertiesScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText("TAPE PROPERTIES", TapeType.display, scheme.ink.tape)
+        TapeText("SETTINGS", TapeType.display, scheme.ink.tape)
 
         // Every group below is a GroupBox, THIS KIT's pattern: one closed
         // line each, and LOOK - the biggest visible change on the page, and

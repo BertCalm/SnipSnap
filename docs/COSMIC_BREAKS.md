@@ -119,3 +119,84 @@ chain assembly/persistence, shelf registration and repository conventions. The
 MPC generator and independent grid inspector passed again. A full local JVM run
 was attempted without observed failures, then stopped during the long synth
 regression; it is not counted as a full-suite pass. Complete regression runs in CI.
+
+
+## Genre family and acceptance gates (2026-11-10)
+
+Baseline inspected: `a90049ce7`. The earlier velocity implementation landed in
+PR #1008 with all CI checks passing. This follow-up adds three shelf arrangements:
+
+| Shelf kit | BPM | Authored behavior |
+|---|---:|---|
+| Cosmic Breaks | 170 | Original Low Orbit DnB bank A, unchanged |
+| Cosmic Jungle | 174 | Crack-snare substitution, higher tuning, tight decays and breakbeat chatter |
+| Cosmic Dubstep | 140 | Sub-kick substitution, lowered tuning, darker snares and dotted echoes |
+
+Each kit has the same 16 bank-A roles plus B01 Orbit Roll and B02 Relay Ascent.
+These are finite one-bar gestures with release tails, not HOLD loops. All 18 pads
+have three velocity zones and four distinct takes, including the gestures.
+Individual hits remain finite. Melodic keygroups/chord tools and picked-string
+STRUM do not apply to this drum-kit family.
+
+The new arrangements reuse the frozen v2 sources, so there is no new embedded
+sample bank. Genre-specific substitutions, pitch, envelope and echo decisions
+change the musical behavior. Source grids are released as processed grids replace
+them to avoid retaining two complete banks. Transposition uses the existing cubic
+sampler read with an eighth-order 9 kHz prefilter. A 20 kHz probe at the maximum
++4-semitone shift is rejected by at least 60 dB relative to a 3 kHz probe. The
+original arrangement bypasses this processing completely.
+
+### Export and playback evidence
+
+Run `./gradlew :synth:generateCosmicBreaksFamily`. The three full-grid ZIPs contain
+native kit.json, SFZ and DecentSampler programs sharing one set of WAVs. Their
+PCM16 delivery depth matches the source bank depth; numerical comparisons allow
+one 16-bit quantization step. The application's ordinary export remains PCM24.
+The 16-pad MPC compatibility generator remains available separately; it is not
+presented as a full-grid export.
+
+- 81 focused JVM tests passed, covering original-source preservation, distinct
+  finite strikes, determinism, anti-alias rejection, shelf registration and
+  conventions, plus the save/export/import/playback path for every genre.
+- `CosmicBreaksRoundTripTest` checks every MIDI velocity 1–127 and nine successive
+  hits per pad after native saving and SFZ export/import. PCM files remain exact
+  through SFZ copying; selection windows, gains and pitch agree with PadHit.
+- The family generator verifies all 648 delivered strike windows against rendered
+  PCM and checks every DecentSampler velocity range, sequence position and group
+  cycle. These checks validate files, not an external sampler application.
+- The published player reads the actual ZIP contents and native grid metadata.
+  Its decoder harness checks all 648 strikes and 2,916 boundary/cycle selections.
+- Browser interaction, phone execution and external sampler/device playback are
+  not established by these software checks. Full JVM/CI results are tracked
+  separately; no pending run is counted as green.
+
+### Gate ledger
+
+| Gate | Evidence/status |
+|---|---|
+| Multiple genre drum kits | Three registered shelf arrangements; new sounds await owner listening |
+| Appropriate percussion articulation | Authored roll and density/brightness riser on B01/B02; finite hits retained |
+| Velocity/takes through rendering and saving | Three timbres × four takes, distinct PCM, native persistence checks |
+| Velocity/takes through playback | PadHit selection/gain checks across all velocities, including after SFZ import |
+| Full-grid export | SFZ round-trip verified; DecentSampler program fields verified |
+| MPC export acceptance | **Open**: MPC 3 WAV slice map and hardware cycling are not established; MPC 2 four-slot layout cannot carry a 3 × 4 grid on one pad |
+
+The repository contains the PSK track but no corresponding known-working sliced
+chain WAV; `reference/live3 room take.wav` contains ordinary fmt/LIST/data chunks
+only. Closing the MPC 3 gate requires a device-saved program **and its sliced WAV**
+with known velocity/cycle settings, followed by a load/re-save/playback check.
+A limitation disclosure does not turn that gate green.
+
+### Why it is built this way
+
+- The original bank bypass preserves the sound already approved.
+- Genre arrangements change drum voicing and articulation as well as treatment.
+- Bank-B gestures add performance tools without replacing the requested 16 hits.
+- Shared WAVs keep native, SFZ and DecentSampler strikes identical within each package.
+- Auditioning the packages themselves makes missing layers or takes testable at the delivery boundary.
+
+The genre-kit audition source is Site commit
+`f3bf9a8a751375f3954f00a3ad4379c22eb0c3fb`. Its control smoke test uses a
+mock DOM/Web Audio and passed layer changes, take stepping, cycling off/on,
+both new genre grooves and stop. This is not a browser/device playback claim.
+The original macro sandbox remains available separately from the package player.

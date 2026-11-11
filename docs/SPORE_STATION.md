@@ -164,3 +164,31 @@ Nine synth tests and the three-kit save/playback/SFZ integration passed. The 131
 The listening ZIP is 24,845,017 bytes. Browser decoding, owner listening and device checks remain pending. MPC hardware round robin still needs the chain-WAV slice map; the earlier emulator CI failure remains unresolved.
 
 Published audition source: `526d6e2568dbedf72859fd23ed4db1ec48fadebf`; deployment `appgdep_6af20de182248191b21e9fcecdb39ed3` succeeded.
+
+
+## V6 — articulated jungle breaks
+
+The owner's three screen recordings identify old-school 160 BPM breaks, a live drummer at 170 BPM and a 175 BPM drum loop. These supplied examples inform the direction; the phrases are original, and no reference audio is included. Inspection covered frames and measured envelopes, not a listening judgment.
+
+The v6 core shortens the kick sweep and body, raises and tightens the main snare, shortens the bright alternate snare, and reduces open-cymbal tails. Ghost/pickup sources and kick/snare accent levels stay unchanged. A01–A10 remain dry SKIN model 1. The characteristic gesture is tight kick → cracked backbeat → grace strokes → chopped turnaround.
+
+The page preserves v5 hits exactly and compares both cores on the same new phrase. Four separate performances use the full three-zone/three-take Jungle grid: Cutback (160 BPM), Ghostwork (170), Razor edits (175) and Orbital breaks (170, with colour). Independent zone counters cycle actual alternate strikes. The flam uses a 19 ms grace offset at 170 BPM; the drag uses two quiet strikes before the backbeat. Open/closed hats choke with a 5 ms fade. The Jungle MPC clip contains the Ghostwork event list.
+
+Validation: 11 synth tests, including exact velocity boundaries, independent take cycling and phrase articulation; the three-kit save/playback/SFZ integration; all 262 WAV headers/hashes and 486 SFZ region windows; archive checks and DOM-mock controls passed. The first phrase test exposed a skipped open-hat accent in Cutback; the pattern was corrected and all checks rerun. All 16 previous-bank hits match published v5 exactly, every Dub/Electro exported WAV is unchanged, and generator source fingerprints match. The time containing 90% of raw-hit energy fell from 41.7→19.8 ms (kick), 39.9→17.1 ms (main snare), and 24.3→11.1 ms (alternate). These are envelope measurements, not perceived-quality claims.
+
+The listening ZIP is 23,835,728 bytes. Browser audio decoding, owner listening, phone timing and MPC hardware remain unverified. Native/SFZ preserve complete grids; MPC's missing chain slice map and XPM first-take fallback keep the overall hardware/export gate open. The full JVM suite was not repeated for this preset/audition revision; focused tests and complete three-kit export checks were used.
+
+
+## V7 — recorded acoustic core
+
+The owner rejected the synthesized core as not live/organic. A01–A11 now use actual acoustic strikes from the CC0 Virtuosity Drums library (Versilian Studios; drummer Austin McMahon), pinned to `9f04cf9a734527edfbb0a4eee1f674e45bbf71bc`. Close kick/snare mics and overhead hats, ride and tom replace the corresponding synthesized sources. A12–A16 retain the psychedelic synthesis. No source EQ, compression, pitch shifting, added reverb or per-hit peak normalization is used. The original microphone ambience remains.
+
+There are 93 distinct recorded files forming 99 zone/take entries. Main and heel kick share calibration, as do center and ghost snare. Kick and cymbals use dedicated recorded round robins; snare, cross-stick and tom use adjacent recorded dynamic hits as alternates. These are distinct recorded strikes, not synthesized copies or claims of identical-force RR. The first ghost selection measured too quiet in context; its groups were moved to recorded dynamics 7–9, 13–15 and 19–21, with the shared snare calibration retained.
+
+The main resource bank is 31,596,216 bytes of PCM audio. A bounded 12-file LRU avoids loading the entire bank into float memory. Final JVM generation measured 3,229 ms for the complete Jungle grid, including roll/riser; this is not phone timing. `scripts/prepare_spore_acoustic.py --cache-dir <directory>` reproduces source selection and conversion with ffmpeg, numpy and scipy. It verifies upstream Git blobs, records original and converted SHA256s and carries CC0 notices. Source WAVs and provenance remain authoritative for recorded pads; asking for a synthetic recipe on those slots fails explicitly. Existing saved synthetic recipes still replay.
+
+Validation passed: 12 synth tests, three-kit save/load/playback/SFZ integration, 262 WAV headers/hashes, all 486 SFZ region windows, ZIP contents, page controls with a DOM mock, all 93 resource hashes and source-code fingerprints. The complete v6 single-hit reference bank is byte-identical to the last publication. Dub/Electro WAVs are unchanged. The same four performance phrases isolate the source change. The Jungle roll now uses recorded snare strikes and records that source provenance.
+
+The Jungle program exceeds the host's individual-file limit, so it is delivered as two ordinary ZIPs that must both be extracted into the same parent folder. Validation combines both archives and checks the complete native/SFZ/MPC program. Raw and matched listening packs are separate ZIPs; each includes acoustic credits, the license and provenance. No audio from the owner's reference videos is redistributed.
+
+Owner listening, browser audio decoding, phone timing and MPC hardware remain unverified. Native/SFZ retain the full grids; XTD still lacks the chain-WAV slice map and XPM uses the first take per velocity zone. The overall export/hardware gate remains open. The full JVM suite was not repeated locally; the focused tests and complete three-kit export checks above passed.

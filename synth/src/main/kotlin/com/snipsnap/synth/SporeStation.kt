@@ -8,7 +8,7 @@ import kotlin.math.ln
  * Single-hit audition studies retain recipes; shelf grids retain complete audio and provenance. */
 object SporeStation {
     const val BPM = 170
-    const val VERSION = 5
+    const val VERSION = 7
     data class Part(val name: String, val patch: Patch, val kind: DrumClass, val level: Float = .7f)
     data class Controls(val body: Float = .5f, val bite: Float = .35f, val dust: Float = .15f,
                         val twist: Float = .1f, val space: Float = .2f) {
@@ -53,7 +53,7 @@ object SporeStation {
     ) + parts().drop(10)
 
     /** Big accented break drums; keep the ghost strokes as the quiet reference. */
-    fun previousJungleParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
+    private fun bombasticParts(): List<Part> = restrainedParts().mapIndexed { index, part ->
         val values = when (index) {
             0 -> m("TUNE" to .35f, "DECAY" to .23f, "TONE" to .75f, "CLICK" to .85f, "DROP" to .38f, "PUNCH" to .88f)
             2 -> m("TUNE" to .40f, "DECAY" to .55f, "SNAP" to .52f, "RATTLE" to .42f, "SIZZLE" to .50f, "PUNCH" to .90f)
@@ -68,7 +68,7 @@ object SporeStation {
     }
 
     /** Sound-system accents: deeper sweep, sustained shell weight and tearing wires. */
-    fun jungleParts(): List<Part> = previousJungleParts().mapIndexed { index, part ->
+    private fun soundSystemParts(): List<Part> = bombasticParts().mapIndexed { index, part ->
         val values = when (index) {
             0 -> m("TUNE" to .16f, "DECAY" to .48f, "TONE" to .90f, "CLICK" to 1f, "DROP" to .88f, "PUNCH" to .92f)
             2 -> m("TUNE" to .20f, "DECAY" to .86f, "SNAP" to .48f, "RATTLE" to .68f, "SIZZLE" to .62f, "PUNCH" to .92f)
@@ -81,12 +81,37 @@ object SporeStation {
         part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
     }
 
+    /** Short shell response leaves room for ghost strokes, drags and chopped retriggers. */
+    fun previousJungleParts(): List<Part> = soundSystemParts().mapIndexed { index, part ->
+        val values = when (index) {
+            0 -> m("TUNE" to .52f, "DECAY" to .13f, "TONE" to .82f, "CLICK" to .88f, "DROP" to .20f, "PUNCH" to .82f)
+            2 -> m("TUNE" to .62f, "DECAY" to .32f, "SNAP" to .62f, "RATTLE" to .22f, "SIZZLE" to .52f, "PUNCH" to .82f)
+            4 -> m("TUNE" to .90f, "DECAY" to .16f, "SNAP" to .78f, "RATTLE" to .17f, "SIZZLE" to .74f, "PUNCH" to .85f)
+            6 -> m("DECAY" to .035f, "TONE" to .66f, "RING" to .06f, "PUNCH" to .18f)
+            7 -> m("DECAY" to .24f, "TONE" to .68f, "RING" to .16f, "PUNCH" to .24f)
+            9 -> m("DECAY" to .28f, "TONE" to .62f, "SIZZLE" to .32f, "PUNCH" to .24f)
+            else -> emptyMap()
+        }
+        val level = when(index) { 6 -> .44f; 7 -> .54f; 9 -> .46f; else -> part.level }
+        part.copy(patch = part.patch.withMacros(part.patch.macros + values), level = level)
+    }
+
+    data class Layout(val name:String,val kind:DrumClass,val level:Float)
+    fun layout(genre:Genre):List<Layout> = (if(genre==Genre.JUNGLE) previousJungleParts() else parts()).mapIndexed { i,p ->
+        if(genre==Genre.JUNGLE && SporeAcoustic.contains(i))
+            Layout(SporeAcoustic.names[i],p.kind,SporeAcoustic.levels[i])
+        else Layout(p.name,p.kind,p.level)
+    }
+
     /** Invert ECHO's exponential time map; the baked delay is tied to this kit's documented tempo. */
     fun echoTime(beats: Float): Float = (ln((60f / BPM * beats) / .06f) / ln(.35f / .06f)).coerceIn(0f, 1f)
 
     fun recipe(index: Int, mutation: Boolean = false, controls: Controls = Controls(), jungle: Boolean = false, previousJungle: Boolean = false): PadRecipe {
         require(index in 0..15)
-        val part = (if (previousJungle) previousJungleParts() else if (jungle) jungleParts() else parts())[index]
+        require(!jungle || previousJungle || !SporeAcoustic.contains(index)) {
+            "Recorded Jungle pads retain source WAVs and provenance, not a synthetic recipe"
+        }
+        val part = (if (previousJungle || jungle) previousJungleParts() else parts())[index]
         val old = part.patch.macros
         val changes = mutableMapOf<String, Float>()
         // BODY is explicitly a source balance/decay control, not a physical simulation.
@@ -113,18 +138,23 @@ object SporeStation {
     }
 
     /** Original single-hit audition comparisons; shelf/export callers use [performance]. */
-    fun arranged(mutation: Boolean = false, jungle: Boolean = false, previousJungle: Boolean = false): List<ArrangedPad> = (if (previousJungle) previousJungleParts() else if (jungle) jungleParts() else parts()).mapIndexed { index, part ->
-        val recipe = recipe(index, mutation, jungle = jungle, previousJungle = previousJungle)
-        val hard = recipe.render()
-        val soft = listOf(.3f, .6f).map { velocity ->
-            // Match layer peaks once, retaining velocity-dependent timbre. The sampler applies velocity gain.
-            Velocity.peakMatch(hard, recipe.process(Velocity.atVelocity(requireNotNull(recipe.patch), velocity)))
+    fun arranged(mutation:Boolean=false,jungle:Boolean=false,previousJungle:Boolean=false):List<ArrangedPad> {
+        if(jungle && !previousJungle) return layout(Genre.JUNGLE).mapIndexed { i,p ->
+            val hard=take(i,Genre.JUNGLE,1f,0,mutation)
+            val soft=listOf(.3f,.6f).map { take(i,Genre.JUNGLE,it,0,mutation) }
+            ArrangedPad(hard,p.kind,level=p.level,oneShot=true,softVariants=soft,displayName=p.name,
+                muteGroup=if(i in 6..8)1 else 0,
+                source=if(SporeAcoustic.contains(i))mapOf("bank" to "spore-station/v7","file" to SporeAcoustic.sourceId(i,1f,0),"license" to "CC0-1.0")else emptyMap())
         }
-        ArrangedPad(hard, part.kind, recipe.toJsonValue(), level = part.level, oneShot = true,
-            softVariants = soft, displayName = part.name + if (mutation) " Mutation" else "",
-            layerNames = listOf("Soft", "Middle", "Hard"), muteGroup = if (index in 6..7) 1 else 0,
-            source = mapOf("kit" to "Spore Station", "version" to VERSION.toString(), "bpm" to BPM.toString(), "status" to "candidate-awaiting-listen"))
+        return (if(previousJungle) previousJungleParts() else parts()).mapIndexed { index,part ->
+            val recipe=recipe(index,mutation,previousJungle=previousJungle)
+            val hard=recipe.render()
+            val soft=listOf(.3f,.6f).map { Velocity.peakMatch(hard,recipe.process(Velocity.atVelocity(requireNotNull(recipe.patch),it))) }
+            ArrangedPad(hard,part.kind,recipe.toJsonValue(),level=part.level,oneShot=true,softVariants=soft,
+                displayName=part.name+if(mutation) " Mutation" else "",muteGroup=if(index in 6..7)1 else 0)
+        }
     }
+
     enum class Genre(val bpm: Int) { JUNGLE(170), DUB(85), ELECTRO(130) }
 
     /** Genre siblings change source envelopes and balances as well as their finishing rack. */
@@ -148,6 +178,10 @@ object SporeStation {
      * never TUNE, so successive hits change character without detuning the kit's root. */
     fun take(index: Int, genre: Genre, velocity: Float, take: Int, mutation: Boolean = false): com.snipsnap.audio.Snip {
         require(take in 0..2)
+        if(genre==Genre.JUNGLE && SporeAcoustic.contains(index)) {
+            val raw=SporeAcoustic.render(index,velocity,take)
+            return if(mutation) recipe(index,true).process(raw) else raw
+        }
         val r = genreRecipe(index, genre, mutation)
         val patch = requireNotNull(r.patch)
         val struck = Restrike.take(patch, velocity, 170 + index, take)
@@ -188,16 +222,18 @@ object SporeStation {
             val hard = if (index < 16) take(index, genre, 1f, 0, mutation) else gesture(genre, index == 17, 1f, 0)
             val grid = listOf(.3f, .6f, 1f).map { velocity -> (0..2).map { t ->
                 val sound = if (index < 16) take(index, genre, velocity, t, mutation) else gesture(genre, index == 17, velocity, t)
-                Velocity.peakMatch(hard, sound)
+                if(genre==Genre.JUNGLE && SporeAcoustic.contains(index)) sound else Velocity.peakMatch(hard, sound)
             } }
-            val part = (if (genre == Genre.JUNGLE) jungleParts() else parts()).getOrNull(index)
+            val part = layout(genre).getOrNull(index)
             ArrangedPad(hard, part?.kind ?: if (hard.durationSeconds >= 1.5) DrumClass.LOOP else DrumClass.PERC,
                 level = if (genre == Genre.DUB && index in 6..9) .28f else part?.level ?: .45f,
                 displayName = part?.name ?: if (index == 16) "Canopy Roll" else "Spore Ascent",
-                muteGroup = if (index in 6..7) 1 else 0, velocityTakes = grid,
+                muteGroup = if (index in 6..7 || genre==Genre.JUNGLE && index==8) 1 else 0, velocityTakes = grid,
                 source = mapOf("kit" to "Spore Station", "version" to VERSION.toString(),
                     "genre" to genre.name, "mutation" to mutation.toString(), "bpm" to genre.bpm.toString(),
-                    "articulation" to "3 velocity zones x 3 round-robin takes", "status" to "candidate-awaiting-listen"))
+                    "sourceBank" to if(genre==Genre.JUNGLE && (SporeAcoustic.contains(index) || index==16)) "spore-station/v7 CC0-1.0" else "synthesized",
+                    "sourceFiles" to if(genre==Genre.JUNGLE && (SporeAcoustic.contains(index) || index==16)) listOf(.3f,.6f,1f).flatMap { v -> (0..2).map { t -> SporeAcoustic.sourceId(if(index==16)2 else index,v,t) } }.joinToString(";") else "",
+                    "articulation" to "3 velocity zones x 3 alternate strikes", "status" to "candidate-awaiting-listen"))
         }
 
 }

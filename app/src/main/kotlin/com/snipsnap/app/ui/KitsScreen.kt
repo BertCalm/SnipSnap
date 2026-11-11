@@ -415,10 +415,10 @@ fun KitsScreen(
             ) {
                 TapeText(
                     when {
-                        assigningSnip -> "PICK A KIT FOR THIS SNIP"
+                        assigningSnip -> "PICK A KIT FOR THIS SAMPLE"
                         breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
                         addingTo != null -> Places.addPickHeader(addingTo)
-                        else -> "SHELF"
+                        else -> "LIBRARY"
                     },
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
@@ -626,7 +626,7 @@ fun KitsScreen(
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("ROOMS · RE-AMP AND ROOM MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
@@ -640,7 +640,7 @@ fun KitsScreen(
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -740,7 +740,7 @@ fun KitsScreen(
             // (locked behavior, Task 2 of the bin-restore plan).
             if (binnedCount > 0) {
                 ActionButton(
-                    "BIN · $binnedCount WAITING ▸",
+                    "TRASH · $binnedCount WAITING ▸",
                     scheme,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
@@ -759,10 +759,10 @@ fun KitsScreen(
                 // library reached for often, not a tool, so it stays
                 // top-level rather than moving behind the other door.
                 ActionButton(
-                    "SNIPS ▸",
+                    "SAVED SAMPLES ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "OPEN SNIPS, EVERY CATCH IN ONE LIST",
+                    accessibilityLabel = "OPEN SAVED SAMPLES, EVERY CATCH IN ONE LIST",
                     modifier = Modifier.weight(1f),
                     onClick = onSnips,
                 )
@@ -776,7 +776,7 @@ fun KitsScreen(
                     "TOOLS ▾",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, X-RAY, DOUBLES",
+                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, INSPECT FILE, FIND SIMILAR SOUNDS",
                     modifier = Modifier.weight(1f),
                     onClick = { toolsMenuOpen = true },
                 )
@@ -976,7 +976,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .tapeClick(label = "FORGET ${room.name.uppercase()}", enabled = !busy) { onForget(room) },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
+                TapeText("FORGET → TRASH", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
             }
         } else {
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
@@ -1040,7 +1040,7 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
     // Same text the TapeText below shows — it already follows `armed`,
     // so the accessible name follows it too rather than freezing on
     // whichever state happened to be current when null was written.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()

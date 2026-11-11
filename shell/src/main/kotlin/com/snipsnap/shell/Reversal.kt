@@ -49,7 +49,7 @@ object Reversal {
      * uses. Rewording them belongs to the copy rewrite, which owns every
      * line that was already on screen.
      */
-    const val BIN = "THE BIN KEEPS IT $DAYS DAYS."
+    const val BIN = "THE TRASH KEEPS IT $DAYS DAYS."
 
     /**
      * The same fact for the lines that name what was thrown out rather

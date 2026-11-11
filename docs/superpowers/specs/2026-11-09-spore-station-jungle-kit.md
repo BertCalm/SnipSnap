@@ -276,3 +276,43 @@ Push the dry jungle source design further: kick DROP .38→.88 and DECAY .23→.
 - The kick sweep and shell/wire envelopes supply weight without reverb.
 - A bright alternate snare contrasts with the low main backbeat.
 - The immediately previous version remains available for an honest comparison.
+
+
+## V6: break articulation from the owner's references
+
+Characteristic gesture: tight kick → cracked backbeat → quiet grace strokes → chopped turnaround. This is a preset and performance revision of the existing drum family, not a new engine. The three supplied screen recordings identify 160 BPM old-school breaks, a 170 BPM live drummer and a 175 BPM drum loop. Frames and audio envelopes were inspected; no listening judgment or exact transcription is claimed. Their source audio is not included in the kit or website.
+
+The source change reduces the v5 kick's pitch sweep and tail; the main snare moves up from a low sustained shell to a shorter cracked backbeat, with a brighter short alternate. Open hats and ride retain accents but release sooner. Ghost and pickup patches and accent levels stay unchanged. Core A01–A10 remain dry SKIN model 1 with no rack. The existing five recipe controls and three genre shelves remain intact.
+
+Four original two-bar performances cover 160, 170 and 175 BPM, plus psychedelic colour at 170 BPM. They use the exported Jungle kit's three velocity zones and three round robins, independent zone counters, authored grace strokes, a flam, a drag and a chopped turnaround. A07/A08 choke with a 5 ms fade. The Jungle MPC clip includes the same 170 BPM event list; hardware RR remains unverified. Same-pattern A/B uses single-take velocity layers to isolate the source change and preserves v5 exactly.
+
+No new solver or render stage is introduced; source timing is measured by the generator. Pattern playback uses cached rendered grids. Finite hits and the existing roll/riser are appropriate; melodic/keygroup/chord-tool gates are not applicable. Native/SFZ velocity and RR require regression checks; MPC slice-map and hardware acceptance remain open.
+
+### Why it is built this way
+
+- Shorter tails leave audible gaps for fast cuts and ghost strokes.
+- Grace strokes use softer strikes rather than delayed copies of loud hits.
+- Alternating takes keeps repeated notes from being identical waveforms.
+- Dry drums carry the rhythm while colour pads provide the space.
+- A fixed-pattern comparison separates source changes from arrangement changes.
+
+
+## V7: replace the synthesized core with recorded acoustic strikes
+
+The owner rejected v6 as sounding essentially unchanged and not live/organic. Further SKIN macro revisions do not address the source identity. The new landing is a curated recorded sample bank inside the existing three-genre kit family, not a new synthesis engine. Gesture: real kick impact → center/rim backbeat → softer recorded grace hits → naturally decaying cymbals.
+
+A01–A11 now use CC0 Virtuosity Drums recordings, Versilian Studios, drummer Austin McMahon, pinned to `9f04cf9a734527edfbb0a4eee1f674e45bbf71bc`. Kick/snare use their close microphones; hats, ride and high tom use overheads. No EQ, pitch shift, added room, compression, synthetic exciter or source damping is applied. Mono 44.1 kHz PCM24 conversion trims only near-silence below -60 dB relative peak, retaining 2 ms before onset and 80 ms after the last threshold crossing, then a 4 ms end fade. Exact original paths, source hashes, output hashes and trim frames are retained in the resource provenance file and downloads. Native microphone ambience remains.
+
+Each pad retains three velocity zones and three distinct recorded strikes per zone. Kick and cymbals have dedicated recorded RR; center/ghost/rim/cross-stick/tom group adjacent recorded dynamics as alternates, not claims of identical-force RR. One fixed calibration per instrument family preserves amplitude variation between strikes and dynamics; the center/ghost snare and main/heel kick share their family calibration. Sampler velocity gain still applies. Source arrays are cached in a bounded 12-file LRU; conversion runs at asset preparation time, not on the phone.
+
+The archived v6 synthetic single-hit bank remains exact for A/B. Four performance phrases remain unchanged. The roll now plays recorded snare strikes; the riser and A12–A16 retain synthesized colour. Acoustic one-shots carry source provenance, not a false synthetic edit recipe; native saved grid WAVs remain authoritative. Dub/Electro source audio is unchanged. Recorded core mutation recipes apply only when explicitly requested.
+
+Applicable gates: three genre shelves, finite hits, authored roll/riser, three velocity zones and three alternate strikes through native/SFZ save/playback/export. These require regression validation. MPC slice-map/hardware acceptance remains open, as does owner listening. Recorded sources do not establish musical approval by themselves.
+
+### Why it is built this way
+
+- Actual drum strikes supply shell, wire and mic detail that the previous synthesized sources lacked.
+- Fixed family gains keep the drummer's recorded dynamic differences intact.
+- Close mics keep kick and snare direct; overheads retain natural cymbal complexity.
+- Existing phrases and an exact v6 bank make the source change easy to judge.
+- Source hashes and the CC0 notice travel with the kit, preserving provenance.

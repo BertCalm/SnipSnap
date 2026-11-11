@@ -731,3 +731,5 @@ testkit/backwash-acoustic-integration/
 /testkit/triad-kits/
 # Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
 /testkit/cosmic-breaks-kit/
+
+/testkit/cosmic-family/

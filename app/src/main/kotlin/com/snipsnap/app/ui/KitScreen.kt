@@ -245,10 +245,10 @@ fun KitScreen(
         if (hasProject) {
             EmptyStatePanel(
                 Copy.PROJECT_HAS_NO_KIT,
-                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("TAPE ▸", onNavigateTape)),
+                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("SAMPLE ▸", onNavigateTape)),
             )
         } else {
-            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("LIBRARY ▸", onNavigateKits)))
         }
         return
     }
@@ -791,7 +791,7 @@ fun KitScreen(
         StrikeControls(strike, Modifier.fillMaxWidth())
         StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
-            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD EDITOR", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
         StrikePadArea(strike, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Column(
@@ -974,7 +974,7 @@ fun KitScreen(
                     // same plain separator "KEY · <label>" already uses below.
                     val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
                     ActionButton(
-                        if (twinned) "REMIX BANK B · REROLL" else "REMIX BANK B",
+                        if (twinned) "MAKE BANK B VARIATIONS · REROLL" else "MAKE BANK B VARIATIONS",
                         scheme,
                         enabled = !busy && kit.pads.any { it.slot in 1..16 },
                         modifier = Modifier.weight(2f),
@@ -1044,7 +1044,7 @@ fun KitScreen(
                     // the app. "ROLL BACK OR RESTORE" also dropped to
                     // "RESTORE": RESTORE alone says the same thing the longer
                     // phrase did.
-                    ActionButton("VERSIONS + BIN · RESTORE ▸", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                    ActionButton("VERSIONS · RESTORE ▸", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
                 }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     // BREED: this kit's own recipes crossed with a second kit's
@@ -1481,7 +1481,8 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        if (kind == "SCULPT") TapeText(Copy.SCULPT_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
@@ -1527,7 +1528,7 @@ private fun TexturePanel(
         var startedHere by remember { mutableStateOf(false) }
         LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            "$kind · NEW TAPE",
+            "$kind · NEW SAMPLE",
             scheme,
             enabled = !busy,
             working = busy && startedHere,
@@ -1717,7 +1718,7 @@ private fun PadCell(
                 // rest of the app.
                 onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
                 // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
-                onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
+                onLongClick(label = "OPEN PAD EDITOR") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
             // release to sound would already be wrong as a drum pad. The

@@ -511,3 +511,14 @@ The original five drum voices continue to default to model 4. Frozen `BackwashV4
 The dry/processed audition uses the same source strike without loudness matching. Its genre grooves are rendered from the delivered saved grids. The Android preview embeds the same source bank; `scripts/verify_backwash_preview.py` checks bank bytes as well as signatures and factory registry packaging. Compiling instrumentation tests is not running them on a device.
 
 Verification for this integration: 18 BACKWASH tests and 77 Robin/shelf tests pass; both Android preview APKs build, their signatures verify, and the packaged acoustic-bank bytes match the source resources. Six native CTest targets pass. Both genre-kit generators pass persisted PCM replay and MPC read-back checks; `scripts/verify_backwash_acoustic_exports.py` verifies SFZ/DecentSampler velocity zones, take positions and frame windows. The full repository JVM suite was launched separately and is not claimed complete. No physical phone/MPC test was run.
+
+
+## Accepted baseline and completed regression evidence — 2026-11-10
+
+The owner approved the published acoustic integration with “Sounds good, proceed.” The accepted baseline is the model-5 acoustic percussion, existing core drums, and Soul Pocket/Psych Rock audition delivered by integration commit `6ccfa18d`. No retuning is implied by this acceptance update. PR [#1009](https://github.com/BertCalm/SnipSnap/pull/1009) has since merged.
+
+The initially pending local full run on `6ccfa18d` completed with two shell failures: stale README starter counts and SIREN's worst-case label/span calculation taking 5181 ms against a 5000 ms limit. The roster prose was subsequently corrected during integration. The later full JVM CI passes without weakening that timing assertion; the original local run remains a failed run, not retroactively green.
+
+All JVM shards, Android build and native tests passed on integrated descendant `4cfe915f6bb84e1b755614277989b1001cb5521a` in [run 42700786733](https://github.com/BertCalm/SnipSnap/actions/runs/42700786733). Its full emulator suite also passed in [run 42700786974](https://github.com/BertCalm/SnipSnap/actions/runs/42700786974). The earlier PR emulator failure was PRISM screen recreation exceeding its 30-second wait; the subsequent PRISM wait correction landed separately before the passing run. It was not a BACKWASH audio assertion.
+
+The remaining acceptance limits are physical phone/MPC audio validation and MPC 2's lack of cycling for these exported velocity grids. MPC 3/SFZ/DecentSampler cycle metadata and saved/offline playback have automated evidence; hardware response and pad feel still require a real-device audition. Owner sound approval and general emulator success do not erase those limits.
