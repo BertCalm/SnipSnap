@@ -110,7 +110,7 @@ for s in M["sections"]:
       <ol class="clips">{clips}</ol>
     </section>""")
 
-nav = "".join(f'<a href="#{ESC(s["id"])}">{ESC(s["title"].split(":")[0])}</a>' for s in M["sections"])
+nav = "".join(f'<a href="#{ESC(s["id"])}">{ESC(s["title"].split(":")[0].split(" (")[0])}</a>' for s in M["sections"])
 checks = M["checks"]
 
 GATES = [
