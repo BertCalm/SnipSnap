@@ -177,3 +177,10 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
 - **The risky decision is the cutoff range.** The knob stops at a fairly dark ceiling (3.5 kHz
   on the opened filter) because above it the measured brightness fell instead of rising. Your
   ears decide whether the top of the knob is open enough.
+
+## Published audition
+
+Round 1 published 2026-11-11 as a private artifact:
+<https://claude.ai/artifact/7TUKvRhXeFUz9fJTMsEKJn>, built from `768df8a5`
+(`gen_audition.py` then `build_page.py`). 54 clips and `manifest.json`. The reference clips
+are not on the page. Owner listening is pending.
