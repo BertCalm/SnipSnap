@@ -237,9 +237,9 @@ fun ChopScreen(
 @Composable
 private fun EmptyChop(message: String, onNavigateTape: () -> Unit, onNavigateKits: () -> Unit) {
     val routes = if (message == Copy.EMPTY_CHOP) {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape), EmptyStateRoute("SHELF ▸", onNavigateKits))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape), EmptyStateRoute("LIBRARY ▸", onNavigateKits))
     } else {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape))
     }
     EmptyStatePanel(message, routes)
 }
@@ -1313,7 +1313,7 @@ private fun ClassPicker(
                 onClick = onMerge,
             )
             SecondaryButton(
-                "SPLIT AT ITS NEXT HIT",
+                "CHOP AT NEXT HIT",
                 modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp),
                 enabled = !busy,
                 onClick = onSplit,
@@ -1476,7 +1476,7 @@ private fun CutBench(
         model.mode is ChopReviewModel.ChopMode.Grid ||
         model.mode is ChopReviewModel.ChopMode.Ladder
     GroupBox(
-        legend = "CUT",
+        legend = "CHOP",
         summary = summary,
         open = open,
         onToggle = onToggle,
@@ -1485,7 +1485,7 @@ private fun CutBench(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onByHits)
             SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGrid)
-            SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGhosts)
+            SegmentButton("BETWEEN HITS", active = model.ghosts, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGhosts)
             SegmentButton(
                 if (humming) "STOP" else "HUM",
                 active = humming || model.mode is ChopReviewModel.ChopMode.Hummed,
@@ -1535,7 +1535,7 @@ private fun CutBench(
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("CHOP POINT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }

@@ -139,7 +139,7 @@ class LandingNoteTest {
         val phone = LandingNote.dubbed("Funk Kit", onCard = false, files = 17, where = "/storage/Android/data/Funk Kit")
         assertEquals("FUNK KIT IS SAVED ON THIS PHONE.", phone.title)
         assertEquals(
-            listOf("17 FILES · SIDE A: PROGRAMS · SIDE B: SAMPLES", "/storage/Android/data/Funk Kit"),
+            listOf("17 FILES · PROGRAMS AND SAMPLES", "/storage/Android/data/Funk Kit"),
             phone.lines.map { it.text },
             "the path keeps its case: it is a place on a case-sensitive disk, not a sentence",
         )
@@ -149,7 +149,7 @@ class LandingNoteTest {
 
         val card = LandingNote.dubbed("Funk Kit", onCard = true, files = 1, where = "SD/Funk Kit")
         assertEquals("FUNK KIT IS ON THE CARD.", card.title)
-        assertEquals("1 FILE · SIDE A: PROGRAMS · SIDE B: SAMPLES", card.lines.first().text)
+        assertEquals("1 FILE · PROGRAMS AND SAMPLES", card.lines.first().text)
     }
 
     @Test

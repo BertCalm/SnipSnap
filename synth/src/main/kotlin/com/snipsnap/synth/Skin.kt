@@ -142,8 +142,21 @@ object Skin {
      * is today's render, and any other take re-seeds the beater or stick
      * click's or snare wires' noise, so two hits do not share one texture. The [STRUCK]
      * voices read it; nothing else in the hit is random.
+     *
+     * [reseedUnstruck] lets the hats, ride, shaker and stick read [take] too,
+     * re-seeding their metal, beads or click. It is off by default, so those
+     * voices keep ignoring the take as they always have, and a caller that
+     * already passes takes (FIRED BRONZE's hats) keeps its saved sound.
+     * BREAKER turns it on for its own sources.
      */
-    fun render(voice: SkinVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
+    fun render(
+        voice: SkinVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f,
+        take: Int = 0,
+        reseedUnstruck: Boolean = false,
+    ): Snip {
+        val noiseTake = if (voice in STRUCK || reseedUnstruck) take else 0
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         // U6 (docs/SYNTH_UPGRADE.md): render oversampled, same contract as
@@ -152,12 +165,12 @@ object Skin {
         val raw = when (voice) {
             SkinVoice.KICK -> kick(m, renderRate, velocity = velocity, take = take)
             SkinVoice.SNARE -> snare(m, renderRate, velocity, take)
-            SkinVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
-            SkinVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
+            SkinVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate, take = noiseTake)
+            SkinVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate, take = noiseTake)
             SkinVoice.TOM -> tom(m, renderRate, velocity, take)
-            SkinVoice.RIDE -> ride(m, renderRate)
-            SkinVoice.SHAKER -> shaker(m, renderRate)
-            SkinVoice.STICK -> stick(m, renderRate)
+            SkinVoice.RIDE -> ride(m, renderRate, noiseTake)
+            SkinVoice.SHAKER -> shaker(m, renderRate, noiseTake)
+            SkinVoice.STICK -> stick(m, renderRate, noiseTake)
         }
         val punch = m.getValue("PUNCH")
         // Punch (U3) needs its loudness reference set before it reshapes
@@ -390,7 +403,7 @@ object Skin {
 
     private fun hat(
         m: Map<String, Float>, open: Boolean, rate: Int,
-        rootHz: Float? = null, decaySeconds: Float? = null,
+        rootHz: Float? = null, decaySeconds: Float? = null, take: Int = 0,
     ): FloatArray {
         val base = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 5200f, 8200f)
         val t60 = decaySeconds ?: if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
@@ -411,7 +424,7 @@ object Skin {
         // decay is set entirely by the explicit envelope below, not bound
         // by Dsp.TptSvf's own damping floor the way a single-impulse
         // excitation would be (see modalBody's doc comment).
-        val noise = Dsp.Noise(if (open) 19 else 23)
+        val noise = Dsp.Noise(if (take == 0) (if (open) 19 else 23) else Dsp.seedFor("SKIN", if (open) "HAT_OPEN" else "HAT_CLOSED", "NOISE", take))
         val filters = HAT_RATIOS.map { Dsp.TptSvf(rate) }
         val freqs = HAT_RATIOS.map { ratio -> (base * Math.pow(ratio.toDouble(), spread.toDouble())).toFloat() }
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
@@ -472,7 +485,7 @@ object Skin {
 
     private val RIDE_RATIOS = floatArrayOf(1f, 1.19f, 1.57f, 2.14f, 2.63f, 3.08f, 3.55f, 4.11f)
 
-    private fun ride(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun ride(m: Map<String, Float>, rate: Int, take: Int = 0): FloatArray {
         val base = Dsp.expMap(m.getValue("TUNE"), 3200f, 5200f)
         // Capped well under Classifier.LOOP_MIN_SECONDS (1.5s): at t60=1.0
         // this renders 1.4s (`seconds = t60 * 1.4f` below), same margin
@@ -484,7 +497,7 @@ object Skin {
         // Same continuous-noise-through-a-bank recipe as hat(), but denser
         // (8 modes, not 6) and tuned for a long bell-like sustain rather
         // than a short shimmer — the wash a ride is defined by.
-        val noise = Dsp.Noise(29)
+        val noise = Dsp.Noise(if (take == 0) 29 else Dsp.seedFor("SKIN", "RIDE", "WASH", take))
         val filters = RIDE_RATIOS.map { Dsp.TptSvf(rate) }
         val freqs = RIDE_RATIOS.map { ratio -> (base * Math.pow(ratio.toDouble(), spread.toDouble())).toFloat() }
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
@@ -514,7 +527,7 @@ object Skin {
         val sizzle = m.getValue("SIZZLE")
         if (sizzle > 0f) {
             val washPeak = out.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9f)
-            val rivets = Dsp.Noise(Dsp.seedFor("SKIN", "RIDE", "SIZZLE"))
+            val rivets = Dsp.Noise(if (take == 0) Dsp.seedFor("SKIN", "RIDE", "SIZZLE") else Dsp.seedFor("SKIN", "RIDE", "SIZZLE", take))
             val hp1 = Dsp.OnePole(rate)
             val hp2 = Dsp.OnePole(rate)
             val rivetEnv = Dsp.Env(attackSeconds = 0.004f, decay2T60 = t60 * 1.3f)
@@ -529,7 +542,7 @@ object Skin {
         return out
     }
 
-    private fun shaker(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun shaker(m: Map<String, Float>, rate: Int, take: Int = 0): FloatArray {
         val bandHz = Dsp.expMap(m.getValue("TONE"), 3500f, 9000f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.08f, 0.5f)
         // Broadband noise, not a resonant bank: a shaker has no tonal
@@ -547,11 +560,11 @@ object Skin {
         // 250 beads/s with 1.5 ms of ring each leaves ~4 ms gaps. (900/s
         // at 2.5 ms, tried first, overlapped back into smooth noise.)
         val grain = m.getValue("GRAIN")
-        val beads = kotlin.random.Random(Dsp.seedFor("SKIN", "SHAKER", "GRAIN"))
+        val beads = kotlin.random.Random(if (take == 0) Dsp.seedFor("SKIN", "SHAKER", "GRAIN") else Dsp.seedFor("SKIN", "SHAKER", "GRAIN", take))
         val beadChance = 250.0 / rate
         val beadDecay = exp(-1.0 / (0.0015 * rate)).toFloat()
         var beadEnv = 0f
-        val noise = Dsp.Noise(31)
+        val noise = Dsp.Noise(if (take == 0) 31 else Dsp.seedFor("SKIN", "SHAKER", "NOISE", take))
         val svf = Dsp.TptSvf(rate)
         val env = Dsp.Env(attackSeconds = attack, decay2T60 = t60)
         val out = FloatArray(frames(t60 * 1.4f, rate))
@@ -570,7 +583,7 @@ object Skin {
         return out
     }
 
-    private fun stick(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun stick(m: Map<String, Float>, rate: Int, take: Int = 0): FloatArray {
         // The rimshot/stick click: one tuned sine partial, decay set
         // directly by Dsp.Env. An impulse-excited Dsp.TptSvf mode (Thump.
         // rim()'s own shape, but with the newer filter) was tried first
@@ -597,7 +610,7 @@ object Skin {
         val click = m.getValue("CLICK")
         val out = modalBody(partials, seconds = seconds, rate = rate)
         if (click > 0f) {
-            val noise = Dsp.Noise(Dsp.seedFor("SKIN", "STICK", "CLICK"))
+            val noise = Dsp.Noise(if (take == 0) Dsp.seedFor("SKIN", "STICK", "CLICK") else Dsp.seedFor("SKIN", "STICK", "CLICK", take))
             for (i in out.indices) {
                 val t = i.toFloat() / rate
                 if (t >= 0.002f) break

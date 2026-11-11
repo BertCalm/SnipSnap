@@ -1347,14 +1347,14 @@ fun SurfaceScreen(
 
                 // PAD ◄ name ►, RING and LATCH.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
+                    ActionButton("PREVIOUS PAD", scheme, enabled = padName != null) { stepPad(-1) }
                     TapeText(
                         padName?.let { if (ringVoice) it else "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
                         TapeType.pixel,
                         scheme.ink.tape,
                         Modifier.weight(1f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+                    ActionButton("NEXT PAD", scheme, enabled = padName != null) { stepPad(+1) }
                     // Live whenever a kit is open (a kit with no pads can still
                     // have a voice this way) - a tap with nothing listening says
                     // where to go rather than sitting disabled. Lit while the
@@ -1915,7 +1915,7 @@ private fun PanelStrip(
 @Composable
 private fun PrintDestination(toPad: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onPick: (Boolean) -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        SegmentButton("→ TAPE", active = !toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(false) }
+        SegmentButton("→ SAMPLE", active = !toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(false) }
         SegmentButton("→ PAD", active = toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(true) }
     }
 }

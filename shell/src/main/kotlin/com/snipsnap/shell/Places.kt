@@ -26,10 +26,10 @@ object Places {
     // ---- the dock ----
 
     /** Doors the dock can hold. Each carries its own arrow, as every door label does. */
-    const val DOOR_CUT = "CUT ▸"
+    const val DOOR_CUT = "CHOP ▸"
     const val DOOR_PADS = "PADS ▸"
     const val DOOR_BEAT = "BEAT ▸"
-    const val DOOR_OUT = "OUT ▸"
+    const val DOOR_OUT = "EXPORT ▸"
 
     const val LISTEN = "LISTEN · MIC"
 
@@ -46,7 +46,7 @@ object Places {
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.
      */
-    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND"
+    const val CATCH_FIRST = "LISTEN FOR YOUR FIRST SOUND"
 
     /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. No arrow: that page is Android's, not a screen of ours. */
     const val OPEN_SETTINGS = "OPEN SETTINGS"
@@ -93,7 +93,7 @@ object Places {
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
         val s = secondsOnTape.coerceAtLeast(0)
-        return "ARMED · %02d:%02d ON TAPE".format(Locale.ROOT, s / 60, s % 60)
+        return "LISTENING · %02d:%02d BUFFERED".format(Locale.ROOT, s / 60, s % 60)
     }
 
     fun playing(bpm: Float?, bar: Int): String =
@@ -120,7 +120,7 @@ object Places {
     fun switchKitName(line: String): String = "SWITCH KIT · " + line.removeSuffix(" ▾")
 
     const val NO_KITS = "NO KITS YET"
-    const val ADD_FROM_SHELF = "+ FROM SHELF"
+    const val ADD_FROM_SHELF = "+ FROM LIBRARY"
 
     /** The header chip that opens [ADD_FROM_SHELF]: the same door, in the room the header has. */
     const val ADD_KIT = "+ KIT"
@@ -135,9 +135,9 @@ object Places {
     const val TOOL_BACKUP_DESC = "EVERY KIT, ONE FILE"
     const val TOOL_CHOP_ALL = "CHOP ALL"
     const val TOOL_CHOP_ALL_DESC = "EVERY FILE, ONE KIT"
-    const val TOOL_XRAY = "X-RAY"
+    const val TOOL_XRAY = "INSPECT FILE"
     const val TOOL_XRAY_DESC = "INSPECT A FILE"
-    const val TOOL_DOUBLES = "DOUBLES"
+    const val TOOL_DOUBLES = "FIND SIMILAR SOUNDS"
     const val TOOL_DOUBLES_DESC = "SAME SOUND, ANY KIT"
 
     /**
@@ -147,15 +147,15 @@ object Places {
     const val PROJECT_RENAME = "RENAME"
     const val PROJECT_RENAME_DESC = "GIVE THE PROJECT A NEW NAME"
     const val PROJECT_DELETE = "DELETE"
-    const val PROJECT_DELETE_DESC = "TO THE BIN, KITS STAY ON THE SHELF"
+    const val PROJECT_DELETE_DESC = "TO THE TRASH, KITS STAY IN THE LIBRARY"
     const val PROJECT_DROP = "REMOVE A KIT"
-    const val PROJECT_DROP_DESC = "TAKE ONE OUT, IT STAYS ON THE SHELF"
+    const val PROJECT_DROP_DESC = "TAKE ONE OUT, IT STAYS IN THE LIBRARY"
 
     /** The kit sheet's title. */
     const val SHEET_KITS_TITLE = "SWITCH KIT"
 
     /** The kit sheet's last row, and the line under it: it opens the shelf in pick mode. */
-    const val SHEET_ADD_FROM_SHELF = "+ FROM SHELF"
+    const val SHEET_ADD_FROM_SHELF = "+ FROM LIBRARY"
     const val SHEET_ADD_FROM_SHELF_DESC = "PUT ANOTHER KIT IN THIS PROJECT"
 
     /**
@@ -186,7 +186,7 @@ object Places {
      * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
      * button's or section's name inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
      */
-    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · BREED · SCULPT · STRETCH · ROUND ROBIN"
+    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
 
     /** THIS KIT's heading over REMIX BANK B. */
     const val KIT_BANK_B = "BANK B"
@@ -232,35 +232,35 @@ object Places {
      * place that holds the bench.
      */
     val HELP: Map<String, List<String>> = linkedMapOf(
-        "SHELF" to listOf(
-            "· YOUR PROJECTS, AND THE KITS, SNIPS AND INSTRUMENTS THEY SHARE.",
+        "LIBRARY" to listOf(
+            "· YOUR PROJECTS, AND THE KITS, SAMPLES AND INSTRUMENTS THEY SHARE.",
             "· A KIT IS AN MPC PROGRAM. A PROJECT IS AN MPC PROJECT. THE CARD READS BOTH.",
-            "· HOLD A KIT TO RENAME IT, OR TO BIN IT. THE BIN KEEPS IT ${Reversal.DAYS} DAYS.",
-            "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, X-RAY A FILE, FIND DOUBLES.",
+            "· HOLD A KIT TO RENAME IT, OR TO TRASH IT. THE TRASH KEEPS IT ${Reversal.DAYS} DAYS.",
+            "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, INSPECT A FILE, FIND SIMILAR SOUNDS.",
         ),
-        "TAPE" to listOf(
-            "· DECK: RECORD A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
-            "· CUT: THE MACHINE CUTS ON THE HITS AND GUESSES; ARGUE WITH IT.",
-            "· INSTANT KIT AND CATCH A HIT LAND SOUNDS ON PADS WITHOUT CUT.",
-            "· HUM ALONG ON CUT: THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
+        "SAMPLE" to listOf(
+            "· RECORD: A SOUND FROM THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
+            "· CHOP: THE MACHINE CUTS ON THE HITS AND GUESSES; ARGUE WITH IT.",
+            "· INSTANT KIT AND CATCH A HIT LAND SOUNDS ON PADS WITHOUT CHOP.",
+            "· HUM ALONG ON CHOP: THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
         ),
         "PROJECT" to listOf(
             "· PADS: TAP TO HEAR, OPEN ▸ FOR ITS BENCH. RAW ON A STRIP: NOTHING DONE YET.",
             "· BEAT: THE PROJECT'S PATTERNS. RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
-            "· OUT: WRITE THE KIT, OR THE WHOLE PROJECT AS A SESSION. THE MPC OPENS BOTH.",
-            "· ONE KIT IS ACTIVE AT A TIME. SWAP IT ABOVE THE GRID; ADD MORE FROM THE SHELF.",
-            "· VERSIONS: EVERY SAVE IS A TAKE. EVERY DELETE GOES TO THE BIN FIRST.",
+            "· EXPORT: WRITE THE KIT, OR THE PROJECT AS A SESSION. THE MPC OPENS BOTH.",
+            "· ONE KIT IS ACTIVE AT A TIME. SWAP IT ABOVE THE GRID; ADD MORE FROM LIBRARY.",
+            "· VERSIONS: EVERY SAVE IS A VERSION. EVERY DELETE GOES TO THE TRASH FIRST.",
         ),
-        "MAKE" to listOf(
-            "· SYNTH, SNAP AND SURFACE MAKE A SOUND FROM NOTHING AND SEND IT TO A PAD.",
-            "· SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
+        "CREATE" to listOf(
+            "· SYNTH, PHOTO TO SOUND, TOUCH SURFACE: A SOUND FROM NOTHING, TO A PAD.",
+            "· TOUCH SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
             "· CONFLUENCE VOICES: HEAR A RECORDED PASSAGE, THEN SAVE IT AS A PAD.",
             "· MY VOICE: A SHORT VOWEL OF YOURS BECOMES A VOICE, KEPT ON THIS PHONE.",
         ),
         "THE DOCK" to listOf(
-            "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING ON PADS, OUT, MAKE AND A PAD BENCH.",
-            "· THE LIGHT IS THE TAPE. WHILE IT IS ARMED, SNIP KEEPS WHAT IT HEARS, UP TO 60s.",
+            "· THE BEAT KEEPS PLAYING ON PADS, EXPORT, CREATE AND A PAD BENCH.",
+            "· THE LIGHT MEANS LISTENING. WHILE ON, SNIP KEEPS WHAT IT HEARS, UP TO 60s.",
             "· THE LINE SAYS WHAT JUST HAPPENED. A DOOR BESIDE IT STAYS UNTIL YOU TAKE IT.",
         ),
     )

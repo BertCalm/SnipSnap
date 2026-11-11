@@ -11,9 +11,9 @@ class PlacesTest {
 
     @Test
     fun `the rows read the places and stages the navigation model has`() {
-        assertEquals(listOf("SHELF", "TAPE", "PROJECT", "MAKE"), Places.PLACES)
-        assertEquals(listOf("DECK", "CUT"), Places.TAPE_STAGES)
-        assertEquals(listOf("PADS", "BEAT", "OUT"), Places.PROJECT_STAGES)
+        assertEquals(listOf("LIBRARY", "SAMPLE", "PROJECT", "CREATE"), Places.PLACES)
+        assertEquals(listOf("RECORD", "CHOP"), Places.TAPE_STAGES)
+        assertEquals(listOf("PADS", "BEAT", "EXPORT"), Places.PROJECT_STAGES)
     }
 
     @Test
@@ -54,9 +54,9 @@ class PlacesTest {
         assertTrue(note.endsWith(" OR START FROM A KIT."), note)
         // The places moved out of the note when the panel's row of places went:
         // the tab row above says them, and the buttons under the note are the way in.
-        assertFalse("TAPE" in note || "PROJECT" in note, "the note repeats the tab row: $note")
+        assertFalse("SAMPLE" in note || "PROJECT" in note, "the note repeats the tab row: $note")
         assertFalse("TABS" in note, "there are no tabs in the four-place shape: $note")
-        for (word in listOf("CHOP", "EXPORT", "SHELF", "MAKE")) {
+        for (word in listOf("CHOP", "EXPORT", "LIBRARY", "CREATE")) {
             assertFalse(Regex("""\b$word\b""").containsMatchIn(note), "$word is a stage or a place the note does not need: $note")
         }
     }

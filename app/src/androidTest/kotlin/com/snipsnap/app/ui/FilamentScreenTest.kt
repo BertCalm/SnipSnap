@@ -493,7 +493,7 @@ class FilamentScreenTest : ComposeScreenTest() {
     @Test
     fun fresh_default_scramble_and_same_frame_navigation_preserve_all_controls() {
         show(shelfRoot())
-        val scramble = button("SCRAMBLE").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        val scramble = button("RANDOMISE").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         compose.runOnIdle {
             assertTrue(scramble.invoke())
             screenVisible = false
@@ -532,7 +532,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         assertRoot(67)
         assertEquals(source.velocity, progress("VELOCITY"), 0f)
 
-        activate("SCRAMBLE")
+        activate("RANDOMISE")
         waitFor("scrambled FILAMENT controls") { currentPatch(source.voice)?.macros != source.macros }
         assertGeometry(source, checkNotNull(currentPatch(source.voice)))
         dial("INJECT", .83f)

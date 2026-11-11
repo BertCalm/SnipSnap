@@ -127,7 +127,7 @@ class SynthScreenTest : ComposeScreenTest() {
         assertEquals(.25f, progress("WIRE"), 0f)
         val saved = SynthDrafts.read(settings).filterIsInstance<SkinPatch>().single()
         assertEquals(2, saved.model)
-        activate("SCRAMBLE")
+        activate("RANDOMISE")
         val scrambled = SynthDrafts.read(settings).filterIsInstance<SkinPatch>().single()
         assertEquals(setOf("ATTACK", "BODY", "WIRE", "BRIGHTNESS"), scrambled.macros.keys)
         activate("ORIGINAL")
@@ -193,7 +193,7 @@ class SynthScreenTest : ComposeScreenTest() {
             .fetchSemanticsNodes().last()
         compose.runOnIdle { assertTrue(requireNotNull(cancel.config[SemanticsActions.OnClick].action).invoke()) }
         pump()
-        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        button("RANDOMISE").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
         assertEquals(initial.copy(reply = .25f, ring = .75f, velocity = .6f,
@@ -341,7 +341,7 @@ class SynthScreenTest : ComposeScreenTest() {
         }
         adjust("ELDER", .7f)
         adjust("COMMUNE", .73f)
-        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        button("RANDOMISE").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
         compose.runOnIdle {

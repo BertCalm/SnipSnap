@@ -376,7 +376,7 @@ private fun EmptyDeck(onNavigateSnips: () -> Unit) {
     // shelf's own empty list.
     EmptyStatePanel(
         if (armed) Copy.NO_TAPE_YET_ARMED else Copy.NO_TAPE_YET,
-        listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)),
+        listOf(EmptyStateRoute("SAVED SAMPLES ▸", onNavigateSnips)),
     )
 }
 
@@ -899,7 +899,7 @@ private fun TapeDeckContent(
             // The header says what is going on while a RE-TRIM is live:
             // which pad, which tape — in the pad's own colour, the way the
             // PAD SHEET's chip carries it, so the deck reads as that pad's.
-            title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "TAPE",
+            title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "SAMPLE",
             titleColor = retrim?.let {
                 (it.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(it.drumClass)).tape
             } ?: scheme.lcdInk.tape,
@@ -1293,7 +1293,7 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
                 // Named for what the tap switches to, not Copy.ODOMETER_ON/
                 // OFF — those are toasts (full stop, said once) while this
                 // is a control name spoken every time it's found.
-                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SWITCH TO TAPE COUNTER") {
+                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SHOW COUNTER") {
                     model.toggleOdometer()
                     localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)
@@ -1607,7 +1607,7 @@ private fun WaveformLcd(
             // the existing tap-to-seek gesture below has no accessible
             // equivalent because a synthesized click has no X position
             // to seek to, the same gap velocityFromY has for PLAY's pads.
-            .semantics { contentDescription = "TAPE POSITION" }
+            .semantics { contentDescription = "SAMPLE POSITION" }
             .pointerInput(model) {
                 awaitEachGesture {
                     // Read fresh from AwaitPointerEventScope's own `size`

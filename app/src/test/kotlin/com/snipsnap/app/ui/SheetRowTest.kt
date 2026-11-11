@@ -12,7 +12,7 @@ class SheetRowTest {
 
     @Test
     fun `a row with none is spoken as its name alone`() {
-        assertEquals("SETUP ▸", sheetRowSpoken("SETUP ▸", null))
-        assertEquals("SETUP ▸", sheetRowSpoken("SETUP ▸", ""))
+        assertEquals("SETTINGS ▸", sheetRowSpoken("SETTINGS ▸", null))
+        assertEquals("SETTINGS ▸", sheetRowSpoken("SETTINGS ▸", ""))
     }
 }

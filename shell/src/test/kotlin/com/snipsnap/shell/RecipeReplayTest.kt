@@ -47,7 +47,7 @@ class RecipeReplayTest {
         val mutate = RecipeReplay.plan(
             obj("mutate" to obj("mode" to JsonValue.Str("splice"), "with" to JsonValue.Arr(listOf(JsonValue.Str("Kit:A02"))))),
         )
-        assertEquals(RecipeReplay.Plan.Refused("MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED."), mutate)
+        assertEquals(RecipeReplay.Plan.Refused("COMBINE SOUNDS (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED."), mutate)
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_SPLICE), RecipeReplay.plan(obj("splice" to obj("crossfaded" to JsonValue.Bool(true)))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_OUTSIDE), RecipeReplay.plan(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.replayMeasured("THE DOCTOR")), RecipeReplay.plan(obj("doctor" to JsonValue.Str("sub-carve"))))
@@ -155,7 +155,7 @@ class RecipeReplayTest {
         val done = RecipeReplay.apply(m, 2, clip.recipe, "SNARE 02")
         assertEquals(m.pad(1)!!.recipe, done.pad.recipe)
         assertTrue(bytes(m, 1).contentEquals(bytes(m, 2)), "the same era at the same AMT on the same take is the same sound")
-        assertEquals("CRUSH 50% DONE AGAIN ON SNARE 02. ORIGINAL SLEEPS IN THE BIN.", done.toast)
+        assertEquals("CRUSH 50% DONE AGAIN ON SNARE 02. ORIGINAL SLEEPS IN THE TRASH.", done.toast)
 
         val c = twins("Char")
         c.characterPad(1, "punched", 0.7f)
@@ -200,7 +200,7 @@ class RecipeReplayTest {
         val done = RecipeReplay.apply(p, 2, p.pad(1)!!.recipe!!, "SNARE 02")
         assertEquals(p.pad(1)!!.recipe, p.pad(2)!!.recipe)
         assertTrue(bytes(p, 1).contentEquals(bytes(p, 2)), "a patch renders the same bytes wherever it lands")
-        assertEquals("SNARE 02 IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN.", done.toast)
+        assertEquals("SNARE 02 IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE TRASH.", done.toast)
 
         val r = twins("Robin")
         Robin.apply(r, 1, takes = 3, seed = 5)

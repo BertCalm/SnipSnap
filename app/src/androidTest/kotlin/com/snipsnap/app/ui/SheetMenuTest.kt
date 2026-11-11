@@ -25,7 +25,7 @@ class SheetMenuTest : ComposeScreenTest() {
         setPhoneContent {
             SheetMenu("TOOLS", onDismiss) {
                 SheetRow("BACKUP", "EVERY KIT, ONE FILE", onRun, enabled = canRun)
-                SheetRow("X-RAY", "INSPECT A FILE", onOther, accessibilityLabel = "OPEN X-RAY")
+                SheetRow("INSPECT FILE", "INSPECT A FILE", onOther, accessibilityLabel = "OPEN INSPECT FILE")
             }
         }
         pump(Motion.SHEET_SLIDE_MS + 100L)
@@ -35,7 +35,7 @@ class SheetMenuTest : ComposeScreenTest() {
     fun a_row_is_named_by_its_name_and_its_description_and_is_a_full_touch_target() {
         show()
         button("BACKUP. EVERY KIT, ONE FILE").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
-        button("OPEN X-RAY").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
+        button("OPEN INSPECT FILE").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
     }
 
     @Test
@@ -56,7 +56,7 @@ class SheetMenuTest : ComposeScreenTest() {
         var ran = 0
         show(canRun = false, onRun = { ran++ })
         button("BACKUP. EVERY KIT, ONE FILE").assertIsNotEnabled()
-        button("OPEN X-RAY").assertIsEnabled()
+        button("OPEN INSPECT FILE").assertIsEnabled()
         compose.runOnIdle { assertEquals(0, ran) }
     }
 

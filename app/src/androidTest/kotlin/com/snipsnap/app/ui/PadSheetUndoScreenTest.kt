@@ -91,7 +91,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         val dir = File(cache, "pad-sheet-undo-test-${System.nanoTime()}").apply { mkdirs() }
         kitDirs += dir
         WavWriter.write(File(dir, "hit1.wav"), sine(240.0))
-        val kit = Kit(name = "PAD SHEET UNDO TEST", pads = listOf(KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.KICK)), tempoBpm = 92f)
+        val kit = Kit(name = "PAD EDITOR UNDO TEST", pads = listOf(KitPad(slot = 1, sampleFile = "hit1.wav", drumClass = DrumClass.KICK)), tempoBpm = 92f)
         KitStore.save(kit, dir)
         return KitShelf.Entry(dir, kit)
     }
@@ -191,7 +191,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         m.update(1) { it.copy(source = it.source + ("desampled" to "0.12")) }
         m.save()
         val desampled = savedPad(entry)
-        assertTrue("test setup: DE-SAMPLE's bare patch and stamp are on top", PadSheet.isDesampled(desampled))
+        assertTrue("test setup: FIND NEAREST SYNTH's bare patch and stamp are on top", PadSheet.isDesampled(desampled))
         assertEquals(
             "test setup: the take before the de-sample is kept for A01",
             1,
@@ -199,18 +199,18 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         )
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name)
-        waitFor("the MAKE box's DE-SAMPLE line to name the patch", timeoutMillis = 60_000) { hasText("A PATCH NOW, 0.12 AWAY") }
-        activate("UNDO DE-SAMPLE")
+        waitFor("the MAKE box's FIND NEAREST SYNTH line to name the patch", timeoutMillis = 60_000) { hasText("A PATCH NOW, 0.12 AWAY") }
+        activate("UNDO NEAREST SYNTH")
         waitForToast(Copy.UNDESAMPLED)
         val undone = savedPad(entry)
         assertNull("the patch came off", undone.recipe)
         assertFalse("the de-sample's stamp came off", "desampled" in undone.source)
         assertTrue("the take before the de-sample, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
-        waitFor("the MAKE box's DE-SAMPLE line to stop naming a patch", timeoutMillis = 60_000) {
+        waitFor("the MAKE box's FIND NEAREST SYNTH line to stop naming a patch", timeoutMillis = 60_000) {
             hasText("THE HIT MEASURED AGAINST EVERY THUMP")
         }
 
-        activate("UNDO DE-SAMPLE")
+        activate("UNDO NEAREST SYNTH")
         waitForToast(Copy.DESAMPLE_UNDO_NOTHING)
         assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
     }

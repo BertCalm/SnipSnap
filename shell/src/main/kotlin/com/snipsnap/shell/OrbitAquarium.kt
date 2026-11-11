@@ -27,7 +27,7 @@ object OrbitAquarium {
         // Match the actual resampler's floor at the shelf's MPC rate.
         val atMpcRate = floor((sourceFrames + tailFrames) * (WavWriter.MPC_SAMPLE_RATE.toDouble() / sampleRate))
         require(atMpcRate <= (SnipStore.IMPORT_MAX_SEC * WavWriter.MPC_SAMPLE_RATE).toInt()) {
-            "SNIPS HOLDS ${SnipStore.IMPORT_MAX_SEC.toInt()}s INCLUDING FX TAIL. SHORTEN THE SET OR TAIL."
+            "SAVED SAMPLES HOLDS ${SnipStore.IMPORT_MAX_SEC.toInt()}s INCLUDING FX TAIL. SHORTEN THE SET OR TAIL."
         }
         return sourceFrames.toInt()
     }

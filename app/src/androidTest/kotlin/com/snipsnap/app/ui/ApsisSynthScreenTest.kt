@@ -189,7 +189,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         dial("COUPLE", .73f)
         rootTo(48)
         dial("VELOCITY", .43f)
-        press("SCRAMBLE")
+        press("RANDOMISE")
         val values = Apsis.macrosFor(original.voice).associate { it.name to progress(it.name) }
         compose.runOnIdle { visit++ }
         pump()

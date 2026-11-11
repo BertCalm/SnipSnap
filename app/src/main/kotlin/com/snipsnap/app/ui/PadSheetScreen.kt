@@ -946,7 +946,7 @@ fun PadSheetScreen(
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
                         check(freshPad.velocityLayers.isEmpty()) {
-                            "pad $slot is velocity-layered - clear GHOSTS before smearing"
+                            "pad $slot is velocity-layered - clear SOFT HITS before smearing"
                         }
                         // AMT 0 on a pad that isn't smeared: `smearPad`
                         // touches nothing (its own KDoc — a slider must not
@@ -994,7 +994,7 @@ fun PadSheetScreen(
                 // Same in-voice-copy split as the era branch: the
                 // ghosts-before-smearing refusal above is expected user
                 // copy, not a diagnostic.
-                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("EFFECTS", e)
             } finally {
                 busy = false
                 padJob = null
@@ -1062,7 +1062,7 @@ fun PadSheetScreen(
                     val ridingNow = freshPad?.let { PadSheet.readDust(it.recipe)?.tape?.takeIf { t -> DustPrints.isBare(t) } }
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && (from != null || ridingNow == riding)) {
                         check(freshPad.velocityLayers.isEmpty()) {
-                            "pad $slot is velocity-layered - clear GHOSTS before dusting"
+                            "pad $slot is velocity-layered - clear SOFT HITS before dusting"
                         }
                         // AMT 0 on a pad that isn't dusted: `dustPad` touches
                         // nothing, so this is not a landing.
@@ -1099,7 +1099,7 @@ fun PadSheetScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("EFFECTS", e)
             } finally {
                 busy = false
                 padJob = null
@@ -1225,7 +1225,7 @@ fun PadSheetScreen(
                             PadSheet.UnTreat.READY -> f.unEraPad(slot)
                             PadSheet.UnTreat.GHOSTS_POSTDATE -> error(
                                 "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
-                                    "treatment - clear GHOSTS, or accept the current sound, before treating again",
+                                    "treatment - clear SOFT HITS, or accept the current sound, before treating again",
                             )
                             // A recipe with nothing in the bin behind it (a
                             // bank-B twin, a CLI treat, a bin since emptied)
@@ -1284,7 +1284,7 @@ fun PadSheetScreen(
                 when {
                     e is IllegalStateException -> onToast(Copy.RETREAT_REFUSED)
                     e is KitBuilderModel.Unpitched -> onToast(Copy.notANote(e.message ?: "not a note"))
-                    else -> failure("TREATMENT", e)
+                    else -> failure("EFFECTS", e)
                 }
             } finally {
                 busy = false
@@ -1319,7 +1319,7 @@ fun PadSheetScreen(
         val word = Pedals.byKey(gesture.key).word
         applyingSegment = word
         busy = true
-        padJob = Copy.treatmentBusy(word)
+        padJob = Copy.treatmentBusy(PadSheet.displayLabel(word))
         appScope.launch {
             try {
                 var landed: PedalSlate.Landed = PedalSlate.Landed.Gone
@@ -1427,7 +1427,7 @@ fun PadSheetScreen(
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("UNTREAT", e)
+                failure("REMOVE EFFECT", e)
             } finally {
                 busy = false
                 boardJob?.end()
@@ -1686,7 +1686,7 @@ fun PadSheetScreen(
             return
         }
         onRecipeCopied(clip)
-        onToast(Copy.copied(clip.word, clip.from))
+        onToast(Copy.copied(PadSheet.displayLabel(clip.word), clip.from))
     }
 
     /**
@@ -1730,7 +1730,7 @@ fun PadSheetScreen(
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     busy = false
-                    failure("PASTE", e)
+                    failure("PASTE EFFECT", e)
                     return@launch
                 } finally {
                     // The extraction is this job; the commit below begins its own.
@@ -1741,13 +1741,13 @@ fun PadSheetScreen(
                     onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(plan.tape))
                     return@launch
                 }
-                commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+                commitPadEditNow("PASTE EFFECT", onSuccess = { said?.let(onToast) }) { mm ->
                     said = RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer) { print }.toast
                 }
             }.endBoardJobOnCompletion(boardJob)
             return
         }
-        commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+        commitPadEditNow("PASTE EFFECT", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
                 RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer).toast
             } catch (e: KitBuilderModel.Unpitched) {
@@ -1855,7 +1855,7 @@ fun PadSheetScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException && e.message != null) onToast(e.message!!) else failure("STRIKE FX", e)
+                if (e is IllegalArgumentException && e.message != null) onToast(e.message!!) else failure("FX BY VELOCITY", e)
             }
         }
     }
@@ -1864,7 +1864,7 @@ fun PadSheetScreen(
         val room = strikeRoom
         val slap = strikeSlap
         strikeAuditionJob?.cancel()
-        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_ON) }) { mm ->
+        commitPadEditNow("FX BY VELOCITY", onSuccess = { onToast(Copy.STRIKE_FX_ON) }) { mm ->
             mm.strikeFxLayers(slot, room, slap)
         }
     }
@@ -1890,7 +1890,7 @@ fun PadSheetScreen(
 
     fun onStrikeClear() {
         strikeAuditionJob?.cancel()
-        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_OFF) }) { mm ->
+        commitPadEditNow("FX BY VELOCITY", onSuccess = { onToast(Copy.STRIKE_FX_OFF) }) { mm ->
             mm.clearStrikeFxLayers(slot)
         }
     }
@@ -2295,7 +2295,7 @@ fun PadSheetScreen(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 val why = MutateSheet.refusalOf(e)
-                if (why != null) onToast(why.line) else failure("ROULETTE", e)
+                if (why != null) onToast(why.line) else failure("RANDOM PARTNER", e)
             } finally {
                 busy = false
                 boardJob?.end()
@@ -2417,7 +2417,7 @@ fun PadSheetScreen(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 val why = MutateSheet.refusalOf(e)
-                if (why != null) onToast(why.line) else failure("DRIFT", e)
+                if (why != null) onToast(why.line) else failure("RANDOM BLEND", e)
             } finally {
                 busy = false
                 padJob = null
@@ -2738,7 +2738,7 @@ fun PadSheetScreen(
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("RE-AMP AND ROOM", e)
                     } finally {
                         outsideStage = null
                         busy = false
@@ -2751,7 +2751,7 @@ fun PadSheetScreen(
                 // which now runs inside the `appScope` handoff above, not here —
                 // this capture-phase catch only ever sees a mic/IO failure.
                 if (e is CancellationException) throw e
-                failure("OUTSIDE", e)
+                failure("RE-AMP AND ROOM", e)
             } finally {
                 if (!handedOff) {
                     outsideStage = null
@@ -3512,7 +3512,7 @@ fun PadSheetScreen(
                     editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
                 }
                 ToggleChip(
-                    "CHOKE GRP",
+                    "CHOKE GROUP",
                     pad.muteGroup != 0,
                     classColor,
                     scheme,
@@ -3580,13 +3580,13 @@ fun PadSheetScreen(
                 onFractionCommit = ::onRobinOwn,
             )
             StepperSlider(
-                label = "TAKES",
+                label = "ALTERNATES",
                 fraction = ((pendingRobinTakes - KitRobin.MIN_TAKES).toFloat() / (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).coerceIn(0f, 1f),
                 valueText = "%d".format(java.util.Locale.ROOT, pendingRobinTakes),
                 fillColor = classColor,
                 scheme = scheme,
                 enabled = !busy && robinOn,
-                accessibilityLabel = "ROUND ROBIN TAKES",
+                accessibilityLabel = "ROUND ROBIN ALTERNATES",
                 onFractionChange = { f ->
                     pendingRobinTakes = KitRobin.MIN_TAKES + (f * (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).roundToInt()
                     robinDraft.takes = pendingRobinTakes
@@ -3775,7 +3775,7 @@ fun PadSheetScreen(
                 moreText = Copy.pedalMore(pedalCard.moreCount),
                 moreLit = pedalCard.moreLit,
                 placing = pedalPlacing?.let { Pedals.byKey(it).word },
-                amountLabel = pedalCard.marked?.let { Copy.pedalAmt(Pedals.byKey(it).word) } ?: "AMT",
+                amountLabel = pedalCard.marked?.let { Copy.pedalAmt(PadSheet.displayLabel(Pedals.byKey(it).word)) } ?: "AMT",
                 amountEnabled = activeSegment != null || hasPedals,
                 amountFraction = pendingAmt,
                 amountText = "${(pendingAmt * 100).roundToInt()}%",
@@ -3794,7 +3794,7 @@ fun PadSheetScreen(
                                 val outgoing = pedalRow.keys[pedalRow.words.indexOf(seg)]
                                 runCatching { PedalSlate.putOnRow(pedalRow, placing, outgoing) }.onSuccess { row ->
                                     onPedalRowChange(row)
-                                    onToast(Copy.rowSwapped(Pedals.byKey(placing).word, seg))
+                                    onToast(Copy.rowSwapped(PadSheet.displayLabel(Pedals.byKey(placing).word), PadSheet.displayLabel(seg)))
                                 }
                             }
                         }
@@ -3901,7 +3901,7 @@ fun PadSheetScreen(
             // above for the same reason.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(
-                    "COPY LAST TREATMENT",
+                    "COPY LAST EFFECT",
                     scheme,
                     enabled = !busy,
                     dimmed = pad.recipe == null,
@@ -3912,7 +3912,7 @@ fun PadSheetScreen(
                     },
                 )
                 ActionButton(
-                    clipboard?.let { "PASTE · ${it.word}" } ?: "PASTE",
+                    clipboard?.let { "PASTE EFFECT · ${PadSheet.displayLabel(it.word)}" } ?: "PASTE EFFECT",
                     scheme,
                     enabled = !busy,
                     dimmed = clipboard == null,
@@ -3924,7 +3924,7 @@ fun PadSheetScreen(
                 )
             }
             TapeText(
-                clipboard?.let { "ON THE CLIPBOARD: ${it.word} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                clipboard?.let { "ON THE CLIPBOARD: ${PadSheet.displayLabel(it.word)} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
@@ -4104,7 +4104,7 @@ fun PadSheetScreen(
                 )
             }
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("SUSTAIN ANY SOUND", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             StepperSlider(
                 label = "DEPTH",
                 fraction = pendingDepth,
@@ -4126,7 +4126,7 @@ fun PadSheetScreen(
                 onFractionCommit = {},
             )
             ActionButton(
-                "MAKE PAD · INSTRUMENT",
+                "MAKE SUSTAINED INSTRUMENT",
                 scheme,
                 enabled = !busy,
                 working = busy && padJob == Copy.MAKE_PAD_BUSY,
@@ -4144,7 +4144,7 @@ fun PadSheetScreen(
             // (onUndesample). Named in full for TalkBack: MAKE holds five doors, so a
             // bare UNDO would not say whose it is.
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                TapeText("FIND NEAREST SYNTH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
                 ActionButton(
                     Copy.UNDO_DESAMPLE,
                     scheme,
@@ -4178,9 +4178,10 @@ fun PadSheetScreen(
             // the only door into GRAIN FIELD, so the door was drawn at no
             // height at all (September wiring review, finding 5).
             ActionButton(
-                "GRAIN ▸",
+                "GRAIN · PLAY THIS SOUND AS GRAINS ▸",
                 scheme,
                 enabled = !busy,
+                accessibilityLabel = Copy.GRAIN_DOOR_LINE,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onGrainField(slot) },
             )
@@ -4237,9 +4238,10 @@ fun PadSheetScreen(
         // while busy - see `DeleteButton` one line above.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
-                prevSlot?.let { "◄ ${padTag(it)}" } ?: "◄",
+                "PREVIOUS PAD",
                 scheme,
                 enabled = prevSlot != null && !busy,
+                accessibilityLabel = prevSlot?.let { "PREVIOUS PAD, ${padTag(it)}" },
                 onClick = { prevSlot?.let(onSlotChange) },
             )
             // No swipe gesture is wired here — the buttons on either side are
@@ -4248,9 +4250,10 @@ fun PadSheetScreen(
             val position = (idx + 1).takeIf { idx >= 0 }?.let { "$it OF ${assignedSlots.size}" } ?: ""
             TapeText(position, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton(
-                nextSlot?.let { "${padTag(it)} ►" } ?: "►",
+                "NEXT PAD",
                 scheme,
                 enabled = nextSlot != null && !busy,
+                accessibilityLabel = nextSlot?.let { "NEXT PAD, ${padTag(it)}" },
                 onClick = { nextSlot?.let(onSlotChange) },
             )
         }
@@ -4634,13 +4637,13 @@ private fun StrikeFxSection(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("STRIKE FX", TapeType.pixelSmall, scheme.ink2.tape)
+            TapeText("FX BY VELOCITY", TapeType.pixelSmall, scheme.ink2.tape)
             if (kept) {
                 TapeText(pad.velocityLayers.mapNotNull { it.displayName }.joinToString(" · "), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f))
             }
         }
         StepperSlider(
-            label = "ROOM",
+            label = "REVERB",
             fraction = room,
             valueText = "%.2f".format(java.util.Locale.ROOT, room),
             fillColor = classColor,
@@ -4648,7 +4651,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
-            accessibilityLabel = "STRIKE FX ROOM",
+            accessibilityLabel = "FX BY VELOCITY REVERB",
         )
         StepperSlider(
             label = "SLAP",
@@ -4659,14 +4662,14 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
-            accessibilityLabel = "STRIKE FX SLAP",
+            accessibilityLabel = "FX BY VELOCITY SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
-            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
-            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
             if (kept) {
-                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
             }
         }
     }
@@ -5028,7 +5031,7 @@ private fun ObliterateBoardControls(
         onFractionChange = { fraction -> onChange { current -> current.copy(shimmerMix = (fraction * 50).roundToInt() / 100.0) } },
         onFractionCommit = {},
     )
-    TapeText("${settings.bpm.roundToInt()} BPM · 1/${settings.division} · ${if (settings.pitched) "OCTAVE" else "ROOM"}",
+    TapeText("${settings.bpm.roundToInt()} BPM · 1/${settings.division} · ${if (settings.pitched) "OCTAVE" else "UNPITCHED"}",
         TapeType.pixelSmall, scheme.ink2.tape)
     ActionButton("CLOCK & PATTERN", scheme, enabled = !busy, lit = clockOpen,
         onClick = { clockOpen = !clockOpen })
@@ -5046,7 +5049,7 @@ private fun ObliterateBoardControls(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (pitched in listOf(true, false)) {
-                val label = if (pitched) "OCTAVE" else "ROOM"
+                val label = if (pitched) "OCTAVE" else "UNPITCHED"
                 ActionButton(label, scheme, enabled = !busy, lit = settings.pitched == pitched,
                     accessibilityLabel = "OBLITERATE $label", modifier = Modifier.weight(1f),
                     onClick = { onChange { current -> current.copy(pitched = pitched) } })
@@ -5251,13 +5254,14 @@ private fun PedalMoreList(
     Column(Modifier.fillMaxWidth().testTag("pedal-more-list"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText(Copy.PEDAL_MORE_HEADING, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         for (line in listed) {
+            val shown = PadSheet.displayLabel(line.word)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 ActionButton(
-                    line.word,
+                    shown,
                     scheme,
                     enabled = !busy && (line.on || line.inLibrary),
                     lit = line.on,
-                    accessibilityLabel = "${line.word}, ${if (line.on) "ON" else "OFF"}",
+                    accessibilityLabel = "$shown, ${if (line.on) "ON" else "OFF"}",
                     modifier = Modifier.weight(1.2f).testTag("pedal-more-${line.key}"),
                     onClick = { onToggle(line) },
                 )
@@ -5266,7 +5270,7 @@ private fun PedalMoreList(
                     scheme,
                     enabled = !busy && line.on,
                     lit = line.marked,
-                    accessibilityLabel = "AMT FOR ${line.word}",
+                    accessibilityLabel = "AMT FOR $shown",
                     modifier = Modifier.weight(0.7f).testTag("pedal-more-${line.key}-amt"),
                     onClick = { onMark(line.key) },
                 )
@@ -5276,7 +5280,7 @@ private fun PedalMoreList(
                         if (before) "PRE" else "POST",
                         scheme,
                         enabled = !busy,
-                        accessibilityLabel = "${line.word} ${if (before) "BEFORE" else "AFTER"} THE AMP",
+                        accessibilityLabel = "$shown ${if (before) "BEFORE" else "AFTER"} THE AMP",
                         modifier = Modifier.weight(0.8f).testTag("pedal-more-${line.key}-side"),
                         onClick = { onFlip(line) },
                     )
@@ -5289,7 +5293,7 @@ private fun PedalMoreList(
                         scheme,
                         enabled = true,
                         lit = placing == line.key,
-                        accessibilityLabel = "${Copy.PUT_ON_ROW}: ${line.word}",
+                        accessibilityLabel = "${Copy.PUT_ON_ROW}: $shown",
                         modifier = Modifier.weight(1.3f).testTag("pedal-more-${line.key}-row"),
                         onClick = { onPutOnRow(line.key) },
                     )
@@ -5331,7 +5335,7 @@ private fun DustFromRow(
                 onClick = { if (open) onClose() else onOpen() },
             )
             TapeText(
-                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
+                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO SAMPLE YET",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.weight(1f),
@@ -5506,11 +5510,11 @@ private fun MutateCard(
                             // Always clickable, `!busy` forwarded rather
                             // than dropped (accessibility audit finding 12).
                             // The selected move says so: the bevel's fill alone was invisible to TalkBack.
-                            .tapeClick(label = if (selected) "$m, SELECTED" else m, enabled = !busy) { onMode(m) }
+                            .tapeClick(label = if (selected) "${MutateSheet.modeLabel(m)}, SELECTED" else MutateSheet.modeLabel(m), enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(MutateSheet.modeLabel(m), TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -5583,7 +5587,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -5692,7 +5696,7 @@ private fun MutateCard(
         // writes, moved down beside KEEP. Neither carries a ▸: both act
         // right here with a toast, never navigating or opening a panel.
         ActionButton(
-            deal?.let { "ROULETTE · ${MutateSheet.partnerName(it)}" } ?: MutateSheet.ROULETTE_LABEL,
+            deal?.let { "RANDOM PARTNER · ${MutateSheet.partnerName(it)}" } ?: MutateSheet.ROULETTE_LABEL,
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -5829,7 +5833,7 @@ private fun OutsideCard(
         // The room the last ROOM trip measured, onto the shelf for any pad.
         // The row stays, dimmed, so the card never jumps when a room lands.
         ActionButton(
-            "KEEP ROOM · ON THE SHELF, FOR ANY PAD",
+            "KEEP ROOM · IN THE LIBRARY, FOR ANY PAD",
             scheme,
             enabled = !busy && canKeep,
             dimmed = !canKeep,
@@ -5956,7 +5960,7 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
             // enabled forwarded, not dropped — see ActionButton's own note.
-            .tapeClick(label = "DELETE → BIN", enabled = enabled, onClick = onClick)
+            .tapeClick(label = "DELETE → TRASH", enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -5966,6 +5970,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
         // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
         // BinRedGlow at reduced alpha risks failing contrast against the
         // dark LCD fill, where ink3 is a scheme token already tuned for it.
-        TapeText("DELETE → BIN", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
+        TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
     }
 }

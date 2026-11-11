@@ -39,6 +39,22 @@ object MutateSheet {
     /** Move order, left to right, as the card draws it. */
     val MODES: List<String> = Mutate.Mode.values().map { it.name }
 
+    private val MODE_LABELS: Map<String, String> = mapOf(
+        "STACK" to "LAYER",
+        "SPLICE" to "JOIN",
+        "SPLIT" to "CROSSOVER",
+        "MORPH" to "BLEND",
+        "ROOM" to "ROOM TONE",
+        "TRANSPLANT" to "BORROW TONE",
+        "DRIFT" to "RANDOM BLEND",
+    )
+
+    /**
+     * The word the card draws for a move or a [Applied.word]. The ids (`STACK`, `MORPH`...) are what a
+     * recipe saves and what [modeFor] reads; only this output is shown. A word with no entry draws itself.
+     */
+    fun modeLabel(name: String): String = MODE_LABELS[name] ?: name
+
     fun modeFor(name: String): Mutate.Mode =
         Mutate.Mode.values().firstOrNull { it.name == name }
             ?: throw IllegalArgumentException("unknown mutate move '$name' - the card draws: ${MODES.joinToString(", ")}")
@@ -490,16 +506,16 @@ object MutateSheet {
     const val KEEP_LABEL = "KEEP"
 
     /** DRIFT beside KEEP: it picks a partner, blends toward it and saves, in one tap, and its label says it saves. */
-    const val DRIFT_LABEL = "DRIFT · BLEND & SAVE"
+    const val DRIFT_LABEL = "RANDOM BLEND · SAVES"
 
     /** ROULETTE at rest: it only picks a partner, and writes nothing. */
-    const val ROULETTE_LABEL = "ROULETTE · PICK A PARTNER OFF THE SHELF"
+    const val ROULETTE_LABEL = "RANDOM PARTNER · PICK ONE FROM THE LIBRARY"
 
     /** The partner panel's room row with no room kept (drawn from round M2). It avoids KEEP ROOM: KEEP is the card's commit verb. */
-    const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN OUTSIDE ▸ ROOM"
+    const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN RE-AMP AND ROOM"
 
     /** The partner panel's other-kit row on a one-kit shelf (drawn from round M2). */
-    const val NO_OTHER_KIT_LINE = "NO OTHER KIT ON THE SHELF"
+    const val NO_OTHER_KIT_LINE = "NO OTHER KIT IN THE LIBRARY"
 
     /** STACK's knob row, where the bar would be: `design/mutate-v2/Moves.dc.html:45`, verbatim. */
     const val deadKnobLine = "NO KNOB — THEY LINE UP ON THE HIT"
@@ -539,7 +555,7 @@ object MutateSheet {
 
     /** BECOME's row: its meaning on the caption line under its bar on MORPH; on every other move, the words its dead row draws. */
     fun becomeMeaning(mode: Mutate.Mode): String =
-        if (mode == Mutate.Mode.MORPH) "HOW LONG THE TURN TAKES" else "ONLY MORPH TURNS OVER TIME"
+        if (mode == Mutate.Mode.MORPH) "HOW LONG THE TURN TAKES" else "ONLY BLEND TURNS OVER TIME"
 
     /**
      * The partner as the pairing line names it, in capitals, at most

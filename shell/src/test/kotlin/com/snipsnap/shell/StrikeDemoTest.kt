@@ -16,8 +16,8 @@ class StrikeDemoTest {
         val dir = kotlin.io.path.createTempDirectory("strike-fx").toFile()
         try {
             val started = System.nanoTime()
-            val kit = StarterKits.byId("strike-fx")!!.render("STRIKE FX", dir)
-            println("STRIKE FX creation including WAV writes: ${(System.nanoTime() - started) / 1_000_000} ms")
+            val kit = StarterKits.byId("strike-fx")!!.render("FX BY VELOCITY", dir)
+            println("FX BY VELOCITY creation including WAV writes: ${(System.nanoTime() - started) / 1_000_000} ms")
             assertEquals(kit, KitStore.load(dir), "labels and layers survive saving")
             assertEquals(4, kit.pads.size)
             for (pad in kit.pads) {

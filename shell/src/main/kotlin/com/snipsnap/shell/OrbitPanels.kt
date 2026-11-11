@@ -83,7 +83,7 @@ object OrbitPanels {
 
     const val SPREAD_HELP = "AS EVEN AS THE STEPS ALLOW. ON THE RING'S FIRST PAD."
 
-    fun spreadTitle(steps: Int): String = "SPREAD HOW MANY HITS ROUND ${Copy.countOf(steps, "STEP", "STEPS")}?"
+    fun spreadTitle(steps: Int): String = "SPACE EVENLY · HOW MANY HITS ROUND ${Copy.countOf(steps, "STEP", "STEPS")}?"
 
     /** A tempo line in seconds for a printing length row, to one place. */
     internal fun seconds(s: Float): String = "%.1f".format(Locale.ROOT, s)

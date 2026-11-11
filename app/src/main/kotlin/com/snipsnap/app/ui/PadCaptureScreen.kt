@@ -299,7 +299,7 @@ fun PadCaptureScreen(
     fun grab() {
         commitToPad(
             gesture = Gesture.GRAB,
-            successLabel = Copy.padGestureLanded("GRABBED", padTag(slot)),
+            successLabel = Copy.padGestureLanded("SAVED", padTag(slot)),
             nothingLabel = Copy.GRAB_NOTHING_YET,
             failureAction = "GRAB",
         ) {
@@ -435,7 +435,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB · UP TO ${GRAB_SECONDS}s",
+            label = if (committing == Gesture.GRAB) "SAVING…" else "SAVE LAST ${GRAB_SECONDS} S",
             enabled = armed && committing == null,
             onClick = ::grab,
         )

@@ -65,7 +65,7 @@ internal fun ConfluenceGatheringCard(
             GatheringSlider("INDIVIDUALITY", controls.divergence, percent(controls.divergence), fillColor, scheme, enabled) {
                 onControlsChange(controls.copy(divergence = (it * 40f).roundToInt() / 40f))
             }
-            GatheringSlider("ROOM", controls.space, percent(controls.space), fillColor, scheme, enabled) {
+            GatheringSlider("REVERB", controls.space, percent(controls.space), fillColor, scheme, enabled) {
                 onControlsChange(controls.copy(space = (it * 40f).roundToInt() / 40f))
             }
             GatheringSlider("ANSWER GAP", fraction(controls.answerGapSeconds), "%.2fS".format(Locale.ROOT, controls.answerGapSeconds), fillColor, scheme, enabled) {

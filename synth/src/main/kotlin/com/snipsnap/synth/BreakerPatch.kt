@@ -19,6 +19,7 @@ data class BreakerPatch(
     init {
         Patches.validateMacros(this, Breaker.macrosFor(voice))
         require(model in 1..Breaker.MODEL_VERSION) { "unsupported breaker model $model" }
+        require(model >= 2 || voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) { "breaker model 1 has no $voice" }
     }
 
     override val engine get() = ENGINE

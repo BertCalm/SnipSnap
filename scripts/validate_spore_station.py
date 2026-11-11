@@ -9,6 +9,7 @@ import re
 import sys
 import wave
 import zipfile
+from contextlib import ExitStack
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else 'testkit/spore-station')
 m = json.loads((root / 'manifest.json').read_text())
@@ -28,8 +29,19 @@ for clip in m['clips']:
 for download in m['downloads']:
     path = root / download['href']
     assert hashlib.sha256(path.read_bytes()).hexdigest() == download['sha256']
-    with zipfile.ZipFile(path) as z:
-        assert z.testzip() is None
+    with ExitStack() as stack:
+        archives=[]
+        for part in download.get('parts', [download]):
+            part_path=root / part['href']
+            assert hashlib.sha256(part_path.read_bytes()).hexdigest()==part['sha256']
+            archive=stack.enter_context(zipfile.ZipFile(part_path))
+            assert archive.testzip() is None
+            archives.append(archive)
+        class JoinedArchive:
+            def namelist(self): return [name for archive in archives for name in archive.namelist()]
+            def read(self,name): return next(archive.read(name) for archive in archives if name in archive.namelist())
+        z=JoinedArchive()
+        assert len(z.namelist())==len(set(z.namelist())), 'split kit must not overwrite conflicting entries'
         native = next(n for n in z.namelist() if n.endswith('/kit.json'))
         kit = json.loads(z.read(native))
         assert len(kit['pads']) == 18
@@ -79,9 +91,12 @@ for download in m['downloads']:
 for href in re.findall(r'href="([^"]+)"', (root / 'index.html').read_text()):
     if not href.startswith(('https:', '#')):
         assert (root / href).is_file(), href
-with zipfile.ZipFile(root / 'spore-listening-pack.zip') as z:
-    assert z.testzip() is None
-    assert sum(n.endswith('.wav') for n in z.namelist()) == 262
+for mode in ('raw','matched'):
+    with zipfile.ZipFile(root / f'spore-listening-{mode}.zip') as z:
+        assert z.testzip() is None
+        assert sum(n.endswith('.wav') for n in z.namelist()) == 131
+        assert 'Acoustic-LICENSE.txt' in z.namelist()
+        assert 'Acoustic-provenance.json' in z.namelist()
 space_tail_energy = []
 for step in (1, 5, 9):
     with wave.open(str(root / f'audio/sweep-space-{step}.wav')) as w:

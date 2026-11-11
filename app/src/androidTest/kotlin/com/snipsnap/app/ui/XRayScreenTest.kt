@@ -41,17 +41,17 @@ class XRayScreenTest : ComposeScreenTest() {
 
     @Test
     fun the_back_chip_reads_the_label_it_is_given_in_full() {
-        show("◄ SNIPS")
-        assertReadsInFull("◄ SNIPS")
+        show("◄ SAMPLES")
+        assertReadsInFull("◄ SAMPLES")
     }
 
     @Test
     fun the_back_chip_is_spoken_as_back_to_that_screen_and_a_tap_calls_onBack() {
-        show("◄ SNIPS")
+        show("◄ SAMPLES")
 
-        button("BACK TO SNIPS").assertIsEnabled()
+        button("BACK TO SAMPLES").assertIsEnabled()
         assertEquals("nothing has closed it yet", 0, backs.get())
-        button("BACK TO SNIPS").performClick()
+        button("BACK TO SAMPLES").performClick()
         pump()
         assertEquals("one tap closes it once", 1, backs.get())
     }

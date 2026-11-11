@@ -3554,3 +3554,13 @@ tasks.register<JavaExec>("generateRewindAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/rewind-audition")
 }
+
+tasks.register<JavaExec>("generateCosmicBreaksFamily") {
+    group = "distribution"
+    description = "Export the three Cosmic genre kits with native, SFZ and DecentSampler velocity grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CosmicBreaksFamilyGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("cosmicFamilyOutput").orNull ?: "testkit/cosmic-family")
+}

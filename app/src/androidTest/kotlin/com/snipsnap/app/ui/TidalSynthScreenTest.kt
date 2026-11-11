@@ -177,7 +177,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         pump(16)
         button("TIDAL ORIGINAL SOURCE").assertIsSelected()
         assertEquals(.22f, progress("PASSAGE"), 1e-6f)
-        activate("SCRAMBLE")
+        activate("RANDOMISE")
         val edited = working()
         assertEquals(64, edited.midi)
         assertEquals(.31f, edited.velocity)
@@ -346,13 +346,13 @@ class TidalSynthScreenTest : ComposeScreenTest() {
             assertNull(currentRootOrNull())
             button("PASSAGE").assertDoesNotExist()
             button("TIDAL VARIATION SEED").assertDoesNotExist()
-            for (action in listOf("SCRAMBLE", "SAVE PRESET", "SEND TO PAD", "SPREAD ACROSS PADS", "AUDITION")) {
+            for (action in listOf("RANDOMISE", "SAVE PRESET", "SEND TO PAD", "SPREAD ACROSS PADS", "AUDITION")) {
                 button(action).assertIsNotEnabled()
             }
             button("PRESET ${TidalPresets.forVoice(TidalVoice.PAIR).first().name}").assertIsEnabled()
             // Invoke the registered accessibility action directly as well: an
             // event queued before the disable must not bypass the restore gate.
-            for (action in listOf("SCRAMBLE", "SAVE PRESET", "SEND TO PAD")) {
+            for (action in listOf("RANDOMISE", "SAVE PRESET", "SEND TO PAD")) {
                 button(action).performSemanticsAction(SemanticsActions.OnClick) { it() }
                 pump(16)
             }
@@ -377,7 +377,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
 
     @Test
     fun missingNamedPresetReleasesTheRestoreGate() {
-        settings["preset.TIDAL.PAIR"] = "NO LONGER ON SHELF"
+        settings["preset.TIDAL.PAIR"] = "NO LONGER IN LIBRARY"
         show()
         waitFor("missing TIDAL preset cleared") { !settings.containsKey("preset.TIDAL.PAIR") }
         currentRoot()

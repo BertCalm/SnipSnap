@@ -187,7 +187,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
             WavWriter.write(File(dir, file), Snip(FloatArray(4410), channels = 1, sampleRate = WavWriter.MPC_SAMPLE_RATE))
             KitPad(slot = slot, sampleFile = file, drumClass = DrumClass.KICK)
         }
-        val kit = Kit(name = "PAD SHEET TEST", pads = pads, tempoBpm = 92f)
+        val kit = Kit(name = "PAD EDITOR TEST", pads = pads, tempoBpm = 92f)
         KitStore.save(kit, dir)
         return KitShelf.Entry(dir, kit)
     }
@@ -281,21 +281,21 @@ class PadSheetScreenTest : ComposeScreenTest() {
         show(padSheetKit(listOf(1, 2, 3)), slot = 1)
         assertOnPad(1, "1 OF 3")
         // Wrapping backward from the first pad reaches the last, forward the second.
-        button("◄ ${PadBanks.tag(3)}").assertExists()
-        button("${PadBanks.tag(2)} ►").assertExists()
+        button("PREVIOUS PAD, ${PadBanks.tag(3)}").assertExists()
+        button("NEXT PAD, ${PadBanks.tag(2)}").assertExists()
 
-        tap("${PadBanks.tag(2)} ►")
+        tap("NEXT PAD, ${PadBanks.tag(2)}")
         assertOnPad(2, "2 OF 3")
 
-        tap("${PadBanks.tag(3)} ►")
+        tap("NEXT PAD, ${PadBanks.tag(3)}")
         assertOnPad(3, "3 OF 3")
         // Wrapping forward from the last pad reaches the first.
-        button("${PadBanks.tag(1)} ►").assertExists()
+        button("NEXT PAD, ${PadBanks.tag(1)}").assertExists()
 
-        tap("${PadBanks.tag(1)} ►")
+        tap("NEXT PAD, ${PadBanks.tag(1)}")
         assertOnPad(1, "1 OF 3")
 
-        tap("◄ ${PadBanks.tag(3)}")
+        tap("PREVIOUS PAD, ${PadBanks.tag(3)}")
         assertOnPad(3, "3 OF 3")
     }
 
@@ -304,10 +304,10 @@ class PadSheetScreenTest : ComposeScreenTest() {
     fun a_single_pad_kit_has_nowhere_for_the_pad_nav_to_go() {
         show(padSheetKit(listOf(5)), slot = 5)
         compose.onNodeWithText("1 OF 1", useUnmergedTree = true).assertExists()
-        button("◄").assertExists()
-        button("◄").assertIsNotEnabled()
-        button("►").assertExists()
-        button("►").assertIsNotEnabled()
+        button("PREVIOUS PAD").assertExists()
+        button("PREVIOUS PAD").assertIsNotEnabled()
+        button("NEXT PAD").assertExists()
+        button("NEXT PAD").assertIsNotEnabled()
     }
 
     /**
@@ -333,7 +333,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
         assertEquals("Back from EFFECTS lands on the editor", 0, backs)
         // VARIATIONS holds MUTATE.
         activate(Copy.PAD_VARIATIONS_DOOR)
-        assertTrue("MUTATE names what it holds", idle(PadSheetBoxes.MUTATE_OFFERS) >= 1)
+        assertTrue("COMBINE SOUNDS names what it holds", idle(PadSheetBoxes.MUTATE_OFFERS) >= 1)
     }
 
     /**
@@ -358,9 +358,9 @@ class PadSheetScreenTest : ComposeScreenTest() {
         assertTrue("dialling DEPTH did not move its value off the default", dialledDepth != defaultDepth)
         assertTrue("dialling BLOOM did not move its value off the default", dialledBloom != defaultBloom)
 
-        tap("${PadBanks.tag(2)} ►")
+        tap("NEXT PAD, ${PadBanks.tag(2)}")
         assertOnPad(2, "2 OF 2")
-        tap("◄ ${PadBanks.tag(1)}")
+        tap("PREVIOUS PAD, ${PadBanks.tag(1)}")
         assertOnPad(1, "1 OF 2")
 
         assertEquals(
