@@ -1462,9 +1462,9 @@ class UserPresetsTest {
         assertEquals("2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(2, 0))
         assertEquals("3 KITS AND 2 PRESETS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(3, 0, 2))
         assertEquals("1 KIT AND 1 PRESET ON ONE FILE. 1 SKIPPED. PICK WHERE IT GOES.", Copy.backedUp(1, 1, 1))
-        assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0))
-        assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
-        assertEquals("2 KITS LANDED ON THE SHELF. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
+        assertEquals("1 KIT LANDED IN THE LIBRARY.", Copy.landed(1, 0))
+        assertEquals("1 KIT LANDED IN THE LIBRARY. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
+        assertEquals("2 KITS LANDED IN THE LIBRARY. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
     }
 
     /**

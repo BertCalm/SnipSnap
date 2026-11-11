@@ -415,10 +415,10 @@ fun KitsScreen(
             ) {
                 TapeText(
                     when {
-                        assigningSnip -> "PICK A KIT FOR THIS SNIP"
+                        assigningSnip -> "PICK A KIT FOR THIS SAMPLE"
                         breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
                         addingTo != null -> Places.addPickHeader(addingTo)
-                        else -> "SHELF"
+                        else -> "LIBRARY"
                     },
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
@@ -759,10 +759,10 @@ fun KitsScreen(
                 // library reached for often, not a tool, so it stays
                 // top-level rather than moving behind the other door.
                 ActionButton(
-                    "SNIPS ▸",
+                    "SAVED SAMPLES ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "OPEN SNIPS, EVERY CATCH IN ONE LIST",
+                    accessibilityLabel = "OPEN SAVED SAMPLES, EVERY CATCH IN ONE LIST",
                     modifier = Modifier.weight(1f),
                     onClick = onSnips,
                 )

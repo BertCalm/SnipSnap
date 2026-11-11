@@ -237,9 +237,9 @@ fun ChopScreen(
 @Composable
 private fun EmptyChop(message: String, onNavigateTape: () -> Unit, onNavigateKits: () -> Unit) {
     val routes = if (message == Copy.EMPTY_CHOP) {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape), EmptyStateRoute("SHELF ▸", onNavigateKits))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape), EmptyStateRoute("LIBRARY ▸", onNavigateKits))
     } else {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape))
     }
     EmptyStatePanel(message, routes)
 }

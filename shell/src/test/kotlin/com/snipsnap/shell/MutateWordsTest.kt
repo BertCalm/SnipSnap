@@ -48,7 +48,7 @@ class MutateWordsTest {
             Copy.mutated("SPLICE", "A01", "B07"),
         )
         assertEquals("UNDONE. THE TAKE BEFORE THE LAST MUTATE IS BACK FROM THE BIN.", Copy.UNMUTATED)
-        assertEquals("THE SHELF HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK.", Copy.CRATE_EMPTY)
+        assertEquals("THE LIBRARY HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK.", Copy.CRATE_EMPTY)
         assertEquals("NOT A PARTNER: THAT FILE IS SILENT.", Copy.fileRefused("that file is silent"))
         assertEquals(
             "MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED.",
@@ -253,9 +253,9 @@ class MutateWordsTest {
         assertEquals("NOTHING CHANGES YOUR PAD UNTIL YOU KEEP IT", MutateSheet.NOTE_LINE)
         assertEquals("KEEP", MutateSheet.KEEP_LABEL)
         assertEquals("DRIFT · BLEND & SAVE", MutateSheet.DRIFT_LABEL)
-        assertEquals("ROULETTE · PICK A PARTNER OFF THE SHELF", MutateSheet.ROULETTE_LABEL)
+        assertEquals("ROULETTE · PICK A PARTNER FROM THE LIBRARY", MutateSheet.ROULETTE_LABEL)
         assertEquals("NO ROOM YET · MAKE ONE IN OUTSIDE ▸ ROOM", MutateSheet.NO_ROOM_LINE)
-        assertEquals("NO OTHER KIT ON THE SHELF", MutateSheet.NO_OTHER_KIT_LINE)
+        assertEquals("NO OTHER KIT IN THE LIBRARY", MutateSheet.NO_OTHER_KIT_LINE)
         for ((name, text) in rows) {
             assertEquals(text.uppercase(), text, "MutateSheet.$name does not shout: '$text'")
             assertTrue(text.length <= MutateSheet.ROW_CHARS, "MutateSheet.$name runs ${text.length}, past the row's ${MutateSheet.ROW_CHARS}: '$text'")
@@ -296,7 +296,7 @@ class MutateWordsTest {
             "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE.",
             Copy.MUTATE_CHAINED,
         )
-        assertEquals("EVERY OTHER SOUND ON THE SHELF IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
+        assertEquals("EVERY OTHER SOUND IN THE LIBRARY IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
         assertEquals("THAT PARTNER IS GONE. PICK ANOTHER.", Copy.MUTATE_PARTNER_GONE)
         assertEquals("THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE.", Copy.UNDO_NOTHING)
         assertEquals("THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS.", Copy.UNDO_NOT_BINNED)

@@ -328,7 +328,7 @@ fun SnipsScreen(
             ) {
                 HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
                 Spacer(Modifier.weight(1f))
-                TapeText("SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText("SAVED SAMPLES", TapeType.lcdHeader, scheme.lcdInk.tape)
                 Spacer(Modifier.weight(1f))
                 TapeText(
                     "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
@@ -484,7 +484,7 @@ private fun SnipRow(
             // Always enabled — never gated on an already-open kit. See this
             // file's own KDoc and App.kt's `pendingSnipAssign` for why.
             ActionButton("→ PAD", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onPickPad)
-            ActionButton("→ TAPE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
+            ActionButton("→ SAMPLE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
             // Always enabled, like its two neighbours. A full grid is the one
             // state that could dim this, and it is answered in words instead
             // (Copy.loopFull, which also says how to make room) — a dead
@@ -547,7 +547,7 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("DELETE THIS SAMPLE? IT WAITS IN DELETED SAMPLES FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
@@ -593,7 +593,7 @@ private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfir
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("RENAME SNIP", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText("RENAME SAMPLE", TapeType.lcdSmall, scheme.ink.tape)
             Box(
                 Modifier
                     .fillMaxWidth()

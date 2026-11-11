@@ -77,7 +77,7 @@ internal fun OrbitSheets(
 
 @Composable
 private fun SnipSheet(snips: List<File>, onAddSnipRing: (File) -> Unit, onDismiss: () -> Unit) {
-    SheetMenu("WHICH SNIP GOES ROUND A RING?", onDismiss) {
+    SheetMenu("WHICH SAMPLE GOES ROUND A RING?", onDismiss) {
         for (file in snips) {
             val name = SnipStore.displayName(file).uppercase(Locale.ROOT)
             SheetRow(name, onClick = { onAddSnipRing(file) }, accessibilityLabel = "ADD RING $name")

@@ -1915,7 +1915,7 @@ private fun PanelStrip(
 @Composable
 private fun PrintDestination(toPad: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onPick: (Boolean) -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        SegmentButton("→ TAPE", active = !toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(false) }
+        SegmentButton("→ SAMPLE", active = !toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(false) }
         SegmentButton("→ PAD", active = toPad, modifier = Modifier.weight(1f), enabled = enabled) { onPick(true) }
     }
 }

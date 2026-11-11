@@ -79,13 +79,13 @@ enum class AppScreen(val label: String) {
      * lists "whether the desktop metaphor extends to a 'My Kits'
      * file-manager screen or kits stay a menu" as open, and it stays open.
      */
-    KITS("SHELF"),
+    KITS("LIBRARY"),
     KIT("KIT"),
-    TAPE("TAPE"),
+    TAPE("SAMPLE"),
     CHOP("CHOP"),
     GROOVE("GROOVE"),
     EXPORT("EXPORT"),
-    PROPERTIES("SETUP"),
+    PROPERTIES("SETTINGS"),
     HELP("HELP"),
     /** Behind the gear with SETUP and HELP: what MIDI is plugged in and what it sends. */
     MIDI("MIDI"),
@@ -359,6 +359,6 @@ fun NoKitPanel(
     if (hasProject) {
         EmptyStatePanel(need, listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf)), modifier)
     } else {
-        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), modifier)
+        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("LIBRARY ▸", onNavigateKits)), modifier)
     }
 }

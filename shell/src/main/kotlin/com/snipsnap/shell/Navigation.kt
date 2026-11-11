@@ -212,19 +212,19 @@ class Navigation(start: Location = Location(Place.SHELF)) {
 
 /** The four places across the top. Always visible, never scrolling. */
 enum class Place(val label: String) {
-    SHELF("SHELF"),
-    TAPE("TAPE"),
+    SHELF("LIBRARY"),
+    TAPE("SAMPLE"),
     PROJECT("PROJECT"),
-    MAKE("MAKE"),
+    MAKE("CREATE"),
 }
 
 /** The stages inside a place; SHELF and MAKE have none. */
 enum class Stage(val place: Place, val label: String) {
-    DECK(Place.TAPE, "DECK"),
-    CUT(Place.TAPE, "CUT"),
+    DECK(Place.TAPE, "RECORD"),
+    CUT(Place.TAPE, "CHOP"),
     PADS(Place.PROJECT, "PADS"),
     BEAT(Place.PROJECT, "BEAT"),
-    OUT(Place.PROJECT, "OUT"),
+    OUT(Place.PROJECT, "EXPORT"),
     ;
 
     companion object {
@@ -265,7 +265,7 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     SONG(Place.PROJECT, "SONG"),
     LOOP(Place.PROJECT, "LOOP"),
     // Under SHELF.
-    SNIPS(Place.SHELF, "SNIPS"),
+    SNIPS(Place.SHELF, "SAVED SAMPLES", backName = "SAMPLES"),
     BIN(Place.SHELF, "BIN"),
     XRAY(Place.SHELF, "X-RAY"),
     DOUBLES(Place.SHELF, "DOUBLES"),
@@ -283,7 +283,7 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
     /** Audition selected recorded passages and keep a source-backed finite texture. */
     CONFLUENCE_VOICES(Place.MAKE, "CONFLUENCE VOICES", backName = "VOICES"),
     // Behind the gear, from anywhere: opened over whatever is showing.
-    SETUP(Place.SHELF, "SETUP"),
+    SETUP(Place.SHELF, "SETTINGS"),
     HELP(Place.SHELF, "HELP"),
     /** What is plugged in and what it sends: the MIDI diagnostics screen. */
     MIDI(Place.SHELF, "MIDI"),

@@ -237,7 +237,7 @@ Every label in `Navigation.kt`. The last column says where the name goes next.
 | `ORBIT` | `ORBIT` | PROJECT | Circular sequencer. | Keep with line (B) |
 | `SONG` | `SONG` | PROJECT | Lay the beat out as a song. | Keep |
 | `LOOP` | `LOOP` | PROJECT | Six-track loop grid. | Keep with line (B) |
-| `SNIPS` | `SNIPS` | SHELF | The list of saved sounds. | Final: `SAVED SAMPLES` (ruling 3) |
+| `SNIPS` | `SAMPLES` | SHELF | The list of saved sounds. | Final: `SAVED SAMPLES` (ruling 3) |
 | `BIN` | `BIN` | SHELF | Deleted kits and samples. | Proposed `TRASH` (B) |
 | `X-RAY` | `X-RAY` | SHELF | Inspect an MPC file. | Proposed `INSPECT FILE` (B) |
 | `DOUBLES` | `DOUBLES` | SHELF | Find similar-sounding pads. | Proposed (B, F6) |
@@ -257,7 +257,7 @@ Every label in `Navigation.kt`. The last column says where the name goes next.
 
 **Back labels** (`Navigation.backChip`, `Navigation.kt:192-200`)
 
-The chip reads `◄ ` plus the back name of the bench under the top one, else the stage label, else the place label. So every stage label and place label above is also a back label (`◄ DECK`, `◄ CUT`, `◄ PADS`, `◄ BEAT`, `◄ OUT`, `◄ SHELF`, `◄ MAKE`, and `◄ TAPE`, `◄ PROJECT` where a place has no stage). Every bench back name in the table above is a back label. The four back names that differ from their label are `PAD`, `STACK`, `VERSIONS`, `VOICES`.
+The chip reads `◄ ` plus the back name of the bench under the top one, else the stage label, else the place label. So every stage label and place label above is also a back label (`◄ DECK`, `◄ CUT`, `◄ PADS`, `◄ BEAT`, `◄ OUT`, `◄ SHELF`, `◄ MAKE`, and `◄ TAPE`, `◄ PROJECT` where a place has no stage). Every bench back name in the table above is a back label. The five back names that differ from their label are `PAD`, `STACK`, `VERSIONS`, `VOICES`, and `SAMPLES` (the back name of `SAVED SAMPLES`: the full label is 13 characters and a chip holds 11).
 
 Back labels that do not come from `backChip`:
 

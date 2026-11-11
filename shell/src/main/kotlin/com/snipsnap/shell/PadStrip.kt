@@ -35,7 +35,7 @@ object PadStrip {
 
     const val DOOR_OPEN = "OPEN ▸"
     const val DOOR_CAPTURE = "CAPTURE ▸"
-    const val DOOR_FROM_SNIPS = "FROM SNIPS ▸"
+    const val DOOR_FROM_SNIPS = "FROM SAVED SAMPLES ▸"
 
     fun line(pad: KitPad?, slot: Int, outsideStage: String? = null): Strip {
         val id = PadBanks.tag(slot)

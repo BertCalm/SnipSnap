@@ -245,10 +245,10 @@ fun KitScreen(
         if (hasProject) {
             EmptyStatePanel(
                 Copy.PROJECT_HAS_NO_KIT,
-                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("TAPE ▸", onNavigateTape)),
+                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("SAMPLE ▸", onNavigateTape)),
             )
         } else {
-            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("LIBRARY ▸", onNavigateKits)))
         }
         return
     }
@@ -1481,7 +1481,7 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
@@ -1527,7 +1527,7 @@ private fun TexturePanel(
         var startedHere by remember { mutableStateOf(false) }
         LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            "$kind · NEW TAPE",
+            "$kind · NEW SAMPLE",
             scheme,
             enabled = !busy,
             working = busy && startedHere,

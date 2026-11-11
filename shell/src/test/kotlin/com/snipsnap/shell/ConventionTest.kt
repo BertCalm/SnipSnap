@@ -1534,7 +1534,7 @@ class ConventionTest {
         // way in. Held as absence, so a place sneaking back in is a failure
         // here and not a drift.
         assertTrue(
-            "TAPE" !in words && "PROJECT" !in words,
+            "SAMPLE" !in words && "PROJECT" !in words,
             "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") names a place again. The tab row says the places; " +
                 "the note says the four verbs and that a kit is a way in too.",
         )
@@ -1549,6 +1549,63 @@ class ConventionTest {
                 "under the place row and reads as a gloss of it; a tab name in it points a new user at a screen " +
                 "that is not a place. Use a verb that is not a tab, or the place's own name.",
         )
+    }
+
+    // ==================== Law: the vocabulary ledger names every place, stage, bench and back label ====================
+
+    /**
+     * `docs/VOCABULARY.md` is the one list of names a player navigates by (clarity PR 5,
+     * spec section 7.2 "Ledger and law"). A label added to [Place], [Stage] or [Bench] without a
+     * row there is a name nobody ruled on. A name counts as listed when the ledger carries it in
+     * backticks, the way every row writes a literal on-screen string.
+     */
+    private fun ledgerMisses(labels: Collection<String>, ledger: String): List<String> =
+        labels.filter { "`$it`" !in ledger }.distinct().sorted()
+
+    @Test
+    fun `law - every place, stage, bench and back label is in docs VOCABULARY md`() {
+        val ledgerFile = File("../docs/VOCABULARY.md")
+        assertTrue(ledgerFile.isFile, "docs/VOCABULARY.md is missing: ${ledgerFile.absolutePath}")
+        val ledger = ledgerFile.readText(Charsets.UTF_8)
+
+        val labels = Place.entries.map { it.label } + Stage.entries.map { it.label } +
+            Bench.entries.flatMap { listOf(it.label, it.backName) }
+        assertTrue(labels.size >= 40, "only ${labels.size} labels were read: the law would pass by checking nothing")
+
+        // Every back label the model can draw: the chip over each bench on each place and stage,
+        // and over each bench on another bench. Read out of Navigation.backChip, not retyped.
+        val chips = mutableListOf<String>()
+        for (place in Place.entries) {
+            val stages = Stage.of(place).ifEmpty { listOf(null) }
+            for (stage in stages) {
+                for (bench in Bench.entries) {
+                    Navigation(Location(place, stage, listOf(bench))).backChip?.let { chips += it }
+                    for (under in Bench.entries) {
+                        Navigation(Location(place, stage, listOf(under, bench))).backChip?.let { chips += it }
+                    }
+                }
+            }
+        }
+        assertTrue(chips.isNotEmpty() && chips.all { it.startsWith("◄ ") }, "back chips are not read: $chips")
+        val backNames = chips.map { it.removePrefix("◄ ") }
+
+        val missing = ledgerMisses(labels + backNames, ledger)
+        assertTrue(
+            missing.isEmpty(),
+            "docs/VOCABULARY.md has no backticked entry for $missing. Add a row for each new place, stage, bench " +
+                "or back label before it ships, with what it means and the owner's ruling.",
+        )
+    }
+
+    @Test
+    fun `law - the ledger law fails on a label the ledger does not carry`() {
+        val ledger = "| `LIBRARY` | place |\n| `SAVED SAMPLES` | bench |"
+        assertEquals(emptyList(), ledgerMisses(listOf("LIBRARY", "SAVED SAMPLES"), ledger))
+        assertEquals(listOf("SHELF"), ledgerMisses(listOf("LIBRARY", "SHELF"), ledger))
+        // A word that is only a substring of a listed one is not listed.
+        assertEquals(listOf("SAMPLES"), ledgerMisses(listOf("SAMPLES"), ledger))
+        // Unticked prose does not count either.
+        assertEquals(listOf("BENCH"), ledgerMisses(listOf("BENCH"), "the BENCH is mentioned"))
     }
 
     // ==================== Law: the ladder row's chips are named once ====================
@@ -5803,11 +5860,11 @@ class ConventionTest {
 
     /** Controls that open a screen: a bench, or a place or stage switch. */
     private val SCREEN_OPENERS = setOf(
-        "CUT ▸", "PADS ▸", "BEAT ▸", "OUT ▸", // Places.DOOR_*: the stage doors
-        "OPEN ▸", "CAPTURE ▸", "FROM SNIPS ▸", // the pad strip's doors, and a project row's OPEN
+        "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
+        "OPEN ▸", "CAPTURE ▸", "FROM SAVED SAMPLES ▸", // the pad strip's doors, and a project row's OPEN
         "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
         "BREED · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
-        "SHELF ▸", "TAPE ▸", "SNIPS ▸", // the empty-state routes
+        "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
         "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYS ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
@@ -5838,7 +5895,7 @@ class ConventionTest {
 
     /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
     private val GLYPH_PATHS = listOf(
-        "RE-TRIM ▸: TAPE", "REMIX BANK B ▸ DEALS EVIL TWINS", "BREED ▸ PICK A KIT", "REMIX BANK B ▸ DEALS TWINS HERE", // HELP lines naming the button then what it does
+        "RE-TRIM ▸: CHOP", "REMIX BANK B ▸ DEALS EVIL TWINS", "BREED ▸ PICK A KIT", "REMIX BANK B ▸ DEALS TWINS HERE", // HELP lines naming the button then what it does
         "VERSIONS ▸ ROLLS BACK", "MUTATE ▸ ROOM", "ROOM ▸ SEND", "OUTSIDE ▸ ROOM", // toasts and lines naming a menu path
         "OPEN ▸ FOR ITS BENCH", "CLIP ▸ KIT WRITES ONE", // PADS help, and ORBIT's section line
     )

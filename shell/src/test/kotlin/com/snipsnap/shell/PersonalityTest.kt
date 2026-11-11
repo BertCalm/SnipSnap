@@ -89,10 +89,10 @@ class PersonalityTest {
         // laws below hold shape, not route, so a slide back to "ARM THE
         // MIC" or a bare "TRY GRID" would pass them.
         for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
-            assertTrue("LISTEN · MIC ON SHELF" in line || ("LISTEN · MIC" in line && "SHELF" in line), "HUM's route is the button on SHELF: $line")
+            assertTrue("LISTEN · MIC IN LIBRARY" in line || ("LISTEN · MIC" in line && "LIBRARY" in line), "HUM's route is the button on LIBRARY: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
-        assertTrue("STOP ON SHELF" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        assertTrue("STOP IN LIBRARY" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
         // RING takes either ring, so its refusal names both doors on SHELF
         // (a slide back to the mic alone would send an APP AUDIO user to
         // stop the very session RING wanted).
@@ -102,12 +102,12 @@ class PersonalityTest {
         }
         // EVERY BAR switching itself off names the button as it reads and
         // the same two doors, since either ring feeds it.
-        assertTrue("EVERY BAR" in Copy.RING_BAR_STOPPED && "LISTEN · MIC" in Copy.RING_BAR_STOPPED && "APP AUDIO" in Copy.RING_BAR_STOPPED && "SHELF" in Copy.RING_BAR_STOPPED, Copy.RING_BAR_STOPPED)
+        assertTrue("EVERY BAR" in Copy.RING_BAR_STOPPED && "LISTEN · MIC" in Copy.RING_BAR_STOPPED && "APP AUDIO" in Copy.RING_BAR_STOPPED && "LIBRARY" in Copy.RING_BAR_STOPPED, Copy.RING_BAR_STOPPED)
         assertTrue("ARM" !in Copy.RING_BAR_STOPPED, "nothing on any screen is called ARM: ${Copy.RING_BAR_STOPPED}")
-        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "SHELF" in Copy.RING_NOT_LISTENING, "RING's route is either button on SHELF: ${Copy.RING_NOT_LISTENING}")
+        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "LIBRARY" in Copy.RING_NOT_LISTENING, "RING's route is either button on LIBRARY: ${Copy.RING_NOT_LISTENING}")
         // FOLLOW and DUCK read the same ring RING does, so the same two doors.
         assertTrue("FOLLOW" in Copy.FOLLOW_NOT_LISTENING && "DUCK" in Copy.FOLLOW_NOT_LISTENING, "names the shapes as the MOD row reads them: ${Copy.FOLLOW_NOT_LISTENING}")
-        assertTrue("LISTEN · MIC" in Copy.FOLLOW_NOT_LISTENING && "APP AUDIO" in Copy.FOLLOW_NOT_LISTENING && "SHELF" in Copy.FOLLOW_NOT_LISTENING, "FOLLOW's route is either button on SHELF: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue("LISTEN · MIC" in Copy.FOLLOW_NOT_LISTENING && "APP AUDIO" in Copy.FOLLOW_NOT_LISTENING && "LIBRARY" in Copy.FOLLOW_NOT_LISTENING, "FOLLOW's route is either button on LIBRARY: ${Copy.FOLLOW_NOT_LISTENING}")
         assertTrue("ARM" !in Copy.FOLLOW_NOT_LISTENING, "nothing on any screen is called ARM: ${Copy.FOLLOW_NOT_LISTENING}")
         // The length is the voice's own, not RING's four-second ask: a ring
         // that only just started gives less, and the ceiling law below holds
@@ -130,7 +130,7 @@ class PersonalityTest {
         // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
         assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
-        assertEquals("ONE TAP, THE WHOLE TAPE. 1 SLICE ON THE PADS.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
+        assertEquals("ONE TAP, THE WHOLE SAMPLE. 1 SLICE ON THE PADS.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
     }
 
     /**
@@ -279,7 +279,7 @@ class PersonalityTest {
         val whole = Copy.instantKit(8, chokeSet = false, wholeTape = true)
         val selected = Copy.instantKit(8, chokeSet = false, wholeTape = false)
         assertTrue(whole != selected, "the whole tape and a selection cannot read the same: $whole")
-        assertTrue(whole.contains("WHOLE TAPE"), "it says it took everything: $whole")
+        assertTrue(whole.contains("WHOLE SAMPLE"), "it says it took everything: $whole")
         // COMMIT's refusal is "SET IN + OUT FIRST"; the same two markers are
         // named here, so the pair of buttons speaks one vocabulary.
         assertTrue(selected.contains("IN + OUT"), "it names the markers COMMIT asks for: $selected")
@@ -605,7 +605,7 @@ class PersonalityTest {
         // that was actually open.
         val help = Places.HELP.values.flatten() + Copy.HELP_MORE
         assertTrue(help.any { it.contains("INSTANT KIT") }, "INSTANT KIT is in no HELP list")
-        assertTrue(help.any { it.contains("CATCH ON TAPE") }, "CATCH is in no HELP list")
+        assertTrue(help.any { it.contains("CATCH ON SAMPLE") }, "CATCH is in no HELP list")
     }
 
     @Test
@@ -983,7 +983,7 @@ class PersonalityTest {
             "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE PADS. CHOKE GROUP SET.",
             Copy.instantKit(8, chokeSet = true, wholeTape = false),
         )
-        assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE PADS.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
+        assertEquals("ONE TAP, THE WHOLE SAMPLE. 5 SLICES ON THE PADS.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(Copy.feelRolled(4).startsWith("FEEL #4 ROLLED."), "the seed leads its own toast")
@@ -1046,13 +1046,13 @@ class PersonalityTest {
         // The bounce names what it rendered, and names the cycle too when the
         // two differ — a player told only "12 BARS" would read that as the
         // whole loop.
-        assertEquals("12 BARS BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(12))
-        assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(64, 840))
+        assertEquals("12 BARS BOUNCED. IT IS IN SAVED SAMPLES NOW.", Copy.loopBounced(12))
+        assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SAVED SAMPLES NOW.", Copy.loopBouncedPart(64, 840))
         // One bar is a legal bounce — the grid's default interval is one bar,
         // so a six-track grid of one-block chains bounces exactly this. Both
         // lines count the same thing and both have to say BAR for it.
-        assertEquals("1 BAR BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(1))
-        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(1, 6))
+        assertEquals("1 BAR BOUNCED. IT IS IN SAVED SAMPLES NOW.", Copy.loopBounced(1))
+        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SAVED SAMPLES NOW.", Copy.loopBouncedPart(1, 6))
         // The block readout: 1-based like everything else on the grid, and
         // its own line for a track nothing has been sent to — an app that
         // counts tracks and blocks from zero anywhere on screen is the one
@@ -1073,8 +1073,8 @@ class PersonalityTest {
         assertEquals("BREAK IS READY TO SEND. PICK WHERE IT GOES.", Copy.snipReady("BREAK"))
         assertTrue(Copy.snipReady("BREAK").endsWith("."), "and still lands on a full stop")
         assertFalse("SENT" in Copy.snipReady("BREAK"), "the chooser opening is not the file leaving")
-        assertEquals("PAD MADE — DRONE 2. ON THE SHELF.", Copy.madeNamed("PAD", "DRONE 2"))
-        assertEquals("INSTRUMENT MADE — BELL. ON THE SHELF.", Copy.madeNamed("INSTRUMENT", "BELL"))
+        assertEquals("PAD MADE — DRONE 2. IN THE LIBRARY.", Copy.madeNamed("PAD", "DRONE 2"))
+        assertEquals("INSTRUMENT MADE — BELL. IN THE LIBRARY.", Copy.madeNamed("INSTRUMENT", "BELL"))
         assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")
         val made = Copy.madeNamed("PAD", "DRONE 2")
         assertEquals(made.uppercase(), made, "TapeOS shouts here too")
@@ -1099,8 +1099,8 @@ class PersonalityTest {
 
     @Test
     fun `tapeTruncated matches the import cap's own truncation phrasing`() {
-        assertEquals("FIRST 10 MIN KEPT - THE TAPE IS ONLY SO LONG.", Copy.tapeTruncated(600f))
-        assertEquals("FIRST 8s KEPT - THE TAPE IS ONLY SO LONG.", Copy.tapeTruncated(8.2f))
+        assertEquals("FIRST 10 MIN KEPT - A SAMPLE IS ONLY SO LONG.", Copy.tapeTruncated(600f))
+        assertEquals("FIRST 8s KEPT - A SAMPLE IS ONLY SO LONG.", Copy.tapeTruncated(8.2f))
         // Same tail as SnipStore.import's own truncation line — one voice
         // for "a cap cut this tape's tail", not two competing ones.
         assertTrue(Copy.imported(180f, truncated = true).endsWith(Copy.tapeTruncated(180f)))
@@ -1177,7 +1177,7 @@ class PersonalityTest {
         // from history before trusting it against production copy.
         assertTrue(ceilingClaim.containsMatchIn("KEEPS LAST 2s"), "sanity check on the regex itself: it must catch the historical GRAB bug's exact shape, or this law is checking nothing")
         assertTrue(ceilingClaim.containsMatchIn("\"GRAB! KEEPS LAST \${n}s.\""), "sanity check: it must also catch the same shape written inside a templated toast's string interpolation (\$n / \${n}), not just a hardcoded literal — that's the whole reason the source-text scan exists")
-        assertFalse(ceilingClaim.containsMatchIn("FIRST 3 MIN KEPT - THE TAPE IS ONLY SO LONG."), "sanity check: a fact about what a truncation already did (FIRST, not LAST) must never be flagged")
+        assertFalse(ceilingClaim.containsMatchIn("FIRST 3 MIN KEPT - A SAMPLE IS ONLY SO LONG."), "sanity check: a fact about what a truncation already did (FIRST, not LAST) must never be flagged")
         assertFalse(ceilingClaim.containsMatchIn("SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."), "sanity check: the qualified UP TO form must never be flagged")
 
         // 1) Every reflected String constant.
@@ -1234,7 +1234,7 @@ class PersonalityTest {
             Copy.clippedSectionsIntoKit(1, 1, 1, 0),
         )
         assertEquals(
-            "1 SECTION IN THE GROOVES: 1 BAR, 1 NOTE. 1 SNIP RING STAYED OUT.",
+            "1 SECTION IN THE GROOVES: 1 BAR, 1 NOTE. 1 SAMPLE RING STAYED OUT.",
             Copy.clippedSectionsIntoKit(1, 1, 1, 1),
         )
     }
@@ -1252,7 +1252,7 @@ class PersonalityTest {
             Copy.clippedIntoKit("GROOVE", 1, 1, 0),
         )
         assertEquals(
-            "GROOVE IN THE GROOVES: 2 BARS, 8 NOTES. 1 SNIP RING STAYED OUT.",
+            "GROOVE IN THE GROOVES: 2 BARS, 8 NOTES. 1 SAMPLE RING STAYED OUT.",
             Copy.clippedIntoKit("GROOVE", 2, 8, 1),
         )
     }
@@ -1290,16 +1290,16 @@ class PersonalityTest {
         )
         for ((who, line) in before + after) {
             assertTrue(
-                "SNIPS" in line,
-                "$who reads \"$line\", which does not name SNIPS. Every bounce in the app writes through " +
-                    "SnipStore.import into the folder SNIPS lists — three names for one destination is what " +
+                "SAMPLES" in line,
+                "$who reads \"$line\", which does not name SAMPLES (the buttons say BOUNCE TO SAMPLES, the landing lines say SAVED SAMPLES). Every bounce in the app writes through " +
+                    "SnipStore.import into the folder SAVED SAMPLES lists — three names for one destination is what " +
                     "prior #25 was, and TAPE (ORBIT's old word) is a different screen.",
             )
         }
         for ((who, line) in before + after) {
             assertFalse(
                 Regex("""\bTAPE\b""").containsMatchIn(line),
-                "$who reads \"$line\" and says TAPE. A bounce does not land on TAPE; it lands in SNIPS.",
+                "$who reads \"$line\" and says TAPE. A bounce does not land on TAPE; it lands in SAVED SAMPLES.",
             )
         }
     }
