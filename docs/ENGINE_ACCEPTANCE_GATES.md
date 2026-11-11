@@ -96,7 +96,7 @@ presence do not close the outstanding gates above.
   - **Sound character, heard 2026-11-10:** the hats, stick (short slap), tambourine, shaker and toms accepted, and the repeat and 40% hits too. The ride was heard as a crash and is re-voiced at round 3.
 - **Overall: incomplete.** This is a prototype with twelve voices and no kit yet.
 
-## GATECRASH kits (candidate, 2026-11-10)
+## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
 A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro Funk. See [GATECRASH](GATECRASH.md).
 
@@ -108,5 +108,5 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Saving: verified.** A saved kit reloads equal, and all 576 saved slices match their renders (`:shell:generateGatecrashKits`, `GatecrashKitTest`).
   - **Playback: verified in software.** `PadHit.resolve`, the resolver the app's pad engine calls, picks the zone by velocity and deals the four takes in order, then repeats. No phone has played these kits.
   - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: round 1 rejected, rounds 2 and 3 each heard with one correction, round 4 not heard.** On round 3 the owner said "we are missing some brightness"; round 4 opens the returns from 1.5 to 3.5 kHz to 2.2 to 6 kHz and restores some snap to the snares and toms. On round 2 the owner said 80s drums "round off at the end rather than cut abruptly"; round 3 lengthens every close from 10 to 25 ms to 45 to 130 ms. The owner has not approved any round. On 2026-11-10 the owner heard round 1 as "harsh" and "more like loud static" than 80s drums. Measured afterwards, its rooms carried 14 to 20 dB more energy than the drums and were as bright as the drums. Round 2 sets each room's energy against its drum's (at most +4 dB), darkens every return, removes the hard clip and leaves cymbals dry. Round 1 passed every software probe it had, so those probes are not evidence of sound.
-- **Overall: incomplete.** The software evidence is in place. Owner listening, phone playback and MPC hardware playback remain open.
+- **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.

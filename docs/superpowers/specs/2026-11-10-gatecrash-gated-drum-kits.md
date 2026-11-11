@@ -1,9 +1,9 @@
 # GATECRASH: 1980s gated drum kits, engineering specification
 
 Version 1.0 · 2026-11-10
-Status: built as a candidate. Round 1 was heard and rejected on 2026-11-10; round 2 is measured, not heard.
-Android and MPC hardware not exercised. Sections 1 to 12 record the round-1 design; "Round 2" at the end
-records what the listen changed, and wins where they differ.
+Status: built. Four rounds; the owner approved round 4 by ear on 2026-11-11. Android and MPC hardware not
+exercised. Sections 1 to 12 record the round-1 design; the "Round" sections at the end record what each
+listen changed, and win where they differ.
 Repository truth: read at `a90049ce`. Grepped before naming: `Room.plan`, `Room.bloom`, `Room.lateGain`,
 `Valve.upsample`, `Tide.bandLimit`, `Dsp.decimate`, `Dsp.seedFor`, `Dsp.Noise`, `Skin.render(voice, macros,
 velocity, take)`, `Thump.render(voice, macros, velocity)`, `Onset.render(voice, macros, modelVersion,
@@ -344,3 +344,21 @@ The level probes that hold round 1's fault away are untouched. 22 of 22 pass.
 "Brighter room" (1.7 times). Each is re-calibrated to the same room energy, so the comparison is colour, not
 amount. Whether the missing brightness was in the rooms or in the drums themselves is not known; the page asks.
 Round 4 is not heard.
+
+## Round 4 heard (2026-11-11)
+
+**Heard:** "Everything sounds good".
+
+Round 4 is the accepted baseline: `GatecrashKits.VERSION` 4 on `Gatecrash.VERSION` 2. The owner listened on
+the published page, which plays 16-bit mono copies of the exported slices, the dry comparisons and the trial
+clips. Which of the trial clips (less or more room, sharp or longer fade, darker or brighter) they compared is
+not recorded; no change was asked for, so the authored middle stands.
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The three kits sound right | heard, approved | the owner, 2026-11-11, on round 4 |
+| Phone playback, MPC hardware playback | not verified | no device audition |
+| MPC 2 round robin | fails | its projection keeps one take per zone |
+
+What the four rounds showed about method: every correction came from a listen, and none from a probe. The
+probes were worth having afterwards, as guards on what each listen fixed.
