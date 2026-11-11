@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → OCTAVER → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → HUSH → MOTION
+ *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → OCTAVER → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → ECHO → REWIND → SPRING → ROOM → HUSH → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -42,6 +42,10 @@ import com.snipsnap.json.JsonValue
  *
  * valve after forge and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
+ *
+ * rewind after echo and before spring: a reverse delay sits after the amp beside
+ * the delay, and the spring and the room then put the same space on the backwards
+ * swell as on the hit.
  *
  * room after spring and before motion: a spring tank is a device, and the
  * room is where everything, the tank included, is heard. ROOM is the last
@@ -112,6 +116,7 @@ data class FxChain(
     val room: Map<String, Float>? = null,
     val hush: Map<String, Float>? = null,
     val octaver: Map<String, Float>? = null,
+    val rewind: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -271,6 +276,7 @@ data class FxChain(
             Section("ensemble", Ensemble.MACROS, { it.ensemble }, { c, m -> c.copy(ensemble = m) }, Ensemble::process),
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
+            Section("rewind", Rewind.MACROS, { it.rewind }, { c, m -> c.copy(rewind = m) }, Rewind::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
             Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
             Section("hush", Hush.MACROS, { it.hush }, { c, m -> c.copy(hush = m) }, Hush::process),

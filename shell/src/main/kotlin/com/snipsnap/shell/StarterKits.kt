@@ -33,6 +33,8 @@ import java.io.File
  * their printed wet pads do not pretend to have dry-source synth recipes.
  * TRIAD starters are versioned rendered banks: three velocity zones and four takes
  * per zone, including finite bus phrases, with source provenance on every pad.
+ * GATECRASH starters are the same kind of bank: three zones of four takes, each pad printed
+ * through its own gated space, with two finite phrases and source provenance on every pad.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -622,6 +624,21 @@ object StarterKits {
             seeded = false, tempoBpm = 174f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.JUNGLE) },
         Starter("cosmic-dubstep", "COSMIC DUBSTEP", "Deep kicks, dark snares and spaced echoes. Includes a roll and riser.",
             seeded = false, tempoBpm = 140f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.DUBSTEP) },
+        Starter(
+            "gatecrash-stone", "GATECRASH STONE ROOM",
+            "Acoustic drums and six concert toms in a hard room, crushed and gated. Three touch zones, four takes; a tom fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.STONE_ROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.STONE_ROOM) },
+        Starter(
+            "gatecrash-machine", "GATECRASH MACHINE POP",
+            "Analog drums and four diving synth toms through a burst of reflections that stops dead. Three touch zones, four takes; a fill and a build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.MACHINE_POP.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.MACHINE_POP) },
+        Starter(
+            "gatecrash-electro", "GATECRASH ELECTRO FUNK",
+            "A long dry boom kick with a snappy snare and clap in a small, short-gated room. Three touch zones, four takes; a tom break and a build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

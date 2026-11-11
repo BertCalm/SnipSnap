@@ -1,3 +1,8 @@
+> GATECRASH candidate kits (2026-11-10): three 1980s gated drum kits on the shelf, Stone Room, Machine Pop
+> and Electro Funk. A new treatment stage crushes each pad's room flat and cuts it on the drum's own timing.
+> Velocity × round robin is proven through save, playback and MPC 3 export in software. Not heard; no
+> hardware. See [GATECRASH](GATECRASH.md).
+
 > Cosmic Breaks gate update: DnB, Jungle and Dubstep shelf kits, each with 18 pads
 > and three velocity layers × four takes. Native/SFZ round trips and DecentSampler
 > grid fields are checked; MPC slice-map/hardware acceptance remains open.

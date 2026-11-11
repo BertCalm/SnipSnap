@@ -28,6 +28,8 @@ Dub (85) and Electro (130), each with 18 pads and three velocity zones × three 
 The published audition includes SFZ, native kits and MPC programs. MPC round robin
 remains blocked on slice-map/hardware verification. Owner listening is pending.
 
+[GATECRASH](docs/GATECRASH.md) is a candidate family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. Measured, not yet heard.
+
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
 ## The loop
@@ -441,7 +443,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 91 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 94 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1289,7 +1291,7 @@ one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
 dark repeats with HEAD off, see
-[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), REWIND (a reverse delay, right after ECHO: the pad cut into windows of TIME's length from the hit's onset, each played backwards during the next, so the hit comes back swelling out of its tail into its attack, which lands at twice TIME, 240 ms to 1 s after the hit; REPEAT feeds it back, so repeats alternate backwards and forwards, each darker; MIX is the backwards copy's level; chip-less until its listening gate), SPRING (a Schroeder network, 1962),
 ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
 close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
@@ -1322,7 +1324,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
-ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → hush → motion — owns
+ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 

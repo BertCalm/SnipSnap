@@ -220,7 +220,7 @@ object Room {
      * The bloom's level: the late response to one click, measured once, scaled to the diffuse level the decay
      * calls for. ROOM is linear, so the gain that sets the click's energy sets every pad's.
      */
-    private fun lateGain(p: Plan, rate: Int): Float {
+    internal fun lateGain(p: Plan, rate: Int): Float {
         val click = FloatArray((1.2f * rate).toInt())
         click[0] = 1f
         val late = bloom(click, p, rate)

@@ -529,6 +529,16 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
     args("${rootDir}/testkit/backwash-acoustic-integration")
 }
 
+tasks.register<JavaExec>("generateGatecrashKits") {
+    group = "distribution"
+    description = "Build the three GATECRASH kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.GatecrashKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("gatecrashOutput").orNull ?: "${rootDir}/testkit/gatecrash-kits")
+}
+
 tasks.register<JavaExec>("generateTriadKits") {
     group = "distribution"
     classpath = sourceSets["test"].runtimeClasspath

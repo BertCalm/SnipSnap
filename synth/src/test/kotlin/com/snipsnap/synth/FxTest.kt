@@ -784,6 +784,24 @@ class FxTest {
     }
 
     @Test
+    fun `REWIND sits after ECHO and before SPRING, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("echo") + 1, names.indexOf("rewind"), "REWIND is not right after ECHO: $names")
+        assertEquals(names.indexOf("rewind") + 1, names.indexOf("spring"), "REWIND is not right before SPRING: $names")
+
+        val without = FxChain(echo = Echo.defaults())
+        assertTrue(!without.toJsonText().contains("rewind"), "no rewind key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        assertEquals(FxChain(rewind = Rewind.defaults()), FxChain.fromJsonText(FxChain(rewind = Rewind.defaults()).toJsonText()))
+        // One backwards copy, so the whole render is inside the rack's tail budget and nothing but the row is compared.
+        val once = Rewind.defaults() + ("REPEAT" to 0f)
+        val chained = FxChain(rewind = once).process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the rewind section is a no-op in the chain")
+        assertContentEquals(Rewind.process(snare, once).samples, chained.samples, "the chain's rewind row does not run Rewind.process")
+    }
+
+    @Test
     fun `DIVE sits right after PITCH in the transport, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("speed") + 1, names.indexOf("dive"), "DIVE is not right after PITCH: $names")

@@ -180,6 +180,8 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 **Verifiers:** buildable with fixes (0.8). New (0.8). Worth 4: both audiences, known from records, correct after the amp today; the owner never asked, and it competes with FUZZ for the last chip.
 
+**Built, chip-less until its gate (2026-11-10):** the owner picked REWIND as the next pedal, since modulation pedals have failed on short hits and this one works on a drum. Built as the REWIND section, `Rewind.kt`, after ECHO and before SPRING, the saved key `rewind`. Windows of TIME's length from the hit's onset, each played backwards during the next under 5 ms raised-cosine edges, so the backwards attack lands at twice TIME after the hit (less the two edges). REPEAT feeds the output back through a 5 kHz one-pole, so repeats alternate backwards and forwards. The headline hazard is answered differently from the sketch above. Anchoring the grid at the pad's end would land a short hit's backwards attack at twice the pad's length whatever TIME said, so TIME would do nothing on a drum. The grid stays at the onset and TIME tops out at 500 ms (120 to 500 ms, not 700): the backwards attack lands at most 1 s after the hit, so on a snare the whole first copy ends before the rack's fade (pinned by a test). Repeats after the first still run into the budget at long TIME, as ECHO's do. The grid starts in the silence before the pad when a drum starts on its first frame: clamped to the pad, the closing fade cost the backwards snare's attack 6 dB. `generateRewindAudition` renders the gate on ONSET's snare and tom, JANGLE and the choir.
+
 ### 7. PUMP (keyed treatment `pumped`), worth 4
 
 **Chip and key:** PUMP on the KEYED row.
