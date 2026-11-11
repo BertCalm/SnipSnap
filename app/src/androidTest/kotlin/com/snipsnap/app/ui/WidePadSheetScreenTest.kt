@@ -353,7 +353,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         waitForText("◄ PADS ${PadBanks.tag(2)}")
         activate("PREVIOUS PAD, ${PadBanks.tag(1)}")
         waitForText("OBLITERATE kept at 35%")
-        waitForText("98 BPM · 1/8 · ROOM")
+        waitForText("98 BPM · 1/8 · UNPITCHED")
         activate("REMOVE")
         waitFor("OBLITERATE removal", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == original }
         assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
