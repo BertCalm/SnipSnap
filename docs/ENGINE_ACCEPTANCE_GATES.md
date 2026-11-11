@@ -110,3 +110,17 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
 - **Sound character: round 1 rejected, rounds 2 and 3 each heard with one correction, round 4 not heard.** On round 3 the owner said "we are missing some brightness"; round 4 opens the returns from 1.5 to 3.5 kHz to 2.2 to 6 kHz and restores some snap to the snares and toms. On round 2 the owner said 80s drums "round off at the end rather than cut abruptly"; round 3 lengthens every close from 10 to 25 ms to 45 to 130 ms. The owner has not approved any round. On 2026-11-10 the owner heard round 1 as "harsh" and "more like loud static" than 80s drums. Measured afterwards, its rooms carried 14 to 20 dB more energy than the drums and were as bright as the drums. Round 2 sets each room's energy against its drum's (at most +4 dB), darkens every return, removes the hard clip and leaves cymbals dry. Round 1 passed every software probe it had, so those probes are not evidence of sound.
 - **Overall: incomplete.** The software evidence is in place. Owner listening, phone playback and MPC hardware playback remain open.
+
+## ETCH (round 1, 2026-11-11)
+
+A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
+Round 1 is a Python prototype audition; no Kotlin exists.
+
+- **Melodic:** open. Two waves built in the prototype; six voices proposed for the owner to choose. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
+- **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
+- **Percussion and drum kits:** not applicable. A bass engine.
+- **Velocity and round robin:**
+  - **Rendering: Python harness only.** Velocity is the accent and changes the filter, not only the level: level-matched attack centroid 781 to 1,324 Hz from velocity 0.35 to 1.0. Round-robin takes are distinct but subtle, 1.0% attack spread at full accent.
+  - **Saving, playback and export:** not yet verified.
+- **Sound character:** not heard.
+- **Overall: incomplete.**
