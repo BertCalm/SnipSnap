@@ -5138,7 +5138,7 @@ private fun TreatmentCard(
             // segment in flight, which no legend can.
             when {
                 applying != null -> Copy.treatmentBusy(PadSheet.displayLabel(applying))
-                placing != null -> Copy.putOnRowPrompt(placing)
+                placing != null -> Copy.putOnRowPrompt(PadSheet.displayLabel(placing))
                 // One recipe per pad, except row seven: pedals stack on one pad (the slate design).
                 else -> "ONE PER PAD · PEDALS STACK"
             },

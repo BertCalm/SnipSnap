@@ -49,3 +49,18 @@ Old model-3 and model-4 recipes retain their original renderers. Source selectio
   - **Saving, playback and export:** not yet verified.
   - **Sound character, heard 2026-11-10:** the hats, stick (short slap), tambourine, shaker and toms accepted, and the repeat and 40% hits too. The ride was heard as a crash and is re-voiced at round 3.
 - **Overall: incomplete.** This is a prototype with twelve voices and no kit yet.
+
+## GATECRASH kits (candidate, 2026-11-10)
+
+A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro Funk. See [GATECRASH](GATECRASH.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. These are drum kits.
+- **Articulation:** finite hits, with no HOLD. Each kit has an authored fill on A15 and an accelerating build on A16. The build is the roll and riser for this family.
+- **Drum shelf: pass in software, not heard.** Three authored 16-pad kits are on the shelf under SKINS. They differ in source drums, tunings, pad roles (six, four and three toms), tempo and the mechanism that makes the space, not only in effect strength. `GatecrashTest` checks each of those differences. The owner chose the three genres on 2026-11-10.
+- **Velocity and round robin:**
+  - **Rendering: verified.** Three zones of four takes per pad. The closest pair of takes is the stone kick's at the soft zone (41 dB apart), which is weak. All 42 hits measure duller at the soft zone, and the toms at least 1.5 dB drier for their level, so a zone is not a volume change. Every take differs from the others in its zone. SKIN's kick, snare and toms are fresh strikes. THUMP, ONSET and SKIN's hats and shaker cannot be re-struck from outside, so their takes are small control moves on the same noise. That is weaker than a re-strike and is disclosed.
+  - **Saving: verified.** A saved kit reloads equal, and all 576 saved slices match their renders (`:shell:generateGatecrashKits`, `GatecrashKitTest`).
+  - **Playback: verified in software.** `PadHit.resolve`, the resolver the app's pad engine calls, picks the zone by velocity and deals the four takes in order, then repeats. No phone has played these kits.
+  - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
+- **Sound character: round 1 rejected, rounds 2 and 3 each heard with one correction, round 4 not heard.** On round 3 the owner said "we are missing some brightness"; round 4 opens the returns from 1.5 to 3.5 kHz to 2.2 to 6 kHz and restores some snap to the snares and toms. On round 2 the owner said 80s drums "round off at the end rather than cut abruptly"; round 3 lengthens every close from 10 to 25 ms to 45 to 130 ms. The owner has not approved any round. On 2026-11-10 the owner heard round 1 as "harsh" and "more like loud static" than 80s drums. Measured afterwards, its rooms carried 14 to 20 dB more energy than the drums and were as bright as the drums. Round 2 sets each room's energy against its drum's (at most +4 dB), darkens every return, removes the hard clip and leaves cymbals dry. Round 1 passed every software probe it had, so those probes are not evidence of sound.
+- **Overall: incomplete.** The software evidence is in place. Owner listening, phone playback and MPC hardware playback remain open.

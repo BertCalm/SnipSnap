@@ -731,4 +731,6 @@ testkit/backwash-acoustic-integration/
 # Cosmic Breaks MPC exports are rebuilt from the frozen source assets.
 /testkit/cosmic-breaks-kit/
 
+# GATECRASH kits: regenerate with :shell:generateGatecrashKits
+/testkit/gatecrash-kits/
 /testkit/cosmic-family/

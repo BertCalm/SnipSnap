@@ -265,12 +265,12 @@ class SnapScreenTest : ComposeScreenTest() {
         // CLOUD needs FIELD's grains, so it stays off until a field is built.
         button("CLOUD TO PAD").assertIsNotEnabled()
         invokeClick("PHOTO GRAINS")
-        // The field's back chip reads "◄ SNAP" and is named for a screen
-        // reader in words (spokenBack): "BACK TO SNAP".
-        waitFor("the field over the picture", timeoutMillis = 60_000) { present("BACK TO SNAP") }
+        // The field's back chip reads "◄ PHOTO" and is named for a screen
+        // reader in words (spokenBack): "BACK TO PHOTO".
+        waitFor("the field over the picture", timeoutMillis = 60_000) { present("BACK TO PHOTO") }
         assertTrue(showing("◄ PHOTO"))
-        invokeClick("BACK TO SNAP")
-        waitFor("back on SNAP") { !present("BACK TO SNAP") }
+        invokeClick("BACK TO PHOTO")
+        waitFor("back on SNAP") { !present("BACK TO PHOTO") }
         waitFor("CLOUD to light") { runCatching { button("CLOUD TO PAD").assertIsEnabled() }.isSuccess }
         invokeClick("CLOUD TO PAD")
         invokeClick("${PadBanks.tag(1)}, EMPTY")
