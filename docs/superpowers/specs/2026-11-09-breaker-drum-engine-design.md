@@ -586,6 +586,9 @@ riser. Presets:
 - riser: Tamed, Pumping (CRUSH .9, AMP .35), Short spring (DRIP .2).
 
 **Still open:**
-- The Kotlin renders wait for the owner's confirming listen.
+- The Kotlin renders wait for the owner's confirming listen. The page
+  (https://claude.ai/artifact/5CKZu3HiYQj7xqzkEDXexA) plays each pick beside the app's render, then
+  takes, 40% hits, the presets and two beats. The app's riser is the pick, sample for sample. The
+  cymbals match it within 1 to 2 dB in the dense bands.
 - The riser is the percussion gate's authored roll in rendering only. It has not been played, saved
   in a kit or exported yet.
