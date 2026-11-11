@@ -501,7 +501,7 @@ fun GrainFieldScreen(
                     scheme,
                     Modifier.width(84.dp),
                     engaged = printing,
-                    accessibilityLabel = if (printing) "STOP PRINT" else "PRINT TO TAPE",
+                    accessibilityLabel = if (printing) "STOP PRINT" else "SAVE AS SAMPLE",
                 ) {
                     if (printing) finishPrint() else if (voice.startPrint()) printing = true
                 }

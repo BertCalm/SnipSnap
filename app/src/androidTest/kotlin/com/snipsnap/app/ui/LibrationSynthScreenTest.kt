@@ -139,7 +139,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         }
         val edited = requireNotNull(stored(factory.voice))
         assertFalse(settings.containsKey("preset.LIBRATION.GATHER"))
-        invokeClick("SCRAMBLE")
+        invokeClick("RANDOMISE")
         waitFor("scrambled timbre") { stored(factory.voice)?.macros != edited.macros }
         val scrambled = requireNotNull(stored(factory.voice))
         assertEquals(edited.copy(macros = scrambled.macros), scrambled)
@@ -202,7 +202,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         } == true }
         rootTo(36 + 12) // old slider .25 over 36..84
         dial("TOUCH", .37f)
-        invokeClick("SCRAMBLE")
+        invokeClick("RANDOMISE")
         dial("SWARM", .1f)
         val held = requireNotNull(stored(factory.voice))
         assertEquals(48, held.midi)

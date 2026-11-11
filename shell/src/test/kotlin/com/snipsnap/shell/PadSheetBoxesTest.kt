@@ -13,7 +13,7 @@ class PadSheetBoxesTest {
 
     @Test
     fun `five boxes in order, one open at a time, a tap on the open one closes it`() {
-        assertEquals(listOf("TREATMENT", "SHAPE", "OUTSIDE", "MUTATE", "MAKE"), PadSheetBoxes.ORDER.map { it.legend })
+        assertEquals(listOf("EFFECTS", "SHAPE", "RE-AMP AND ROOM", "COMBINE SOUNDS", "MAKE FROM THIS PAD"), PadSheetBoxes.ORDER.map { it.legend })
         assertEquals(PadSheetBoxes.Box.MUTATE, PadSheetBoxes.boxFor("MUTATE"))
         assertNull(PadSheetBoxes.boxFor("BENCH"))
         assertEquals(PadSheetBoxes.Box.SHAPE, PadSheetBoxes.toggle(null, PadSheetBoxes.Box.SHAPE))
@@ -29,7 +29,7 @@ class PadSheetBoxesTest {
         assertEquals(PadSheetBoxes.MUTATE_OFFERS, s[PadSheetBoxes.Box.MUTATE])
         assertEquals(PadSheetBoxes.OUTSIDE_HOLDS, s[PadSheetBoxes.Box.OUTSIDE])
         assertTrue(PadSheetBoxes.lines(bare, null).values.none { it.carried }, "idle words are not a carried bench")
-        assertEquals("PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT", s[PadSheetBoxes.Box.MAKE])
+        assertEquals("SUSTAIN · NEAREST SYNTH · INSTRUMENT", s[PadSheetBoxes.Box.MAKE])
         for ((box, line) in s) assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "$box: '$line' (${line.length})")
     }
 
@@ -40,15 +40,15 @@ class PadSheetBoxesTest {
 
         val shaped = bare.copy(attack = 0.5f, cutoff = 0.5f)
         val shape = PadSheetBoxes.shape(shaped)
-        assertEquals("ATK 200 MS · CUT 632 HZ", shape, "only the fields the pad sets")
+        assertEquals("ATK 200MS · CUTOFF 632 HZ", shape, "only the fields the pad sets")
         val fully = PadSheetBoxes.shape(bare.copy(attack = 1f, decay = 0.5f, cutoff = 1f, resonance = 1f))
         assertTrue(fully.length <= PadSheetBoxes.SUMMARY_CHARS, "$fully (${fully.length})")
         assertEquals("632 HZ", PadSheetBoxes.cutoffLabel(0.5f))
         assertEquals("20.0K", PadSheetBoxes.cutoffLabel(1f))
 
-        assertEquals("ROOM × FUNK ROOM", PadSheetBoxes.mutate(MutateSheet.Applied("ROOM", listOf("room:FUNK ROOM"))))
-        assertEquals("DRIFT × SOUL A03", PadSheetBoxes.mutate(MutateSheet.Applied("MORPH", listOf("Soul:A03"), drifted = true)))
-        assertEquals("STACK × FUNK A01 + FUNK A05", PadSheetBoxes.mutate(MutateSheet.Applied("STACK", listOf("FUNK:A01", "FUNK:A05"))))
+        assertEquals("ROOM TONE × FUNK ROOM", PadSheetBoxes.mutate(MutateSheet.Applied("ROOM", listOf("room:FUNK ROOM"))))
+        assertEquals("RANDOM BLEND × SOUL A03", PadSheetBoxes.mutate(MutateSheet.Applied("MORPH", listOf("Soul:A03"), drifted = true)))
+        assertEquals("LAYER × FUNK A01 + FUNK A05", PadSheetBoxes.mutate(MutateSheet.Applied("STACK", listOf("FUNK:A01", "FUNK:A05"))))
 
         val applied = OutsideSheet.Applied("ROOM", 23.4f, 0.87f, false)
         assertEquals(OutsideSheet.statusLine(applied), PadSheetBoxes.outside(applied, null))
@@ -137,13 +137,13 @@ class PadSheetBoxesTest {
         assertEquals("DELAY 70%", PadSheetBoxes.effectsLine(delayed))
 
         // SHAPE and a trip out count too; MUTATE's and MAKE's strips do not.
-        assertEquals("ATK 200 MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
-        assertEquals("DELAY 70% · ATK 200 MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
+        assertEquals("ATK 200MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
+        assertEquals("DELAY 70% · ATK 200MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
         assertEquals(Copy.OUTSIDE_LISTENING, PadSheetBoxes.effectsLine(bare, outsideStage = Copy.OUTSIDE_LISTENING))
         assertEquals(
             PadSheetBoxes.EFFECTS_HOLDS,
             PadSheetBoxes.effectsLine(bare.copy(source = bare.source + ("desampled" to "2 steps"))),
-            "MAKE's DE-SAMPLE is not on the EFFECTS screen",
+            "MAKE's FIND NEAREST SYNTH is not on the EFFECTS screen",
         )
 
         // Words that would not fit the line become a count, as the pedal strip's own do.
@@ -182,6 +182,6 @@ class PadSheetBoxesTest {
         }
         assertTrue("UNTOUCHED" !in PadSheetBoxes.effectsLine(bare))
         assertTrue("UNTOUCHED" !in PadSheetBoxes.variationsLine(bare))
-        assertEquals("TREATMENT, SHAPE, OUTSIDE", PadSheetBoxes.EFFECTS_HOLDS)
+        assertEquals("EFFECTS, SHAPE, RE-AMP AND ROOM", PadSheetBoxes.EFFECTS_HOLDS)
     }
 }

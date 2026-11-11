@@ -23,6 +23,7 @@ internal fun SurfaceAquariumPanel(
 ) {
     Column(Modifier.fillMaxWidth().testTag("surface-aquarium-panel"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("AQUARIUM · KIT", TapeType.lcdHeader, scheme.ink.tape)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(if (optedIn) "KIT FX ON" else "USE KIT FX", scheme,
                 enabled = ready && !busy && (route.warning == null || optedIn), lit = optedIn,

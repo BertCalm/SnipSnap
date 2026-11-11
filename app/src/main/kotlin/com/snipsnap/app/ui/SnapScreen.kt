@@ -893,7 +893,7 @@ fun SnapScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                TapeText("SNAP", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText("PHOTO TO SOUND", TapeType.lcdHeader, scheme.lcdInk.tape)
                 val lineWord = when {
                     voice == SnapVoice.DRAWN -> "LINE DRAWN"
                     photo == null -> "NO PHOTO"
@@ -1002,11 +1002,11 @@ fun SnapScreen(
                         showSpectrumChooser = true
                     }
                     LabButton(
-                        if (telephoneBusy) "…" else "TELEPHONE",
+                        if (telephoneBusy) "…" else "EIGHT COPIES",
                         scheme,
                         enabled = photo != null && !telephoneBusy,
                         modifier = Modifier.weight(1f),
-                        accessibilityLabel = "TELEPHONE CHAIN",
+                        accessibilityLabel = "EIGHT COPIES CHAIN",
                     ) {
                         runTelephone()
                     }
@@ -1041,7 +1041,7 @@ fun SnapScreen(
                         scheme,
                         enabled = photo != null && !buildingField,
                         modifier = Modifier.weight(1f),
-                        accessibilityLabel = "PHOTO FIELD",
+                        accessibilityLabel = "PHOTO GRAINS",
                     ) { openField() }
                 }
 
@@ -1113,7 +1113,7 @@ fun SnapScreen(
                 // its load and its voice on it, and a fresh instance per
                 // recomposition (a toast, a kit refresh) would tear the
                 // voice down mid-drag and start it again.
-                val prebuilt = remember(f, thumb) { PrebuiltField(f.source, f.map, thumb, "PHOTO FIELD", "◄ SNAP") }
+                val prebuilt = remember(f, thumb) { PrebuiltField(f.source, f.map, thumb, "PHOTO GRAINS", "◄ PHOTO") }
                 Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }) {
                     GrainFieldScreen(
                         entry = null,
@@ -1298,7 +1298,7 @@ private fun TelephoneOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("TELEPHONE — TAP ONE TO HEAR IT", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                TapeText("EIGHT COPIES — TAP ONE TO HEAR IT", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)

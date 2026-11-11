@@ -21,3 +21,7 @@ For pull-request and CI work, also read
 ## Engine completion gates
 
 Apply the owner's [engine acceptance gates](docs/ENGINE_ACCEPTANCE_GATES.md) to every engine. A listening preview or passing render test does not satisfy the end-to-end velocity/round-robin gate.
+
+For instrument development, apply the owner's
+[instrument acceptance gates](docs/INSTRUMENT_ACCEPTANCE_GATES.md) alongside
+Luthier. A disclosed export fallback does not close a velocity/round-robin gate.

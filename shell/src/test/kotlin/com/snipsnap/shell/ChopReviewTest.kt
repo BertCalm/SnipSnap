@@ -287,7 +287,7 @@ class ChopReviewTest {
         assertEquals(4, ghosts.sliceCount, "a space after every hit")
         assertEquals(4, ghosts.hitsHeard, "and the bench steps from the hits underneath")
         assertEquals(4, hits.hitsHeard)
-        assertEquals("GHOSTS", ghosts.modeLabel())
+        assertEquals("BETWEEN HITS", ghosts.modeLabel())
         assertEquals(listOf("AFTER KICK 1", "AFTER HAT CL 2", "AFTER SNARE 3", "AFTER HAT OP 4"), ghosts.rows.map { it.ghostOf })
         assertTrue(ghosts.rows.all { it.effectiveClass == DrumClass.LOOP && !it.unsure }, "a ghost is texture, never NOT SURE")
         for (i in 0 until 4) {
@@ -301,7 +301,7 @@ class ChopReviewTest {
         // The bench reaches the hits underneath: one hit fewer, one ghost fewer; the header carries the hits' extras.
         val fewer = ghosts.rechopKeeping(ChopReviewModel.withHits(ghosts.mode, byHits(3, cut = ChopReviewModel.Cut.EARLY)))
         assertEquals(3, fewer.sliceCount)
-        assertEquals("GHOSTS · CUT EARLY", fewer.modeLabel())
+        assertEquals("BETWEEN HITS · CUT EARLY", fewer.modeLabel())
         assertEquals(byHits(3, cut = ChopReviewModel.Cut.EARLY), ChopReviewModel.hitsOf(fewer.mode))
         assertEquals(byHits(8), ChopReviewModel.withHits(ChopReviewModel.ChopMode.Grid(4), byHits(8)), "a grid becomes the hits")
         // Landing: gate pads named for their hit, balanced, RE-TRIM keys on every one.

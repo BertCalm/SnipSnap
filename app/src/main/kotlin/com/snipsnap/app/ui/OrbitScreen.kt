@@ -1462,9 +1462,9 @@ private fun RingDetailPanel(
         SmallChip("SOLO", scheme, accent = solo == selected) { onToggleSolo() }
         SmallChip("DEL", scheme) { onDeleteRing() }
         if (ring.content is PatternOrbit) {
-            SmallChip(Places.opener("SPREAD"), scheme, description = "SPREAD") { onOpenSpread() }
+            SmallChip(Places.opener("SPACE EVENLY"), scheme, description = "SPACE EVENLY") { onOpenSpread() }
             SmallChip("CLEAR", scheme) { onUpdateRing { OrbitPatterns.clear(it) } }
-            SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { onScrambleRing() }
+            SmallChip("⚄ RANDOM FILL", scheme, description = "RANDOM FILL") { onScrambleRing() }
             SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
             SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
         }
@@ -1684,7 +1684,7 @@ private fun OutPanel(
     why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
     if (why.isEmpty()) {
         TapeText(
-            "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+            "SAMPLE: WHAT YOU HEAR, AS A SAMPLE IN THE LIBRARY — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth(),
@@ -2210,7 +2210,7 @@ private fun OrbitFooterRow(
             TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
         }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
-        ActionButton(Places.opener("+ SNIP"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SNIP") {
+        ActionButton(Places.opener("+ SAMPLE"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SAMPLE") {
             onToggleSnipPicker()
         }
         ActionButton("OUT", scheme, Modifier.weight(1f), accent = outOpen) {

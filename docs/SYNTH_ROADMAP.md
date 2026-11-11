@@ -3,6 +3,11 @@
 > Velocity × round robin is proven through save, playback and MPC 3 export in software. Not heard; no
 > hardware. See [GATECRASH](GATECRASH.md).
 
+> Cosmic Breaks gate update: DnB, Jungle and Dubstep shelf kits, each with 18 pads
+> and three velocity layers × four takes. Native/SFZ round trips and DecentSampler
+> grid fields are checked; MPC slice-map/hardware acceptance remains open.
+> See [Cosmic Breaks](COSMIC_BREAKS.md) and the [acceptance gates](INSTRUMENT_ACCEPTANCE_GATES.md).
+
 > Spore Station candidate jungle kit: Jungle, Dub and Electro shelf kits, with 18 pads each,
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).
@@ -3412,3 +3417,11 @@ Round 1b (renderer model 2):
   from 95 to 90 ms. Round 1 had blamed the kick's onset; that was a measuring artefact.
 - **The change:** the kick goes back to tank A, and the slap back to 95 ms. Model-1 saves keep
   round 1's sound.
+
+Round 2 adds ten drums through the same rig:
+- **The drums:** Backroom's hats, stick and shaker; three SKIN toms; a SKIN ride; and BACKWASH's
+  CC0 tambourine.
+- **Repeat hits:** SKIN's unstruck voices can re-seed their noise per take, but only when asked; only BREAKER asks.
+- **Soft hits:** the unstruck drums soften after the rig, since darkening their source came out
+  brighter.
+- **Status:** waiting for the owner's listen.

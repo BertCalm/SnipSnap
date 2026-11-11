@@ -289,7 +289,7 @@ class ChopScreenTest : ComposeScreenTest() {
     @Test
     fun the_cut_bench_grid_cuts_the_tape_into_as_many_equal_parts() {
         showChopped()
-        invokeClick("EXPAND CUT")
+        invokeClick("EXPAND CHOP")
         invokeClick("GRID")
         waitFor("the grid chop") { showing(header(4, "GRID ×4")) }
     }

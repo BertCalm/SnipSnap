@@ -48,9 +48,9 @@ class DockModelTest {
     fun `the capture and transport regions read their state`() {
         val dock = DockModel()
         dock.capture = DockModel.Capture.Armed(41)
-        assertEquals("ARMED · 00:41 ON TAPE", dock.captureLabel)
+        assertEquals("LISTENING · 00:41 BUFFERED", dock.captureLabel)
         dock.capture = DockModel.Capture.Armed(125)
-        assertEquals("ARMED · 02:05 ON TAPE", dock.captureLabel)
+        assertEquals("LISTENING · 02:05 BUFFERED", dock.captureLabel)
         dock.capture = DockModel.Capture.Snipped
         assertEquals(Places.SNIPPED, dock.captureLabel)
 

@@ -125,7 +125,7 @@ class SurfaceScreenTest : ComposeScreenTest() {
         // The mode row: the five modes alone.
         for (m in Mode.entries) assertReadsInFull(m.name)
         // The print row: where it lands, how long, and the button.
-        assertReadsInFull("→ TAPE")
+        assertReadsInFull("→ SAMPLE")
         assertReadsInFull("NO TEMPO")
         assertReadsInFull("PRINT")
         // The strip, and VOICE's first row.
@@ -133,8 +133,8 @@ class SurfaceScreenTest : ComposeScreenTest() {
         assertReadsInFull("SHAPE")
         assertReadsInFull("MOD")
         assertReadsInFull("MIDI")
-        assertReadsInFull("◄ PAD")
-        assertReadsInFull("PAD ►")
+        assertReadsInFull("PREVIOUS PAD")
+        assertReadsInFull("NEXT PAD")
         assertReadsInFull("RING")
         assertReadsInFull("LATCH")
     }
@@ -150,7 +150,7 @@ class SurfaceScreenTest : ComposeScreenTest() {
         tap("${PrintLength.label(PrintLength.BARS[1])} ▾")
         tap(PrintLength.label(PrintLength.BARS[2]))
         assertReadsInFull("${PrintLength.label(PrintLength.BARS[2])} ▾")
-        assertReadsInFull("→ TAPE")
+        assertReadsInFull("→ SAMPLE")
         assertReadsInFull("→ PAD")
     }
 
@@ -169,13 +169,13 @@ class SurfaceScreenTest : ComposeScreenTest() {
     fun the_print_destination_flips_between_tape_and_pad() {
         show(entry = null)
         // Both destinations are always on screen; the one in force is selected.
-        button("→ TAPE").assertIsSelected()
+        button("→ SAMPLE").assertIsSelected()
         button("→ PAD").assertIsNotSelected()
         tap("→ PAD")
         button("→ PAD").assertIsSelected()
-        button("→ TAPE").assertIsNotSelected()
-        tap("→ TAPE")
-        button("→ TAPE").assertIsSelected()
+        button("→ SAMPLE").assertIsNotSelected()
+        tap("→ SAMPLE")
+        button("→ SAMPLE").assertIsSelected()
     }
 
     @Test
@@ -212,12 +212,12 @@ class SurfaceScreenTest : ComposeScreenTest() {
         tap("SHAPE")
         button("SET A").assertExists()
         button("LATCH").assertDoesNotExist()
-        button("→ TAPE").assertExists()
+        button("→ SAMPLE").assertExists()
         button("PRINT").assertExists()
         tap("MOD")
         button("MOD A").assertExists()
         button("SET A").assertDoesNotExist()
-        button("→ TAPE").assertExists()
+        button("→ SAMPLE").assertExists()
         button("PRINT").assertExists()
     }
 

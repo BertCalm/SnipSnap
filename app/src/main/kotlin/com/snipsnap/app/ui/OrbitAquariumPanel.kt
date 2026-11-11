@@ -25,6 +25,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
     val tails = listOf(0f, 1f, 3f, 5f, 10f, 30f)
     Column(Modifier.fillMaxWidth().testTag("orbit-aquarium-panel"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("AQUARIUM · ORBIT", TapeType.lcdHeader, scheme.ink.tape)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(if (set.aquariumFromKit) "KIT FX ON" else "USE KIT FX", scheme,
                 enabled = !busy && (route.warning == null || set.aquariumFromKit), lit = set.aquariumFromKit,
@@ -61,7 +62,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
         }
         TapeText("Saved KIT → PERFORMANCE sound at ORBIT tempo. Mix and tapped pads have separate FX history. BOUNCE starts fresh for one turn plus the chosen zero-input tail; taps are excluded. The ending can cut a long tail, and a wet bounce can have a loop seam. CLIP TO KIT carries notes only.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        TapeText("SNIPS keeps the stereo file; TAPE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
+        TapeText("SAVED SAMPLES keeps the stereo file; SAMPLE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (set.aquariumFromKit) TapeText("MIX PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
     }

@@ -523,7 +523,7 @@ class OrigamiSynthScreenTest {
         // Sparse older recipes must use their frozen defaults, not R4's
         // recalibrated FAN crease, before the first edit or render.
         assertEquals(if (model <= 3) .63f else .5f, macroValue("CREASE"), .0001f)
-        click("SCRAMBLE")
+        click("RANDOMISE")
         assertEquals(19f / 24f, macroValue("TUNE"), .0001f)
         dial("FOLD", .9f)
         val first = send(1)

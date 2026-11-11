@@ -209,7 +209,7 @@ class RelaySynthScreenTest : ComposeScreenTest() {
             button("PULSE").assertDoesNotExist()
             button("VELOCITY").assertDoesNotExist()
             button("RELAY REPEATING PULSE").assertDoesNotExist()
-            button("SCRAMBLE").assertIsNotEnabled()
+            button("RANDOMISE").assertIsNotEnabled()
             button("SAVE PRESET").assertIsNotEnabled()
             button("AUDITION").assertIsNotEnabled()
             button("PRESET FIRST HANDOFF").assertIsEnabled()

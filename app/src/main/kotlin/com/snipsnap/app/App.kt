@@ -3668,7 +3668,7 @@ fun App(shelf: KitShelf) {
                         top == Bench.SNIPS -> SnipsScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
-                            backLabel = checkNotNull(nav.backChip) { "SNIPS is a bench, so it has something to go back to" },
+                            backLabel = checkNotNull(nav.backChip) { "SAVED SAMPLES is a bench, so it has something to go back to" },
                             onBack = { pendingSnipTarget = null; nav.closeBench() },
                             // BIN opens over SNIPS, wherever SNIPS is (the
                             // shelf, PADS, DECK): Back from BIN returns here,
@@ -3717,7 +3717,7 @@ fun App(shelf: KitShelf) {
                                 XRayScreen(
                                     fileName = xrayView.fileName,
                                     reading = xrayView.reading,
-                                    backLabel = checkNotNull(nav.backChip) { "X-RAY is a bench, so it has something to go back to" },
+                                    backLabel = checkNotNull(nav.backChip) { "INSPECT FILE is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                 )
                             }
@@ -3725,7 +3725,7 @@ fun App(shelf: KitShelf) {
                         top == Bench.BIN -> BinScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
-                            backLabel = checkNotNull(nav.backChip) { "BIN is a bench, so it has something to go back to" },
+                            backLabel = checkNotNull(nav.backChip) { "TRASH is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
                             onKitRestored = {
@@ -3928,7 +3928,7 @@ fun App(shelf: KitShelf) {
                                     slot = captureSlot,
                                     armed = captureArmed,
                                     onRequestArm = ::requestArm,
-                                    backLabel = checkNotNull(nav.backChip) { "PAD CAPTURE is a bench, so it has something to go back to" },
+                                    backLabel = checkNotNull(nav.backChip) { "RECORD ON PAD is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onKitUpdated = { updatedKit ->
@@ -4064,7 +4064,7 @@ fun App(shelf: KitShelf) {
                                 PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
-                                    backLabel = checkNotNull(nav.backChip) { "PAD SHEET is a bench, so it has something to go back to" },
+                                    backLabel = checkNotNull(nav.backChip) { "PAD EDITOR is a bench, so it has something to go back to" },
                                     onSlotChange = ::retargetPadSheet,
                                     page = PadSheetPage.of(top) ?: PadSheetPage.EDITOR,
                                     onOpenEffects = { nav.open(Bench.PAD_EFFECTS) },
@@ -4246,7 +4246,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onEmptyTapHint = {
-                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
+                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SAMPLE" else "LONG-PRESS TO CAPTURE")
                                 },
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,

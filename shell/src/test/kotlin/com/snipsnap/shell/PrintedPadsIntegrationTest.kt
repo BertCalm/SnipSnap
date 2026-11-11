@@ -96,11 +96,11 @@ class PrintedPadsIntegrationTest {
             assertEquals("REMOVE AQUARIUM BEFORE CHANGING SOFT HITS.", layerError.message)
             val take = KitBuilderModel.BinEntry("main.wav", 0L, File(model.kitDir, "absent-take.wav"))
             val stackError = assertFailsWith<IllegalArgumentException> { model.stackTakes(1, listOf(take)) }
-            assertEquals("REMOVE AQUARIUM BEFORE STACK THE TAKES.", stackError.message)
+            assertEquals("REMOVE AQUARIUM BEFORE STACK VERSIONS.", stackError.message)
             val spliceError = assertFailsWith<IllegalArgumentException> { model.splicePad(1, tone(220.0), 700, tone(330.0), 900) }
             assertEquals("REMOVE AQUARIUM BEFORE SPLICE.", spliceError.message)
             val desampleError = assertFailsWith<IllegalArgumentException> { model.desamplePad(1, evenIfFar = true) }
-            assertEquals("REMOVE AQUARIUM BEFORE DE-SAMPLE.", desampleError.message)
+            assertEquals("REMOVE AQUARIUM BEFORE FIND NEAREST SYNTH.", desampleError.message)
 
             val plan = Spread.plan(model.kit, 60f, Spread.Options(60, Scale.MAJOR, padCount = 4, bank = 1, replaceFull = true))
             for (sound in listOf(

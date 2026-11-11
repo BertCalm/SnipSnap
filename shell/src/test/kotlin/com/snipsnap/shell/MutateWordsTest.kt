@@ -38,20 +38,20 @@ class MutateWordsTest {
 
     private fun assertNoRetiredWord(where: String, text: String) {
         val hit = retired.find(text.uppercase())
-        assertTrue(hit == null, "$where says '${hit?.value}', a word MUTATE retired for PARTNER: '$text'")
+        assertTrue(hit == null, "$where says '${hit?.value}', a word COMBINE SOUNDS retired for PARTNER: '$text'")
     }
 
     @Test
     fun `the toasts MUTATE shows say PARTNER, never a retired word`() {
         assertEquals(
-            "SPLICE: A01 × B07. THE TAKE BEFORE IT SLEEPS IN THE BIN.",
+            "SPLICE: A01 × B07. THE VERSION BEFORE IT SLEEPS IN THE TRASH.",
             Copy.mutated("SPLICE", "A01", "B07"),
         )
-        assertEquals("UNDONE. THE TAKE BEFORE THE LAST MUTATE IS BACK FROM THE BIN.", Copy.UNMUTATED)
-        assertEquals("THE SHELF HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK.", Copy.CRATE_EMPTY)
+        assertEquals("UNDONE. THE VERSION BEFORE THE LAST COMBINE IS BACK FROM THE TRASH.", Copy.UNMUTATED)
+        assertEquals("THE LIBRARY HOLDS NO OTHER PAD. RANDOM PARTNER HAS NOTHING TO PICK.", Copy.CRATE_EMPTY)
         assertEquals("NOT A PARTNER: THAT FILE IS SILENT.", Copy.fileRefused("that file is silent"))
         assertEquals(
-            "MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED.",
+            "COMBINE SOUNDS (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED.",
             Copy.replayNeedsPartner("SPLICE", listOf("KIT A02")),
         )
         for ((where, text) in listOf(
@@ -112,7 +112,7 @@ class MutateWordsTest {
         // BECOME's lines are this spec's and the brief's, not the board's: pinned as written.
         assertEquals("HOW LONG THE TURN TAKES", MutateSheet.becomeMeaning(Mutate.Mode.MORPH))
         for (mode in Mutate.Mode.values().filter { it != Mutate.Mode.MORPH }) {
-            assertEquals("ONLY MORPH TURNS OVER TIME", MutateSheet.becomeMeaning(mode), "$mode's BECOME row")
+            assertEquals("ONLY BLEND TURNS OVER TIME", MutateSheet.becomeMeaning(mode), "$mode's BECOME row")
         }
     }
 
@@ -252,10 +252,10 @@ class MutateWordsTest {
         assertEquals("▶ HEAR THE RESULT", MutateSheet.HEAR_LABEL)
         assertEquals("NOTHING CHANGES YOUR PAD UNTIL YOU KEEP IT", MutateSheet.NOTE_LINE)
         assertEquals("KEEP", MutateSheet.KEEP_LABEL)
-        assertEquals("DRIFT · BLEND & SAVE", MutateSheet.DRIFT_LABEL)
-        assertEquals("ROULETTE · PICK A PARTNER OFF THE SHELF", MutateSheet.ROULETTE_LABEL)
-        assertEquals("NO ROOM YET · MAKE ONE IN OUTSIDE ▸ ROOM", MutateSheet.NO_ROOM_LINE)
-        assertEquals("NO OTHER KIT ON THE SHELF", MutateSheet.NO_OTHER_KIT_LINE)
+        assertEquals("RANDOM BLEND · SAVES", MutateSheet.DRIFT_LABEL)
+        assertEquals("RANDOM PARTNER · PICK ONE FROM THE LIBRARY", MutateSheet.ROULETTE_LABEL)
+        assertEquals("NO ROOM YET · MAKE ONE IN RE-AMP AND ROOM", MutateSheet.NO_ROOM_LINE)
+        assertEquals("NO OTHER KIT IN THE LIBRARY", MutateSheet.NO_OTHER_KIT_LINE)
         for ((name, text) in rows) {
             assertEquals(text.uppercase(), text, "MutateSheet.$name does not shout: '$text'")
             assertTrue(text.length <= MutateSheet.ROW_CHARS, "MutateSheet.$name runs ${text.length}, past the row's ${MutateSheet.ROW_CHARS}: '$text'")
@@ -281,7 +281,7 @@ class MutateWordsTest {
             MutateSheet.NO_ROOM_LINE, MutateSheet.NO_OTHER_KIT_LINE, MutateSheet.deadKnobLine,
         ) + Mutate.Mode.values().flatMap { listOfNotNull(MutateSheet.outcomeLine(it, 1f), MutateSheet.knobMeaning(it), MutateSheet.becomeMeaning(it)) }
         for (text in labels + MutateSheet.KEEP_LABEL) {
-            assertTrue("KEEP ROOM" !in text, "'$text' says KEEP ROOM, OUTSIDE's button, on the card whose commit verb is KEEP")
+            assertTrue("KEEP ROOM" !in text, "'$text' says KEEP ROOM, RE-AMP AND ROOM's button, on the card whose commit verb is KEEP")
             assertOneMeaning("'$text'", text)
         }
         val keepers = labels.filter { Regex("""\bKEEP\b""").containsMatchIn(it) }
@@ -291,15 +291,15 @@ class MutateWordsTest {
     @Test
     fun `the refusals and UNDO's lines say what to do next, in PARTNER's words`() {
         assertEquals("PICK A PARTNER FIRST.", Copy.MUTATE_PICK_PARTNER)
-        assertEquals("SOFT HITS IS ON: THIS PAD HAS LAYERS. MUTATE WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST.", Copy.MUTATE_LAYERED)
+        assertEquals("SOFT HITS IS ON: THIS PAD HAS LAYERS. COMBINE SOUNDS WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST.", Copy.MUTATE_LAYERED)
         assertEquals(
-            "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE.",
+            "THIS PAD PLAYS ITS SLICES IN TURN. COMBINE SOUNDS WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE.",
             Copy.MUTATE_CHAINED,
         )
-        assertEquals("EVERY OTHER SOUND ON THE SHELF IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
+        assertEquals("EVERY OTHER SOUND IN THE LIBRARY IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
         assertEquals("THAT PARTNER IS GONE. PICK ANOTHER.", Copy.MUTATE_PARTNER_GONE)
-        assertEquals("THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE.", Copy.UNDO_NOTHING)
-        assertEquals("THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS.", Copy.UNDO_NOT_BINNED)
+        assertEquals("THIS PAD CARRIES NO COMBINE. NOTHING TO UNDO HERE.", Copy.UNDO_NOTHING)
+        assertEquals("THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE COMBINE STAYS.", Copy.UNDO_NOT_BINNED)
         for (r in listOf(
             MutateSheet.Refusal.NoPartner, MutateSheet.Refusal.Layered, MutateSheet.Refusal.Chained,
             MutateSheet.Refusal.ShelfEmpty, MutateSheet.Refusal.OnlyCopies, MutateSheet.Refusal.PartnerGone,
@@ -320,11 +320,11 @@ class MutateWordsTest {
     @Test
     fun `the keep toast says what was flipped and how the length changed, and only when it did`() {
         assertEquals(
-            "STACK: A02 × B07. THE TAKE BEFORE IT SLEEPS IN THE BIN. B07 WAS FLIPPED: IT WAS CANCELLING THE PAD.",
+            "STACK: A02 × B07. THE VERSION BEFORE IT SLEEPS IN THE TRASH. B07 WAS FLIPPED: IT WAS CANCELLING THE PAD.",
             Copy.mutated("STACK", "A02", "B07", flipped = listOf("B07")),
         )
         assertEquals(
-            "SPLICE: A02 × B07. THE TAKE BEFORE IT SLEEPS IN THE BIN. IT RUNS 1.4 S NOW, NOT 0.3 S.",
+            "SPLICE: A02 × B07. THE VERSION BEFORE IT SLEEPS IN THE TRASH. IT RUNS 1.4 S NOW, NOT 0.3 S.",
             Copy.mutated("SPLICE", "A02", "B07", lengthNote = Copy.lengthNote(300, 1400)),
         )
         assertTrue(Copy.mutated("SPLICE", "A01", "A03", listOf("A03"), Copy.lengthNote(300, 1400)).startsWith("SPLICE: A01 × A03."))

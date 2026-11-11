@@ -155,6 +155,6 @@ class PadToolBackChipTest : ComposeScreenTest() {
     @Test
     fun stack_header_names_the_pad_it_works_on() {
         showStack(LABEL)
-        assertReadsInFull("STACK THE TAKES · $PAD")
+        assertReadsInFull("STACK VERSIONS · $PAD")
     }
 }

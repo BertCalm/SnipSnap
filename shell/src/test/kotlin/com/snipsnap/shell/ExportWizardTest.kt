@@ -37,8 +37,8 @@ class ExportWizardTest {
         val w = ExportWizardModel(kit, dir)
 
         assertEquals(ExportWizardModel.Stage.READY, w.stage)
-        assertEquals("WRITE KIT", w.writeLabel)
-        assertEquals("READY TO DUB", w.dubLabel)
+        assertEquals("EXPORT KIT", w.writeLabel)
+        assertEquals("READY TO EXPORT", w.dubLabel)
         assertEquals(4, w.fileCount) // 3 WAVs + the program
         assertTrue("4 FILES QUEUED" in w.dubFilesLine(0))
         // The landing box (LandingNote.dubbed) repeats the sides in the same words.
@@ -55,9 +55,9 @@ class ExportWizardTest {
             readBack.none { it.severity == com.snipsnap.kit.Severity.FAIL },
             readBack.joinToString(" | ") { it.message },
         )
-        assertEquals("WRITE ANOTHER ✓", w.writeLabel)
-        assertEquals("DUB COMPLETE", w.dubLabel)
-        assertTrue("ALL 4 FILES ON TAPE" in w.dubFilesLine(4))
+        assertEquals("EXPORT ANOTHER", w.writeLabel)
+        assertEquals("EXPORT COMPLETE", w.dubLabel)
+        assertTrue("ALL 4 FILES WRITTEN" in w.dubFilesLine(4))
 
         assertFailsWith<IllegalStateException> { w.write(File(temp, "again")) }
         w.eject()

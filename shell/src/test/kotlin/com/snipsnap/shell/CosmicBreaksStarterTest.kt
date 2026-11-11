@@ -15,8 +15,8 @@ class CosmicBreaksStarterTest {
             assertEquals(170f, starter.tempoBpm)
             val kit = starter.render("Cosmic Breaks", dir)
             assertEquals(kit, KitStore.load(dir))
-            val expected = CosmicBreaksKits.build()
-            assertEquals(16, kit.pads.size)
+            val expected = com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.ORBIT)
+            assertEquals(18, kit.pads.size)
             for ((i, pad) in kit.pads.withIndex()) {
                 assertEquals(expected[i].displayName, pad.displayName)
                 assertEquals(expected[i].source, pad.source)

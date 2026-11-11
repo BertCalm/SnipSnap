@@ -120,7 +120,7 @@ class BenchExportTest {
         try {
             kitWithLog(root, "Break Kit", listOf(snare))
             val onPlay = BenchNotes.Note("2026-09-19 2107", "PLAY", "Break Kit", null, "hats feel late at 92")
-            val onShelf = BenchNotes.Note("2026-09-19 2115", "SHELF", null, null, "first dub took about eight seconds")
+            val onShelf = BenchNotes.Note("2026-09-19 2115", "LIBRARY", null, null, "first dub took about eight seconds")
             BenchNotes.append(BenchNotes.file(root), listOf(onPlay, onShelf))
 
             assertEquals(listOf(onPlay, onShelf), BenchExport.notes(root))
