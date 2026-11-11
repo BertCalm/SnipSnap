@@ -241,8 +241,10 @@ class ArrangeScreenTest : ComposeScreenTest() {
         }
         waitFor("the plan to be kept", timeoutMillis = 30_000) { SongPlanStore.load(projectDir, entry.dir.name) != null }
         val before = SongPlanStore.load(projectDir, entry.dir.name)!!
-        // Nothing has played, so there is nothing to keep.
-        button(Copy.SONG_KEEP_ORDER).assertIsNotEnabled()
+        // The plan is on disk before the frozen clock draws the row. Nothing has played, so there is nothing to keep.
+        waitFor("KEEP THIS ORDER before anything has played", timeoutMillis = 30_000) {
+            runCatching { button(Copy.SONG_KEEP_ORDER).assertIsNotEnabled() }.isSuccess
+        }
         // LOOP says its state in words.
         button(Copy.SONG_LOOP_OFF).performClick()
         pump()
