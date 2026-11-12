@@ -639,3 +639,10 @@ It has two dynamic layers of two recorded takes, so it now gets exactly that: 2 
 
 **Levels.** They follow the round-3 beats the owner heard: ride and crash about a quarter and a third
 of the kick.
+
+**Page:** https://claude.ai/artifact/9Cn1pQu89gNvRzMjyBkVMt. Every clip on it is cut from the MPC 3
+export through `PadHit.resolve`, and the groove plays through `KitPreview`. It asks:
+- the kit in a groove: is it BREAKER, balanced as wanted?
+- the pushed row: keep it?
+- the kick hit again: one kick played again, or one sample repeated?
+- every pad soft to hard: softer in character, with a fresh hit each time?
