@@ -191,6 +191,24 @@ object MirrorballKitGenerator {
             }
             trim(dryOut)
             write("groove-dry.wav", dryOut)
+            // Speaker candidates, after the owner heard round 1b as "a bit mid heavy, like listening through dollar store
+            // headphones": the same groove and every pad's hard first take with the speaker opened, re-amped in
+            // parallel, or both. Rendered directly, not read from a kit: comparisons only.
+            for (sp in MirrorballKits.Speaker.entries) if (sp != MirrorballKits.SPEAKER) {
+                val name = sp.name.lowercase()
+                val cache = HashMap<Triple<Int, Int, Int>, FloatArray>()
+                val candidate = mix(events, g.bpm) { e, i ->
+                    val z = zones.indexOfFirst { e.velocity * 127f <= it.velEnd + .5f }.coerceAtLeast(0)
+                    val t = i % MirrorballKits.TAKES
+                    cache.getOrPut(Triple(e.slot, z, t)) {
+                        MirrorballKits.renderWith(g, e.slot - 1, MirrorballKits.velocities[z], t, sp).samples
+                    } to e.velocity
+                }
+                trim(candidate)
+                write("groove-$name.wav", candidate)
+                for (pad in saved.pads) write("speaker_$name-${String.format(Locale.ROOT, "%02d", pad.slot)}.wav",
+                    MirrorballKits.renderWith(g, pad.slot - 1, 1f, 0, sp).samples)
+            }
             File(folder, "kit-source.json").writeText(File(staging, KitStore.FILE_NAME).readText())
             println("Verified ${g.title}: 16 pads, 192 slices, saved PCM + playback + MPC 3 track, built in $buildMs ms, groove trim $trimmed")
         }

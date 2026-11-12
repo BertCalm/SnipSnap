@@ -92,10 +92,19 @@ object Mirrorball {
     }
 
     /** COMBO: preamp gain (1.6 clean, 5 pushed), how far the supply gives way, and where the speaker rolls off. */
-    data class Combo(val drive: Float = 1.6f, val sag: Float = .35f, val cabHz: Float = 5_200f) {
+    /**
+     * COMBO's speaker is [lowHz] (the open back's low cut), a [bumpDb] resonance at 110 Hz and [cabHz] (the cone's
+     * top). [blend] is how much of the amp is heard against the signal that went into it: 1 is the amp alone, 0.5
+     * the two at equal level, the way a drum is re-amped in a studio. Round 1b had the amp alone through a guitar
+     * speaker (75 Hz to 6.5 or 8.5 kHz); the owner heard it as "a bit mid heavy, like listening through dollar store
+     * headphones", and it measured 12 to 19 dB short at both ends of the spectrum against the same grooves dry.
+     */
+    data class Combo(val drive: Float = 1.6f, val sag: Float = .35f, val cabHz: Float = 5_200f,
+                     val lowHz: Float = 75f, val bumpDb: Float = 3f, val blend: Float = 1f) {
         init {
             require(drive.isFinite() && drive in .5f..12f && sag.isFinite() && sag in 0f..1f)
-            require(cabHz.isFinite() && cabHz in 2_000f..14_000f)
+            require(cabHz.isFinite() && cabHz in 2_000f..18_000f && lowHz.isFinite() && lowHz in 20f..200f)
+            require(bumpDb.isFinite() && bumpDb in -6f..6f && blend.isFinite() && blend in 0f..1f)
         }
     }
 
@@ -373,12 +382,20 @@ object Mirrorball {
         }
         val y = down(out, x.size)
         // The speaker, at the output rate: linear, nothing to fold.
-        val hp = Biquad.highpass(75.0, .8, Dsp.RATE)
-        val bump = Biquad.peak(110.0, 1.4, 3.0, Dsp.RATE)
+        val hp = Biquad.highpass(c.lowHz.toDouble(), .8, Dsp.RATE)
+        val bump = Biquad.peak(110.0, 1.4, c.bumpDb.toDouble(), Dsp.RATE)
         val lp1 = Biquad.lowpass(c.cabHz.toDouble(), .8, Dsp.RATE)
         val lp2 = Biquad.lowpass(max(9000.0, c.cabHz * 1.6), .6, Dsp.RATE)
         for (i in y.indices) y[i] = lp2.process(lp1.process(bump.process(hp.process(y[i].toDouble())))).toFloat()
-        return y
+        if (c.blend >= 1f) return y
+        // Re-amped in parallel: the signal that went in, at the amp's own rms, under the amp. The direct path keeps
+        // the lows and the top the speaker cannot play; the amp keeps its grit in the middle.
+        var ey = 0.0
+        var ex = 0.0
+        for (i in y.indices) { ey += y[i].toDouble() * y[i]; ex += x[i].toDouble() * x[i] }
+        val k = if (ex > 0) sqrt(ey / ex) else 0.0
+        val b = c.blend.toDouble()
+        return FloatArray(y.size) { ((1 - b) * k * x[it] + b * y[it]).toFloat() }
     }
 
     /** Band-limit at 4x and decimate, as the house output stage and [Valve] do; trimmed to [frames]. */

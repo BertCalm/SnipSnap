@@ -136,14 +136,37 @@ object MirrorballKits {
         }
     }
 
+    /**
+     * How the amp's speaker is heard. [CLOSED] is round 1b: the amp alone through a guitar speaker, heard by the owner
+     * as "a bit mid heavy, like listening through dollar store headphones". [OPEN] opens the speaker to 40 Hz and past
+     * 13 kHz; [PARALLEL] re-amps in parallel (the direct signal and the amp at equal level); [OPEN_PARALLEL] is both.
+     */
+    enum class Speaker { CLOSED, OPEN, PARALLEL, OPEN_PARALLEL }
+
+    /** The speaker the kits are printed with. */
+    val SPEAKER = Speaker.CLOSED
+
     /** The full setting [role] is printed with, at [intensity] of round 0b's Punch ([INTENSITY] in the kits). */
-    fun settingOf(kit: Kit, role: Int, intensity: Float = INTENSITY): Setting {
+    fun settingOf(kit: Kit, role: Int, intensity: Float = INTENSITY, speaker: Speaker = SPEAKER): Setting {
         require(intensity.isFinite() && intensity in 0f..1f)
         val c = chainOf(kit, role)
         val v = voicingOf(kit)
         val eq = eqOf(kit, role).map { it.copy(db = it.db * intensity) }
-        val amp = ampOf(kit).copy(drive = 1f + (v.drive - 1f) * intensity, sag = v.sag * intensity, cabHz = c.cabHz)
+        var amp = ampOf(kit).copy(drive = 1f + (v.drive - 1f) * intensity, sag = v.sag * intensity, cabHz = c.cabHz)
+        if (speaker == Speaker.OPEN || speaker == Speaker.OPEN_PARALLEL)
+            amp = amp.copy(lowHz = 40f, bumpDb = 1.5f, cabHz = if (c.cabHz >= BRIGHT_CAB) 15_000f else 13_000f)
+        if (speaker == Speaker.PARALLEL || speaker == Speaker.OPEN_PARALLEL) amp = amp.copy(blend = .5f)
         return Setting(c.press, c.reel, tapeOf(kit), amp, Print(eq, v.hot * intensity), v.parallel * intensity)
+    }
+
+    /** One pad's hard-to-soft take as [render] makes it, but with [speaker]: the audition's comparison, not in a kit. */
+    fun renderWith(kit: Kit, role: Int, velocity: Float, take: Int, speaker: Speaker): Snip {
+        require(role in 0 until PADS && velocity.isFinite() && velocity in 0f..1f && take in 0 until TAKES)
+        val dry = dryRaw(kit, role, velocity, take)
+        val s = settingOf(kit, role, speaker = speaker)
+        val x = Mirrorball.process(dry, s, kit.bpm, seedOf(kit, role), lengthOf(kit, role, dry, s.reel)).out
+        val peak = finish(x.copyOf(), 1f, ceiling = Float.MAX_VALUE, cap = role < HITS).samples.maxOf { abs(it) }
+        return finish(x, if (peak > 1e-9f) PAD_PEAK / peak else 1f, cap = role < HITS)
     }
 
     // Console EQ, at round 0b's full Punch. From the owner's research note: a disco kick's thump at 60 to 80 Hz and
