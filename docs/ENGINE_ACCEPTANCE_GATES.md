@@ -120,7 +120,7 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
 
-## MIRRORBALL kits (round 2, 2026-11-12, heard as "Much better")
+## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
 A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Machine. See [MIRRORBALL](MIRRORBALL.md).
 
@@ -145,7 +145,7 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows
     match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the
     first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: round 2 heard as "Much better"** (2026-11-12): an improvement, not yet approval of a baseline. The rounds so far:
+- **Sound character: approved at round 2.** On 2026-11-12 the owner heard round 2 as "Much better" and chose to lock it in. Preserve round 2 (`MirrorballKits.VERSION` 3) as the accepted baseline. This is not evidence of a phone or MPC audition. The rounds so far:
   - Round 0: heard as "kind of basic and not very punchy or character rich".
   - Round 0b: the owner picked Punch, "dialed back like 10-15%".
   - Round 1b: heard as "mid heavy, like listening through dollar store headphones".
@@ -153,5 +153,6 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - Round 2: those pads are fitted to CC0 recordings
     ([audition](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB),
     [comparison](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)).
-- **Overall: incomplete.** The software evidence is in place. The owner's listen, phone and MPC hardware playback
-  remain open, and MPC 2 does not pass the round-robin export gate.
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone and MPC hardware
+  playback remain open, MPC 2 does not pass the round-robin export gate, and SFZ and DecentSampler exports were
+  not generated.

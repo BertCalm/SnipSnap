@@ -12,7 +12,7 @@ engines already make them, plus a tambourine synthesized from BACKWASH's CC0 rec
 treatment stage, `Mirrorball`, which prints each pad through the owner's chain in the owner's order. The FX rack
 cannot do this: `FxChain` runs VALVE before TAPE and ECHO, so there the echoes never reach the amp.
 
-**Status: round 2, built, heard as "Much better".** Not yet approved as the baseline. The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
+**Status: sound approved at round 2; hardware gates open.** On 2026-11-12 the owner heard round 2 as "Much better" and chose to lock it in. Round 2 (`MirrorballKits.VERSION` 3) is the accepted baseline: preserve it, and bump the kit version for any change to a pad's audio. The approval is of what the audition pages play, not a phone or MPC audition. The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
 as the app would. The [design specification](superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md) has the
 research, the model and each round's measurements.
 
@@ -25,7 +25,7 @@ research, the model and each round's measurements.
 | 1 | The app, at round 0's settings. Never heard; superseded before any listen | (none) |
 | 1b | The app: Punch at 87.5 percent, the synthesized tambourine | "It sound a bit mid heavy. Like listening through dollar store headphones." |
 | 1c | The amp's speaker opened, re-amped in parallel, or both ([page](https://claude.ai/artifact/75bDrRceDQPXXydrFewRmM)) | Picked Open + parallel; "A04, 05, 11, 13 in Philly need work to more closely model a pro sound. A04, 05, 13 from loft" too, where "pro" means "like real recordings" |
-| 2 | The app: Open + parallel, and the seven pads fitted to CC0 recordings ([comparison page](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)) | "Much better" (2026-11-12). Recorded as an improvement, not yet as approval of a baseline |
+| 2 | The app: Open + parallel, and the seven pads fitted to CC0 recordings ([comparison page](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)) | "Much better", then approved: "Lock it in" (2026-11-12) |
 
 Measured, round 0 was basic for concrete reasons:
 - the kick was nearly a pure sub sine, with no beater click;
@@ -171,8 +171,8 @@ The generator, `:shell:generateMirrorballKits`:
 
 ## Limits, stated plainly
 
-- **Not heard.** Round 1b is the owner's round-0b pick moved into the app, at the intensity they asked for. Only
-  round 0b's Python Punch was heard.
+- **Heard on the listening pages only.** The owner approved round 2 there. The pages play mono 16-bit copies of
+  the exported slices in a browser. Nothing was heard on a phone or an MPC.
 - **MPC 3 is the export target that keeps the round robin.** MPC 2's grid projection keeps the velocity zones
   but only the first take of each, so an MPC 2 export does not pass the round-robin gate. SFZ and DecentSampler
   exports were not generated.
