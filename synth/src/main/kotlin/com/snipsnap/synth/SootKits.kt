@@ -25,7 +25,8 @@ import kotlin.random.Random
  * [VERSION] when any pad's audio changes; saved kits keep the version they were printed with.
  */
 object SootKits {
-    const val VERSION = 1
+    /** 2: A11 and A12 re-voiced (the owner heard A02, A11 and A12 as the same snare). */
+    const val VERSION = 2
     const val BPM = 84
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
@@ -46,8 +47,8 @@ object SootKits {
         Hit("Metal Cup", SootVoice.CUP, "Printed"),
         Hit("Steel Plate", SootVoice.PLATE, "Printed"),
         Hit("Coil", SootVoice.COIL, "Printed"),
-        Hit("Bench Snare", SootVoice.SNARE, "Bench"),
-        Hit("Coil Snare", SootVoice.SNARE, "Coil"),
+        Hit("Bench Slap", SootVoice.SNARE, "Bench"),
+        Hit("Deep Coil Snare", SootVoice.SNARE, "Coil"),
         Hit("Narrow Closed Hat", SootVoice.HAT_CLOSED, "Narrow", mute = 3),
         Hit("Narrow Open Hat", SootVoice.HAT_OPEN, "Narrow", mute = 3),
     )

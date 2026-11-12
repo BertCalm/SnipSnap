@@ -40,7 +40,7 @@ hold the sounds that were not picked.
 | | | | |
 |---|---|---|---|
 | A13 Narrow closed hat (9 cents) | A14 Narrow open hat (chokes A13) | A15 Coil roll | A16 Four bars (loops at 84 BPM) |
-| A09 Steel plate | A10 The coil kicked alone | A11 Bench snare | A12 Coil snare, cassette .5 |
+| A09 Steel plate | A10 The coil kicked alone | A11 Bench slap (high, clean metal) | A12 Deep coil snare (low, drowned in the spring) |
 | A05 Heavy kick (sub t60 0.9 s) | A06 Dry crack | A07 Tension rod | A08 Small metal cup |
 | A01 Kick (sag .35, sub 0.6 s) | A02 Hot snare (12-bit) | A03 Wide closed hat (25 cents) | A04 Wide open hat (chokes A03) |
 

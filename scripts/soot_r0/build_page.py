@@ -145,6 +145,10 @@ MEASURED_R1B = {
 
 # Round 2: the kit on the shelf (`:shell:generateSootKit`), every pad read back from the MPC 3 export.
 QUESTIONS_R2 = [
+    ("pads", "0 · The three snares, re-voiced", "You heard A02, A11 and A12 as the same drum. They measured 0.4 and 2.0 dB apart (A02's dry crack, A06, sits 3.8 dB away). A11 is now a clean, high metal slap (no coil, no cassette, no dictaphone); A12 a low snare drowned in the coil. Each is now 8.7 dB or more from the others. Two other candidates are underneath, in case you prefer one.",
+     "Are they three different drums now?", ["a02", "a11", "a12"], "yesno", ["Different", "Still too close"],
+     {"a11": ("../soot-snares/a11_d.wav", "Another bench option: a little coil and grit, less high (5.3 dB from A02)"),
+      "a12": ("../soot-snares/a12_a.wav", "Another coil option: less low, the default dictaphone (6.6 dB from A02)")}),
     ("roll", "1 · The coil roll (A15)", "Sixteen fresh snare strikes speeding up into one coil, so the spring fills as the roll builds, then rings out. A fader push over the build, as BREAKER's riser. Each zone as the pad plays it.",
      "Is this the roll?", ["z2", "z1", "z0"], "yesno", ["Yes", "Not yet"], {}),
     ("phrase", "2 · Four bars (A16)", "Your round-0 groove through one shared coil the kick drives, then the dictaphone the kick pumps: the only pad where the whole kit breathes through one spring. The kit prints it at GRIME .45; the .9 version is here to steer by.",
@@ -164,6 +168,7 @@ MEASURED_R2 = {
     "Coil roll: last 400 ms of the build against the first 400 ms": "+11.9 dB (the pump flattened it to +1.9 dB before the fader push)",
     "Four bars: the loop point's step against the music's own 99.9th-percentile step": "take 0: 0.0074 vs 0.1168 · take 3: 0.0012 vs 0.1233",
     "Soft against hard zone, share above 3 kHz": "roll -21.9 / -18.6 dB · four bars -19.9 / -18.8 dB",
+    "The three snares, log-spectral distance (24 bands, 60 Hz to 16 kHz)": "before: A02/A12 0.4 dB, A02/A11 2.0 dB · now: A02/A11 8.7, A02/A12 8.8, A11/A12 11.7 dB (SootKitsTest holds them at 6 dB or more)",
     "Kit build time, this host (4 cores, in parallel)": "27.6 s: the four bars are 2.0 s a render, 12 renders; a hit 10 to 225 ms; the roll 0.3 s",
 }
 
@@ -180,7 +185,7 @@ MEASURED_R1 = {
 
 
 GATES_R2 = """      <tbody>
-        <tr><td>Sound character</td><td><span class="state s-part">Hits approved</span></td><td>You approved the fourteen hits and the kit (round 1b). The roll and the four bars are new on this page.</td></tr>
+        <tr><td>Sound character</td><td><span class="state s-part">Hits approved</span></td><td>You approved the fourteen hits and the kit (round 1b). A11 and A12 are re-voiced; the roll and the four bars are new on this page.</td></tr>
         <tr><td>Melodic, keygroups, chord tools</td><td><span class="state s-na">N/A</span></td><td>A drum kit.</td></tr>
         <tr><td>Articulation</td><td><span class="state s-na">N/A</span></td><td>Finite hits, no HOLD.</td></tr>
         <tr><td>Percussion roll or riser</td><td><span class="state s-part">Built, not heard</span></td><td>A15, the coil roll, with its three zones and four takes (section 1).</td></tr>

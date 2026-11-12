@@ -419,3 +419,30 @@ If the wait is too long, the four bars can share strikes between zones, or keep 
 | Velocity and round robin, rendering | verified |
 | Saving and playback | verified in software (`KitStore`, `PadHit.resolve`); no phone has played it |
 | Export | MPC 3 verified by read-back; MPC 2 keeps one take per zone and does not pass; no MPC has loaded it; SFZ and DecentSampler not generated |
+
+## Round 2, heard in part: the snares (2026-11-12, `SootKits.VERSION` 2)
+
+The owner's words: "A2,11,12 sound the same". Measured on the files the page played, as a
+log-spectral distance (24 geometric bands, 60 Hz to 16 kHz, over the first 0.6 s, each normalised to
+its loudest band):
+- A02 to A12: 0.4 dB;
+- A02 to A11: 2.0 dB;
+- A11 to A12: 1.9 dB;
+- for scale, the dry crack (A06), which they did not flag, sits 3.8 dB from A02, and the kick and
+  the rod 26.3 dB apart.
+
+**The cause.** A12 differed from A02 only in its cassette edge (.5 against 1), and A11 only in more
+bench (.9 against .35). The dictaphone and the levelling covered both.
+
+**The change.** Both alternates now differ in mechanism, not in grit:
+- **Bench Slap (A11):** BENCH 1, TUNE 1 (six semitones up), no coil, no cassette, no dictaphone.
+  A short, clean, high metal slap.
+- **Deep Coil Snare (A12):** COIL 1, TUNE 0 (six down), no bench, no cassette, GRIME .9. A low snare
+  drowned in the spring.
+
+They are now A02/A11 8.7 dB, A02/A12 8.8 dB and A11/A12 11.7 dB apart. Of the candidates rendered,
+this pair was the most separated. The page offers the next pair beneath them (5.3 and 6.6 dB from
+A02). `SootKitsTest` holds the three snares at least 6 dB apart; the old voicing would fail it.
+`SootPresets`' "Bench" and "Coil" carry the new settings. Saved patches keep their own macros. The
+kit regenerated and passed the whole proof again: 16 pads, 192 slices, saved and exported PCM,
+playback, the MPC 3 track.

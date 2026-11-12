@@ -46,7 +46,7 @@ class SootKitsTest {
         val pads = SootKits.build()
         assertEquals(SootKits.PADS, pads.size)
         assertEquals(listOf("Kick", "Hot Snare", "Closed Hat", "Open Hat", "Heavy Kick", "Dry Crack", "Tension Rod", "Metal Cup",
-            "Steel Plate", "Coil", "Bench Snare", "Coil Snare", "Narrow Closed Hat", "Narrow Open Hat", "Coil Roll", "Four Bars"), pads.map { it.displayName })
+            "Steel Plate", "Coil", "Bench Slap", "Deep Coil Snare", "Narrow Closed Hat", "Narrow Open Hat", "Coil Roll", "Four Bars"), pads.map { it.displayName })
         assertEquals(DrumClass.KICK, pads[0].drumClass); assertEquals(DrumClass.SNARE, pads[1].drumClass)
         assertEquals(DrumClass.HAT_CLOSED, pads[2].drumClass); assertEquals(DrumClass.HAT_OPEN, pads[3].drumClass)
         assertEquals(DrumClass.PERC, pads[14].drumClass); assertEquals(DrumClass.LOOP, pads[15].drumClass)
@@ -108,6 +108,40 @@ class SootKitsTest {
             assertTrue(hard > soft, "role $role: the hard zone is brighter ($soft -> $hard)")
             assertTrue(takes > -40, "role $role: takes differ ($takes)")
         }
+    }
+
+    /** A 24-band log spectrum (60 Hz to 16 kHz, geometric) of the first 0.6 s, normalised to its loudest band. */
+    private fun bands(x: FloatArray): DoubleArray {
+        val n = 1 shl 15
+        val re = FloatArray(n) { if (it < minOf(x.size, (.6 * rate).toInt())) x[it] else 0f }
+        val im = FloatArray(n)
+        com.snipsnap.audio.Fft.forward(re, im)
+        val edges = DoubleArray(25) { 60.0 * Math.pow(16000.0 / 60.0, it / 24.0) }
+        val out = DoubleArray(24) { b ->
+            var s = 0.0; var c = 0
+            for (k in 1 until n / 2) { val f = k * rate.toDouble() / n; if (f >= edges[b] && f < edges[b + 1]) { s += re[k] * re[k] + im[k] * im[k]; c++ } }
+            10 * log10(s / maxOf(1, c) + 1e-24)
+        }
+        val top = out.max()
+        return DoubleArray(24) { out[it] - top }
+    }
+
+    private fun distance(a: FloatArray, b: FloatArray): Double {
+        val x = bands(a); val y = bands(b)
+        return sqrt(x.indices.sumOf { (x[it] - y[it]) * (x[it] - y[it]) } / x.size)
+    }
+
+    /**
+     * The owner heard A02, A11 and A12 as the same snare (2026-11-12). Measured then: 0.4 dB (A02/A12)
+     * and 2.0 dB (A02/A11) apart; the dry crack, which they did not flag, sits 3.8 dB from A02. The three
+     * now differ in mechanism, and must stay at least 6 dB apart on this measure.
+     */
+    @Test
+    fun `the three snares on the kit are different drums`() {
+        val (hot, bench, coil) = listOf(1, 10, 11).map { SootKits.render(it, 1f, 0).samples }
+        val d = listOf(distance(hot, bench), distance(hot, coil), distance(bench, coil))
+        println("SOOT snares apart (log-spectral): hot/bench ${"%.1f".format(d[0])}, hot/coil ${"%.1f".format(d[1])}, bench/coil ${"%.1f".format(d[2])} dB")
+        for (x in d) assertTrue(x >= 6.0, "the snares stay apart ($d)")
     }
 
     @Test
