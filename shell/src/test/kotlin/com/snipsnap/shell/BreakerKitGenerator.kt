@@ -115,11 +115,11 @@ object BreakerKitGenerator {
             for (x in strip) { x.copyInto(out, at); at += x.size + gap }
             WavWriter.write(File(root, "touch-$n.wav"), Snip(out, 1, 44100), WavWriter.BitDepth.PCM_24)
             proof.append("${pad.slot},${pad.displayName},${g.zones},${g.takes},")
-                .append(String.format(Locale.ROOT, "%.1f,%.1f", -g.takeSeparationDb, g.leastZoneMoveDb))
+                .append(String.format(Locale.ROOT, "%.1f,%.1f", g.takesApartDb, g.leastZoneMoveDb))
                 .append(",verified,verified,2,verified\n")
             manifest.append("    {\"slot\": ${pad.slot}, \"name\": \"${pad.displayName}\", \"class\": \"${pad.drumClass}\", \"level\": ${pad.level}, ")
                 .append("\"zones\": ${g.zones}, \"takes\": ${g.takes}, ")
-                .append(String.format(Locale.ROOT, "\"takesApartDb\": %.1f, \"zoneMoveDb\": %.1f}", -g.takeSeparationDb, g.leastZoneMoveDb))
+                .append(String.format(Locale.ROOT, "\"takesApartDb\": %.1f, \"zoneMoveDb\": %.1f}", g.takesApartDb, g.leastZoneMoveDb))
                 .append(if (pad.slot == saved.pads.size) "\n" else ",\n")
         }
         manifest.append("  ]\n}\n")

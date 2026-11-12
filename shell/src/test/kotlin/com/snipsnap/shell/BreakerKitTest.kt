@@ -78,7 +78,7 @@ class BreakerKitTest {
     fun `every take is another strike, and every softer zone a different strike, not the hard one turned down`() {
         val grids = BreakerKitProof.measure(KitStore.load(kitDir), kitDir)
         println("BREAKER kit grid:\n" + grids.joinToString("\n") {
-            "${it.name}: ${it.zones}x${it.takes}, closest takes ${"%.1f".format(it.takeSeparationDb)} dB apart, " +
+            "${it.name}: ${it.zones}x${it.takes}, closest takes ${"%.1f".format(it.takesApartDb)} dB apart, " +
                 "least-moved soft zone ${"%.1f".format(it.leastZoneMoveDb)} dB"
         })
         // What a copy measures, against what a re-strike does: the robin's dealing of one strike (a shave off

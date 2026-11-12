@@ -120,6 +120,9 @@ How to read the two columns:
 - **MPC 2** plays each zone's first take only, so it does not pass the round-robin export gate.
 - **Not yet tested on hardware:** no phone or MPC has played the kit.
 
+**Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a
+phone has not been timed.
+
 ## How a hit is made
 
 1. **Source:** each drum's settings are frozen in `Breaker.kt`.

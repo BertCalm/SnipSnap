@@ -31,8 +31,11 @@ object BreakerKitProof {
         /** The softer zone whose spectrum's shape moved least from the hard zone's, in dB: 0 is a level change only. */
         val leastZoneMoveDb: Double,
     ) {
-        /** How far apart the closest takes are, in dB of what differs against what is shared. */
-        val takeSeparationDb: Double get() = 10 * log10(2 * (1 - closestTakes) + 1e-12)
+        /**
+         * How far apart the closest two takes are: what they share over what differs, in dB. A copy is
+         * more than 40 dB apart; two unrelated sounds are about 0.
+         */
+        val takesApartDb: Double get() = -10 * log10(2 * (1 - closestTakes) + 1e-12)
     }
 
     /** Slice [i] of [pad]'s chain, cut from its WAV [whole]. */
