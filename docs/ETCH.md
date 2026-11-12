@@ -291,6 +291,55 @@ range did not help: it widened the widest pair.
 Only the 15 take clips changed; the other 73 clips are byte-identical. The audition adds an
 A/B pair: one take played four times, then four takes. Not heard.
 
+## Round 3: the tone (2026-11-12)
+
+**Heard:** after round 2 the owner said "It feels a bit mid heavy. Like dollar store headphones."
+
+Measured as octave bands relative to the 500 Hz band against reference B (the TD-3 clip), the
+lows were fine (ETCH +12 dB at 63 Hz against +4.5), but the top was missing: line B sat 14 dB
+short at 8 kHz and 23 dB short at 16 kHz. With nothing above, 250 Hz to 2 kHz reads as boxy.
+
+What caused it, in order of effect:
+- **The round-1 cutoff cap.** CUT_HI 1.2 kHz and FC_MAX 3.5 kHz were set in round 1 because a
+  brightness measure stopping at 5 to 10 kHz fell at the top of the knob. Measured to 16 kHz,
+  the wider range rises steadily (line B centroid 776 → 2,876 Hz across CUTOFF at SWEEP 0.2,
+  1,375 → 3,069 Hz at 0.6): the old measure read a rising resonant peak as "darker". That
+  round-1 decision was partly a measurement artifact, and it made the engine dull.
+- **BITE's post-clip low-pass** (9 to 6 kHz) removed most of the sizzle the clip makes; on
+  the loops nearly everything above 4 kHz comes from that clip.
+- **The ladder's slope** (0.8 four-pole + 0.2 three-pole). Changing it alone moved line B's top
+  only 1 to 2 dB; it matters most on single notes.
+
+Round 3, all in `etch_proto.py`: CUT_HI 2 kHz, FC_MAX 8 kHz, ladder output 0.4 / 0.3 / 0.3 of
+the fourth, third and second poles, BITE low-pass 14 to 9 kHz plus a +4 dB high shelf at 3 kHz
+(the pedal's HIGH control), and the engine default CUTOFF 0.45 (was 0.3). `ROUND1B_TONE` keeps
+the old values for the audition's before/after section.
+
+| dB vs 500 Hz | 4 kHz | 8 kHz | 16 kHz |
+|---|---|---|---|
+| Reference B | -9.1 | -16.0 | -26.3 |
+| Line B, round 1b | -14.2 | -30.4 | -49.7 |
+| Line B, round 3 | -7.3 | -18.6 | -34.7 |
+| Line A, round 1b | -26.0 | -42.2 | -67.2 |
+| Line A, round 3 | -18.1 | -30.6 | -47.3 |
+| SAW C2 note, round 1b | -51.1 | -81.2 | -102.4 |
+| SAW C2 note, round 3 | -27.5 | -43.7 | -70.9 |
+
+The "before" loops are byte-identical to the published round-1b clips, so the comparison is
+fair. Every other clip on the page changes: the accepted round-1b sound is now the reference
+for the before/after, not a byte baseline.
+
+Knock-on effects, measured and handled:
+- The brighter default left less room for an accent to open the filter, so the velocity
+  0.6 → 0.8 gap shrank (SAW 9.2 → 4.8 dB). Velocity still changes the tone on every voice
+  (SAW attack centroid 1,223 → 1,663 Hz soft to hard).
+- Round robin's widest pairs then passed a velocity step on SAW and SQUARE, so the
+  filter-opening range went from ±9.5% to ±7%. Closest pairs are now 1.8 to 3.1 dB (2 to 4
+  times the 0.5 to 0.8 dB heard as the same); every widest pair is under a velocity step.
+- SAW and SQUARE are 3.1 dB apart (3.7 in round 2). Disclosed for the owner's ears.
+
+Not heard.
+
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:

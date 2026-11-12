@@ -128,6 +128,64 @@ def line_with(base, **kw):
     return d
 
 
+# ------------------------------------------------------------------ 0. tone: round 1b against round 3
+OCT_CENT = (63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
+
+
+def octaves_rel(x):
+    """Octave-band levels relative to the 500 Hz band, dB. Reference B (the TD-3 clip)
+    measured 4.5, 4.3, -3.0, 0, -3.2, -5.5, -9.1, -16.0, -26.3."""
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x)))) ** 2
+    f = np.fft.rfftfreq(len(x), 1 / e.RATE)
+    b = [10 * math.log10(X[(f >= c / math.sqrt(2)) & (f < c * math.sqrt(2))].sum() + 1e-12) for c in OCT_CENT]
+    return [round(v - b[3], 1) for v in b]
+
+
+def with_tone(tone, fn):
+    """Render with another tone setting, then put the current one back."""
+    keep = dict(CUT_HI=e.CUT_HI, FC_MAX=e.FC_MAX, OUT_W=e.OUT_W, BITE_LP=e.BITE_LP,
+                BITE_HIGH_DB=e.BITE_HIGH_DB, DEFAULTS_CUTOFF=e.DEFAULTS["CUTOFF"])
+    try:
+        for k, v in tone.items():
+            if k == "DEFAULTS_CUTOFF":
+                e.DEFAULTS["CUTOFF"] = v
+            else:
+                setattr(e, k, v)
+        return fn()
+    finally:
+        for k, v in keep.items():
+            if k == "DEFAULTS_CUTOFF":
+                e.DEFAULTS["CUTOFF"] = v
+            else:
+                setattr(e, k, v)
+
+
+s = section("tone", "Round 3: the tone, before and after",
+            "You heard round 2 as mid heavy, like cheap headphones. Measured against reference B, "
+            "ETCH sat 14 dB short at 8 kHz and 23 dB short at 16 kHz. Each pair plays the round-1b "
+            "tone, then round 3: a higher cutoff ceiling, a gentler filter slope, and BITE keeping "
+            "the drive's sizzle. Octaves are dB against the 500 Hz band; reference B measured "
+            "4 kHz -9.1, 8 kHz -16.0, 16 kHz -26.3.")
+TONE_OCT = {}
+for label, L in (("line-b", e.LINE_B), ("line-a", e.LINE_A)):
+    before = with_tone(e.ROUND1B_TONE, lambda: e.render_loop(L)[0])
+    after = e.render_loop(L)[0]
+    for tag, y in (("before", before), ("after", after)):
+        o = octaves_rel(y)
+        TONE_OCT[f"{label}-{tag}"] = o
+        save(s, f"{label}-{tag}", np.concatenate([y, y]),
+             f"{L['name']}, whole chain, {'round 1b tone' if tag == 'before' else 'round 3 tone'}",
+             {"oct_4k_db": o[6], "oct_8k_db": o[7], "oct_16k_db": o[8]})
+nb = with_tone(e.ROUND1B_TONE, lambda: e.render_note(36, "SAW", {}))
+na = e.render_note(36, "SAW", {})
+for tag, y in (("before", nb), ("after", na)):
+    o = octaves_rel(y)
+    TONE_OCT[f"note-{tag}"] = o
+    save(s, f"note-saw-C2-{tag}", y, f"SAW C2 note at the engine defaults, {'round 1b' if tag == 'before' else 'round 3'}",
+         {"oct_2k_db": o[5], "oct_4k_db": o[6], "oct_8k_db": o[7]})
+MANIFEST["checks"]["tone_octaves"] = TONE_OCT
+
+
 # ------------------------------------------------------------------ 1. the chain, stage by stage
 for L in (e.LINE_A, e.LINE_B):
     tag = L["name"][-1]
@@ -268,7 +326,7 @@ save(s, "vel-sequence-as-played", seq, "0.35, 0.6, 0.8, 1.0 at real relative lev
 # ------------------------------------------------------------------ 10. round robin
 s = section("round-robin", "Round robin",
             "Four takes of SAW C2 at velocity 0.6, then four at 1.0. A take is the box's own wander: "
-            "where the oscillator cycle starts, how far the filter opens (+/-11%), how long its envelope "
+            "where the oscillator cycle starts, how far the filter opens (+/-7%), how long its envelope "
             "decays (+/-48%), how much it rings (+/-18%), a pitch dip of up to 40 cents at the onset "
             "that settles onto the exact note in about 12 ms, and attack speed (1 to 5 ms). The four "
             "takes are dealt out so no two share a setting. Round 2 of round robin: you heard round 1's "

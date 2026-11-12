@@ -43,7 +43,7 @@ FS = sk.INTERNAL  # 176_400
 # ----------------------------------------------------------------------------- macros
 
 # Six macros, the house limit, TUNE included. ACCENT is not a macro: it is velocity.
-DEFAULTS = {"TUNE": 0.5, "CUTOFF": 0.3, "PEAK": 0.7, "SWEEP": 0.5, "BITE": 0.45, "SPACE": 0.4}
+DEFAULTS = {"TUNE": 0.5, "CUTOFF": 0.45, "PEAK": 0.7, "SWEEP": 0.5, "BITE": 0.45, "SPACE": 0.4}
 VOICES = ("SAW", "SQUARE", "RUBBER", "WHISTLE", "GRIT", "DUB")
 
 # What makes each voice a different instrument, not a preset. Every switch is off for SAW and
@@ -74,9 +74,20 @@ VOICE_DEFAULTS = {
     "DUB":     {**DEFAULTS, "CUTOFF": 0.2, "PEAK": 0.6, "SWEEP": 0.4, "BITE": 0.3, "SPACE": 0.85},
 }
 ROOT_MIDI = 36  # C2 at TUNE 0.5
-CUT_LO, CUT_HI = 110.0, 1200.0  # CUTOFF's base range, Hz. "shape"
+# Round 3 tone (2026-11-12). The owner heard round 2 as "a bit mid heavy, like dollar store
+# headphones". Measured against reference B, ETCH sat 14 dB short at 8 kHz and 23 dB short
+# at 16 kHz. The round-1 cutoff cap (CUT_HI 1.2 kHz, FC_MAX 3.5 kHz) came from a brightness
+# measure that stopped at 5 to 10 kHz and read a rising resonant peak as "darker"; with a
+# measure to 16 kHz the wider range rises steadily. Round 3: CUT_HI 2 kHz, FC_MAX 8 kHz, a
+# gentler ladder slope (OUT_W), and BITE keeps its sizzle (BITE_LP, BITE_HIGH_DB).
+CUT_LO, CUT_HI = 110.0, 2000.0  # CUTOFF's base range, Hz. "shape"
 FB_HP_HZ = 140.0  # high-pass in the resonance feedback, Hz. "shape"
-FC_MAX = 3500.0  # soft ceiling on the opened cutoff, Hz: above it the peak stops squelching and only buzzes. "shape"
+BITE_LP = (14000.0, 9000.0)  # BITE's post-clip low-pass, Hz, at BITE 0 and 1 (round 1b: 9k, 6k)
+BITE_HIGH_DB, BITE_HIGH_HZ = 4.0, 3000.0  # BITE's post-clip high shelf, the pedal's HIGH (round 1b: 0 dB)
+OUT_W = (0.4, 0.3, 0.3)  # ladder output blend: four-pole, third, second pole (round 1b: 0.8, 0.2, 0)
+ROUND1B_TONE = dict(CUT_HI=1200.0, FC_MAX=3500.0, OUT_W=(0.8, 0.2, 0.0), BITE_LP=(9000.0, 6000.0),
+                    BITE_HIGH_DB=0.0, DEFAULTS_CUTOFF=0.3)  # kept for the before/after audition
+FC_MAX = 8000.0  # soft ceiling on the opened cutoff, Hz (round 1b: 3.5 kHz). "shape"
 TUNE_SEMITONES = 24
 
 
@@ -132,7 +143,7 @@ LINE_B = dict(name="LINE B", bpm=130.0, root=36, voice="SAW",      # C2, brighte
 @njit(cache=True)
 def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak, sweep,
                   phase0, drift_cut, drift_dec, fs, fb_hp_hz, fc_max, sub_level, pre_drive,
-                  keytrack, k_scale, in_scale, k_take, scoop_cents, att_s):
+                  keytrack, k_scale, in_scale, k_take, scoop_cents, att_s, out_w4, out_w3, out_w2):
     """Per-sample voice at the internal rate.
 
     target_midi : pitch the oscillator heads for (MIDI, float)
@@ -295,8 +306,10 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
         s2 += g * (math.tanh(s1) - s2)
         s3 += g * (math.tanh(s2) - s3)
         s4 += g * (s3 - s4)
-        # mostly the four-pole output, a little of the third pole: a gentler slope. "shape"
-        y = 0.8 * s4 + 0.2 * s3
+        # the output blends the ladder's stages: OUT_W4 of the four-pole output, OUT_W3 of the
+        # third pole, OUT_W2 of the second. More of the earlier poles is a gentler slope above
+        # the cutoff, so the saw's upper harmonics survive. "shape"
+        y = out_w4 * s4 + out_w3 * s3 + out_w2 * s2
         # make up a little of the passband the feedback takes away
         y *= 1.0 + 0.5 * k / 4.15
         amp = aenv * (0.62 + 0.38 * cur_acc + 0.25 * (cur_vel - 0.6))
@@ -344,7 +357,7 @@ def _controls(steps, bpm, root, cycles, cut_oct_fn=None, gate_frac=0.55):
 # each dimension's four positions are dealt out by a different permutation (a Latin
 # hypercube), so no two takes share a position on any dimension. The settled pitch is
 # never moved; only the onset dips in from above and settles. "shape" ranges.
-RR_CUT = 0.095     # +/- share of the whole filter opening (~ +/-0.8 octave at full opening)
+RR_CUT = 0.07      # +/- share of the whole filter opening (~ +/-0.6 octave fully open); 0.095 before the round-3 tone
 RR_DEC = 0.48      # +/- share of the filter-envelope decay
 RR_RES = 0.18      # +/- share of the resonance feedback
 RR_SCOOP = 40.0    # onset pitch dip, cents above the note at the attack, 0..this
@@ -393,7 +406,7 @@ def render_voice(steps, bpm, root, voice, macros, cycles=1, seed=0, ride=None):
     return _voice_kernel(tgt, gate, trig, sld, vel, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
                          phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
                          c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"],
-                         t["k_take"], t["scoop"], t["att"]), step_n
+                         t["k_take"], t["scoop"], t["att"], *OUT_W), step_n
 
 
 # ----------------------------------------------------------------------------- BITE (4x)
@@ -421,7 +434,11 @@ def bite(x, amount):
     lb, la = signal.butter(1, 500.0 / (FS / 2))
     low = signal.lfilter(lb, la, d)
     d = low + (d - low) / 2.8                    # de-emphasis: the shelf taken back out
-    d = signal.sosfilt(signal.butter(2, lin(amount, 9000.0, 6000.0) / (FS / 2), output="sos"), d)
+    d = signal.sosfilt(signal.butter(2, lin(amount, BITE_LP[0], BITE_LP[1]) / (FS / 2), output="sos"), d)
+    if BITE_HIGH_DB:
+        # the pedal's HIGH control: a shelf after the clip that lifts its sizzle back up
+        d = d + (10 ** (BITE_HIGH_DB / 20) - 1) * signal.sosfilt(
+            signal.butter(1, BITE_HIGH_HZ / (FS / 2), "high", output="sos"), d)
     d *= (np.sqrt(np.mean(x ** 2)) + 1e-12) / (np.sqrt(np.mean(d ** 2)) + 1e-12)
     return (1 - mix) * x + mix * d
 
@@ -632,7 +649,7 @@ def render_note(midi, voice, macros, vel=0.6, seconds=0.9, gate_s=0.45, seed=0, 
     raw = _voice_kernel(tgt, gate, trig, sld, velv, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
                         phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
                         c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"],
-                        t["k_take"], t["scoop"], t["att"])
+                        t["k_take"], t["scoop"], t["att"], *OUT_W)
     if bite_on:
         raw = bite(raw, m["BITE"])
     y = to_output_rate(raw)

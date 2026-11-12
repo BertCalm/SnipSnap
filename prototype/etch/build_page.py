@@ -33,6 +33,10 @@ LABELS = {
     "late_band_centroid_hz": ("AT 0.2 s", "{:.0f} Hz"),
     "raw_peak_db": ("UNMATCHED PEAK", "{:.1f} dB"),
     "second_harmonic_db": ("2ND HARMONIC", "{:.1f} dB"),
+    "oct_2k_db": ("2 kHz", "{:.1f} dB"),
+    "oct_4k_db": ("4 kHz", "{:.1f} dB"),
+    "oct_8k_db": ("8 kHz", "{:.1f} dB"),
+    "oct_16k_db": ("16 kHz", "{:.1f} dB"),
     "sub_octave_db": ("SUB OCTAVE", "{:.1f} dB"),
 }
 
@@ -87,6 +91,8 @@ LISTEN = {
     "velocity": "Does the hard hit sound like an accent, not just louder?",
     "round-robin": "Start with the A/B pair at the end: does B sound like four strikes and A like "
                    "one strike repeated? Then: is any take so different it sounds like another note?",
+    "tone": "Play each before/after pair: is the round-3 version open on top without getting harsh "
+            "or fizzy? Is the low end still where you want it?",
     "six-voices": "Are these six different instruments, not six settings of one? "
                   "Is RUBBER round or just muffled? Does WHISTLE sing without getting shrill?",
     "six-notes": "Would each work as a keygroup note? RUBBER's sub octave is as loud as the note itself.",
@@ -179,7 +185,8 @@ GATES = [
     ("Velocity and round robin: playback", "not yet verified", "No phone playback."),
     ("Velocity and round robin: export", "not yet verified", "No MPC export."),
     ("Sound character", "partial",
-     "Round 1b accepted 2026-11-12 (\"It all seems fine from the audition\"). The four new voices are not heard."),
+     "Round 1b accepted 2026-11-12, then heard as mid heavy after round 2. Round 3 opens the top end "
+     "for the whole engine; not heard."),
 ]
 
 
@@ -269,13 +276,14 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 2 · PYTHON HARNESS · NEW VOICES NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 3 · PYTHON HARNESS · NEW TONE NOT HEARD</span></div>
     <h1>ETCH Audition</h1>
     <p class="lede">A squelching step-line bass, then a drive that glues the steps, then a tempo delay into a reverb.
     Built from your two reference clips. These are prototype renders from a Python model, not the app.
     Every clip is level-matched, so a later stage never wins by being louder.</p>
-    <p class="lede"><b>Round 2</b> adds the four voices you chose: RUBBER, WHISTLE, GRIT and DUB, in the sections at the end.
-    The round-1b sections above are your accepted baseline and are byte-identical to what you heard.</p>
+    <p class="lede"><b>Round 3</b> answers "mid heavy, like dollar store headphones": the whole engine now has its top end back.
+    Start with the before/after section. Every other clip on the page is rendered with the new tone, so the round-1b sections
+    no longer match what you approved note for note. Round 2's four voices (RUBBER, WHISTLE, GRIT, DUB) are in the sections at the end.</p>
     <p class="gesture">The gesture: a sixteen-step line, accents bite and build, slides carry the pitch and keep the filter open, the drive evens out the peaks, and dotted-eighth repeats fall into a room behind it.</p>
   </header>
 
@@ -311,6 +319,8 @@ MACROS  TUNE · CUTOFF · PEAK · SWEEP · BITE · SPACE      VELOCITY = ACCENT<
   <section class="card" id="next">
     <h2>What I need from you</h2>
     <ul class="plain">
+      <li><b>Tone:</b> in the before/after section, is round 3 open on top without getting harsh? Keep it, or go part of the way back?</li>
+      <li><b>SAW and SQUARE:</b> the brighter tone brings them closer (3.1 dB apart, from 3.7). Still clearly different?</li>
       <li><b>Round robin:</b> rebuilt after your note. Does the A/B pair in the round-robin section now sound like four strikes against one? Is any take too far, like a different note?</li>
       <li><b>Each new voice:</b> keep, change or drop RUBBER, WHISTLE, GRIT and DUB (the six-voice loops and held notes).</li>
       <li><b>RUBBER:</b> round, or too muffled? It is the darkest voice by far.</li>
