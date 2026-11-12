@@ -165,3 +165,18 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
 - **Overall:** every software gate passes; the four new kits wait for the owner's ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
+
+## SCUFF (rounds 0 and 0b, 2026-11-12)
+
+A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
+Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answered the owner's note "more character in general" (written before listening): every voice gained a mechanism, BARK went from under 1 dB of effect to 3 to 5 dB, and every pad ends at a tail gate.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
+- **Percussion:** open. The two-bar pattern carries a 32nd hat burst, a tape-stopped hat and a suck-back crash; no roll or riser pad is authored.
+- **Drum shelf:** open. One kit's worth of voices in Python; a second genre kit is proposed, not built.
+- **Velocity and round robin:**
+  - **Rendering: Python harness only.** Every voice changes tone with velocity at matched peak (round 0b: soft against hard, 2.6 to 14.9 dB by take distance). Four takes per voice on four dealt dimensions; closest pairs 1.9 to 4.9 dB apart. The tick's takes are the closest and are disclosed.
+  - **Saving, playback and export:** not yet verified.
+- **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
+- **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
