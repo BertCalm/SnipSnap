@@ -1,3 +1,9 @@
+> MIRRORBALL kits (round 1b, built, not yet heard): three 1970s disco kits on the shelf, Philly Strings, Loft
+> Party and Munich Machine. A treatment stage prints each pad (console EQ, hot tape), compresses it in parallel,
+> sends it to a multi-head tape echo and then an amp, the owner's order. Velocity × round robin is proven through
+> save, playback and MPC 3 export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone.
+> See [MIRRORBALL](MIRRORBALL.md).
+
 > GATECRASH kits (sound approved 2026-11-11, round 4): three 1980s gated drum kits on the shelf, Stone Room,
 > Machine Pop and Electro Funk. A treatment stage holds each pad's room level behind the drum and rounds it
 > off on the drum's own timing. Velocity × round robin is proven through save, playback and MPC 3 export in
