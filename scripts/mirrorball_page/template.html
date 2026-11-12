@@ -117,7 +117,7 @@ th { font-family: var(--display); font-weight: 700; font-size: 12.5px; text-tran
         <button class="act" type="button" data-t="no_echo">No echo</button>
         <button class="act" type="button" data-t="more_echo">More echo</button>
       </div>
-      <div class="acts" id="tambAct"><button class="act" type="button" id="bRecorded">Recorded tambourine, same chain</button></div>
+      <div class="acts" id="tambAct"><span class="actlabel">Tambourine models (not in the kit)</span><button class="act" type="button" id="bRecorded">The recording, same chain</button><button class="act" type="button" id="bJingles">Round 1b: jingles only</button><button class="act" type="button" id="bTexture">Rattle texture only</button></div>
       <dl id="dNums"></dl>
       <p class="note" id="dNote"></p>
       <div id="err" role="status"></div>
@@ -244,6 +244,8 @@ $("bDry").onclick = () => play(url(kit, "dry", pad.slot));
 $("bTouch").onclick = () => play(url(kit, "touch", pad.slot));
 $("bStop").onclick = stop;
 $("bRecorded").onclick = () => play(url(kit, "recorded_tambourine", pad.slot));
+$("bJingles").onclick = () => play(url(kit, "jingles_tambourine", pad.slot));
+$("bTexture").onclick = () => play(url(kit, "texture_tambourine", pad.slot));
 document.querySelectorAll("#trials button").forEach(b => b.onclick = () => play(url(kit, b.dataset.t, pad.slot)));
 $("bGroove").onclick = () => play(url(kit, "groove"));
 $("bGrooveDry").onclick = () => play(url(kit, "groove-dry"));

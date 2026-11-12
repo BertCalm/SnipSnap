@@ -56,7 +56,7 @@ import kotlin.math.roundToInt
  */
 object MirrorballKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     /** Round 0b's Punch, dialed back as the owner asked ("like 10-15%"): the middle of that, 87.5 percent. */
     const val INTENSITY = .875f
@@ -143,8 +143,8 @@ object MirrorballKits {
      */
     enum class Speaker { CLOSED, OPEN, PARALLEL, OPEN_PARALLEL }
 
-    /** The speaker the kits are printed with. */
-    val SPEAKER = Speaker.CLOSED
+    /** The speaker the kits are printed with: the owner's pick from round 1c (2026-11-12). */
+    val SPEAKER = Speaker.OPEN_PARALLEL
 
     /** The full setting [role] is printed with, at [intensity] of round 0b's Punch ([INTENSITY] in the kits). */
     fun settingOf(kit: Kit, role: Int, intensity: Float = INTENSITY, speaker: Speaker = SPEAKER): Setting {
@@ -232,15 +232,21 @@ object MirrorballKits {
      * print (75 percent), the rack's order, no echo, more echo, and on the tambourine the CC0 recording it was fitted
      * to, through the same chain.
      */
-    enum class Trial { DRY, FULL_PUNCH, LIGHTER, RACK_ORDER, NO_ECHO, MORE_ECHO, RECORDED_TAMBOURINE }
+    enum class Trial { DRY, FULL_PUNCH, LIGHTER, RACK_ORDER, NO_ECHO, MORE_ECHO, RECORDED_TAMBOURINE, JINGLES_TAMBOURINE, TEXTURE_TAMBOURINE }
 
     /** The hard first take of [role] with one thing changed, levelled on its own to the pad peak. */
     fun trial(kit: Kit, role: Int, t: Trial): Snip {
         require(role in 0 until PADS)
         val base = settingOf(kit, role)
-        val dry = if (t == Trial.RECORDED_TAMBOURINE) {
-            require(role < HITS && parts(kit)[role].name == "Tambourine") { "only the tambourine pad has a recording" }
-            struck(Part("Tambourine", DrumClass.PERC, chainOf(kit, role), strike = recordedTambourine()), 1f, 0)
+        val alternative = when (t) {
+            Trial.RECORDED_TAMBOURINE -> recordedTambourine()
+            Trial.JINGLES_TAMBOURINE -> tambourine(TambourineModel.JINGLES)
+            Trial.TEXTURE_TAMBOURINE -> tambourine(TambourineModel.TEXTURE)
+            else -> null
+        }
+        val dry = if (alternative != null) {
+            require(role < HITS && parts(kit)[role].name == "Tambourine") { "only the tambourine pad has tambourine alternatives" }
+            struck(Part("Tambourine", DrumClass.PERC, chainOf(kit, role), strike = alternative), 1f, 0)
         } else dryRaw(kit, role, 1f, 0)
         val x = when (t) {
             Trial.DRY -> dry
@@ -414,8 +420,54 @@ object MirrorballKits {
     private fun hand(voice: TerraVoice, vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
         { v, t -> Terra.render(voice, mapOf(*m), null, v, t).samples }
 
-    /** The synthesized tambourine: every take a fresh pattern of jingle collisions ([MirrorballTambourine]). */
-    private fun tambourine(): (Float, Int) -> FloatArray = { v, t -> MirrorballTambourine.render(v, t) }
+    /**
+     * How the tambourine is synthesized. [JINGLES] is round 1b: the fitted jingle resonances struck by a collision
+     * train ([MirrorballTambourine]). [TEXTURE] is the recordings' own rattle as band noise ([MirrorballTexture]).
+     * [BLEND] is both at equal rms over their first 300 ms, the pitched shimmer over the noise of the rattle (the
+     * sines and the residual of Serra and Smith's model). The owner heard round 1b's as short of "a pro sound".
+     */
+    enum class TambourineModel { JINGLES, TEXTURE, BLEND }
+
+    /** The tambourine the kits print with. */
+    val TAMBOURINE = TambourineModel.BLEND
+
+    private fun tambourine(model: TambourineModel = TAMBOURINE): (Float, Int) -> FloatArray = { v, t ->
+        when (model) {
+            TambourineModel.JINGLES -> MirrorballTambourine.render(v, t)
+            TambourineModel.TEXTURE -> MirrorballTexture.render(MirrorballTexture.Voice.TAMBOURINE, v, t)
+            TambourineModel.BLEND -> {
+                val j = MirrorballTambourine.render(v, t)
+                val x = MirrorballTexture.render(MirrorballTexture.Voice.TAMBOURINE, v, t)
+                fun rms(a: FloatArray): Double {
+                    val m = min(a.size, (.3f * Dsp.RATE).toInt())
+                    var e = 0.0
+                    for (i in 0 until m) e += a[i].toDouble() * a[i]
+                    return kotlin.math.sqrt(e / max(m, 1)).coerceAtLeast(1e-12)
+                }
+                val kj = .5 / rms(j)
+                val kx = .5 / rms(x)
+                FloatArray(max(j.size, x.size)) { (kj * j.getOrElse(it) { 0f } + kx * x.getOrElse(it) { 0f }).toFloat() }
+            }
+        }
+    }
+
+    /** A fitted open hat ([MirrorballCymbal]): every take re-strikes all 400 modes. */
+    private fun hat(kind: MirrorballCymbal.Kind): (Float, Int) -> FloatArray = { v, t -> MirrorballCymbal.render(kind, v, t, HIT_SECONDS) }
+
+    /** BREAKER's fitted ride, the one the owner accepted ("these are fine", 2026-11-11), dry from its source. */
+    private fun ride(): (Float, Int) -> FloatArray = { v, t -> BreakerCymbal.render(BreakerCymbal.Kind.RIDE, v, t, HIT_SECONDS) }
+
+    /**
+     * A fitted noise texture ([MirrorballTexture]). The clap was recorded at two dynamics and blends them; a shaker was
+     * recorded at one, so its softer zones lose top as a softer shake does (a one-pole falling from 18 to 2.5 kHz).
+     */
+    private fun texture(voice: MirrorballTexture.Voice, soften: Boolean): (Float, Int) -> FloatArray = { v, t ->
+        val x = MirrorballTexture.render(voice, v, t)
+        if (!soften) x else {
+            val contact = Dsp.FixedOnePole(2_500f + 15_500f * v)
+            FloatArray(x.size) { contact.lp(x[it]) }
+        }
+    }
 
     /** BACKWASH's recorded tambourine (CC0), kept only as the audition's comparison for the synthesized one. */
     private fun recordedTambourine(): (Float, Int) -> FloatArray = { v, t ->
@@ -469,8 +521,10 @@ object MirrorballKits {
             strike = skin(SkinVoice.SNARE, "TUNE" to .52f, "SNAP" to .80f, "DECAY" to .32f, "PUNCH" to .80f, "RATTLE" to .65f, "SIZZLE" to .55f)),
         Part("Closed Hat", DrumClass.HAT_CLOSED, Chain(Press(10f, .60f, .60f), Reel(gallop, .26f, .30f)), mute = 1,
             strike = skinTouched(SkinVoice.HAT_CLOSED, mapOf("TUNE" to .55f, "DECAY" to .22f, "TONE" to .45f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
+        // Round 2 (the owner: these "need work to more closely model a pro sound", like real recordings): the half-open
+        // hat fitted to CC0 recordings, the disco "tss".
         Part("Open Hat", DrumClass.HAT_OPEN, Chain(Press(10f, .60f, .55f), Reel(gallop, .22f, .28f)), mute = 1,
-            strike = skinTouched(SkinVoice.HAT_OPEN, mapOf("TUNE" to .55f, "DECAY" to .42f, "TONE" to .45f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
+            strike = hat(MirrorballCymbal.Kind.HAT_HALF)),
         Part("Tambourine", DrumClass.PERC, Chain(Press(12f, .65f, .60f), Reel(gallop, .24f, .30f)), strike = tambourine()),
         Part("Cross Stick", DrumClass.PERC, Chain(Press(12f, .65f, .65f), Reel(listOf(1), .12f, .10f)),
             strike = skinTouched(SkinVoice.STICK, mapOf("TUNE" to .50f, "DECAY" to .35f, "BODY" to .45f)) { v -> mapOf("CLICK" to .25f + .4f * v, "PUNCH" to .4f + .3f * v) }),
@@ -483,12 +537,11 @@ object MirrorballKits {
             strike = skin(SkinVoice.TOM, "TUNE" to .62f, "DECAY" to .40f, "TONE" to .60f, "PUNCH" to .72f, "DROP" to .20f, "CLICK" to .70f)),
         Part("Floor Tom", DrumClass.TOM, Chain(Press(12f, .10f, .70f, Ratio.EIGHT), Reel(listOf(2), .18f, .22f), WARM_CAB),
             strike = skin(SkinVoice.TOM, "TUNE" to .30f, "DECAY" to .45f, "TONE" to .60f, "PUNCH" to .72f, "DROP" to .22f, "CLICK" to .70f)),
-        Part("Ride", DrumClass.PERC, Chain(Press(8f, .50f, .45f)),
-            strike = skinTouched(SkinVoice.RIDE, mapOf("TUNE" to .50f, "DECAY" to .55f, "TONE" to .50f)) { v -> mapOf("PUNCH" to .3f + .4f * v, "SIZZLE" to .15f * v) }),
+        Part("Ride", DrumClass.PERC, Chain(Press(8f, .50f, .45f)), strike = ride()),
         Part("Cowbell", DrumClass.PERC, Chain(Press(10f, .60f, .60f), Reel(listOf(2), .14f, .15f)),
             strike = thump(ThumpVoice.COWBELL, mapOf("TUNE" to .45f, "DECAY" to .35f)) { v -> mapOf("TONE" to .35f + .3f * v) }),
         Part("Shaker", DrumClass.PERC, Chain(Press(12f, .70f, .60f), Reel(gallop, .22f, .30f)),
-            strike = skinTouched(SkinVoice.SHAKER, mapOf("TONE" to .60f, "DECAY" to .35f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("GRAIN" to .2f + .3f * v, "PUNCH" to .4f + .3f * v) }),
+            strike = texture(MirrorballTexture.Voice.SHAKER, soften = true)),
         Part("Ghost Snare", DrumClass.SNARE, Chain(Press(16f, .70f, .75f), Reel(listOf(1), .10f, .10f)),
             strike = skin(SkinVoice.SNARE, "TUNE" to .62f, "SNAP" to .55f, "DECAY" to .20f, "PUNCH" to .45f, "RATTLE" to .70f, "SIZZLE" to .60f)),
     )
@@ -518,15 +571,17 @@ object MirrorballKits {
             strike = { v, t ->
                 // A snare and a clap struck together: the clap is the louder half, as on the records.
                 val s = Skin.render(SkinVoice.SNARE, mapOf("TUNE" to .50f, "SNAP" to .65f, "DECAY" to .30f, "PUNCH" to .60f, "RATTLE" to .55f), v, t).samples
-                val c = thump(ThumpVoice.CLAP, mapOf("SPREAD" to .55f, "DECAY" to .40f, "CLAPS" to .7f), listOf("SPREAD", "DECAY", "TONE")) { w -> mapOf("TONE" to .4f + .3f * w) }(v, t)
+                // Round 2: the recorded-clap texture, as on the Hand Clap pad, not THUMP's.
+                val c = MirrorballTexture.render(MirrorballTexture.Voice.CLAP, v, t)
                 FloatArray(max(s.size, c.size)) { .55f * s.getOrElse(it) { 0f } + .8f * c.getOrElse(it) { 0f } }
             }),
         Part("Closed Hat", DrumClass.HAT_CLOSED, Chain(Press(10f, .60f, .60f), Reel(gallop, .30f, .35f)), mute = 1,
             strike = skinTouched(SkinVoice.HAT_CLOSED, mapOf("TUNE" to .62f, "DECAY" to .18f, "TONE" to .55f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
+        // Round 2: the three-quarter-open hat (a longer sizzle than Philly's) and a recorded clap, both fitted.
         Part("Open Hat", DrumClass.HAT_OPEN, Chain(Press(10f, .60f, .55f), Reel(gallop, .26f, .32f)), mute = 1,
-            strike = skinTouched(SkinVoice.HAT_OPEN, mapOf("TUNE" to .62f, "DECAY" to .38f, "TONE" to .55f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
+            strike = hat(MirrorballCymbal.Kind.HAT_34)),
         Part("Hand Clap", DrumClass.CLAP, Chain(Press(14f, .70f, .70f), Reel(listOf(1, 2), .24f, .28f)),
-            strike = thump(ThumpVoice.CLAP, mapOf("SPREAD" to .70f, "DECAY" to .45f, "CLAPS" to .8f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .45f + .3f * v) }),
+            strike = texture(MirrorballTexture.Voice.CLAP, soften = false)),
         Part("Quinto", DrumClass.PERC, loftPerc.copy(cabHz = WARM_CAB),
             strike = hand(TerraVoice.SLAP, "TUNE" to .80f, "DECAY" to .40f, "FORCE" to .95f, "POS" to .9f, "BOWL" to .45f)),
         Part("Conga", DrumClass.PERC, loftPerc.copy(cabHz = WARM_CAB),
@@ -539,8 +594,9 @@ object MirrorballKits {
             strike = thump(ThumpVoice.COWBELL, mapOf("TUNE" to .55f, "DECAY" to .40f)) { v -> mapOf("TONE" to .4f + .3f * v) }),
         Part("Claves", DrumClass.PERC, loftPerc,
             strike = onset(OnsetVoice.PERC_WOOD, mapOf("TUNE" to .70f, "DECAY" to .30f)) { v -> mapOf("SNAP" to .4f + .4f * v, "EDGE" to .4f + .3f * v) }),
+        // Round 2: a different instrument from Philly's, a wooden shaker, fitted.
         Part("Shaker", DrumClass.PERC, Chain(Press(12f, .70f, .60f), Reel(gallop, .28f, .35f)),
-            strike = skinTouched(SkinVoice.SHAKER, mapOf("TONE" to .55f, "DECAY" to .30f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("GRAIN" to .2f + .3f * v, "PUNCH" to .4f + .3f * v) }),
+            strike = texture(MirrorballTexture.Voice.SHAKER_WOOD, soften = true)),
         Part("Bongo", DrumClass.PERC, loftPerc.copy(cabHz = WARM_CAB),
             strike = hand(TerraVoice.DARBUKA, "TUNE" to .75f, "DECAY" to .35f, "FORCE" to .9f, "POS" to .85f, "SHELL" to .3f, "SNAP" to .6f)),
     )

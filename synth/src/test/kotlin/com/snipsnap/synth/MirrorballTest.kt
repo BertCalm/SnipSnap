@@ -358,6 +358,43 @@ class MirrorballTest {
         assertTrue(lighter < kit && kit < full, "harmonics do not follow the punch: $lighter, $kit, $full dB")
     }
 
+    @Test fun `the fitted shakers swell, the fitted clap cracks at once, and every take is a new one`() {
+        fun loudestMs(x: FloatArray) = (0 until x.size / frames(2.5f) - 8).maxBy { rms(x, it * frames(2.5f), it * frames(2.5f) + frames(20f)) } * 2.5
+        for (voice in MirrorballTexture.Voice.entries) {
+            val takes = List(4) { MirrorballTexture.render(voice, 1f, it) }
+            assertContentEquals(takes[1], MirrorballTexture.render(voice, 1f, 1), "$voice is not deterministic")
+            for (a in takes.indices) for (b in a + 1 until takes.size) {
+                assertTrue(shapeDistance(takes[a], takes[b]) > .3, "$voice takes $a and $b: ${shapeDistance(takes[a], takes[b])}")
+            }
+        }
+        // The recordings: a shake is thrown, so its loudest 20 ms come tens of milliseconds in; a clap is loudest at once.
+        for (voice in listOf(MirrorballTexture.Voice.SHAKER, MirrorballTexture.Voice.SHAKER_WOOD)) {
+            val at = List(4) { loudestMs(MirrorballTexture.render(voice, 1f, it)) }.average()
+            assertTrue(at > 25, "$voice is loudest at $at ms: it does not swell")
+        }
+        val clapAt = List(4) { loudestMs(MirrorballTexture.render(MirrorballTexture.Voice.CLAP, 1f, it)) }.average()
+        assertTrue(clapAt < 15, "the clap is loudest at $clapAt ms")
+        // The clap's two recorded dynamics differ, and not only in level.
+        val soft = MirrorballTexture.render(MirrorballTexture.Voice.CLAP, .3f, 0)
+        val hard = MirrorballTexture.render(MirrorballTexture.Voice.CLAP, 1f, 0)
+        assertTrue(shapeDistance(soft, hard) > .3, "${shapeDistance(soft, hard)}")
+    }
+
+    @Test fun `the fitted hats are two articulations, and the ride is BREAKER's accepted one`() {
+        fun tail(x: FloatArray) = db(rms(x, frames(500f), frames(800f)) / max(rms(x, 0, frames(50f)), 1e-12))
+        val half = List(3) { tail(MirrorballCymbal.render(MirrorballCymbal.Kind.HAT_HALF, 1f, it, 1.45f)) }.average()
+        val threeQuarter = List(3) { tail(MirrorballCymbal.render(MirrorballCymbal.Kind.HAT_34, 1f, it, 1.45f)) }.average()
+        // The recordings: the half-open hat is about 30 dB down by half a second; the three-quarter one rings on.
+        assertTrue(half < threeQuarter - 3, "half-open $half dB against three-quarter $threeQuarter dB at 0.5-0.8 s")
+        for (kind in MirrorballCymbal.Kind.entries) {
+            val takes = List(4) { MirrorballCymbal.render(kind, 1f, it, 1.45f) }
+            for (a in takes.indices) for (b in a + 1 until takes.size) assertTrue(shapeDistance(takes[a], takes[b]) > .05, "$kind takes $a and $b")
+        }
+        val ride = BreakerCymbal.render(BreakerCymbal.Kind.RIDE, 1f, 2, MirrorballKits.HIT_SECONDS)
+        val pad = MirrorballKits.dryRaw(Kit.PHILLY, 10, 1f, 2)
+        assertTrue(shapeDistance(ride, pad) < 1e-3, "Philly's ride is not BREAKER's: ${shapeDistance(ride, pad)}")
+    }
+
     @Test fun `no pad or kit name borrows a maker's name`() {
         for (k in Kit.entries) for (name in MirrorballKits.roles(k) + k.title + k.id) {
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), name)
