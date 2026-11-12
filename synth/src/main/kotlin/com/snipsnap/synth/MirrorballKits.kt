@@ -272,9 +272,13 @@ object MirrorballKits {
         return out
     }
 
-    /** SKIN's struck voices (kick, snare, tom) take velocity and take themselves: a real re-strike. */
+    /**
+     * SKIN's struck voices (kick, snare, tom) take velocity and take themselves: a real re-strike. A take also
+     * moves TONE a small step, as a second stroke lands a little off the first: a soft kick's re-strikes alone
+     * came out nearly alike (the Loft kick's soft takes measured 0.004 apart, under the test's 0.005 floor).
+     */
     private fun skin(voice: SkinVoice, vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
-        { v, t -> Skin.render(voice, mapOf(*m), v, t).samples }
+        { v, t -> Skin.render(voice, varied(mapOf(*m), listOf("TONE"), t), v, t).samples }
 
     /**
      * A voice whose engine has no strike velocity. [soft] moves the named controls with velocity, and a softer
