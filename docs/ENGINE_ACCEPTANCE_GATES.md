@@ -146,25 +146,25 @@ Round 1 is a Python prototype audition; no Kotlin exists.
 
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
-Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), and that approval covers TRAP and DRILL. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
+Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
 
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits; SUB is a drum voice. |
 | Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
 | Percussion: authored roll or riser | Pass | Twelve authored phrases: a hat roll to 1/64 and a sub line (TRAP); the drill snare bar and a sub call (DRILL); swung hats and a break drop (BACKROOM); a laid-back groove and a big fill (LOWRIDER); two unquantized breaks (DUST); a click scatter and a slide stack (FLINT). |
-| Drums: multiple distinct genre kits on the shelf | Pass in software; two of six heard | Six kits under SKINS. `CypherTest` holds every pair to at least six different pads and a different kick and snare dry, and the prints differ (dry, a dark room, the Backroom rack, tape, a long room). Not "different effect strengths on the same kit". TRAP and DRILL approved; the other four not heard. |
+| Drums: multiple distinct genre kits on the shelf | Pass; all six heard | Six kits under SKINS. `CypherTest` holds every pair to at least six different pads and a different kick and snare dry, and the prints differ (dry, a dark room, the Backroom rack, tape, a long room). Not "different effect strengths on the same kit". TRAP and DRILL approved at round 1b, the other four at round 2. The owner also kept SCUFF beside CYPHER FLINT, two Michigan kits by choice. |
 | Velocity: rendering | Pass | Every hit is a different strike at the soft zone, duller (a sub: cleaner), not a quieter copy. THUMP's KICK and SUB, SKIN's struck voices, ONSET's kick, TERRA and RIVET strike at the velocity; the rest are touched. |
 | Round robin: rendering | Pass | Four different takes in every zone of every pad; SUB deals five dimensions out and keeps its root within 10 cents; SKIN drums on the new kits re-strike with a force spread and a small decay and contact move. |
 | Velocity and round robin: saving | Pass | Each kit reloads equal and all 1152 saved slices match their renders. A lone SUB pad's chain and recipe survive a save and regenerate the drum (`ThumpSubRobinTest`). |
 | Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats; chokes survive. No phone has played these kits. |
 | Velocity and round robin: export | Pass for MPC 3, SFZ and DecentSampler; **fail for MPC 2** | MPC 3 read back: velocity ranges, base slices, cycle lengths, frame windows and slices match. SFZ and DecentSampler written by the generator, both cycling takes. MPC 2 keeps only each zone's first take: a format limit, stated. |
 | Hardware playback (phone, MPC) | Not verified | Only the owner's devices can close this. |
-| Sound character | TRAP and DRILL approved; four not heard | Round 1b approved 2026-11-12. BACKROOM opens with the six accepted Backroom pads byte for byte through their rack (`CypherTest`). |
+| Sound character | Approved, all six kits | Round 1b approved TRAP and DRILL and round 2 approved the rest, both 2026-11-12, both from the listening page. Preserve kit version 3 as the accepted baseline. BACKROOM opens with the six accepted Backroom pads byte for byte through their rack (`CypherTest`). |
 | SUB presets | Pass | Eight factory presets, the sub recipes of the approved TRAP and DRILL (`ThumpPresets`); none authored blind. |
 
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
-- **Overall:** every software gate passes; the four new kits wait for the owner's ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
+- **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
 
 ## SCUFF (rounds 0 and 0b, 2026-11-12)
 
