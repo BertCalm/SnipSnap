@@ -300,3 +300,6 @@ are not on the page. Owner listening is pending.
 
 Round 2 published 2026-11-12 to the same link as version 3, built from `566bbf0b`: 88 clips
 (the 58 round-1b clips unchanged, 30 new). Owner listening of the four new voices is pending.
+
+The rebuilt round robin published 2026-11-12 to the same link as version 4, built from
+`c4dddfca`: 90 clips (15 take clips replaced, two A/B clips added). Not heard.
