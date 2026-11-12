@@ -229,86 +229,32 @@ object GatecrashKits {
     /** Where every zone's first take peaks. */
     const val PAD_PEAK = .92f
 
-    private fun finish(x: FloatArray, gain: Float, ceiling: Float = .98f): Snip {
-        check(x.all { it.isFinite() })
-        val mean = x.average().toFloat()
-        val dc = Dsp.FixedOnePole(20f)
-        var peak = 0f
-        for (i in x.indices) {
-            val centred = x[i] - mean
-            x[i] = (centred - dc.lp(centred)) * gain
-            peak = max(peak, abs(x[i]))
-        }
-        // Safety only: another take may land a little hotter than the first. Never a boost.
-        if (peak > ceiling) { val k = ceiling / peak; for (i in x.indices) x[i] *= k; peak = ceiling }
-        // Stop 80 dB under the pad's peak, 20 ms later.
-        var last = 0
-        val floor = max(peak, 1e-6f) * 1e-4f
-        for (i in x.indices) if (abs(x[i]) > floor) last = i
-        val out = x.copyOf(min(x.size, max(last + (.02f * Dsp.RATE).toInt(), 2048)))
-        Dsp.fadeTail(out)
-        return Snip(out, 1, Dsp.RATE)
-    }
+    private fun finish(x: FloatArray, gain: Float, ceiling: Float = .98f): Snip = KitStrikes.finish(x, gain, ceiling)
 
     // ---------- sources ----------
 
-    /** Takes sit at -1.5, -0.5, 0.5 and 1.5: four strikes around the authored one, none of them on it. */
-    private fun jitter(take: Int): Float = take - 1.5f
-
-    /** How far one step of [jitter] moves a 0..1 control. At 0.02 a hat's pitch moves about a sixth of a semitone. */
-    private const val TAKE_STEP = .02f
-
-    private fun varied(m: Map<String, Float>, vary: List<String>, take: Int): Map<String, Float> {
-        val out = m.toMutableMap()
-        // Alternate the direction from control to control, so a take is not simply "everything up".
-        for ((i, name) in vary.withIndex()) {
-            val step = jitter(take) * TAKE_STEP * if (i % 2 == 0) 1f else -1f
-            out[name] = ((out[name] ?: .5f) + step).coerceIn(0f, 1f)
-        }
-        return out
-    }
+    // The strike laws live in [KitStrikes] (lifted out of here when CYPHER needed the same ones); these keep
+    // this kit's call sites as they were authored and heard. A GATECRASH strike takes no pitch offset.
 
     /** SKIN's struck voices (kick, snare, tom) take velocity and take themselves: a real re-strike. */
     private fun skin(voice: SkinVoice, vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
-        { v, t -> Skin.render(voice, mapOf(*m), v, t).samples }
-
-    /**
-     * A voice whose engine has no strike velocity. The soft hit is built from what a softer stick does:
-     * [soft] moves the named controls with velocity, and a softer contact loses its top (a one-pole falling
-     * from 18 kHz to 7 kHz). A take moves the [vary] controls a little, as a second strike lands elsewhere.
-     */
-    private fun touched(
-        render: (Map<String, Float>) -> FloatArray,
-        base: Map<String, Float>,
-        vary: List<String>,
-        soft: (Float) -> Map<String, Float>,
-    ): (Float, Int) -> FloatArray = { v, t ->
-        val x = render(varied(base + soft(v), vary, t))
-        val contact = Dsp.FixedOnePole(2_500f + 15_500f * v)
-        FloatArray(x.size) { contact.lp(x[it]) }
-    }
+        KitStrikes.skin(voice, *m).let { s -> { v, t -> s(v, t, 0f) } }
 
     private fun thump(voice: ThumpVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "DECAY"),
-                      soft: (Float) -> Map<String, Float> = { emptyMap() }) =
-        touched({ Thump.render(voice, it).samples }, base, vary, soft)
+                      soft: (Float) -> Map<String, Float> = { emptyMap() }): (Float, Int) -> FloatArray =
+        KitStrikes.thump(voice, base, vary, soft).let { s -> { v, t -> s(v, t, 0f) } }
 
     private fun skinTouched(voice: SkinVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "DECAY"),
-                            soft: (Float) -> Map<String, Float> = { emptyMap() }) =
-        touched({ Skin.render(voice, it).samples }, base, vary, soft)
+                            soft: (Float) -> Map<String, Float> = { emptyMap() }): (Float, Int) -> FloatArray =
+        KitStrikes.skinTouched(voice, base, vary, soft).let { s -> { v, t -> s(v, t, 0f) } }
 
     /** THUMP's kick reads velocity itself (less pitch drop, a duller click, less drive). */
     private fun thumpKick(vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
-        { v, t -> Thump.render(ThumpVoice.KICK, varied(mapOf(*m), listOf("TUNE", "CLICK"), t), v).samples }
+        KitStrikes.thumpKick(*m).let { s -> { v, t -> s(v, t, 0f) } }
 
-    /**
-     * ONSET's snare does not change with its velocity argument (measured: the same brightness to eight
-     * figures at 0.3 and 1), so it is touched like THUMP's voices. The model version is pinned so a later
-     * ONSET cannot move this kit.
-     */
-    private fun onset(voice: OnsetVoice, base: Map<String, Float>, soft: (Float) -> Map<String, Float>) =
-        touched({ Onset.render(voice, it, ONSET_MODEL).samples }, base, listOf("TUNE", "SNAP", "EDGE"), soft)
-
-    private const val ONSET_MODEL = 4
+    /** ONSET's snare is touched like THUMP's voices; the model version is pinned ([KitStrikes.ONSET_MODEL]). */
+    private fun onset(voice: OnsetVoice, base: Map<String, Float>, soft: (Float) -> Map<String, Float>): (Float, Int) -> FloatArray =
+        KitStrikes.onset(voice, base, soft).let { s -> { v, t -> s(v, t, 0f) } }
 
     // ---------- the three kits ----------
 

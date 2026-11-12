@@ -499,7 +499,7 @@ object Velocity {
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().
-        is ThumpPatch -> if (patch.voice == ThumpVoice.KICK) Thump.render(patch.voice, patch.macros, velocity = v) else null
+        is ThumpPatch -> if (patch.voice == ThumpVoice.KICK || patch.voice == ThumpVoice.SUB) Thump.render(patch.voice, patch.macros, velocity = v) else null
         is OnsetPatch -> if (patch.voice == OnsetVoice.KICK) Onset.render(patch.voice, patch.macros, patch.modelVersion, velocity = v) else null
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.

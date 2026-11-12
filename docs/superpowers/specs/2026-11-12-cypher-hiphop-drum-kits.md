@@ -458,3 +458,45 @@ The owner's brief (2026-11-12) is the research text and names the machines: the 
 - **The feel is a table of milliseconds, not a sequencer setting.** `render` receives no tempo, swing lives on the MPC, so the only place a kit can carry its groove is a phrase pad, with each note's lateness written down and seeded once. Remove the offsets and every kit's phrase is the same straight grid.
 - **The Backroom kit reuses the accepted sound byte for byte** rather than re-authoring it, because the owner already accepted it and twelve hashes pin it. The ten new pads get the same rack.
 - **The one risky decision is DRIVE on the sub.** A clean sub is correct and inaudible on a phone; a driven sub is audible and less pure. The prototype puts the number on the trade (0.3 % to 5.5 % of the drum between 150 and 400 Hz) and the pack plays all three so the owner can choose, as they did for the SUB pedal.
+
+## As built (round 1, 2026-11-12)
+
+The owner answered the two questions on 2026-11-12: SLIDE becomes an editable THUMP voice (Direction B, taken
+now rather than at round 4), and TRAP and DRILL are built first. What changed against the design above:
+
+- **SLIDE is `ThumpVoice.SUB`.** Six macros as in §7, no PUNCH. `Thump.render` gained a trailing `take`
+  parameter that only SUB reads; `Velocity.touchedRender` and `Restrike` treat SUB as they treat KICK and
+  SKIN's struck voices, so a SUB pad re-strikes through the app's robin. The app's two voice switches gained
+  arms (class KICK, chip "SUB"); the picker lists voices from `ThumpVoice.entries`, so SUB appears. No factory
+  presets (`PatchTypes.PROTOTYPE_VOICES`), and `Desample` keeps its legacy grid without SUB, like SPARK.
+- **DECAY's top is 1.2 s, not 1.3,** and a render is `t60 × 1.15 + 0.042` s: at 1.3 s the longest render was
+  1.75 s and the classifier filed it as LOOP. The longest is now 1.42 s.
+- **The takes are the prototype's table**, in `Thump.SUB_TAKES`. Measured in Kotlin on the fourth-down sub:
+  waveform shape distances 0.18 to 0.69 between takes, roots 58.33 to 58.45 Hz by autocorrelation (the
+  detector's own resolution at 58 Hz is about 5 cents).
+- **The kit helpers are shared.** `KitStrikes` (in `Cypher.kt`) holds `touched`, `varied`, `jitter`,
+  `TAKE_STEP`, the engine wrappers, `layered`, `struck` and `finish`; `GatecrashKits` delegates to them through
+  thin wrappers so its call sites and arithmetic are unchanged. `GatecrashTest` still passes.
+- **A strike takes a pitch offset** (`Strike = (velocity, take, tuneSemis) -> FloatArray`) rather than a Note
+  carrying a TUNE delta: the helper knows the voice's TUNE span in octaves (hats 0.954, rim 0.737).
+- **Phrases choke inside themselves.** `CypherKits.Phrase.choke` names the parts that stop each other; a
+  choked note ends where the next choked note starts, over a 5 ms fade. Without it the sub line was mud.
+- **DRILL's snare is ONSET's, not THUMP's.** Every THUMP snare shares one wire-noise stream, so TRAP's and
+  DRILL's measured as one drum in different clothes (shape distance under 0.5). ONSET's snare in the drill
+  room is a different drum.
+- **DRILL's subs sit at TUNE .62 (63 Hz), not .50:** 58 Hz down a fifth is 39 Hz, under the pitch probe's
+  40 Hz floor and under most phones. TRAP's low sub (TUNE .08, 43 Hz) is driven harder (DRIVE .62) to reach
+  the phone band.
+- **Probe 10 is two probes.** GATECRASH's attack key cannot hear a sub landing on a ringing sub (it wants
+  the level to lead its held peak by 1.7, and a sub is already at full level), so the key counts attacks on
+  the DRILL snare bar only; on every phrase, every note is checked as an onset (louder after than before).
+  The 1/64 roll is held by the ratchet probe (a 20 dB dip between hits, measured on the render).
+- **Pitch on the kit's subs is read from zero crossings**, not autocorrelation: the detector loses roots
+  near its 40 Hz floor, and a sub is a sine.
+
+Measured (Kotlin, this cloud JVM): see [CYPHER](../../CYPHER.md). A warm SUB render is about 23 ms for a
+0.74 s drum. TRAP built in 7.5 s and DRILL in 12.0 s in the generator. MP3 lead-in on the listening page moves
+its onsets by a few milliseconds; the kit's timing is sample-accurate.
+
+Not built: BACKROOM, LOWRIDER, DUST, FLINT (round 2), the riser, SFZ and DecentSampler exports. Not heard:
+everything. The [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner.

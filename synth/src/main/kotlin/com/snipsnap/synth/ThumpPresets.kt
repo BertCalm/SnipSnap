@@ -62,6 +62,9 @@ object ThumpPresets {
         // SPARK stays editable through defaults and SCRAMBLE while its
         // character is auditioned. Factory names follow a listening verdict.
         ThumpVoice.SPARK -> emptyList()
+        // SUB ships inside the CYPHER kits with authored settings; its factory
+        // names wait for the owner's listening verdict, like SPARK's.
+        ThumpVoice.SUB -> emptyList()
     }
 
     fun all(): List<ThumpPatch> = ThumpVoice.entries.flatMap { forVoice(it) }

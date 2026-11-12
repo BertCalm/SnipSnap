@@ -143,3 +143,19 @@ Round 1 is a Python prototype audition; no Kotlin exists.
   - **Saving, playback and export:** not yet verified.
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
+
+## CYPHER kits and THUMP SUB (round 1, 2026-11-12)
+
+Hip-hop drum kits in the GATECRASH shape, two of six built: TRAP and DRILL. See [CYPHER](CYPHER.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. These are drum kits; SUB is a drum voice.
+- **Articulation:** finite hits, no HOLD. Each kit has two authored phrases: TRAP a hat roll (to 1/64, rising) and a sub line; DRILL a triplet snare bar in its room and a sub call. The roll is the family's roll; a riser is not built.
+- **Drum shelf: two of six, in software, not heard.** TRAP and DRILL are on the shelf under SKINS. `CypherTest` checks they differ in tempo, in at least six pad sources, in the main snare's print and in the hat grid. BACKROOM, LOWRIDER, DUST and FLINT are not built.
+- **Velocity and round robin:**
+  - **Rendering: verified.** THUMP's KICK and SUB and RIVET strike at the velocity; the other voices are touched (controls move, contact filter closes). Every hit is a different strike at the soft zone, duller (a sub: cleaner); every zone holds four different takes; the sub's root stays within 10 cents across zones and takes.
+  - **Saving: verified.** Each kit reloads equal and all 192 saved slices match their renders (`:shell:generateCypherKits`, `CypherKitTest`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; the sub pads' choke group survives the save. No phone has played these kits.
+  - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
+- **Sound character: not heard.** Round 1 waits for the owner on the [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG). Every control value is a shape value.
+- **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`; no factory presets until a listening verdict (`PatchTypes.PROTOTYPE_VOICES`). The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`).
+- **Overall: incomplete.** Two of six genre kits, nothing heard, hardware playback open, MPC 2 round robin open.

@@ -427,6 +427,19 @@ class DeterminismTest {
     }
 
     @Test
+    fun `THUMP SUB regenerates its sliding sub and every take from the saved recipe exactly`() {
+        val patch = ThumpPatch("Sub canary", ThumpVoice.SUB,
+            Thump.defaults(ThumpVoice.SUB) + mapOf("SLIDE" to .29f, "WHEN" to .6f, "DRIVE" to .55f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        for (take in 0 until 4) for (v in listOf(.3f, 1f)) {
+            assertContentEquals(
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples,
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples, "take $take v $v")
+        }
+    }
+
+    @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }

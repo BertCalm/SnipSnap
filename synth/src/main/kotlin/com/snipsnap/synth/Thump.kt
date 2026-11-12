@@ -24,7 +24,7 @@ import kotlin.random.Random
  * U2); a flat uniform roll of the whole space is still reachable at
  * `temperature = 1` (see [scramble]).
  */
-enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM, SPARK }
+enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM, SPARK, SUB }
 
 /**
  * One macro: its name, where it starts, and where it *does nothing*.
@@ -107,6 +107,12 @@ object Thump {
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.35f), MacroSpec("PUNCH", 0.5f),
             MacroSpec("METAL", 0.25f), MacroSpec("COLOR", 0.5f),
         )
+        // SUB: the sliding sub drum (see [sub]). No PUNCH: a sub has no transient to reshape, and
+        // the clipper is its DRIVE. SLIDE is centred: .5 is no slide, and that is its neutral.
+        ThumpVoice.SUB -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.45f), MacroSpec("SLIDE", 0.5f, neutral = 0.5f),
+            MacroSpec("WHEN", 0.5f), MacroSpec("DRIVE", 0.4f), MacroSpec("CLICK", 0.5f),
+        )
     }
 
     /** The factory macro settings for [voice]. */
@@ -147,17 +153,23 @@ object Thump {
      * Render [voice] with [macros]; missing macros fall back to defaults.
      *
      * [velocity] is how hard the hit was, 0..1 ([StrikeVelocity]), and only
-     * KICK reads it: a softer hit drops less in pitch, lands a quieter and
+     * KICK and SUB read it: a softer hit drops less in pitch, lands a quieter and
      * duller click, and drives its saturator less. Full velocity (the
      * default) is the render THUMP has always made, bit for bit. The other
      * voices keep the touch [Velocity] gives them.
+     *
+     * [take] is another strike of the same drum ([Restrike]), and only SUB
+     * reads it: take 0 is the authored drum, and takes 1 to 3 deal its
+     * settle, click, drive, slide start and glide time out ([SUB_TAKES]) so
+     * no two takes share a setting while the root never moves. Every other
+     * voice renders the same bytes whatever the take.
      */
-    fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
+    fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) {
             // Keep legacy mappings byte-identical; the new voice rejects a
             // non-finite control before it can reach a phase or filter state.
-            if (voice != ThumpVoice.SPARK || v.isFinite()) m[k] = v.coerceIn(0f, 1f)
+            if ((voice != ThumpVoice.SPARK && voice != ThumpVoice.SUB) || v.isFinite()) m[k] = v.coerceIn(0f, 1f)
         }
         // U6 (docs/SYNTH_UPGRADE.md): every voice synthesizes at 4x RATE, so
         // its own oscillators' aliasing folds down above 22.05kHz instead of
@@ -172,23 +184,16 @@ object Thump {
             ThumpVoice.TOM -> tom(m, renderRate)
             ThumpVoice.COWBELL -> cowbell(m, renderRate)
             ThumpVoice.RIM -> rim(m, renderRate)
-            ThumpVoice.SPARK -> spark(m, renderRate).also { source ->
-                // This branch alone adopts explicit pre-decimation bandwidth
-                // and DC conditioning. Changing the common finish would also
-                // re-voice every already-auditioned THUMP sound.
-                Tide.bandLimit(source, renderRate)
-                val mean = source.sumOf { it.toDouble() } / source.size
-                val dc = Dsp.FixedOnePole(20f, renderRate)
-                for (i in source.indices) {
-                    val centered = (source[i] - mean).toFloat()
-                    source[i] = centered - dc.lp(centered)
-                }
-            }
+            ThumpVoice.SPARK -> spark(m, renderRate).also { conditioned(it, renderRate) }
+            // SUB's clipper makes harmonics well up the band and its sine can sit under 20 Hz
+            // at the bottom of a slide: band-limited and DC-blocked before decimation, like SPARK.
+            ThumpVoice.SUB -> sub(m, renderRate, velocity, take).also { conditioned(it, renderRate) }
         }
         // SPARK's longer source articulation already owns PUNCH. Applying
         // the legacy 2 ms shaper again added a separate spike at its upper
         // endpoint rather than extending the source control's useful range.
-        val punch = if (voice == ThumpVoice.SPARK) 0f else m.getValue("PUNCH")
+        // SUB has no PUNCH macro: its DRIVE is the only shaper it wants.
+        val punch = if (voice == ThumpVoice.SPARK || voice == ThumpVoice.SUB) 0f else m.getValue("PUNCH")
         // Only SNARE carries a WIDTH macro (m["WIDTH"] is absent, hence 0f,
         // for every other voice) - this is the one place `render()` needs
         // to know whether `raw` came back interleaved stereo or mono.
@@ -242,6 +247,135 @@ object Thump {
     // ---------- voices ----------
 
     private fun frames(seconds: Float, rate: Int) = (seconds * rate).toInt().coerceAtLeast(64)
+
+    /**
+     * Explicit pre-decimation bandwidth and DC conditioning, in place, for the
+     * voices that adopt it (SPARK, SUB). Changing the common finish instead
+     * would re-voice every already-auditioned THUMP sound.
+     */
+    private fun conditioned(source: FloatArray, rate: Int) {
+        Tide.bandLimit(source, rate)
+        val mean = source.sumOf { it.toDouble() } / source.size
+        val dc = Dsp.FixedOnePole(20f, rate)
+        for (i in source.indices) {
+            val centered = (source[i] - mean).toFloat()
+            source[i] = centered - dc.lp(centered)
+        }
+    }
+
+    /** One take of SUB: how far five audible dimensions move from the authored drum. */
+    internal class SubTake(val settle: Float, val click: Float, val drive: Float, val whenMs: Float, val glide: Float)
+
+    /**
+     * SUB's four takes. Take 0 is the authored drum. The others deal five
+     * dimensions out so no two takes share a setting; the root is never one
+     * of them, because a detuned sub is a different note. Measured in the
+     * Python prototype (`prototype/cypher/cypher_proto.py`): on a sine into a
+     * tanh the distance between takes is set almost entirely by the drive
+     * ratio, about 10 dB of log-spectral distance per unit of ln(ratio), so
+     * the drives sit 0.16 to 0.22 apart in ln and the closest pair measured
+     * 1.49 dB. Shape values until heard.
+     */
+    internal val SUB_TAKES = listOf(
+        SubTake(1.00f, 1.00f, 1.00f, 0f, 1.00f),
+        SubTake(0.70f, 1.45f, 0.80f, 10f, 1.18f),
+        SubTake(1.30f, 0.65f, 1.25f, -8f, 0.88f),
+        SubTake(0.88f, 1.60f, 0.64f, 5f, 1.06f),
+    )
+
+    /** SUB's lowest root (TUNE 0), E1; TUNE 1 is an octave up. */
+    internal const val SUB_LOW_HZ = 41.2034f
+
+    /** SUB's root for a TUNE value: E1 to E2, in semitones. Takes and velocity never move it. */
+    internal fun subRootHz(tune: Float): Float = SUB_LOW_HZ * 2f.pow(Dsp.lin(tune, 0f, 12f) / 12f)
+
+    /**
+     * SUB's decay to -60 dB for a DECAY value at full velocity, seconds. The top is set so the
+     * longest render ([subSeconds]) stays under the classifier's 1.5 s loop floor: a sub is a
+     * drum, never a LOOP, whatever the knob. Over about 0.5 s of measured decay the classifier
+     * reads TONAL rather than KICK; the default reads KICK (measured, ThumpSubTest).
+     */
+    internal fun subT60(decay: Float): Float = Dsp.expMap(decay, 0.25f, 1.2f)
+
+    /** How long a SUB render is for its decay: 15 percent past -60 dB, plus the hold and a tail. */
+    internal fun subSeconds(t60: Float): Float = t60 * 1.15f + 0.012f + 0.03f
+
+    /** SUB's slide, in semitones, for a SLIDE value: an octave each way, none at .5. */
+    internal fun subSlideSemitones(slide: Float): Float = Dsp.lin(slide, -12f, 12f)
+
+    /** When SUB's slide starts, seconds, for WHEN and the drum's decay: 0.15 to 0.75 of t60. */
+    internal fun subSlideStart(whenMacro: Float, t60: Float): Float = Dsp.lin(whenMacro, 0.15f, 0.75f) * t60
+
+    /**
+     * SUB: a sub drum whose pitch holds its root and then glides to another note.
+     *
+     * The characteristic gesture is **click and settle onto the root → the note holds → it
+     * slides to the target and sits there → the tail runs out**. The gesture of the sliding
+     * subs in trap, drill and Michigan rap; the roster had no drum that could do it. KICK's
+     * pitch only falls onto its root in the first tens of milliseconds and its tail is capped
+     * so it keeps reading as a kick; FATHOM's GLIDE slides *into* the note from below.
+     *
+     * The chain, at the render rate:
+     *
+     *     pitch law p(t) → sin(∫ 2π p dt) × amp env → + click → tanh DRIVE
+     *
+     * The pitch law is one function of time integrated into phase, never a retune of a
+     * ringing resonator, so a slide cannot click. It has three parts: a short settle like
+     * the machines this comes from (the sine starts up to a third of an octave high and
+     * falls onto the root in about 12 ms), the root held, and from [subSlideStart] an
+     * exponential approach to root + SLIDE semitones with a time constant that grows with
+     * the interval, so the note arrives and sits rather than passing through.
+     *
+     * The click is a 1.5 ms raised cosine plus 4 ms of low-passed noise, scaled by velocity
+     * to a power above one so a soft hit loses its click faster than its body. DRIVE is a
+     * tanh whose gain follows velocity, so a soft hit is cleaner as well as quieter; the
+     * harmonics it makes between 150 and 400 Hz are what a phone speaker plays of a sub
+     * (the SUB pedal's lesson, measured in the prototype: 0.3 percent of the drum's energy
+     * there at DRIVE 0, 5.5 percent at DRIVE 1). The clipper runs here at 4x and the caller
+     * band-limits before decimation.
+     *
+     * Not simulated: the voltage-controlled decay and the bridged-T's own ring of the
+     * original machines, any speaker. Every constant is a shape value.
+     */
+    internal fun sub(m: Map<String, Float>, rate: Int, velocity: Float = 1f, take: Int = 0): FloatArray {
+        val v = StrikeVelocity.settled(velocity)
+        val tk = SUB_TAKES[Math.floorMod(take, SUB_TAKES.size)]
+        val root = subRootHz(m.getValue("TUNE"))
+        // A softer hit rings a little less (shape).
+        val t60 = subT60(m.getValue("DECAY")) * (0.85f + 0.15f * v)
+        val hold = 0.012f
+        val settleOct = 0.35f * (0.6f + 0.4f * v) * tk.settle
+        val settleTau = 0.012f
+        val target = subSlideSemitones(m.getValue("SLIDE"))
+        val whenS = subSlideStart(m.getValue("WHEN"), t60) + tk.whenMs * 0.001f
+        val glideTau = (0.08f + 0.10f * kotlin.math.abs(target) / 12f) * tk.glide
+        val clickLevel = Dsp.lin(m.getValue("CLICK"), 0f, 0.5f) * v.pow(1.6f) * tk.click
+        val g = Dsp.lin(m.getValue("DRIVE"), 1f, 6f) * (0.55f + 0.45f * v) * tk.drive
+        val norm = 1f / kotlin.math.tanh(g)
+        val out = FloatArray(frames(subSeconds(t60), rate))
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60, holdSeconds = hold)
+        val noise = Dsp.Noise(Dsp.seedFor("THUMP", "SUB", "click", take))
+        val clickLp = Dsp.FixedOnePole(4_000f, rate)
+        val pulseSec = 0.0015f
+        val burstSec = 0.004f
+        var phase = 0.0
+        for (i in out.indices) {
+            val t = i.toFloat() / rate
+            val semis = if (t >= whenS) target * (1f - exp(-(t - whenS) / glideTau)) else 0f
+            val f = root * 2f.pow(settleOct * exp(-t / settleTau)) * 2f.pow(semis / 12f)
+            phase += f.toDouble() / rate
+            var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
+            if (t < burstSec) {
+                // The burst's window is a raised cosine too, so the click has its own attack and
+                // never jumps to full level (the ramp-in rule every THUMP voice follows).
+                val pulse = if (t < pulseSec) 0.5f * (1f - cos(2.0 * PI * t / pulseSec).toFloat()) else 0f
+                val window = 0.5f * (1f - cos(2.0 * PI * t / burstSec).toFloat())
+                s += clickLevel * (pulse + 0.6f * window * clickLp.lp(noise.next()))
+            }
+            out[i] = kotlin.math.tanh(g * s) * norm
+        }
+        return out
+    }
 
     /**
      * SPARK: strike -> metallic flare -> falling pitch -> rounded body.
