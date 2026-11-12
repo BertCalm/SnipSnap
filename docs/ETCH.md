@@ -1,6 +1,6 @@
 # ETCH: design brief and round-1 audition
 
-Status: **round 1, Python prototype, not heard.** No Kotlin exists. The engine stays in
+Status: **round 1b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/etch/`](../prototype/etch/) (`etch_proto.py` is the model,
@@ -159,7 +159,7 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
 - **Measured:** every number on this page and the audition page, Python harness.
 - **Proposed:** every constant marked "shape" in `etch_proto.py`; the six voices; HOLD; the
   slide-does-not-retrigger behaviour.
-- **Heard:** round 1b's square against the saw, "That's better" (2026-11-12). Nothing else yet.
+- **Heard:** round 1b's square against the saw, "That's better", and then the whole round-1b audition, "It all seems fine from the audition" (both 2026-11-12). Accepted as the sound-direction baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
 
 ## Why it is built this way
 
@@ -198,6 +198,15 @@ square clip changed, including LINE A; not heard at the time.
 square against the saw. This is the owner's judgement of the wave difference only. The
 chain, the BITE and SPACE defaults, the ride, round robin and overall sound character have
 not been judged yet.
+
+**Heard, 2026-11-12, the whole round-1b audition:** "It all seems fine from the audition."
+The owner accepted the published round-1b sound direction: the voice, BITE, SPACE (dotted
+eighth into the reverb), the filter macros, accents, slide, single notes, velocity and the
+round-robin takes as rendered. Preserve round 1b (`etch_proto.py` at `02b725f2`) as the
+accepted baseline: the line defaults stand (LINE A BITE 0.4, SPACE 0.55; LINE B BITE 0.5,
+SPACE 0.32; engine defaults BITE 0.45, SPACE 0.4). This is a listen to Python renders on
+the audition page, not evidence of Kotlin, phone playback or an MPC. Not yet decided:
+whether loop pads carry a baked cutoff ride, and which six voices complete the engine.
 
 ## Published audition
 
