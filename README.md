@@ -1289,12 +1289,16 @@ swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), FLANGER (one short delay, 0.1 to 10 ms, swept
 by one sine on a log law and summed with the dry: a comb of notches sliding
 down and back up, the jet; DEPTH is how far down it sweeps, FEEDBACK is
-two-way, metallic above the middle and hollow below it, and the ring dies
-inside the pad; chip-less until its listening gate), TREMOLO (the level
+two-way, metallic above the middle, hollow below it and none at its middle
+default, and the ring dies inside the pad; the FLANGE pedal, the `flanged`
+character, is the plain sweep at DEPTH 0.7 at a tap (AMT 70), DEPTH 1 at
+AMT 100; for drums and held sounds), TREMOLO (the level
 pulses between full and 1 minus DEPTH at 1 to 12 Hz, starting at full level
 so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
-edge takes 4 ms at every rate, so it chops without clicking; chip-less
-until its listening gate), ECHO (one delay line and
+edge takes 4 ms at every rate, so it chops without clicking; the TREM
+pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
+second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
+sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,

@@ -125,4 +125,25 @@ class FlangerTest {
             assertTrue(late < head * 1e-3f, "FEEDBACK $feedback still rings ${db((late / head).toDouble())} dB after 0.35 s")
         }
     }
+
+    @Test
+    fun `a tap of the FLANGE chip is the Plain clip the owner chose, and AMT 0 is a copy`() {
+        // The gate (2026-11-12): Plain, DEPTH 0.7 at RATE 0.4 with no feedback (FEEDBACK 0.5), heard through the rack.
+        // RATE and FEEDBACK are left at their defaults, each its own neutral, so no AMT moves either.
+        val character = Treatments.chain("flanged").flanger!!
+        assertEquals(setOf("DEPTH"), character.keys, "the flanged character set more than DEPTH")
+        assertEquals(0.4f, Flanger.MACROS.single { it.name == "RATE" }.default, "RATE's default is no longer Plain's")
+        assertEquals(0.5f, Flanger.MACROS.single { it.name == "FEEDBACK" }.default, "FEEDBACK's default is no longer Plain's none")
+        val tap = 0.7f
+        val tapped = Treatments.chain("flanged", tap).flanger!!
+        assertEquals(0.7f, tapped.getValue("DEPTH"), 1e-6f, "a tap is not DEPTH 0.7")
+        val snare = Onset.render(OnsetVoice.SNARE)
+        val heard = FxChain(flanger = mapOf("DEPTH" to 0.7f, "RATE" to 0.4f, "FEEDBACK" to 0.5f)).process(snare).samples
+        val got = Treatments.apply("flanged", snare, tap).snip.samples
+        assertEquals(heard.size, got.size)
+        var worst = 0f
+        for (i in heard.indices) worst = maxOf(worst, abs(heard[i] - got[i]))
+        assertTrue(worst < 1e-5f, "the tap is not the Plain clip: worst sample difference $worst")
+        assertContentEquals(snare.samples, Treatments.apply("flanged", snare, 0f).snip.samples, "AMT 0 is not a copy")
+    }
 }

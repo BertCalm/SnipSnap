@@ -36,7 +36,10 @@ import kotlin.math.sin
  * Sits after FLANGER and before ECHO: after the amp, where an amp's own tremolo lives, and in front of the delay,
  * so the repeats carry the throb.
  *
- * Chip-less until the owner's listening gate.
+ * For held sounds. At its gate (2026-11-12) the owner heard it on ONSET's snare, JANGLE and the choir: it throbs like
+ * an amp's tremolo, the chop is clean, before or after the spring made no difference (so it stays before), and the ends
+ * are extreme enough. They chose Gentle for the tap, so the TREM chip's tap is DEPTH 0.5, RATE 0.5 and SHAPE 0 (the
+ * `tremoloed` character).
  */
 object Tremolo {
 

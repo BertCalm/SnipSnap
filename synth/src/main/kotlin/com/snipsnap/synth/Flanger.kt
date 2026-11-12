@@ -43,14 +43,18 @@ import kotlin.math.pow
  * Sits after PHASE and before TREMOLO: after the amp, beside the phaser, and in front of the tremolo and the
  * delay, so the throb and the repeats carry the sweep.
  *
- * Chip-less until the owner's listening gate.
+ * For drums and held sounds both. At its gate (2026-11-12) the owner heard it on ONSET's snare, JANGLE and the choir:
+ * it sounds like a flanger, it is different enough from PHASE to keep both, and the ends are extreme enough (the jet
+ * included, so nothing in the answers asked for a better read than linear interpolation). They chose Plain for the tap, so the FLANGE chip's tap is
+ * DEPTH 0.7, RATE 0.4 and FEEDBACK 0.5, none (the `flanged` character), and FEEDBACK's default moved from 0.7 to
+ * 0.5 to match: its default is its own neutral, as RATE's is, so a pad with no FEEDBACK set has no ring.
  */
 object Flanger {
 
     val MACROS: List<MacroSpec> = listOf(
         MacroSpec("DEPTH", 0.7f),                       // how far the notches sweep down: none .. MAX_DELAY_MS at the bottom
         MacroSpec("RATE", 0.4f, neutral = 0.4f),        // SLOW_HZ .. FAST_HZ (log); its own neutral, so AMT never moves it
-        MacroSpec("FEEDBACK", 0.7f, neutral = 0.5f),    // 0 hollow (-MAX_FEEDBACK) .. 0.5 none .. 1 metallic (+MAX_FEEDBACK)
+        MacroSpec("FEEDBACK", 0.5f, neutral = 0.5f),    // 0 hollow (-MAX_FEEDBACK) .. 0.5 none .. 1 metallic (+MAX_FEEDBACK); the gate's Plain
     )
 
     /** RATE's ends, cycles a second: a slow jet takes ten seconds a sweep, a fast one is a warble. */

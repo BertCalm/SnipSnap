@@ -105,4 +105,23 @@ class TremoloTest {
         val out = Tremolo.process(tone, mapOf("DEPTH" to 1f, "SHAPE" to 1f, "RATE" to 1f))
         for (i in tone.samples.indices) assertTrue(tone.samples[i] * out.samples[i] >= 0f, "the sign flipped at $i: RING, not a tremolo")
     }
+
+    @Test
+    fun `a tap of the TREM chip is the Gentle clip the owner chose, and AMT 0 is a copy`() {
+        // The gate (2026-11-12): Gentle, DEPTH 0.5 at RATE 0.5 and SHAPE 0, heard through the rack. RATE and SHAPE are left
+        // at their defaults, each its own neutral, so no AMT moves them.
+        val character = Treatments.chain("tremoloed").tremolo!!
+        assertEquals(setOf("DEPTH"), character.keys, "the tremoloed character set more than DEPTH")
+        assertEquals(0.5f, Tremolo.MACROS.single { it.name == "RATE" }.default, "RATE's default is no longer Gentle's")
+        assertEquals(0f, Tremolo.MACROS.single { it.name == "SHAPE" }.default, "SHAPE's default is no longer the sine")
+        val tap = 0.7f
+        assertEquals(0.5f, Treatments.chain("tremoloed", tap).tremolo!!.getValue("DEPTH"), 1e-6f, "a tap is not DEPTH 0.5")
+        val heard = FxChain(tremolo = mapOf("DEPTH" to 0.5f, "RATE" to 0.5f, "SHAPE" to 0f)).process(snare).samples
+        val got = Treatments.apply("tremoloed", snare, tap).snip.samples
+        assertEquals(heard.size, got.size)
+        var worst = 0f
+        for (i in heard.indices) worst = maxOf(worst, abs(heard[i] - got[i]))
+        assertTrue(worst < 1e-6f, "the tap is not the Gentle clip: worst sample difference $worst")
+        assertContentEquals(snare.samples, Treatments.apply("tremoloed", snare, 0f).snip.samples, "AMT 0 is not a copy")
+    }
 }
