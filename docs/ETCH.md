@@ -159,7 +159,7 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
 - **Measured:** every number on this page and the audition page, Python harness.
 - **Proposed:** every constant marked "shape" in `etch_proto.py`; the six voices; HOLD; the
   slide-does-not-retrigger behaviour.
-- **Heard:** nothing yet.
+- **Heard:** round 1b's square against the saw, "That's better" (2026-11-12). Nothing else yet.
 
 ## Why it is built this way
 
@@ -192,7 +192,12 @@ and its 3rd −9.3 dB (an ideal square: absent and −9.5 dB). Rendered C2 at de
 2nd and 4th harmonics: saw −10.4 and −17.2 dB, square −33.3 and −44.5 dB. A held C2 with
 the filter open: saw −8.6 dB, square −50.0 dB. The audition gains a "Saw against square"
 section that plays LINE B's notes in both waves at the same settings. 58 clips. Every
-square clip changed, including LINE A; not heard.
+square clip changed, including LINE A; not heard at the time.
+
+**Heard, 2026-11-12:** after listening to round 1b the owner said "That's better" about the
+square against the saw. This is the owner's judgement of the wave difference only. The
+chain, the BITE and SPACE defaults, the ride, round robin and overall sound character have
+not been judged yet.
 
 ## Published audition
 

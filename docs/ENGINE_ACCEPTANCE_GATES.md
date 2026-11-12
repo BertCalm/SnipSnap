@@ -131,5 +131,5 @@ Round 1 is a Python prototype audition; no Kotlin exists.
 - **Velocity and round robin:**
   - **Rendering: Python harness only.** Velocity is the accent and changes the filter, not only the level: level-matched attack centroid 781 to 1,324 Hz from velocity 0.35 to 1.0. Round-robin takes are distinct but subtle, 1.0% attack spread at full accent.
   - **Saving, playback and export:** not yet verified.
-- **Sound character:** not heard.
+- **Sound character:** partly heard. On 2026-11-12 the owner heard round 1b's corrected square against the saw and said "That's better". The chain, its defaults and the overall sound have not been judged.
 - **Overall: incomplete.**
