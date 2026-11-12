@@ -144,7 +144,7 @@ Round 1 is a Python prototype audition; no Kotlin exists.
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
 
-## MIRRORBALL kits (round 2, 2026-11-12, heard as "Much better")
+## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
 A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Machine. See [MIRRORBALL](MIRRORBALL.md).
 
@@ -168,8 +168,9 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
     order, then repeats. No phone has played these kits.
   - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows
     match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the
-    first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: round 2 heard as "Much better"** (2026-11-12): an improvement, not yet approval of a baseline. The rounds so far:
+    first take of each zone. **SFZ: waived by the owner** (2026-11-12: "I'm good with skipping sfz"). DecentSampler
+    exports were not generated. No MPC has loaded these kits.
+- **Sound character: approved at round 2.** On 2026-11-12 the owner heard round 2 as "Much better" and chose to lock it in. Preserve round 2 (`MirrorballKits.VERSION` 3) as the accepted baseline. This is not evidence of a phone or MPC audition. The rounds so far:
   - Round 0: heard as "kind of basic and not very punchy or character rich".
   - Round 0b: the owner picked Punch, "dialed back like 10-15%".
   - Round 1b: heard as "mid heavy, like listening through dollar store headphones".
@@ -177,5 +178,6 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - Round 2: those pads are fitted to CC0 recordings
     ([audition](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB),
     [comparison](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)).
-- **Overall: incomplete.** The software evidence is in place. The owner's listen, phone and MPC hardware playback
-  remain open, and MPC 2 does not pass the round-robin export gate.
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone and MPC hardware
+  playback remain open, MPC 2 does not pass the round-robin export gate, and DecentSampler exports were not
+  generated. The owner waived SFZ.

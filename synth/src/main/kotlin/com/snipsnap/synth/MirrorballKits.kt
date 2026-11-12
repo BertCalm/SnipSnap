@@ -55,7 +55,11 @@ import kotlin.math.roundToInt
  * Every setting below is a shape value. Only round 0b's Punch, in the Python harness, has been heard.
  */
 object MirrorballKits {
-    /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
+    /**
+     * Bump when a pad's audio changes; saved kits carry the version they were printed with. Version 3 (round 2:
+     * the Open + parallel speaker and the seven pads fitted to recordings) is the owner's approved baseline
+     * (2026-11-12: "Much better", then "Lock it in"). Preserve it: any change to a pad's audio is a new version.
+     */
     const val VERSION = 3
 
     /** Round 0b's Punch, dialed back as the owner asked ("like 10-15%"): the middle of that, 87.5 percent. */

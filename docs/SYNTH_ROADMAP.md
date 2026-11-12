@@ -1,4 +1,4 @@
-> MIRRORBALL kits (round 1b, built, not yet heard): three 1970s disco kits on the shelf, Philly Strings, Loft
+> MIRRORBALL kits (sound approved 2026-11-12, round 2): three 1970s disco kits on the shelf, Philly Strings, Loft
 > Party and Munich Machine. A treatment stage prints each pad (console EQ, hot tape), compresses it in parallel,
 > sends it to a multi-head tape echo and then an amp, the owner's order. Velocity × round robin is proven through
 > save, playback and MPC 3 export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone.

@@ -30,7 +30,7 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
-[MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. Round 1b is built and not yet heard; phone and MPC hardware playback remain unverified.
+[MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
