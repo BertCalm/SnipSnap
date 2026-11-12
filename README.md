@@ -1685,6 +1685,12 @@ and snare run through record dust, a tube, a spring tank that drips, a slap echo
 crushes the spring back up behind each hit, and a bright combo amp. Round 1 (kick and snare) is a
 prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
 
+SOOT is a drum engine in progress: grimy street boom bap from physical models only. A membrane
+kick that sags in pitch over a tuned sub, a papery snare into a tight coil spring and a cassette
+edge, metal hats and percussion with no noise in them, and each pad printed through its own coil
+send and a dictaphone. Round 1 (eight voices) is a prototype outside the picker.
+[Design and listening rounds](docs/SOOT.md).
+
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.
 See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).

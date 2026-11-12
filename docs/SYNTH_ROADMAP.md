@@ -3438,3 +3438,18 @@ Round 3 (renderer model 3, 2026-11-11) re-voices the ride and adds the crash and
   not simply darker.
 - **Saves:** model-2 saves keep round 2's ride.
 - **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.
+
+### SOOT, round 1 (2026-11-12)
+
+Owner-requested drum engine: a grimy street boom bap kit built only from physical models, after the
+owner's sonic profile. A membrane kick whose pitch sags under the hit over a tuned sub, a papery
+snare into a tight coil (BREAKER's spring model, a new tank) and a cassette edge, noise-free metal
+hats and percussion, and a per-pad print through the pad's own coil send and a dictaphone. Round 0
+was heard in the Python harness on 2026-11-12. The owner picked sag .35 with the longer sub, the
+hot snare, the 25-cent hats and the heavy dictaphone, kept all four metal voices, heard every
+velocity strip as a softer hand, found no pad print ruined and approved the 16-pad layout. Round 1
+builds the eight voices in Kotlin (`Soot`, renderer model 1), a prototype outside the factory
+presets. BREAKER's `Tank` grew fields for the coil, with defaults that keep BREAKER byte-identical
+(checked by hash). The Kotlin renders await the owner's confirming listen; the kit, the coil roll,
+the phrase pad and the genre kits follow. See [SOOT](SOOT.md) and the
+[design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).

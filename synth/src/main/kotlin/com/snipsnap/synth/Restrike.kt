@@ -33,7 +33,7 @@ object Restrike {
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
-            patch is HalobarPatch || patch is BreakerPatch || (patch is BackwashPatch && patch.model == 5)
+            patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || (patch is BackwashPatch && patch.model == 5)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -60,6 +60,8 @@ object Restrike {
             is SkinPatch -> patch.render(velocity = v, take = take)
             // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
             is BreakerPatch -> patch.render(velocity = v, take = take)
+            // SOOT's takes are fresh strikes: new noise, a moved strike position, fresh metal phases.
+            is SootPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {
                 // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
                 val pos = Terra.defaults(patch.voice)["POS"]

@@ -3281,6 +3281,16 @@ tasks.register<JavaExec>("generateHydroformCandidateKit") {
 }
 
 // Backroom is a listening study until the owner approves its voicing.
+tasks.register<JavaExec>("generateSootAudition") {
+    group = "distribution"
+    description = "Render SOOT's round-1 listening pack: the round-0 picks in Kotlin, the pad prints, the alternates, touch strips and four bars from the pads."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SootAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
+}
+
 tasks.register<JavaExec>("generateBoomBapAudition") {
     group = "distribution"
     description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."

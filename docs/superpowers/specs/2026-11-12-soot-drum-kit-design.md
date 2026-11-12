@@ -1,8 +1,8 @@
 # SOOT drum kit: design brief and round 0
 
-Status: round 0 (Python harness, not Kotlin) published for the owner's listening gate on
-2026-11-12. Nothing heard yet. No Kotlin, no kit, no presets. Every constant below is a shape
-until the owner picks.
+Status: round 0 heard and picked by the owner on 2026-11-12. Round 1 (eight voices in Kotlin,
+renderer model 1) built the same day and published for a confirming listen. No kit yet. The
+overview is [SOOT](../../SOOT.md).
 Repository truth: `1d8f24ec` (main after #1037). Read: `BreakerChain.kt` (the dispersive spring
 tank, `Tank`, `spring`, `tankMix`, `crush`), `Terra.kt` (DROOP: a sliding membrane fundamental,
 `DROOP_TAU_SECONDS = 0.020f`), `docs/BOOM_BAP.md` (the accepted Backroom kit),
@@ -227,3 +227,74 @@ renders from `:synth:generateBoomBapAudition`.
 6. Which glue (coupled, per-pad, dry, straight, heavy dictaphone, sub through the grit)?
 7. Does any pad print get ruined by the glue?
 8. Approve the 16-pad layout?
+
+## Round 0, heard (2026-11-12)
+
+Page: https://claude.ai/artifact/NcS9CrhdUvGR7mP9fZKz4m. The owner's answers, as pasted:
+
+| Question | Picked |
+|---|---|
+| 1. The kick | k1_long: sag .35, the longer sub (t60 0.6 s) |
+| 2. The snare | s_hot: the coil, cassette 1.0 (12-bit) |
+| 3. The hats | h_closed_wide: 25 cents |
+| 4. Metal percussion | rod, plate, cup and coil: all kept |
+| 5. Touch | kick, snare and hat: "softer hand" |
+| 6. The glue | g_heavy: coupled, dictaphone 0.9 |
+| 7. Pads as they would land | "No" (no pad ruined, heard at GRIME .45) |
+| 8. The layout | approved |
+
+Round 1's defaults follow. Three picks moved what the layout's alternates should be: the heavy kick
+(A05) goes longer still (sub t60 0.9 s), A12 becomes the round-0 coil snare at cassette .5, and
+A13/A14 become the round-0 narrow hats (9 cents). The confirming page asks whether those swaps are right.
+One pick was heard in a different setting than it will be used: GRIME .9 was picked on the coupled
+groove, while the pad prints were heard at .45. Round 1 defaults the pads to .9 and plays both.
+
+## As built: round 1 (2026-11-12, renderer model 1)
+
+- `Soot.kt`, `SootPatch.kt` (with a renderer `model`, 1), `SootPresets.kt` (outside `Presets`, the
+  layout's alternates), `SootTables.kt` (the round-0 hat partials and plate gains, generated from the
+  harness so the picked metal is struck again; re-rolling would make a different hat).
+- Registered as BREAKER is: `Patches.fromJsonValue`, `Velocity.macroSpecsFor` and `touchedRender`,
+  `Restrike` (takes are fresh strikes), `SynthRoot`'s no-root arm, `PatchTypes.PROTOTYPES`, the
+  hand-built lists in `PatchesTest` and `PadRecipeTest`, and a `DeterminismTest` canary.
+- **The coil reuses BREAKER's spring.** `BreakerChain.Tank` gained springs, loop decay, send
+  high-pass and tone, with defaults written as BREAKER's own numbers, and `spring` takes a per-call
+  send high-pass. BREAKER is byte-identical: a SHA-256 over every BREAKER voice at full strength and
+  at 60% on take 2 read `699d7574…` before and after the change.
+- **Controls** (defaults are the picks): KICK TUNE SAG SUB COIL GRIME; SNARE TUNE COIL EDGE BENCH
+  GRIME; hats TUNE DETUNE DECAY GRIME; ROD, PLATE, CUP TUNE DECAY COIL GRIME; COIL TUNE COIL GRIME.
+  The print's dictaphone is the round-0 one; GRIME 0 bypasses it.
+- **Changed against round 0:**
+  - the coil hit now answers velocity (the tank normalises its send, so round 0's velocity did
+    nothing; it now sets the dwell);
+  - its takes vary the thump's pitch within 3% and the dwell within 5% (round 0's takes measured as
+    near copies);
+  - band-passes are a 2nd-order high-pass and low-pass in cascade rather than scipy's band design;
+  - the noise is the house generator.
+  So "the same drum" is a listening question, and the page asks it beside the Python picks.
+
+`SootTest` (all pass) measured:
+
+| Measured | Result |
+|---|---|
+| Velocity, dry (GRIME 0): share above each drum's split, 0.3 → 1.0 | kick +10.6 dB (1.5 kHz) · snare +4.0 (3 kHz) · closed hat +5.5, open +5.0 (9 kHz) · rod +6.1, cup +3.4 (5 kHz) · plate +1.5 (3 kHz) · coil +1.4 (1.5 kHz) |
+| The same through the print (GRIME .9) | kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8 dB |
+| Soft against hard, peak-normalised difference energy | -7.5 (snare) to -20.2 dB (cup): never the hard hit scaled |
+| Takes at full strength, difference energy | kick -18.5 to -22.7 dB (closest); coil -8.2 to -26.2; snare, hats and metal -0.3 to +5.2 |
+| Coil energy per 100 ms after its peak | 0, -5.4, -13.4, -20.6, -27.5, -33.9, -40.3, -46.8, -52.9, -59.1 ... -74.8 dB |
+| Coil first echo | 300 Hz at 23.7 ms, 1.8 kHz at 49.1 ms: the chirp rises |
+| GRIME 0 → .9, share above 6 kHz | snare -17.4 → -22.9 · closed hat -8.6 → -14.3 · open hat -7.8 → -13.7 dB; the plate -51 → -25 (the ROM hold's aliasing adds grit to a dark drum) |
+| Kick energy under 100 Hz, printed | -1.2 dB re the whole |
+| Warm render per hit, this host (median of 5) | kick 46 · snare 73 · closed hat 12 · open hat 72 · rod 23 · plate 30 · cup 11 · coil 23 ms |
+
+Two findings went to the page instead of being tuned away: through GRIME .9 the hats keep almost
+none of their velocity brightness, and the plate gains aliased grit rather than losing its top.
+
+| Gate | Status |
+|---|---|
+| Sound character | round 0 picked; the Kotlin renders not yet heard |
+| Velocity, rendering | verified in Kotlin (above); the hats' through the print is the open question |
+| Round robin, rendering | verified in Kotlin; the kick's takes are the closest |
+| Velocity and round robin: saving, playback, export | not yet verified: the kit round |
+| Roll or riser; genre kits | not yet built |
+| Melodic, articulation | not applicable |
