@@ -286,3 +286,17 @@ Philly's groove:
 The kits still print Closed until the owner picks. The 31 Hz octave stays about 10 dB under dry in every
 candidate. Part of that is the kick's own +5 dB at 68 Hz, which lowers the octave below's share. Nothing in
 round 1c has been heard.
+
+## Round 1c, heard, and round 2 (2026-11-12)
+
+The owner picked **Open + parallel**. They also named seven pads that "need work to more closely model a pro
+sound":
+- Philly A04 open hat, A05 tambourine, A11 ride and A13 shaker;
+- Loft A04 open hat, A05 hand clap and A13 shaker.
+
+Asked what "pro" should mean, they chose "like real recordings". Round 2 fits each pad to CC0 recordings
+(docs/MIRRORBALL.md, "The fitted pads", has the models, sources and measurements). The kits print with Open +
+parallel (`MirrorballKits.VERSION` 3).
+
+Comparison page: https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M. Audition with the gates:
+https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB. Nothing in round 2 has been heard.

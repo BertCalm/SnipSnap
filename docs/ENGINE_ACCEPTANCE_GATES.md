@@ -120,7 +120,7 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
 
-## MIRRORBALL kits (round 1b, 2026-11-12, not yet heard)
+## MIRRORBALL kits (round 2, 2026-11-12, not yet heard)
 
 A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Machine. See [MIRRORBALL](MIRRORBALL.md).
 
@@ -134,8 +134,10 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - **Rendering: verified.** Three zones of four takes per pad. Every soft hit is a different strike and duller.
     A softer hit drives the tape, compressor and amp less, so it is squeezed less (measured on each main snare).
     Kicks, snares and toms are fresh strikes, each kick with its own seeded beater. The tambourine is synthesized,
-    and every take is a new pattern of jingle collisions. Hats, shakers and the THUMP and ONSET voices take small
-    control moves on fresh noise, which is weaker than a re-strike and is disclosed.
+    and every take is a new pattern of jingle collisions and rattle. The fitted open hats and ride re-strike all
+    400 modes. The fitted shakers and clap draw fresh noise on a slightly stretched envelope. The closed hats and
+    the THUMP and ONSET voices take small control moves on fresh noise, which is weaker than a re-strike and is
+    disclosed.
   - **Saving: verified.** Each saved kit reloads equal, and all 576 saved slices match their renders
     (`:shell:generateMirrorballKits`, `MirrorballKitTest`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in
@@ -143,8 +145,13 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows
     match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the
     first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: not yet heard at round 1b.** Round 0 was heard as "kind of basic and not very punchy or
-  character rich". From round 0b the owner picked Punch, "dialed back like 10-15%", and asked for a synthesized
-  tambourine. Round 1b is both: [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB).
+- **Sound character: not yet heard at round 2.** The rounds so far:
+  - Round 0: heard as "kind of basic and not very punchy or character rich".
+  - Round 0b: the owner picked Punch, "dialed back like 10-15%".
+  - Round 1b: heard as "mid heavy, like listening through dollar store headphones".
+  - Round 1c: the owner picked the Open + parallel speaker and flagged seven pads.
+  - Round 2: those pads are fitted to CC0 recordings
+    ([audition](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB),
+    [comparison](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)).
 - **Overall: incomplete.** The software evidence is in place. The owner's listen, phone and MPC hardware playback
   remain open, and MPC 2 does not pass the round-robin export gate.

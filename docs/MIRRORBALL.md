@@ -12,7 +12,7 @@ engines already make them, plus a tambourine synthesized from BACKWASH's CC0 rec
 treatment stage, `Mirrorball`, which prints each pad through the owner's chain in the owner's order. The FX rack
 cannot do this: `FxChain` runs VALVE before TAPE and ECHO, so there the echoes never reach the amp.
 
-**Status: round 1b, built, not yet heard.** The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
+**Status: round 2, built, not yet heard.** The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
 as the app would. The [design specification](superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md) has the
 research, the model and each round's measurements.
 
@@ -23,7 +23,9 @@ research, the model and each round's measurements.
 | 0 | Python study: SKIN drums through the chain, gently set ([page](https://claude.ai/artifact/EJ9vFTy9SBbj2cbQJ125oH)) | "Sounds kind of basic and not very punchy or character rich" |
 | 0b | Python study: retuned drums, a beater on the kick, a print stage (console EQ, hot tape), the compressor's parallel mode, the amp driven harder; Punch and Hot ([page](https://claude.ai/artifact/RC5kSEXbMUNHUmNvnAhLnN)) | "Punch is pretty good but maybe dialed back like 10-15%. Can we recreate the tambourine with synthesis?" |
 | 1 | The app, at round 0's settings. Never heard; superseded before any listen | (none) |
-| 1b | The app: Punch at 87.5 percent, the synthesized tambourine | not yet heard |
+| 1b | The app: Punch at 87.5 percent, the synthesized tambourine | "It sound a bit mid heavy. Like listening through dollar store headphones." |
+| 1c | The amp's speaker opened, re-amped in parallel, or both ([page](https://claude.ai/artifact/75bDrRceDQPXXydrFewRmM)) | Picked Open + parallel; "A04, 05, 11, 13 in Philly need work to more closely model a pro sound. A04, 05, 13 from loft" too, where "pro" means "like real recordings" |
+| 2 | The app: Open + parallel, and the seven pads fitted to CC0 recordings ([comparison page](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)) | not yet heard |
 
 Measured, round 0 was basic for concrete reasons:
 - the kick was nearly a pure sub sine, with no beater click;
@@ -68,8 +70,10 @@ other (group 2).
    - three heads at a sixteenth, a dotted eighth and a quarter, at the kit's tempo;
    - every pass saturates, darkens and thins, with wow, flutter and a seeded drift;
    - the loop gain is at most 0.92, so it cannot run away.
-4. **Combo**, a tube amp and an open-backed speaker, last: the echoes go through it too. The speaker rolls off at
-   8.5 kHz on snares, hats, claps and percussion, and at 6.5 kHz on kicks, toms and hand drums.
+4. **Combo**, a tube amp, last: the echoes go through it too. Round 1b played it alone through a guitar speaker
+   (75 Hz to 6.5 or 8.5 kHz), measured 17 to 19 dB short at 31 Hz and 12 to 14 dB short at 16 kHz against the
+   same grooves dry. Since round 2 it is the owner's pick, **Open + parallel**: the speaker opened to 40 Hz and 13 to
+   15 kHz, and the direct signal blended under the amp at equal rms, the way a studio re-amps drums.
 
 **Intensity.** The owner asked for Punch "dialed back like 10-15%". The kits use 87.5 percent, the middle of
 that range. The EQ's decibels, the tape's heat, the crushed copy's share, the amp's gain above unity and its
@@ -77,28 +81,40 @@ sag all scale with it. Each kit then leans its own way from Punch: Philly is Pun
 hotter, Munich hotter still. The beater is round 0b's level at 87.5 percent. The audition page has "Full
 Punch" and "Lighter (75%)" on three pads per kit.
 
-## The tambourine
+## The fitted pads (round 2)
 
-The owner asked for the tambourine to be recreated with synthesis. BACKWASH's designed tambourines (model 4 and
-its revisions) had been heard as lacking "a living rattle" and were replaced by CC0 recordings. So this one is
-fitted to those recordings, as BREAKER's cymbals were fitted to theirs.
+The owner asked that seven pads "more closely model a pro sound", meaning "like real recordings". Each is now
+fitted to CC0 recordings. Only fitted numbers ship (`synth/src/main/resources/mirrorball/`); the recordings never
+do.
 
-A tambourine does not ring as one body. Its jingles knock together dozens of times in the few hundred
-milliseconds after the hand hits the frame. The recordings measure 57 to 69 collisions per hit, 3 to 5 ms apart,
-and that rattle is the instrument. So `MirrorballTambourine` is built from four parts:
-- **Jingles:** 78 resonances measured from the recordings, up to six per third-octave from 1 to 16 kHz.
-- **Collisions:** about every 4 ms, each striking a random third of the jingles with a random sign. Their level
-  follows the recordings' own 4 to 11 kHz envelope. A hard hit is loudest at once; a soft one builds for about
-  50 ms. Velocity blends the two.
-- **The hand:** a 3 ms click on the frame.
-- **Tuning:** every jingle's level matched to the recordings per third-octave, per layer, then a fourth-order
-  high-pass at 2.2 kHz, where the recordings hold almost nothing.
+| Pad | Model | Source (all CC0 1.0) |
+|---|---|---|
+| Philly A04, Loft A04 open hats | BREAKER's dense modal cymbal fit, unchanged (`scripts/fit_breaker_cymbals.py`): 400 resonances each, a decay each, a stick burst, a measured soft-hit tilt. `MirrorballCymbal` copies BREAKER's renderer so BREAKER's own code is untouched | Virtuosity Drums, overhead mic: the half-open hat (Philly, the disco "tss", about 30 dB down by 0.5 s) and the three-quarter-open hat (Loft, a longer sizzle). `scripts/fit_mirrorball_cymbals.py` |
+| Philly A11 ride | BREAKER's fitted ride itself, which the owner accepted ("these are fine", 2026-11-11) | Virtuosity Drums, via BREAKER |
+| Philly A13, Loft A13 shakers; Loft A05 hand clap (and the clap in Loft's Clap Snare) | A noise texture (`MirrorballTexture`): the recordings' own envelope in 23 third-octaves at 2.5 ms steps, takes aligned on their loudest 20 ms and averaged, driving fresh noise. The clap blends its soft and hard recordings | Virtuosity Drums' shaker (7 takes), VSCO 2 CE's wooden "Camo's Shaker" (8), body_percussion's handclap (4 soft, 6 hard). `scripts/fit_mirrorball_textures.py` |
+| Philly A05 tambourine | The fitted jingles (`MirrorballTambourine`, round 1b) blended at equal rms with a texture of the recordings' rattle | BACKWASH v5's tambourine recordings (already in the repository) |
 
-`scripts/fit_mirrorball_tambourine.py` writes the fit (`synth/src/main/resources/mirrorball/tambourine.json`).
-Only those numbers ship; the synthesis never reads the recordings. By the fit's own measure it is within 1.5 dB
-of the recordings in every third-octave from 1 to 16 kHz, and within 2 dB median on the envelope over 0 to
-400 ms. Every take re-seeds the collisions, so a zone holds four genuinely different strikes rather than two
-recordings replayed.
+How close each fit is, by its own measure: four renders against the recordings, at 20 ms.
+- **Shakers:** Philly's within 1.0 dB median across bands and time, Loft's wooden one within 1.8.
+- **Clap:** within 1.8 dB, except its 100 to 160 Hz bands, which sit 22 to 31 dB under its peak and miss by 6 to
+  11 dB. A narrow 100 Hz filter rings longer than a clap lasts.
+- **Tambourine:** the rattle within 1.4 dB, and the jingles within 3 dB per third-octave from 1.6 to 16 kHz
+  (tested in `MirrorballTest`).
+- **Timing:** Philly's shaker is loudest 50 to 80 ms in, as its takes are. The clap is loudest at once.
+
+Every take of a fitted pad is a new strike:
+- **Hats and ride:** all 400 modes re-struck.
+- **Shakers and clap:** fresh noise, the envelope stretched by up to 3 percent, each band moved about 1 dB.
+- **Tambourine:** a new collision pattern and new rattle.
+
+The shakers were recorded at one dynamic, so their soft zones lose top as a softer shake does.
+
+Sources and the commits read:
+- Virtuosity Drums, github.com/sfzinstruments/virtuosity_drums @ 9f04cf9a734527edfbb0a4eee1f674e45bbf71bc;
+- body_percussion, github.com/sfzinstruments/body_percussion @ 4ac9d8966679c648b62fa10a188179e186b97f24;
+- VSCO 2 CE, github.com/sgossner/VSCO-2-CE (HEAD on 2026-11-12).
+
+All three are CC0 1.0. Credit is not required; it is given so the origin stays traceable.
 
 ## Generate the proof and the listening pack
 
@@ -119,7 +135,14 @@ generator does six things:
    groove dry;
 6. writes `verification.csv`, `metrics.csv` and `manifest.json`.
 
-## What was measured (round 1b, this cloud JVM, commit after `42400b4d`)
+## What was measured (this cloud JVM)
+
+**Round 2:** all three kits pass the generator again (192 slices each through save, reload, `PadHit.resolve` and
+the MPC 3 read-back), built warm in 40.8 s (Philly), 43.5 s (Loft) and 25.0 s (Munich). `MirrorballTest` has 20
+tests. The new ones check the fitted textures' timing, that their takes differ, that the half-open hat dies faster
+than the three-quarter one, and that Philly's ride is BREAKER's.
+
+**Round 1b**, for the record:
 
 The generator, `:shell:generateMirrorballKits`:
 - **All three kits pass.** 16 pads and 192 slices each. Every saved slice and every exported slice matches its
@@ -164,6 +187,12 @@ The generator, `:shell:generateMirrorballKits`:
   as long as a GATECRASH kit (figures above). That is a one-time cost when the starter is created.
 - **Shared code copied, not shared.** `finish` and the zone levelling follow `GatecrashKits` line for line.
   Sharing them would mean editing the approved GATECRASH round.
+- **Munich's machine kick has a smaller click.** With the speaker opened, its beater band sits about 21 dB
+  under its first 15 ms at full strength, against -18 dB or better on the acoustic kicks. Munich's hotter print
+  and smash crush the click. Raising THUMP's own CLICK moved it 0.04 dB and a bigger beater 0.8, so neither was
+  kept, and the test holds this kick to -22.
+- **Loft's Clap Snare changed without being flagged.** It took the recorded clap because it used the same THUMP
+  clap the owner flagged on A05.
 - **Takes on noise voices.** The hats, shakers and THUMP and ONSET voices cannot be re-struck from outside, so
   their takes are small control moves on fresh noise. That is weaker than a re-strike.
 
