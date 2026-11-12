@@ -12,7 +12,7 @@ engines already make them, plus a tambourine synthesized from BACKWASH's CC0 rec
 treatment stage, `Mirrorball`, which prints each pad through the owner's chain in the owner's order. The FX rack
 cannot do this: `FxChain` runs VALVE before TAPE and ECHO, so there the echoes never reach the amp.
 
-**Status: round 2, built, not yet heard.** The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
+**Status: round 2, built, heard as "Much better".** Not yet approved as the baseline. The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
 as the app would. The [design specification](superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md) has the
 research, the model and each round's measurements.
 
@@ -25,7 +25,7 @@ research, the model and each round's measurements.
 | 1 | The app, at round 0's settings. Never heard; superseded before any listen | (none) |
 | 1b | The app: Punch at 87.5 percent, the synthesized tambourine | "It sound a bit mid heavy. Like listening through dollar store headphones." |
 | 1c | The amp's speaker opened, re-amped in parallel, or both ([page](https://claude.ai/artifact/75bDrRceDQPXXydrFewRmM)) | Picked Open + parallel; "A04, 05, 11, 13 in Philly need work to more closely model a pro sound. A04, 05, 13 from loft" too, where "pro" means "like real recordings" |
-| 2 | The app: Open + parallel, and the seven pads fitted to CC0 recordings ([comparison page](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)) | not yet heard |
+| 2 | The app: Open + parallel, and the seven pads fitted to CC0 recordings ([comparison page](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)) | "Much better" (2026-11-12). Recorded as an improvement, not yet as approval of a baseline |
 
 Measured, round 0 was basic for concrete reasons:
 - the kick was nearly a pure sub sine, with no beater click;

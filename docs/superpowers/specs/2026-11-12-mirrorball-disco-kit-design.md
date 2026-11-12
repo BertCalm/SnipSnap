@@ -300,3 +300,8 @@ parallel (`MirrorballKits.VERSION` 3).
 
 Comparison page: https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M. Audition with the gates:
 https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB. Nothing in round 2 has been heard.
+
+## Round 2, heard (2026-11-12)
+
+The owner's words: "Much better". This is recorded as an improvement over round 1b, not as approval of round 2 as
+the baseline. Hardware, MPC 2 round robin, and SFZ and DecentSampler exports remain open.
