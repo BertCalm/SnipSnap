@@ -39,6 +39,18 @@ def upper_db(x, edge=2000.0):
     return float(10 * math.log10(X[(f > edge) & (f < 10000)].sum() / X[(f > 150) & (f < 10000)].sum()))
 
 
+def second_harmonic_db(x, f0):
+    """Level of the 2nd harmonic relative to the fundamental, dB. A saw has it at about
+    -6 dB; a 50% square has almost none. The clearest single number for saw vs square."""
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x))))
+    f = np.fft.rfftfreq(len(x), 1 / e.RATE)
+
+    def at(hz):
+        i = int(np.argmin(np.abs(f - hz)))
+        return float(X[i - 3:i + 4].max())
+    return round(20 * math.log10(at(2 * f0) / at(f0)), 1)
+
+
 def save(section, name, y, note="", metrics=None, level=True):
     os.makedirs(os.path.join(OUT, section["id"]), exist_ok=True)
     yy = e.finish(y) if level else sk.fade_tail(sk.dc_block(y, e.RATE), e.RATE)
@@ -179,6 +191,22 @@ sl_on = line_with(sl_off, steps=e.parse("0s 12 0s 15 7s 12 0s 13 0s 12 0s 15 7s 
 for name, L in (("no-slide", sl_off), ("with-slide", sl_on)):
     out, full, n = e.render_loop(L, bars=1)
     save(s, name, np.concatenate([out, out]), "Played twice.")
+
+# ------------------------------------------------------------------ 7b. saw against square
+s = section("waves", "Saw against square, same line",
+            "LINE B's notes at CUTOFF 0.45, PEAK 0.6, BITE 0.3, no SPACE, so the filter lets "
+            "enough harmonics through to hear the wave. Two bars each. The square has almost no "
+            "even harmonics, so it should sound hollower and woodier than the saw.")
+for voice in e.VOICES:
+    L = line_with(e.LINE_B, voice=voice, macros={"CUTOFF": 0.45, "PEAK": 0.6, "SWEEP": 0.5, "BITE": 0.3, "SPACE": 0.0})
+    out, full, n = e.render_loop(L)
+    save(s, f"line-{voice.lower()}", out, f"{voice} wave", {"band_centroid_hz": round(band_centroid(out)),
+                                                            "upper_db": round(upper_db(out), 1)})
+for voice in e.VOICES:
+    y = e.render_note(36, voice, {"CUTOFF": 0.5, "PEAK": 0.5, "SWEEP": 0.3, "BITE": 0.0}, gate_s=0.8, seconds=1.0)
+    save(s, f"held-{voice.lower()}-C2", y, f"{voice} C2 held, filter open",
+         {"second_harmonic_db": second_harmonic_db(y[int(0.3 * e.RATE):int(0.75 * e.RATE)], 65.41)})
+
 
 # ------------------------------------------------------------------ 8. keygroup notes
 s = section("notes", "Single notes (keygroup material)",

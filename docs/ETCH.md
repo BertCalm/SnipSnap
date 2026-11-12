@@ -178,6 +178,22 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
   on the opened filter) because above it the measured brightness fell instead of rising. Your
   ears decide whether the top of the knob is open enough.
 
+## Round 1b: the square wave (2026-11-12)
+
+The owner heard SAW and SQUARE as the same sound. Measured, they nearly were. The round-1
+square was `tanh(6 × saw + 1.2)`, a 60/40 pulse with soft edges. A 50% square has almost
+no even harmonics, and that hollowness is what tells it from a saw, but this pulse kept its
+2nd harmonic at −11.5 dB (raw oscillator). After the filter at default settings, the two
+waves' 2nd harmonics were −10.4 and −12.5 dB, within 2 dB. The audition also never played
+one line in both waves: LINE A is square and LINE B is saw.
+
+The square is now `tanh(25 × saw)`: 50% duty, short edges. Raw, its 2nd harmonic is −44 dB
+and its 3rd −9.3 dB (an ideal square: absent and −9.5 dB). Rendered C2 at default settings,
+2nd and 4th harmonics: saw −10.4 and −17.2 dB, square −33.3 and −44.5 dB. A held C2 with
+the filter open: saw −8.6 dB, square −50.0 dB. The audition gains a "Saw against square"
+section that plays LINE B's notes in both waves at the same settings. 58 clips. Every
+square clip changed, including LINE A; not heard.
+
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:

@@ -32,6 +32,7 @@ LABELS = {
     "attack_band_centroid_hz": ("ATTACK", "{:.0f} Hz"),
     "late_band_centroid_hz": ("AT 0.2 s", "{:.0f} Hz"),
     "raw_peak_db": ("UNMATCHED PEAK", "{:.1f} dB"),
+    "second_harmonic_db": ("2ND HARMONIC", "{:.1f} dB"),
 }
 
 
@@ -80,6 +81,7 @@ LISTEN = {
     "filter": "Is every knob useful across its whole travel?",
     "accent": "Can you hear the run of accents opening further each time?",
     "slide": "Is the glide speed right?",
+    "waves": "Do the two waves now sound clearly different? The square should be hollower.",
     "notes": "Are these usable as keygroup notes as they are?",
     "velocity": "Does the hard hit sound like an accent, not just louder?",
     "round-robin": "Are the takes different enough for a repeated note? "

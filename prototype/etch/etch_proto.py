@@ -185,8 +185,13 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             x = (ph - 1.0) / dt
             saw -= x * x + x + x + 1.0
         if square:
-            # a square shaped from the saw, as the reference circuit does, with soft edges
-            sq = math.tanh(6.0 * saw + 1.2) * 0.9
+            # a square shaped from the saw, as the reference circuit does. Centred on zero so
+            # the duty is 50% (a 50% square has no even harmonics: that hollowness is what
+            # tells it from the saw), and a steep shaper so the edges are short: gain 25 puts
+            # the 2nd harmonic at -44 dB and the 3rd at -9.3 dB (ideal -9.5). Round 1 used
+            # tanh(6 * saw + 1.2): a 60/40 pulse with soft edges, 2nd harmonic at -11.5 dB,
+            # which after the filter measured within 2 dB of the saw.
+            sq = math.tanh(25.0 * saw) * 0.7
             sq_lp = sq + (sq_lp - sq) * a_sq
             osc = sq_lp
         else:
