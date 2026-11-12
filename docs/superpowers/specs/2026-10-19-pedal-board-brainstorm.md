@@ -206,6 +206,8 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 ### 8. ROTARY (section, saved key `rotary`), worth 4
 
+**Built chip-less, 2026-11-12:** `Rotary.kt`, after TREMOLO and before ECHO; macros SPIN, SPEED and RAMP (see the pedal board spec's Stage 4b note). Its gate decides the chip.
+
 **Chip and key:** ROTARY on the PEDALS row. Recipe `spun` = {SPIN 1.0, RAMP 0.6}. ROTOR is a preset word; ROTARY is clean.
 
 **Kind and slot:** a section, because three things are missing at once: a band split at 800 Hz, level and pitch modulation together at two linked rates, and a rate that accelerates. After the staged TREMOLO, before ECHO (re-anchored from "after VIBRATO", which is not staged). After the amp, where a Leslie lives, so right on guitars today.

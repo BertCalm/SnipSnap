@@ -788,7 +788,8 @@ class FxTest {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("phase") + 1, names.indexOf("flanger"), "FLANGER is not right after PHASE: $names")
         assertEquals(names.indexOf("flanger") + 1, names.indexOf("tremolo"), "TREMOLO is not right after FLANGER: $names")
-        assertEquals(names.indexOf("tremolo") + 1, names.indexOf("echo"), "TREMOLO is not right before ECHO: $names")
+        assertEquals(names.indexOf("tremolo") + 1, names.indexOf("rotary"), "ROTARY is not right after TREMOLO: $names")
+        assertEquals(names.indexOf("rotary") + 1, names.indexOf("echo"), "ROTARY is not right before ECHO: $names")
 
         val without = FxChain(phase = Phase.defaults(), echo = Echo.defaults())
         val text = without.toJsonText()
@@ -805,6 +806,20 @@ class FxTest {
             assertTrue(!chained.samples.contentEquals(snare.samples), "a section is a no-op in the chain")
             assertContentEquals(alone.samples, chained.samples, "the chain's row does not run the section's process")
         }
+    }
+
+    @Test
+    fun `ROTARY sits after TREMOLO and before ECHO, and an absent section keeps old recipes byte-stable`() {
+        val without = FxChain(tremolo = Tremolo.defaults(), echo = Echo.defaults())
+        val text = without.toJsonText()
+        assertTrue(!text.contains("rotary"), "no rotary key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(text))
+
+        val with = FxChain(rotary = Rotary.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "ROTARY is a no-op in the chain")
+        assertContentEquals(Rotary.process(snare, Rotary.defaults()).samples, chained.samples, "the chain's rotary row does not run Rotary.process")
     }
 
     @Test

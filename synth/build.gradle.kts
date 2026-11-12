@@ -3594,3 +3594,12 @@ tasks.register<JavaExec>("generateSporeMembraneAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("sporePrototypeOutput").orNull ?: "${rootDir}/testkit/spore-synthesis")
 }
+
+tasks.register<JavaExec>("generateRotaryAudition") {
+    group = "distribution"
+    description = "Render ROTARY's listening gate clips under testkit/rotary-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RotaryAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/rotary-audition")
+}

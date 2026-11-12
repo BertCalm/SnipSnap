@@ -182,9 +182,9 @@ engine can synthesize. Verified at commit `a292d5f6` (2026-11-01); the 2026-10-2
 
 ## Rack and pedals (the FX side of a pad)
 
-Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07), HUSH (2026-11-07), OCTAVER (2026-11-08, its SUB chip 2026-11-09), REWIND (2026-11-10, its chip 2026-11-11), FLANGER and TREMOLO (2026-11-12, their FLANGE and TREM chips the same day). The rack has 31 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
+Verified at `a292d5f6`, then updated for VOLUME (2026-11-02), VIBRATO (2026-11-04), DIVE (2026-11-07), HUSH (2026-11-07), OCTAVER (2026-11-08, its SUB chip 2026-11-09), REWIND (2026-11-10, its chip 2026-11-11), FLANGER and TREMOLO (2026-11-12, their FLANGE and TREM chips the same day), ROTARY (2026-11-12, chip-less). The rack has 32 sections in a fixed order (`FxChain.SECTIONS`): speed, dive,
 swell, smear, ghost, spike, volume, octaver, eq, contour, wah, compressor, squash, forge, valve, crunch, ring, dub,
-vinyl, tape, vibrato, ensemble, phase, flanger, tremolo, echo, rewind, spring, room, hush, motion. The pedal library (`Pedals.kt`) has
+vinyl, tape, vibrato, ensemble, phase, flanger, tremolo, rotary, echo, rewind, spring, room, hush, motion. The pedal library (`Pedals.kt`) has
 sixteen pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE, DELAY, ROOM, FADE IN, VIBRATO, DIVE, HUSH, SUB, REWIND, TREM, FLANGE) and one board (RIG). Rack
 moves that exist as characters but not as pedals include `swelled`, `phased` and `ensembled`.
 The owner asked for a FADE IN pedal and a VIBRATO pedal at the 2026-10-23 gate (roadmap S30 row);
