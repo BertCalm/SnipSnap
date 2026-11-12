@@ -9,8 +9,11 @@ GATECRASH is a kit family, not a SYNTH engine: there are no knobs to turn. The o
 two phrases per kit. The hits are SKIN, THUMP and ONSET drums as those engines already make them. What is new
 is one treatment stage, `Gatecrash`, which prints each pad through its own space.
 
-**Status: candidate, round 4. Rounds 1, 2 and 3 were heard; round 4 is not yet heard.** Phone and MPC
-hardware playback have not been exercised.
+**Status: sound approved at round 4; hardware gates open.** On 2026-11-11 the owner heard round 4 on the
+published listening page and said: "Everything sounds good". Round 4 (`GatecrashKits.VERSION` 4,
+`Gatecrash.VERSION` 2) is the accepted baseline: preserve it, and bump the kit version for any change to a
+pad's audio. The approval is of what the page plays. It is not a phone or MPC audition, and those gates and
+the MPC 2 round-robin gate remain open.
 
 **Round 1 (2026-11-10): rejected.** The owner's words: "That is harsh and doesn't sound like 80s drums at
 all. More like loud static." Measured afterwards, the rooms on the snares, toms and claps carried 14 to 20 dB
@@ -116,8 +119,8 @@ Render time, warm: a hit takes 22 to 105 ms and a phrase 206 to 256 ms. A whole 
 
 ## Limits, stated plainly
 
-- **Round 2 is not heard.** These numbers describe the fault round 1 had. They do not say round 2 sounds
-  like a drum kit; passing probes did not stop round 1 sounding like static.
+- **Heard on the listening page only.** The owner approved round 4 there. The page plays mono 16-bit copies of
+  the exported slices in a browser. Nothing was heard on a phone or an MPC.
 - **MPC 3 is the export target that keeps the round robin.** MPC 2's grid projection keeps the velocity zones
   but only the first take of each, so an MPC 2 export does not pass the round-robin gate. SFZ and
   DecentSampler exports were not generated.
