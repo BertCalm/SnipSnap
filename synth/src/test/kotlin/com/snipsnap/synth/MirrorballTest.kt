@@ -358,7 +358,7 @@ class MirrorballTest {
         assertTrue(lighter < kit && kit < full, "harmonics do not follow the punch: $lighter, $kit, $full dB")
     }
 
-    @Test fun `the fitted shakers swell, the fitted clap cracks at once, and every take is a new one`() {
+    @Test fun `the fitted textures keep their recordings' timing, and every take is a new one`() {
         fun loudestMs(x: FloatArray) = (0 until x.size / frames(2.5f) - 8).maxBy { rms(x, it * frames(2.5f), it * frames(2.5f) + frames(20f)) } * 2.5
         for (voice in MirrorballTexture.Voice.entries) {
             val takes = List(4) { MirrorballTexture.render(voice, 1f, it) }
@@ -367,13 +367,16 @@ class MirrorballTest {
                 assertTrue(shapeDistance(takes[a], takes[b]) > .3, "$voice takes $a and $b: ${shapeDistance(takes[a], takes[b])}")
             }
         }
-        // The recordings: a shake is thrown, so its loudest 20 ms come tens of milliseconds in; a clap is loudest at once.
-        for (voice in listOf(MirrorballTexture.Voice.SHAKER, MirrorballTexture.Voice.SHAKER_WOOD)) {
+        // Each render keeps its fitted envelope's timing: its loudest 20 ms within 10 ms of the fit's.
+        for (voice in MirrorballTexture.Voice.entries) {
             val at = List(4) { loudestMs(MirrorballTexture.render(voice, 1f, it)) }.average()
-            assertTrue(at > 25, "$voice is loudest at $at ms: it does not swell")
+            val fit = MirrorballTexture.loudestMs(voice, 1f)
+            assertTrue(abs(at - fit) < 10, "$voice is loudest at $at ms, its fit at $fit ms")
         }
-        val clapAt = List(4) { loudestMs(MirrorballTexture.render(MirrorballTexture.Voice.CLAP, 1f, it)) }.average()
-        assertTrue(clapAt < 15, "the clap is loudest at $clapAt ms")
+        // And the recordings' gestures survive the fit: Philly's shake is thrown, loudest 50 to 80 ms in (measured on
+        // its seven takes); the clap cracks, loudest at once. (The wooden shaker's takes peak 10 to 50 ms in.)
+        assertTrue(MirrorballTexture.loudestMs(MirrorballTexture.Voice.SHAKER, 1f) > 40)
+        assertTrue(MirrorballTexture.loudestMs(MirrorballTexture.Voice.CLAP, 1f) < 15)
         // The clap's two recorded dynamics differ, and not only in level.
         val soft = MirrorballTexture.render(MirrorballTexture.Voice.CLAP, .3f, 0)
         val hard = MirrorballTexture.render(MirrorballTexture.Voice.CLAP, 1f, 0)

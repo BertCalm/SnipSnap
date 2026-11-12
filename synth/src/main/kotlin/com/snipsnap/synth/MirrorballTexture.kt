@@ -58,6 +58,16 @@ internal object MirrorballTexture {
         }
     }
 
+    /** When the fitted envelope at [velocity] is loudest, over 20 ms (8 steps): the timing the render should keep. */
+    fun loudestMs(voice: Voice, velocity: Float): Double {
+        val m = models.getValue(voice)
+        val w = ((velocity.coerceIn(0f, 1f) - .3) / .7).coerceIn(0.0, 1.0)
+        val frames = m.hard[0].size
+        val power = DoubleArray(frames) { i -> m.hard.indices.sumOf { b -> 10.0.pow(((1 - w) * m.soft[b][i] + w * m.hard[b][i] + m.gain[b]) / 10) } }
+        val smooth = DoubleArray(frames) { i -> (max(0, i - 3)..min(frames - 1, i + 4)).sumOf { power[it] } }
+        return smooth.indices.maxBy { smooth[it] } * hopS * 1000
+    }
+
     /** One hit of [voice] at [velocity], take [take], peak 1. Pure: the same arguments give the same samples. */
     fun render(voice: Voice, velocity: Float, take: Int): FloatArray {
         require(velocity.isFinite() && take >= 0)

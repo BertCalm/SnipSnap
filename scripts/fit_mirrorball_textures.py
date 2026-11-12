@@ -10,8 +10,8 @@ with no sines):
 
 - bands: third-octaves from 100 Hz to 16 kHz (23), each fresh Gaussian noise through two cascaded RBJ band-passes
   (the same filter as Dsp.Biquad.bandpass and BREAKER's stick);
-- envelope: each band's energy in 2.5 ms steps, aligned at the onset and averaged (in power) over every take of a
-  layer, in dB re the layer's loudest frame;
+- envelope: each band's energy in 2.5 ms steps, the takes aligned on their loudest 20 ms and averaged (in power)
+  over every take of a layer, in dB re the layer's loudest frame;
 - level: one gain per band, matched to the recordings by rendering and measuring the same way (three passes);
 - layers: the clap has a soft and a hard recording set, and velocity blends their envelopes in dB; the shakers have
   one dynamic each.
@@ -114,7 +114,25 @@ def fit_voice(paths_by_layer, seconds):
     targets = {}
     for layer, paths in paths_by_layer.items():
         clips = [load(q) for q in paths]
-        power = np.mean([envelopes(x, frames) for x in clips], axis=0)
+        # Align the takes on their loudest 20 ms before averaging, at the median of those frames. Aligned only at the
+        # onset, takes whose main burst lands at different times (the wooden shaker's peak at 160 to 260 ms) averaged
+        # into a smear that the grab-click at the very start outweighed: the fit peaked at 7.5 ms.
+        long = [envelopes(x, frames * 2) for x in clips]
+        # The peak of a 20 ms smoothing: at 2.5 ms a take's grab-click is the loudest single frame, but the burst
+        # carries the energy.
+        peaks = [int(np.argmax(np.convolve(e.sum(axis=0), np.ones(8) / 8, "same"))) for e in long]
+        target = int(np.median(peaks))
+        aligned = []
+        for e, pk in zip(long, peaks):
+            shift = pk - target
+            if shift >= 0:
+                a = e[:, shift:shift + frames]
+            else:
+                a = np.concatenate([np.zeros((e.shape[0], -shift)), e[:, :frames + shift]], axis=1)
+            if a.shape[1] < frames:
+                a = np.concatenate([a, np.zeros((e.shape[0], frames - a.shape[1]))], axis=1)
+            aligned.append(a)
+        power = np.mean(aligned, axis=0)
         db = 10 * np.log10(power + 1e-14)
         db -= db.max()
         p["env"][layer] = np.maximum(db, -90.0)
@@ -152,7 +170,7 @@ def fit_voice(paths_by_layer, seconds):
 def main(d, outp, audition=None):
     voices = {
         "shaker": ({"hard": sorted(glob.glob(f"{d}/LShaker_Shake1D_rr*_Close.wav"))}, .7),
-        "shaker_wood": ({"hard": sorted(glob.glob(f"{d}/shake[1-8].wav"))}, .7),
+        "shaker_wood": ({"hard": sorted(glob.glob(f"{d}/shake[1-8].wav"))}, .6),
         "clap": ({"soft": sorted(glob.glob(f"{d}/handclap_vl1_rr*.wav")),
                   "hard": sorted(glob.glob(f"{d}/handclap_vl2_rr*.wav"))}, .5),
         # The tambourine's rattle: BACKWASH's CC0 recordings, already in the repository (layer 1 soft, 2 hard).
