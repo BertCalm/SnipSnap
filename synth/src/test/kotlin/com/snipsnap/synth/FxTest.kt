@@ -784,6 +784,30 @@ class FxTest {
     }
 
     @Test
+    fun `FLANGER then TREMOLO sit between PHASE and ECHO, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("phase") + 1, names.indexOf("flanger"), "FLANGER is not right after PHASE: $names")
+        assertEquals(names.indexOf("flanger") + 1, names.indexOf("tremolo"), "TREMOLO is not right after FLANGER: $names")
+        assertEquals(names.indexOf("tremolo") + 1, names.indexOf("echo"), "TREMOLO is not right before ECHO: $names")
+
+        val without = FxChain(phase = Phase.defaults(), echo = Echo.defaults())
+        val text = without.toJsonText()
+        assertTrue(!text.contains("flanger") && !text.contains("tremolo"), "no flanger or tremolo key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(text))
+
+        val both = FxChain(flanger = Flanger.defaults(), tremolo = Tremolo.defaults())
+        assertEquals(both, FxChain.fromJsonText(both.toJsonText()))
+        for ((chain, alone) in listOf(
+            FxChain(flanger = Flanger.defaults()) to Flanger.process(snare, Flanger.defaults()),
+            FxChain(tremolo = Tremolo.defaults()) to Tremolo.process(snare, Tremolo.defaults()),
+        )) {
+            val chained = chain.process(snare)
+            assertTrue(!chained.samples.contentEquals(snare.samples), "a section is a no-op in the chain")
+            assertContentEquals(alone.samples, chained.samples, "the chain's row does not run the section's process")
+        }
+    }
+
+    @Test
     fun `REWIND sits after ECHO and before SPRING, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("echo") + 1, names.indexOf("rewind"), "REWIND is not right after ECHO: $names")

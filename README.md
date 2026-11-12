@@ -1286,7 +1286,19 @@ macro swaps the locked taps for six independent players, each with their own
 pitch drift, vibrato, onset, tone and level, which is the difference between
 one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
-up and down the spectrum), ECHO (one delay line and
+up and down the spectrum), FLANGER (one short delay, 0.1 to 10 ms, swept
+by one sine on a log law and summed with the dry: a comb of notches sliding
+down and back up, the jet; DEPTH is how far down it sweeps, FEEDBACK is
+two-way, metallic above the middle, hollow below it and none at its middle
+default, and the ring dies inside the pad; the FLANGE pedal, the `flanged`
+character, is the plain sweep at DEPTH 0.7 at a tap (AMT 70), DEPTH 1 at
+AMT 100; for drums and held sounds), TREMOLO (the level
+pulses between full and 1 minus DEPTH at 1 to 12 Hz, starting at full level
+so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
+edge takes 4 ms at every rate, so it chops without clicking; the TREM
+pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
+second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
+sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
@@ -1324,7 +1336,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
-ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → rewind → spring → room → hush → motion — owns
+ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
