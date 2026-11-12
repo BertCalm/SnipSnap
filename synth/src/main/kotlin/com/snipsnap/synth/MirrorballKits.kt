@@ -621,9 +621,10 @@ object MirrorballKits {
 
     private val munich: List<Part> = listOf(
         Part("Machine Kick", DrumClass.KICK, Chain(Press(12f, 0f, .75f, Ratio.EIGHT), cabHz = WARM_CAB),
-            // Round 2: CLICK .55 to .75. With the speaker opened, the kick's low end comes through whole, and the beater
-            // band fell to 21 dB under the hit's first 15 ms.
-            strike = beaten("munich-kick", thumpKick("TUNE" to .35f, "SWEEP" to .50f, "DECAY" to .35f, "CLICK" to .75f, "DRIVE" to .20f, "PUNCH" to .65f))),
+            // With the speaker opened (round 1c), this machine kick's beater band sits about 21 dB under its first 15 ms at
+            // full strength: Munich's hot print and smash crush the click (its softer zones measure 17). Raising THUMP's
+            // CLICK moved it 0.04 dB and a 1.6 times beater 0.8, so neither was kept; the acoustic kicks keep -18 or better.
+            strike = beaten("munich-kick", thumpKick("TUNE" to .35f, "SWEEP" to .50f, "DECAY" to .35f, "CLICK" to .55f, "DRIVE" to .20f, "PUNCH" to .65f))),
         Part("Machine Snare", DrumClass.SNARE, Chain(Press(14f, .70f, .70f), Reel(listOf(1), .14f, .15f)),
             strike = onset(OnsetVoice.SNARE, mapOf("TUNE" to .60f, "DECAY" to .32f, "BLEND" to .40f, "BODY" to .50f)) { v -> mapOf("SNAP" to .45f + .3f * v, "EDGE" to .35f + .3f * v) }),
         Part("Closed Hat", DrumClass.HAT_CLOSED, Chain(Press(10f, .60f, .60f), Reel(listOf(1), .12f, .10f)), mute = 1,
