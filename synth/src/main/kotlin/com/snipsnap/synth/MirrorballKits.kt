@@ -4,7 +4,10 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.synth.Mirrorball.Combo
+import com.snipsnap.synth.Mirrorball.Eq
+import com.snipsnap.synth.Mirrorball.EqKind
 import com.snipsnap.synth.Mirrorball.Press
+import com.snipsnap.synth.Mirrorball.Print
 import com.snipsnap.synth.Mirrorball.Ratio
 import com.snipsnap.synth.Mirrorball.Reel
 import com.snipsnap.synth.Mirrorball.Setting
@@ -22,11 +25,11 @@ import kotlin.math.roundToInt
  * every pad printed through [Mirrorball]'s FET compressor → multi-head tape echo → amp.
  *
  * A rendered kit family, like [GatecrashKits], not a Patch engine: the hits come from SKIN, THUMP, ONSET,
- * TERRA and BACKWASH's recorded tambourine as they stand. The three kits differ in their drums, tunings, pad
+ * TERRA as they stand, and a tambourine synthesized from BACKWASH's recordings. The three kits differ in their drums, tunings, pad
  * roles and tempo, and in how the chain is set, not only in how much of it there is:
  *
- * - [Kit.PHILLY]: a live soul-disco kit. Dead kick, towelled snare, two congas, a recorded tambourine, two
- *   toms. Dry: the echo is a whisper on the snare and a gallop on the hats and tambourine.
+ * - [Kit.PHILLY]: a live soul-disco kit. Dead kick, towelled snare, two congas, a synthesized tambourine
+ *   ([MirrorballTambourine], fitted to BACKWASH's recordings), two toms. Dry: the echo is a whisper on the snare and a gallop on the hats and tambourine.
  * - [Kit.LOFT]: a New York party kit. A clap with the snare, three hand drums, two timbales, cowbell,
  *   claves. Longer, wetter echoes on the percussion, older tape, the amp a little warmer.
  * - [Kit.MUNICH]: a machine-disco kit. Analog kick and snare, four diving synth toms, a sequencer hat that
@@ -43,11 +46,23 @@ import kotlin.math.roundToInt
  * Copied, not shared: [finish] and the zone levelling follow [GatecrashKits] line for line. Sharing them
  * would mean editing the approved GATECRASH round, so the copy is disclosed here instead.
  *
- * Every setting below is a shape value, authored unheard.
+ * **The sound (round 1b):** the owner heard round 0 as "kind of basic and not very punchy or character rich",
+ * picked round 0b's Punch, and asked for it "dialed back like 10-15%". Every pad is now printed (console EQ per
+ * drum, then hot tape), compressed in parallel, and played through an amp driven to the edge of breakup, at
+ * [INTENSITY] of the Punch settings: the EQ's decibels, the tape's heat, the crushed copy's share, the amp's gain
+ * above unity and its sag are all scaled by it. Each kit then leans its own way ([voicingOf]).
+ *
+ * Every setting below is a shape value. Only round 0b's Punch, in the Python harness, has been heard.
  */
 object MirrorballKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
+
+    /** Round 0b's Punch, dialed back as the owner asked ("like 10-15%"): the middle of that, 87.5 percent. */
+    const val INTENSITY = .875f
+
+    /** The felt beater's level on every kick, against the drum's peak: round 0b's 0.55 at [INTENSITY]. */
+    const val BEATER = .55f * INTENSITY
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         PHILLY("mirrorball-philly", "Philly Strings", 116),
@@ -73,8 +88,11 @@ object MirrorballKits {
         val strike: (velocity: Float, take: Int) -> FloatArray,
     )
 
-    /** A pad's own share of the chain; the kit supplies the tape and the amp. */
+    /** A pad's own share of the chain; the kit supplies the tape, the amp and the console EQ ([eqOf]). */
     internal data class Chain(val press: Press, val reel: Reel = Reel(), val cabHz: Float = BRIGHT_CAB)
+
+    /** How hard a kit is printed and played, at round 0b's full Punch: tape heat, crushed share, amp gain and sag. */
+    data class Voicing(val hot: Float, val parallel: Float, val drive: Float, val sag: Float)
 
     private class Note(val beat: Double, val part: Int, val weight: Float)
 
@@ -82,7 +100,7 @@ object MirrorballKits {
 
     /** The speaker's roll-off for bright pads (snares, hats, percussion) and for the low ones (kicks, toms, hand drums). */
     const val BRIGHT_CAB = 8_500f
-    const val WARM_CAB = 5_200f
+    const val WARM_CAB = 6_500f
 
     /** A dry hit's level against a full one, as the compressor hears it. Zones are levelled afterwards. */
     fun touch(velocity: Float): Float = .35f + .65f * velocity.coerceIn(0f, 1f)
@@ -111,17 +129,62 @@ object MirrorballKits {
                     "role" to role.toString(), "bpm" to kit.bpm.toString(),
                     "velocities" to velocities.joinToString(","), "takes" to TAKES.toString(),
                     "articulation" to "finite",
-                    "processing" to "press>reel>combo",
+                    "processing" to "print>press+parallel>reel>combo", "intensity" to INTENSITY.toString(),
                     "echoHeads" to chain.reel.heads.joinToString("+").ifEmpty { "none" },
                 ),
             )
         }
     }
 
-    /** The full setting [role] is printed with. */
-    fun settingOf(kit: Kit, role: Int): Setting {
+    /** The full setting [role] is printed with, at [intensity] of round 0b's Punch ([INTENSITY] in the kits). */
+    fun settingOf(kit: Kit, role: Int, intensity: Float = INTENSITY): Setting {
+        require(intensity.isFinite() && intensity in 0f..1f)
         val c = chainOf(kit, role)
-        return Setting(c.press, c.reel, tapeOf(kit), ampOf(kit).copy(cabHz = c.cabHz))
+        val v = voicingOf(kit)
+        val eq = eqOf(kit, role).map { it.copy(db = it.db * intensity) }
+        val amp = ampOf(kit).copy(drive = 1f + (v.drive - 1f) * intensity, sag = v.sag * intensity, cabHz = c.cabHz)
+        return Setting(c.press, c.reel, tapeOf(kit), amp, Print(eq, v.hot * intensity), v.parallel * intensity)
+    }
+
+    // Console EQ, at round 0b's full Punch. From the owner's research note: a disco kick's thump at 60 to 80 Hz and
+    // its beater at 2 to 3 kHz, the box cut out between; a snare's body and a bright top; the hats' harsh top
+    // rolled off a little.
+    private val KICK_EQ = listOf(Eq(EqKind.PEAK, 68f, 1.1f, 6f), Eq(EqKind.PEAK, 380f, 1.2f, -6f), Eq(EqKind.PEAK, 3_000f, .9f, 11f))
+    private val SNARE_EQ = listOf(Eq(EqKind.PEAK, 210f, 1f, 4f), Eq(EqKind.PEAK, 700f, 1.2f, -3f), Eq(EqKind.HIGH_SHELF, 5_500f, .7f, 6f))
+    private val TOM_EQ = listOf(Eq(EqKind.PEAK, 110f, 1f, 3f), Eq(EqKind.PEAK, 420f, 1.2f, -4f), Eq(EqKind.PEAK, 3_500f, 1.2f, 7f))
+    private val HAT_EQ = listOf(Eq(EqKind.HIGH_PASS, 350f, .7f), Eq(EqKind.PEAK, 11_000f, .9f, -2.5f))
+    private val CLAP_EQ = listOf(Eq(EqKind.PEAK, 1_200f, .9f, 3f), Eq(EqKind.HIGH_SHELF, 6_000f, .7f, 3f))
+    private val METAL_EQ = listOf(Eq(EqKind.HIGH_PASS, 400f, .7f))
+    private val HAND_EQ = listOf(Eq(EqKind.PEAK, 3_200f, 1.2f, 5f))
+
+    /**
+     * The console EQ for [role], by what the drum is: its class, and for percussion its name (hand drums and
+     * timbales; bells and the tambourine; shakers and the sequencer hat; sticks, rims and claves). A phrase takes its
+     * first note's drum's EQ.
+     */
+    internal fun eqOf(kit: Kit, role: Int): List<Eq> {
+        val part = if (role < HITS) parts(kit)[role] else parts(kit)[phrases(kit)[role - HITS].notes.first().part]
+        return when (part.cls) {
+            DrumClass.KICK -> KICK_EQ
+            DrumClass.SNARE -> SNARE_EQ
+            DrumClass.TOM -> TOM_EQ
+            DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN -> HAT_EQ
+            DrumClass.CLAP -> CLAP_EQ
+            else -> when {
+                Regex("Conga|Tumba|Quinto|Bongo|Timbale").containsMatchIn(part.name) -> HAND_EQ
+                Regex("Tambourine|Cowbell|Ride").containsMatchIn(part.name) -> METAL_EQ
+                Regex("Shaker|Sequencer Hat").containsMatchIn(part.name) -> HAT_EQ
+                Regex("Stick|Rim|Claves").containsMatchIn(part.name) -> CLAP_EQ
+                else -> emptyList()
+            }
+        }
+    }
+
+    /** Each kit's lean, at full Punch: Philly is round 0b's Punch itself, Loft a little hotter, Munich hotter still. */
+    fun voicingOf(kit: Kit): Voicing = when (kit) {
+        Kit.PHILLY -> Voicing(hot = .45f, parallel = .45f, drive = 2.6f, sag = .45f)
+        Kit.LOFT -> Voicing(hot = .50f, parallel = .45f, drive = 3.0f, sag = .50f)
+        Kit.MUNICH -> Voicing(hot = .55f, parallel = .55f, drive = 3.6f, sag = .55f)
     }
 
     internal fun chainOf(kit: Kit, role: Int): Chain =
@@ -141,24 +204,29 @@ object MirrorballKits {
         return finish(dryRaw(kit, role, velocity, take), zoneGain(kit, role, velocity), cap = role < HITS)
     }
 
-    /** Alternatives the audition plays beside a pad, none of them part of any kit. */
-    enum class Trial { DRY, PRESS_ONLY, DARK_SPEAKER, RACK_ORDER, PUSHED_AMP, NO_ECHO, MORE_ECHO, ALL_BUTTONS }
+    /**
+     * Alternatives the audition plays beside a pad, none of them part of any kit: round 0b's full Punch, a lighter
+     * print (75 percent), the rack's order, no echo, more echo, and on the tambourine the CC0 recording it was fitted
+     * to, through the same chain.
+     */
+    enum class Trial { DRY, FULL_PUNCH, LIGHTER, RACK_ORDER, NO_ECHO, MORE_ECHO, RECORDED_TAMBOURINE }
 
     /** The hard first take of [role] with one thing changed, levelled on its own to the pad peak. */
     fun trial(kit: Kit, role: Int, t: Trial): Snip {
         require(role in 0 until PADS)
         val base = settingOf(kit, role)
-        val dry = dryRaw(kit, role, 1f, 0)
+        val dry = if (t == Trial.RECORDED_TAMBOURINE) {
+            require(role < HITS && parts(kit)[role].name == "Tambourine") { "only the tambourine pad has a recording" }
+            struck(Part("Tambourine", DrumClass.PERC, chainOf(kit, role), strike = recordedTambourine()), 1f, 0)
+        } else dryRaw(kit, role, 1f, 0)
         val x = when (t) {
             Trial.DRY -> dry
-            Trial.PRESS_ONLY -> Mirrorball.press(dry, base.press)
             else -> {
                 val s = when (t) {
-                    Trial.DARK_SPEAKER -> base.copy(combo = base.combo.copy(cabHz = WARM_CAB))
-                    Trial.PUSHED_AMP -> base.copy(combo = base.combo.copy(drive = 5f, sag = .6f))
+                    Trial.FULL_PUNCH -> settingOf(kit, role, 1f)
+                    Trial.LIGHTER -> settingOf(kit, role, .75f)
                     Trial.NO_ECHO -> base.copy(reel = Reel())
                     Trial.MORE_ECHO -> base.copy(reel = base.reel.copy(send = min(1f, base.reel.send * 2f), repeats = min(1f, base.reel.repeats + .2f)))
-                    Trial.ALL_BUTTONS -> base.copy(press = base.press.copy(ratio = Ratio.ALL))
                     else -> base
                 }
                 val order = if (t == Trial.RACK_ORDER) Mirrorball.Order.RACK else Mirrorball.Order.OWNER
@@ -305,6 +373,10 @@ object MirrorballKits {
                       soft: (Float) -> Map<String, Float> = { emptyMap() }) =
         touched({ m, _ -> Thump.render(voice, m).samples }, base, vary, soft)
 
+    /** Any kick with the felt beater added at the front ([Mirrorball.beater]), seeded per kit, drum and take. */
+    private fun beaten(name: String, kick: (Float, Int) -> FloatArray): (Float, Int) -> FloatArray =
+        { v, t -> Mirrorball.beater(kick(v, t), BEATER, Dsp.seedFor("MIRRORBALL", "BEATER", name, t), v) }
+
     /** THUMP's kick reads velocity itself (less pitch drop, a duller click, less drive). */
     private fun thumpKick(vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
         { v, t -> Thump.render(ThumpVoice.KICK, varied(mapOf(*m), listOf("TUNE", "CLICK"), t), v).samples }
@@ -319,12 +391,11 @@ object MirrorballKits {
     private fun hand(voice: TerraVoice, vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =
         { v, t -> Terra.render(voice, mapOf(*m), null, v, t).samples }
 
-    /**
-     * BACKWASH's recorded tambourine (CC0): two dynamic layers of two recorded takes. Takes 2 and 3 replay the
-     * recordings a fifth of a semitone up and down, so a zone still holds four different strikes; that is
-     * weaker than four recordings and disclosed in the docs.
-     */
-    private fun tambourine(): (Float, Int) -> FloatArray = { v, t ->
+    /** The synthesized tambourine: every take a fresh pattern of jingle collisions ([MirrorballTambourine]). */
+    private fun tambourine(): (Float, Int) -> FloatArray = { v, t -> MirrorballTambourine.render(v, t) }
+
+    /** BACKWASH's recorded tambourine (CC0), kept only as the audition's comparison for the synthesized one. */
+    private fun recordedTambourine(): (Float, Int) -> FloatArray = { v, t ->
         val tamb = BackwashVoice.TAMBOURINE
         val tune = .5f + when (t) { 2 -> .025f; 3 -> -.025f; else -> 0f }
         BackwashAcoustic.source(tamb, Backwash.defaults(tamb) + ("TUNE" to tune), v, t % 2).samples
@@ -367,10 +438,12 @@ object MirrorballKits {
     // is dead and clicky and has no echo, so four on the floor stays four. The snare gets one quiet slap at a
     // sixteenth; the hats and tambourine carry the gallop.
     private val philly: List<Part> = listOf(
-        Part("Dead Kick", DrumClass.KICK, Chain(Press(14f, .45f, .80f, Ratio.EIGHT), cabHz = WARM_CAB),
-            strike = skin(SkinVoice.KICK, "TUNE" to .22f, "DECAY" to .30f, "TONE" to .40f, "PUNCH" to .70f, "CLICK" to .72f, "DROP" to .08f)),
-        Part("Towel Snare", DrumClass.SNARE, Chain(Press(16f, .70f, .75f), Reel(listOf(1), .16f, .15f)),
-            strike = skin(SkinVoice.SNARE, "TUNE" to .58f, "SNAP" to .72f, "DECAY" to .26f, "PUNCH" to .62f, "RATTLE" to .60f, "SIZZLE" to .55f)),
+        // Round 0b: the kick up to about 60 Hz with a hard beater (round 0's sat under 60 Hz, a sub sine with no click).
+        // The compressor's attack at its slowest (800 us), so the beater gets through before the squeeze.
+        Part("Dead Kick", DrumClass.KICK, Chain(Press(12f, 0f, .85f, Ratio.EIGHT), cabHz = WARM_CAB),
+            strike = beaten("philly-kick", skin(SkinVoice.KICK, "TUNE" to .42f, "DECAY" to .30f, "TONE" to .38f, "PUNCH" to .78f, "CLICK" to .85f, "DROP" to .22f))),
+        Part("Towel Snare", DrumClass.SNARE, Chain(Press(14f, .55f, .80f), Reel(listOf(1), .16f, .15f)),
+            strike = skin(SkinVoice.SNARE, "TUNE" to .52f, "SNAP" to .80f, "DECAY" to .32f, "PUNCH" to .80f, "RATTLE" to .65f, "SIZZLE" to .55f)),
         Part("Closed Hat", DrumClass.HAT_CLOSED, Chain(Press(10f, .60f, .60f), Reel(gallop, .26f, .30f)), mute = 1,
             strike = skinTouched(SkinVoice.HAT_CLOSED, mapOf("TUNE" to .55f, "DECAY" to .22f, "TONE" to .45f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
         Part("Open Hat", DrumClass.HAT_OPEN, Chain(Press(10f, .60f, .55f), Reel(gallop, .22f, .28f)), mute = 1,
@@ -382,10 +455,11 @@ object MirrorballKits {
             strike = hand(TerraVoice.SLAP, "TUNE" to .62f, "DECAY" to .45f, "FORCE" to .9f, "POS" to .8f, "BOWL" to .55f)),
         Part("Tumba", DrumClass.PERC, Chain(Press(10f, .55f, .60f), Reel(listOf(2), .16f, .18f), WARM_CAB),
             strike = hand(TerraVoice.SLAP, "TUNE" to .30f, "DECAY" to .55f, "FORCE" to .85f, "POS" to .7f, "BOWL" to .65f)),
-        Part("Rack Tom", DrumClass.TOM, Chain(Press(12f, .55f, .60f, Ratio.EIGHT), Reel(listOf(2), .18f, .22f), WARM_CAB),
-            strike = skin(SkinVoice.TOM, "TUNE" to .62f, "DECAY" to .38f, "TONE" to .50f, "PUNCH" to .60f, "DROP" to .18f, "CLICK" to .40f)),
-        Part("Floor Tom", DrumClass.TOM, Chain(Press(12f, .55f, .60f, Ratio.EIGHT), Reel(listOf(2), .18f, .22f), WARM_CAB),
-            strike = skin(SkinVoice.TOM, "TUNE" to .30f, "DECAY" to .45f, "TONE" to .45f, "PUNCH" to .60f, "DROP" to .22f, "CLICK" to .35f)),
+        // Round 0b: a stick attack on the toms (round 0's were pure sines), and a slower compressor attack to keep it.
+        Part("Rack Tom", DrumClass.TOM, Chain(Press(12f, .10f, .70f, Ratio.EIGHT), Reel(listOf(2), .18f, .22f), WARM_CAB),
+            strike = skin(SkinVoice.TOM, "TUNE" to .62f, "DECAY" to .40f, "TONE" to .60f, "PUNCH" to .72f, "DROP" to .20f, "CLICK" to .70f)),
+        Part("Floor Tom", DrumClass.TOM, Chain(Press(12f, .10f, .70f, Ratio.EIGHT), Reel(listOf(2), .18f, .22f), WARM_CAB),
+            strike = skin(SkinVoice.TOM, "TUNE" to .30f, "DECAY" to .45f, "TONE" to .60f, "PUNCH" to .72f, "DROP" to .22f, "CLICK" to .70f)),
         Part("Ride", DrumClass.PERC, Chain(Press(8f, .50f, .45f)),
             strike = skinTouched(SkinVoice.RIDE, mapOf("TUNE" to .50f, "DECAY" to .55f, "TONE" to .50f)) { v -> mapOf("PUNCH" to .3f + .4f * v, "SIZZLE" to .15f * v) }),
         Part("Cowbell", DrumClass.PERC, Chain(Press(10f, .60f, .60f), Reel(listOf(2), .14f, .15f)),
@@ -398,11 +472,11 @@ object MirrorballKits {
 
     private val phillyPhrases = listOf(
         // Down the toms and congas, landing on the floor tom with the open hat.
-        Phrase("Tom Fill", Chain(Press(12f, .55f, .60f, Ratio.EIGHT), Reel(listOf(2), .14f, .18f), WARM_CAB), listOf(
+        Phrase("Tom Fill", Chain(Press(12f, .10f, .70f, Ratio.EIGHT), Reel(listOf(2), .14f, .18f), WARM_CAB), listOf(
             Note(0.0, 6, .80f), Note(0.5, 6, .70f), Note(0.75, 7, .85f), Note(1.0, 8, .88f), Note(1.5, 8, .78f),
             Note(1.75, 8, .82f), Note(2.0, 9, .90f), Note(2.5, 9, .84f), Note(2.75, 9, .80f), Note(3.0, 7, .92f),
             Note(3.5, 9, 1f), Note(3.5, 3, .8f))),
-        Phrase("Snare Build", Chain(Press(16f, .70f, .75f), Reel(listOf(1), .16f, .20f)), build(part = 1)),
+        Phrase("Snare Build", Chain(Press(14f, .55f, .80f), Reel(listOf(1), .16f, .20f)), build(part = 1)),
     )
 
     // LOFT PARTY. Percussion first: a clap layered with the snare, three hand drums, two metal-shelled
@@ -414,9 +488,9 @@ object MirrorballKits {
         strike = skin(SkinVoice.TOM, "TUNE" to tune, "DECAY" to .30f, "TONE" to .85f, "PUNCH" to .70f, "DROP" to .10f, "CLICK" to .85f))
 
     private val loft: List<Part> = listOf(
-        Part("Loft Kick", DrumClass.KICK, Chain(Press(12f, .40f, .70f, Ratio.EIGHT), cabHz = WARM_CAB),
+        Part("Loft Kick", DrumClass.KICK, Chain(Press(12f, 0f, .70f, Ratio.EIGHT), cabHz = WARM_CAB),
             // Not Philly's dead kick: a big open boom for a sound system, lower, longer, the pitch falling more.
-            strike = skin(SkinVoice.KICK, "TUNE" to .12f, "DECAY" to .66f, "TONE" to .55f, "PUNCH" to .55f, "CLICK" to .42f, "DROP" to .32f)),
+            strike = beaten("loft-kick", skin(SkinVoice.KICK, "TUNE" to .12f, "DECAY" to .66f, "TONE" to .55f, "PUNCH" to .55f, "CLICK" to .42f, "DROP" to .32f))),
         Part("Clap Snare", DrumClass.SNARE, Chain(Press(16f, .70f, .70f), Reel(listOf(1, 2), .20f, .22f)),
             strike = { v, t ->
                 // A snare and a clap struck together: the clap is the louder half, as on the records.
@@ -461,14 +535,14 @@ object MirrorballKits {
 
     // MUNICH MACHINE. Machine disco: an analog kick on every beat, a sequencer hat riding the dotted-eighth
     // head, four diving synth toms. New tape (less wobble, brighter repeats) and the amp pushed.
-    private fun pew(name: String, tune: Float) = Part(name, DrumClass.TOM, Chain(Press(12f, .55f, .55f), Reel(listOf(2, 3), .26f, .40f), WARM_CAB),
+    private fun pew(name: String, tune: Float) = Part(name, DrumClass.TOM, Chain(Press(12f, .10f, .55f), Reel(listOf(2, 3), .26f, .40f), WARM_CAB),
         // The synth tom that falls: a sine that dives a long way (SWEEP), slowly enough to hear (BEND).
         strike = thump(ThumpVoice.TOM, mapOf("TUNE" to tune, "SWEEP" to .88f, "DECAY" to .55f, "BEND" to .55f, "PUNCH" to .55f)) { v ->
             mapOf("CLICK" to .1f + .3f * v, "SWEEP" to .6f + .28f * v) })
 
     private val munich: List<Part> = listOf(
-        Part("Machine Kick", DrumClass.KICK, Chain(Press(12f, .40f, .75f, Ratio.EIGHT), cabHz = WARM_CAB),
-            strike = thumpKick("TUNE" to .35f, "SWEEP" to .50f, "DECAY" to .35f, "CLICK" to .55f, "DRIVE" to .20f, "PUNCH" to .65f)),
+        Part("Machine Kick", DrumClass.KICK, Chain(Press(12f, 0f, .75f, Ratio.EIGHT), cabHz = WARM_CAB),
+            strike = beaten("munich-kick", thumpKick("TUNE" to .35f, "SWEEP" to .50f, "DECAY" to .35f, "CLICK" to .55f, "DRIVE" to .20f, "PUNCH" to .65f))),
         Part("Machine Snare", DrumClass.SNARE, Chain(Press(14f, .70f, .70f), Reel(listOf(1), .14f, .15f)),
             strike = onset(OnsetVoice.SNARE, mapOf("TUNE" to .60f, "DECAY" to .32f, "BLEND" to .40f, "BODY" to .50f)) { v -> mapOf("SNAP" to .45f + .3f * v, "EDGE" to .35f + .3f * v) }),
         Part("Closed Hat", DrumClass.HAT_CLOSED, Chain(Press(10f, .60f, .60f), Reel(listOf(1), .12f, .10f)), mute = 1,
@@ -486,7 +560,7 @@ object MirrorballKits {
             strike = thump(ThumpVoice.RIM, mapOf("TUNE" to .60f, "DECAY" to .20f), vary = listOf("TUNE", "DECAY", "RING"))),
         Part("Shaker", DrumClass.PERC, Chain(Press(12f, .70f, .60f), Reel(gallop, .20f, .25f)),
             strike = skinTouched(SkinVoice.SHAKER, mapOf("TONE" to .65f, "DECAY" to .25f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("GRAIN" to .15f + .3f * v) }),
-        Part("Long Kick", DrumClass.KICK, Chain(Press(10f, .35f, .65f, Ratio.FOUR), cabHz = WARM_CAB),
+        Part("Long Kick", DrumClass.KICK, Chain(Press(10f, 0f, .65f, Ratio.FOUR), cabHz = WARM_CAB),
             strike = thumpKick("TUNE" to .28f, "SWEEP" to .55f, "DECAY" to .70f, "CLICK" to .35f, "DRIVE" to .15f)),
     )
 

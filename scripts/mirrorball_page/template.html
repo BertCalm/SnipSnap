@@ -84,10 +84,10 @@ th { font-family: var(--display); font-weight: 700; font-size: 12.5px; text-tran
     <h1>MIRRORBALL</h1>
     <p class="gesture">dead, clicky strike → FET squeeze → tape repeats in rhythm → the amp pulls the repeats up behind the hit</p>
     <p>Three 1970s disco kits for the SKINS shelf. Every pad is printed through your chain, in your order:</p>
-    <div class="chain" aria-label="Signal chain"><span>drum</span><i>→</i><span class="stage">FET compressor</span><i>→</i><span class="stage">multi-head tape echo</span><i>→</i><span class="stage">tube amp + speaker</span><i>→</i><span>pad</span></div>
+    <div class="chain" aria-label="Signal chain"><span>drum</span><i>→</i><span class="stage">studio print: console EQ + hot tape</span><i>→</i><span class="stage">FET compressor, parallel</span><i>→</i><span class="stage">multi-head tape echo</span><i>→</i><span class="stage">tube amp + speaker</span><i>→</i><span>pad</span></div>
     <div class="status">
-      <p><strong>Round 1, built in the app, not yet heard.</strong> Round 0's five questions were not answered, so I went with these defaults. Each one has a button here to compare against:</p>
-      <p>Your order (amp last). A bright speaker on snares, hats and percussion, and a darker one on kicks, toms and hand drums. A clean amp on Philly, warmer on Loft, pushed on Munich. No echo on any kick. Pads print one at a time, and the fills and builds print as one phrase through one chain.</p>
+      <p><strong>Round 1b, built in the app, not yet heard.</strong> You picked round 0b's Punch, "dialed back like 10-15%", and asked for the tambourine to be synthesized. This is Punch at 87.5% in all three kits, and Philly's tambourine is now synthesized.</p>
+      <p>Each kit leans its own way from there: Philly is Punch itself, Loft a little hotter, Munich hotter still. Every kick has the beater click. The tambourine's jingles and their rattle were fitted to the recordings you accepted on BACKWASH; only the fitted numbers ship.</p>
     </div>
   </header>
 
@@ -111,14 +111,13 @@ th { font-family: var(--display); font-weight: 700; font-size: 12.5px; text-tran
       </div>
       <div class="acts" id="trials">
         <span class="actlabel">Compare (not in the kit)</span>
-        <button class="act" type="button" data-t="press_only">Compressor only</button>
-        <button class="act" type="button" data-t="dark_speaker">Darker speaker</button>
+        <button class="act" type="button" data-t="full_punch">Full Punch (100%)</button>
+        <button class="act" type="button" data-t="lighter">Lighter (75%)</button>
         <button class="act" type="button" data-t="rack_order">Rack order (amp before echo)</button>
-        <button class="act" type="button" data-t="pushed_amp">Pushed amp</button>
         <button class="act" type="button" data-t="no_echo">No echo</button>
         <button class="act" type="button" data-t="more_echo">More echo</button>
-        <button class="act" type="button" data-t="all_buttons">All buttons in</button>
       </div>
+      <div class="acts" id="tambAct"><button class="act" type="button" id="bRecorded">Recorded tambourine, same chain</button></div>
       <dl id="dNums"></dl>
       <p class="note" id="dNote"></p>
       <div id="err" role="status"></div>
@@ -135,12 +134,11 @@ th { font-family: var(--display); font-weight: 700; font-size: 12.5px; text-tran
     <div>
       <h2>What to listen for</h2>
       <ol class="listen">
-        <li><strong>Does each kit sound like disco?</strong> Start with the groove, then "Same groove, dry". If the dry drums are wrong, the chain cannot fix them.</li>
-        <li><strong>Bright or dark speaker?</strong> On the dotted pads, "Darker speaker" is round 0's default. The research says disco snares and hats were bright.</li>
-        <li><strong>Your order or the rack's?</strong> "Rack order" puts the amp before the echo. With the amp last, the echoes come back louder and rougher behind the hit.</li>
+        <li><strong>Is the punch where you wanted it?</strong> On the dotted pads (each kit's kick and snare, plus one more), "Full Punch" is what you heard in round 0b and "Lighter" goes a step further back.</li>
+        <li><strong>Does the synthesized tambourine pass?</strong> Philly A05. "Recorded tambourine, same chain" plays the recording it was fitted to. "Play all 12 strikes" shows the rattle changing every take.</li>
+        <li><strong>Does each kit sound like disco?</strong> Start with the groove, then "Same groove, dry".</li>
         <li><strong>How much echo?</strong> "No echo" and "More echo" sit either side of what I built.</li>
-        <li><strong>Clean or pushed?</strong> Munich is already pushed. "Pushed amp" on Philly and Loft is the same push.</li>
-        <li><strong>Do soft strikes sound like the same drum?</strong> "Play all 12 strikes" plays four soft, four medium and four hard. A softer hit gets less squeeze, so it should sound more open.</li>
+        <li><strong>Do soft strikes sound like the same drum?</strong> "Play all 12 strikes" plays four soft, four medium and four hard. A softer hit drives the tape, compressor and amp less, so it should sound more open.</li>
         <li><strong>Are these three kits or one?</strong> Different drums, tunings, pad roles, tempos, tape and amp.</li>
       </ol>
     </div>
@@ -165,9 +163,9 @@ const DATA = /*MANIFEST*/;
 const EXT = "/*EXT*/";
 const accents = { "mirrorball-philly": "var(--philly)", "mirrorball-loft": "var(--loft)", "mirrorball-munich": "var(--munich)" };
 const blurbs = {
-  "mirrorball-philly": "Live soul-disco, dry the way the orchestra records were: a dead kick with no echo, a towelled snare with one quiet slap, the hats and tambourine galloping on two heads, two congas. Clean amp.",
-  "mirrorball-loft": "Percussion first: a clap layered on the snare, quinto, conga, tumba, bongo, timbales, cowbell and claves on two long heads. Older, wobblier tape, a warmer amp.",
-  "mirrorball-munich": "Machine disco: an analog kick, four falling synth toms, a sequencer hat on the dotted-eighth head. Newer tape and the amp pushed."
+  "mirrorball-philly": "Live soul-disco, dry the way the orchestra records were: a dead kick with a beater click and no echo, a towelled snare with one quiet slap, hats and a synthesized tambourine galloping on two heads, two congas. Round 0b's Punch.",
+  "mirrorball-loft": "Percussion first: a booming kick, a clap layered on the snare, quinto, conga, tumba, bongo, timbales, cowbell and claves on two long heads. Older, wobblier tape, printed and played a little hotter than Philly.",
+  "mirrorball-munich": "Machine disco: an analog kick with a beater, four falling synth toms, a sequencer hat on the dotted-eighth head. Newer tape, the hottest print and amp of the three."
 };
 const beats = { "1": "1/16", "2": "dotted 1/8", "3": "1/4" };
 let kit = DATA.kits[0], pad = kit.pads[0], audio = null;
@@ -234,6 +232,7 @@ function drawDetail() {
   $("dNums").innerHTML = rows.map(r => "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>").join("");
   $("dNote").textContent = pad.phrase ? "A phrase: every note goes through one chain together, as a drum bus would." : pad.heads === "none" ? "No echo on this pad, on purpose." : "";
   $("trials").hidden = !pad.trial;
+  $("tambAct").hidden = !pad.tambourine;
 }
 function render() {
   document.documentElement.style.setProperty("--accent", accents[kit.id]);
@@ -244,6 +243,7 @@ $("bPad").onclick = () => play(url(kit, "pad", pad.slot));
 $("bDry").onclick = () => play(url(kit, "dry", pad.slot));
 $("bTouch").onclick = () => play(url(kit, "touch", pad.slot));
 $("bStop").onclick = stop;
+$("bRecorded").onclick = () => play(url(kit, "recorded_tambourine", pad.slot));
 document.querySelectorAll("#trials button").forEach(b => b.onclick = () => play(url(kit, b.dataset.t, pad.slot)));
 $("bGroove").onclick = () => play(url(kit, "groove"));
 $("bGrooveDry").onclick = () => play(url(kit, "groove-dry"));

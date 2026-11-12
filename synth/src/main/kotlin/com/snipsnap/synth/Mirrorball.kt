@@ -23,7 +23,13 @@ import kotlin.math.tanh
  * [Gatecrash] is for its kits. It takes one dry mono hit (or a dry phrase) at [Dsp.RATE] and returns it
  * printed through the owner's chain, in the owner's order:
  *
- * 1. **PRESS**, an FET limiting amplifier. INPUT drives into a fixed threshold, so a softer hit is squeezed
+ * 0. **PRINT**, the drum as it was recorded before any pedal (round 0b, after the owner heard round 0 as "kind of
+ *    basic and not very punchy or character rich"): console EQ per drum, then tape driven hot, an asymmetric soft
+ *    curve at 4x that gives a sine-like kick the harmonics a small speaker can play. The level a hit reaches the
+ *    tape at is its own, so a softer hit saturates less.
+ * 1. **PRESS**, an FET limiting amplifier, in the pedal's parallel mode: the hit through the compressor as set, plus
+ *    a crushed copy (all buttons in, fastest knobs) under it. The first keeps the attack, the second fills the
+ *    body in behind it. INPUT drives into a fixed threshold, so a softer hit is squeezed
  *    less: the velocity character comes from the circuit, not from a law. Attack 20 µs to 800 µs, release
  *    50 ms to 1.1 s with a slow second stage after a long squeeze (program dependence). At fast settings the
  *    gain follows a kick's waveform, which is distortion; nothing adds it, it falls out of the detector. The
@@ -46,7 +52,7 @@ import kotlin.math.tanh
 object Mirrorball {
 
     /** Bump when a change alters rendered audio: saved kits name the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     /** The most the tape loop may return of itself per pass, whatever is set. */
     const val MAX_LOOP_GAIN = .92
@@ -93,14 +99,31 @@ object Mirrorball {
         }
     }
 
-    /** One pad's whole chain. */
-    data class Setting(val press: Press, val reel: Reel, val tape: Tape, val combo: Combo)
+    enum class EqKind { PEAK, HIGH_SHELF, HIGH_PASS }
+
+    /** One band of console EQ: [db] is ignored by [EqKind.HIGH_PASS]. */
+    data class Eq(val kind: EqKind, val hz: Float, val q: Float, val db: Float = 0f) {
+        init {
+            require(hz.isFinite() && hz in 20f..18_000f && q.isFinite() && q in .1f..10f && db.isFinite() && db in -24f..24f)
+        }
+    }
+
+    /** PRINT: the console EQ, then how hot the tape is driven (0 clean, 1 slammed). */
+    data class Print(val eq: List<Eq> = emptyList(), val hot: Float = 0f) {
+        init { require(hot.isFinite() && hot in 0f..1f) }
+    }
+
+    /** One pad's whole chain. [parallel] is how much of the crushed copy sits under the hit (0 is off). */
+    data class Setting(val press: Press, val reel: Reel, val tape: Tape, val combo: Combo,
+                       val print: Print = Print(), val parallel: Float = 0f) {
+        init { require(parallel.isFinite() && parallel in 0f..1f) }
+    }
 
     /** The owner's order, or the FX rack's (amp before echo), kept for the audition's comparison. */
     enum class Order { OWNER, RACK }
 
     /** Every stage of one print, for the tests that measure the gesture. */
-    class Stages(val dry: FloatArray, val pressed: FloatArray, val out: FloatArray)
+    class Stages(val dry: FloatArray, val printed: FloatArray, val pressed: FloatArray, val out: FloatArray)
 
     /**
      * Prints [dry] through [s] at [bpm]. [length] is the most frames the print may run (the echo's tail lands
@@ -110,12 +133,89 @@ object Mirrorball {
         require(bpm in 60..200) { "bpm $bpm" }
         require(dry.all { it.isFinite() })
         val n = max(dry.size, length)
-        val pressed = press(dry, s.press)
+        val printed = print(dry, s.print)
+        val pressed = parallel(printed, s.press, s.parallel)
         val out = when (order) {
             Order.OWNER -> combo(reel(pressed, s.reel, s.tape, bpm, seed, n), s.combo)
             Order.RACK -> reel(combo(pressed, s.combo), s.reel, s.tape, bpm, seed, n)
         }
-        return Stages(dry, pressed, out)
+        return Stages(dry, printed, pressed, out)
+    }
+
+    // ------------------------------------------------------------------ PRINT
+
+    private fun peakOf(x: FloatArray): Float { var p = 0f; for (v in x) p = max(p, abs(v)); return p }
+
+    /**
+     * Console EQ, then tape. The EQ'd hit is set back to the dry hit's own peak, so the EQ shapes the tone and the
+     * touch still sets how hard the tape is hit; the tape then takes it at 1 + 5 [Print.hot] gain.
+     */
+    internal fun print(x: FloatArray, p: Print): FloatArray {
+        if (x.isEmpty() || (p.eq.isEmpty() && p.hot <= 0f)) return x.copyOf()
+        val p0 = peakOf(x)
+        if (p0 <= 0f) return x.copyOf()
+        val bands = p.eq.map { e ->
+            when (e.kind) {
+                EqKind.PEAK -> Biquad.peak(e.hz.toDouble(), e.q.toDouble(), e.db.toDouble(), Dsp.RATE)
+                EqKind.HIGH_SHELF -> Biquad.highShelf(e.hz.toDouble(), e.q.toDouble(), e.db.toDouble(), Dsp.RATE)
+                EqKind.HIGH_PASS -> Biquad.highpass(e.hz.toDouble(), e.q.toDouble(), Dsp.RATE)
+            }
+        }
+        val y = FloatArray(x.size) { i -> var v = x[i].toDouble(); for (b in bands) v = b.process(v); v.toFloat() }
+        val p1 = peakOf(y)
+        val k = if (p1 > 0f) p0 / p1 else 0f
+        for (i in y.indices) y[i] *= k
+        if (p.hot <= 0f) return y
+        val u = Valve.upsample(y, Dsp.RATE)
+        val g = 1.0 + 5.0 * p.hot
+        // Tape: soft both ways, a little softer below zero, so it adds even harmonics as well as odd.
+        for (i in u.indices) {
+            val v = u[i] * g
+            u[i] = (if (v >= 0) tanh(v) else tanh(.8 * v) / .8).toFloat()
+        }
+        val out = down(u, x.size)
+        // The asymmetry leaves a little DC; take it out before the compressor hears it.
+        val dc = Dsp.FixedOnePole(10f)
+        for (i in out.indices) out[i] = out[i] - dc.lp(out[i])
+        return out
+    }
+
+    /** The crushed copy the parallel mode adds: all buttons in, the fastest attack and release, hard driven. */
+    val SMASH = Press(inputDb = 24f, attack = 1f, release = 1f, ratio = Ratio.ALL)
+
+    /** The pedal's parallel mode: the hit through [p], plus [blend] of [SMASH] under it, set back to the hit's peak. */
+    internal fun parallel(x: FloatArray, p: Press, blend: Float): FloatArray {
+        val clean = press(x, p)
+        if (blend <= 0f) return clean
+        val p0 = peakOf(x)
+        val smash = press(x, SMASH)
+        val ks = p0 / max(peakOf(smash), 1e-9f)
+        val y = FloatArray(clean.size) { clean[it] + blend * ks * smash.getOrElse(it) { 0f } }
+        val k = p0 / max(peakOf(y), 1e-9f)
+        for (i in y.indices) y[i] *= k
+        return y
+    }
+
+    /**
+     * A felt beater on the batter head, added to a kick before it is printed: a 4 ms click of noise, band-limited to
+     * 1.8 kHz up to 3 + 2.5 [velocity] kHz, [level] of the drum's peak at full velocity. SKIN's kick has almost
+     * nothing above 1.5 kHz (measured, round 0), and a disco kick's identity is that click. The noise is seeded by
+     * [seed], so takes differ at the very attack; a softer hit gets a quieter and duller click.
+     */
+    fun beater(x: FloatArray, level: Float, seed: Int, velocity: Float): FloatArray {
+        val p0 = peakOf(x)
+        if (p0 <= 0f || level <= 0f) return x.copyOf()
+        val v = velocity.coerceIn(0f, 1f)
+        val n = (.004 * Dsp.RATE).toInt()
+        val noise = Dsp.Noise(seed)
+        val hp = Biquad.highpass(1800.0, .7071, Dsp.RATE)
+        val lp = Biquad.lowpass(3000.0 + 2500.0 * v, .7071, Dsp.RATE)
+        val tau = (.0012 + .0008 * (1 - v)) * Dsp.RATE
+        val burst = DoubleArray(n) { lp.process(hp.process(noise.next() * exp(-it / tau))) }
+        val bp = burst.maxOf { abs(it) }.coerceAtLeast(1e-12)
+        val y = FloatArray(x.size) { x[it] / p0 }
+        for (i in 0 until min(n, y.size)) y[i] += (level * v * burst[i] / bp).toFloat()
+        return y
     }
 
     // ------------------------------------------------------------------ PRESS

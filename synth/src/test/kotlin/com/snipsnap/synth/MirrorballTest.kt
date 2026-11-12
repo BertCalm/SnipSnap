@@ -282,6 +282,79 @@ class MirrorballTest {
         }
     }
 
+    /** Energy share of [lo]..[hi] Hz over the first [ms] of [x], dB, by FFT (zero-padded to 16384). */
+    private fun bandShare(x: FloatArray, lo: Double, hi: Double, ms: Float = 300f): Double {
+        val n = 16384
+        val m = min(min(x.size, frames(ms)), n)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until m) re[i] = (x[i] * (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * i / max(m - 1, 1)))).toFloat()
+        com.snipsnap.audio.Fft.forward(re, im)
+        var band = 0.0
+        var all = 0.0
+        for (k in 1 until n / 2) {
+            val pw = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            val hz = k.toDouble() * rate / n
+            all += pw
+            if (hz >= lo && hz < hi) band += pw
+        }
+        return 10 * log10(max(band, 1e-30) / max(all, 1e-30))
+    }
+
+    private fun recording(name: String): FloatArray {
+        val bytes = checkNotNull(javaClass.getResourceAsStream("/backwash/v5/$name.wav")).use { it.readBytes() }
+        val snip = com.snipsnap.audio.WavReader.read(bytes)
+        val c = snip.channels
+        val x = FloatArray(snip.samples.size / c) { i -> (0 until c).sumOf { snip.samples[i * c + it].toDouble() }.toFloat() / c }
+        val p = peak(x)
+        val on = max(0, x.indexOfFirst { abs(it) > .05 * p } - frames(1f))
+        return x.copyOfRange(on, x.size)
+    }
+
+    @Test fun `the synthesized tambourine matches the recordings it was fitted to, band by band`() {
+        val thirds = (0..12).map { 1000.0 * Math.pow(2.0, it / 3.0) }.filter { it >= 1600 }
+        fun profile(x: FloatArray) = thirds.map { fc -> bandShare(x, fc / Math.pow(2.0, 1 / 6.0), fc * Math.pow(2.0, 1 / 6.0)) }
+        for ((velocity, layer) in listOf(1f to 2, .3f to 1)) {
+            val target = List(2) { profile(recording("tambourine-$layer-$it")) }.let { (a, b) -> a.indices.map { (a[it] + b[it]) / 2 } }
+            val got = List(4) { profile(MirrorballTambourine.render(velocity, it)) }.let { takes -> target.indices.map { i -> takes.map { it[i] }.average() } }
+            for ((i, fc) in thirds.withIndex()) {
+                assertTrue(abs(got[i] - target[i]) < 3.0, "layer $layer, ${fc.toInt()} Hz: synth ${got[i]} against recording ${target[i]} dB")
+            }
+        }
+    }
+
+    @Test fun `every tambourine take is a new pattern of collisions, the same every time`() {
+        val takes = List(4) { MirrorballTambourine.render(1f, it) }
+        for (a in takes.indices) for (b in a + 1 until takes.size) {
+            assertTrue(shapeDistance(takes[a], takes[b]) > .3, "takes $a and $b: ${shapeDistance(takes[a], takes[b])}")
+        }
+        assertContentEquals(takes[2], MirrorballTambourine.render(1f, 2))
+        // A soft hit builds: its loudest 20 ms comes later than a hard hit's (the recordings: about 50 ms against at once).
+        fun loudest(x: FloatArray) = (0 until 40).maxBy { rms(x, it * frames(5f), it * frames(5f) + frames(20f)) }
+        assertTrue(loudest(MirrorballTambourine.render(.3f, 0)) > loudest(MirrorballTambourine.render(1f, 0)))
+    }
+
+    @Test fun `every kick has its beater, and the print gives it harmonics in proportion to the punch`() {
+        for (k in Kit.entries) for ((role, pad) in kit(k).withIndex()) if (pad.drumClass == DrumClass.KICK && pad.displayName != "Long Kick") {
+            val hard = grid(k, role, 2, 0)
+            val click = bandShare(hard, 1500.0, 4000.0, 15f)
+            assertTrue(click > -18, "${k.name} ${pad.displayName}: beater band only $click dB in the first 15 ms")
+        }
+        val k = Kit.PHILLY
+        val dry = MirrorballKits.dryRaw(k, 0, 1f, 0)
+        fun harmonics(intensity: Float?): Double {
+            val s = if (intensity == null) MirrorballKits.settingOf(k, 0).copy(print = Mirrorball.Print(), parallel = 0f)
+                    else MirrorballKits.settingOf(k, 0, intensity)
+            return bandShare(Mirrorball.process(dry, s, k.bpm, 1).out, 250.0, 600.0)
+        }
+        val none = harmonics(null)
+        val lighter = harmonics(.75f)
+        val kit = harmonics(MirrorballKits.INTENSITY)
+        val full = harmonics(1f)
+        assertTrue(kit > none + 10, "the print adds only ${kit - none} dB at 250-600 Hz")
+        assertTrue(lighter < kit && kit < full, "harmonics do not follow the punch: $lighter, $kit, $full dB")
+    }
+
     @Test fun `no pad or kit name borrows a maker's name`() {
         for (k in Kit.entries) for (name in MirrorballKits.roles(k) + k.title + k.id) {
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), name)

@@ -26,11 +26,11 @@ import kotlin.math.roundToInt
 object MirrorballKitGenerator {
     private const val RATE = 44100
 
-    /** Pads that get the full set of comparisons: the main snare, a hat, and a percussion or tom pad. */
+    /** Pads that get the full set of comparisons: the kick, the main snare, and the tambourine, a conga or a synth tom. */
     private fun trialRoles(kit: Kit): List<Int> = when (kit) {
-        Kit.PHILLY -> listOf(1, 2, 6)
-        Kit.LOFT -> listOf(1, 2, 7)
-        Kit.MUNICH -> listOf(1, 9, 5)
+        Kit.PHILLY -> listOf(0, 1, 4)
+        Kit.LOFT -> listOf(0, 1, 6)
+        Kit.MUNICH -> listOf(0, 1, 5)
     }
 
     /** One groove note: beat, pad slot (1..16), velocity. */
@@ -149,8 +149,10 @@ object MirrorballKitGenerator {
                 write("pad-$n.wav", wet)
                 val dry = MirrorballKits.trial(g, role, Trial.DRY).samples
                 write("dry-$n.wav", dry)
-                if (role in trials) for (t in Trial.entries) if (t != Trial.DRY)
+                if (role in trials) for (t in Trial.entries) if (t != Trial.DRY && t != Trial.RECORDED_TAMBOURINE)
                     write("${t.name.lowercase()}-$n.wav", MirrorballKits.trial(g, role, t).samples)
+                val tambourine = pad.displayName == "Tambourine"
+                if (tambourine) write("recorded_tambourine-$n.wav", MirrorballKits.trial(g, role, Trial.RECORDED_TAMBOURINE).samples)
                 // Soft, medium, hard: four takes each, in the order the pad deals them, read from the export.
                 val clips = MirrorballKits.velocities.flatMap { v -> List(MirrorballKits.TAKES) { t -> play(pad.slot, v, t).first } }
                 val stride = clips.maxOf { it.size } + RATE / 8
@@ -166,7 +168,7 @@ object MirrorballKitGenerator {
                 manifest.append("      {\"slot\": ${pad.slot}, \"name\": \"${pad.displayName}\", \"class\": \"${pad.drumClass}\", ")
                     .append("\"heads\": \"$heads\", \"send\": ${chain.reel.send}, \"repeats\": ${chain.reel.repeats}, ")
                     .append("\"inputDb\": ${chain.press.inputDb}, \"ratio\": \"${chain.press.ratio}\", \"cabHz\": ${chain.combo.cabHz.roundToInt()}, ")
-                    .append("\"seconds\": ${String.format(Locale.ROOT, "%.3f", wet.size / RATE.toDouble())}, \"trial\": ${role in trials}, \"phrase\": ${role >= MirrorballKits.HITS}, ")
+                    .append("\"seconds\": ${String.format(Locale.ROOT, "%.3f", wet.size / RATE.toDouble())}, \"trial\": ${role in trials}, \"tambourine\": $tambourine, \"phrase\": ${role >= MirrorballKits.HITS}, ")
                     .append("\"wet\": ${envelope(wet, max(wet.size, dry.size))}, \"dryEnv\": ${envelope(dry, max(wet.size, dry.size))}}")
                     .append(if (pad.slot == saved.pads.size) "\n" else ",\n")
             }
