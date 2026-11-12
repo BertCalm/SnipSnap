@@ -197,6 +197,6 @@ square clip changed, including LINE A; not heard.
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:
-<https://claude.ai/artifact/7TUKvRhXeFUz9fJTMsEKJn>, built from `768df8a5`
+<https://claude.ai/artifact/7TUKvRhXeFUz9fJTMsEKJn>, built from `768df8a5` (round 1); round 1b republished to the same link from `02b725f2`
 (`gen_audition.py` then `build_page.py`). 54 clips and `manifest.json`. The reference clips
 are not on the page. Owner listening is pending.

@@ -231,7 +231,7 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 1 · PYTHON HARNESS · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 1B · PYTHON HARNESS · NOT HEARD</span></div>
     <h1>ETCH Audition</h1>
     <p class="lede">A squelching step-line bass, then a drive that glues the steps, then a tempo delay into a reverb.
     Built from your two reference clips. These are prototype renders from a Python model, not the app.
