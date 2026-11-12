@@ -50,8 +50,15 @@ open rig (below, "Model 4: the open rig"), and heard their snare, hat and kick t
 "better".
 
  Not in the synth picker yet; that
-entry waits for a session with an Android SDK, as the house rule says. Still to come:
-- the owner's listen to the kit's three pushed pads, the kick's takes and the soft-to-hard grid;
+entry waits for a session with an Android SDK, as the house rule says.
+
+On the open tone (model 4) the owner accepted the kit (2026-11-12):
+- **The balance:** "sounds right now".
+- **The pushed row:** keep all three.
+- **The kick hit again:** "one kick played again: fine".
+- **Every pad, soft to hard:** softer in character, with a fresh hit each time.
+
+Still to come:
 - two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
   first;
 - the surf tom fill;

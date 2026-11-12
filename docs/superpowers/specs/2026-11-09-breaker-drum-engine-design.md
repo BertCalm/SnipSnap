@@ -700,3 +700,18 @@ Checked against what was heard:
     1.2 dB (1.9).
   - **Broadband,** the opened crack of the hit hides it (0.4 and 0.9 dB).
   - **So `BreakerTest` measures it below 2 kHz,** with its 1 dB bound unchanged.
+
+## Heard: the kit on the open tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove, on the open tone: is this BREAKER, balanced the way you want? | **Sounds right now** |
+| The pushed row (A05, A06, A12): keep them? | **Keep all three** |
+| Your kick hit again: one kick played again, or one sample repeated? | **One kick played again: fine** |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | **Yes** |
+
+The page kept the first answer from the model-3 listen, word for word. Asked directly, the owner said
+the open tone "sounds right now".
+
+The BREAKER kit is accepted by ear on model 4. Next come the two genre kits, Dub Tank and Trip hop,
+each laid out for the owner before it is built.
