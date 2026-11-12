@@ -41,10 +41,29 @@ object CypherKitGenerator {
             .filterNot { it.beat >= 7.5 && it.slot == 3 && it.beat % .5 != 0.0 } +
             bar(Hit(4.0, 6, 1f), Hit(6.5, 8, .9f), Hit(5.5, 11, .7f), Hit(7.75, 12, .8f), Hit(7.5, 13, .5f), Hit(7.75, 14, .5f))
         Kit.DRILL -> listOf(0.0, 4.0).flatMap { o -> bar(
-            Hit(o + 0.0, 1, 1f), Hit(o + 1.75, 1, .9f), Hit(o + 0.0, 5, 1f), Hit(o + 1.5, 6, .95f), Hit(o + 2.0, 8, .9f), Hit(o + 3.5, 7, .9f),
-            Hit(o + 1.0, 2, 1f), Hit(o + 2.5, 2, 1f), Hit(o + 1 - 1.0 / 3, 9, .55f), Hit(o + 1 - 1.0 / 6, 9, .7f), Hit(o + 2.5 - 1.0 / 3, 9, .55f), Hit(o + 2.5 - 1.0 / 6, 9, .7f),
+            Hit(o + 0.0, 1, 1f), Hit(o + 1.5, 1, .85f), Hit(o + 0.0, 5, 1f), Hit(o + 1.5, 6, .95f), Hit(o + 2.0, 8, .9f), Hit(o + 3.5, 7, .9f),
+            Hit(o + 2.0, 2, 1f), Hit(o + 3.5, 2, .95f), Hit(o + 2 - 1.0 / 3, 9, .55f), Hit(o + 3.5 - 1.0 / 3, 9, .5f),
         ) + List(8) { Hit(o + it * .5, 3, if (it % 2 == 0) .7f else .45f) } } +
             bar(Hit(3.0, 11, .8f), Hit(7.0, 12, .85f), Hit(7.5, 10, .6f), Hit(6.75, 14, .5f))
+        // Boom bap: swung sixteenth hats, the backbeat, a ghost and a rim; the kit's own swing on the off-beats.
+        Kit.BACKROOM -> listOf(0.0, 4.0).flatMap { o -> bar(
+            Hit(o + 0.0, 1, 1f), Hit(o + 1.0, 2, 1f), Hit(o + 2.5, 1, .85f), Hit(o + 3.0, 2, 1f), Hit(o + 3.75, 7, .6f), Hit(o + 1.75, 10, .45f),
+        ) + List(16) { Hit(o + it * .25 + (if (it % 2 == 1) com.snipsnap.synth.CypherKits.BACKROOM_SWING * .25 else 0.0), if (it == 15) 4 else 3, if (it % 4 == 0) .8f else if (it % 2 == 0) .55f else .35f) } } +
+            bar(Hit(7.25, 9, .5f), Hit(7.5, 11, .7f), Hit(7.75, 12, .85f))
+        // G-funk: the hybrid thump, the snare and clap 18 ms behind, hats 8 ms behind, a shaker, the bell at the turn.
+        Kit.LOWRIDER -> listOf(0.0, 4.0).flatMap { o -> bar(
+            Hit(o + 0.0, 1, 1f), Hit(o + 2.5, 1, .85f), Hit(o + 1.0 + .018 * Kit.LOWRIDER.bpm / 60, 6, 1f), Hit(o + 3.0 + .018 * Kit.LOWRIDER.bpm / 60, 6, 1f), Hit(o + 0.0, 13, .8f),
+        ) + List(8) { Hit(o + it * .5 + .008 * Kit.LOWRIDER.bpm / 60, 3, if (it % 2 == 0) .65f else .4f) } + List(16) { Hit(o + it * .25, 11, if (it % 4 == 2) .5f else .3f) } } +
+            bar(Hit(7.5, 8, .6f), Hit(7.75, 7, .5f))
+        // Dust: a bar of nothing but the stab, then the crash and the break.
+        Kit.DUST -> bar(Hit(0.0, 13, .8f), Hit(2.0, 13, .6f), Hit(4.0, 8, 1f), Hit(4.0, 1, 1f), Hit(5.0, 2, .95f), Hit(5.75, 1, .7f), Hit(6.5, 1, .85f), Hit(7.0, 2, 1f), Hit(7.75, 5, .55f)) +
+            List(8) { Hit(4.0 + it * .5, if (it == 7) 4 else 3, if (it % 2 == 0) .7f else .5f) }
+        // Flint: the fast kick, the high snare, the early slide, and the clicks thrown off the grid.
+        Kit.FLINT -> listOf(0.0, 4.0).flatMap { o -> bar(
+            Hit(o + 0.0, 1, 1f), Hit(o + 0.75, 1, .7f), Hit(o + 2.0, 2, 1f), Hit(o + 3.0, 1, .8f), Hit(o + 0.0, 6, 1f), Hit(o + 2.5, 5, .9f),
+            Hit(o + 0.5, 7, .9f), Hit(o + 1.5, 8, .8f), Hit(o + 1.75, 10, .7f), Hit(o + 2.25, 7, 1f), Hit(o + 3.25, 9, .85f), Hit(o + 3.5, 12, .6f),
+        ) + List(8) { Hit(o + it * .5, 3, if (it % 2 == 0) .6f else .4f) } } +
+            bar(Hit(7.75, 14, .7f), Hit(7.5, 13, .6f))
     }
 
     /** The clip's peak level in 96 steps across [span] frames, for the page's envelope drawing. */
@@ -71,6 +90,10 @@ object CypherKitGenerator {
             val kit = KitAssembler.assembleArranged("Cypher ${g.title}", pads, staging, tempoBpm = g.bpm.toFloat())
             val exported = Mpc3Exporter.exportTrack(kit, staging, File(folder, "mpc"), overwrite = true)
             val data = File(folder, "mpc/${Mpc3TrackWriter.trackDataDirName(kit.name)}")
+            // The other two sampler formats, beside MPC 3: both cycle takes. MPC 2 is not written: its grid
+            // projection keeps only the first take of each zone and does not pass the round-robin gate.
+            com.snipsnap.kit.SfzWriter.write(kit, staging, File(folder, "sfz"), overwrite = true)
+            com.snipsnap.kit.DecentSamplerWriter.write(kit, staging, File(folder, "decentsampler"), overwrite = true)
             val saved = KitStore.load(staging)
             check(saved == kit) { "${g.title}: the reloaded kit differs from the one saved" }
             TriadKitProof.verify(saved, staging, pads)
@@ -139,9 +162,12 @@ object CypherKitGenerator {
             for (i in out.indices) out[i] *= trim
             write("groove.wav", out)
             File(folder, "kit-source.json").writeText(File(staging, KitStore.FILE_NAME).readText())
-            println("Verified ${g.title}: 16 pads, 192 slices, saved PCM + playback + MPC 3 track, built in $buildMs ms, groove bus trim $trim")
+            println("Verified ${g.title}: 16 pads, 192 slices, saved PCM + playback + MPC 3 track + SFZ + DecentSampler, built in $buildMs ms, groove bus trim $trim")
         }
         manifest.append("  ]\n}\n")
+        File(root, "README.txt").writeText("CYPHER kits, version ${CypherKits.VERSION}: six hip-hop drum kits, three velocity zones of four takes per pad.\n" +
+            "MPC 3, SFZ and DecentSampler exports cycle takes. MPC 2 is not written: it keeps each zone's first take and does not pass the round-robin export gate.\n" +
+            "Nothing here has been played on a phone or an MPC.\n")
         File(root, "verification.csv").writeText(proof.toString())
         File(root, "metrics.csv").writeText(metrics.toString())
         File(root, "manifest.json").writeText(manifest.toString())

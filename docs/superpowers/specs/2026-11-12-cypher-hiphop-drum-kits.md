@@ -501,6 +501,33 @@ its onsets by a few milliseconds; the kit's timing is sample-accurate.
 Not built: BACKROOM, LOWRIDER, DUST, FLINT (round 2), the riser, SFZ and DecentSampler exports. Not heard:
 everything. The [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner.
 
+## Round 1b heard, round 2 (2026-11-12)
+
+"Ok, sounds good. Make sure we clear the approval gates." TRAP and DRILL are approved at kit version 2.
+Round 2 builds the other four kits and closes what software can close:
+
+- **BACKROOM, LOWRIDER, DUST, FLINT** as in §8, with these changes against the design: BACKROOM's accepted six
+  are read from `BoomBapKits.parts()` and their hard first take is the accepted recipe at its own level into
+  its rack (`KitStrikes.struck`'s `exact`), because the rack's converter and tape answer to level and a
+  renormalised strike was not the accepted sound. The ten new pads use the same rack. LOWRIDER's long room
+  is the GATECRASH stage with no crush, open 900 ms: a room that rings out, energy-measured like every space,
+  rather than `Room.process` mixed by hand. Its snare is tuned well under BACKROOM's (both SKIN snares; at
+  the design's tuning they measured as one drum). DUST's crash is BREAKER's fitted cymbal at 1.4 s with a
+  half-second fade, under the loop floor. FLINT's kick is ONSET's, not THUMP's (a third THUMP kick measured
+  as DRILL's). A print (`Part.print`, `Phrase.print`) applies a rack, tape or vinyl after the space.
+- **The feel laws** (`Cypher.swung`, `behind`, `humanised`): swing .14 of a sixteenth on the off-beat
+  sixteenths, 18 and 8 ms behind, ±22 ms seeded for the unquantized break, ±6 ms for the click scatter.
+- **SKIN takes on the new kits** (`KitStrikes.skinStruck`): a drummer's force spread from `Restrike.landing`
+  plus a small move of decay, contact and sag (kick, tom) or snap and sizzle (snare), at twice the usual
+  step. A soft kick's re-strikes through BACKROOM's dark rack were 0.003 apart without it. GATECRASH keeps
+  `skin` as approved.
+- **SUB's length is its DECAY.** The design scaled t60 by velocity; a softer take then shortened the drum,
+  which the robin's windows showed (`ThumpSubRobinTest`). Velocity moves drive, click and settle only.
+- **SUB presets:** the eight sub recipes of the approved kits, named TRAP ROOT, TRAP LOW, TRAP DOWN, TRAP UP,
+  DRILL ROOT, DRILL DOWN, DRILL UP, DRILL LATE. SUB leaves `PROTOTYPE_VOICES`.
+- **Exports:** SFZ and DecentSampler beside MPC 3; MPC 2 is not written.
+- `CypherKits.VERSION` is 3. Not heard: the four new kits.
+
 ## Round 1 heard, round 1b (2026-11-12)
 
 The owner heard round 1 and said: "The triple snare thing is messy." That is DRILL's A15. Two causes, both

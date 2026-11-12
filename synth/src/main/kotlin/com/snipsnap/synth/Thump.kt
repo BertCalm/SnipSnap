@@ -341,8 +341,10 @@ object Thump {
         val v = StrikeVelocity.settled(velocity)
         val tk = SUB_TAKES[Math.floorMod(take, SUB_TAKES.size)]
         val root = subRootHz(m.getValue("TUNE"))
-        // A softer hit rings a little less (shape).
-        val t60 = subT60(m.getValue("DECAY")) * (0.85f + 0.15f * v)
+        // The decay is the knob, not the touch: on the machines this comes from, decay never followed
+        // velocity, and a take or a soft zone that changed the drum's length would also change the robin's
+        // windows. Velocity moves the drive, the click and the settle instead.
+        val t60 = subT60(m.getValue("DECAY"))
         val hold = 0.012f
         val settleOct = 0.35f * (0.6f + 0.4f * v) * tk.settle
         val settleTau = 0.012f

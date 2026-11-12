@@ -149,9 +149,15 @@ class CypherTest {
         // The before-window starts 100 ms in, past the settle; a quarter second so the detector can call a
         // note near its 40 Hz floor. The after-window starts where the slide has had three time constants.
         for (kit in Kit.entries) for (role in subs(kit)) {
+            // The root window ends before the pad's slide starts (an early slide moves by 150 ms) and starts
+            // after the settle (12 cents high at 50 ms, 2 at 60).
+            val m = assertNotNull(CypherKits.parts(kit)[role].subMacros)
+            val d = Thump.defaults(ThumpVoice.SUB) + m
+            val slideAt = Thump.subSlideStart(d.getValue("WHEN"), Thump.subT60(d.getValue("DECAY")))
+            val from = min(.10f, max(.06f, slideAt - .10f))
             val roots = mutableListOf<Float>()
             for (v in CypherKits.velocities) for (take in 0 until CypherKits.TAKES) {
-                roots += subHz(CypherKits.dry(kit, role, v, take).samples, .10f, .12f)
+                roots += subHz(CypherKits.dry(kit, role, v, take).samples, from, .08f)
             }
             assertTrue(cents(roots.max(), roots.min()) < 10.0, "${kit.name} role $role: roots $roots")
         }
@@ -159,6 +165,7 @@ class CypherTest {
         val expected = mapOf(
             (Kit.TRAP to 6) to -500.0, (Kit.TRAP to 7) to 1200.0,
             (Kit.DRILL to 5) to -700.0, (Kit.DRILL to 6) to 1200.0, (Kit.DRILL to 7) to -500.0,
+            (Kit.FLINT to 4) to -500.0,
         )
         for ((where, target) in expected) {
             val (kit, role) = where
@@ -176,7 +183,7 @@ class CypherTest {
             assertEquals(target * .95, cents(after, root), 80.0, "${kit.name} role $role moved ${cents(after, root)} cents")
         }
         // The straight subs do not move.
-        for ((kit, role) in listOf(Kit.TRAP to 4, Kit.TRAP to 5, Kit.DRILL to 4)) {
+        for ((kit, role) in listOf(Kit.TRAP to 4, Kit.TRAP to 5, Kit.DRILL to 4, Kit.LOWRIDER to 12, Kit.FLINT to 5)) {
             val s = CypherKits.dry(kit, role, 1f, 0)
             val a = subHz(s.samples, .10f, .12f)
             val b = subHz(s.samples, s.frameCount / rate.toFloat() - .35f, .12f)
@@ -194,7 +201,8 @@ class CypherTest {
     @Test fun `the hats obey the ratchet rule`() {
         // A hat whose decay to -60 dB is at most 1.5 times the shortest period in its kit's roll keeps a 35 dB
         // dip between hits (prototype/cypher, Python); past four times it is a buzz. The closed hat is pad 2.
-        for (kit in Kit.entries) {
+        // TRAP and DRILL roll their hats; FLINT scatters clicks instead and its hat is held by its own DECAY.
+        for (kit in listOf(Kit.TRAP, Kit.DRILL)) {
             val period = assertNotNull(CypherKits.shortestPeriod(kit, 2), "${kit.name}: the hat never rolls")
             for (take in 0 until CypherKits.TAKES) {
                 val t60 = decaySeconds(CypherKits.dry(kit, 2, 1f, take).samples)
@@ -255,11 +263,15 @@ class CypherTest {
         // 1.7, and a sub is already at full level). On every phrase, every written note is instead an
         // onset: the 3 ms after its start are louder than the 3 ms before it. The 1/64 roll is held by the
         // ratchet test instead.
+        // 1/64 roll is held by the ratchet test instead. Each note is checked in its own part's render, so a
+        // neighbouring drum's attack (a kick 5 ms before a hat in the unquantized break) cannot hide it.
         for (kit in Kit.entries) for (role in CypherKits.HITS until CypherKits.PADS) {
             if (kit == Kit.TRAP && role == 14) continue
             val phrase = CypherKits.phrases(kit)[role - CypherKits.HITS]
-            val x = CypherKits.dryRaw(kit, role, 1f, 0)
+            val parts = phrase.notes.map { it.part }.toSet()
+            val renders = parts.associateWith { CypherKits.partRaw(kit, role, it, 1f, 0) }
             for (note in phrase.notes) {
+                val x = renders.getValue(note.part)
                 val start = Cypher.startFrame(note, kit.bpm)
                 val before = rms(x, start - frames(3f), start)
                 val after = rms(x, start, start + frames(3f))
@@ -340,23 +352,69 @@ class CypherTest {
         }
     }
 
-    @Test fun `the two kits are two kits`() {
+    @Test fun `the six kits are six kits`() {
         val names = Kit.entries.map { CypherKits.roles(it) }
         for (roles in names) { assertEquals(CypherKits.PADS, roles.size); assertEquals(roles.size, roles.toSet().size) }
-        assertEquals(2, Kit.entries.map { it.bpm }.toSet().size)
-        // At least six pads are differently named parts, the main snare is printed differently, and the hats
-        // roll on different grids.
-        assertTrue((names[0] zip names[1]).count { (a, b) -> a != b } >= 6)
-        assertNull(CypherKits.spaceOf(Kit.TRAP, 1))
-        assertNotNull(CypherKits.spaceOf(Kit.DRILL, 1))
-        assertTrue(assertNotNull(CypherKits.shortestPeriod(Kit.TRAP, 2)) < assertNotNull(CypherKits.shortestPeriod(Kit.DRILL, 2)))
-        // The kick and the main snare are different drums in each kit, dry, before any space.
-        for (role in 0..1) {
-            val drums = Kit.entries.map { CypherKits.dry(it, role, 1f, 0).samples }
-            assertTrue(shapeDistance(drums[0], drums[1]) > .5, "role $role: the kits share a drum")
+        assertEquals(6, Kit.entries.map { it.bpm }.toSet().size)
+        // Every pair of kits differs in at least six pad names, and the kick and the main snare are different
+        // drums in every kit, dry, before any space or print. "Different effect strengths on the same kit are
+        // not sufficient evidence of distinct genre kits" (the owner's gate).
+        for (a in Kit.entries.indices) for (b in a + 1 until Kit.entries.size) {
+            assertTrue((names[a] zip names[b]).count { (x, y) -> x != y } >= 6, "${Kit.entries[a]} and ${Kit.entries[b]} share pads")
+            for (role in 0..1) {
+                val d = shapeDistance(CypherKits.dry(Kit.entries[a], role, 1f, 0).samples, CypherKits.dry(Kit.entries[b], role, 1f, 0).samples)
+                assertTrue(d > .5, "role $role: ${Kit.entries[a]} and ${Kit.entries[b]} share a drum ($d)")
+            }
         }
+        // The prints differ too: TRAP's snare is dry, DRILL's is in a room, BACKROOM's through the rack, DUST's on tape.
+        assertNull(CypherKits.spaceOf(Kit.TRAP, 1)); assertNull(CypherKits.printOf(Kit.TRAP, 1))
+        assertNotNull(CypherKits.spaceOf(Kit.DRILL, 1))
+        assertEquals("backroom", CypherKits.printOf(Kit.BACKROOM, 1)?.name)
+        assertEquals("tape", CypherKits.printOf(Kit.DUST, 1)?.name)
+        assertNotNull(CypherKits.spaceOf(Kit.LOWRIDER, 1))
+        assertTrue(assertNotNull(CypherKits.shortestPeriod(Kit.TRAP, 2)) < assertNotNull(CypherKits.shortestPeriod(Kit.DRILL, 2)))
         // No hat and no sub has a space in any kit.
         for (kit in Kit.entries) for (role in listOf(2, 3) + subs(kit)) assertNull(CypherKits.spaceOf(kit, role), "${kit.name} role $role")
+    }
+
+    @Test fun `BACKROOM opens with the accepted Backroom sound`() {
+        // A01 to A06's hard first take is the accepted study's strike through its accepted rack, before the
+        // kit's own zone level and DC block: the same waveform shape to within a hair.
+        for ((role, part) in BoomBapKits.parts().withIndex()) {
+            // Through the kit's own finish (its 20 Hz block and tail trim), so only the strike and the rack are compared.
+            val accepted = KitStrikes.finish(PadRecipe(part.patch, BoomBapKits.colorationFor(part.id)).render().samples.copyOf(), 1f, ceiling = Float.MAX_VALUE).samples
+            val kit = CypherKits.render(Kit.BACKROOM, role, 1f, 0).samples
+            val n = min(accepted.size, kit.size)
+            val d = shapeDistance(accepted.copyOf(n), kit.copyOf(n))
+            assertTrue(d < .05, "${part.id}: the kit's pad is not the accepted sound ($d)")
+        }
+        // And its softer zones and later takes are still different strikes (the family's rule), not the accepted bytes.
+        assertTrue(shapeDistance(CypherKits.dry(Kit.BACKROOM, 0, 1f, 0).samples, CypherKits.dry(Kit.BACKROOM, 0, 1f, 1).samples) > .005)
+    }
+
+    @Test fun `the feel laws move notes by what they say`() {
+        val bpm = Kit.BACKROOM.bpm
+        // Swing: every off-beat sixteenth late by the kit's swing share of a sixteenth; nothing else moves.
+        val hats = CypherKits.phrases(Kit.BACKROOM)[0].notes
+        val sixteenth = 60_000f / bpm / 4
+        for (n in hats) {
+            val step = Math.round(n.beat * 4).toInt()
+            assertEquals(if (step % 2 == 1) CypherKits.BACKROOM_SWING * sixteenth else 0f, n.offsetMs, 1e-3f, "step $step")
+        }
+        // Behind the beat: the laid-back snare notes are 18 ms late, the hats 8, the kick on time.
+        val laid = CypherKits.phrases(Kit.LOWRIDER)[0].notes
+        assertTrue(laid.filter { it.part == 5 }.all { it.offsetMs == 18f })
+        assertTrue(laid.filter { it.part == 2 }.all { it.offsetMs == 8f })
+        assertTrue(laid.filter { it.part == 0 }.all { it.offsetMs == 0f })
+        // Unquantized: every note of the dusty break is off the grid, within the spread, and the same every build.
+        val dusty = CypherKits.phrases(Kit.DUST)[0].notes
+        assertTrue(dusty.all { abs(it.offsetMs) <= CypherKits.DUST_SPREAD_MS })
+        assertTrue(dusty.count { abs(it.offsetMs) > 3f } >= dusty.size / 2, "the break is barely off the grid")
+        assertEquals(dusty.map { it.offsetMs }, CypherKits.phrases(Kit.DUST)[0].notes.map { it.offsetMs })
+        // Scatter: the clicks move a few ms, the kick and snare do not.
+        val scatter = CypherKits.phrases(Kit.FLINT)[0].notes
+        assertTrue(scatter.filter { it.part in 6..10 }.all { abs(it.offsetMs) <= CypherKits.FLINT_SCATTER_MS })
+        assertTrue(scatter.filter { it.part <= 1 }.all { it.offsetMs == 0f })
     }
 
     @Test fun `a built kit carries its grid its classes its chokes and its provenance`() {
@@ -365,7 +423,7 @@ class CypherTest {
             assertEquals(CypherKits.PADS, pads.size)
             assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN), pads.take(4).map { it.drumClass })
             assertEquals(listOf(DrumClass.LOOP, DrumClass.LOOP), pads.takeLast(2).map { it.drumClass })
-            assertEquals(4, subs(kit).size, "${kit.name} has four subs")
+            assertEquals(when (kit) { Kit.TRAP, Kit.DRILL -> 4; Kit.LOWRIDER -> 1; Kit.FLINT -> 2; else -> 0 }, subs(kit).size, "${kit.name} subs")
             for ((role, pad) in pads.withIndex()) {
                 assertEquals(3, pad.velocityTakes.size)
                 assertTrue(pad.velocityTakes.all { it.size == CypherKits.TAKES })

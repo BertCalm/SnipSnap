@@ -33,11 +33,11 @@ internal object KitStrikes {
     /** How far one step of [jitter] moves a 0..1 control. At 0.02 a hat's pitch moves about a sixth of a semitone. */
     const val TAKE_STEP = .02f
 
-    fun varied(m: Map<String, Float>, vary: List<String>, take: Int): Map<String, Float> {
+    fun varied(m: Map<String, Float>, vary: List<String>, take: Int, stepSize: Float = TAKE_STEP): Map<String, Float> {
         val out = m.toMutableMap()
         // Alternate the direction from control to control, so a take is not simply "everything up".
         for ((i, name) in vary.withIndex()) {
-            val step = jitter(take) * TAKE_STEP * if (i % 2 == 0) 1f else -1f
+            val step = jitter(take) * stepSize * if (i % 2 == 0) 1f else -1f
             out[name] = ((out[name] ?: .5f) + step).coerceIn(0f, 1f)
         }
         return out
@@ -69,23 +69,78 @@ internal object KitStrikes {
         vary: List<String>,
         soft: (Float) -> Map<String, Float>,
         tuneOctaves: Float = 0f,
+        exactFirst: Boolean = false,
     ): Strike = { v, t, semis ->
-        val x = render(retuned(varied(base + soft(v), vary, t), semis, tuneOctaves))
-        val contact = Dsp.FixedOnePole(2_500f + 15_500f * v)
-        FloatArray(x.size) { contact.lp(x[it]) }
+        // [exactFirst]: the hard first take is the authored render itself, untouched, so a kit built on an
+        // accepted sound (BACKROOM's six Backroom pads) opens with exactly that sound. The other takes and
+        // zones are touched as usual.
+        if (exactFirst && v >= 1f && t == 0 && semis == 0f) render(base) else {
+            val x = render(retuned(varied(base + soft(v), vary, t), semis, tuneOctaves))
+            val contact = Dsp.FixedOnePole(2_500f + 15_500f * v)
+            FloatArray(x.size) { contact.lp(x[it]) }
+        }
     }
 
     fun thump(voice: ThumpVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "DECAY"),
               soft: (Float) -> Map<String, Float> = { emptyMap() }): Strike =
         touched({ Thump.render(voice, it).samples }, base, vary, soft, THUMP_TUNE_OCTAVES[voice] ?: 0f)
 
+    /** [exactFirst] sits before [soft] so a trailing lambda is still the soft law. */
     fun skinTouched(voice: SkinVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "DECAY"),
-                    soft: (Float) -> Map<String, Float> = { emptyMap() }): Strike =
-        touched({ Skin.render(voice, it).samples }, base, vary, soft)
+                    exactFirst: Boolean = false, soft: (Float) -> Map<String, Float> = { emptyMap() }): Strike =
+        touched({ Skin.render(voice, it).samples }, base, vary, soft, exactFirst = exactFirst)
+
+    /** TERRA's drums strike at the velocity themselves; a take moves where and how hard the hand lands. */
+    fun terra(voice: TerraVoice, base: Map<String, Float>, vary: List<String> = listOf("POS", "FORCE")): Strike =
+        { v, t, _ -> Terra.render(voice, varied(base, vary, t), v).samples }
+
+    /** TINES has no strike velocity: touched, with BRIGHT as the stick. */
+    fun tines(voice: TinesVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "BRIGHT"),
+              soft: (Float) -> Map<String, Float> = { v -> mapOf("BRIGHT" to .25f + .4f * v) }): Strike =
+        touched({ Tines.render(voice, it).samples }, base, vary, soft)
+
+    /**
+     * BREAKER's fitted cymbal, struck at the velocity and take, [seconds] long with a [fadeSeconds] cosine
+     * fade at its end so a crash can sit under the classifier's 1.5 s loop floor without a chop.
+     */
+    fun cymbal(kind: BreakerCymbal.Kind, seconds: Float, fadeSeconds: Float, pitch: Double = 1.0): Strike = { v, t, _ ->
+        val x = BreakerCymbal.render(kind, v, t, seconds, pitch)
+        Dsp.fadeTailCosine(x, fadeSeconds)
+        x
+    }
+
+    /** The same drum struck at [factor] of the asked velocity: a ghost note as a pad of its own. */
+    fun softer(strike: Strike, factor: Float): Strike = { v, t, semis -> strike(v * factor, t, semis) }
 
     /** SKIN's struck voices (kick, snare, tom) take velocity and take themselves: a real re-strike. */
     fun skin(voice: SkinVoice, vararg m: Pair<String, Float>): Strike =
         { v, t, _ -> Skin.render(voice, mapOf(*m), v, t).samples }
+
+    /**
+     * SKIN's struck voices with a drummer's force spread on the later takes: [Restrike.landing]'s law (up to
+     * 15 percent softer, drawn from the take), on top of the fresh strike noise [skin] gives. A soft kick's
+     * re-strikes are nearly alike without it (GATECRASH's weakest pair). Not used by GATECRASH, whose sound
+     * is approved as [skin] made it.
+     */
+    fun skinStruck(voice: SkinVoice, vararg m: Pair<String, Float>): Strike = { v, t, _ ->
+        val force = if (t == 0) v else Restrike.landing(v, Dsp.seedFor("CYPHER", voice.name, m.toList()), t).first
+        Skin.render(voice, if (t == 0) mapOf(*m) else varied(mapOf(*m), skinTakeVary(voice), t, SKIN_TAKE_STEP), force, t).samples
+    }
+
+    /** Twice the usual step on a struck SKIN drum's takes: a soft kick through a dark rack needs it to read as another hit. */
+    const val SKIN_TAKE_STEP = 2 * TAKE_STEP
+
+    /**
+     * What a later take of a SKIN drum also moves, a little: the decay, the stick's contact and the pitch sag
+     * on a kick or tom, the snap and sizzle on a snare. A soft kick's re-strikes through a dark rack were
+     * otherwise nearly alike (measured 0.003 apart on BACKROOM's low knock at the soft zone, where the family
+     * asks 0.005); a slightly different length is what reads as another hit there.
+     */
+    fun skinTakeVary(voice: SkinVoice): List<String> = if (voice == SkinVoice.SNARE) listOf("SNAP", "SIZZLE") else listOf("DECAY", "CLICK", "DROP")
+
+    /** ONSET's kick reads velocity (the same contact law as THUMP's); a take moves its tune and snap a little. */
+    fun onsetKick(vararg m: Pair<String, Float>): Strike =
+        { v, t, _ -> Onset.render(OnsetVoice.KICK, varied(mapOf(*m), listOf("TUNE", "SNAP"), t), ONSET_MODEL, v).samples }
 
     /** THUMP's kick reads velocity itself (less pitch drop, a duller click, less drive). */
     fun thumpKick(vararg m: Pair<String, Float>): Strike =
@@ -136,9 +191,14 @@ internal object KitStrikes {
         return peak
     }
 
-    /** A dry strike scaled to peak at [peak]. The engines peak-normalise every render, so level is set here. */
-    fun struck(strike: Strike, velocity: Float, take: Int, peak: Float, tuneSemis: Float = 0f): FloatArray {
+    /**
+     * A dry strike scaled to peak at [peak]. The engines peak-normalise every render, so level is set here.
+     * [exact] leaves the hard first take at the engine's own level: a rack with a converter and a tape in it
+     * answers to level, and an accepted recipe fed its rack what the engine made, not a renormalised copy.
+     */
+    fun struck(strike: Strike, velocity: Float, take: Int, peak: Float, tuneSemis: Float = 0f, exact: Boolean = false): FloatArray {
         val x = strike(velocity, take, tuneSemis)
+        if (exact && velocity >= 1f && take == 0 && tuneSemis == 0f) return x
         val k = peakOf(x).let { if (it > 1e-9f) peak / it else 0f }
         return FloatArray(x.size) { x[it] * k }
     }
@@ -207,6 +267,20 @@ internal object Cypher {
             if (offbeat) Note(n.beat, n.part, n.weight, n.offsetMs + swing * sixteenthMs, n.tuneSemis) else n
         }
     }
+
+    /**
+     * Every note moved by its own seeded offset in -[spreadMs]..+[spreadMs]: the "unquantized" break, or a
+     * scatter of clicks off the grid. Drawn once from [seed] and the note's index, so the feel is fixed by
+     * the kit version and a build never changes it (the determinism canary would catch it if it did).
+     */
+    fun humanised(notes: List<Note>, spreadMs: Float, seed: String): List<Note> = notes.mapIndexed { i, n ->
+        val draw = Dsp.Noise(Dsp.seedFor("CYPHER", "feel", seed, i)).next()
+        Note(n.beat, n.part, n.weight, (n.offsetMs + draw * spreadMs).coerceIn(-60f, 60f), n.tuneSemis)
+    }
+
+    /** Every note of [parts] moved by [ms]: the backbeat 18 ms behind, the hats 8 ms behind. */
+    fun behind(notes: List<Note>, parts: Set<Int>, ms: Float): List<Note> =
+        notes.map { n -> if (n.part in parts) Note(n.beat, n.part, n.weight, n.offsetMs + ms, n.tuneSemis) else n }
 
     /**
      * A ratchet: [count] notes of [part] from [beat], one every [division] of a beat, the weight rising from

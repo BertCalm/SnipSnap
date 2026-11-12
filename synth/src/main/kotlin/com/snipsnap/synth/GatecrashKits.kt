@@ -246,7 +246,7 @@ object GatecrashKits {
 
     private fun skinTouched(voice: SkinVoice, base: Map<String, Float>, vary: List<String> = listOf("TUNE", "DECAY"),
                             soft: (Float) -> Map<String, Float> = { emptyMap() }): (Float, Int) -> FloatArray =
-        KitStrikes.skinTouched(voice, base, vary, soft).let { s -> { v, t -> s(v, t, 0f) } }
+        KitStrikes.skinTouched(voice, base, vary, soft = soft).let { s -> { v, t -> s(v, t, 0f) } }
 
     /** THUMP's kick reads velocity itself (less pitch drop, a duller click, less drive). */
     private fun thumpKick(vararg m: Pair<String, Float>): (Float, Int) -> FloatArray =

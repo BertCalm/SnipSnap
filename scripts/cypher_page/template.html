@@ -6,7 +6,7 @@
    lays it out (A13 top-left, A01 bottom-left), the selected pad's measured envelope on the right. */
 :root {
   --bg: #e4e7ec; --panel: #f3f5f8; --ink: #18202b; --muted: #55606f; --line: #c3cad4;
-  --stone: #2f5f8f; --machine: #a8327a; --electro: #9a6a00; --trap: #7a2fa0; --drill: #1f6f6a;
+  --stone: #2f5f8f; --machine: #a8327a; --electro: #9a6a00; --trap: #7a2fa0; --drill: #1f6f6a; --backroom: #8a4b00; --lowrider: #2f5f8f; --dust: #5b5248; --flint: #a8327a;
   --accent: var(--stone); --wet: var(--accent); --dry: #18202b; --warn: #8a4b00; --pad: #fbfcfd;
   --display: "Chakra Petch", "Arial Narrow", sans-serif;
   --body: "IBM Plex Sans", system-ui, sans-serif;
@@ -14,7 +14,7 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #141a22; --panel: #1c242e; --ink: #e6ebf2; --muted: #9aa6b5; --line: #334050;
-  --stone: #7fb2e6; --machine: #ee7fc0; --electro: #e8b64a; --trap: #c99bf0; --drill: #7fd6cf; --dry: #e6ebf2; --warn: #f0b060; --pad: #232d39;
+  --stone: #7fb2e6; --machine: #ee7fc0; --electro: #e8b64a; --trap: #c99bf0; --drill: #7fd6cf; --backroom: #f0b060; --lowrider: #7fb2e6; --dust: #c9bfae; --flint: #ee7fc0; --dry: #e6ebf2; --warn: #f0b060; --pad: #232d39;
   color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #141a22; --panel: #1c242e; --ink: #e6ebf2; --muted: #9aa6b5; --line: #334050;
@@ -77,8 +77,8 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
   <header>
     <h1>CYPHER</h1>
     <p class="gesture">kick and snare → the print → the hats' grid → the phrase that proves the genre</p>
-    <p>Two hip-hop drum kits for the FRESH TAPE shelf, the first of six: TRAP and DRILL, the two that need the new sliding sub. Tap a pad to hear it.</p>
-    <p class="status"><strong>Round 1b.</strong> On round 1 the owner heard DRILL's A15 as messy. It sent the kick and hats through the room as well as the snare, so every hat re-opened the gate and the room never closed, and its two clap pickups 70 ms apart smeared. It is now the drill shape: snare on three and the and of four, one eighth-triplet clap before each, kick and hats dry, only the snare and clap in the room. Nothing else changed. Every sub pad still plays at three other DRIVE settings so you can choose how much of it a phone should hear.</p>
+    <p>Six hip-hop drum kits for the FRESH TAPE shelf. Tap a pad to hear it.</p>
+    <p class="status"><strong>Round 2.</strong> TRAP and DRILL are the round 1b kits you approved ("Ok, sounds good"), unchanged. BACKROOM, LOWRIDER, DUST and FLINT are new and not heard. BACKROOM opens with the six Backroom pads you accepted on 2026-11-07, byte for byte through their rack, plus ten more through the same rack and two swung phrases. LOWRIDER's snare, clap and toms bloom into a long room; its laid-back phrase puts the backbeat 18 ms behind. DUST is raw tape with no compressor, a crash, and an unquantized break on crackle. FLINT is the fast kit with clicks thrown off the grid.</p>
   </header>
 
   <div class="kits" id="kits" role="group" aria-label="Kit"></div>
@@ -122,8 +122,11 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
         <li><strong>Does the hat roll roll?</strong> TRAP A15 tightens from eighths to sixty-fourths and rises at the end. If the last beat is a buzz rather than hits, say so.</li>
         <li><strong>Is the drill room right?</strong> DRILL's snare, clap and metal hits are in one dark big room; "Play dry" plays the same strike without it. Too much, too little, too dark?</li>
         <li><strong>Do soft strikes sound like the same drum, and do the four takes sound like four hits?</strong> "Play all 12 strikes": four soft, four medium, four hard. The sub's takes differ mostly in drive and click.</li>
-        <li><strong>Are these two kits?</strong> Different subs, snares, hats and grids. If they read as one kit at two tempos, that is the finding.</li>
-        <li><strong>The pads that are not here yet:</strong> four more kits follow (boom bap, G-funk, cinematic, Michigan) once these two are heard.</li>
+        <li><strong>BACKROOM:</strong> A01 to A06 should be exactly the Backroom sound you accepted. Do the ten new pads belong with them, and do the swung hats (A15) nod?</li>
+        <li><strong>LOWRIDER:</strong> is the snare's room drenched enough, or too much? Is the laid-back phrase (A15) behind the beat, or just late?</li>
+        <li><strong>DUST:</strong> is the tape thud raw enough with no compressor? Does the unquantized break (A15) read as feel, or as a mistake? A16 adds the crash on the one.</li>
+        <li><strong>FLINT:</strong> do the clicks (A07 to A11) sound thrown, and does the early slide (A05) land in time at 120?</li>
+        <li><strong>Are these six kits?</strong> If any two read as one kit at two tempos, that is the finding.</li>
       </ol>
     </div>
     <div>
@@ -138,16 +141,17 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
     <div class="tablewrap"><table>
       <thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead>
       <tbody>
-        <tr><td>Several distinct genre kits on the shelf</td><td class="open">Two of six</td><td>TRAP and DRILL under SKINS. Tests check they differ in drums, prints, tempo and hat grid. Four kits follow.</td></tr>
-        <tr><td>Authored roll or riser</td><td class="ok">Built</td><td>A hat roll and a sub line on TRAP; a triplet snare bar and a sub call on DRILL.</td></tr>
+        <tr><td>Several distinct genre kits on the shelf</td><td class="ok">Six, in software</td><td>All six under SKINS. Tests check every pair differs in at least six pads and in its kick and snare, and that the prints differ. Four of the six are not heard.</td></tr>
+        <tr><td>Authored roll or riser</td><td class="ok">Built</td><td>A hat roll and a sub line on TRAP; a drill snare bar and a sub call on DRILL; swung hats and a break drop; a laid-back groove and a big fill; two unquantized breaks; a click scatter and a slide stack.</td></tr>
         <tr><td>Velocity: rendering</td><td class="ok">Verified</td><td>Every hit measures duller at the soft zone, every sub cleaner; the sub's root does not move with velocity.</td></tr>
         <tr><td>Round robin: rendering</td><td class="ok">Verified</td><td>Four different takes in every zone of every pad. The sub deals five settings out and keeps its root within 10 cents.</td></tr>
-        <tr><td>Saving</td><td class="ok">Verified</td><td>All 384 slices match after save and reload.</td></tr>
+        <tr><td>Saving</td><td class="ok">Verified</td><td>All 1152 slices match after save and reload.</td></tr>
         <tr><td>Playback</td><td class="ok">Verified in software</td><td>The app's own pad resolver picks the zone and deals takes in order, then repeats.</td></tr>
         <tr><td>Export: MPC 3</td><td class="ok">Verified by read-back</td><td>Velocity ranges, slice starts and cycle lengths read back from the exported track.</td></tr>
-        <tr><td>Export: MPC 2</td><td class="open">Does not pass</td><td>MPC 2's format keeps only the first take of each zone.</td></tr>
+        <tr><td>Export: SFZ and DecentSampler</td><td class="ok">Written</td><td>Both formats cycle takes; written beside the MPC 3 track by the generator.</td></tr>
+        <tr><td>Export: MPC 2</td><td class="open">Does not pass</td><td>MPC 2's format keeps only the first take of each zone. A format limit, stated.</td></tr>
         <tr><td>Phone and MPC hardware</td><td class="open">Not verified</td><td>Nothing has been played on a device.</td></tr>
-        <tr><td>Sound character</td><td class="open">Not heard</td><td>Round 1 is waiting for you.</td></tr>
+        <tr><td>Sound character</td><td class="open">Two of six approved</td><td>TRAP and DRILL approved at round 1b. The four new kits wait for you.</td></tr>
         <tr><td>Melodic voices, keygroups, chord tools, HOLD</td><td>Not applicable</td><td>These are drum kits with finite hits.</td></tr>
       </tbody>
     </table></div>
@@ -157,7 +161,7 @@ th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-
 <script>
 const DATA = /*MANIFEST*/;
 const EXT = "/*EXT*/";
-const accents = { "cypher-trap": "var(--trap)", "cypher-drill": "var(--drill)" };
+const accents = { "cypher-trap": "var(--trap)", "cypher-drill": "var(--drill)", "cypher-backroom": "var(--backroom)", "cypher-lowrider": "var(--lowrider)", "cypher-dust": "var(--dust)", "cypher-flint": "var(--flint)" };
 let kit = DATA.kits[0], pad = kit.pads[0], audio = null;
 const $ = id => document.getElementById(id);
 const nn = n => String(n).padStart(2, "0");
@@ -200,7 +204,7 @@ function drawGrid() {
 }
 function drawDetail() {
   $("dName").textContent = "A" + nn(pad.slot) + "  " + pad.name;
-  const how = pad.space === "STONE" ? "dark big room" : pad.sub ? "sub, dry, chokes other subs" : "dry";
+  const how = pad.space === "STONE" ? "room" : pad.sub ? "sub, dry, chokes other subs" : "dry";
   $("dTag").textContent = pad["class"].replace("_", " ").toLowerCase() + " · " + how + " · " + pad.seconds.toFixed(2) + " s";
   const W = 400, H = 120, top = 8;
   let s = '<line x1="0" y1="' + (top + H) + '" x2="' + W + '" y2="' + (top + H) + '" stroke="var(--line)" stroke-width="1"/>';

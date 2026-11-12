@@ -144,18 +144,24 @@ Round 1 is a Python prototype audition; no Kotlin exists.
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
 
-## CYPHER kits and THUMP SUB (round 1, 2026-11-12)
+## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
-Hip-hop drum kits in the GATECRASH shape, two of six built: TRAP and DRILL. See [CYPHER](CYPHER.md).
+Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), and that approval covers TRAP and DRILL. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
 
-- **Melodic, keygroup and chord-tool gates:** not applicable. These are drum kits; SUB is a drum voice.
-- **Articulation:** finite hits, no HOLD. Each kit has two authored phrases: TRAP a hat roll (to 1/64, rising) and a sub line; DRILL a triplet snare bar in its room and a sub call. The roll is the family's roll; a riser is not built.
-- **Drum shelf: two of six, in software, not heard.** TRAP and DRILL are on the shelf under SKINS. `CypherTest` checks they differ in tempo, in at least six pad sources, in the main snare's print and in the hat grid. BACKROOM, LOWRIDER, DUST and FLINT are not built.
-- **Velocity and round robin:**
-  - **Rendering: verified.** THUMP's KICK and SUB and RIVET strike at the velocity; the other voices are touched (controls move, contact filter closes). Every hit is a different strike at the soft zone, duller (a sub: cleaner); every zone holds four different takes; the sub's root stays within 10 cents across zones and takes.
-  - **Saving: verified.** Each kit reloads equal and all 192 saved slices match their renders (`:shell:generateCypherKits`, `CypherKitTest`).
-  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; the sub pads' choke group survives the save. No phone has played these kits.
-  - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: round 1 heard in part (2026-11-12).** The owner heard DRILL's A15 phrase as "messy"; round 1b (kit version 2) rebuilds it so only the snare and clap go to the room and the pattern is the drill backbeat. The other pads drew no comment, which is not approval. Round 1b waits on the [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG). Every control value is a shape value.
-- **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`; no factory presets until a listening verdict (`PatchTypes.PROTOTYPE_VOICES`). The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`).
-- **Overall: incomplete.** Two of six genre kits, nothing heard, hardware playback open, MPC 2 round robin open.
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits; SUB is a drum voice. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
+| Percussion: authored roll or riser | Pass | Twelve authored phrases: a hat roll to 1/64 and a sub line (TRAP); the drill snare bar and a sub call (DRILL); swung hats and a break drop (BACKROOM); a laid-back groove and a big fill (LOWRIDER); two unquantized breaks (DUST); a click scatter and a slide stack (FLINT). |
+| Drums: multiple distinct genre kits on the shelf | Pass in software; two of six heard | Six kits under SKINS. `CypherTest` holds every pair to at least six different pads and a different kick and snare dry, and the prints differ (dry, a dark room, the Backroom rack, tape, a long room). Not "different effect strengths on the same kit". TRAP and DRILL approved; the other four not heard. |
+| Velocity: rendering | Pass | Every hit is a different strike at the soft zone, duller (a sub: cleaner), not a quieter copy. THUMP's KICK and SUB, SKIN's struck voices, ONSET's kick, TERRA and RIVET strike at the velocity; the rest are touched. |
+| Round robin: rendering | Pass | Four different takes in every zone of every pad; SUB deals five dimensions out and keeps its root within 10 cents; SKIN drums on the new kits re-strike with a force spread and a small decay and contact move. |
+| Velocity and round robin: saving | Pass | Each kit reloads equal and all 1152 saved slices match their renders. A lone SUB pad's chain and recipe survive a save and regenerate the drum (`ThumpSubRobinTest`). |
+| Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats; chokes survive. No phone has played these kits. |
+| Velocity and round robin: export | Pass for MPC 3, SFZ and DecentSampler; **fail for MPC 2** | MPC 3 read back: velocity ranges, base slices, cycle lengths, frame windows and slices match. SFZ and DecentSampler written by the generator, both cycling takes. MPC 2 keeps only each zone's first take: a format limit, stated. |
+| Hardware playback (phone, MPC) | Not verified | Only the owner's devices can close this. |
+| Sound character | TRAP and DRILL approved; four not heard | Round 1b approved 2026-11-12. BACKROOM opens with the six accepted Backroom pads byte for byte through their rack (`CypherTest`). |
+| SUB presets | Pass | Eight factory presets, the sub recipes of the approved TRAP and DRILL (`ThumpPresets`); none authored blind. |
+
+- **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
+- **Overall:** every software gate passes; the four new kits wait for the owner's ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.

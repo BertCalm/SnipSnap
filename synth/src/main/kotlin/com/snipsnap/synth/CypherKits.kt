@@ -41,12 +41,19 @@ import kotlin.math.min
  */
 object CypherKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         TRAP("cypher-trap", "Trap", 140),
         DRILL("cypher-drill", "Drill", 142),
+        BACKROOM("cypher-backroom", "Backroom", 90),
+        LOWRIDER("cypher-lowrider", "Lowrider", 93),
+        DUST("cypher-dust", "Dust", 86),
+        FLINT("cypher-flint", "Flint", 120),
     }
+
+    /** A print that is not a space: a rack, a tape, a vinyl bed, applied to the finished dry (or spaced) pad. */
+    internal class Print(val name: String, val apply: (Snip) -> Snip)
 
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
@@ -61,7 +68,11 @@ object CypherKits {
     /** One playable hit: what it is, the space it is printed in, its choke group, and how to strike it dry. */
     internal class Part(val name: String, val cls: DrumClass, val space: Space?, val mute: Int = 0, val strike: Strike,
                         /** A sub's authored controls, kept so the audition can play it at another DRIVE. */
-                        val subMacros: Map<String, Float>? = null)
+                        val subMacros: Map<String, Float>? = null,
+                        /** A rack, tape or vinyl print after the space (or instead of one). */
+                        val print: Print? = null,
+                        /** The hard first take is an accepted render at its own level ([KitStrikes.struck]'s `exact`). */
+                        val exact: Boolean = false)
 
     /**
      * A phrase: notes on the kit's grid, one shared space (or dry), the parts that choke each other inside
@@ -70,7 +81,11 @@ object CypherKits {
      * every hat re-opened the gate, the room never closed, and the owner heard it as messy.
      */
     internal class Phrase(val name: String, val space: Space?, val notes: List<Note>, val choke: Set<Int> = emptySet(),
-                          val printed: Set<Int>? = null)
+                          val printed: Set<Int>? = null, val print: Print? = null)
+
+    /** The rack, tape or vinyl print on [role], or null. */
+    internal fun printOf(kit: Kit, role: Int): Print? =
+        if (role < HITS) parts(kit)[role].print else phrases(kit)[role - HITS].print
 
     /** A dry hit's level against a full one, as its space hears it. The finished zones are then levelled ([zoneGain]). */
     fun touch(velocity: Float): Float = .35f + .65f * velocity.coerceIn(0f, 1f)
@@ -95,7 +110,7 @@ object CypherKits {
                     "kit" to kit.name, "role" to role.toString(), "bpm" to kit.bpm.toString(),
                     "velocities" to velocities.joinToString(","), "takes" to TAKES.toString(),
                     "articulation" to "finite",
-                    "processing" to (spaceOf(kit, role)?.mode?.name?.lowercase() ?: "dry"),
+                    "processing" to listOfNotNull(spaceOf(kit, role)?.mode?.name?.lowercase(), printOf(kit, role)?.name).joinToString("+").ifEmpty { "dry" },
                 ),
             )
         }
@@ -141,18 +156,28 @@ object CypherKits {
         return Gatecrash.Stages(out, printed.ret, printed.gate, printed.attacks)
     }
 
-    private fun raw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray =
-        stages(kit, role, velocity, take)?.out ?: dryRaw(kit, role, velocity, take)
+    private fun raw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
+        val x = stages(kit, role, velocity, take)?.out ?: dryRaw(kit, role, velocity, take)
+        val print = printOf(kit, role) ?: return x
+        return print.apply(Snip(x, 1, Dsp.RATE)).samples
+    }
 
-    /** The bar at this kit's tempo plus the tail a long sub needs. */
-    fun phraseSeconds(kit: Kit): Float = (4 * 60f / kit.bpm + 1.2f)
+    /** The phrase's bars at this kit's tempo plus the tail a long sub or room needs. */
+    fun phraseSeconds(kit: Kit): Float = (bars(kit) * 4 * 60f / kit.bpm + 1.2f)
+
+    /** Two-bar phrases on the two slow kits whose feel needs a second bar to show; one bar elsewhere. */
+    fun bars(kit: Kit): Int = if (kit == Kit.BACKROOM || kit == Kit.LOWRIDER) 2 else 1
 
     /** The whole pad dry: a hit, or every note of a phrase. */
     internal fun dryRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
         val parts = parts(kit)
-        if (role < HITS) return KitStrikes.struck(parts[role].strike, velocity, take, touch(velocity))
+        if (role < HITS) return KitStrikes.struck(parts[role].strike, velocity, take, touch(velocity), exact = parts[role].exact)
         return phraseRaw(kit, phrases(kit)[role - HITS], velocity, take)
     }
+
+    /** One part of a phrase alone, dry: for the probe that checks every written note is an onset of its part. */
+    internal fun partRaw(kit: Kit, role: Int, part: Int, velocity: Float, take: Int): FloatArray =
+        phraseRaw(kit, phrases(kit)[role - HITS], velocity, take, only = setOf(part))
 
     /** What the pad's space hears: the hit, or only the notes a phrase prints. */
     internal fun printedRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
@@ -218,11 +243,19 @@ object CypherKits {
     internal fun parts(kit: Kit): List<Part> = when (kit) {
         Kit.TRAP -> trap
         Kit.DRILL -> drill
+        Kit.BACKROOM -> backroom
+        Kit.LOWRIDER -> lowrider
+        Kit.DUST -> dust
+        Kit.FLINT -> flint
     }
 
     internal fun phrases(kit: Kit): List<Phrase> = when (kit) {
         Kit.TRAP -> trapPhrases
         Kit.DRILL -> drillPhrases
+        Kit.BACKROOM -> backroomPhrases
+        Kit.LOWRIDER -> lowriderPhrases
+        Kit.DUST -> dustPhrases
+        Kit.FLINT -> flintPhrases
     }
 
     private fun sub(name: String, vararg m: Pair<String, Float>) =
@@ -343,6 +376,197 @@ object CypherKits {
         // The sub pattern: the root on one, down a fifth on the and of two, the late slide on three, up an octave before four.
         Phrase("Slide Call", null,
             listOf(Note(0.0, 0, 1f), Note(0.0, 4, 1f), Note(1.5, 5, .95f), Note(2.0, 7, .9f), Note(3.5, 6, .9f)), choke = setOf(4, 5, 6, 7)),
+    )
+
+    // ---------- BACKROOM (boom bap, 90) ----------
+    // The accepted Backroom six are the kit's core: their strikes are the accepted SKIN patches and their
+    // print is the accepted rack (CRUNCH → TAPE → ROOM, the snare's SPIKE), so A01 to A06's hard first take is
+    // the sound the owner accepted on 2026-11-07, levelled to the kit's zone peak. The ten new pads get the
+    // same rack. The study's six are read from BoomBapKits so one table feeds both.
+
+    private fun backroomRack(id: String) = Print("backroom", { BoomBapKits.colorationFor(id).process(it) })
+
+    private val backroomStudy = BoomBapKits.parts().associateBy { it.id }
+
+    /** An accepted Backroom part: SKIN's struck voices re-strike; the others are touched, with the hard first take exact. */
+    private fun accepted(id: String, name: String, cls: DrumClass, mute: Int = 0): Part {
+        val study = backroomStudy.getValue(id)
+        val voice = study.patch.voice
+        // A struck voice re-strikes with a drummer's force spread on the later takes (as skinStruck does);
+        // the hard first take is the accepted render itself, at its own level into its rack (exact).
+        val strike: Strike = if (voice in Skin.STRUCK) { v, t, _ ->
+            val force = if (t == 0) v else Restrike.landing(v, Dsp.seedFor("CYPHER", "backroom", id), t).first
+            val patch = if (t == 0) study.patch else study.patch.copy(macros = KitStrikes.varied(study.patch.macros, KitStrikes.skinTakeVary(voice), t, KitStrikes.SKIN_TAKE_STEP))
+            patch.render(velocity = force, take = t).samples
+        } else when (voice) {
+            SkinVoice.HAT_CLOSED, SkinVoice.HAT_OPEN -> KitStrikes.skinTouched(voice, study.patch.macros, exactFirst = true) { v -> mapOf("PUNCH" to .35f + .3f * v) }
+            SkinVoice.STICK -> KitStrikes.skinTouched(voice, study.patch.macros, exactFirst = true) { v -> mapOf("CLICK" to (study.patch.macros["CLICK"] ?: .2f) * (.5f + .5f * v)) }
+            else -> KitStrikes.skinTouched(voice, study.patch.macros, vary = listOf("TONE", "DECAY", "GRAIN"), exactFirst = true) { v -> mapOf("PUNCH" to .4f + .3f * v) }
+        }
+        return Part(name, cls, null, mute, strike, print = backroomRack(id), exact = true)
+    }
+
+    private val backroom: List<Part> = listOf(
+        accepted("kick", "Pushed Knock", DrumClass.KICK),
+        accepted("snare", "Snap Paper", DrumClass.SNARE),
+        accepted("closed", "Pushed Tip", DrumClass.HAT_CLOSED, HAT_GROUP),
+        accepted("open", "Pushed Edge", DrumClass.HAT_OPEN, HAT_GROUP),
+        accepted("stick", "Pushed Stick", DrumClass.PERC),
+        accepted("shaker", "Pushed Seeds", DrumClass.PERC),
+        // The deeper second kick a chopped break gives you.
+        Part("Low Knock", DrumClass.KICK, null, strike = KitStrikes.skinStruck(SkinVoice.KICK, "TUNE" to .22f, "DECAY" to .40f, "CLICK" to .25f, "PUNCH" to .60f), print = backroomRack("kick")),
+        // The clap and rim layers the brief names under the snare.
+        Part("Clap Layer", DrumClass.CLAP, null, strike = KitStrikes.thump(ThumpVoice.CLAP, mapOf("SPREAD" to .35f, "DECAY" to .35f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .35f + .3f * v) }, print = backroomRack("snare")),
+        Part("Rim Layer", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to .55f, "DECAY" to .20f), vary = listOf("TUNE", "DECAY", "RING")), print = backroomRack("snare")),
+        // The ghost the study carries as a zone, promoted to a pad for finger drummers.
+        Part("Ghost Snare", DrumClass.SNARE, null, strike = KitStrikes.softer({ v, t, _ -> backroomStudy.getValue("snare").patch.render(velocity = v, take = t).samples }, .35f), print = backroomRack("snare")),
+        Part("Rack Tom", DrumClass.TOM, null, strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .55f, "DECAY" to .45f, "TONE" to .45f), print = backroomRack("kick")),
+        Part("Floor Tom", DrumClass.TOM, null, strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .20f, "DECAY" to .55f, "TONE" to .40f), print = backroomRack("kick")),
+        Part("Dark Ride", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.RIDE, mapOf("TUNE" to .35f, "DECAY" to .50f, "TONE" to .35f)) { v -> mapOf("PUNCH" to .3f + .4f * v, "SIZZLE" to .2f * v) }, print = backroomRack("kick")),
+        // The chopped-vibe stab a boom bap kit always has one of.
+        Part("Bell Hit", DrumClass.PERC, null, strike = KitStrikes.tines(TinesVoice.BELL, mapOf("TUNE" to .35f, "DECAY" to .30f, "RATIO" to .7f)), print = backroomRack("kick")),
+    )
+
+    /** Boom bap's swing: every off-beat sixteenth late by this share of a sixteenth (a sampler's "58 percent"). Shape. */
+    const val BACKROOM_SWING = .14f
+
+    private val backroomPhrases = listOf(
+        // The head nod written down: one bar of sixteenths on the closed hat, accents on the eighths, two open
+        // hats, every off-beat sixteenth late by the swing.
+        Phrase("Swung Hats", null,
+            Cypher.swung(List(16) { Note(it * .25, if (it == 7 || it == 15) 3 else 2, if (it % 4 == 0) .85f else if (it % 2 == 0) .6f else .4f) }, BACKROOM_SWING, Kit.BACKROOM.bpm),
+            print = backroomRack("kick")),
+        // The kit playing itself: two bars of kick, snare and hats, swung, the snare 6 ms behind the kick, a rim pickup.
+        Phrase("Break Drop", null,
+            Cypher.swung(listOf(0.0, 4.0).flatMap { o ->
+                listOf(Note(o + 0.0, 0, 1f), Note(o + 1.0, 1, 1f, offsetMs = 6f), Note(o + 2.5, 0, .85f), Note(o + 3.0, 1, 1f, offsetMs = 6f), Note(o + 3.75, 0, .6f)) +
+                    List(8) { Note(o + it * .5, if (it == 7) 3 else 2, if (it % 2 == 0) .7f else .45f) }
+            } + listOf(Note(3.5, 8, .5f), Note(7.25, 1, .55f), Note(7.5, 4, .6f), Note(7.75, 1, .7f)), BACKROOM_SWING, Kit.BACKROOM.bpm),
+            print = backroomRack("kick")),
+    )
+
+    // ---------- LOWRIDER (G-funk, 93) ----------
+    // A long room that is a room: the GATECRASH stage with no crush and a hold longer than the room's own
+    // decay, so it rings out and the gate only tidies the last of the tail. Energy-measured like every space.
+    private val longRoom = Space(STONE, size = .75f, walls = .80f, crush = 0f, holdMs = 900f, closeMs = 300f, roomDb = 2f, drive = .1f, toneHz = 6_000f)
+    private val smallRoom = Space(STONE, size = .30f, walls = .60f, crush = .2f, holdMs = 120f, closeMs = 60f, roomDb = -6f, toneHz = 4_000f)
+
+    // Deep and fat: tuned well under BACKROOM's accepted snare (also SKIN's), with a long wire tail; the two measured as one drum at .45.
+    private val lowriderSnare = KitStrikes.skinStruck(SkinVoice.SNARE, "TUNE" to .22f, "SNAP" to .55f, "DECAY" to .70f, "RATTLE" to .80f, "SIZZLE" to .35f, "PUNCH" to .60f)
+    private val lowriderClap = KitStrikes.thump(ThumpVoice.CLAP, mapOf("SPREAD" to .60f, "DECAY" to .50f, "ROOM" to .70f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .35f + .3f * v) }
+
+    private val lowrider: List<Part> = listOf(
+        // The acoustic-electronic hybrid: a synth sine that dives slowly and roundly, under an acoustic knock.
+        Part("Hybrid Thump", DrumClass.KICK, null, strike = KitStrikes.layered(
+            KitStrikes.thumpKick("TUNE" to .30f, "SWEEP" to .35f, "DECAY" to .60f, "BEND" to .30f, "CLICK" to .20f, "PUNCH" to .5f), .7f,
+            KitStrikes.skinStruck(SkinVoice.KICK, "TUNE" to .35f, "DECAY" to .30f, "CLICK" to .60f, "TONE" to .50f), .5f)),
+        Part("Fat Snare", DrumClass.SNARE, longRoom, strike = lowriderSnare),
+        Part("Closed Hat", DrumClass.HAT_CLOSED, null, HAT_GROUP,
+            strike = KitStrikes.thump(ThumpVoice.HAT_CLOSED, mapOf("TUNE" to .55f, "DECAY" to .30f, "METAL" to .40f)) { v -> mapOf("NOISE" to .05f + .12f * v) }),
+        Part("Open Hat", DrumClass.HAT_OPEN, null, HAT_GROUP,
+            strike = KitStrikes.thump(ThumpVoice.HAT_OPEN, mapOf("TUNE" to .55f, "DECAY" to .60f, "METAL" to .40f)) { v -> mapOf("NOISE" to .05f + .12f * v) }),
+        Part("Big Clap", DrumClass.CLAP, longRoom.copy(roomDb = 3f), strike = lowriderClap),
+        Part("Snare and Clap", DrumClass.SNARE, longRoom, strike = KitStrikes.layered(lowriderSnare, .8f, lowriderClap, .6f)),
+        Part("Rim", DrumClass.PERC, smallRoom, strike = KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to .50f, "DECAY" to .25f), vary = listOf("TUNE", "DECAY", "RING"))),
+        Part("Bell", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.COWBELL, mapOf("TUNE" to .50f, "DECAY" to .40f)) { v -> mapOf("TONE" to .35f + .3f * v) }),
+        Part("High Tom", DrumClass.TOM, longRoom.copy(roomDb = 0f), strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .70f, "DECAY" to .50f, "TONE" to .50f)),
+        Part("Low Tom", DrumClass.TOM, longRoom.copy(roomDb = 0f), strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .30f, "DECAY" to .60f, "TONE" to .45f)),
+        Part("Shaker", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.SHAKER, mapOf("TONE" to .50f, "DECAY" to .30f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("PUNCH" to .4f + .3f * v) }),
+        // A tuned open hat standing in for a tambourine (BREAKER's is a recording and stays BREAKER's). Disclosed.
+        Part("Jingle", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.HAT_OPEN, mapOf("TUNE" to .80f, "DECAY" to .30f, "TONE" to .70f, "RING" to .90f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }),
+        // The P-funk synth bass note under the kick: no slide.
+        sub("Sub Note", "TUNE" to .25f, "DECAY" to .60f, "SLIDE" to .5f, "DRIVE" to .25f, "CLICK" to .20f),
+        Part("Snap", DrumClass.PERC, smallRoom, strike = KitStrikes.skinTouched(SkinVoice.STICK, mapOf("TUNE" to .60f, "DECAY" to .30f, "BODY" to .30f, "CLICK" to .40f)) { v -> mapOf("CLICK" to .25f + .4f * v) }),
+    )
+
+    private val lowriderPhrases = listOf(
+        // Behind the beat: the snare and clap 18 ms late, the hats 8 ms late, the kick on time. Two bars; the
+        // snare notes alone go to the long room.
+        Phrase("Laid Back", longRoom,
+            Cypher.behind(Cypher.behind(listOf(0.0, 4.0).flatMap { o ->
+                listOf(Note(o + 0.0, 0, 1f), Note(o + 2.5, 0, .85f), Note(o + 1.0, 5, 1f), Note(o + 3.0, 5, 1f)) +
+                    List(8) { Note(o + it * .5, 2, if (it % 2 == 0) .65f else .4f) } + List(16) { Note(o + it * .25, 10, if (it % 4 == 2) .5f else .3f) }
+            } + listOf(Note(7.5, 7, .6f)), setOf(5), 18f), setOf(2), 8f),
+            printed = setOf(5)),
+        // A bar of snare sixteenths growing into the big clap on the next downbeat, in the room.
+        Phrase("Big Fill", longRoom, Cypher.ratchet(1, 0.0, .25, 16, .40f, 1f) + listOf(Note(4.0, 4, 1f)), printed = setOf(1, 4)),
+    )
+
+    // ---------- DUST (underground cinematic boom bap, 86) ----------
+    // No compressor anywhere: the print is the TAPE section driven hard; VINYL only under the phrases.
+    private val tape = Print("tape", { Tape.process(it, mapOf("WOBBLE" to .05f, "DRIVE" to .70f, "AGE" to .75f)) })
+    private val tapeLight = Print("tape", { Tape.process(it, mapOf("WOBBLE" to .05f, "DRIVE" to .40f, "AGE" to .60f)) })
+    private val tapeVinyl = Print("tape+vinyl", { Vinyl.process(Tape.process(it, mapOf("WOBBLE" to .05f, "DRIVE" to .70f, "AGE" to .75f)), mapOf("CRACKLE" to .50f, "RUMBLE" to .30f, "HISS" to .40f)) })
+
+    private val woodCrack = KitStrikes.skinStruck(SkinVoice.SNARE, "TUNE" to .85f, "SNAP" to .80f, "DECAY" to .20f, "RATTLE" to .30f, "SIZZLE" to .20f, "PUNCH" to .30f)
+
+    private val dust: List<Part> = listOf(
+        Part("Tape Thud", DrumClass.KICK, null, strike = KitStrikes.skinStruck(SkinVoice.KICK, "TUNE" to .30f, "DECAY" to .35f, "TONE" to .35f, "PUNCH" to .30f, "CLICK" to .40f), print = tape),
+        Part("Wood Crack", DrumClass.SNARE, null, strike = woodCrack, print = tape),
+        Part("Dry Tip", DrumClass.HAT_CLOSED, null, HAT_GROUP, strike = KitStrikes.skinTouched(SkinVoice.HAT_CLOSED, mapOf("TUNE" to .50f, "DECAY" to .15f, "TONE" to .35f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }, print = tapeLight),
+        Part("Dry Edge", DrumClass.HAT_OPEN, null, HAT_GROUP, strike = KitStrikes.skinTouched(SkinVoice.HAT_OPEN, mapOf("TUNE" to .50f, "DECAY" to .35f, "TONE" to .35f)) { v -> mapOf("PUNCH" to .35f + .3f * v) }, print = tapeLight),
+        Part("Rim Click", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.STICK, mapOf("TUNE" to .70f, "DECAY" to .25f, "BODY" to .15f, "CLICK" to .60f)) { v -> mapOf("CLICK" to .3f + .4f * v) }, print = tape),
+        // The wooden snare the brief describes, as two woods: the crack over a slapped box.
+        Part("Box Snare", DrumClass.SNARE, null, strike = KitStrikes.layered(woodCrack, .8f, KitStrikes.terra(TerraVoice.BOX, mapOf("TUNE" to .55f, "DECAY" to .35f, "FORCE" to .90f)), .5f), print = tape),
+        Part("Second Thud", DrumClass.KICK, null, strike = KitStrikes.skinStruck(SkinVoice.KICK, "TUNE" to .40f, "DECAY" to .25f, "TONE" to .30f, "PUNCH" to .20f), print = tape),
+        // BREAKER's fitted crash, 1.4 s with a long fade so it stays a hit and not a loop.
+        Part("Crash", DrumClass.PERC, null, strike = KitStrikes.cymbal(BreakerCymbal.Kind.CRASH, 1.4f, .5f), print = tape),
+        Part("Dark Ride", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.RIDE, mapOf("TUNE" to .30f, "DECAY" to .50f, "TONE" to .30f)) { v -> mapOf("PUNCH" to .3f + .4f * v, "SIZZLE" to .2f * v) }, print = tape),
+        Part("Low Tom", DrumClass.TOM, null, strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .25f, "DECAY" to .50f, "TONE" to .35f), print = tape),
+        Part("Shaker", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.SHAKER, mapOf("TONE" to .40f, "DECAY" to .30f), vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("PUNCH" to .4f + .3f * v) }, print = tapeLight),
+        Part("Soft Snare", DrumClass.SNARE, null, strike = KitStrikes.softer(woodCrack, .4f), print = tape),
+        // The lone stab the drumless stretch plays over.
+        Part("Bell Stab", DrumClass.PERC, null, strike = KitStrikes.tines(TinesVoice.BELL, mapOf("TUNE" to .30f, "DECAY" to .30f, "RATIO" to .7f)), print = tape),
+        Part("Knock", DrumClass.PERC, null, strike = KitStrikes.terra(TerraVoice.BOX, mapOf("TUNE" to .30f, "DECAY" to .45f, "FORCE" to .70f)), print = tape),
+    )
+
+    /** The unquantized break's spread, either side of the grid, milliseconds. Shape. */
+    const val DUST_SPREAD_MS = 22f
+
+    private val dustBreak = Cypher.humanised(
+        listOf(Note(0.0, 0, 1f), Note(1.0, 1, .95f), Note(1.75, 0, .7f), Note(2.5, 0, .85f), Note(3.0, 1, 1f), Note(3.75, 4, .55f)) +
+            List(8) { Note(it * .5, if (it == 7) 3 else 2, if (it % 2 == 0) .7f else .5f) },
+        DUST_SPREAD_MS, "dust-break")
+
+    private val dustPhrases = listOf(
+        // One bar, every note off the grid by its own fixed amount, on a bed of crackle.
+        Phrase("Dusty Break", null, dustBreak, print = tapeVinyl),
+        // The crash on the one, then the same break.
+        Phrase("Crash Break", null, listOf(Note(0.0, 7, 1f)) + dustBreak, print = tapeVinyl),
+    )
+
+    // ---------- FLINT (Michigan scat, 120) ----------
+    private val flint: List<Part> = listOf(
+        // ONSET's kick, not THUMP's: DRILL's and TRAP's are THUMP kicks, and a third at these settings measured as the same drum.
+        Part("Fast Kick", DrumClass.KICK, null, strike = KitStrikes.onsetKick("TUNE" to .60f, "DECAY" to .25f, "BLEND" to .70f, "SNAP" to .80f, "EDGE" to .60f)),
+        // A very high, sizzling SKIN snare: not THUMP's (TRAP's) and not ONSET's (DRILL's).
+        Part("High Snare", DrumClass.SNARE, null, strike = KitStrikes.skinStruck(SkinVoice.SNARE, "TUNE" to .95f, "SNAP" to .90f, "DECAY" to .18f, "RATTLE" to .35f, "SIZZLE" to .70f, "PUNCH" to .70f)),
+        // DECAY .1 is a 46 ms hat; the scatter's 1/32 pickup at 120 BPM is 62 ms.
+        Part("Short Hat", DrumClass.HAT_CLOSED, null, HAT_GROUP, strike = KitStrikes.thump(ThumpVoice.HAT_CLOSED, mapOf("TUNE" to .65f, "DECAY" to .10f, "METAL" to .50f), vary = listOf("TUNE", "METAL")) { v -> mapOf("NOISE" to .05f + .12f * v) }),
+        Part("Open Hat", DrumClass.HAT_OPEN, null, HAT_GROUP, strike = KitStrikes.thump(ThumpVoice.HAT_OPEN, mapOf("TUNE" to .65f, "DECAY" to .40f, "METAL" to .50f)) { v -> mapOf("NOISE" to .05f + .12f * v) }),
+        sub("Early Slide", "TUNE" to .45f, "DECAY" to .50f, "SLIDE" to FOURTH_DOWN, "WHEN" to .20f, "DRIVE" to .50f, "CLICK" to .50f),
+        sub("Sub Root", "TUNE" to .45f, "DECAY" to .50f, "SLIDE" to .5f, "DRIVE" to .50f, "CLICK" to .50f),
+        Part("High Rim", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to .90f, "DECAY" to .18f), vary = listOf("TUNE", "DECAY", "RING"))),
+        Part("Higher Rim", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to 1f, "DECAY" to .15f), vary = listOf("DECAY", "RING", "BODY"))),
+        Part("Wood Click", DrumClass.PERC, null, strike = KitStrikes.skinTouched(SkinVoice.STICK, mapOf("TUNE" to .90f, "DECAY" to .15f, "BODY" to 0f, "CLICK" to .80f)) { v -> mapOf("CLICK" to .4f + .4f * v) }),
+        Part("Box Click", DrumClass.PERC, null, strike = KitStrikes.terra(TerraVoice.BOX, mapOf("TUNE" to .80f, "DECAY" to .30f, "FORCE" to .90f))),
+        Part("Block", DrumClass.PERC, null, strike = KitStrikes.tines(TinesVoice.BLOCK, mapOf("TUNE" to .60f, "DECAY" to .30f))),
+        Part("Off Bell", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.COWBELL, mapOf("TUNE" to .70f, "DECAY" to .25f)) { v -> mapOf("TONE" to .35f + .3f * v) }),
+        Part("Clap", DrumClass.CLAP, null, strike = KitStrikes.thump(ThumpVoice.CLAP, mapOf("SPREAD" to .20f, "DECAY" to .25f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .40f + .3f * v) }),
+        Part("Zap", DrumClass.PERC, null, strike = KitStrikes.thump(ThumpVoice.SPARK, mapOf("TUNE" to .80f, "DECAY" to .20f, "COLOR" to .90f)) { v -> mapOf("METAL" to .1f + .3f * v) }),
+    )
+
+    /** The clicks' scatter off the grid, either side, milliseconds. Shape. */
+    const val FLINT_SCATTER_MS = 6f
+
+    private val flintPhrases = listOf(
+        // The four click pads on an off-balance sixteenth grid with a 1/32 pickup, each click a few ms off.
+        Phrase("Click Scatter", null,
+            Cypher.humanised(listOf(Note(.5, 6, .9f), Note(.75, 8, .6f), Note(1.5, 7, .8f), Note(1.75, 9, .7f), Note(2.125, 8, .5f), Note(2.25, 6, 1f),
+                Note(2.5, 10, .6f), Note(3.25, 7, .85f), Note(3.75, 9, .65f)), FLINT_SCATTER_MS, "flint-scatter") +
+                listOf(Note(0.0, 0, 1f), Note(2.0, 1, 1f), Note(3.0, 0, .8f))),
+        // The root on one, the early slide on the and of one and on three, the root on the and of four.
+        Phrase("Slide Stack", null, listOf(Note(0.0, 5, 1f), Note(0.5, 4, .9f), Note(2.0, 4, .95f), Note(3.5, 5, .9f)), choke = setOf(4, 5)),
     )
 
     /** The shortest interval between two hits of [part] in [kit]'s phrases, seconds; null if the part never repeats. */

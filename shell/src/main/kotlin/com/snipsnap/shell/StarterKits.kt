@@ -655,6 +655,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DRILL.bpm.toFloat(),
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DRILL) },
         Starter(
+            "cypher-backroom", "CYPHER BACKROOM",
+            "Boom bap: the accepted Backroom six through their rack, completed to sixteen pads. Three touch zones, four takes; swung hats and a break drop.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.BACKROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.BACKROOM) },
+        Starter(
+            "cypher-lowrider", "CYPHER LOWRIDER",
+            "G-funk: a hybrid thump, a fat snare and clap that bloom into a long room, hats and a shaker behind the beat, a bell. Three touch zones, four takes; a laid-back groove and a big fill.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.LOWRIDER.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.LOWRIDER) },
+        Starter(
+            "cypher-dust", "CYPHER DUST",
+            "Underground cinematic boom bap: raw tape thuds, a high wooden crack, a crash, no compressor anywhere. Three touch zones, four takes; an unquantized break with and without the crash.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DUST) },
+        Starter(
+            "cypher-flint", "CYPHER FLINT",
+            "Michigan scat: a fast kick and an early-sliding sub, a high piercing snare, wooden clicks and high rims off the grid, an off-beat bell. Three touch zones, four takes; a click scatter and a slide stack.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,

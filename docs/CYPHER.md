@@ -16,11 +16,19 @@ privately now live in one place (`KitStrikes`) for both families.
 The [engineering specification](superpowers/specs/2026-11-12-cypher-hiphop-drum-kits.md) has the six kits'
 design, the Python prototype's numbers, and what changed while building.
 
-**Status: round 1b, waiting for the second listen.** The owner chose the family on 2026-11-12 ("I want to
-build this"), asked for the sub as an editable THUMP voice, and chose TRAP and DRILL first. Both kits are on
-the shelf, with their velocity and round-robin grid proven through save, playback and MPC 3 export in
-software. Nothing has been played on a phone or an MPC. The
+**Status: round 2 built; TRAP and DRILL approved, the other four not heard.** The owner chose the family on
+2026-11-12 ("I want to build this"), asked for the sub as an editable THUMP voice, chose TRAP and DRILL
+first, and on hearing round 1b said "Ok, sounds good. Make sure we clear the approval gates." All six kits
+are on the shelf, with their velocity and round-robin grid proven through save, playback, MPC 3, SFZ and
+DecentSampler export in software. Nothing has been played on a phone or an MPC. The
 [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner's account.
+
+**Round 1b heard (2026-11-12): approved.** "Ok, sounds good." Preserve TRAP's and DRILL's hard first takes
+as the accepted baseline; round 2 changed only their soft zones' length (the sub's decay no longer follows
+velocity, see below), which is a change in the unheard direction and is disclosed.
+
+**Round 2 (kit version 3):** BACKROOM, LOWRIDER, DUST and FLINT, SUB's eight factory presets, SFZ and
+DecentSampler exports, and the per-gate table in [the acceptance gates](ENGINE_ACCEPTANCE_GATES.md).
 
 **Round 1 heard (2026-11-12).** The owner's words: "The triple snare thing is messy." That is DRILL's A15.
 Round 1 sent the whole phrase through the dark room, kick and hats included, so every hat re-opened the gate
@@ -39,7 +47,7 @@ notes and shuts between them. Not heard.
 none at .5), WHEN (where the slide starts, 0.15 to 0.75 of the decay), DRIVE (a tanh at 4×, gain 1 to 6) and
 CLICK. No PUNCH: the clipper is the only shaper it wants. The pitch law is one function of time integrated
 into phase, never a retune of a ringing resonator, so a slide cannot click. It reads velocity (drive, click and
-the onset settle follow it; the root never moves) and takes (four takes deal settle, click, drive, slide start
+the onset settle follow it; the root and the length never move) and takes (four takes deal settle, click, drive, slide start
 and glide time out so no two share a setting; the root never moves). It re-strikes through `Restrike`, so a
 pad of it gets fresh takes from the app's robin. No factory presets until the owner's listening verdict
 (`PatchTypes.PROTOTYPE_VOICES`, like SPARK); the kits carry their own authored settings.
@@ -52,16 +60,29 @@ The classifier files a sub with a long decay as TONAL (its decay rule is 500 ms)
 The kits author a sub pad's class as KICK, and the test records the classifier's reading beside it rather
 than hiding it. No DECAY makes a LOOP: the longest render is under the 1.5 s loop floor by construction.
 
-## The two kits
+## The six kits
 
 | Kit | Tempo | What it is | Print |
 |---|---|---|---|
 | CYPHER TRAP | 140 | A short punch over four subs (two roots, a slide down a fourth, a slide up an octave), a piercing snare, a 40 ms hat, a clap, a rim, a bell, a zap, two shakers | Dry throughout: precision is the print |
 | CYPHER DRILL | 142 | A kick over four subs (a root, a slide down a fifth, a slide up, a late slide down a fourth), an ONSET snare and a clap in one dark big room, a 47 ms hat, two RIVET metal hits in the same room, a dry RIVET snare, a rim, a shaker | `Gatecrash` STONE: a large hard room, half crushed, open 140 ms, closing over 60 ms, 3 dB under the drum (6 under the metal), low-passed at 3 kHz |
+| CYPHER BACKROOM | 90 | The six accepted Backroom pads (kick, snare, hats, cross stick, shaker) exactly as accepted, plus a low knock, a clap and rim layer, the ghost snare as a pad, two toms, a dark ride and a bell stab | The accepted Backroom rack on every pad: CRUNCH → TAPE → ROOM, the snare's SPIKE |
+| CYPHER LOWRIDER | 93 | A hybrid thump (a slow synth dive under an acoustic knock), a deep fat snare, a big clap, both together, a rim and a snap in a small room, two toms, a bell, a shaker, a jingle, a sub note | A long room (the GATECRASH stage with no crush, open 900 ms) on the snare, clap and toms, energy-measured |
+| CYPHER DUST | 86 | A raw tape thud and a second, a high wooden crack and a box snare, a rim click, a crash, a dark ride, a low tom, a shaker, a soft snare, a bell stab, a knock | TAPE driven hard on every hit, no compressor; VINYL crackle under the phrases only |
+| CYPHER FLINT | 120 | An ONSET kick, a very high sizzling snare, a 46 ms hat, an early-sliding sub and its root, two high rims, a wood click, a box click, a block, an off-beat bell, a clap, a zap | Dry |
 
 Each kit's A15 and A16 are phrases. TRAP: a hat roll (one bar tightening from eighths to sixteenths to 1/32
-triplets to 1/64, rising four semitones across the last beat) and a sub line. DRILL: a triplet snare bar (the
-snare on two and the and of three with sixteenth-triplet clap pickups, in the room) and a sub call.
+triplets to 1/64, rising four semitones across the last beat) and a sub line. DRILL: the drill snare bar
+(snare on three and the and of four with a triplet clap pickup before each, in the room) and a sub call.
+BACKROOM: swung hats (every off-beat sixteenth 14 percent of a sixteenth late) and a two-bar break drop with
+the snare 6 ms behind. LOWRIDER: a two-bar laid-back groove (snare and clap 18 ms behind, hats 8) and a big
+fill into the clap. DUST: an unquantized break (every note off the grid by its own seeded amount within 22 ms)
+and the same break under a crash. FLINT: a click scatter (the clicks within 6 ms of the grid, a 1/32 pickup)
+and a slide stack.
+
+**The feel laws** (`Cypher.swung`, `behind`, `humanised`): a note's lateness is an authored number of
+milliseconds, fixed by the kit version. `render` receives no tempo and the MPC owns its swing, so a phrase
+pad is the only place a kit can carry its groove.
 
 Chokes: hats cut hats (group 1), the two phrases cut each other (group 2), and every sub cuts every other sub
 (group 3), on the pads and inside the phrases. That is how sliding subs are played.
@@ -109,9 +130,9 @@ few milliseconds; the kit's timing is sample-accurate).
 ## Limits, stated plainly
 
 - **Not heard.** Round 1 waits for the owner. Every control value is a shape value.
-- **Two of six kits.** BACKROOM, LOWRIDER, DUST and FLINT follow once these two are heard.
-- **MPC 3 is the export target that keeps the round robin.** MPC 2's projection keeps only the first take of
-  each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
+- **Four of six kits are not heard.** BACKROOM, LOWRIDER, DUST and FLINT wait for the owner.
+- **MPC 3, SFZ and DecentSampler keep the round robin.** MPC 2's projection keeps only the first take of
+  each zone and is not written. No MPC or other sampler has loaded these kits.
 - **No hardware.** Nothing was played on a phone or an MPC.
 - **Rendered bank.** A kit pad cannot be re-edited as a SYNTH patch; SUB itself can, as a THUMP voice.
   Changing the kits means bumping `CypherKits.VERSION`.
