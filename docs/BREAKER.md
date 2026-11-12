@@ -39,24 +39,89 @@ for the recorded cymbals to be replicated with synthesis instead. On 2026-11-11 
 - **A13:** this ride. **A14:** this crash, ringing about 3 s.
 - **A15:** the tamed riser.
 
-Model-2 saves keep round 2's ride.
+Model-2 saves keep round 2's ride. On 2026-11-11 the owner heard the app's own renders of the
+ride, crash and riser as their picks, the repeat and 40% hits as the same cymbal played softer, the
+presets as bringing the rig back the way they want, and said to build the kit.
 
-Not in the phone picker yet; the picker entry waits for a session with an Android SDK, as the house
-rule says. Still to come:
-- the 16 pads assembled into a kit, with velocity and round robin through saving, playback and
-  export;
-- two more genre kits, Dub Tank and Trip hop (the owner's picks);
+The kit is on the shelf as the BREAKER starter (below, "The kit"). Not in the synth picker yet; that
+entry waits for a session with an Android SDK, as the house rule says. Still to come:
+- the owner's listen to the kit, including the three pushed pads and the kick's takes;
+- two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
+  first;
 - the surf tom fill;
 - the audition page.
 
-The kit, as agreed:
+## The kit
+
+The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on the shelf), at
+92 BPM, the tempo every BREAKER beat was heard at. A01 is bottom left.
 
 | | | | |
 |---|---|---|---|
-| A13 Ride | A14 Crash (rings about 3 s) | A15 Snare riser | A16 Shaker |
+| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Shaker |
 | A09 Floor Tom | A10 Rack Tom | A11 High Tom | A12 Crushed Snare |
 | A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick | A08 Tambourine |
 | A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
+
+- **Every pad is a BREAKER patch** at its drum's defaults, so each pad keeps its recipe and stays
+  editable.
+- **The pushed pads** are authored and not yet heard:
+  - A05 Crushed Boom: the kick at CRUSH 1, DUST .5, AMP .55;
+  - A06 Drip Snare: the snare at DRIP .9, SLAP .35;
+  - A12 Crushed Snare: the snare at CRUSH 1, DUST .5, AMP .55, DRIP .35.
+- **Levels** come from the balance the owner heard in the round-3 beats: Boom .90, Bap .80, the
+  hats and shaker .35, the toms .70, the ride .27 and the crash .32.
+- **Chokes:** only the open hat chokes the closed one. The cymbals never choke.
+
+**Velocity and round robin.** The shared robin (`Robin.apply`, as the BACKWASH kits) deals each pad
+from its recipe:
+- **Every synth drum: 3 zones × 3 takes.**
+  - A softer zone is the drum re-rendered at velocity .3 or .6.
+  - Every take after a zone's first is the drum struck again (`Restrike`).
+- **The tambourine: 2 zones × 2 takes,** exactly its recordings.
+  - A third zone would land on a dynamic layer already used, so it would differ only in level.
+  - A third take would repeat the first.
+  - With 3 × 3 it measured both: one zone was another only turned down, and two takes were the same
+    recording, −119 dB apart.
+
+Measured on the saved grid (`BreakerKitProof`):
+
+| Pad | Closest two takes, apart by | Least-changed soft zone |
+|---|---:|---:|
+| Boom | 34.1 dB | 0.9 dB |
+| Crushed Boom | 33.8 dB | 1.0 dB |
+| High Tom | 30.1 dB | 3.2 dB |
+| Floor Tom | 27.4 dB | 3.4 dB |
+| Rack Tom | 26.6 dB | 3.8 dB |
+| Snare Riser | 25.3 dB | 4.7 dB |
+| Cross Stick | 25.1 dB | 1.5 dB |
+| Drip Snare | 17.0 dB | 6.5 dB |
+| Crushed Snare | 17.0 dB | 3.4 dB |
+| Bap | 16.0 dB | 6.3 dB |
+| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.7 to 6.6 dB |
+
+How to read the two columns:
+- **"Apart by"** is what differs between two takes against what they share. A copy, dealt with a
+  level nudge and a shave off its front, is apart by more than 40 dB.
+- **"Least-changed soft zone"** is the most an octave band's level moves between a soft zone and
+  the hard zone, at matched loudness. A zone that is the hard one turned down moves 0.
+- **The weak spot is the kick.** The crush evens out the small force differences between strikes.
+  So the two kicks' takes are distinct strikes, but close: 34 dB apart, against more than 40 for a
+  copy. Their soft zones move about 1 dB in shape. GATECRASH's stone kick was disclosed the same
+  way. The owner's listen decides whether the kick needs more variation per strike.
+
+**Through saving, playback and export** (`BreakerKitTest`; the full kit and listening pack:
+`./gradlew :shell:generateBreakerKit`):
+- **Saving:** the kit reloads equal. Rendered again from its recipes, it is the same, byte for byte.
+- **Playback:** `PadHit.resolve`, the resolver the app's pads use, picks the zone by velocity, deals
+  the takes in order and repeats them. The preview mixer cycles them too.
+- **MPC 3:** the exported track's velocity ranges, slice anchors, cycle lengths and slice windows
+  match the kit, and its samples are the saved ones.
+- **MPC 2** plays each zone's first take only, so it does not pass the round-robin export gate.
+- **Not yet tested on hardware:** no phone or MPC has played the kit.
+
+**Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a
+phone has not been timed.
 
 ## How a hit is made
 
@@ -207,3 +272,10 @@ Model 2's ride: DUST .30, DRIP .45, SLAP 0, CRUSH .60, AMP .35.
 unasked (every other engine), a take changes nothing.
 
 `DeterminismTest` replays every voice and a take, byte for byte, and through a JSON round trip.
+
+`BreakerKitTest` checks the kit:
+- the sixteen pads, their grids, recipes, levels and chokes;
+- that no two takes are copies and no soft zone is the hard one turned down;
+- saving, reloading and regenerating from the recipes, byte for byte;
+- zone selection and take cycling in the pad resolver and the preview mixer;
+- the MPC 3 track and its samples.

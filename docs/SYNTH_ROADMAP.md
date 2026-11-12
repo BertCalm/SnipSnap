@@ -3443,4 +3443,16 @@ Round 3 (renderer model 3, 2026-11-11) re-voices the ride and adds the crash and
 - **Velocity:** measured from soft and hard recordings. It changes the spectrum's shape, and it is
   not simply darker.
 - **Saves:** model-2 saves keep round 2's ride.
-- **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.
+- **Status:** heard on 2026-11-11. The owner confirmed the app's renders as their picks and asked for the kit.
+
+The BREAKER kit (2026-11-12) is the first of three shelf kits:
+- **The pads:** sixteen BREAKER patches in the agreed layout, at 92 BPM.
+- **The grid:** the shared robin deals each pad from its recipe.
+  - 3 velocity zones × 3 re-struck takes;
+  - the recorded tambourine gets 2 × 2.
+- **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
+  export.
+- **Open:**
+  - MPC 2 plays each zone's first take only.
+  - The kick's takes are distinct but close (34 dB apart).
+  - The owner's listen to the kit.

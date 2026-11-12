@@ -529,6 +529,16 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
     args("${rootDir}/testkit/backwash-acoustic-integration")
 }
 
+tasks.register<JavaExec>("generateBreakerKit") {
+    group = "distribution"
+    description = "Build the BREAKER kit, prove its velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BreakerKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("breakerOutput").orNull ?: "${rootDir}/testkit/breaker-kit")
+}
+
 tasks.register<JavaExec>("generateGatecrashKits") {
     group = "distribution"
     description = "Build the three GATECRASH kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
