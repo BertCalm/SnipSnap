@@ -735,6 +735,7 @@ testkit/backwash-acoustic-integration/
 
 # GATECRASH kits: regenerate with :shell:generateGatecrashKits
 /testkit/gatecrash-kits/
+/testkit/breaker-kit/
 /testkit/cosmic-family/
 testkit/soot-r0/
 testkit/soot-audition/

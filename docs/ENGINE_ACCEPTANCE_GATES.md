@@ -77,13 +77,13 @@ unverified completion gates explicit.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (rounds 1 to 3, 2026-11-09 to 11-11)
+## BREAKER (rounds 1 to 3 and the kit, 2026-11-09 to 11-12)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
-  - **The snare riser (round 3): built in rendering, chosen by ear.** The owner picked the tamed roll in the Python harness on 2026-11-11. It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. Its Kotlin render has not been heard, played from a pad, saved in a kit or exported. Until then, it does not satisfy the percussion gate's roll or riser.
+  - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). No phone or MPC has played it.
   - **The surf tom fill:** not yet built.
-- **Drum shelf:** not yet built. The owner picked Dub Tank and Trip hop on 2026-11-09 to join the BREAKER kit. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
+- **Drum shelf: one of three kits.** The BREAKER kit is on the shelf (2026-11-12). The owner picked Dub Tank and Trip hop on 2026-11-09 to join it. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
   - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
@@ -103,7 +103,17 @@ presence do not close the outstanding gates above.
   - **Saving: partly verified.** Patches round-trip through JSON with model 3, and model 2's ride still replays. A saved kit has not been tested.
   - **Playback and export:** not yet verified.
   - **Sound character:** the owner picked the tight cymbals (heard dry) and the tamed riser in the Python harness. The Kotlin renders wait for a confirming listen.
-- **Overall: incomplete.** This is a prototype with fourteen voices and no kit yet. The kit, the two genre kits and velocity and round robin through saving, playback and export are still open.
+- **The kit (2026-11-12): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, `:shell:generateBreakerKit`).
+  - **Rendering:** the shared robin deals every pad from its recipe. Each synth drum gets 3 zones of 3 takes: softer zones are re-rendered at velocity .3 and .6, and each later take is re-struck. The tambourine gets its recordings, 2 dynamic layers × 2 takes.
+    - No two takes are copies. A copy measures more than 40 dB apart; the closest pair here, the kick's, is 34 dB apart.
+    - No soft zone is the hard one turned down. The least change in spectral shape is 0.9 dB, on the kick.
+    - **The kick is weak.** Its takes are distinct strikes but close, because the crush evens out the force difference. This is disclosed and waits for the owner's listen.
+    - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
+  - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
+  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2 does not pass:** it plays each zone's first take. No MPC has loaded the kit.
+  - **Sound character:** the drums, cymbals and riser are each accepted by ear. The three pushed pads (A05, A06, A12), the levels and the kit as a whole wait for the owner's listen.
+- **Overall: incomplete.** One of three genre kits is on the shelf. Dub Tank and Trip hop are still to be authored, MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
@@ -119,6 +129,20 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
+
+## ETCH (round 1, 2026-11-11)
+
+A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
+Round 1 is a Python prototype audition; no Kotlin exists.
+
+- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in the Python prototype (round 2), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
+- **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
+- **Percussion and drum kits:** not applicable. A bass engine.
+- **Velocity and round robin:**
+  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Not heard yet.
+  - **Saving, playback and export:** not yet verified.
+- **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
+- **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
 
 ## SOOT (rounds 0 to 2, 2026-11-12)
 
