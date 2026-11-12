@@ -117,7 +117,7 @@ Measured highlights (Python harness):
 
 | Gate | Status |
 |---|---|
-| Six distinct melodic voices with presets | open: six chosen by the owner 2026-11-12 (SAW, SQUARE, RUBBER, WHISTLE, GRIT, DUB); SAW and SQUARE built, four to build |
+| Six distinct melodic voices with presets | open: six chosen by the owner 2026-11-12 and all six built in Python; SAW and SQUARE heard, RUBBER, WHISTLE, GRIT and DUB not heard; no preset banks |
 | Playable keygroups | not yet verified |
 | Premade kit | open |
 | Chord-tool compatibility | owner's call: the line voice is monophonic by design |
@@ -212,6 +212,49 @@ whether loop pads carry a baked cutoff ride, and which six voices complete the e
 (both built and accepted), RUBBER, WHISTLE, GRIT and DUB. For the ride the owner chose "some
 pads ride": most loop pads hold one setting, and one or two kit pads carry a baked cutoff
 ride, so the MPC gets both.
+
+## Round 2: the four new voices (2026-11-12)
+
+Built in the Python prototype, not heard. Each voice has its own mechanism, not only its own
+macro settings. Every switch is off for SAW and SQUARE, and all 58 round-1b clips regenerate
+**byte-identical** (sha256 of every WAV checked), so the accepted baseline is untouched.
+
+| Voice | Mechanism | Defaults (CUTOFF PEAK SWEEP BITE SPACE) |
+|---|---|---|
+| RUBBER | square plus a square one octave down, mixed before the filter; low resonance | 0.25 0.3 0.3 0.3 0.2 |
+| WHISTLE | the cutoff tracks the note (1 octave per octave); resonance ×1.15, past self-oscillation at the top of PEAK; level into the filter ×0.6, so the filter's own tone dominates | 0.45 0.95 0.2 0.35 0.35 |
+| GRIT | a wavefolder before the filter (depth 6); velocity sets the number of folds | 0.35 0.7 0.55 0.5 0.15 |
+| DUB | square; inside the delay loop each echo passes a unity-peak band-pass whose centre follows the echo's own level (280 Hz to 2.2 kHz), so every echo squelches again and fades darker | 0.2 0.6 0.4 0.3 0.85 |
+
+Distinctness: the RMS difference of level-matched third-octave spectra of the six loops on one
+line. The closest pairs are SAW-SQUARE 3.73 dB, SQUARE-GRIT 5.38 dB, SAW-WHISTLE 6.07 dB, SAW-GRIT 7.49 dB. SAW against SQUARE
+(3.7 dB) is the pair the owner heard as clearly different, so every new voice clears the
+heard floor by at least 1.6 dB.
+
+| Voice | Attack centroid, velocity 0.35 → 1.0 | Take spread at attack | at 0.2 s |
+|---|---|---|---|
+| SAW | 765 → 1248 Hz | 4.6% | 3.0% |
+| SQUARE | 728 → 1197 Hz | 5.6% | 2.9% |
+| RUBBER | 382 → 620 Hz | 8.8% | 5.4% |
+| WHISTLE | 622 → 1734 Hz | 5.1% | 2.9% |
+| GRIT | 876 → 1102 Hz | 4.3% | 2.8% |
+| DUB | 468 → 878 Hz | 5.0% | 2.2% |
+
+Three first attempts failed their measurements and were changed before publishing:
+- **DUB** put 99% of its energy above 2 kHz and its loop did not close (seam error 1.4). The
+  band-pass in the echo loop amplified by 1/Q, about 4.5×, so the loop gain passed 1 and the
+  echoes ran away into a whine. Normalised to unity gain at the centre: −30.8 dB above 2 kHz,
+  seam 1.7e-14.
+- **GRIT** first clipped before the filter. A clipped saw keeps a saw's harmonic shape, so it sat
+  2.9 to 3.3 dB from SAW, and at its first BITE default (0.85) a soft and a hard hit measured
+  1,010 and 1,029 Hz. A wavefolder with BITE 0.5 sits 7.5 dB from SAW and 5.4 from SQUARE, and
+  responds to velocity (876 → 1,102 Hz).
+- **WHISTLE** at PEAK 0.95 without the resonance boost sat 3.4 dB from SAW, closer than SAW and
+  SQUARE. The resonance boost and the lower input level put it 6.1 dB from SAW.
+
+Disclosed: RUBBER is by far the darkest voice (−40 dB above 2 kHz). GRIT's accents lift its
+level by only 0.1 dB, because folding flattens the peaks; its accent is a change of tone.
+Python harness, not Kotlin; nothing in round 2 has been heard.
 
 ## Published audition
 

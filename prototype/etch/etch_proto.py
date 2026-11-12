@@ -44,7 +44,35 @@ FS = sk.INTERNAL  # 176_400
 
 # Six macros, the house limit, TUNE included. ACCENT is not a macro: it is velocity.
 DEFAULTS = {"TUNE": 0.5, "CUTOFF": 0.3, "PEAK": 0.7, "SWEEP": 0.5, "BITE": 0.45, "SPACE": 0.4}
-VOICES = ("SAW", "SQUARE")
+VOICES = ("SAW", "SQUARE", "RUBBER", "WHISTLE", "GRIT", "DUB")
+
+# What makes each voice a different instrument, not a preset. Every switch is off for SAW and
+# SQUARE, whose renders are the owner's accepted round-1b baseline and stay byte-identical.
+#   wave     0 saw, 1 square
+#   sub      level of a square one octave down, mixed before the filter (RUBBER)
+#   pre      drive into a wavefolder BEFORE the filter, so the filter sweeps the folds (GRIT)
+#   keytrack octaves of cutoff per octave of pitch: the peak follows the note (WHISTLE)
+#   dub      echoes run through an envelope-driven band-pass inside the delay loop (DUB)
+#   k_scale  extra resonance feedback, past self-oscillation at the top of PEAK (WHISTLE)
+#   in_scale level into the filter: lower lets the filter's own tone dominate (WHISTLE)
+K_SCALE_WHISTLE, IN_SCALE_WHISTLE = 1.15, 0.6  # "shape"
+VOICE_CFG = {
+    "SAW":     dict(wave=0, sub=0.0, pre=0.0, keytrack=0.0, dub=False, k_scale=1.0, in_scale=1.0),
+    "SQUARE":  dict(wave=1, sub=0.0, pre=0.0, keytrack=0.0, dub=False, k_scale=1.0, in_scale=1.0),
+    "RUBBER":  dict(wave=1, sub=0.85, pre=0.0, keytrack=0.0, dub=False, k_scale=1.0, in_scale=1.0),
+    "WHISTLE": dict(wave=0, sub=0.0, pre=0.0, keytrack=1.0, dub=False, k_scale=K_SCALE_WHISTLE, in_scale=IN_SCALE_WHISTLE),
+    "GRIT":    dict(wave=0, sub=0.0, pre=6.0, keytrack=0.0, dub=False, k_scale=1.0, in_scale=1.0),
+    "DUB":     dict(wave=1, sub=0.0, pre=0.0, keytrack=0.0, dub=True, k_scale=1.0, in_scale=1.0),
+}
+
+# Each voice's own starting macros. SAW and SQUARE use the round-1b DEFAULTS. "shape"
+VOICE_DEFAULTS = {
+    "SAW": DEFAULTS, "SQUARE": DEFAULTS,
+    "RUBBER":  {**DEFAULTS, "CUTOFF": 0.25, "PEAK": 0.3, "SWEEP": 0.3, "BITE": 0.3, "SPACE": 0.2},
+    "WHISTLE": {**DEFAULTS, "CUTOFF": 0.45, "PEAK": 0.95, "SWEEP": 0.2, "BITE": 0.35, "SPACE": 0.35},
+    "GRIT":    {**DEFAULTS, "CUTOFF": 0.35, "PEAK": 0.7, "SWEEP": 0.55, "BITE": 0.5, "SPACE": 0.15},
+    "DUB":     {**DEFAULTS, "CUTOFF": 0.2, "PEAK": 0.6, "SWEEP": 0.4, "BITE": 0.3, "SPACE": 0.85},
+}
 ROOT_MIDI = 36  # C2 at TUNE 0.5
 CUT_LO, CUT_HI = 110.0, 1200.0  # CUTOFF's base range, Hz. "shape"
 FB_HP_HZ = 140.0  # high-pass in the resonance feedback, Hz. "shape"
@@ -103,7 +131,8 @@ LINE_B = dict(name="LINE B", bpm=130.0, root=36, voice="SAW",      # C2, brighte
 
 @njit(cache=True)
 def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak, sweep,
-                  phase0, drift_cut, drift_dec, fs, fb_hp_hz, fc_max):
+                  phase0, drift_cut, drift_dec, fs, fb_hp_hz, fc_max, sub_level, pre_drive,
+                  keytrack, k_scale, in_scale):
     """Per-sample voice at the internal rate.
 
     target_midi : pitch the oscillator heads for (MIDI, float)
@@ -120,6 +149,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
     a_glide = math.exp(-1.0 / (0.022 * fs))
     cv = target_midi[0]
     ph = phase0
+    ph2 = phase0        # sub oscillator phase (RUBBER)
     # Envelopes
     fenv = 0.0          # filter envelope, decays from 1
     aenv = 0.0          # amp envelope
@@ -145,7 +175,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
     # sweep "becomes more prominent as the Resonance pot is increased"). "shape"
     a_cap_up = math.exp(-1.0 / (0.012 * fs))
     a_cap_dn = math.exp(-1.0 / ((0.12 + 0.35 * peak) * fs))
-    k = 4.15 * peak                              # ladder feedback; self-oscillates near 1.0
+    k = 4.15 * peak * k_scale                    # ladder feedback; self-oscillates near 1.0
     a_fbhp = math.exp(-2.0 * math.pi * fb_hp_hz / fs)  # high-pass in the feedback path
     a_sq = math.exp(-2.0 * math.pi * 9000.0 / fs)   # square edge softening
     cur_vel = 0.6
@@ -157,6 +187,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             # restart the oscillator cycle on every new (non-slid) note, so a loop's passes
             # are identical and the seam closes; the round-robin take picks phase0
             ph = phase0
+            ph2 = phase0
             cur_vel = vel[i]
             # accent amount: nothing below vel 0.55, full at 1.0, smooth in between
             t = (cur_vel - 0.55) / 0.45
@@ -196,6 +227,30 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             osc = sq_lp
         else:
             osc = saw
+        if sub_level > 0.0:
+            # RUBBER: a square one octave down, from its own polyBLEP saw, under the main wave
+            dt2 = 0.5 * dt
+            ph2 += dt2
+            if ph2 >= 1.0:
+                ph2 -= 1.0
+            saw2 = 2.0 * ph2 - 1.0
+            if ph2 < dt2:
+                x = ph2 / dt2
+                saw2 -= x + x - x * x - 1.0
+            elif ph2 > 1.0 - dt2:
+                x = (ph2 - 1.0) / dt2
+                saw2 -= x * x + x + x + 1.0
+            osc = (osc + sub_level * math.tanh(25.0 * saw2) * 0.7) / (1.0 + 0.5 * sub_level)
+        if pre_drive > 0.0:
+            # GRIT: fold before the filter, slightly asymmetric, so the filter has new
+            # harmonics to sweep through instead of only the oscillator's own. A clip was
+            # tried first: it kept the saw's harmonic shape (2.9 to 3.3 dB from SAW).
+            # velocity sets how hard it clips: a soft hit stays cleaner, a hard hit gnarlier
+            # velocity sets how many times it folds: a soft hit stays close to the plain
+            # wave, a hard hit folds over and over, so the filter sweeps clusters of
+            # harmonics a plain clip never makes
+            pd = pre_drive * (0.08 + 0.92 * cur_vel * cur_vel)
+            osc = math.sin(pd * osc + 0.3) - math.sin(0.3)
         # envelopes
         fenv *= fdec
         acc_drive = fenv * cur_acc
@@ -210,8 +265,14 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             aenv *= a_rel
         # cutoff: base + envelope (deeper when accented) + the accent capacitor
         # the take's drift scales the whole opening, so accented takes vary as well
-        oct_ = (cut_oct[i] + env_oct * fenv * (1.0 - 0.35 * cur_acc)
-                + (1.2 + 2.2 * peak) * acc_cap) * drift_cut
+        if keytrack != 0.0:
+            # WHISTLE: the cutoff follows the note, so the peak sings at the same place in
+            # every note's harmonic series instead of at one fixed frequency
+            oct_ = (cut_oct[i] + keytrack * (cv - 36.0) / 12.0 + env_oct * fenv * (1.0 - 0.35 * cur_acc)
+                    + (1.2 + 2.2 * peak) * acc_cap) * drift_cut
+        else:
+            oct_ = (cut_oct[i] + env_oct * fenv * (1.0 - 0.35 * cur_acc)
+                    + (1.2 + 2.2 * peak) * acc_cap) * drift_cut
         fc = 20.0 * 2.0 ** oct_
         # soft ceiling: however far envelope and accents push, the peak stays in the range
         # where it squelches (FC_MAX) instead of turning into fizz above it. "shape"
@@ -221,7 +282,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
         fb_in = s4
         fb_hp = a_fbhp * (fb_hp + fb_in - fb_hp_x)
         fb_hp_x = fb_in
-        u = math.tanh(osc * 0.9 - k * fb_hp)
+        u = math.tanh(osc * 0.9 * in_scale - k * fb_hp)
         s1 += g * (u - s1)
         s2 += g * (math.tanh(s1) - s2)
         s3 += g * (math.tanh(s2) - s3)
@@ -271,7 +332,7 @@ def _controls(steps, bpm, root, cycles, cut_oct_fn=None, gate_frac=0.55):
 def render_voice(steps, bpm, root, voice, macros, cycles=1, seed=0, ride=None):
     """The dry voice at the internal rate. `ride(t)` adds a CUTOFF offset (0..1 knob units)
     over normalized time t in [0,1) of the whole render: the hand on the cutoff knob."""
-    m = {**DEFAULTS, **macros}
+    m = {**VOICE_DEFAULTS[voice], **macros}
     base = math.log2(expmap(m["CUTOFF"], CUT_LO, CUT_HI) / 20.0)  # "shape"
 
     def cut_fn(t):
@@ -288,8 +349,10 @@ def render_voice(steps, bpm, root, voice, macros, cycles=1, seed=0, ride=None):
     phase0 = float(rng.random()) if seed else 0.0
     drift_cut = 1.0 + (float(rng.random()) - 0.5) * 0.03 if seed else 1.0
     drift_dec = 1.0 + (float(rng.random()) - 0.5) * 0.12 if seed else 1.0
-    return _voice_kernel(tgt, gate, trig, sld, vel, cut, voice == "SQUARE", m["PEAK"], m["SWEEP"],
-                         phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX), step_n
+    c = VOICE_CFG[voice]
+    return _voice_kernel(tgt, gate, trig, sld, vel, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
+                         phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
+                         c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"]), step_n
 
 
 # ----------------------------------------------------------------------------- BITE (4x)
@@ -384,10 +447,60 @@ def _fdn_kernel(x, lens, g, a_damp):
     return out
 
 
+@njit(cache=True)
+def _dub_delay_kernel(x, d, fb, a_hp, fs):
+    """DUB's delay: each repeat passes a resonant band-pass whose centre follows the repeat's
+    own loudness (an envelope follower in the feedback loop), so a loud echo opens and then
+    closes as it fades: every echo squelches again, and quieter echoes come back darker.
+    The loop gain is bounded by fb < 1 and a tanh, as in the plain delay. "shape" constants."""
+    n = x.shape[0]
+    buf = np.zeros(d + 1)
+    w = 0
+    hp = 0.0
+    hpx = 0.0
+    env = 0.0
+    lp_s = 0.0
+    bp_s = 0.0
+    a_att = math.exp(-1.0 / (0.002 * fs))
+    a_rel = math.exp(-1.0 / (0.09 * fs))
+    q = 0.22                       # 1/Q: a fairly narrow, ringing band
+    wet = np.zeros(n)
+    for i in range(n):
+        r = w - d
+        if r < 0:
+            r += d + 1
+        tap = buf[r]
+        a = abs(tap)
+        if a > env:
+            env = a + (env - a) * a_att
+        else:
+            env = a + (env - a) * a_rel
+        e = env / 0.25
+        if e > 1.0:
+            e = 1.0
+        fc = 280.0 * 2.0 ** (3.0 * e)          # 280 Hz closed, 2.2 kHz fully open
+        f = 2.0 * math.sin(math.pi * fc / fs)
+        hi = tap - lp_s - q * bp_s
+        bp_s += f * hi
+        lp_s += f * bp_s
+        band = q * bp_s            # unity gain at the centre: without the q the band-pass
+        # amplifies by 1/q (~4.5x), the loop gain passes 1 and the echoes run away into a
+        # whine (measured: 99% of the energy above 2 kHz, loop seam error 1.4)
+        hp = a_hp * (hp + band - hpx)
+        hpx = band
+        rep = math.tanh(hp * 1.5) / 1.5
+        wet[i] = tap
+        buf[w] = x[i] + fb * rep
+        w += 1
+        if w > d:
+            w = 0
+    return wet
+
+
 DIVISIONS = {"1/16": 0.25, "1/8": 0.5, "dotted 1/8": 0.75, "1/4": 1.0}
 
 
-def space(x, amount, bpm, division="dotted 1/8", delay=True, reverb=True):
+def space(x, amount, bpm, division="dotted 1/8", delay=True, reverb=True, dub=False):
     """Tempo delay, then reverb on the whole signal (dry plus repeats).
     SPACE couples: delay mix and repeats rise together, the room grows longer and wetter.
     At 0 it is an exact bypass."""
@@ -399,7 +512,11 @@ def space(x, amount, bpm, division="dotted 1/8", delay=True, reverb=True):
         fb = lin(amount, 0.2, 0.62)                       # "shape"
         a_lp = math.exp(-2 * math.pi * lin(amount, 3800.0, 2600.0) / RATE)
         a_hp = math.exp(-2 * math.pi * 260.0 / RATE)      # repeats stay out of the bass
-        wet = _delay_kernel(x, d, fb, a_lp, a_hp)
+        if dub:
+            wet = _dub_delay_kernel(x, d, lin(amount, 0.35, 0.78), math.exp(-2 * math.pi * 180.0 / RATE),
+                                    float(RATE))
+        else:
+            wet = _delay_kernel(x, d, fb, a_lp, a_hp)
         y = x + lin(amount, 0.25, 0.6) * wet
     if reverb:
         t60 = lin(amount, 0.5, 3.2)                        # "shape"
@@ -429,7 +546,7 @@ def render_loop(line, macros=None, stages=("bite", "space"), bars=2, ride=None, 
     """A seamless LOOP of `bars` bars. The line is rendered for `warm` extra passes first,
     the chain runs over everything, and the last pass is kept, so the delay and reverb tails
     from the end of the loop are already sounding at its start: the loop wraps."""
-    m = {**DEFAULTS, **line["macros"], **(macros or {})}
+    m = {**VOICE_DEFAULTS[line["voice"]], **line["macros"], **(macros or {})}
     steps = line["steps"] * bars
     cycles = warm + 1
     ride_fn = None
@@ -441,7 +558,7 @@ def render_loop(line, macros=None, stages=("bite", "space"), bars=2, ride=None, 
         raw = bite(raw, m["BITE"])
     y = to_output_rate(raw)
     if "space" in stages:
-        y = space(y, m["SPACE"], line["bpm"], division, delay, reverb)
+        y = space(y, m["SPACE"], line["bpm"], division, delay, reverb, VOICE_CFG[line["voice"]]["dub"])
     loop_len = step_n * len(steps) // 4
     full = y
     out = y[-loop_len:]
@@ -451,7 +568,7 @@ def render_loop(line, macros=None, stages=("bite", "space"), bars=2, ride=None, 
 def render_note(midi, voice, macros, vel=0.6, seconds=0.9, gate_s=0.45, seed=0, bite_on=True,
                 space_on=False, bpm=120.0):
     """A single keygroup note: the gate held for gate_s, then released."""
-    m = {**DEFAULTS, **macros}
+    m = {**VOICE_DEFAULTS[voice], **macros}
     bpm_eff = 60.0 / (gate_s * 4)  # one step == gate length
     steps = [Step(midi - ROOT_MIDI, vel, False)]
     tgt, gate, trig, sld, velv, cut, step_n = _controls(steps, bpm_eff, ROOT_MIDI, 1,
@@ -472,13 +589,15 @@ def render_note(midi, voice, macros, vel=0.6, seconds=0.9, gate_s=0.45, seed=0, 
     phase0 = float(rng.random()) if seed else 0.0
     drift_cut = 1.0 + (float(rng.random()) - 0.5) * 0.03 if seed else 1.0
     drift_dec = 1.0 + (float(rng.random()) - 0.5) * 0.12 if seed else 1.0
-    raw = _voice_kernel(tgt, gate, trig, sld, velv, cut, voice == "SQUARE", m["PEAK"], m["SWEEP"],
-                        phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX)
+    c = VOICE_CFG[voice]
+    raw = _voice_kernel(tgt, gate, trig, sld, velv, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
+                        phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
+                        c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"])
     if bite_on:
         raw = bite(raw, m["BITE"])
     y = to_output_rate(raw)
     if space_on:
-        y = space(y, m["SPACE"], bpm)
+        y = space(y, m["SPACE"], bpm, dub=c["dub"])
     return y
 
 

@@ -125,11 +125,11 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
 Round 1 is a Python prototype audition; no Kotlin exists.
 
-- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. SAW and SQUARE are built in the prototype; four remain. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
+- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in the Python prototype (round 2), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
 - **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**
-  - **Rendering: Python harness only.** Velocity is the accent and changes the filter, not only the level: level-matched attack centroid 781 to 1,324 Hz from velocity 0.35 to 1.0. Round-robin takes are distinct but subtle, 1.0% attack spread at full accent.
+  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round-robin takes differ by 4.3% to 8.8% at the attack across the six voices.
   - **Saving, playback and export:** not yet verified.
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.

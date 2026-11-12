@@ -20,6 +20,7 @@ import snipkit as sk
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "etch-audition"
 MANIFEST: dict = {"sections": [], "checks": {}}
+ROUND1_VOICES = ("SAW", "SQUARE")  # the accepted round-1b sections stay exactly as they were
 
 
 def band_centroid(x, lo=150.0, hi=5000.0):
@@ -197,12 +198,12 @@ s = section("waves", "Saw against square, same line",
             "LINE B's notes at CUTOFF 0.45, PEAK 0.6, BITE 0.3, no SPACE, so the filter lets "
             "enough harmonics through to hear the wave. Two bars each. The square has almost no "
             "even harmonics, so it should sound hollower and woodier than the saw.")
-for voice in e.VOICES:
+for voice in ROUND1_VOICES:
     L = line_with(e.LINE_B, voice=voice, macros={"CUTOFF": 0.45, "PEAK": 0.6, "SWEEP": 0.5, "BITE": 0.3, "SPACE": 0.0})
     out, full, n = e.render_loop(L)
     save(s, f"line-{voice.lower()}", out, f"{voice} wave", {"band_centroid_hz": round(band_centroid(out)),
                                                             "upper_db": round(upper_db(out), 1)})
-for voice in e.VOICES:
+for voice in ROUND1_VOICES:
     y = e.render_note(36, voice, {"CUTOFF": 0.5, "PEAK": 0.5, "SWEEP": 0.3, "BITE": 0.0}, gate_s=0.8, seconds=1.0)
     save(s, f"held-{voice.lower()}-C2", y, f"{voice} C2 held, filter open",
          {"second_harmonic_db": second_harmonic_db(y[int(0.3 * e.RATE):int(0.75 * e.RATE)], 65.41)})
@@ -211,7 +212,7 @@ for voice in e.VOICES:
 # ------------------------------------------------------------------ 8. keygroup notes
 s = section("notes", "Single notes (keygroup material)",
             "Each wave at C1, C2 and C3, velocity 0.6, gate 0.45 s, BITE default, no SPACE.")
-for voice in e.VOICES:
+for voice in ROUND1_VOICES:
     for midi, nm in ((24, "C1"), (36, "C2"), (48, "C3")):
         y = e.render_note(midi, voice, {})
         save(s, f"{voice.lower()}-{nm}", y, f"{voice} {nm}",
@@ -258,6 +259,87 @@ seq = np.concatenate([np.concatenate([takes[(v, k)][:int(0.32 * e.RATE)], np.zer
                       for v in (0.6, 1.0) for k in range(1, 5)])
 save(s, "takes-back-to-back", seq, "eight takes at real relative levels", level=False)
 MANIFEST["checks"]["round_robin"] = rr_metrics
+
+# ------------------------------------------------------------------ round 2: six voices
+def third_octave_db(x):
+    """Level-matched third-octave band levels, 40 Hz to 8 kHz: a coarse picture of the
+    spectrum, closer to how the ear groups frequencies than raw FFT bins."""
+    x = x / (np.sqrt(np.mean(x ** 2)) + 1e-12)
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x)))) ** 2
+    f = np.fft.rfftfreq(len(x), 1 / e.RATE)
+    centres = 40.0 * 2 ** (np.arange(0, 28) / 3)
+    out = []
+    for c in centres:
+        b = (f >= c / 2 ** (1 / 6)) & (f < c * 2 ** (1 / 6))
+        out.append(10 * math.log10(X[b].sum() + 1e-12))
+    return np.array(out)
+
+
+def sub_db(x, f0):
+    """Level at half the note's frequency relative to the note: RUBBER's sub octave."""
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x))))
+    f = np.fft.rfftfreq(len(x), 1 / e.RATE)
+
+    def at(hz):
+        i = int(np.argmin(np.abs(f - hz)))
+        return float(X[max(0, i - 3):i + 4].max())
+    return round(20 * math.log10(at(f0 / 2) / at(f0)), 1)
+
+
+SIX_LINE = dict(e.LINE_B, name="SIX", macros={})
+s = section("six-voices", "Round 2: six voices, one line",
+            "LINE B's notes at 130 BPM, each voice at its own defaults with the whole chain, two "
+            "bars played twice. SAW and SQUARE are the accepted round-1b sound; RUBBER, WHISTLE, "
+            "GRIT and DUB are new and not heard.")
+loops = {}
+for voice in e.VOICES:
+    L = dict(SIX_LINE, voice=voice)
+    out, full, n = e.render_loop(L)
+    loops[voice] = out
+    m = loop_metrics(out, L, 2)
+    m["seam_error"] = float(f"{sk.seam_error(full, len(full) - n):.2e}")
+    save(s, f"six-{voice.lower()}", np.concatenate([out, out]), f"{voice}, its own defaults", m)
+
+s = section("six-notes", "Round 2: one held note per voice",
+            "C2 held for 0.8 s, BITE at each voice's default, no SPACE (DUB's identity is in its "
+            "SPACE, so its loop above is the fairer test).")
+for voice in e.VOICES:
+    y = e.render_note(36, voice, {"SPACE": 0.0}, gate_s=0.8, seconds=1.1)
+    seg = y[int(0.3 * e.RATE):int(0.75 * e.RATE)]
+    save(s, f"held-{voice.lower()}", y, f"{voice} C2",
+         {"second_harmonic_db": second_harmonic_db(seg, 65.41), "sub_octave_db": sub_db(seg, 65.41),
+          "band_centroid_hz": round(band_centroid(seg))})
+
+s = section("six-dynamics", "Round 2: velocity and round robin, every voice",
+            "For each voice: a soft hit (velocity 0.35) and a hard hit (1.0), level-matched, then "
+            "four round-robin takes at velocity 0.6 played back to back at their real levels.")
+dyn = {}
+for voice in e.VOICES:
+    soft = e.render_note(36, voice, {"SPACE": 0.0}, vel=0.35)
+    hard = e.render_note(36, voice, {"SPACE": 0.0}, vel=1.0)
+    takes = [e.render_note(36, voice, {"SPACE": 0.0}, vel=0.6, seed=k) for k in range(1, 5)]
+    att = [band_centroid(t[:int(0.06 * e.RATE)]) for t in takes]
+    late = [band_centroid(t[int(0.2 * e.RATE):int(0.3 * e.RATE)]) for t in takes]
+    d = {"soft_attack_hz": round(band_centroid(soft[:int(0.06 * e.RATE)])),
+         "hard_attack_hz": round(band_centroid(hard[:int(0.06 * e.RATE)])),
+         "rr_attack_spread_pct": round(100 * (max(att) - min(att)) / float(np.mean(att)), 1),
+         "rr_late_spread_pct": round(100 * (max(late) - min(late)) / float(np.mean(late)), 1)}
+    dyn[voice] = d
+    save(s, f"{voice.lower()}-soft", soft, f"{voice} velocity 0.35",
+         {"attack_band_centroid_hz": d["soft_attack_hz"]})
+    save(s, f"{voice.lower()}-hard", hard, f"{voice} velocity 1.0",
+         {"attack_band_centroid_hz": d["hard_attack_hz"]})
+    seq = np.concatenate([np.concatenate([t[:int(0.32 * e.RATE)], np.zeros(int(0.05 * e.RATE))]) for t in takes])
+    save(s, f"{voice.lower()}-takes", seq, f"{voice}: four takes at real levels", level=False)
+MANIFEST["checks"]["six_dynamics"] = dyn
+
+bands = {v: third_octave_db(loops[v]) for v in e.VOICES}
+pairs = {}
+for i, a in enumerate(e.VOICES):
+    for b in e.VOICES[i + 1:]:
+        pairs[f"{a}-{b}"] = round(float(np.sqrt(np.mean((bands[a] - bands[b]) ** 2))), 2)
+MANIFEST["checks"]["six_distance_db"] = pairs
+
 
 # ------------------------------------------------------------------ checks
 a1, _, _ = e.render_loop(e.LINE_A)

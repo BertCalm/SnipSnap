@@ -33,6 +33,7 @@ LABELS = {
     "late_band_centroid_hz": ("AT 0.2 s", "{:.0f} Hz"),
     "raw_peak_db": ("UNMATCHED PEAK", "{:.1f} dB"),
     "second_harmonic_db": ("2ND HARMONIC", "{:.1f} dB"),
+    "sub_octave_db": ("SUB OCTAVE", "{:.1f} dB"),
 }
 
 
@@ -86,6 +87,11 @@ LISTEN = {
     "velocity": "Does the hard hit sound like an accent, not just louder?",
     "round-robin": "Are the takes different enough for a repeated note? "
                    "The accented takes vary less than the plain ones.",
+    "six-voices": "Are these six different instruments, not six settings of one? "
+                  "Is RUBBER round or just muffled? Does WHISTLE sing without getting shrill?",
+    "six-notes": "Would each work as a keygroup note? RUBBER's sub octave is as loud as the note itself.",
+    "six-dynamics": "Does a hard hit change the tone on every voice? GRIT's accents change its "
+                    "folds, not its level: is that enough?",
 }
 
 sections = []
@@ -103,6 +109,33 @@ for s in M["sections"]:
         <div class="table-wrap"><table>
           <thead><tr><th>Velocity</th><th>Attack centroid per take (Hz)</th><th>Attack spread</th><th>Spread at 0.2 s</th></tr></thead>
           <tbody>{rows}</tbody></table></div>"""
+    if s["id"] == "six-voices":
+        names = ("SAW", "SQUARE", "RUBBER", "WHISTLE", "GRIT", "DUB")
+        dist = M["checks"]["six_distance_db"]
+
+        def dd(a, b):
+            if a == b:
+                return "·"
+            return f"{dist.get(f'{a}-{b}', dist.get(f'{b}-{a}')):.1f}"
+        head = "".join(f"<th>{n}</th>" for n in names)
+        rows = "".join(f"<tr><th>{a}</th>" + "".join(f"<td>{dd(a, b)}</td>" for b in names) + "</tr>"
+                       for a in names)
+        extra = f"""
+        <p class="intro">How far apart the six loops are, in dB: the root-mean-square difference of their
+        level-matched third-octave spectra. SAW against SQUARE (3.7) is the pair you heard as clearly
+        different, so treat it as the floor.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th></th>{head}</tr></thead><tbody>{rows}</tbody></table></div>"""
+    if s["id"] == "six-dynamics":
+        dyn = M["checks"]["six_dynamics"]
+        rows = "".join(
+            f"<tr><td>{v}</td><td>{d['soft_attack_hz']} → {d['hard_attack_hz']} Hz</td>"
+            f"<td>{d['rr_attack_spread_pct']}%</td><td>{d['rr_late_spread_pct']}%</td></tr>"
+            for v, d in dyn.items())
+        extra = f"""
+        <div class="table-wrap"><table>
+          <thead><tr><th>Voice</th><th>Attack centroid, soft → hard</th><th>Take spread at attack</th><th>Take spread at 0.2 s</th></tr></thead>
+          <tbody>{rows}</tbody></table></div>"""
     sections.append(f"""
     <section class="card" id="{ESC(s['id'])}">
       <h2>{ESC(s['title'])}</h2>
@@ -117,7 +150,9 @@ checks = M["checks"]
 
 GATES = [
     ("Melodic: six distinct voices with presets", "open",
-     "Two waves built (SAW, SQUARE) on one voice model. Six voices are proposed below for you to choose; none has presets yet."),
+     "You chose the six on 2026-11-12. All six are built in Python, each with its own mechanism, and every pair "
+     f"is at least {min(checks['six_distance_db'].values()):.1f} dB apart. SAW and SQUARE are heard and accepted; "
+     "RUBBER, WHISTLE, GRIT and DUB are not heard. Each voice has defaults; no preset banks yet."),
     ("Melodic: playable keygroups", "not yet verified",
      "Single notes render at C1, C2 and C3. No keygroup has been built or played."),
     ("Melodic: premade kit", "open", "No kit yet."),
@@ -130,18 +165,19 @@ GATES = [
     ("Percussion: roll or riser", "not applicable", "A bass engine, not percussion."),
     ("Drums: genre kits", "not applicable", "Not a drum engine."),
     ("Velocity: rendering", "pass (Python only)",
-     "Velocity sets the accent, which changes the filter, not only the level: level-matched attack centroid "
-     + " → ".join(str(c["metrics"]["attack_band_centroid_hz"]) for c in
-                  next(s for s in M["sections"] if s["id"] == "velocity")["clips"][:4])
-     + " Hz from velocity 0.35 to 1.0. Kotlin not built."),
-    ("Round robin: rendering", "partial (Python only)",
-     f"Takes differ (attack spread {checks['round_robin']['0.6']['attack_spread_pct']}% at velocity 0.6), "
-     f"but accented takes differ little ({checks['round_robin']['1.0']['attack_spread_pct']}% at attack, "
-     f"{checks['round_robin']['1.0']['late_spread_pct']}% at 0.2 s). Your ears decide whether that is enough."),
+     "On all six voices a hard hit changes the tone, not only the level. Level-matched attack centroid, "
+     "velocity 0.35 → 1.0, in Hz: " + " · ".join(f"{v} {d['soft_attack_hz']}→{d['hard_attack_hz']}" for v, d in checks["six_dynamics"].items()) + ". Kotlin not built."),
+    ("Round robin: rendering", "pass (Python only)",
+     "Four takes per voice differ at the attack by "
+     f"{min(d['rr_attack_spread_pct'] for d in checks['six_dynamics'].values())}% to "
+     f"{max(d['rr_attack_spread_pct'] for d in checks['six_dynamics'].values())}% at velocity 0.6; "
+     "you accepted the round-1b takes. Accented SAW takes differ less "
+     f"({checks['round_robin']['1.0']['attack_spread_pct']}% at attack). Kotlin not built."),
     ("Velocity and round robin: saving", "not yet verified", "No Kotlin patch exists to save."),
     ("Velocity and round robin: playback", "not yet verified", "No phone playback."),
     ("Velocity and round robin: export", "not yet verified", "No MPC export."),
-    ("Sound character", "not heard", "Waiting for your listen."),
+    ("Sound character", "partial",
+     "Round 1b accepted 2026-11-12 (\"It all seems fine from the audition\"). The four new voices are not heard."),
 ]
 
 
@@ -231,11 +267,13 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 1B · PYTHON HARNESS · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 2 · PYTHON HARNESS · NEW VOICES NOT HEARD</span></div>
     <h1>ETCH Audition</h1>
     <p class="lede">A squelching step-line bass, then a drive that glues the steps, then a tempo delay into a reverb.
     Built from your two reference clips. These are prototype renders from a Python model, not the app.
     Every clip is level-matched, so a later stage never wins by being louder.</p>
+    <p class="lede"><b>Round 2</b> adds the four voices you chose: RUBBER, WHISTLE, GRIT and DUB, in the sections at the end.
+    The round-1b sections above are your accepted baseline and are byte-identical to what you heard.</p>
     <p class="gesture">The gesture: a sixteen-step line, accents bite and build, slides carry the pitch and keep the filter open, the drive evens out the peaks, and dotted-eighth repeats fall into a room behind it.</p>
   </header>
 
@@ -271,12 +309,12 @@ MACROS  TUNE · CUTOFF · PEAK · SWEEP · BITE · SPACE      VELOCITY = ACCENT<
   <section class="card" id="next">
     <h2>What I need from you</h2>
     <ul class="plain">
-      <li><b>Chain:</b> keep, change or drop each stage (the four clips in each chain section).</li>
-      <li><b>BITE and SPACE defaults:</b> which clip number in each sweep is the default.</li>
-      <li><b>Ride:</b> should loop pads carry a baked cutoff ride, or stay static?</li>
-      <li><b>Round robin:</b> is the analog wander enough, or should takes differ more?</li>
-      <li><b>Six voices</b> (proposed, pick or replace): SAW LINE and SQUARE LINE (built), RUBBER (square plus sub, low peak), WHISTLE (peak near self-oscillation), GRIT (BITE first, hard), DUB (dark, long SPACE, repeats re-filtered).</li>
-      <li><b>Chord tools:</b> does the chord gate apply to a mono line voice?</li>
+      <li><b>Each new voice:</b> keep, change or drop RUBBER, WHISTLE, GRIT and DUB (the six-voice loops and held notes).</li>
+      <li><b>RUBBER:</b> round, or too muffled? It is the darkest voice by far.</li>
+      <li><b>WHISTLE:</b> does it sing, or is it shrill?</li>
+      <li><b>GRIT:</b> its accents change its folds rather than its level. Enough, or should hard hits also be louder?</li>
+      <li><b>DUB:</b> do the echoes squelch on their own, and is the wash too long?</li>
+      <li><b>Chord tools:</b> does the chord gate apply to a mono line voice? Still open.</li>
     </ul>
   </section>
 
