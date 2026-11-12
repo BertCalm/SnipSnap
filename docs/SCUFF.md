@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 0, Python prototype; nothing heard.** No Kotlin exists. The engine stays in
+Status: **round 0b, Python prototype; nothing heard.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -226,3 +226,61 @@ work as THUMP plus CRUNCH; one-shots should stay inside the tens-of-ms rule, loo
 - **The risky decision is the per-pad bus.** SnipSnap renders one pad at a time, so the
   kick-and-bass fusion the brief calls defining is only real on loop pads. The audition plays
   it both ways (one hit, two bars) so the owner can say whether the one-shot version is enough.
+
+## Round 0b: more character (2026-11-12)
+
+After seeing round 0's page the owner asked, "Can we make them a little more distinct?" and
+then, asked which "them", answered "More character in general." Not a listen: the owner had not
+played the clips when they wrote it.
+
+Measured first, before changing anything. Round 0's ten pads were already far apart from each
+other (the closest pair, kick against zap, 17.9 dB by the take-distance measure; ETCH's six
+voices sit 3.7 to 7.5 dB apart), so the blandness was inside each hit and in the chain. The
+stage-by-stage measure found BARK moving every voice by under 1 dB: a unity-gain band-pass
+blended at 17 percent is inaudible. Round 0 shipped a stage that did nothing.
+
+Round 0b, every setting "shape", nothing heard:
+
+| Where | Round 0 | Round 0b |
+|---|---|---|
+| KICK | sine with a drop, a click, one tanh | the drop from 3x (300 Hz) over 27 ms; a 420 Hz knock under the click; a harder, more asymmetric shaper; a resonant low-pass at 2.2x the body (the rubbery bounce) with the click kept on top |
+| CLAP | four 6 ms bursts, a +7 dB peak at Q 1.2 | four 3 ms taps rising in level, a +10 dB peak at Q 2.5, a whip crack (2.5 kHz to 900 Hz sine chirp, 12 ms) on the last tap |
+| BOOM | one shaper, low-passed; harmonics 11 dB under the sub | a separate harmonic path (high-passed at 90 Hz, clipped hard, kept to 100 to 400 Hz) mixed under the sub; the mute at 0.7 of the decay, while the note is still loud |
+| RIM | two resonators Q 18, a quiet click | Q 26, a woody third resonance at 0.56x (480 Hz), a loud 1.5 ms click, BITE default 0.4 → 0.65 |
+| HAT | one exponential decay | a 1 ms 9 kHz tip on the contact; a two-stage decay (8 ms then the ring), so it says "tst" |
+| BELL | one modulator at 1.414 | a second modulator at 2.756 that dies in 80 ms (the clang), index 1.5 to 7 |
+| ZAP | a fixed light clip | the clip hardest at the top of the sweep, SHAPE default 0.3 → 0.5 |
+| TICK | hiss only | a 0.8 ms pitched click at 3.6 kHz under the hiss |
+| PLUCK | one sine | an octave slap (15 ms) on the contact, drive 1.4 → 2.2 |
+| INHALE | one ring modulator | two carriers, 1.37 and 2.21 kHz |
+| BARK | unity band-pass, mix 0 to 50% | a boost of 0 to 18 dB on the band-pass; past 0.3 the dry path loses lows and highs as a parked wah does; output peak-matched |
+| LOCKER | feedback 0.45 to 0.70, send 0 to 0.6 | feedback 0.5 to 0.74, send 0 to 0.9, a soft clip in the loop (bounded) |
+| SLAM | bias 0.12 | bias 0.2 (more even harmonics) |
+| GRIT | hold down to 14 kHz | hold down to 11 kHz |
+| Every pad | the exponential tail runs out | a tail gate: the pad ends 2 ms after its envelope last falls 40 dB under its peak |
+| Defaults | SLAM .55 GRIT .45 BARK .35 LOCKER .3 | SLAM .65 GRIT .55 BARK .5 LOCKER .45 |
+
+Measured, round 0 against round 0b at the defaults (take-distance, dB): kick 20.0, pluck 15.2,
+tick 11.5, rim 11.2, clap 8.7, zap 7.5, hat 7.0, bell 5.2, crash 4.6, bass hit 3.6. For scale, a
+soft and a hard kick in round 0 were 7.9 dB apart. BARK now moves the clap, rim, pluck and bell
+by 3.3 to 4.9 dB. The bass hit's harmonics (100 to 300 Hz) rose from -11.3 to -6.7 dB against
+its sub, which answers round 0's first disclosed miss; its before/after distance is the smallest
+because the sub, which the measure weights, did not change.
+
+What else moved, and is disclosed:
+- Velocity grew on the kick (7.9 → 14.9 dB soft against hard), rim (5.6 → 8.5), bell (10.1 →
+  9.2) and zap (6.5 → 8.3), and shrank on the hat (10.1 → 4.7) because the tip is a fixed
+  element at every velocity, and on the clap (14.2 → 9.7).
+- Round robin: the kick's takes spread 4.7 to 10.2 dB (was 2.3 to 6.2), under its velocity
+  step. The tick's takes are now the closest (1.9 to 2.7 dB) and its widest pair equals its
+  velocity step (2.6); a tick is a 13 ms hiss and has little to vary.
+- The kick-and-bass pair's time at the ceiling at SLAM 0.55 fell from 80 to 40 percent,
+  because the bass hit's harmonic path adds crest the clipper does not flatten at that drive.
+- The -60 dB times: the tail gate brings the kick to 140 ms (brief 120 to 180) and the hat to
+  20 ms (brief 25 to 45; the gate cuts the ring at -40 dB). The clap stays at 150 ms with the
+  comb.
+
+The page gained a before/after section (every pad and the two bars, round 0 then round 0b)
+and a stage-moves table. Round 0's model is read from git at `f92233a1` when the audition is
+generated, so the A/B is against what was published, not a copy. Published 2026-11-12 to the
+same link as version 2 (155 clips). Not heard.

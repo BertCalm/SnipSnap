@@ -1,12 +1,21 @@
-"""SCUFF round 0: a dry, mid-forward Michigan drum kit and the chain that makes it.
+"""SCUFF round 0b: a dry, mid-forward Michigan drum kit and the chain that makes it.
 
 Python harness, not Kotlin. Nothing here has been heard by its author; every constant marked
 "shape" is a starting value for a listening pass, not a measurement. The brief is the owner's
 Detroit/Flint drum description (docs/SCUFF.md); the numbers in it are the design targets.
 
+Round 0b (2026-11-12) answers the owner's note on round 0, "more character in general".
+Measured, round 0's ten pads were far apart from each other (the closest pair 18 dB), so the
+blandness was inside each hit and in the chain: BARK moved every voice by under 1 dB (a
+unity-gain band-pass blended at 17 percent is inaudible). Round 0b gives every voice one more
+mechanism (a knock, a crack, a harmonic path, a woody body, a tip, a second modulator, a
+mechanical click, a slap) and makes BARK a resonant boost that also narrows the dry path,
+LOCKER a hotter send with a soft clip in its loop, SLAM more asymmetric, and every pad
+bone-dry by a hard tail gate. Round 0 renders stay reachable from git for the A/B.
+
 Ten voices and one chain. Every pad goes:
 
-    voice (4x) ─► band-limit, decimate ─► GRIT ─► LOCKER ─► BARK ─► up 4x ─► SLAM ─► finish
+    voice (4x) ─► band-limit, decimate ─► GRIT ─► LOCKER ─► BARK ─► up 4x ─► SLAM ─► tail gate, finish
                                           crush   comb     cocked   asymmetric clip
                                           (some   slap     band-    + hard ceiling
                                           voices) (some)   pass
@@ -17,8 +26,7 @@ Why each stage sits where it does:
   * GRIT (sample-and-hold plus quantisation) runs at 1x on purpose: the aliasing is the sound,
     exactly as CRUNCH does it. It is skipped on the kick, bass, bell, zap and pluck, as the
     brief asks, so the sub stays clean.
-  * LOCKER and BARK are linear and run at 1x. Both are parallel sends, so at 0 the dry path is
-    untouched.
+  * LOCKER and BARK run at 1x. Both are parallel sends, so at 0 the dry path is untouched.
   * SLAM is the one nonlinear stage after the voice, so it goes back up to 4x before clipping
     and is band-limited before the rate drops (the VALVE and FORGE rule).
 
@@ -49,11 +57,13 @@ RARE = VOICES[5:]
 
 # The engine macros: TUNE and DECAY per voice as THUMP has them, and four chain macros that
 # every pad shares. All 0..1. Chain macros at 0 are exact bypasses.
-DEFAULTS = {"TUNE": 0.5, "DECAY": 0.5, "SLAM": 0.55, "GRIT": 0.45, "BARK": 0.35, "LOCKER": 0.3}
+# Round 0b defaults sit higher than round 0's (SLAM .55, GRIT .45, BARK .35, LOCKER .3): the
+# chain was measured as barely there. "shape"
+DEFAULTS = {"TUNE": 0.5, "DECAY": 0.5, "SLAM": 0.65, "GRIT": 0.55, "BARK": 0.5, "LOCKER": 0.45}
 
-# Which voices take which chain stage, from the brief: crush the claps, rims, hats and the
-# money-counter tick, not the sub; the comb goes on the rim, clap and pluck (the "small metal
-# locker"); BARK on the mid percussion; SLAM on everything (it is the bus).
+# Which voices take which chain stage, from the brief: crush the claps, rims and hats, not the
+# sub; the comb goes on the rim, clap and pluck (the "small metal locker"); BARK on the mid
+# percussion; SLAM on everything (it is the bus).
 CHAIN = {
     "KICK":   dict(grit=False, locker=False, bark=False),
     "CLAP":   dict(grit=True,  locker=True,  bark=True),
@@ -68,6 +78,8 @@ CHAIN = {
 }
 # Comb delay per voice, ms: the locker's size. Shorter is a smaller box. "shape"
 LOCKER_MS = {"CLAP": 19.0, "RIM": 11.0, "PLUCK": 24.0}
+# The tail gate: a pad ends when its envelope is this far down, over 2 ms. Bone dry. "shape"
+TAIL_GATE_DB = -40.0
 # The take dimensions use a 4-position Latin square so no two takes share a position on any
 # dimension (the ETCH round-robin lesson: small independent wobbles read as one strike).
 _STRATA = (-0.75, -0.25, 0.25, 0.75)
@@ -126,6 +138,17 @@ def peak_filter(x, hz, q, fs, gain_db=None):
     return x + (10 ** (gain_db / 20) - 1.0) * y
 
 
+def resonant_lp(x, hz, q, fs):
+    """A two-pole resonant low-pass (RBJ), the rubbery bounce of a resonant filter near the
+    body of a kick."""
+    w0 = 2 * math.pi * hz / fs
+    alpha = math.sin(w0) / (2 * q)
+    cw = math.cos(w0)
+    b = [(1 - cw) / 2, 1 - cw, (1 - cw) / 2]
+    a = [1 + alpha, -2 * cw, 1 - alpha]
+    return signal.lfilter(np.array(b) / a[0], np.array(a) / a[0], x)
+
+
 def asym_clip(x, drive, bias):
     """Asymmetric soft clip: a DC offset before tanh, the offset's own output subtracted
     after, so even harmonics appear and no DC leaves. The brief's 'trunk rattle' shaper."""
@@ -154,39 +177,64 @@ def up4(y):
     return signal.resample_poly(y, 4, 1, window=("kaiser", 8.0))
 
 
+def tail_gate(y, floor_db=TAIL_GATE_DB, fade_ms=2.0):
+    """End the pad where its 5 ms envelope last falls under `floor_db` of its peak, with a
+    short fade: the genre's abrupt, dry ending. A pad that never falls that far is left whole."""
+    n = int(0.005 * RATE)
+    env = np.sqrt(np.convolve(y * y, np.ones(n) / n, mode="same"))
+    thr = env.max() * 10 ** (floor_db / 20)
+    above = np.where(env > thr)[0]
+    if len(above) == 0:
+        return y
+    end = min(len(y), int(above[-1]) + int(fade_ms * 1e-3 * RATE))
+    out = y[:end].copy()
+    f = int(fade_ms * 1e-3 * RATE)
+    if f < end:
+        out[-f:] *= np.linspace(1.0, 0.0, f)
+    return out
+
+
 # ----------------------------------------------------------------------------- the voices
 # Every voice takes (m, vel, take) and returns audio at FS, peak about 1.
 
 def kick(m, vel, tk):
     # Punch kick: 80 to 160 Hz body, a 250 -> 95 Hz drop in about 20 ms, a 3 kHz click,
     # 120 to 180 ms squared-off decay, no sub below 45 Hz.
+    # Round 0b: a deeper, slower drop; a 400 Hz knock under the click; a resonant low-pass
+    # near the body (the rubbery bounce); a harder, more asymmetric shaper.
     f_end = expmap(m["TUNE"], 70.0, 140.0)                       # 99 Hz at the default
-    f_start = f_end * 2.6 * (1.0 + 0.15 * tk["a"]) * (0.45 + 0.55 * vel)  # harder = deeper drop
-    tau = 0.007 * (1.0 + 0.35 * tk["b"])                          # 95% of the drop in ~21 ms
+    f_start = f_end * 3.0 * (1.0 + 0.15 * tk["a"]) * (0.45 + 0.55 * vel)  # harder = deeper drop
+    tau = 0.009 * (1.0 + 0.35 * tk["b"])                          # 95% of the drop in ~27 ms
     t60 = expmap(m["DECAY"], 0.09, 0.22) * (1.0 + 0.12 * tk["c"]) * (0.8 + 0.2 * vel)  # 141 ms
     t = t_axis(t60 * 1.5 + 0.05)
+    n = len(t)
     hz = f_end + (f_start - f_end) * np.exp(-t / tau)
     ph = phase_of(hz)
     body = np.sin(ph)
     tri = (2.0 / math.pi) * np.arcsin(np.sin(ph))
     body = (1.0 - m["SQUARE"]) * body + m["SQUARE"] * tri
-    body = body * squared_tail(t, t60)
+    body = body * squared_tail(t, t60, 1.8)
     # The click: 3 kHz band-passed noise, 3 ms, level and brightness with velocity.
     click_delay = int(0.0005 * (0.5 + 0.5 * tk["d"] + 0.5) * FS)
-    c = noise(tk["rng"], len(t)) * exp_env(t, 0.004)
-    c = peak_filter(c, 3000.0 * (0.8 + 0.2 * vel), 2.0, FS)
-    c = np.roll(c, click_delay) * m["CLICK"] * vel ** 3 * 1.8
-    drive = (1.5 + 1.5 * m["SQUARE"]) * (0.5 + 0.5 * vel)          # a soft hit stays rounder
-    y = asym_clip(body * (0.6 + 0.4 * vel) + c, drive, 0.15)
+    nz = noise(tk["rng"], n)
+    c = peak_filter(nz * exp_env(t, 0.004), 3000.0 * (0.8 + 0.2 * vel), 2.0, FS)
+    c = np.roll(c, click_delay) * m["CLICK"] * vel ** 3 * 2.2
+    # The knock: a 400 Hz burst, 6 ms, the beater on the head. "shape"
+    k = peak_filter(nz * exp_env(t, 0.006), 420.0, 3.0, FS) * (0.4 + 0.6 * vel) * 1.2
+    drive = (2.5 + 2.0 * m["SQUARE"]) * (0.5 + 0.5 * vel)          # a soft hit stays rounder
+    y = asym_clip(body * (0.6 + 0.4 * vel) + k, drive, 0.25)
+    y = resonant_lp(y, f_end * 2.2, 2.2, FS) + c                  # the bounce; the click stays on top
     return butter(y, 45.0, 2, "high", FS)
 
 
 def clap(m, vel, tk):
     # Flint clap: 3 to 4 micro impulses 8 to 12 ms apart, then a 60 to 90 ms noise burst.
     # High-passed below 250 Hz, a peak at 1.2 to 2 kHz, air from 5 to 10 kHz, a 220 Hz body.
+    # Round 0b: sharper taps (3 ms), a narrower louder peak, and a whip crack (a 12 ms
+    # downward sine chirp) on the last tap.
     spacing = lin(m["SNAP"], 0.012, 0.008) * (1.0 + 0.12 * tk["a"])
     t60 = expmap(m["DECAY"], 0.05, 0.12) * (1.0 + 0.08 * tk["b"])  # 77 ms at the default
-    peak_hz = 1500.0 * 2 ** (0.5 * (m["TUNE"] - 0.5)) * (1.0 + 0.05 * tk["c"]) * (0.85 + 0.25 * vel)
+    peak_hz = 1600.0 * 2 ** (0.5 * (m["TUNE"] - 0.5)) * (1.0 + 0.05 * tk["c"]) * (0.85 + 0.25 * vel)
     taps = 4 if vel >= 0.55 else 3
     t60 *= (0.8 + 0.2 * vel)
     t = t_axis(spacing * 4 + t60 * 1.4)
@@ -195,44 +243,55 @@ def clap(m, vel, tk):
     env = np.zeros(n)
     for k in range(taps):
         t0 = k * spacing * (1.0 + 0.04 * tk["d"] * (k % 2 * 2 - 1))
-        env += np.where(t >= t0, exp_env(t, 0.006, t0), 0.0) * (0.8 if k < taps - 1 else 1.0)
+        env += np.where(t >= t0, exp_env(t, 0.003, t0), 0.0) * (0.7 + 0.1 * k)
     tail_t0 = (taps - 1) * spacing
-    env += np.where(t >= tail_t0, exp_env(t, t60, tail_t0), 0.0) * 0.9
+    env += np.where(t >= tail_t0, exp_env(t, t60, tail_t0), 0.0) * 0.8
     y = nz * env
     y = butter(y, 250.0, 4, "high", FS)
-    y = peak_filter(y, peak_hz, 1.2, FS, gain_db=7.0)
+    y = peak_filter(y, peak_hz, 2.5, FS, gain_db=10.0)
     y = peak_filter(y, 7000.0, 1.0, FS, gain_db=3.0)
     body_hz = 220.0 * 2 ** (m["TUNE"] - 0.5)
     body = (2.0 / math.pi) * np.arcsin(np.sin(phase_of(np.full(n, body_hz)))) * exp_env(t, 0.035)
-    y = y + 0.25 * body * vel
-    return np.clip(y * (0.6 + 0.4 * vel) * 1.4, -0.8, 0.8)  # brittle: a hard ceiling in the voice
+    # The crack: a sine falling from 2.5 kHz to 900 Hz over 12 ms, on the last tap. "shape"
+    tc = np.maximum(t - tail_t0, 0.0)
+    crack_hz = 900.0 + 1600.0 * np.exp(-tc / 0.004)
+    crack = np.sin(phase_of(crack_hz)) * np.where(t >= tail_t0, exp_env(t, 0.012, tail_t0), 0.0)
+    y = y + 0.25 * body * vel + 0.6 * crack * vel
+    return np.clip(y * (0.6 + 0.4 * vel) * 1.5, -0.8, 0.8)  # brittle: a hard ceiling in the voice
 
 
 def boom(m, vel, tk):
     # Staccato bass hit: 50 to 75 Hz, a fast pitch punch, saturated so 100 to 300 Hz carry the
     # note, 250 to 450 ms decay with an abrupt gate, low-passed around 500 Hz.
+    # Round 0b: a separate harmonic path (the body high-passed at 90 Hz, clipped hard,
+    # band-passed 100 to 400 Hz) mixed under the sub, so the harmonics outlive the drive;
+    # the note-off lands while the note is still loud, so the mute is heard.
     f0 = expmap(m["TUNE"], 45.0, 80.0)                            # 60 Hz at the default
     punch = (1.5 + 1.5 * vel) * (1.0 + 0.3 * tk["a"])             # starts punch+1 times f0
     tau = 0.004 * (1.0 + 0.35 * tk["b"])
     t60 = expmap(m["DECAY"], 0.20, 0.50) * (1.0 + 0.10 * tk["c"]) * (0.8 + 0.2 * vel)  # 316 ms
-    gate_at = t60 * 0.9
+    gate_at = t60 * 0.7
     t = t_axis(gate_at + 0.01)
     hz = f0 * (1.0 + punch * np.exp(-t / tau))
     ph = phase_of(hz) + 0.3 * tk["phase"]
-    # The body is lifted and clipped (squared_tail) so it stays inside the shaper for most
-    # of the note: that is what keeps the 2nd to 4th harmonics loud enough to carry the pitch.
-    y = np.sin(ph) * np.minimum(1.0, t / 0.001) * squared_tail(t, t60 * 1.3, 2.5)
-    # The hard note-off: the next note mutes this one. 3 ms, as a sampler's choke would.
-    y *= np.clip((gate_at - t) / 0.003, 0.0, 1.0)
+    body = np.sin(ph) * np.minimum(1.0, t / 0.001) * squared_tail(t, t60 * 1.3, 2.5)
     drive = m["DRIVE"] * (0.4 + 0.6 * vel)
-    y = asym_clip(y, 1.0 + 7.0 * drive, 0.22)                     # the even harmonics
-    y = asym_clip(y, 1.0 + 3.0 * drive, -0.08)
-    return butter(y, 500.0, 4, "low", FS)
+    sub = asym_clip(body, 1.0 + 4.0 * drive, 0.15)
+    sub = butter(sub, 500.0, 4, "low", FS)
+    # The harmonic path: everything above the fundamental, clipped hard, kept to 100 to 400 Hz.
+    harm = butter(body, 90.0, 2, "high", FS)
+    harm = asym_clip(harm * 4.0, 2.0 + 8.0 * drive, 0.3)
+    harm = butter(butter(harm, 100.0, 2, "high", FS), 420.0, 4, "low", FS)
+    y = sub + (0.35 + 0.45 * drive) * harm
+    # The hard note-off: the next note mutes this one. 3 ms, as a sampler's choke would.
+    return y * np.clip((gate_at - t) / 0.003, 0.0, 1.0)
 
 
 def rim(m, vel, tk):
     # Stank rim: a 2 ms bipolar impulse into two high-Q resonators at 850 and 1350 Hz,
     # a 40 to 70 ms ring, overdriven a little.
+    # Round 0b: a louder woody click, a third low body resonance near 480 Hz, higher Q so the
+    # ring is a pitch, and more overdrive by default.
     f1 = 850.0 * 2 ** (m["TUNE"] - 0.5) * (1.0 + 0.025 * tk["a"])
     f2 = f1 * (1350.0 / 850.0) * (1.0 + 0.04 * tk["b"])
     t60 = expmap(m["DECAY"], 0.035, 0.09) * (1.0 + 0.15 * tk["c"]) * (0.85 + 0.15 * vel)  # 56 ms
@@ -240,10 +299,11 @@ def rim(m, vel, tk):
     t = t_axis(t60 * 1.5 + 0.02)
     n = len(t)
     imp = np.where(t < width, np.sin(2 * math.pi * t / width), 0.0)  # one bipolar cycle
-    imp += np.where(t < 0.001, noise(tk["rng"], n) * 0.5 * vel, 0.0)  # the woody click
-    y = peak_filter(imp, f1, 18.0, FS) + (0.4 + 0.5 * vel) * peak_filter(imp, f2, 18.0, FS)
+    click = np.where(t < 0.0015, noise(tk["rng"], n), 0.0) * exp_env(t, 0.002) * (0.6 + 0.6 * vel)
+    y = peak_filter(imp, f1, 26.0, FS) + (0.4 + 0.5 * vel) * peak_filter(imp, f2, 26.0, FS)
+    y = y + 0.35 * peak_filter(imp, f1 * 0.56, 12.0, FS)          # the woody body under it
     y = y / (np.max(np.abs(y)) + 1e-9)
-    y = y * exp_env(t, t60) + 0.5 * imp * exp_env(t, 0.004)
+    y = y * exp_env(t, t60) + 0.9 * click + 0.5 * imp * exp_env(t, 0.004)
     bite = 1.0 + 8.0 * m["BITE"] * vel * vel
     return np.tanh(bite * y) / math.tanh(bite)
 
@@ -254,6 +314,8 @@ HAT_HZ = (205.3, 304.4, 369.6, 522.7, 540.0, 800.0)  # the classic six-oscillato
 def hat(m, vel, tk):
     # Chopper hat: six squares, high-passed at 5 kHz, a ring near 9 kHz, 25 to 45 ms decay.
     # Round robin is real here: the oscillators run free, so every hit catches new phases.
+    # Round 0b: a tip (1 ms of 10 kHz noise on the stick contact) and a two-stage decay, a
+    # fast first 8 ms then the ring, so the hat says "tst" instead of "sss".
     scale = 2 ** (0.5 * (m["TUNE"] - 0.5))
     t60 = expmap(m["DECAY"], 0.020, 0.060) * (1.0 + 0.08 * tk["c"])  # 35 ms at the default
     t = t_axis(t60 * 1.6 + 0.01)
@@ -264,49 +326,61 @@ def hat(m, vel, tk):
         y += np.sign(np.sin(2 * math.pi * (hz * scale * t + ph0)))
     y = butter(y, 5000.0 * (0.8 + 0.2 * vel), 6, "high", FS)
     y = peak_filter(y, 9500.0 * 2 ** (0.3 * (m["TUNE"] - 0.5)), 3.0, FS, gain_db=12.0)
-    y = y * exp_env(t, t60) * (0.5 + 0.5 * vel)
-    y = y / (np.max(np.abs(y)) + 1e-9)
+    env = 0.55 * exp_env(t, 0.008) + 0.45 * exp_env(t, t60)       # the two-stage decay
+    y = y * env * (0.5 + 0.5 * vel)
+    tip = butter(noise(tk["rng"], n), 9000.0, 4, "high", FS) * exp_env(t, 0.0012) * 1.5 * vel
+    y = y / (np.max(np.abs(y)) + 1e-9) + tip
     return np.clip(y * 1.3, -0.9, 0.9)  # clean digital clipping
 
 
 def bell(m, vel, tk):
     # Bando bell: two-operator FM at a 1 : 1.414 ratio, 600 to 900 ms, drifting 12 cents flat.
+    # Round 0b: a second modulator at 1 : 2.756 that dies in the first 80 ms (the clang on the
+    # strike, then the cold ring), and a brighter index.
     fc = expmap(m["TUNE"], 300.0, 1200.0)
     ratio = 1.414 * (1.0 + 0.01 * tk["b"])
     t60 = expmap(m["DECAY"], 0.5, 1.1) * (0.75 + 0.25 * vel)
-    index = lin(m["TONE"], 1.0, 6.0) * (1.0 + 0.25 * tk["a"]) * (0.4 + 0.6 * vel)
+    index = lin(m["TONE"], 1.5, 7.0) * (1.0 + 0.25 * tk["a"]) * (0.4 + 0.6 * vel)
     t = t_axis(t60 * 1.2)
     drift = -(12.0 + 3.0 * tk["c"]) / 1200.0 * np.minimum(1.0, t / t60)   # cents, linear over the tail
     fc_t = fc * 2 ** drift
     mod = np.sin(phase_of(fc_t * ratio) + 2 * math.pi * tk["phase"]) * index * exp_env(t, t60 * 0.5)
-    y = np.sin(phase_of(fc_t) + mod) * np.minimum(1.0, t / 0.001) * exp_env(t, t60)
-    return np.tanh(1.3 * y) / math.tanh(1.3)
+    clang = np.sin(phase_of(fc_t * 2.756)) * index * 0.8 * exp_env(t, 0.08) * vel
+    y = np.sin(phase_of(fc_t) + mod + clang) * np.minimum(1.0, t / 0.001) * exp_env(t, t60)
+    return np.tanh(1.6 * y) / math.tanh(1.6)
 
 
 def zap(m, vel, tk):
     # Laser tom: an exponential sweep from 1.2 kHz to 120 Hz over 80 to 130 ms, lightly clipped.
+    # Round 0b: the clip bites hardest at the top of the sweep (the buzz of the start), and a
+    # square share by default.
     f_hi = expmap(m["TUNE"], 800.0, 1800.0) * (1.0 + 0.06 * tk["a"]) * (0.6 + 0.4 * vel)
     sweep = expmap(m["DECAY"], 0.08, 0.13) * (1.0 + 0.1 * tk["b"])
     t = t_axis(sweep * 1.4)
     hz = f_hi * (120.0 / f_hi) ** np.minimum(1.0, t / sweep)
     ph = phase_of(hz) + 2 * math.pi * tk["phase"]
     y = (1.0 - m["SHAPE"]) * np.sin(ph) + m["SHAPE"] * (2.0 / math.pi) * np.arcsin(np.sin(ph))
-    y = y * exp_env(t, sweep * 1.2) * (0.6 + 0.4 * vel)
-    return np.clip(y * 1.4, -0.7, 0.7) / 0.7
+    gain = 1.2 + 2.0 * np.exp(-t / (sweep * 0.3)) * vel            # hardest at the start
+    y = np.tanh(gain * y) * exp_env(t, sweep * 1.2) * (0.6 + 0.4 * vel)
+    return y / (np.max(np.abs(y)) + 1e-9)
 
 
 def tick(m, vel, tk):
     # Money counter: 7 kHz+ noise, 10 to 15 ms, cutoff and level following velocity.
+    # Round 0b: a 0.8 ms pitched click at 3.6 kHz under the hiss, the mechanism's own tick.
     t60 = expmap(m["DECAY"], 0.008, 0.020) * (0.7 + 0.3 * vel)
     cut = 7000.0 * (1.0 + 0.1 * tk["a"]) * (1.4 - 0.4 * vel)     # soft hits sit higher and thinner
     t = t_axis(t60 * 2.0)
     y = noise(tk["rng"], len(t)) * np.minimum(1.0, t / 0.0003) * exp_env(t, t60)
     y = butter(y, cut, 4, "high", FS) * (0.4 + 0.6 * vel)
+    click = np.sin(2 * math.pi * 3600.0 * (1.0 + 0.05 * tk["b"]) * t) * exp_env(t, 0.0008) * 0.7
+    y = y / (np.max(np.abs(y)) + 1e-9) + click
     return y / (np.max(np.abs(y)) + 1e-9)
 
 
 def pluck(m, vel, tk):
     # Hollow conga: one sine at 220 to 320 Hz that rises ~30 Hz in 8 ms, then falls ~80 Hz.
+    # Round 0b: a slap (the octave, 15 ms) on the contact and more rubber in the shaper.
     f0 = expmap(m["TUNE"], 200.0, 340.0)
     up = 30.0 * (1.0 + 0.2 * tk["a"]) * (0.7 + 0.3 * vel)
     down = 80.0 * (1.0 + 0.2 * tk["b"])
@@ -315,12 +389,15 @@ def pluck(m, vel, tk):
     rise = 1.0 - np.exp(-t / 0.0027)
     fall = np.where(t > 0.008, 1.0 - np.exp(-(t - 0.008) / 0.02), 0.0)
     hz = f0 + up * rise - down * fall
-    y = np.sin(phase_of(hz) + 2 * math.pi * 0.1 * tk["phase"]) * np.minimum(1.0, t / 0.001) * exp_env(t, t60)
-    return np.tanh(1.4 * y * (0.7 + 0.3 * vel)) / math.tanh(1.4)
+    ph = phase_of(hz) + 2 * math.pi * 0.1 * tk["phase"]
+    y = np.sin(ph) * np.minimum(1.0, t / 0.001) * exp_env(t, t60)
+    slap = np.sin(2 * ph) * exp_env(t, 0.015) * 0.5 * vel
+    return np.tanh(2.2 * (y + slap) * (0.7 + 0.3 * vel)) / math.tanh(2.2)
 
 
 def inhale(m, vel, tk):
     # Suck-back crash: metallic noise rising over 250 to 400 ms, cut at a zero crossing.
+    # Round 0b: two ring-modulator carriers (1.37 and 2.21 kHz) so the metal is denser.
     rise = expmap(m["DECAY"], 0.25, 0.40) * (1.0 + 0.1 * tk["b"]) * (1.3 - 0.3 * vel)  # soft = slower
     t = t_axis(rise)
     n = len(t)
@@ -328,8 +405,8 @@ def inhale(m, vel, tk):
     y = np.zeros(n)
     for hz in HAT_HZ:
         y += np.sign(np.sin(2 * math.pi * (hz * scale * t + tk["rng"].random())))
-    y *= np.sin(2 * math.pi * 1370.0 * t)                            # ring modulation
-    y = 0.5 * y + 0.5 * noise(tk["rng"], n)
+    y = y * (0.6 * np.sin(2 * math.pi * 1370.0 * t) + 0.4 * np.sin(2 * math.pi * 2210.0 * t))
+    y = 0.6 * y + 0.4 * noise(tk["rng"], n)
     y = butter(butter(y, 3000.0 * (1.5 - 0.5 * vel), 2, "high", FS), 12000.0, 2, "low", FS)
     y *= np.exp(6.9078 * (t - rise) / rise) * (0.5 + 0.5 * vel)     # -60 dB up to 0 dB at `rise`
     # The gate: find the last zero crossing and stop there, sample-accurate.
@@ -344,8 +421,8 @@ RENDER = {"KICK": kick, "CLAP": clap, "BOOM": boom, "RIM": rim, "HAT": hat,
 
 # Per-voice extra macros and their defaults ("shape"). TUNE and DECAY come from DEFAULTS.
 VOICE_MACROS = {
-    "KICK": {"CLICK": 0.5, "SQUARE": 0.4}, "CLAP": {"SNAP": 0.5}, "BOOM": {"DRIVE": 0.6},
-    "RIM": {"BITE": 0.4}, "HAT": {}, "BELL": {"TONE": 0.5}, "ZAP": {"SHAPE": 0.3},
+    "KICK": {"CLICK": 0.6, "SQUARE": 0.5}, "CLAP": {"SNAP": 0.5}, "BOOM": {"DRIVE": 0.65},
+    "RIM": {"BITE": 0.65}, "HAT": {}, "BELL": {"TONE": 0.55}, "ZAP": {"SHAPE": 0.5},
     "TICK": {}, "PLUCK": {}, "INHALE": {},
 }
 
@@ -359,13 +436,13 @@ def macros_for(voice, macros=None):
 # ----------------------------------------------------------------------------- the chain (1x)
 
 def grit(y, amount, vel):
-    """CRUNCH's move, velocity-aware: a zero-order hold at 16 to 22 kHz and 10 to 12 bit
+    """CRUNCH's move, velocity-aware: a zero-order hold down to 11 kHz and 16 to 9 bit
     quantisation, both deeper on a harder hit. 0 is an exact bypass."""
     if amount <= 0.0:
         return y
     depth = amount * (0.55 + 0.45 * vel)                         # harder hits crunch harder
     bits = lin(depth, 16.0, 9.0)
-    hold = expmap(depth, RATE, 14000.0)
+    hold = expmap(depth, RATE, 11000.0)
     k = np.floor(np.arange(len(y)) * hold / RATE)
     idx = np.searchsorted(k, k)                                   # first sample of each hold
     z = y[idx]
@@ -383,12 +460,13 @@ def _biquad(b, a, x_in, z):
 
 
 def locker(y, amount, delay_ms):
-    """A feedback comb 8 to 28 ms long with a band-pass (800 Hz to 2.5 kHz) inside the loop,
-    as a parallel send. The 'room' is a metal box, not a tail. 0 is an exact bypass."""
+    """A feedback comb 8 to 28 ms long with a band-pass (800 Hz to 2.5 kHz) and a soft clip
+    inside the loop, as a parallel send. The 'room' is a metal box, not a tail; the clip is
+    the box's walls giving. 0 is an exact bypass."""
     if amount <= 0.0:
         return y
-    fb = lin(amount, 0.45, 0.70)
-    send = lin(amount, 0.0, 0.6)
+    fb = lin(amount, 0.5, 0.74)
+    send = lin(amount, 0.0, 0.9)
     d = int(delay_ms * 1e-3 * RATE)
     b, a = signal.iirpeak(1400.0 / (RATE / 2), 1.0)             # ~800 Hz to 2.5 kHz at -3 dB
     n_tail = int(0.20 * RATE)                                     # the comb rings past the hit
@@ -398,7 +476,7 @@ def locker(y, amount, delay_ms):
     z = [0.0, 0.0]
     for i in range(len(x)):
         r = buf[i % d]
-        v = x[i] + fb * _biquad(b, a, r, z)
+        v = x[i] + fb * math.tanh(1.5 * _biquad(b, a, r, z)) / 1.5  # the soft clip keeps the loop bounded
         buf[i % d] = v
         out[i] = v
     wet = out - x
@@ -406,14 +484,21 @@ def locker(y, amount, delay_ms):
 
 
 def bark(y, amount):
-    """The cocked wah: a band-pass of Q 3.5 to 6 parked near 1.1 kHz, blended in parallel at
-    up to 50 percent. 0 is an exact bypass."""
+    """The cocked wah: a band-pass of Q 3.5 to 6 parked near 1.1 kHz, boosted up to 18 dB and
+    blended in; past 0.3 the dry path also loses its lows and highs, as a parked wah
+    does. Round 0 blended a unity-gain band-pass at 17 percent and measured under 1 dB of
+    change on every voice. 0 is an exact bypass."""
     if amount <= 0.0:
         return y
     q = lin(amount, 3.5, 6.0)
-    mix = lin(amount, 0.0, 0.5)
+    boost = 10 ** (lin(amount, 0.0, 18.0) / 20)
     bp = peak_filter(y, 1100.0, q, RATE)
-    return (1.0 - mix) * y + mix * bp * 2.2
+    dry = y
+    if amount > 0.3:
+        focus = (amount - 0.3) / 0.7
+        dry = butter(butter(y, 150.0 + 250.0 * focus, 1, "high", RATE), 9000.0 - 5000.0 * focus, 1, "low", RATE)
+    out = dry + boost * bp
+    return out * (np.max(np.abs(y)) / (np.max(np.abs(out)) + 1e-9))
 
 
 def slam(y, amount):
@@ -424,7 +509,7 @@ def slam(y, amount):
         return y
     x = up4(y)
     drive = expmap(amount, 1.0, 12.0)
-    bias = 0.12 * amount
+    bias = 0.2 * amount                                            # round 0: 0.12
     wet = cubic_clip(drive * (x + bias)) - cubic_clip(np.full(1, drive * bias))[0]
     wet = wet / drive ** 0.5                                      # keep its level in the room
     wet_lp = butter(wet, 600.0, 2, "low", FS)
@@ -443,9 +528,9 @@ def finish(y, peak=0.89):
 
 
 def render_pad(voice, macros=None, vel=1.0, take=0, stages=("grit", "locker", "bark", "slam"),
-               level=True):
+               level=True, gate=True):
     """One pad through the chain, at the output rate. `stages` chooses which chain stages run;
-    the voice itself always does."""
+    the voice itself always does. `gate` applies the tail gate."""
     m = macros_for(voice, macros)
     tk = take_params(take * 101 + VOICES.index(voice) * 7 if take else 0)
     raw = RENDER[voice](m, vel, tk)
@@ -459,6 +544,8 @@ def render_pad(voice, macros=None, vel=1.0, take=0, stages=("grit", "locker", "b
         y = bark(y, m["BARK"])
     if "slam" in stages:
         y = slam(y, m["SLAM"])
+    if gate and voice != "INHALE":
+        y = tail_gate(y)
     return finish(y) if level else y
 
 
@@ -564,7 +651,7 @@ def render_pattern(macros=None, bus_slam=None, bars=2, stages=("grit", "locker",
             i = int((14 + j * 0.5) * step * RATE)
             mix[i:i + len(y)] += y[:n - i]
     if drop_hat:  # the last hat of bar 2 is a tape-stopped stutter
-        y = render_pad("HAT", {**m, "DECAY": 0.9}, 0.9, 1, stages=stages, level=False)
+        y = render_pad("HAT", {**m, "DECAY": 0.9}, 0.9, 1, stages=stages, level=False, gate=False)
         y = drop(y * (0.89 / (np.max(np.abs(y)) + 1e-9)) * PAD_GAIN["HAT"], over_s=0.09)
         i = int(30 * step * RATE)
         mix[i:i + len(y)] += y[:n - i]

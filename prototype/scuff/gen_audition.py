@@ -1,4 +1,4 @@
-"""Render the SCUFF round-0 audition: WAVs per section plus manifest.json with measurements.
+"""Render the SCUFF round-0b audition: WAVs per section plus manifest.json with measurements.
 
 Python harness, not Kotlin. Every one-shot is peak-matched (0.89) and every loop too (0.95),
 so a later stage never wins by being louder. Run:  python3 gen_audition.py OUT_DIR
@@ -6,9 +6,11 @@ so a later stage never wins by being louder. Run:  python3 gen_audition.py OUT_D
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import math
 import os
+import subprocess
 import sys
 
 import numpy as np
@@ -20,6 +22,25 @@ import probes as pr
 OUT = sys.argv[1] if len(sys.argv) > 1 else "scuff-audition"
 MANIFEST: dict = {"sections": [], "checks": {}}
 RATE = e.RATE
+ROUND0_COMMIT = "f92233a1"  # round 0's model, read from git for the before/after section
+
+
+def load_round0():
+    """Round 0's scuff_proto.py as a module, from git, so the A/B is against what was
+    published and not against a copy that could drift. None if git cannot give it."""
+    try:
+        src = subprocess.check_output(["git", "show", f"{ROUND0_COMMIT}:prototype/scuff/scuff_proto.py"],
+                                      cwd=os.path.dirname(os.path.abspath(__file__)), text=True)
+    except Exception:  # noqa: BLE001
+        return None
+    d = os.path.join(OUT, "_round0")
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, "scuff_round0.py")
+    open(path, "w").write(src)
+    spec = importlib.util.spec_from_file_location("scuff_round0", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # ------------------------------------------------------------------ measures
@@ -111,6 +132,8 @@ def spectro_db(x, ms=5, total=0.15):
     x = x / (np.sqrt(np.mean(x ** 2)) + 1e-12)
     n = int(ms * 1e-3 * RATE)
     w = 4 * n
+    if len(x) < w + n:  # a tail-gated hit can be shorter than one window
+        x = np.concatenate([x, np.zeros(w + n - len(x))])
     f = np.fft.rfftfreq(w, 1 / RATE)
     win = np.hanning(w)
     rows = []
@@ -162,16 +185,16 @@ def twice(y, gap_s=0.35):
 
 
 VOICE_NOTE = {
-    "KICK": "Punch kick: 80 to 160 Hz body, a 250 to 95 Hz drop in about 20 ms, a 3 kHz click, squared-off tail.",
-    "CLAP": "Flint clap: four micro-impulses 10 ms apart into a 77 ms noise burst, high-passed at 250 Hz, peak near 1.5 kHz.",
-    "BOOM": "Bass hit: 60 Hz with a fast pitch punch, saturated so 100 to 300 Hz carry the note, muted hard at 285 ms.",
-    "RIM": "Stank rim: a 2 ms bipolar impulse into resonators at 850 and 1350 Hz, 56 ms ring, overdriven.",
-    "HAT": "Chopper hat: six squares high-passed at 5 kHz with a 9 kHz ring, 35 ms, clipped clean.",
-    "BELL": "Bando bell: two-operator FM at 1 : 1.414, 740 ms, drifting 12 cents flat over its tail.",
-    "ZAP": "Laser tom: 1.2 kHz to 120 Hz over 100 ms, lightly clipped.",
-    "TICK": "Money counter: 7 kHz+ noise, 13 ms, no crush (the brief keeps GRIT for claps, rims and hats).",
-    "PLUCK": "Hollow conga: one sine at 260 Hz, up 30 Hz in 8 ms then down 80 Hz, no noise.",
-    "INHALE": "Suck-back crash: ring-modulated metal noise rising over 316 ms, cut at a zero crossing.",
+    "KICK": "Punch kick: 80 to 160 Hz body, a 300 to 95 Hz drop in about 27 ms, a 3 kHz click over a 420 Hz knock, a resonant bounce, squared-off tail.",
+    "CLAP": "Flint clap: four 3 ms impulses 10 ms apart, a whip crack on the last, a 77 ms burst, high-passed at 250 Hz, peak near 1.6 kHz.",
+    "BOOM": "Bass hit: 60 Hz with a fast pitch punch, a separate clipped harmonic path at 100 to 400 Hz, muted hard while still loud.",
+    "RIM": "Stank rim: a 2 ms bipolar impulse into resonators at 850 and 1350 Hz with a woody 480 Hz body, a loud click, 56 ms ring, overdriven.",
+    "HAT": "Chopper hat: six squares high-passed at 5 kHz with a 9 kHz ring, a 1 ms tip, a two-stage decay, clipped clean.",
+    "BELL": "Bando bell: FM at 1 : 1.414 with a second 1 : 2.756 modulator that dies in 80 ms (the clang), 740 ms, drifting 12 cents flat.",
+    "ZAP": "Laser tom: 1.2 kHz to 120 Hz over 100 ms, clipped hardest at the top of the sweep.",
+    "TICK": "Money counter: 7 kHz+ noise with a 3.6 kHz mechanical click, 13 ms, no crush.",
+    "PLUCK": "Hollow conga: one sine at 260 Hz, up 30 Hz in 8 ms then down 80 Hz, an octave slap on the contact, no noise.",
+    "INHALE": "Suck-back crash: metal noise through two ring modulators rising over 316 ms, cut at a zero crossing.",
 }
 
 
@@ -208,6 +231,28 @@ def voice_metrics(v, y):
         m.update({"rise_ms": round(1000.0 * (len(y) - n20) / RATE, 1), "last_sample": round(float(y[-1]), 4)})
     return m
 
+
+# ------------------------------------------------------------------ 0. round 0 against round 0b
+R0 = load_round0()
+AB = {}
+if R0 is not None:
+    s = section("before-after", "Round 0 against round 0b, pad by pad",
+                "You asked for more character in general. Each pair plays the round-0 pad, then the round-0b "
+                "pad, both at their own defaults and peak-matched. The distance is the same measure as the "
+                "take and velocity tables; for scale, a soft and a hard kick in round 0 were 7.9 dB apart.")
+    for v in e.VOICES:
+        a = R0.render_pad(v)
+        b = e.render_pad(v)
+        d = take_distance_db(a, b)
+        AB[v] = {"distance_db": d, "centroid_before": round(centroid(a)), "centroid_after": round(centroid(b)),
+                 "crest_before": crest_db(a), "crest_after": crest_db(b)}
+        save(s, f"{v.lower()}-0-before", twice(a), f"{v}, round 0.", {"centroid_hz": round(centroid(a)), "crest_db": crest_db(a), "decay_ms": decay60(a)})
+        save(s, f"{v.lower()}-1-after", twice(b), f"{v}, round 0b.", {"centroid_hz": round(centroid(b)), "crest_db": crest_db(b), "decay_ms": decay60(b), "round0_to_0b_db": d})
+    a = R0.render_pattern()
+    b = e.render_pattern()
+    save(s, "bars-0-before", np.concatenate([a, a]), "Two bars, round 0.", {"crest_db": crest_db(a)})
+    save(s, "bars-1-after", np.concatenate([b, b]), "Two bars, round 0b.", {"crest_db": crest_db(b)})
+    MANIFEST["checks"]["before_after"] = AB
 
 # ------------------------------------------------------------------ 1. the kit
 s = section("kit", "The kit: ten pads at the defaults",
@@ -333,7 +378,7 @@ s = section("rack", "DROP and CHOKE, from the rack",
             "to half speed over 90 ms, then mutes), on a long hat; CHOKE, a dense slammed burst into a gate with "
             "an 80 ms hold and 5 ms release, on the clap and the bell. DIVE already does DROP's move in the rack; "
             "GATECRASH's space already keys a room from the dry hit.")
-y = e.render_pad("HAT", {"DECAY": 0.9}, level=False)
+y = e.render_pad("HAT", {"DECAY": 0.9}, level=False, gate=False)
 y = e.finish(e.drop(y, over_s=0.09))
 save(s, "drop-hat", twice(y), "A long hat through DROP.", {"hz_at_start": window_hz(y, 0, 0.02, 4000, 16000), "hz_at_end": window_hz(y, 0.06, 0.085, 2000, 16000), "decay_ms": decay60(y)})
 for v in ("CLAP", "BELL"):
@@ -387,6 +432,16 @@ def digest(y):
     return hashlib.sha256(y.tobytes()).hexdigest()
 
 
+VD = {}
+for i, a in enumerate(e.VOICES):
+    for b in e.VOICES[i + 1:]:
+        VD[f"{a}-{b}"] = take_distance_db(KIT[a], KIT[b])
+STAGE = {}
+for v in e.VOICES:
+    dry = e.render_pad(v, stages=())
+    STAGE[v] = {st: take_distance_db(dry, e.render_pad(v, stages=(st,))) for st in ("grit", "locker", "bark", "slam")}
+MANIFEST["checks"]["voice_distance_db"] = VD
+MANIFEST["checks"]["stage_moves_db"] = STAGE
 det = all(digest(e.render_pad(v)) == digest(KIT[v]) for v in e.VOICES)
 det_loop = digest(e.render_pattern()) == digest(PAT)
 MANIFEST["checks"].update({"clips": len(clips), "all_finite": allfin, "determinism_pads": det,
@@ -399,3 +454,6 @@ for v in e.VOICES:
 print("fuse", FUSE)
 print("velocity", {v: VEL[v]["soft_vs_hard_db"] for v in e.VOICES})
 print("rr", RR)
+print("before/after", {v: d["distance_db"] for v, d in AB.items()})
+print("stage moves", STAGE)
+print("closest voices", sorted(VD.items(), key=lambda kv: kv[1])[:5])

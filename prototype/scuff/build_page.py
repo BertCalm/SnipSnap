@@ -1,4 +1,4 @@
-"""Build the SCUFF round-0 audition page (index.html) from manifest.json.
+"""Build the SCUFF round-0b audition page (index.html) from manifest.json.
 
 Every number on the page is read from the manifest the generator wrote; nothing is typed in
 by hand. Run after gen_audition.py:   python3 build_page.py OUT_DIR
@@ -36,6 +36,7 @@ LABELS = {
     "ring_hz": ("RING", "{:.0f} Hz"), "rise_ms": ("RISE FROM -20 dB", "{:.0f} ms"),
     "last_sample": ("LAST SAMPLE", "{:.4f}"), "closest_takes_db": ("CLOSEST TAKES", "{:.1f} dB"),
     "widest_takes_db": ("WIDEST TAKES", "{:.1f} dB"),
+    "round0_to_0b_db": ("FROM ROUND 0", "{:.1f} dB"),
 }
 
 
@@ -68,6 +69,7 @@ def clip_html(c: dict) -> str:
 
 
 LISTEN = {
+    "before-after": "Play each pair. Is round 0b more the sound, or just more? Name any pad where round 0 was closer.",
     "kit": "Is this the kit? Dry, mid-forward, in your face. Which pads are already right, and which are not the sound?",
     "chain-rim": "Does each stage add something you would keep? Where does the rim become the stank rim: GRIT, LOCKER or BARK?",
     "chain-clap": "Is the clap thin and papery enough, or too harsh once GRIT is in?",
@@ -98,6 +100,17 @@ for s in M["sections"]:
         <p class="intro">Attack centroid (first 30 ms) at velocity 0.4, 0.7 and 1.0, all peak-matched; crest factor soft against hard;
         and the distance between the soft and the hard hit (RMS difference of level-matched third-octave spectrograms over the first 150 ms, 5 ms frames).</p>
         <div class="table-wrap"><table><thead><tr><th>Voice</th><th>Attack centroid</th><th>Crest, soft → hard</th><th>Soft vs hard</th></tr></thead><tbody>{rows}</tbody></table></div>"""
+    if s["id"] == "before-after":
+        ab = M["checks"]["before_after"]
+        rows = "".join(f"<tr><th>{v}</th><td>{d['distance_db']} dB</td><td>{d['centroid_before']} → {d['centroid_after']} Hz</td><td>{d['crest_before']} → {d['crest_after']} dB</td></tr>" for v, d in ab.items())
+        extra = f"""
+        <div class="table-wrap"><table><thead><tr><th>Voice</th><th>Round 0 to 0b</th><th>Centroid</th><th>Crest</th></tr></thead><tbody>{rows}</tbody></table></div>"""
+    if s["id"] == "chain-rim":
+        st = M["checks"]["stage_moves_db"]
+        rows = "".join(f"<tr><th>{v}</th>" + "".join(f"<td>{d[k]:.1f}</td>" for k in ("grit", "locker", "bark", "slam")) + "</tr>" for v, d in st.items())
+        extra = f"""
+        <p class="intro">How far each stage alone moves each voice from its dry render, in dB by the take-distance measure. A 0 is a stage the brief keeps off that voice. Round 0's BARK measured under 1 dB everywhere; it now boosts up to 18 dB and narrows the dry path.</p>
+        <div class="table-wrap"><table><thead><tr><th>Voice</th><th>GRIT</th><th>LOCKER</th><th>BARK</th><th>SLAM</th></tr></thead><tbody>{rows}</tbody></table></div>"""
     if s["id"] == "round-robin":
         rr = M["checks"]["round_robin"]
         rows = "".join(f"<tr><th>{v}</th><td>{d['closest_db']} dB</td><td>{d['widest_db']} dB</td><td>{d['velocity_step_db']} dB</td></tr>" for v, d in rr.items())
@@ -133,7 +146,7 @@ GATES = [
      f"Four takes per voice on four dealt dimensions. Closest two takes {min(d['closest_db'] for d in rr.values())} to {max(d['closest_db'] for d in rr.values())} dB apart; "
      f"widest {min(d['widest_db'] for d in rr.values())} to {max(d['widest_db'] for d in rr.values())} dB. The hat's takes are free-running oscillator phases, a real re-strike. No Kotlin."),
     ("Velocity and round robin: saving, playback, export", "not yet verified", "No Kotlin patch, kit or MPC export exists."),
-    ("Sound character", "not heard", "Round 0. Nothing on this page has been heard by anyone."),
+    ("Sound character", "not heard", "Round 0b. The owner asked for more character after seeing round 0; neither round has been heard."),
 ]
 
 
@@ -243,11 +256,13 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SCUFF · ROUND 0 · PYTHON HARNESS · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SCUFF · ROUND 0B · PYTHON HARNESS · NOT HEARD</span></div>
     <h1>SCUFF Audition</h1>
     <p class="lede">A dry, mid-forward Michigan drum kit and the chain that makes it: ten voices built to your brief's numbers,
     crushed, boxed, barked and slammed into the ceiling. These are prototype renders from a Python model, not the app.
     Every one-shot is peak-matched, so a later stage never wins by being louder.</p>
+    <p class="lede"><b>Round 0b</b> answers "more character in general": every voice gained one more mechanism (a knock, a crack, a harmonic path, a woody body, a tip, a clang, a mechanical click, a slap),
+    BARK went from inaudible to a real boost, LOCKER's loop got hotter with a soft clip in it, SLAM got more asymmetric, and every pad ends bone-dry at a hard tail gate. Start with the before/after section.</p>
     <p class="gesture">The gesture: a dry hit lands at the front of the speaker, the mids bark, the bus squares it off against the ceiling, and it is gone before the next sixteenth.</p>
   </header>
 
@@ -280,13 +295,14 @@ RACK    DROP (tape stop, DIVE's move) and CHOKE (gated burst, GATECRASH's room) 
 
   <section class="card" id="gates">
     <h2>Acceptance gates</h2>
-    <p class="intro">From docs/ENGINE_ACCEPTANCE_GATES.md. Round 0 is a prototype; the engine stays in progress until every applicable row has evidence.</p>
+    <p class="intro">From docs/ENGINE_ACCEPTANCE_GATES.md. Round 0b is a prototype; the engine stays in progress until every applicable row has evidence.</p>
     <div class="table-wrap"><table><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{gate_rows}</tbody></table></div>
   </section>
 
   <section class="card" id="next">
     <h2>What I need from you</h2>
     <ul class="plain">
+      <li><b>Round 0 or 0b:</b> pad by pad, which has the character you want? Any pad that got worse?</li>
       <li><b>The kit:</b> which of the ten pads are the sound, which are close, and which are wrong? Name the wrong ones and what they should do instead.</li>
       <li><b>The bus:</b> is SLAM 0.55 the glue and 0.9 the trunk, or is the whole thing too flat? Should hats go through the bus?</li>
       <li><b>The stages:</b> on the rim and the clap, which stage makes it stank: GRIT, LOCKER or BARK? Any you would drop?</li>
