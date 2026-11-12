@@ -77,13 +77,13 @@ unverified completion gates explicit.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (rounds 1 to 3, 2026-11-09 to 11-11)
+## BREAKER (rounds 1 to 3 and the kit, 2026-11-09 to 11-12)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
-  - **The snare riser (round 3): built in rendering, chosen by ear.** The owner picked the tamed roll in the Python harness on 2026-11-11. It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. Its Kotlin render has not been heard, played from a pad, saved in a kit or exported. Until then, it does not satisfy the percussion gate's roll or riser.
+  - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). No phone or MPC has played it.
   - **The surf tom fill:** not yet built.
-- **Drum shelf:** not yet built. The owner picked Dub Tank and Trip hop on 2026-11-09 to join the BREAKER kit. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
+- **Drum shelf: one of three kits.** The BREAKER kit is on the shelf (2026-11-12). The owner picked Dub Tank and Trip hop on 2026-11-09 to join it. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
   - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
@@ -103,7 +103,17 @@ presence do not close the outstanding gates above.
   - **Saving: partly verified.** Patches round-trip through JSON with model 3, and model 2's ride still replays. A saved kit has not been tested.
   - **Playback and export:** not yet verified.
   - **Sound character:** the owner picked the tight cymbals (heard dry) and the tamed riser in the Python harness. The Kotlin renders wait for a confirming listen.
-- **Overall: incomplete.** This is a prototype with fourteen voices and no kit yet. The kit, the two genre kits and velocity and round robin through saving, playback and export are still open.
+- **The kit (2026-11-12): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, `:shell:generateBreakerKit`).
+  - **Rendering:** the shared robin deals every pad from its recipe. Each synth drum gets 3 zones of 3 takes: softer zones are re-rendered at velocity .3 and .6, and each later take is re-struck. The tambourine gets its recordings, 2 dynamic layers × 2 takes.
+    - No two takes are copies. A copy measures more than 40 dB apart; the closest pair here, the kick's, is 34 dB apart.
+    - No soft zone is the hard one turned down. The least change in spectral shape is 0.9 dB, on the kick.
+    - **The kick is weak.** Its takes are distinct strikes but close, because the crush evens out the force difference. This is disclosed and waits for the owner's listen.
+    - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
+  - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
+  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2 does not pass:** it plays each zone's first take. No MPC has loaded the kit.
+  - **Sound character:** the drums, cymbals and riser are each accepted by ear. The three pushed pads (A05, A06, A12), the levels and the kit as a whole wait for the owner's listen.
+- **Overall: incomplete.** One of three genre kits is on the shelf. Dub Tank and Trip hop are still to be authored, MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
