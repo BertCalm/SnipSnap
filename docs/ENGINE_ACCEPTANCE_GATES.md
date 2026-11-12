@@ -125,7 +125,7 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
 Round 1 is a Python prototype audition; no Kotlin exists.
 
-- **Melodic:** open. Two waves built in the prototype; six voices proposed for the owner to choose. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
+- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. SAW and SQUARE are built in the prototype; four remain. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
 - **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**

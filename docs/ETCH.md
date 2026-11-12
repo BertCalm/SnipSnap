@@ -117,7 +117,7 @@ Measured highlights (Python harness):
 
 | Gate | Status |
 |---|---|
-| Six distinct melodic voices with presets | open: two waves built; six proposed (SAW LINE, SQUARE LINE, RUBBER, WHISTLE, GRIT, DUB) for the owner to choose |
+| Six distinct melodic voices with presets | open: six chosen by the owner 2026-11-12 (SAW, SQUARE, RUBBER, WHISTLE, GRIT, DUB); SAW and SQUARE built, four to build |
 | Playable keygroups | not yet verified |
 | Premade kit | open |
 | Chord-tool compatibility | owner's call: the line voice is monophonic by design |
@@ -207,6 +207,11 @@ accepted baseline: the line defaults stand (LINE A BITE 0.4, SPACE 0.55; LINE B 
 SPACE 0.32; engine defaults BITE 0.45, SPACE 0.4). This is a listen to Python renders on
 the audition page, not evidence of Kotlin, phone playback or an MPC. Not yet decided:
 whether loop pads carry a baked cutoff ride, and which six voices complete the engine.
+
+**Decided, 2026-11-12:** the owner chose all four proposed voices, so the six are SAW, SQUARE
+(both built and accepted), RUBBER, WHISTLE, GRIT and DUB. For the ride the owner chose "some
+pads ride": most loop pads hold one setting, and one or two kit pads carry a baked cutoff
+ride, so the MPC gets both.
 
 ## Published audition
 
