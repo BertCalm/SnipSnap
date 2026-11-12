@@ -119,3 +119,31 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
+
+## SOOT (rounds 0 to 2, 2026-11-12)
+
+A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. SOOT is a drum engine.
+- **Articulation:** finite hits, with no HOLD.
+- **Percussion:** A15, the coil roll, is built: sixteen fresh snare strikes into one coil, with three
+  zones and four takes. Not yet heard.
+- **Drum shelf: one of three.** SOOT is on the shelf (SKINS). The two sibling genre kits are the
+  owner's choice, and not yet built.
+- **Velocity and round robin:**
+  - **Rendering: verified.** Every drum takes velocity through its own contact law, so a soft zone
+    is a duller strike. A take is a fresh strike.
+  - **Saving: verified.** The saved kit reloads equal, and all 192 saved slices match their renders
+    (`SootKitTest`, `:shell:generateSootKit`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
+    takes in order, then repeats. No phone has played the kit.
+  - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2 does
+    not pass:** it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
+    No MPC has loaded the kit.
+- **Sound character:**
+  - **Round 0:** the owner picked the hits.
+  - **Round 1:** they accepted the kick and snare in Kotlin.
+  - **Round 1b:** they kept the alternates and approved the kit ("Is this the kit?" "Yes").
+  - **Round 2:** the roll and the four bars await a listen.
+- **Overall: incomplete.** The sibling kits, the roll and the four bars' listen, and phone and MPC
+  hardware are open. MPC 2 does not pass the round-robin export gate.

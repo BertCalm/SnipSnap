@@ -3455,6 +3455,11 @@ presets. BREAKER's `Tank` grew fields for the coil, with defaults that keep BREA
 - the pads moved to GRIME .45;
 - the hat had an effect sound, its own coil send.
 
-Round 1b (model 2) removes the send. Model-1 saves keep their sound. The kit, the coil roll, the
-phrase pad and the genre kits follow. See [SOOT](SOOT.md) and the
+Round 1b (model 2) removes the send. Model-1 saves keep their sound. The owner kept the alternates
+and approved the kit.
+
+Round 2 (`SootKits` 1) puts the 16-pad kit on the FRESH TAPE shelf. Its grids pass GATECRASH's
+proof in software: save, reload, `PadHit.resolve` and MPC 3 read-back. It adds the coil roll (A15)
+and four bars through one shared coil (A16), which await a listen. The two sibling genre kits and
+hardware remain. See [SOOT](SOOT.md) and the
 [design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).

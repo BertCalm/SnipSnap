@@ -188,7 +188,7 @@ function build() {
   DATA.sections.forEach((s, si) => {
     const sec = document.createElement("section");
     sec.setAttribute("aria-labelledby", "h-" + s.key);
-    sec.innerHTML = `<div class="eyebrow">${s.title.split(" · ")[0]} · ${s.key}</div><h2 id="h-${s.key}">${s.title.split(" · ")[1]}</h2><p></p><p class="ask"></p>`;
+    sec.innerHTML = `<div class="eyebrow">${s.title.split(" · ")[0]} · ${s.tag || s.key}</div><h2 id="h-${s.key}">${s.title.split(" · ")[1]}</h2><p></p><p class="ask"></p>`;
     sec.querySelectorAll("p")[0].textContent = s.what;
     sec.querySelectorAll("p")[1].textContent = s.ask;
     const rack = document.createElement("div"); rack.className = "rack";
@@ -200,7 +200,7 @@ function build() {
       const meta = document.createElement("div"); meta.className = "meta";
       meta.innerHTML = `<span class="label"></span><span class="id"></span><div class="bar"><i></i></div>`;
       meta.querySelector(".label").textContent = r.label;
-      meta.querySelector(".id").textContent = (r.ref ? "reference" : s.key + "/" + r.id) + (r.trim ? ` · plays ${r.trim} dB under the others (peak limit)` : "");
+      meta.querySelector(".id").textContent = (r.ref ? "reference" : (s.tag || s.key) + "/" + r.id) + (r.trim ? ` · plays ${r.trim} dB under the others (peak limit)` : "");
       const fill = meta.querySelector("i");
       audio.addEventListener("timeupdate", () => { fill.style.width = (100 * audio.currentTime / (audio.duration || 1)) + "%"; });
       const stop = () => { audio.pause(); audio.currentTime = 0; btn.classList.remove("on"); btn.innerHTML = PLAY; fill.style.width = "0"; };

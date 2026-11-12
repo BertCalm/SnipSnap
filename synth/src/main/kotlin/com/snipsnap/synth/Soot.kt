@@ -309,7 +309,11 @@ object Soot {
         return body
     }
 
-    private fun snare(m: Map<String, Float>, v: Double, r: Random, noise: Dsp.Noise): DoubleArray {
+    private fun snare(m: Map<String, Float>, v: Double, r: Random, noise: Dsp.Noise): DoubleArray =
+        snareTail(snareStrike(m, v, r, noise), m)
+
+    /** The snare's strike before the coil: head, crack, wires and bench. The coil roll strikes it many times into one coil. */
+    internal fun snareStrike(m: Map<String, Float>, v: Double, r: Random, noise: Dsp.Noise): DoubleArray {
         val n = (.6 * rate).toInt()
         val head0 = 196.0 * pitch(m.getValue("TUNE"), 6.0)
         val hf = DoubleArray(7) { head0 * MEMBRANE[it] }
@@ -333,7 +337,11 @@ object Soot {
         val b = m.getValue("BENCH").toDouble()
         val dry = DoubleArray(n) { .9 * head[it] + v.pow(1.2) * crack[it] + .55 * sqrt(v) * wires[it] + b * v * bench[it] }
         attack(dry, .15)
-        val frames = (CAP_SECONDS * rate).toInt()
+        return dry
+    }
+
+    /** The snare's coil (COIL) then its cassette edge (EDGE), over [frames]. */
+    internal fun snareTail(dry: DoubleArray, m: Map<String, Float>, frames: Int = (CAP_SECONDS * rate).toInt()): DoubleArray {
         val coiled = BreakerChain.tankMix(dry, m.getValue("COIL").toDouble(), frames, rate, COIL_TANK)
         return cassette(coiled, m.getValue("EDGE").toDouble())
     }
@@ -464,9 +472,9 @@ object Soot {
      * low-pass (7.2 down to 4 kHz), and a ROM reader: a zero-order hold (22 to 11 kHz, aliasing on
      * purpose: the metallic footprint) and bit loss (12 to 8 bits), blended in at 0.6 x [amount].
      */
-    internal fun dictaphone(x: DoubleArray, amount: Double): DoubleArray {
-        val low = compress(lp4(x, 100.0), x, -10.0, 2.0, .003, .18)
-        val pumped = compress(hp4(x, 100.0), x, -16 - 8 * amount, 6 + 6 * amount, .003, .18)
+    internal fun dictaphone(x: DoubleArray, amount: Double, key: DoubleArray = x): DoubleArray {
+        val low = compress(lp4(x, 100.0), key, -10.0, 2.0, .003, .18)
+        val pumped = compress(hp4(x, 100.0), key, -16 - 8 * amount, 6 + 6 * amount, .003, .18)
         val y = lp2(run(pumped, Bq.peaking(2700.0, 3 + 3 * amount, 1.2)), 7200.0 - 3200.0 * amount)
         val hold = (2 + 2 * amount).roundToInt()
         val q = 2.0.pow(11 - 4 * amount)
@@ -478,8 +486,12 @@ object Soot {
         return DoubleArray(x.size) { (1 - w) * y[it] + w * rom[it] + low[it] }
     }
 
+    /** A 2nd-order Butterworth high-pass and low-pass, for the kit's shared bus ([SootKits.phrase]). */
+    internal fun highpass(x: DoubleArray, hz: Double) = hp2(x, hz)
+    internal fun lowpass(x: DoubleArray, hz: Double) = lp2(x, hz)
+
     /** The house output stage's shape for a dry drum: centred, 20 Hz high-passed, peak 0.89. */
-    private fun centre(x: DoubleArray): DoubleArray {
+    internal fun centre(x: DoubleArray): DoubleArray {
         val mean = x.average()
         for (i in x.indices) x[i] -= mean
         return norm(hp1(x, 20.0), .89)
@@ -493,7 +505,18 @@ object Soot {
     fun render(voice: SootVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, model: Int = MODEL_VERSION): Snip {
         require(model in 1..MODEL_VERSION) { "unsupported soot model $model" }
         val m = settled(voice, macros, model)
-        val v = (velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f).toDouble().coerceAtLeast(.02)
+        return output(print(voice, m, dry(voice, m, velocity, take), model))
+    }
+
+    /** A velocity as the drums take it: finite, 0..1, and never quite silent. */
+    internal fun strength(velocity: Float) = (velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f).toDouble().coerceAtLeast(.02)
+
+    /**
+     * The dry drum, centred and at peak 0.89, before the print: what a shared bus would receive (the
+     * snare already carries its own coil and cassette, which are part of the drum). [m] is settled.
+     */
+    internal fun dry(voice: SootVoice, m: Map<String, Float>, velocity: Float, take: Int): DoubleArray {
+        val v = strength(velocity)
         val r = Random(Dsp.seedFor("soot", voice.name, take))
         val noise = Dsp.Noise(Dsp.seedFor("soot-noise", voice.name, take))
         val dry = when (voice) {
@@ -506,9 +529,15 @@ object Soot {
             SootVoice.CUP -> cup(m, v, r)
             SootVoice.COIL -> coil(m, v, r, noise)
         }
-        var x = centre(dry)
-        // The print: the pad's own send into the coil, then the dictaphone. GRIME 0 bypasses the
-        // dictaphone entirely, so the dry drum is one control away.
+        return centre(dry)
+    }
+
+    /**
+     * The print a pad keeps: its own send into the coil, then the dictaphone. GRIME 0 bypasses the
+     * dictaphone entirely, so the dry drum is one control away.
+     */
+    internal fun print(voice: SootVoice, m: Map<String, Float>, dry: DoubleArray, model: Int = MODEL_VERSION): DoubleArray {
+        var x = dry
         val send = sendFor(voice, m, model)
         if (send > 0) {
             val ret = lp2(BreakerChain.spring(x, .5, x.size, rate, COIL_TANK, sendHp = if (voice == SootVoice.KICK) 90.0 else 250.0), COIL_TANK.tone)
@@ -517,7 +546,12 @@ object Soot {
         }
         val grime = m.getValue("GRIME").toDouble()
         if (grime > 0) x = dictaphone(x, grime)
-        val frames = minOf(x.size, (CAP_SECONDS * rate).toInt())
+        return x
+    }
+
+    /** The house output stage: capped at [cap] frames, centred, 20 Hz high-pass, levelled, 4 ms fade. */
+    internal fun output(x: DoubleArray, cap: Int = (CAP_SECONDS * rate).toInt()): Snip {
+        val frames = minOf(x.size, cap)
         val out = FloatArray(frames) { x[it].toFloat() }
         val mean = out.average().toFloat()
         val dc = Dsp.FixedOnePole(20f, rate)

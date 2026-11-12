@@ -529,6 +529,16 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
     args("${rootDir}/testkit/backwash-acoustic-integration")
 }
 
+tasks.register<JavaExec>("generateSootKit") {
+    group = "distribution"
+    description = "Build the SOOT kit, prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sootKitOutput").orNull ?: "${rootDir}/testkit/soot-kit")
+}
+
 tasks.register<JavaExec>("generateGatecrashKits") {
     group = "distribution"
     description = "Build the three GATECRASH kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

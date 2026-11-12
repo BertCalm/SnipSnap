@@ -11,31 +11,25 @@ kit breathing through a dictaphone**.
 
 ## Status
 
-Round 1b (renderer model 2): eight voices in Kotlin, a prototype outside the factory presets
-(`PatchTypes.PROTOTYPES`) and the phone picker.
-- **Round 1, heard on 2026-11-12:**
-  - the Kotlin kick and snare are the drums the owner picked, and every touch strip a softer hand;
-  - the pads print at GRIME .45 (their four-bar pick), and the layout's swaps are right;
-  - the hat was "different" (an effect sound): its own coil send, now removed.
-- **Round 1b:** the re-listen is https://claude.ai/artifact/4rgHxAF39Z9nuztgjtEgwB (private to the
-  owner).
+Round 2: the 16-pad kit is on the FRESH TAPE shelf (SKINS: "SOOT"). Its grids are proven in software,
+and the coil roll (A15) and the four bars (A16) are published for a listen at
+https://claude.ai/artifact/3zmAc3qu32W7vEpJ6Yb6C2 (private to the owner). The engine stays a prototype
+outside the factory presets and the phone picker.
 
-Round 0 (Python harness) was heard on 2026-11-12. The owner picked:
-- **Kick:** sag .35 with the longer sub (t60 0.6 s).
-- **Snare:** the hot one, the 12-bit cassette.
-- **Hats:** 25 cents of detune.
-- **Metal:** the rod, plate, cup and the coil kicked alone, all kept.
-- **Touch:** every soft hit heard as a softer hand.
-- **Glue:** the coupled groove with the heavy dictaphone (GRIME .9). No pad print ruined.
-- **Layout:** approved.
+The owner's verdicts on 2026-11-12:
+- **Round 0:** the picks: the kick at sag .35 with the longer sub, the hot snare, the wide hats, and
+  the layout.
+- **Round 1:**
+  - the Kotlin kick and snare are their picks, and every touch strip a softer hand;
+  - the pads print at GRIME .45, and the layout swaps are right;
+  - the hat had an effect sound, its own coil send.
+- **Round 1b:** model 2 removes the hats' coil send. The thirteen alternates are kept, and four bars
+  of the kit are "Yes".
 
 Still to come:
-- the hats re-heard at model 2, and the alternates (unanswered at round 1);
-- the 16 pads assembled into a kit, with velocity and round robin through saving, playback and
-  export (GATECRASH's path: `PadHit.resolve`, MPC 3 read-back);
-- A15, the coil roll (the percussion gate's riser), and A16, the four-bar phrase through one shared
-  coil (the only place the kick can drive the whole kit's spring);
-- two sibling genre kits, chosen by the owner;
+- the owner's listen to the roll and the four bars;
+- two sibling genre kits, the owner's choice;
+- phone and MPC hardware;
 - the picker entry, in a session with an Android SDK, as the house rule says.
 
 ## The kit (approved 2026-11-12, re-pointed by the picks)
@@ -45,7 +39,7 @@ hold the sounds that were not picked.
 
 | | | | |
 |---|---|---|---|
-| A13 Narrow closed hat (9 cents) | A14 Narrow open hat (chokes A13) | A15 Coil roll (not built) | A16 Four-bar phrase (not built) |
+| A13 Narrow closed hat (9 cents) | A14 Narrow open hat (chokes A13) | A15 Coil roll | A16 Four bars (loops at 84 BPM) |
 | A09 Steel plate | A10 The coil kicked alone | A11 Bench snare | A12 Coil snare, cassette .5 |
 | A05 Heavy kick (sub t60 0.9 s) | A06 Dry crack | A07 Tension rod | A08 Small metal cup |
 | A01 Kick (sag .35, sub 0.6 s) | A02 Hot snare (12-bit) | A03 Wide closed hat (25 cents) | A04 Wide open hat (chokes A03) |
@@ -81,6 +75,25 @@ Velocity is a strike, not a level: every drum takes it through a contact law (a 
 longer contact, a lower corner), the kick also through its sag, and the coil through its dwell.
 A take re-strikes: fresh noise, a moved strike position, fresh metal phases.
 
+## The kit (`SootKits.kt`)
+
+- **Grids:** every pad has three velocity zones (.30, .65, 1) of four takes, struck afresh by the
+  engine.
+- **A15, the coil roll:** sixteen snare strikes speeding up into one coil, with a fader push over
+  the build.
+- **A16, four bars:** the groove through one shared coil the kick drives, then the dictaphone the
+  kick pumps. It is exactly four bars at 84 BPM, its tail wrapped onto its start.
+- **Recipes:** none. The pads carry their grids, as GATECRASH's do.
+
+`./gradlew --no-daemon :shell:generateSootKit` builds the kit and proves it. The saved kit reloads
+equal. The saved and exported PCM match the renders through `PadHit.resolve`, two cycles of every
+zone. The MPC 3 track reads back with its zones, cycles and windows. The listening pack goes to
+`testkit/soot-kit/listen/`. Then:
+
+```sh
+python3 scripts/soot_r0/build_page.py --round 2 testkit/soot-kit testkit/soot-r0
+```
+
 ## Listen
 
 ```sh
@@ -101,5 +114,10 @@ Round 0's harness: `python3 scripts/soot_r0/soot_r0.py` then `python3 scripts/so
   about -51 dB to -25 dB through GRIME .9. That is the ROM hold's aliasing, which the profile asked
   for; on the snare and hats the dictaphone removes 5 to 6 dB up there.
 - **The kick's takes are the closest:** 18.5 to 22.7 dB apart. Most of a kick is its sub.
-- **No shared bus on pads.** A sampler plays each pad alone, so a pad carries only its own breath.
+- **The shared bus lives on A16 only.** A sampler plays each pad alone, so a single-hit pad
+  carries only its own breath.
+- **The kit takes 27.6 s to build on this host** (4 cores). The four bars are 63% of it. A phone
+  will be slower.
+- **MPC 2 does not pass the round-robin export gate.** It keeps one take per zone. SFZ and
+  DecentSampler were not generated.
 - **Mono, no hardware.** Nothing has been played on a phone or an MPC.

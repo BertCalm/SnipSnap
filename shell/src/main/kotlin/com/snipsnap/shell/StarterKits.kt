@@ -639,6 +639,11 @@ object StarterKits {
             "A long dry boom kick with a snappy snare and clap in a small, short-gated room. Three touch zones, four takes; a tom break and a build.",
             seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
         ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
+        Starter(
+            "soot", "SOOT",
+            "Grimy street boom bap from physical models: a sagging skin over a sub, a hot snare into a tight coil, detuned metal and a dictaphone. Three touch zones, four takes; a coil roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootKits.BPM.toFloat(),
+        ) { com.snipsnap.synth.SootKits.build() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

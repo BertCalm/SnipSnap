@@ -1,7 +1,8 @@
 # SOOT drum kit: design brief and round 0
 
-Status: round 0 picked and round 1 heard by the owner on 2026-11-12. Round 1b (renderer model 2)
-answers round 1 and is published for a short re-listen. No kit yet. The
+Status: the hits and the kit approved by the owner at round 1b (2026-11-12). Round 2 puts the
+16-pad kit on the FRESH TAPE shelf, proves its grids through save, playback and MPC 3 export, and adds
+the coil roll and the four bars, published for a listen. The
 overview is [SOOT](../../SOOT.md).
 Repository truth: `1d8f24ec` (main after #1037). Read: `BreakerChain.kt` (the dispersive spring
 tank, `Tank`, `spring`, `tankMix`, `crush`), `Terra.kt` (DROOP: a sliding membrane fundamental,
@@ -334,3 +335,87 @@ inside that spread (take 4 measures within 2 dB of it).
 - The alternates were left unanswered, and the round-1b page asks again.
 - Page: https://claude.ai/artifact/4rgHxAF39Z9nuztgjtEgwB (the hats beside the pick, with model 1
   for contrast; the alternates; the pads at .45; four bars).
+
+## Round 1b, heard (2026-11-12)
+
+Page: https://claude.ai/artifact/4rgHxAF39Z9nuztgjtEgwB. The owner's answers:
+- **The hats:** left unanswered.
+- **The thirteen alternates:** "Keep", all of them.
+- **The pads:** no notes.
+- **"Is this the kit?":** "Yes", on the four bars with the new hats.
+
+The hats are read as approved through the kit; their side-by-side question was not answered.
+
+## As built: round 2 (2026-11-12, `SootKits.VERSION` 1)
+
+**`SootKits.kt`** is the 16-pad kit in the approved layout. Every pad holds three velocity zones
+(.30, .65, 1) of four takes, GATECRASH's grid.
+- **A01 to A14:** the hits. Each is a `SootPresets` patch struck by `Soot` at the zone's velocity and
+  re-struck per take.
+- **Chokes:** the wide hats choke each other (group 1), the narrow hats each other (group 3), and the
+  roll and the four bars each other (group 2).
+- **A15, the coil roll:**
+  - sixteen fresh strikes of the hot snare, the gap shrinking along a 1.6 power curve;
+  - each strike stronger than the last, all into one coil, then the cassette and the print;
+  - the dictaphone's pump evened the build out (it rose 1.9 dB), so the rise is a fader push after
+    it, -12 dB to 0: BREAKER's riser, as the owner approved it there. Now +11.9 dB;
+  - declared PERC at 3.4 s, never classified.
+- **A16, four bars:**
+  - the round-0 groove, every hit dry (`Soot.dry`), with the 58% swing and the dragged hats;
+  - the sends and the kick (opened to 90 Hz) go into one coil, then the dictaphone at GRIME .45,
+    keyed by the kick;
+  - the hats send nothing to the coil, as the owner picked them;
+  - exactly four bars at 84 BPM, the tail wrapped onto the start. The loop point's step is 0.0074
+    against the music's own 99.9th-percentile step of 0.1168;
+  - a LOOP pad.
+- **A rendered bank.** The pads carry their grids, not recipes: GATECRASH's proven path. The hits
+  stay editable as `SootPresets` patches in the engine. A pad on the kit cannot be re-edited in
+  place.
+
+**The refactor.** `Soot` exposes `dry`, `print`, `output`, `snareStrike`, `snareTail` and a keyed
+`dictaphone` for the kit. Every SOOT render is byte-identical before and after: a SHA-256 over both
+models, all eight voices, at 1.0/take 0, .6/take 2 and .3/take 1, read `410078ff…` both times.
+
+**The shelf.** `StarterKits` "soot" goes in the SKINS group. Both READMEs now count 95 starters.
+
+**The proof.** `:shell:generateSootKit` (`SootKitGenerator`) and `SootKitTest` run GATECRASH's
+proof:
+- the saved kit reloads equal;
+- the saved PCM and then the exported PCM match the renders, through `PadHit.resolve`, over two
+  full cycles of every zone;
+- the exported MPC 3 track reads back with its velocity ranges, base slices, cycle lengths and
+  frame windows.
+
+All 16 pads and 192 slices pass. `verification.csv` lists it per pad.
+
+**The listening page** (https://claude.ai/artifact/3zmAc3qu32W7vEpJ6Yb6C2) plays every pad read back
+from the export:
+- the roll at each zone;
+- the four bars at each zone, and at GRIME .9 to steer by;
+- the four bars looped twice;
+- four touch strips;
+- two bars from the single pads, for contrast.
+
+`SootKitsTest` (all pass) measured:
+
+| Measured | Result |
+|---|---|
+| Roll: last 400 ms of the build against the first | +11.9 dB; 200 to 400 ms after it, the coil is still -5.7 dB re the build's end |
+| Four bars, loop point against the 99.9th-percentile step | take 0: 0.0074 / 0.1168; take 3: 0.0012 / 0.1233 |
+| Soft against hard zone, share above 3 kHz | roll -21.9 / -18.6 dB; four bars -19.9 / -18.8 dB |
+| Takes, difference energy | roll -2.0 dB; four bars +2.0 dB |
+| Kit build, this host, 4 cores in parallel | 27.6 s. The four bars are 2.0 s a render x 12; a hit 10 to 225 ms; the roll 0.3 s |
+
+**Disclosed, not fixed.** The kit takes 27.6 s to build on this host, against GATECRASH's 8 to
+11 s. The four bars are 63% of it. Starters are built once, when made. A phone will be slower.
+If the wait is too long, the four bars can share strikes between zones, or keep fewer takes.
+
+| Gate | Status |
+|---|---|
+| Sound | the hits and the kit approved; the roll and the four bars not yet heard |
+| Melodic, articulation | not applicable |
+| Percussion roll or riser | built (A15); not yet heard |
+| Multiple genre kits | one of three; two sibling kits, the owner's choice, still to come |
+| Velocity and round robin, rendering | verified |
+| Saving and playback | verified in software (`KitStore`, `PadHit.resolve`); no phone has played it |
+| Export | MPC 3 verified by read-back; MPC 2 keeps one take per zone and does not pass; no MPC has loaded it; SFZ and DecentSampler not generated |

@@ -3,6 +3,7 @@
 
 Run:  python3 scripts/soot_r0/build_page.py [r0_dir] [boom_bap_dir] [out.html]
       python3 scripts/soot_r0/build_page.py --round 1|1b [r1_dir] [r0_dir] [out.html]
+      python3 scripts/soot_r0/build_page.py --round 2 testkit/soot-kit testkit/soot-r0 [out.html]
 Needs numpy and ffmpeg. The Backroom references come from `:synth:generateBoomBapAudition`.
 """
 from __future__ import annotations
@@ -142,6 +143,30 @@ MEASURED_R1B = {
     "GRIME default": "model 2: .45 on every voice (your four-bar pick); model-1 saves keep .9",
 }
 
+# Round 2: the kit on the shelf (`:shell:generateSootKit`), every pad read back from the MPC 3 export.
+QUESTIONS_R2 = [
+    ("roll", "1 · The coil roll (A15)", "Sixteen fresh snare strikes speeding up into one coil, so the spring fills as the roll builds, then rings out. A fader push over the build, as BREAKER's riser. Each zone as the pad plays it.",
+     "Is this the roll?", ["z2", "z1", "z0"], "yesno", ["Yes", "Not yet"], {}),
+    ("phrase", "2 · Four bars (A16)", "Your round-0 groove through one shared coil the kick drives, then the dictaphone the kick pumps: the only pad where the whole kit breathes through one spring. The kit prints it at GRIME .45; the .9 version is here to steer by.",
+     "Which dictaphone for the four bars?", ["z2", "grime90", "z1", "z0"], "pick", [], {}),
+    ("phrase", "3 · The loop point", "Four bars, played around twice. The file is exactly four bars at 84 BPM, its tail wrapped into its start.",
+     "Does it loop cleanly?", ["looped"], "yesno", ["Clean", "I hear a seam"], {}),
+    ("pads", "4 · The sixteen pads", "Each pad's hard first take, read back from the exported MPC 3 files through the app's own pad resolver.",
+     "Anything off?", [f"a{n:02d}" for n in range(1, 17)], "note", [], {}),
+    ("touch", "5 · Touch and takes, as the pad deals them", "Soft, medium, hard, four takes each, read back from the export. A selection of the fourteen hits.",
+     "Does each zone sound like a softer hand, and each take like another strike?", ["a01", "a02", "a03", "a09"], "yesno", ["Yes", "Not yet"], {}),
+    ("groove", "6 · Two bars from the single pads", "For contrast: the same groove dealt from the single-hit pads, each in its own print, with no shared coil.",
+     "Notes?", ["pads"], "note", [], {}),
+]
+
+MEASURED_R2 = {
+    "Save, reload, playback, MPC 3 export (all 16 pads, 192 slices)": "verified: the reloaded kit equals the saved one; saved and exported PCM match the renders through PadHit.resolve over two cycles of every zone; the exported track's velocity ranges, base slices, cycle lengths and frame windows match",
+    "Coil roll: last 400 ms of the build against the first 400 ms": "+11.9 dB (the pump flattened it to +1.9 dB before the fader push)",
+    "Four bars: the loop point's step against the music's own 99.9th-percentile step": "take 0: 0.0074 vs 0.1168 · take 3: 0.0012 vs 0.1233",
+    "Soft against hard zone, share above 3 kHz": "roll -21.9 / -18.6 dB · four bars -19.9 / -18.8 dB",
+    "Kit build time, this host (4 cores, in parallel)": "27.6 s: the four bars are 2.0 s a render, 12 renders; a hit 10 to 225 ms; the roll 0.3 s",
+}
+
 MEASURED_R1 = {
     "Velocity, dry: share above each drum's split, soft (0.3) to hard (1.0), dB": "kick +10.6 · snare +4.0 · closed hat +5.5 · open hat +5.0 · rod +6.1 · plate +1.5 · cup +3.4 · coil +1.4",
     "Velocity through GRIME .9, same measure, dB": "kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8",
@@ -154,14 +179,26 @@ MEASURED_R1 = {
 }
 
 
+GATES_R2 = """      <tbody>
+        <tr><td>Sound character</td><td><span class="state s-part">Hits approved</span></td><td>You approved the fourteen hits and the kit (round 1b). The roll and the four bars are new on this page.</td></tr>
+        <tr><td>Melodic, keygroups, chord tools</td><td><span class="state s-na">N/A</span></td><td>A drum kit.</td></tr>
+        <tr><td>Articulation</td><td><span class="state s-na">N/A</span></td><td>Finite hits, no HOLD.</td></tr>
+        <tr><td>Percussion roll or riser</td><td><span class="state s-part">Built, not heard</span></td><td>A15, the coil roll, with its three zones and four takes (section 1).</td></tr>
+        <tr><td>Multiple genre kits</td><td><span class="state s-open">One of three</span></td><td>SOOT is on the shelf. Two sibling kits, your choice, are still to come.</td></tr>
+        <tr><td>Velocity and round robin: rendering</td><td><span class="state s-part">Verified</span></td><td>Each zone a softer strike, each take a fresh one.</td></tr>
+        <tr><td>Velocity and round robin: saving and playback</td><td><span class="state s-part">Verified in software</span></td><td>The saved kit reloads equal; all 192 slices play back through the app's resolver, zone by velocity, takes in order then repeating. No phone has played it.</td></tr>
+        <tr><td>Velocity and round robin: export</td><td><span class="state s-part">MPC 3 verified by read-back</span></td><td>The exported track's zones, cycles and windows match. MPC 2 keeps one take per zone and does not pass. No MPC has loaded it.</td></tr>
+      </tbody>"""
+
+
 def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     global TARGET_DB
     TARGET_DB = -26.0  # the printed metal's peaks are high for its loudness; match lower so few clips hit the limit
-    questions, measured = (QUESTIONS_R1B, MEASURED_R1B) if sub == "1b" else (QUESTIONS_R1, MEASURED_R1)
+    questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
     man = json.load(open(os.path.join(r1, "manifest.json")))
     by = {(c["section"], c["id"]): c for c in man["clips"]}
     sections = []
-    for key, title, what, ask, ids, mode, options, refs in questions:
+    for qi, (key, title, what, ask, ids, mode, options, refs) in enumerate(questions):
         rows = []
         for cid in ids:
             c = by[(key, cid)]
@@ -170,10 +207,29 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
             if cid in refs and os.path.exists(os.path.join(r0, refs[cid][0])):
                 src, trim = matched_mp3(read(os.path.join(r0, refs[cid][0])))
                 rows.append({"id": "ref", "label": refs[cid][1], "src": src, "secs": None, "note": "", "trim": round(trim, 1), "ref": True})
-        sections.append({"key": key, "title": title, "what": what, "ask": ask, "rows": rows, "mode": mode, "options": options})
+        # Two questions may share a clip folder; the page keys each question on its own.
+        sections.append({"key": key if sub != "2" else f"{key}{qi}", "tag": key, "title": title, "what": what, "ask": ask, "rows": rows, "mode": mode, "options": options})
     meas = dict(measured)
-    meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
+    if "render_ms_warm_median5" in man:
+        meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
     tpl = open(os.path.join(os.path.dirname(__file__), "template_r1.html")).read()
+    if sub == "2":
+        a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
+        tpl = (tpl[:a] + GATES_R2 + tpl[b:])
+        tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Round 2 · the kit on the shelf")
+               .replace("<title>SOOT Round 1</title>", "<title>SOOT Round 2</title>")
+               .replace('const KEY = "soot-r1-picks";', 'const KEY = "soot-r2-picks";')
+               .replace('const lines = ["SOOT round 1 answers"];', 'const lines = ["SOOT round 2 answers"];')
+               .replace("Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.",
+                        "SOOT is on the FRESH TAPE shelf: the sixteen pads you approved, each with three touch zones and four takes, plus the two new pads: the coil roll on A15 and the four bars on A16. Every pad on this page was saved, reloaded, exported to MPC 3 and read back through the app's own pad resolver.")
+               .replace('Every clip plays at the same loudness. Kotlin and Python render noise and a few filters differently, so "the same drum" means the same character, not the same file. Pick on each question, then copy the answers at the bottom and paste them back to me.',
+                        "Every clip plays at the same loudness. Pick on each question, then copy the answers at the bottom and paste them back to me.")
+               .replace('<section aria-labelledby="kit-h">', '<section aria-labelledby="kit-h" hidden>')
+               .replace('lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));', "")
+               .replace('<div class="eyebrow">7 · Where the gates stand</div>', '<div class="eyebrow">7 · Where the gates stand</div>')
+               .replace('<p>From the engine acceptance gates. This round builds the drums; the kit, saving, playback and export are the next round.</p>',
+                        '<p>From the engine acceptance gates. This round puts the kit on the shelf and proves its grids in software. Hardware and the sibling kits remain.</p>')
+               .replace('<div class="eyebrow">8 · What I measured</div>', '<div class="eyebrow">8 · What I measured</div>'))
     if sub == "1b":
         tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Round 1b · Kotlin, renderer model 2")
                .replace("<title>SOOT Round 1</title>", "<title>SOOT Round 1b</title>")
@@ -196,7 +252,7 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b"):
+    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2"):
         a = sys.argv[3:]
         return main_r1(a[0] if a else "testkit/soot-audition", a[1] if len(a) > 1 else "testkit/soot-r0",
                        a[2] if len(a) > 2 else "testkit/soot-audition/index.html", sys.argv[2])

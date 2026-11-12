@@ -212,7 +212,7 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro")) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "soot")) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
@@ -241,7 +241,7 @@ class StarterKitsTest {
                     "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
-                    StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro" -> (1..16).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID, "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "soot" -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
@@ -249,6 +249,16 @@ class StarterKitsTest {
                     for (pad in kit.pads) {
                         assertEquals("TRIAD", pad.source["engine"])
                         assertEquals("2", pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id == "soot") {
+                    for (pad in kit.pads) {
+                        assertEquals("SOOT", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.SootKits.VERSION.toString(), pad.source["kitVersion"])
                         assertEquals(3, pad.chain?.zones?.size)
                         assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
                         assertEquals(12, pad.chain?.boundaries?.size)
