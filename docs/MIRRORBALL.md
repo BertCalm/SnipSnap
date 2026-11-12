@@ -12,7 +12,7 @@ engines already make them, plus a tambourine synthesized from BACKWASH's CC0 rec
 treatment stage, `Mirrorball`, which prints each pad through the owner's chain in the owner's order. The FX rack
 cannot do this: `FxChain` runs VALVE before TAPE and ECHO, so there the echoes never reach the amp.
 
-**Status: round 1b, built, not yet heard.** The audition page (linked here once published) plays every pad
+**Status: round 1b, built, not yet heard.** The [audition page](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB) plays every pad
 as the app would. The [design specification](superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md) has the
 research, the model and each round's measurements.
 
@@ -119,7 +119,32 @@ generator does six things:
    groove dry;
 6. writes `verification.csv`, `metrics.csv` and `manifest.json`.
 
-Measured results are recorded here once the generator has run on this round.
+## What was measured (round 1b, this cloud JVM, commit after `42400b4d`)
+
+The generator, `:shell:generateMirrorballKits`:
+- **All three kits pass.** 16 pads and 192 slices each. Every saved slice and every exported slice matches its
+  render through `PadHit.resolve` over two full cycles of each zone. The MPC 3 track reads back with matching
+  velocity ranges, base slices, cycle lengths and frame windows.
+- **Build time, warm:** Philly 34.6 s, Loft 34.5 s, Munich 24.2 s. These are not phone timings.
+
+`MirrorballTest` (18 tests) and `MirrorballKitTest`, `StarterKitsTest`, `StarterShelfTest` all pass:
+- **The order.** With the amp last, the first echo comes back on average at least 2 dB louder against the hit
+  than in the rack's order, on every kit's clean echo pads. Take the amp's sag and most of its gain away and that
+  gap shrinks by more than 1 dB.
+- **The echoes land on the heads.** The closed hat's repeats at a sixteenth and a dotted eighth stand at least
+  10 dB over the space between them. With no echo, nothing is left there (60 dB or more under the hit).
+- **The tape loop never grows,** at repeats 1, on three head settings at 60, 128 and 200 BPM.
+- **Kicks.** No kick has an echo. Every kick (except Munich's long kick) has its beater: the 1.5 to 4 kHz band
+  sits within 18 dB of the whole in the first 15 ms. The print adds more than 10 dB at 250 to 600 Hz to
+  Philly's kick, and those harmonics rise from Lighter to the kit to Full Punch.
+- **The compressor** lowers every main snare's crest by more than 1.5 dB and squeezes a soft hit less than a
+  hard one. A hit held under the threshold comes through within 0.5 dB.
+- **The tambourine** is within 3 dB of the recordings in every third-octave from 1.6 to 16 kHz, hard and soft,
+  averaged over four takes. Its takes differ, and a soft hit peaks later than a hard one, as the recordings do.
+- **Velocity and round robin.** Every zone is levelled to one peak. Every soft hit is a different strike, not a
+  quieter copy, and every hit is duller there. Every zone holds four different takes.
+- **The kits.** The three kits have different kicks and snares (dry), tempos, tapes, amps and pad roles. Every
+  hit stays under 1.5 s and every phrase is filed as a loop. No name carries a maker's.
 
 ## Limits, stated plainly
 
