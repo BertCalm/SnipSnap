@@ -55,8 +55,18 @@ enum class SootVoice(val drumClass: DrumClass) {
  * No HOLD: every hit is a one-shot under the classifier's 1.5 s loop threshold.
  */
 object Soot {
-    /** Renderer models. A save keeps the model it was made with. 1: round 1, the round-0 picks in Kotlin. */
-    const val MODEL_VERSION = 1
+    /**
+     * Renderer models. A save keeps the model it was made with.
+     * - **2 (round 1b, 2026-11-12):** the owner's round-1 answers. The hats print with no send into
+     *   the coil (they heard the Kotlin hat as "different": "there is an effect sound on the Kotlin
+     *   one"; the coil's tail measured 47 dB louder at 100 ms than on the hat they picked), and every
+     *   voice's GRIME defaults to .45 (their pick on the four bars from the pads).
+     * - **1 (round 1):** the round-0 picks in Kotlin: GRIME .9, the hats sending .05 and .08 to the coil.
+     */
+    const val MODEL_VERSION = 2
+
+    /** GRIME's default by model: .9 was the round-0 groove pick, .45 the round-1 pad pick. */
+    private fun grimeFor(model: Int) = if (model >= 2) .45f else .9f
 
     /** The longest hit; every hit is capped here with a 4 ms fade, under the 1.5 s loop threshold. */
     const val CAP_SECONDS = 1.45f
@@ -77,9 +87,14 @@ object Soot {
      * - the kick at SAG .35 with the longer sub (t60 0.6 s, SUB .5);
      * - the hot snare (EDGE 1, the 12-bit cassette);
      * - the wide hats (DETUNE .625, 25 cents);
-     * - the heavy dictaphone (GRIME .9), picked on the coupled groove.
+     * - the heavy dictaphone (GRIME .9), picked on the coupled groove; model 2 takes the round-1 pick
+     *   on the pads, GRIME .45 ([grimeFor]).
      */
-    fun macrosFor(voice: SootVoice): List<MacroSpec> = when (voice) {
+    fun macrosFor(voice: SootVoice, model: Int = MODEL_VERSION): List<MacroSpec> = controls(voice).map {
+        if (it.name == "GRIME") it.copy(default = grimeFor(model)) else it
+    }
+
+    private fun controls(voice: SootVoice): List<MacroSpec> = when (voice) {
         SootVoice.KICK -> listOf(MacroSpec("TUNE", .5f), MacroSpec("SAG", .35f), MacroSpec("SUB", .5f), MacroSpec("COIL", .45f), MacroSpec("GRIME", .9f))
         SootVoice.SNARE -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COIL", .55f), MacroSpec("EDGE", 1f), MacroSpec("BENCH", .35f), MacroSpec("GRIME", .9f))
         SootVoice.HAT_CLOSED, SootVoice.HAT_OPEN -> listOf(MacroSpec("TUNE", .5f), MacroSpec("DETUNE", .625f), MacroSpec("DECAY", .5f), MacroSpec("GRIME", .9f))
@@ -89,9 +104,9 @@ object Soot {
         SootVoice.COIL -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COIL", .85f), MacroSpec("GRIME", .9f))
     }
 
-    fun defaults(voice: SootVoice) = macrosFor(voice).associate { it.name to it.default }
+    fun defaults(voice: SootVoice, model: Int = MODEL_VERSION) = macrosFor(voice, model).associate { it.name to it.default }
 
-    fun settled(voice: SootVoice, macros: Map<String, Float>) = defaults(voice).mapValues { (k, d) ->
+    fun settled(voice: SootVoice, macros: Map<String, Float>, model: Int = MODEL_VERSION) = defaults(voice, model).mapValues { (k, d) ->
         macros[k]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: d
     }
 
@@ -417,12 +432,15 @@ object Soot {
 
     // ------------------------------------------------------------------ the print and the dictaphone
 
-    /** Each voice's own send into the coil when its print is made. Where COIL is the voice's send, it is the macro. */
-    private fun sendFor(voice: SootVoice, m: Map<String, Float>): Double = when (voice) {
+    /**
+     * Each voice's own send into the coil when its print is made. Where COIL is the voice's send, it is
+     * the macro. From model 2 the hats send nothing: the owner picked the dry metal.
+     */
+    private fun sendFor(voice: SootVoice, m: Map<String, Float>, model: Int): Double = when (voice) {
         SootVoice.KICK, SootVoice.ROD, SootVoice.PLATE, SootVoice.CUP -> m.getValue("COIL").toDouble()
         SootVoice.SNARE -> .25
-        SootVoice.HAT_CLOSED -> .05
-        SootVoice.HAT_OPEN -> .08
+        SootVoice.HAT_CLOSED -> if (model >= 2) 0.0 else .05
+        SootVoice.HAT_OPEN -> if (model >= 2) 0.0 else .08
         SootVoice.COIL -> 0.0
     }
 
@@ -474,7 +492,7 @@ object Soot {
      */
     fun render(voice: SootVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, model: Int = MODEL_VERSION): Snip {
         require(model in 1..MODEL_VERSION) { "unsupported soot model $model" }
-        val m = settled(voice, macros)
+        val m = settled(voice, macros, model)
         val v = (velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f).toDouble().coerceAtLeast(.02)
         val r = Random(Dsp.seedFor("soot", voice.name, take))
         val noise = Dsp.Noise(Dsp.seedFor("soot-noise", voice.name, take))
@@ -491,7 +509,7 @@ object Soot {
         var x = centre(dry)
         // The print: the pad's own send into the coil, then the dictaphone. GRIME 0 bypasses the
         // dictaphone entirely, so the dry drum is one control away.
-        val send = sendFor(voice, m)
+        val send = sendFor(voice, m, model)
         if (send > 0) {
             val ret = lp2(BreakerChain.spring(x, .5, x.size, rate, COIL_TANK, sendHp = if (voice == SootVoice.KICK) 90.0 else 250.0), COIL_TANK.tone)
             val pr = peak(ret)

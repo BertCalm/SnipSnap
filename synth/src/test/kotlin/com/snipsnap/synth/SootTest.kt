@@ -172,6 +172,46 @@ class SootTest {
         assertTrue(share > -6.0, "the sub survives the dictaphone ($share dB)")
     }
 
+    /** The level of the 20 ms block centred on [ms], against the loudest 20 ms block, in dB. */
+    private fun levelAt(x: FloatArray, ms: Double): Double {
+        val n = (.02 * rate).toInt()
+        val blocks = (0 until x.size / n).map { k -> rms(x, k * n.toDouble() / rate, (k + 1) * n.toDouble() / rate) }
+        return db(blocks[(ms / 20).toInt()]) - db(blocks.max())
+    }
+
+    /**
+     * The owner heard model 1's dry Kotlin hat as "different" ("there is an effect sound on the Kotlin
+     * one"): its own coil send rang on after the metal had died. Measured against the Python hat they
+     * picked, at 100 ms: model 1 -29 dB, the pick -76. (Below 2.4 kHz the Kotlin hat also sits about
+     * 10 dB over the pick, but the pick's own takes spread 15 dB there on their random phases alone, so
+     * that is take-to-take variation, not this.)
+     */
+    @Test
+    fun `model 2's hats carry no coil, model 1's did`() {
+        for (voice in listOf(SootVoice.HAT_CLOSED, SootVoice.HAT_OPEN)) {
+            val dry = mapOf("GRIME" to 0f)
+            val at = if (voice == SootVoice.HAT_CLOSED) 100.0 else 700.0
+            val m1 = levelAt(Soot.render(voice, dry, model = 1).samples, at)
+            val m2 = levelAt(Soot.render(voice, dry, model = 2).samples, at)
+            println("SOOT $voice level at $at ms, dry, model 1 / 2: ${"%.1f".format(m1)} / ${"%.1f".format(m2)} dB")
+            // The open hat's own 0.55 s ring covers most of its coil, so its margin is smaller (measured 9 dB at 700 ms).
+            val margin = if (voice == SootVoice.HAT_CLOSED) 15.0 else 6.0
+            assertTrue(m2 < m1 - margin, "$voice: the coil's tail is gone ($m1 -> $m2)")
+        }
+    }
+
+    @Test
+    fun `a model-1 save keeps its GRIME and its hats' coil`() {
+        for (voice in SootVoice.entries) {
+            assertEquals(.9f, Soot.defaults(voice, model = 1).getValue("GRIME"))
+            assertEquals(.45f, Soot.defaults(voice).getValue("GRIME"))
+            val old = Patches.fromJsonText(SootPatch("Saved", voice, emptyMap(), model = 1).toJsonText()) as SootPatch
+            assertEquals(1, old.model)
+            assertContentEquals(Soot.render(voice, emptyMap(), model = 1).samples, old.render().samples, "$voice replays as model 1")
+        }
+        assertTrue(apart(Soot.render(SootVoice.HAT_CLOSED, model = 1).samples, Soot.render(SootVoice.HAT_CLOSED).samples) > -30.0)
+    }
+
     @Test
     fun `a patch round-trips through JSON with its model`() {
         for (p in SootPresets.all()) {

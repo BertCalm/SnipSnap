@@ -3450,6 +3450,11 @@ hot snare, the 25-cent hats and the heavy dictaphone, kept all four metal voices
 velocity strip as a softer hand, found no pad print ruined and approved the 16-pad layout. Round 1
 builds the eight voices in Kotlin (`Soot`, renderer model 1), a prototype outside the factory
 presets. BREAKER's `Tank` grew fields for the coil, with defaults that keep BREAKER byte-identical
-(checked by hash). The Kotlin renders await the owner's confirming listen; the kit, the coil roll,
-the phrase pad and the genre kits follow. See [SOOT](SOOT.md) and the
+(checked by hash). Round 1 was heard the same day:
+- the kick, snare and touch were accepted;
+- the pads moved to GRIME .45;
+- the hat had an effect sound, its own coil send.
+
+Round 1b (model 2) removes the send. Model-1 saves keep their sound. The kit, the coil roll, the
+phrase pad and the genre kits follow. See [SOOT](SOOT.md) and the
 [design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).

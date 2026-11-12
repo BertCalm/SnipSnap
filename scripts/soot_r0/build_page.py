@@ -2,7 +2,7 @@
 """Build SOOT's listening pages (round 0, and with --round 1 the Kotlin confirming listen): loudness-matched MP3s embedded in one HTML file.
 
 Run:  python3 scripts/soot_r0/build_page.py [r0_dir] [boom_bap_dir] [out.html]
-      python3 scripts/soot_r0/build_page.py --round 1 [r1_dir] [r0_dir] [out.html]
+      python3 scripts/soot_r0/build_page.py --round 1|1b [r1_dir] [r0_dir] [out.html]
 Needs numpy and ffmpeg. The Backroom references come from `:synth:generateBoomBapAudition`.
 """
 from __future__ import annotations
@@ -120,6 +120,28 @@ QUESTIONS_R1 = [
      "Which dictaphone for the kit?", ["grime90", "grime45"], "pick", [], {}),
 ]
 
+# Round 1b: the hats re-heard after model 2, the alternates the owner left blank, the new GRIME default.
+QUESTIONS_R1B = [
+    ("same", "1 · The hats again", "Model 2 takes the hats' own send into the coil away. Each Kotlin hat sits beside the Python one you picked; model 1's closed hat, the one you heard as different, is last.",
+     "Is each one now the hat you picked?", ["hat", "hat_open", "hat_m1"], "yesno", ["Same drum", "Different"],
+     {"hat": ("hats/h_closed_wide.wav", "Your round-0 pick (Python)"), "hat_open": ("hats/h_open_wide.wav", "Your round-0 pick (Python)")}),
+    ("alternates", "2 · The alternates", "These were left unanswered last round. The approved layout's other pads, now at GRIME .45.",
+     "Keep, change or drop each.", ["kick_heavy", "kick_tight", "kick_dry", "snare_coil", "snare_dry_crack", "snare_bench",
+                                     "hat_closed_narrow", "hat_open_narrow", "hat_closed_pure", "rod_dry", "plate_dry", "cup_dry", "coil_dry"],
+     "each", ["Keep", "Change", "Drop"], {}),
+    ("pads", "3 · The pads at your pick", "Every voice as its pad now prints it: GRIME .45, the hats dry of the coil.",
+     "Anything off?", ["kick", "snare", "hat_closed", "hat_open", "rod", "plate", "cup", "coil"], "note", [], {}),
+    ("kit", "4 · Four bars from the pads", "The groove you picked, GRIME .45, with the new hats.",
+     "Is this the kit?", ["grime45"], "yesno", ["Yes", "Not yet"], {}),
+]
+
+MEASURED_R1B = {
+    "Closed hat, dry, level at 100 ms re its loudest 20 ms": "model 1 -29.2 dB · model 2 -76.2 dB · your Python pick -76.2 dB",
+    "Open hat, dry, level at 700 ms": "model 1 -62.5 dB · model 2 -71.7 dB (its own ring covers most of the coil)",
+    "Closed hat energy below 2.4 kHz": "Kotlin about 10 dB over your pick; your pick's own eight takes spread 15 dB there on their random phases, so this is take-to-take variation",
+    "GRIME default": "model 2: .45 on every voice (your four-bar pick); model-1 saves keep .9",
+}
+
 MEASURED_R1 = {
     "Velocity, dry: share above each drum's split, soft (0.3) to hard (1.0), dB": "kick +10.6 · snare +4.0 · closed hat +5.5 · open hat +5.0 · rod +6.1 · plate +1.5 · cup +3.4 · coil +1.4",
     "Velocity through GRIME .9, same measure, dB": "kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8",
@@ -132,13 +154,14 @@ MEASURED_R1 = {
 }
 
 
-def main_r1(r1: str, r0: str, out: str) -> int:
+def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     global TARGET_DB
     TARGET_DB = -26.0  # the printed metal's peaks are high for its loudness; match lower so few clips hit the limit
+    questions, measured = (QUESTIONS_R1B, MEASURED_R1B) if sub == "1b" else (QUESTIONS_R1, MEASURED_R1)
     man = json.load(open(os.path.join(r1, "manifest.json")))
     by = {(c["section"], c["id"]): c for c in man["clips"]}
     sections = []
-    for key, title, what, ask, ids, mode, options, refs in QUESTIONS_R1:
+    for key, title, what, ask, ids, mode, options, refs in questions:
         rows = []
         for cid in ids:
             c = by[(key, cid)]
@@ -148,9 +171,24 @@ def main_r1(r1: str, r0: str, out: str) -> int:
                 src, trim = matched_mp3(read(os.path.join(r0, refs[cid][0])))
                 rows.append({"id": "ref", "label": refs[cid][1], "src": src, "secs": None, "note": "", "trim": round(trim, 1), "ref": True})
         sections.append({"key": key, "title": title, "what": what, "ask": ask, "rows": rows, "mode": mode, "options": options})
-    meas = dict(MEASURED_R1)
+    meas = dict(measured)
     meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
     tpl = open(os.path.join(os.path.dirname(__file__), "template_r1.html")).read()
+    if sub == "1b":
+        tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Round 1b · Kotlin, renderer model 2")
+               .replace("<title>SOOT Round 1</title>", "<title>SOOT Round 1b</title>")
+               .replace('const KEY = "soot-r1-picks";', 'const KEY = "soot-r1b-picks";')
+               .replace('const lines = ["SOOT round 1 answers"];', 'const lines = ["SOOT round 1b answers"];')
+               .replace("Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.",
+                        "Your round-1 answers, built: the hats no longer send into the coil (the effect you heard was its tail), and every pad prints at GRIME .45, your four-bar pick. The kick and snare are unchanged; you heard them as the same drums.")
+               .replace('<section aria-labelledby="kit-h">', '<section aria-labelledby="kit-h" hidden>')
+               .replace('lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));', "")
+               .replace('<div class="eyebrow">7 · Where the gates stand</div>', '<div class="eyebrow">5 · Where the gates stand</div>')
+               .replace('<div class="eyebrow">8 · What I measured</div>', '<div class="eyebrow">6 · What I measured</div>')
+               .replace("<td>Sound character</td><td><span class=\"state s-part\">Round 0 picked</span></td><td>Your round-0 picks; this page confirms the Kotlin renders.</td>",
+                        "<td>Sound character</td><td><span class=\"state s-part\">Kick and snare confirmed</span></td><td>You heard the Kotlin kick and snare as your picks. The hats are re-heard here.</td>")
+               .replace("Through GRIME .9 the hats keep almost none of that brightness (section 4 asks).",
+                        "You heard every touch strip as a softer hand through the print."))
     with open(out, "w") as f:
         f.write(tpl.replace("/*DATA*/null", json.dumps({"sections": sections, "measurements": meas})))
     print(out, round(os.path.getsize(out) / 1e6, 2), "MB")
@@ -158,10 +196,10 @@ def main_r1(r1: str, r0: str, out: str) -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 1 and sys.argv[1] == "--round" and sys.argv[2] == "1":
+    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b"):
         a = sys.argv[3:]
         return main_r1(a[0] if a else "testkit/soot-audition", a[1] if len(a) > 1 else "testkit/soot-r0",
-                       a[2] if len(a) > 2 else "testkit/soot-audition/index.html")
+                       a[2] if len(a) > 2 else "testkit/soot-audition/index.html", sys.argv[2])
     r0 = sys.argv[1] if len(sys.argv) > 1 else "testkit/soot-r0"
     bb = sys.argv[2] if len(sys.argv) > 2 else "testkit/boom-bap-audition/native"
     out = sys.argv[3] if len(sys.argv) > 3 else os.path.join(r0, "index.html")

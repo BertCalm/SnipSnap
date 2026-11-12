@@ -11,9 +11,9 @@ import kotlin.random.Random
  * (default `testkit/soot-audition`); `scripts/soot_r0/build_page.py --round 1` turns it into the page.
  *
  * Sections:
- * - **same**: each picked drum dry in Kotlin, to set beside the Python render the owner picked;
- * - **pads**: every voice as its pad prints it, at the picked heavy dictaphone (GRIME .9) and at the
- *   .45 the owner heard the pad prints at;
+ * - **same**: each picked drum dry in Kotlin, to set beside the Python render the owner picked, and
+ *   model 1's closed hat, which the owner heard as different;
+ * - **pads**: every voice as its pad prints it (model 2: GRIME .45, the hats dry of the coil);
  * - **alternates**: the approved layout's other pads (the presets after the first);
  * - **touch**: soft, medium and hard, three takes each, every strike levelled to one peak;
  * - **kit**: four bars at 84 BPM played from the pads the way a sampler plays them: each hit its own
@@ -107,10 +107,11 @@ object SootAuditionGenerator {
         val dry = mapOf("GRIME" to 0f)
         emit(out, "same", "kick", "Kick, Kotlin, dry", Soot.render(SootVoice.KICK, dry + ("COIL" to 0f)).samples)
         emit(out, "same", "snare", "Snare, Kotlin, dry of the print", Soot.render(SootVoice.SNARE, dry).samples)
-        emit(out, "same", "hat", "Closed hat, Kotlin, dry", Soot.render(SootVoice.HAT_CLOSED, dry).samples)
+        emit(out, "same", "hat", "Closed hat, Kotlin, dry (model ${Soot.MODEL_VERSION})", Soot.render(SootVoice.HAT_CLOSED, dry).samples)
+        emit(out, "same", "hat_open", "Open hat, Kotlin, dry (model ${Soot.MODEL_VERSION})", Soot.render(SootVoice.HAT_OPEN, dry).samples)
+        emit(out, "same", "hat_m1", "Closed hat, Kotlin, dry, model 1 (what you heard as different)", Soot.render(SootVoice.HAT_CLOSED, dry, model = 1).samples)
         for (voice in SootVoice.entries) {
-            emit(out, "pads", voice.name.lowercase(), "${voice.name.lowercase().replace('_', ' ')}: GRIME .9 (your groove pick)", Soot.render(voice).samples)
-            emit(out, "pads", voice.name.lowercase() + "_45", "${voice.name.lowercase().replace('_', ' ')}: GRIME .45 (what the pad prints were heard at)", Soot.render(voice, mapOf("GRIME" to .45f)).samples)
+            emit(out, "pads", voice.name.lowercase(), "${voice.name.lowercase().replace('_', ' ')}: as its pad prints it (GRIME .45)", Soot.render(voice).samples)
         }
         for (voice in SootVoice.entries) for (p in SootPresets.forVoice(voice).drop(1)) {
             emit(out, "alternates", "${voice.name.lowercase()}_${p.name.lowercase().replace(' ', '_')}", "${voice.name.lowercase().replace('_', ' ')}: ${p.name}", p.render().samples)
@@ -124,8 +125,7 @@ object SootAuditionGenerator {
             val t0 = System.nanoTime(); repeat(5) { Soot.render(voice) }
             timing[voice.name] = (System.nanoTime() - t0) / 5 / 1_000_000
         }
-        emit(out, "kit", "grime90", "Four bars from the pads, GRIME .9", kit(.9f))
-        emit(out, "kit", "grime45", "Four bars from the pads, GRIME .45", kit(.45f))
+        emit(out, "kit", "grime45", "Four bars from the pads, GRIME .45 (your pick), the new hats", kit(.45f))
         val json = buildString {
             append("{\n \"engine\": \"SOOT\", \"round\": 1, \"model\": ${Soot.MODEL_VERSION}, \"harness\": \"Kotlin\",\n")
             append(" \"render_ms_warm_median5\": {"); append(timing.entries.joinToString(", ") { "\"${it.key}\": ${it.value}" }); append("},\n")

@@ -11,9 +11,14 @@ kit breathing through a dictaphone**.
 
 ## Status
 
-Round 1 (renderer model 1): eight voices in Kotlin, a prototype outside the factory presets
-(`PatchTypes.PROTOTYPES`) and the phone picker. Not heard in Kotlin yet: the confirming-listen page
-is https://claude.ai/artifact/6DPRBQwsJLHre4kFp2UtVc (private to the owner).
+Round 1b (renderer model 2): eight voices in Kotlin, a prototype outside the factory presets
+(`PatchTypes.PROTOTYPES`) and the phone picker.
+- **Round 1, heard on 2026-11-12:**
+  - the Kotlin kick and snare are the drums the owner picked, and every touch strip a softer hand;
+  - the pads print at GRIME .45 (their four-bar pick), and the layout's swaps are right;
+  - the hat was "different" (an effect sound): its own coil send, now removed.
+- **Round 1b:** the re-listen is https://claude.ai/artifact/4rgHxAF39Z9nuztgjtEgwB (private to the
+  owner).
 
 Round 0 (Python harness) was heard on 2026-11-12. The owner picked:
 - **Kick:** sag .35 with the longer sub (t60 0.6 s).
@@ -25,7 +30,7 @@ Round 0 (Python harness) was heard on 2026-11-12. The owner picked:
 - **Layout:** approved.
 
 Still to come:
-- the confirming listen on the Kotlin renders, and the pads' GRIME (.9 or .45);
+- the hats re-heard at model 2, and the alternates (unanswered at round 1);
 - the 16 pads assembled into a kit, with velocity and round robin through saving, playback and
   export (GATECRASH's path: `PadHit.resolve`, MPC 3 read-back);
 - A15, the coil roll (the percussion gate's riser), and A16, the four-bar phrase through one shared
@@ -62,7 +67,8 @@ hold the sounds that were not picked.
      a five-mode cup.
    - **COIL:** a soft thump into the coil with its send opened to 120 Hz.
 2. **The print**, what a pad keeps: the pad's own send into the coil (the kick's opened down to
-   90 Hz, so the kick drives the spring), then the dictaphone at GRIME: the lows under 100 Hz go
+   90 Hz, so the kick drives the spring; the hats send nothing from model 2), then the dictaphone at
+   GRIME (.45 by default from model 2, .9 on model 1): the lows under 100 Hz go
    round the grit; above them an AGC that pumps, a small speaker's 2.7 kHz bump and low-pass, and a
    ROM reader's zero-order hold and bit loss. GRIME 0 bypasses the dictaphone.
 3. **Output:** centred, 20 Hz high-pass, levelled to the house target, 4 ms fade, under 1.45 s.
@@ -86,10 +92,11 @@ Round 0's harness: `python3 scripts/soot_r0/soot_r0.py` then `python3 scripts/so
 
 ## Limits, stated plainly
 
-- **Not heard in Kotlin.** The Kotlin port uses the app's noise and filter cascades, not numpy's.
-- **The hats' velocity mostly disappears in the print.** Dry, a hard hat has 5.5 dB more energy
-  above 9 kHz than a soft one; through GRIME .9 it has 0.1 dB more. The renders still differ (18 dB
-  apart). The confirming listen asks.
+- **The Kotlin port uses the app's noise and filter cascades,** not numpy's. The owner heard the
+  kick and snare as their picks; the hats are re-heard at model 2.
+- **The hats' velocity brightness mostly disappears in the print.** Dry, a hard hat has 5.5 dB more
+  energy above 9 kHz than a soft one; through GRIME .9 it has 0.1 dB more. By ear (round 1) a soft
+  hat is still a softer hand.
 - **The dictaphone adds grit to a dark drum.** On the plate, the energy above 6 kHz rises from
   about -51 dB to -25 dB through GRIME .9. That is the ROM hold's aliasing, which the profile asked
   for; on the snare and hats the dictaphone removes 5 to 6 dB up there.

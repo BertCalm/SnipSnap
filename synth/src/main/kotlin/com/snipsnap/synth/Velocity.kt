@@ -241,7 +241,7 @@ object Velocity {
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is BreakerPatch -> Breaker.macrosFor(patch.voice, patch.model)
-        is SootPatch -> Soot.macrosFor(patch.voice)
+        is SootPatch -> Soot.macrosFor(patch.voice, patch.model)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)

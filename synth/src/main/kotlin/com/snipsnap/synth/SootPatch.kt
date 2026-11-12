@@ -14,7 +14,7 @@ data class SootPatch(
     val model: Int = Soot.MODEL_VERSION,
 ) : Patch {
     init {
-        Patches.validateMacros(this, Soot.macrosFor(voice))
+        Patches.validateMacros(this, Soot.macrosFor(voice, model))
         require(model in 1..Soot.MODEL_VERSION) { "unsupported soot model $model" }
     }
 

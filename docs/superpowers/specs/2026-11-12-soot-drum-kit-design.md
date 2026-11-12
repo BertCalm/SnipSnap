@@ -1,7 +1,7 @@
 # SOOT drum kit: design brief and round 0
 
-Status: round 0 heard and picked by the owner on 2026-11-12. Round 1 (eight voices in Kotlin,
-renderer model 1) built the same day and published for a confirming listen. No kit yet. The
+Status: round 0 picked and round 1 heard by the owner on 2026-11-12. Round 1b (renderer model 2)
+answers round 1 and is published for a short re-listen. No kit yet. The
 overview is [SOOT](../../SOOT.md).
 Repository truth: `1d8f24ec` (main after #1037). Read: `BreakerChain.kt` (the dispersive spring
 tank, `Tank`, `spring`, `tankMix`, `crush`), `Terra.kt` (DROOP: a sliding membrane fundamental,
@@ -298,3 +298,39 @@ none of their velocity brightness, and the plate gains aliased grit rather than 
 | Velocity and round robin: saving, playback, export | not yet verified: the kit round |
 | Roll or riser; genre kits | not yet built |
 | Melodic, articulation | not applicable |
+
+## Round 1, heard (2026-11-12)
+
+Page: https://claude.ai/artifact/6DPRBQwsJLHre4kFp2UtVc. The owner's answers, as pasted:
+
+| Question | Heard |
+|---|---|
+| 1. Same drums? | kick: same; snare: same; hat: **different**, "There is an effect sound on the Kotlin one" |
+| 2. The pads | no notes |
+| 3. The alternates | unanswered |
+| 4. Touch, through the print | kick, snare, closed hat, rod: "softer hand" |
+| 5. Four bars from the pads | **GRIME .45** |
+| 6. Layout swaps | right |
+
+The touch answer settles the round-1 worry that the hats lose their velocity brightness in the print:
+by ear, a soft hat is still a softer hand at GRIME .9.
+
+**The hat's effect sound, traced.** The "same drum" hat was rendered at GRIME 0, which bypassed
+the dictaphone but not the hat's own send into the coil (.05). Measured on the files, against the
+Python hat they picked: at 100 ms the Kotlin hat was -29.2 dB under its loudest 20 ms, the pick
+-76.2. That is the coil ringing on after the metal has died. Below 2.4 kHz the Kotlin hat also sat
+about 10 dB over the pick, but that is not the cause. Two things were ruled out by experiment:
+the stick tick (removing it changed nothing) and the attack ramp (identical code). The pick's own
+eight Python takes spread 15 dB in that band on their random phases alone, and the Kotlin hat sits
+inside that spread (take 4 measures within 2 dB of it).
+
+## As built: round 1b (2026-11-12, renderer model 2)
+
+- **The hats print with no coil send.** Closed hat at 100 ms: -76.2 dB, as the pick. The open
+  hat's own 0.55 s ring covers most of its coil; at 700 ms it moves from -62.5 to -71.7 dB.
+- **GRIME defaults to .45 on every voice** (the four-bar pick).
+- **Model 1 is kept.** `Soot.macrosFor`, `defaults` and `settled` take the model. A model-1 save
+  keeps GRIME .9 and the hats' sends. `SootTest` replays one byte for byte, and checks both changes.
+- The alternates were left unanswered, and the round-1b page asks again.
+- Page: https://claude.ai/artifact/4rgHxAF39Z9nuztgjtEgwB (the hats beside the pick, with model 1
+  for contrast; the alternates; the pads at .45; four bars).
