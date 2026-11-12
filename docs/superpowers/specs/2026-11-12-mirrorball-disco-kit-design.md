@@ -252,3 +252,37 @@ What changed, in the order a record was made:
 
 Clap (THUMP), tambourine (BACKWASH's CC0 recording) and conga (TERRA) are new to the study, so they have
 no round-0 column.
+
+## Round 1b, heard (2026-11-12)
+
+The owner's words: "It sound a bit mid heavy. Like listening through dollar store headphones."
+
+Measured afterwards: octave-band shares of the whole, in dB, on each kit's two-bar groove.
+- **Against the same groove dry:** round 1b lost 17 to 19 dB in the lowest octave (31 Hz) and 12 to 14 dB in the
+  top octave (16 kHz) on Philly and Loft. The closed hat and the tambourine each lost 17 dB at 16 kHz.
+- **The cause:** COMBO's guitar-speaker model, which every pad went through. It cut under 75 Hz and rolled off at
+  6.5 or 8.5 kHz.
+- **Against GATECRASH's approved grooves:** 15 to 30 dB short at 31 Hz, 7 to 8 dB short at 16 kHz, and Philly 11
+  to 14 dB hotter at 4 to 8 kHz.
+
+## Round 1c (2026-11-12, the app's renders)
+
+Page: https://claude.ai/artifact/75bDrRceDQPXXydrFewRmM. COMBO gains a speaker low cut, a bump level and a
+parallel blend. There are four speaker settings (`MirrorballKits.Speaker`):
+- **Closed:** round 1b.
+- **Open:** 40 Hz up to 13 to 15 kHz, the bump halved.
+- **Parallel:** the closed speaker, with the direct signal blended under the amp at equal rms.
+- **Open + parallel:** both.
+
+Philly's groove:
+
+| Octave | Dry | Closed (1b) | Open | Parallel | Open + parallel |
+|---|---|---|---|---|---|
+| 31 Hz | −15.5 | −34.4 | −27.0 | −27.5 | −25.0 |
+| 63 Hz | −6.8 | −8.8 | −6.5 | −9.1 | −5.4 |
+| 4 kHz | −8.5 | −5.6 | −8.3 | −13.4 | −12.6 |
+| 16 kHz | −7.6 | −21.9 | −9.8 | −11.1 | −10.4 |
+
+The kits still print Closed until the owner picks. The 31 Hz octave stays about 10 dB under dry in every
+candidate. Part of that is the kick's own +5 dB at 68 Hz, which lowers the octave below's share. Nothing in
+round 1c has been heard.
