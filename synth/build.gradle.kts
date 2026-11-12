@@ -3575,3 +3575,12 @@ tasks.register<JavaExec>("generateCosmicBreaksFamily") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("cosmicFamilyOutput").orNull ?: "testkit/cosmic-family")
 }
+
+tasks.register<JavaExec>("generateTremoloFlangerAudition") {
+    group = "distribution"
+    description = "Render TREMOLO and FLANGER's listening gate clips under testkit/tremflange-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremoloFlangerAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremflange-audition")
+}
