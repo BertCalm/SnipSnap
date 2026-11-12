@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 0b, Python prototype; nothing heard.** No Kotlin exists. The engine stays in
+Status: **round 0b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -171,7 +171,7 @@ Measured highlights (Python harness):
 | Velocity, rendering | pass in the Python harness only (timbral, peak-matched) |
 | Round robin, rendering | pass in the Python harness only; not heard |
 | Velocity and round robin: saving, playback, export | not yet verified: no Kotlin, no kit, no MPC export |
-| Sound character | not heard |
+| Sound character | direction accepted 2026-11-12 ("Sounds good"), Python renders only |
 
 **Overall: incomplete.** Round 0 is a prototype.
 
@@ -205,7 +205,10 @@ work as THUMP plus CRUNCH; one-shots should stay inside the tens-of-ms rule, loo
 - **Measured:** every number on this page and the audition page, Python harness.
 - **Proposed:** every constant marked "shape" in `scuff_proto.py`; the engine landing; the
   rim's 850 and 1350 Hz; the hat as a possible THUMP preset.
-- **Heard:** nothing. The owner has not listened to round 0.
+- **Heard:** round 0b, 2026-11-12. After it was published the owner said "Sounds good, please merge."
+  Preserve round 0b (`scuff_proto.py` at `59c2ea7b`) as the accepted sound-direction baseline. This
+  is a listen to Python renders on the audition page, not evidence of Kotlin, phone or MPC playback;
+  no pad, stage or landing was singled out, so the open questions on the page stand.
 
 ## Why it is built this way
 
@@ -283,4 +286,7 @@ What else moved, and is disclosed:
 The page gained a before/after section (every pad and the two bars, round 0 then round 0b)
 and a stage-moves table. Round 0's model is read from git at `f92233a1` when the audition is
 generated, so the A/B is against what was published, not a copy. Published 2026-11-12 to the
-same link as version 2 (155 clips). Not heard.
+same link as version 2 (155 clips).
+
+**Heard, 2026-11-12:** "Sounds good, please merge." The owner accepted round 0b's direction as
+published. Preserve it as the baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
