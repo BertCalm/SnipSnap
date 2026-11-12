@@ -1,6 +1,6 @@
 # ETCH: design brief and round-1 audition
 
-Status: **round 1b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
+Status: **round 3, Python prototype; the owner accepted the round-3 audition 2026-11-12.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/etch/`](../prototype/etch/) (`etch_proto.py` is the model,
@@ -159,7 +159,7 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
 - **Measured:** every number on this page and the audition page, Python harness.
 - **Proposed:** every constant marked "shape" in `etch_proto.py`; the six voices; HOLD; the
   slide-does-not-retrigger behaviour.
-- **Heard:** round 1b's square against the saw, "That's better", and then the whole round-1b audition, "It all seems fine from the audition" (both 2026-11-12). Accepted as the sound-direction baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
+- **Heard:** round 1b's square against the saw, "That's better"; the whole round-1b audition, "It all seems fine from the audition"; round 2, "Mostly good, but the 4 takes in RR sound the same"; then "It feels a bit mid heavy. Like dollar store headphones"; and the round-3 audition, "I'm good with evening in audition" (read as "everything") (all 2026-11-12). Round 3 is the accepted baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
 
 ## Why it is built this way
 
@@ -339,6 +339,23 @@ Knock-on effects, measured and handled:
 - SAW and SQUARE are 3.1 dB apart (3.7 in round 2). Disclosed for the owner's ears.
 
 Not heard.
+
+## Round 3 accepted (2026-11-12)
+
+**Heard:** after the round-3 audition (version 5) the owner said "I'm good with evening in audition" (read as "everything"). That accepts, as
+rendered in the Python harness at `c445980b`:
+- the round-3 tone (CUT_HI 2 kHz, FC_MAX 8 kHz, ladder output 0.4/0.3/0.3, BITE low-pass 14
+  to 9 kHz with a +4 dB shelf at 3 kHz, default CUTOFF 0.45);
+- the rebuilt round robin (five dimensions dealt by a Latin hypercube, filter opening ±7%);
+- the six voices: SAW and SQUARE, and the four new ones, RUBBER, WHISTLE, GRIT and DUB, at
+  their defaults.
+
+Preserve round 3 as the baseline. This is a listen to Python renders on the audition page,
+not evidence of Kotlin, phone playback or an MPC. Questions the page asked that "everything"
+answers by default rather than by name: whether RUBBER is too dark, whether GRIT's accents
+need more level, how long DUB's wash runs, and whether SAW and SQUARE (3.1 dB apart after the
+brighter tone) still read as different. Still open: whether chord tools apply to a mono
+line voice.
 
 ## Published audition
 
