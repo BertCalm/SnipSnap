@@ -35,6 +35,8 @@ import java.io.File
  * per zone, including finite bus phrases, with source provenance on every pad.
  * GATECRASH starters are the same kind of bank: three zones of four takes, each pad printed
  * through its own gated space, with two finite phrases and source provenance on every pad.
+ * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
+ * a multi-head tape echo and an amp.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -639,6 +641,21 @@ object StarterKits {
             "A long dry boom kick with a snappy snare and clap in a small, short-gated room. Three touch zones, four takes; a tom break and a build.",
             seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
         ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
+        Starter(
+            "mirrorball-philly", "MIRRORBALL PHILLY STRINGS",
+            "A dry live disco kit: dead kick, towelled snare, congas and tambourine through an FET squeeze, tape repeats and a clean amp. Three touch zones, four takes; a tom fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.PHILLY.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.PHILLY) },
+        Starter(
+            "mirrorball-loft", "MIRRORBALL LOFT PARTY",
+            "A percussion-first disco kit: clap snare, hand drums, timbales and cowbell riding long tape repeats into a warm amp. Three touch zones, four takes; a timbale fill and a clap build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.LOFT.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.LOFT) },
+        Starter(
+            "mirrorball-munich", "MIRRORBALL MUNICH MACHINE",
+            "Machine disco: analog kick, four falling synth toms and a sequencer hat on the dotted-eighth head, into a pushed amp. Three touch zones, four takes; a pew fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.MUNICH.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.MUNICH) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

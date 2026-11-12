@@ -1,0 +1,253 @@
+<title>MIRRORBALL Audition</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the same console as the earlier kit auditions. Kit selector across the top, the 4x4 pad grid on the
+   left in MPC order (A13 top-left, A01 bottom-left), the selected pad's measured level and its chain on the right. */
+:root {
+  --bg: #efecf3; --panel: #f8f6fb; --ink: #1f1828; --muted: #5f5670; --line: #d3cbdc; --pad: #fdfcfe;
+  --philly: #9a4a12; --loft: #6b3fa0; --munich: #136f7a;
+  --accent: var(--philly); --wet: var(--accent); --dry: #1f1828; --warn: #8a4b00; --okc: #2c6a3f;
+  --display: "Syne", "Avenir Next", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16121c; --panel: #201a28; --ink: #ede7f4; --muted: #a79cb6; --line: #392f45; --pad: #271f31;
+  --philly: #f0a060; --loft: #c39af0; --munich: #6fd0da; --dry: #ede7f4; --warn: #f0b060; --okc: #7fd096;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #16121c; --panel: #201a28; --ink: #ede7f4; --muted: #a79cb6; --line: #392f45; --pad: #271f31;
+  --philly: #f0a060; --loft: #c39af0; --munich: #6fd0da; --dry: #ede7f4; --warn: #f0b060; --okc: #7fd096;
+  color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(32px, 7vw, 52px); letter-spacing: .02em; margin: 0; line-height: 1; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0 0 10px; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.gesture { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.status { border-left: 4px solid var(--warn); padding: 8px 12px; background: var(--panel); max-width: 74ch; display: flex; flex-direction: column; gap: 6px; }
+.status strong { color: var(--warn); }
+header { display: flex; flex-direction: column; gap: 12px; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12.5px; }
+.chain span { padding: 6px 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); }
+.chain span.stage { border-color: var(--accent); }
+.chain i { font-style: normal; color: var(--muted); }
+.kits { display: flex; flex-wrap: wrap; gap: 8px; }
+.kit { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .03em; text-transform: uppercase;
+  padding: 10px 14px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; border-radius: 3px; text-align: left; }
+.kit small { display: block; font-family: var(--mono); font-weight: 400; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.kit[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 -4px 0 var(--accent); }
+.kitblurb { font-size: 14px; color: var(--muted); max-width: 72ch; }
+.deck { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .deck { grid-template-columns: minmax(0, 1fr); } }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pad { aspect-ratio: 1 / 1; max-width: 100%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 7px; border: 1.5px solid var(--line); border-radius: 4px; background: var(--pad); color: var(--ink); cursor: pointer;
+  font-family: var(--body); text-align: left; overflow: hidden; }
+.pad .slot { font-family: var(--mono); font-size: 10.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 4px; }
+.pad .slot b { font-weight: 500; color: var(--accent); }
+.pad .name { font-weight: 600; font-size: clamp(10.5px, 2.6vw, 13px); line-height: 1.15; overflow-wrap: anywhere; }
+.pad svg { width: 100%; height: 26%; display: block; }
+.pad[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pad.hit { background: color-mix(in srgb, var(--accent) 22%, var(--pad)); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.detail h2 { margin: 0; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.plot { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.actlabel { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); width: 100%; }
+.act { font-family: var(--body); font-weight: 600; font-size: 14px; padding: 9px 13px; border-radius: 3px; cursor: pointer;
+  border: 1.5px solid var(--accent); background: transparent; color: var(--ink); }
+.act.main { background: var(--accent); color: var(--bg); }
+dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 13.5px; }
+dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; color: var(--muted); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+ol.listen { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 68ch; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13.5px; min-width: 560px; width: 100%; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--display); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ok { color: var(--okc); font-weight: 600; } .open { color: var(--warn); font-weight: 600; }
+#err { color: var(--warn); font-size: 13px; min-height: 1.2em; }
+@media (prefers-reduced-motion: no-preference) { .pad { transition: background .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>MIRRORBALL</h1>
+    <p class="gesture">dead, clicky strike → FET squeeze → tape repeats in rhythm → the amp pulls the repeats up behind the hit</p>
+    <p>Three 1970s disco kits for the SKINS shelf. Every pad is printed through your chain, in your order:</p>
+    <div class="chain" aria-label="Signal chain"><span>drum</span><i>→</i><span class="stage">FET compressor</span><i>→</i><span class="stage">multi-head tape echo</span><i>→</i><span class="stage">tube amp + speaker</span><i>→</i><span>pad</span></div>
+    <div class="status">
+      <p><strong>Round 1, built in the app, not yet heard.</strong> Round 0's five questions were not answered, so I went with these defaults. Each one has a button here to compare against:</p>
+      <p>Your order (amp last). A bright speaker on snares, hats and percussion, and a darker one on kicks, toms and hand drums. A clean amp on Philly, warmer on Loft, pushed on Munich. No echo on any kick. Pads print one at a time, and the fills and builds print as one phrase through one chain.</p>
+    </div>
+  </header>
+
+  <div class="kits" id="kits" role="group" aria-label="Kit"></div>
+  <p class="kitblurb" id="kitBlurb"></p>
+
+  <section class="deck">
+    <div>
+      <div class="grid" id="grid" aria-label="Pads, laid out as on an MPC: A13 top left, A01 bottom left"></div>
+      <p class="note" style="margin-top:10px">Laid out like the hardware: A01 is bottom left. The trace on each pad is its real level over time. A dot marks the three pads per kit with extra comparisons.</p>
+    </div>
+    <div class="detail" aria-live="polite">
+      <div><h2 id="dName"></h2><div class="tag" id="dTag"></div></div>
+      <svg class="plot" id="plot" viewBox="0 0 400 150" role="img" aria-label="Level over time for the selected pad"></svg>
+      <div class="legend"><span><i style="background:var(--wet);opacity:.55"></i>pad through the chain</span><span><i style="border:1.5px solid var(--dry);box-sizing:border-box"></i>same strike, dry</span></div>
+      <div class="acts">
+        <button class="act main" id="bPad" type="button">Play pad</button>
+        <button class="act" id="bDry" type="button">Play dry</button>
+        <button class="act" id="bTouch" type="button">Play all 12 strikes</button>
+        <button class="act" id="bStop" type="button">Stop</button>
+      </div>
+      <div class="acts" id="trials">
+        <span class="actlabel">Compare (not in the kit)</span>
+        <button class="act" type="button" data-t="press_only">Compressor only</button>
+        <button class="act" type="button" data-t="dark_speaker">Darker speaker</button>
+        <button class="act" type="button" data-t="rack_order">Rack order (amp before echo)</button>
+        <button class="act" type="button" data-t="pushed_amp">Pushed amp</button>
+        <button class="act" type="button" data-t="no_echo">No echo</button>
+        <button class="act" type="button" data-t="more_echo">More echo</button>
+        <button class="act" type="button" data-t="all_buttons">All buttons in</button>
+      </div>
+      <dl id="dNums"></dl>
+      <p class="note" id="dNote"></p>
+      <div id="err" role="status"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="gTitle">Groove</h2>
+    <p>Two bars at the kit's tempo, played the way the app plays a pad: velocity picks the soft, medium or hard zone, each hit takes the next of four takes, and a hat cuts the hat before it. "Same groove, dry" plays the same strikes with no chain.</p>
+    <div class="acts" style="margin-top:12px"><button class="act main" id="bGroove" type="button">Play groove</button><button class="act" id="bGrooveDry" type="button">Same groove, dry</button><button class="act" id="bFill" type="button">Play A15 fill</button><button class="act" id="bBuild" type="button">Play A16 build</button></div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>What to listen for</h2>
+      <ol class="listen">
+        <li><strong>Does each kit sound like disco?</strong> Start with the groove, then "Same groove, dry". If the dry drums are wrong, the chain cannot fix them.</li>
+        <li><strong>Bright or dark speaker?</strong> On the dotted pads, "Darker speaker" is round 0's default. The research says disco snares and hats were bright.</li>
+        <li><strong>Your order or the rack's?</strong> "Rack order" puts the amp before the echo. With the amp last, the echoes come back louder and rougher behind the hit.</li>
+        <li><strong>How much echo?</strong> "No echo" and "More echo" sit either side of what I built.</li>
+        <li><strong>Clean or pushed?</strong> Munich is already pushed. "Pushed amp" on Philly and Loft is the same push.</li>
+        <li><strong>Do soft strikes sound like the same drum?</strong> "Play all 12 strikes" plays four soft, four medium and four hard. A softer hit gets less squeeze, so it should sound more open.</li>
+        <li><strong>Are these three kits or one?</strong> Different drums, tunings, pad roles, tempos, tape and amp.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>How to tell me what you heard</h2>
+      <p>The most useful notes name a kit, a pad and a direction. For example: "Philly A02: brighter, less echo" or "Munich A06: pushed amp is better". "Sounds good, proceed" also works, and I'll record it as approval of this baseline.</p>
+      <p style="margin-top:10px">Everything is mono. Echo times follow each kit's tempo, so the repeats land on the grid only at that tempo.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Acceptance gates</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead>
+      <tbody>/*GATES*/</tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const DATA = /*MANIFEST*/;
+const EXT = "/*EXT*/";
+const accents = { "mirrorball-philly": "var(--philly)", "mirrorball-loft": "var(--loft)", "mirrorball-munich": "var(--munich)" };
+const blurbs = {
+  "mirrorball-philly": "Live soul-disco, dry the way the orchestra records were: a dead kick with no echo, a towelled snare with one quiet slap, the hats and tambourine galloping on two heads, two congas. Clean amp.",
+  "mirrorball-loft": "Percussion first: a clap layered on the snare, quinto, conga, tumba, bongo, timbales, cowbell and claves on two long heads. Older, wobblier tape, a warmer amp.",
+  "mirrorball-munich": "Machine disco: an analog kick, four falling synth toms, a sequencer hat on the dotted-eighth head. Newer tape and the amp pushed."
+};
+const beats = { "1": "1/16", "2": "dotted 1/8", "3": "1/4" };
+let kit = DATA.kits[0], pad = kit.pads[0], audio = null;
+const $ = id => document.getElementById(id);
+const nn = n => String(n).padStart(2, "0");
+const url = (k, kind, slot) => k.id + "/" + kind + (slot ? "-" + nn(slot) : "") + "." + EXT;
+
+function stop() { if (audio) { audio.pause(); audio = null; } }
+function play(src) {
+  stop(); $("err").textContent = "";
+  const a = new Audio(src); audio = a;
+  a.play().catch(() => { if (audio === a) $("err").textContent = "This clip would not play in your browser."; });
+}
+function path(env, w, h, close) {
+  if (!env) return "";
+  const step = w / env.length; let d = "M0," + h;
+  env.forEach((v, i) => { d += " L" + (i * step).toFixed(1) + "," + (h - Math.min(v, 1) * h).toFixed(1) + " L" + ((i + 1) * step).toFixed(1) + "," + (h - Math.min(v, 1) * h).toFixed(1); });
+  return d + (close ? " L" + w + "," + h + " Z" : "");
+}
+function drawKits() {
+  $("kits").innerHTML = "";
+  DATA.kits.forEach(k => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "kit"; b.id = "kit-" + k.id;
+    b.setAttribute("aria-pressed", k === kit); b.style.setProperty("--accent", accents[k.id]);
+    b.innerHTML = k.title + "<small>" + k.bpm + " BPM</small>";
+    b.onclick = () => { stop(); kit = k; pad = k.pads[0]; render(); };
+    $("kits").appendChild(b);
+  });
+  $("kitBlurb").textContent = blurbs[kit.id];
+}
+function drawGrid() {
+  const g = $("grid"); g.innerHTML = "";
+  [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3].forEach(i => {
+    const p = kit.pads[i];
+    const b = document.createElement("button"); b.type = "button"; b.className = "pad"; b.id = "pad-" + p.slot;
+    b.setAttribute("aria-pressed", p === pad);
+    b.setAttribute("aria-label", "A" + nn(p.slot) + " " + p.name + ", play");
+    b.innerHTML = '<span class="slot"><span>A' + nn(p.slot) + "</span>" + (p.trial ? "<b>●</b>" : "") + '</span><svg viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path d="' + path(p.wet, 100, 26, true) + '" fill="var(--accent)" opacity=".55"/></svg><span class="name">' + p.name + "</span>";
+    b.onclick = () => { pad = p; play(url(kit, "pad", p.slot)); drawGrid(); drawDetail(); const el = $("pad-" + p.slot); el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 160); el.focus(); };
+    g.appendChild(b);
+  });
+}
+function drawDetail() {
+  $("dName").textContent = "A" + nn(pad.slot) + "  " + pad.name;
+  $("dTag").textContent = pad["class"].replace("_", " ").toLowerCase() + " · " + pad.seconds.toFixed(2) + " s";
+  const W = 400, H = 120, top = 8;
+  let s = '<line x1="0" y1="' + (top + H) + '" x2="' + W + '" y2="' + (top + H) + '" stroke="var(--line)" stroke-width="1"/>';
+  s += '<g transform="translate(0,' + top + ')"><path d="' + path(pad.wet, W, H, true) + '" fill="var(--wet)" opacity=".55"/>';
+  s += '<path d="' + path(pad.dryEnv, W, H, false) + '" fill="none" stroke="var(--dry)" stroke-width="1.5"/></g>';
+  const ticks = pad.seconds > 1.2 ? 0.5 : 0.1;
+  for (let t = ticks; t < pad.seconds; t += ticks) {
+    const x = t / pad.seconds * W;
+    s += '<line x1="' + x.toFixed(1) + '" y1="' + (top + H) + '" x2="' + x.toFixed(1) + '" y2="' + (top + H + 4) + '" stroke="var(--muted)" stroke-width="1"/>';
+    if (x < W - 24) s += '<text x="' + x.toFixed(1) + '" y="' + (top + H + 16) + '" font-size="10" font-family="IBM Plex Mono, monospace" fill="var(--muted)" text-anchor="middle">' + (ticks < 0.5 ? Math.round(t * 1000) + " ms" : t.toFixed(1) + " s") + "</text>";
+  }
+  $("plot").innerHTML = s;
+  const heads = pad.heads === "none" ? "none" : pad.heads.split("+").map(h => "head " + h + " (" + beats[h] + ")").join(" + ");
+  const rows = [
+    ["Compressor", "+" + pad.inputDb.toFixed(0) + " dB in, " + (pad.ratio === "ALL" ? "all buttons" : { FOUR: "4", EIGHT: "8", TWELVE: "12", TWENTY: "20" }[pad.ratio] + ":1")],
+    ["Echo heads", heads],
+  ];
+  if (pad.heads !== "none") rows.push(["Echo send / repeats", pad.send.toFixed(2) + " / " + pad.repeats.toFixed(2)]);
+  rows.push(["Speaker rolls off at", (pad.cabHz / 1000).toFixed(1) + " kHz"], ["Velocity zones × takes", "3 × 4"]);
+  $("dNums").innerHTML = rows.map(r => "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>").join("");
+  $("dNote").textContent = pad.phrase ? "A phrase: every note goes through one chain together, as a drum bus would." : pad.heads === "none" ? "No echo on this pad, on purpose." : "";
+  $("trials").hidden = !pad.trial;
+}
+function render() {
+  document.documentElement.style.setProperty("--accent", accents[kit.id]);
+  drawKits(); drawGrid(); drawDetail();
+  $("gTitle").textContent = kit.title + " groove, " + kit.bpm + " BPM";
+}
+$("bPad").onclick = () => play(url(kit, "pad", pad.slot));
+$("bDry").onclick = () => play(url(kit, "dry", pad.slot));
+$("bTouch").onclick = () => play(url(kit, "touch", pad.slot));
+$("bStop").onclick = stop;
+document.querySelectorAll("#trials button").forEach(b => b.onclick = () => play(url(kit, b.dataset.t, pad.slot)));
+$("bGroove").onclick = () => play(url(kit, "groove"));
+$("bGrooveDry").onclick = () => play(url(kit, "groove-dry"));
+$("bFill").onclick = () => play(url(kit, "pad", 15));
+$("bBuild").onclick = () => play(url(kit, "pad", 16));
+render();
+</script>
