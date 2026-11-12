@@ -898,4 +898,14 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
+    @Test
+    fun `SPORE MEMBRANE prototype is byte-identical for both voices and a soft restrike`() {
+        for (voice in SporeMembrane.Voice.entries) {
+            assertContentEquals(
+                SporeMembrane.render(voice, velocity = .3f, take = 2).samples,
+                SporeMembrane.render(voice, velocity = .3f, take = 2).samples,
+                "$voice soft restrike"
+            )
+        }
+    }
 }
