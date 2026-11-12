@@ -735,5 +735,7 @@ testkit/backwash-acoustic-integration/
 
 # GATECRASH kits: regenerate with :shell:generateGatecrashKits
 /testkit/gatecrash-kits/
+# CYPHER kits: regenerate with :shell:generateCypherKits
+/testkit/cypher-kits/
 /testkit/breaker-kit/
 /testkit/cosmic-family/

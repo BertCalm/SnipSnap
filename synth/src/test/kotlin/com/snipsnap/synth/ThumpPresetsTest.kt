@@ -79,7 +79,9 @@ class ThumpPresetsTest {
         for (voice in ThumpVoice.entries) {
             val names = ThumpPresets.forVoice(voice).map { it.name }
             val provisional = voice.name in PatchTypes.PROTOTYPE_VOICES[ThumpPatch.ENGINE].orEmpty()
-            val expectedCount = if (provisional) 0 else 20
+            // SUB's roster is the eight kit recipes the owner heard (ThumpPresets.subPresets): heard presets
+            // only, so eight rather than the original voices' twenty reasoned ones.
+            val expectedCount = if (provisional) 0 else if (voice == ThumpVoice.SUB) 8 else 20
             assertEquals(expectedCount, names.size,
                 "$voice should have $expectedCount factory presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")

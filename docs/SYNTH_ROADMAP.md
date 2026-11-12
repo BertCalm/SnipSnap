@@ -1,3 +1,8 @@
+> CYPHER kits (round 2 built 2026-11-12; TRAP and DRILL approved, four not heard): six hip-hop drum kits in
+> the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
+> another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler
+> export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone. See [CYPHER](CYPHER.md).
+
 > GATECRASH kits (sound approved 2026-11-11, round 4): three 1980s gated drum kits on the shelf, Stone Room,
 > Machine Pop and Electro Funk. A treatment stage holds each pad's room level behind the drum and rounds it
 > off on the drum's own timing. Velocity × round robin is proven through save, playback and MPC 3 export in
@@ -512,6 +517,7 @@ range. First-generation voices:
 | Clap | burst train + noise tail | SPREAD · DECAY · TONE |
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
+| SUB (round 2; its eight presets are the approved CYPHER sub recipes) | a sliding sub drum: a sine whose pitch settles onto its root, holds, then glides to SLIDE semitones from WHEN, with a click and a tanh DRIVE at 4×; reads velocity and deals four takes without moving the root ([CYPHER](CYPHER.md)) | TUNE · DECAY · SLIDE · WHEN · DRIVE · CLICK |
 | SPARK (prototype; awaiting audition) | sine body + phase/ring-modulated edge, separate low-pass responses; related hit snapshots, with MOVE deferred ([design and validation](THUMP_SPARK.md)) | TUNE · DECAY · PUNCH · METAL · COLOR |
 
 Every voice has since grown PUNCH (U3), and SNARE a membrane body with
