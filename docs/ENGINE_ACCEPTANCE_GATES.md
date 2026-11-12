@@ -77,10 +77,12 @@ unverified completion gates explicit.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (round 1, 2026-11-09)
+## BREAKER (rounds 1 to 3, 2026-11-09 to 11-11)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
-- **Articulation:** finite hits, with no HOLD. The authored snare roll and riser, and the surf tom fill, are not yet built.
+- **Articulation:** finite hits, with no HOLD.
+  - **The snare riser (round 3): built in rendering, chosen by ear.** The owner picked the tamed roll in the Python harness on 2026-11-11. It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. Its Kotlin render has not been heard, played from a pad, saved in a kit or exported. Until then, it does not satisfy the percussion gate's roll or riser.
+  - **The surf tom fill:** not yet built.
 - **Drum shelf:** not yet built. The owner picked Dub Tank and Trip hop on 2026-11-09 to join the BREAKER kit. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
@@ -94,7 +96,14 @@ presence do not close the outstanding gates above.
   - **Round robin: verified in rendering.** Each take is a fresh strike (re-seeded SKIN noise, or the tambourine's two recorded takes).
   - **Saving, playback and export:** not yet verified.
   - **Sound character, heard 2026-11-10:** the hats, stick (short slap), tambourine, shaker and toms accepted, and the repeat and 40% hits too. The ride was heard as a crash and is re-voiced at round 3.
-- **Overall: incomplete.** This is a prototype with twelve voices and no kit yet.
+- **Round 3 (2026-11-11, model 3):** the ride re-voiced, and the crash and snare riser added.
+  - **The cymbals:** a modal synth of 400 and 418 resonances, fitted to CC0 recordings that do not ship. Dry by default, with every control a true bypass at 0.
+  - **Velocity: verified in rendering, measured.** A cymbal's soft hit follows the difference measured between a soft and a hard recording. At matched loudness, a 40% ride gains 8.9 dB at 250 Hz and a 40% crash 6.4 dB at 500 Hz. Neither is simply darker; the change in spectral shape is what is asserted. The riser's strikes take SKIN's contact law.
+  - **Round robin: verified in rendering.** A cymbal take re-strikes every mode: a fresh phase, up to 0.3 Hz of detune, a 1.6 dB rms level scatter, and a fresh stick. A riser take re-strikes all twenty snares.
+  - **Saving: partly verified.** Patches round-trip through JSON with model 3, and model 2's ride still replays. A saved kit has not been tested.
+  - **Playback and export:** not yet verified.
+  - **Sound character:** the owner picked the tight cymbals (heard dry) and the tamed riser in the Python harness. The Kotlin renders wait for a confirming listen.
+- **Overall: incomplete.** This is a prototype with fourteen voices and no kit yet. The kit, the two genre kits and velocity and round robin through saving, playback and export are still open.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 

@@ -3424,4 +3424,17 @@ Round 2 adds ten drums through the same rig:
 - **Repeat hits:** SKIN's unstruck voices can re-seed their noise per take, but only when asked; only BREAKER asks.
 - **Soft hits:** the unstruck drums soften after the rig, since darkening their source came out
   brighter.
-- **Status:** waiting for the owner's listen.
+- **Status:** heard on 2026-11-10. The owner accepted all but the ride, which sounded like a crash.
+
+Round 3 (renderer model 3, 2026-11-11) re-voices the ride and adds the crash and the snare riser:
+- **The cymbals:** the recordings' own resonances (400 on the ride, 418 on the crash) as a modal
+  synth. They are fitted by `scripts/fit_breaker_cymbals.py` to Virtuosity Drums (CC0), and the
+  recordings do not ship.
+- **Heard:** through the rig, the first cymbals and riser were harsh. Noise-band cymbals sounded
+  processed even dry. The owner picked the modal synth with "tight" decays, heard dry.
+- **In the kit:** the cymbals are dry by default, with every control a true bypass. The crash rings
+  3.2 s. The riser is the tamed roll.
+- **Velocity:** measured from soft and hard recordings. It changes the spectrum's shape, and it is
+  not simply darker.
+- **Saves:** model-2 saves keep round 2's ride.
+- **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.

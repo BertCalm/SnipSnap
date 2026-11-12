@@ -240,7 +240,7 @@ object Velocity {
         is FiredBronzePatch -> FiredBronzeInstrument.macros
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
-        is BreakerPatch -> Breaker.macrosFor(patch.voice)
+        is BreakerPatch -> Breaker.macrosFor(patch.voice, patch.model)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
