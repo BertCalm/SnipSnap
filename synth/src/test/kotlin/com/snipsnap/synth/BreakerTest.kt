@@ -88,9 +88,11 @@ class BreakerTest {
             // tail for the crush to lift; every other one must come up.
             if (r[0] < -6.0) assertTrue(r[2] > r[0] + 1.0, "$voice: the crush lifts the tail ($r)")
             // The swell the owner heard at round 0, on the kick and snare. A short hat is already held
-            // down hard by the first half, so its tail is up by CRUSH .5.
+            // down hard by the first half, so its tail is up by CRUSH .5. Model 4's open rig, which the
+            // owner picked by ear, makes the kick's smaller: CRUSH .5 to .9 lifts its tail 0.9 dB, where
+            // model 3 lifted it 1.6 dB through the speaker.
             if (voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) {
-                assertTrue(r[2] > r[1] + 1.0, "$voice: the crush after the spring swells the tail ($r)")
+                assertTrue(r[2] > r[1] + .5, "$voice: the crush after the spring swells the tail ($r)")
             }
         }
     }
@@ -269,6 +271,28 @@ class BreakerTest {
         val round2 = mapOf("DUST" to .3f, "DRIP" to .45f, "SLAP" to 0f, "CRUSH" to .6f, "AMP" to .35f, "TUNE" to .5f)
         assertContentEquals(Breaker.render(BreakerVoice.RIDE, round2, model = 2).samples, old.render().samples, "model 2 keeps round 2's ride defaults")
         assertFalse(old.render().samples.contentEquals(Breaker.render(BreakerVoice.RIDE).samples), "model 3's ride is the fitted one")
+    }
+
+    @Test
+    fun `model 4 opens the drums' top end, keeps the cymbals' and riser's rig, and model-3 saves keep theirs`() {
+        // The owner heard the model-3 kit as mid heavy and picked the open rig (2026-11-12): DUST's filter
+        // opened, no speaker. Measured on the hard hit, the 8 kHz octave against the whole hit's level.
+        fun air(x: FloatArray) = db(rms(band(x, 8000f, 1.4f), 0.0, .3)) - db(rms(x, 0.0, .3))
+        for ((voice, least) in listOf(BreakerVoice.SNARE to 6.0, BreakerVoice.HAT_CLOSED to 6.0, BreakerVoice.HAT_OPEN to 6.0, BreakerVoice.KICK to 3.0)) {
+            val now = air(Breaker.render(voice).samples); val before = air(Breaker.render(voice, model = 3).samples)
+            println("BREAKER $voice 8 kHz octave re the hit, model 3 / 4: ${"%.1f".format(before)} / ${"%.1f".format(now)} dB")
+            assertTrue(now > before + least, "$voice: model 4 opens the top by more than $least dB (${now - before})")
+        }
+        for (voice in listOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER)) {
+            assertContentEquals(Breaker.render(voice, model = 3).samples, Breaker.render(voice).samples, "$voice keeps the rig it was heard with")
+            val dialled = mapOf("DUST" to .3f, "CRUSH" to .4f, "AMP" to .35f)
+            assertContentEquals(Breaker.render(voice, dialled, model = 3).samples, Breaker.render(voice, dialled).samples, "$voice's dialled rig too")
+        }
+        val old = BreakerPatch("Model three", BreakerVoice.SNARE, emptyMap(), model = 3)
+        val back = BreakerPatch.fromJsonText(old.toJsonText())
+        assertEquals(3, back.model)
+        assertContentEquals(Breaker.render(BreakerVoice.SNARE, model = 3).samples, back.render().samples, "a model-3 save keeps its tone")
+        assertFalse(back.render().samples.contentEquals(Breaker.render(BreakerVoice.SNARE).samples))
     }
 
     @Test

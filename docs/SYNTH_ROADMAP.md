@@ -3450,3 +3450,9 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
   - MPC 2 plays each zone's first take only.
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
+
+The kit's tone (renderer model 4, 2026-11-12):
+- **Heard:** the owner heard the kit as mid heavy, "like listening through dollar tree headphones".
+- **Measured:** DUST's crunch low-passed the drums near 4 kHz, and the amp's speaker took more off the top.
+- **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
+  but the cymbals and riser. Model-3 saves keep their tone.

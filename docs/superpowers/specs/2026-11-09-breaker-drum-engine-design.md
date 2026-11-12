@@ -646,3 +646,54 @@ export through `PadHit.resolve`, and the groove plays through `KitPreview`. It a
 - the pushed row: keep it?
 - the kick hit again: one kick played again, or one sample repeated?
 - every pad soft to hard: softer in character, with a fresh hit each time?
+
+## Heard: the kit (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove: is this BREAKER, balanced the way you want? | **The balance is off: "Feels very mid heavy like listening through dollar tree headphones"** |
+| The pushed row (A05, A06, A12): keep them? | (not answered) |
+| Your kick hit again: one kick played again, or one sample repeated? | (not answered) |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | (not answered) |
+
+**Measured:** the groove's octave levels fell 9 dB from 2 to 8 kHz and 17 dB to 16 kHz. Each drum's
+top fell harder:
+- the snare: −28 dB at 8 kHz;
+- the closed hat: −35 dB at 8 kHz;
+- the kick: −28 dB at 4 kHz.
+
+**Stage by stage**, rendering each drum with one stage bypassed at a time:
+- DUST's CRUNCH low-passes near 4.2 kHz at DUST .35 (5.5 kHz on the snare). That costs 10 to 20 dB
+  in the top two octaves.
+- The combo's speaker costs another 4 to 8 dB above 8 kHz, and adds breakup peaks at 2.6 and
+  3.75 kHz.
+
+Page: https://claude.ai/artifact/L7Tf8Zdvy4TSzV9RfFfw2i. It played the same five bars four ways at one
+loudness: as built, DUST opened (TONE .75 at DUST .35), no speaker (CAB 0), and both.
+
+## Heard: the kit's tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| Which groove sounds right? | **D (both)** |
+| Your snare, hat and kick opened up (D): still your BREAKER drums? | **Yes, better** |
+
+## As built: model 4, the open rig (2026-11-12)
+
+What changes on every drum except the cymbals and the riser:
+- **DUST:** CRUNCH's output filter at DUST .35 goes from TONE .43 (.55 on the snare) to .75: about
+  8.9 kHz, CRUNCH's own default.
+- **The amp:** VALVE's speaker goes (CAB 0); its drive and sag stay.
+
+What stays:
+- **The cymbals and the riser** keep the rig they were heard with: in the D groove, and the cymbals'
+  dialled presets approved at round 3.
+- **Model-3 saves** keep their tone.
+
+Checked against what was heard:
+- **The app's model-4 render of every kit pad at velocities 1, .65 and .3 is the D clip,** to
+  within 6 × 10⁻⁸.
+- **The top octave rises:** the snare by 9.6 dB, the hats by 8.7 to 10 dB, the kick by 6.3 dB
+  (`BreakerTest`).
+- **The kick's crush swell past halfway shrinks:** CRUSH .5 to .9 lifts the tail 0.9 dB, where it
+  was 1.6 dB. The test's bound goes from 1 to .5 dB, with the reason recorded.
