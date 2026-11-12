@@ -91,10 +91,9 @@ object Mirrorball {
         }
     }
 
-    /** COMBO: preamp gain (1.6 clean, 5 pushed), how far the supply gives way, and where the speaker rolls off. */
     /**
-     * COMBO's speaker is [lowHz] (the open back's low cut), a [bumpDb] resonance at 110 Hz and [cabHz] (the cone's
-     * top). [blend] is how much of the amp is heard against the signal that went into it: 1 is the amp alone, 0.5
+     * COMBO: preamp gain (1.6 clean, 5 pushed) and how far the supply gives way. Its speaker is [lowHz] (the open
+     * back's low cut), a [bumpDb] resonance at 110 Hz and [cabHz] (the cone's top). [blend] is how much of the amp is heard against the signal that went into it: 1 is the amp alone, 0.5
      * the two at equal level, the way a drum is re-amped in a studio. Round 1b had the amp alone through a guitar
      * speaker (75 Hz to 6.5 or 8.5 kHz); the owner heard it as "a bit mid heavy, like listening through dollar store
      * headphones", and it measured 12 to 19 dB short at both ends of the spectrum against the same grooves dry.
