@@ -592,3 +592,57 @@ riser. Presets:
   cymbals match it within 1 to 2 dB in the dense bands.
 - The riser is the percussion gate's authored roll in rendering only. It has not been played, saved
   in a kit or exported yet.
+
+## Heard: round 3 in the app (2026-11-11)
+
+| Question | Owner's answer |
+|---|---|
+| Your picks, then the app's: the same ride, crash and riser? | **Yes, all three** |
+| Hit again and at 40%: the same cymbal, a softer hand? | **Yes** |
+| Dialled in: do the presets bring the rig back the way you'd want? | **Yes** |
+| In a beat: ready to go on the kit? | **Yes, build the kit** |
+
+## As built: the kit (2026-11-12)
+
+The BREAKER kit is in `BreakerKits` and is the `breaker` starter, under SKINS on the shelf, at 92 BPM.
+The layout and its evidence are in docs/BREAKER.md, "The kit".
+
+**The grid goes through the shared paths.** No private round-robin system:
+- **The robin:** the starter hands each pad to `Robin.apply`, as the BACKWASH kits do, and the pad
+  keeps its BREAKER recipe.
+- **Velocity:** a softer zone is `Velocity.layerAt`, the drum re-rendered at velocity .3 or .6.
+- **Takes:** a later take is `Restrike.take`, the drum struck again.
+- **Level:** the robin also grades each softer zone's level (.55 and .775). The app and the MPC turn
+  pad velocity into gain on top of that.
+
+**Found while building the grid, and fixed.** The tambourine at 3 × 3 measured as two defects:
+- **Copies:** two takes were the same recording, −119 dB apart. A copy is not round robin.
+- **A volume-only zone:** the middle and hard zones both landed on its loud layer, so one was the
+  other turned down.
+
+It has two dynamic layers of two recorded takes, so it now gets exactly that: 2 × 2.
+
+**Found, disclosed, not changed.** The crushed kicks are the weakest round robin in the kit:
+- **Their takes are distinct strikes, but close.** Each is struck again up to 15% softer with fresh
+  click noise. The crush at CRUSH .9 to 1 evens out the force difference, so the takes are
+  34 dB apart. A copy measures more than 40 dB apart.
+- **Their soft zones move only 0.9 to 1.2 dB in spectral shape.**
+- **The owner has accepted the kick as is.** They heard it at round 1b as "the same drum, a softer
+  hand".
+- **If more variation is wanted,** a later model can vary the beater per strike, as a drummer does,
+  and keep this model's saves as they are.
+
+**The pushed pads are authored here, not yet heard:**
+- A05 Crushed Boom: CRUSH 1, DUST .5, AMP .55;
+- A06 Drip Snare: DRIP .9, SLAP .35;
+- A12 Crushed Snare: CRUSH 1, DUST .5, AMP .55, DRIP .35.
+
+**Levels.** They follow the round-3 beats the owner heard: ride and crash about a quarter and a third
+of the kick.
+
+**Page:** https://claude.ai/artifact/9Cn1pQu89gNvRzMjyBkVMt. Every clip on it is cut from the MPC 3
+export through `PadHit.resolve`, and the groove plays through `KitPreview`. It asks:
+- the kit in a groove: is it BREAKER, balanced as wanted?
+- the pushed row: keep it?
+- the kick hit again: one kick played again, or one sample repeated?
+- every pad soft to hard: softer in character, with a fresh hit each time?

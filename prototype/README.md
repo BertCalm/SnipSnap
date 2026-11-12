@@ -73,3 +73,10 @@ the export pipeline's job in the real app.
 
 The `window.__deck` / `window.__play` / `window.__lab` handles exist only so
 automated checks can drive the pages.
+
+## etch/ — ETCH round-1 audition (Python harness)
+
+A step-line bass, a drive that glues the steps, and a tempo delay into a reverb, as numbers
+and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders
+54 level-matched clips with their measurements and writes the audition page. Needs numpy,
+scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).

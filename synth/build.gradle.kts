@@ -3584,3 +3584,13 @@ tasks.register<JavaExec>("generateTremoloFlangerAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/tremflange-audition")
 }
+
+tasks.register<JavaExec>("generateSporeMembraneAudition") {
+    group = "distribution"
+    description = "Render and verify the sample-free Spore kick/snare prototype."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SporeMembraneAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("sporePrototypeOutput").orNull ?: "${rootDir}/testkit/spore-synthesis")
+}
