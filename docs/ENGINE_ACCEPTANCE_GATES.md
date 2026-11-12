@@ -143,3 +143,18 @@ Round 1 is a Python prototype audition; no Kotlin exists.
   - **Saving, playback and export:** not yet verified.
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
+
+## SCUFF (round 0, 2026-11-12)
+
+A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
+Round 0 is a Python prototype audition; no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
+- **Percussion:** open. The two-bar pattern carries a 32nd hat burst, a tape-stopped hat and a suck-back crash; no roll or riser pad is authored.
+- **Drum shelf:** open. One kit's worth of voices in Python; a second genre kit is proposed, not built.
+- **Velocity and round robin:**
+  - **Rendering: Python harness only.** Every voice changes tone with velocity at matched peak (soft against hard, 2.3 to 14.2 dB by take distance). Four takes per voice on four dealt dimensions; closest pairs 1.5 to 5.1 dB apart. The bass hit's takes are the closest and are disclosed.
+  - **Saving, playback and export:** not yet verified.
+- **Sound character:** not heard.
+- **Overall: incomplete.** Round 0 is a prototype.

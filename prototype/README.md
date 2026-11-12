@@ -80,3 +80,10 @@ A step-line bass, a drive that glues the steps, and a tempo delay into a reverb,
 and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders
 54 level-matched clips with their measurements and writes the audition page. Needs numpy,
 scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).
+
+## scuff/ — SCUFF round-0 audition (Python harness)
+
+A dry Michigan drum kit (ten voices) and the chain that makes it (GRIT, LOCKER, BARK, SLAM),
+as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT`
+renders 133 peak-matched clips with their measurements and writes the audition page. Needs
+numpy and scipy. See [`../docs/SCUFF.md`](../docs/SCUFF.md).
