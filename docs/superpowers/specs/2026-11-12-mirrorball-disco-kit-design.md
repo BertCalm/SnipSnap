@@ -203,3 +203,52 @@ R0 sits outside all of these. It is a sound study.
    own amount, and the kick gets none.
 5. **The risky decision is the speaker.** A real amp's speaker is dark, and a disco snare is
    bright. The page lets the owner choose, rather than guessing.
+
+## Round 0, heard (2026-11-12)
+
+The owner's words: "Sounds kind of basic and not very punchy or character rich."
+
+Measured afterwards on the round-0 renders, 0 to 300 ms:
+- **The kick was nearly a pure sub sine.** Its fundamental was under 60 Hz and everything above 250 Hz was 56 to
+  80 dB down. The beater band (1.5 to 4 kHz) was about 80 dB down. The research note's beater click was simply
+  absent, and no EQ can boost what is not there.
+- **The tom was a pure sine** at 100 to 250 Hz, with nothing above 600 Hz.
+- **The speaker darkened the snare and hats.** It took 10 to 12 dB off their 8 to 16 kHz.
+- **The chain added almost no harmonics.** The FET bend and the clean amp were too gentle to be heard as
+  character.
+
+Round 1's Kotlin build (commit `decead4f`) carries round 0's settings, so it shares these findings. It waits on
+round 0b's pick before its sound is changed. One of its fifteen tests failed at that commit: the Loft kick's
+soft takes are 0.004 apart, under the 0.005 floor.
+
+## Round 0b (2026-11-12, Python harness, not Kotlin)
+
+Script: `scripts/mirrorball_r0b.py`. Page: https://claude.ai/artifact/RC5kSEXbMUNHUmNvnAhLnN
+
+What changed, in the order a record was made:
+1. **Retuned drums (SKIN):**
+   - kick: TUNE .42, DECAY .30, TONE .38, PUNCH .78, CLICK .85, DROP .22;
+   - snare: TUNE .52, SNAP .80, DECAY .32, PUNCH .80;
+   - tom: CLICK .70, TONE .60.
+2. **A felt-beater layer on the kick:** a 4 ms click of noise, band-limited to 1.8 to 5.5 kHz and seeded per
+   take. A softer hit gets a quieter, duller click.
+3. **PRINT, the drum as recorded:**
+   - console EQ: kick +6 dB at 68 Hz, −6 at 380, +11 at 3 kHz; snare +4 at 210, −3 at 700, a +6 shelf at
+     5.5 kHz; tom +7 at 3.5 kHz; hats high-passed at 350 Hz and −2.5 at 11 kHz;
+   - then tape, asymmetric saturation at 4x.
+4. **PRESS in the pedal's parallel mode:** a crushed copy (all buttons, fastest knobs) under the dry hit. The
+   kick's compressor attack is at its slowest, 800 µs, so the beater passes.
+5. **COMBO driven harder:** preamp gain 2.6 (Punch) or 5 (Hot), against round 0's 1.6. The speaker is bright
+   (8.5 kHz) except on the kick and tom (6.5 kHz).
+
+| Measured (first 300 ms unless stated) | Round 0 | Punch | Hot |
+|---|---|---|---|
+| Kick body, 20 to 80 ms against peak | −15.8 dB | −11.4 | −11.0 |
+| Kick 250 to 600 Hz (harmonics) | −55.9 dB | −32.0 | −23.3 |
+| Kick beater, 1.5 to 4 kHz, first 15 ms | −23.7 dB (dry source −28.0) | −11.2 | −11.0 |
+| Tom body | −10.4 dB | −6.9 | −6.4 |
+| Snare 8 to 16 kHz | −24.5 dB | −5.5 | −5.2 |
+| Closed hat 8 to 16 kHz | −14.6 dB | −7.7 | −7.9 |
+
+Clap (THUMP), tambourine (BACKWASH's CC0 recording) and conga (TERRA) are new to the study, so they have
+no round-0 column.
