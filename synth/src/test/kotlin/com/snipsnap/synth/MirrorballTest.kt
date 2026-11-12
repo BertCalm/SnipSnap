@@ -159,9 +159,11 @@ class MirrorballTest {
         val (one, two, between) = windows(Mirrorball.process(dry, s, k.bpm, 1, n).out)
         assertTrue(db(one / between) > 10, "first head ${db(one)} against the gap ${db(between)} dB")
         assertTrue(db(two / between) > 10, "second head ${db(two)} against the gap ${db(between)} dB")
-        // No echo: nothing at the first head stands over the gap.
-        val (bare, _, bareGap) = windows(Mirrorball.process(dry, s.copy(reel = Reel()), k.bpm, 1, n).out)
-        assertTrue(db(bare / max(bareGap, 1e-9)) < 6, "without the echo the first head still reads ${db(bare)} dB")
+        // No echo: nothing is left at the first head (both windows are then near silence, so their ratio means
+        // nothing; the level against the hit is what shows the echo is gone).
+        val bareOut = Mirrorball.process(dry, s.copy(reel = Reel()), k.bpm, 1, n).out
+        val (bare, _, _) = windows(bareOut)
+        assertTrue(db(bare / peak(bareOut)) < -60, "without the echo the first head still reads ${db(bare / peak(bareOut))} dB under the hit")
     }
 
     @Test fun `no kick has an echo, so four on the floor stays four`() {
@@ -283,12 +285,13 @@ class MirrorballTest {
     }
 
     /** Energy share of [lo]..[hi] Hz over the first [ms] of [x], dB, by FFT (zero-padded to 16384). */
-    private fun bandShare(x: FloatArray, lo: Double, hi: Double, ms: Float = 300f): Double {
+    private fun bandShare(x: FloatArray, lo: Double, hi: Double, ms: Float = 300f, hann: Boolean = true): Double {
         val n = 16384
         val m = min(min(x.size, frames(ms)), n)
         val re = FloatArray(n)
         val im = FloatArray(n)
-        for (i in 0 until m) re[i] = (x[i] * (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * i / max(m - 1, 1)))).toFloat()
+        // A Hann window is near zero at its start, which is where an attack is: an attack window is left plain.
+        for (i in 0 until m) re[i] = (x[i] * (if (hann) 0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * i / max(m - 1, 1)) else 1.0)).toFloat()
         com.snipsnap.audio.Fft.forward(re, im)
         var band = 0.0
         var all = 0.0
@@ -337,7 +340,7 @@ class MirrorballTest {
     @Test fun `every kick has its beater, and the print gives it harmonics in proportion to the punch`() {
         for (k in Kit.entries) for ((role, pad) in kit(k).withIndex()) if (pad.drumClass == DrumClass.KICK && pad.displayName != "Long Kick") {
             val hard = grid(k, role, 2, 0)
-            val click = bandShare(hard, 1500.0, 4000.0, 15f)
+            val click = bandShare(hard, 1500.0, 4000.0, 15f, hann = false)
             assertTrue(click > -18, "${k.name} ${pad.displayName}: beater band only $click dB in the first 15 ms")
         }
         val k = Kit.PHILLY

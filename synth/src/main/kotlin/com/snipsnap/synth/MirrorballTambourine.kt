@@ -26,7 +26,7 @@ import kotlin.math.sqrt
  *   loudest at once, a soft one builds for about 50 ms as the jingles get going. Velocity blends the two.
  * - **The hand** on the frame is a 3 ms click at the front.
  * - Every jingle's level was matched to the recordings per third-octave, per layer (the fit's own check: within
- *   1.4 dB from 1.6 to 16 kHz, the soft layer's 1 kHz band 2.7 dB over).
+ *   1.5 dB from 1 to 16 kHz, measured as MirrorballTest measures, by summed FFT bins).
  *
  * A take re-seeds the collisions ([Dsp.Noise]), so every take is a new strike, not one of two recordings. The
  * recordings themselves are not read here.
@@ -125,10 +125,12 @@ internal object MirrorballTambourine {
             val x = (noise.next().toDouble()) * exp(-i / (.0008 * rate))
             out[i] += click * hc.process(x)
         }
-        // The recordings hold almost nothing under 2 kHz; the jingles' skirts leak there, so a gentle high-pass.
-        val hp = Hp(highpassHz, rate)
+        // The recordings hold almost nothing under 2 kHz; the jingles' skirts and the click leak there, so a
+        // fourth-order high-pass (two second-order passes), as the fit renders it.
+        val hp1 = Hp(highpassHz, rate)
+        val hp2 = Hp(highpassHz, rate)
         var peak = 0.0
-        for (i in 0 until n) { out[i] = hp.process(out[i]); peak = max(peak, abs(out[i])) }
+        for (i in 0 until n) { out[i] = hp2.process(hp1.process(out[i])); peak = max(peak, abs(out[i])) }
         val k = if (peak > 1e-12) 1.0 / peak else 0.0
         return FloatArray(n) { (out[it] * k).toFloat() }
     }

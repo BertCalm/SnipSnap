@@ -19,7 +19,7 @@ The model (docs/MIRRORBALL.md, "The tambourine"):
   at once; soft: building to about 50 ms), averaged over the layer's two takes, 5 ms steps;
 - the hand: a short broadband click at the front, its level measured from the first 5 ms;
 - per third-octave band (1 kHz to 16 kHz): one level correction per layer, matched to the recording over 0 to 300
-  ms (two passes).
+  ms by summed FFT bins (five passes), as MirrorballTest measures it.
 Only these numbers ship. The synthesis never reads the recordings.
 """
 import json
@@ -37,7 +37,7 @@ ENV_S = .8
 PER_BAND = 6
 RING_S = .06
 COLLISION_MS = 4.0
-HIGHPASS_HZ = 1500.0
+HIGHPASS_HZ = 2200.0
 BANDS = [1000 * 2 ** (k / 3) for k in range(13)]   # 1 to 16 kHz
 
 
@@ -58,8 +58,18 @@ def band_sos(fc):
 
 
 def third_octaves(x):
-    seg = x[: int(.3 * FS)]
-    return np.array([10 * math.log10(np.mean(signal.sosfilt(band_sos(fc), seg) ** 2) + 1e-20) for fc in BANDS])
+    """Each third-octave's energy over the first 300 ms, dB, by summing FFT bins (Hann window, 16384 points).
+
+    A Butterworth band filter was used first, but its skirts let a strong neighbour leak into a weak band (the
+    1.6 to 2.5 kHz bands sit 30 dB under 5 to 10 kHz), so the fit matched leakage: MirrorballTest's FFT measure
+    then read the synthesis 6 dB high at 2 kHz. The fit now measures exactly as the test does."""
+    n = 16384
+    m = min(len(x), int(.3 * FS), n)
+    seg = np.zeros(n)
+    seg[:m] = x[:m] * np.hanning(m)
+    X = np.abs(np.fft.rfft(seg)) ** 2
+    f = np.fft.rfftfreq(n, 1 / FS)
+    return np.array([10 * math.log10(X[(f >= fc / 2 ** (1 / 6)) & (f < fc * 2 ** (1 / 6))].sum() + 1e-30) for fc in BANDS])
 
 
 def envelope(x):
@@ -126,8 +136,9 @@ def render(p, layer, velocity=1.0, seed=1, n_s=.8):
     click = signal.sosfilt(signal.butter(2, 2500 / (FS / 2), "high", output="sos"), click)
     out[:m] += p["click"][layer] * click
     # The recordings hold almost nothing under 2 kHz (about 36 dB down); the higher jingles' skirts leak there, so
-    # a gentle high-pass takes it out (second order, HIGHPASS_HZ).
-    out = signal.sosfilt(signal.butter(2, HIGHPASS_HZ / (FS / 2), "high", output="sos"), out)
+    # a high-pass takes it out (two second-order passes at HIGHPASS_HZ).
+    hp = signal.butter(2, HIGHPASS_HZ / (FS / 2), "high", output="sos")
+    out = signal.sosfilt(hp, signal.sosfilt(hp, out))   # two second-order passes: fourth order
     return out / max(np.max(np.abs(out)), 1e-12)
 
 
@@ -144,7 +155,7 @@ def main(root, out_path, audition=None):
     report = {}
     for layer, clips in layers.items():
         target = np.mean([third_octaves(x / np.sqrt(np.mean(x[:int(.3 * FS)] ** 2))) for x in clips], axis=0)
-        for _ in range(3):
+        for _ in range(5):
             y = render(p, layer)
             got = third_octaves(y / np.sqrt(np.mean(y[:int(.3 * FS)] ** 2)))
             corr = np.clip(target - got, -18, 18)

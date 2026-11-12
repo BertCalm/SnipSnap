@@ -75,10 +75,12 @@ object MirrorballKitGenerator {
 
     /** Spectral brightness, a share of energy above 2 kHz by a one-pole split, as the tests measure it. */
     private fun brightness(x: FloatArray): Double {
-        val lp = com.snipsnap.synth.Dsp.FixedOnePole(2_000f)
+        // A one-pole low-pass at 2 kHz (Dsp's own is internal to :synth): what it lets through is the low part.
+        val a = 1.0 - kotlin.math.exp(-2.0 * Math.PI * 2_000.0 / RATE)
+        var lp = 0.0
         var high = 0.0
         var all = 0.0
-        for (v in x) { val h = v - lp.lp(v); high += h.toDouble() * h; all += v.toDouble() * v }
+        for (v in x) { lp += a * (v - lp); val h = v - lp; high += h * h; all += v.toDouble() * v }
         return high / max(all, 1e-18)
     }
 
@@ -182,7 +184,7 @@ object MirrorballKitGenerator {
             write("groove.wav", out)
             // The same groove from the dry strikes (the zone the velocity would pick, the same take order), at the
             // same trim, so the page can play the chain against no chain at all.
-            val zones = saved.pads.first().chain!!.zones
+            val zones = requireNotNull(saved.pads.first().chain?.zones) { "a kit pad without velocity zones" }
             val dryOut = mix(events, g.bpm) { e, i ->
                 val z = zones.indexOfFirst { e.velocity * 127f <= it.velEnd + .5f }.coerceAtLeast(0)
                 MirrorballKits.dry(g, e.slot - 1, MirrorballKits.velocities[z], i % MirrorballKits.TAKES).samples to e.velocity
