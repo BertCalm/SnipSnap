@@ -352,3 +352,6 @@ Round 2 published 2026-11-12 to the same link as version 3, built from `566bbf0b
 
 The rebuilt round robin published 2026-11-12 to the same link as version 4, built from
 `c4dddfca`: 90 clips (15 take clips replaced, two A/B clips added). Not heard.
+
+Round 3 (the tone) published 2026-11-12 to the same link as version 5, built from `c445980b`:
+96 clips, every clip re-rendered with the new tone plus a six-clip before/after section. Not heard.
