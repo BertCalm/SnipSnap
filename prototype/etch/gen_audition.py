@@ -52,6 +52,35 @@ def second_harmonic_db(x, f0):
     return round(20 * math.log10(at(2 * f0) / at(f0)), 1)
 
 
+THIRD_OCT = 60.0 * 2 ** (np.arange(0, 22) / 3)   # 60 Hz to ~6 kHz
+
+
+def spectro_db(x, ms=10, total=0.3):
+    """Level-matched third-octave spectrogram of the first `total` seconds, dB."""
+    x = x[:int(total * e.RATE)]
+    x = x / (np.sqrt(np.mean(x ** 2)) + 1e-12)
+    n = int(ms * 1e-3 * e.RATE)
+    w = 4 * n
+    f = np.fft.rfftfreq(w, 1 / e.RATE)
+    win = np.hanning(w)
+    rows = []
+    for i in range(0, len(x) - w, n):
+        X = np.abs(np.fft.rfft(x[i:i + w] * win)) ** 2
+        rows.append([10 * math.log10(X[(f >= c / 2 ** (1 / 6)) & (f < c * 2 ** (1 / 6))].sum() + 1e-9)
+                     for c in THIRD_OCT])
+    return np.array(rows)
+
+
+def take_distance_db(a, b):
+    """How different two strikes are: RMS difference of their level-matched third-octave
+    spectrograms over the first 300 ms, in dB. It sees brightness, ring, decay, the onset
+    pitch dip and attack speed together. The round-1b takes the owner heard as the same
+    strike measured 0.5 to 0.8 dB apart."""
+    A, B = spectro_db(a), spectro_db(b)
+    m = min(len(A), len(B))
+    return float(np.sqrt(np.mean((A[:m] - B[:m]) ** 2)))
+
+
 def save(section, name, y, note="", metrics=None, level=True):
     os.makedirs(os.path.join(OUT, section["id"]), exist_ok=True)
     yy = e.finish(y) if level else sk.fade_tail(sk.dc_block(y, e.RATE), e.RATE)
@@ -239,8 +268,11 @@ save(s, "vel-sequence-as-played", seq, "0.35, 0.6, 0.8, 1.0 at real relative lev
 # ------------------------------------------------------------------ 10. round robin
 s = section("round-robin", "Round robin",
             "Four takes of SAW C2 at velocity 0.6, then four at 1.0. A take is the box's own wander: "
-            "where the oscillator cycle starts, about 1.5% on how far the filter opens, about 6% on the decay. "
-            "No detune. The last clip plays the eight takes back to back.")
+            "where the oscillator cycle starts, how far the filter opens (+/-11%), how long its envelope "
+            "decays (+/-48%), how much it rings (+/-18%), a pitch dip of up to 40 cents at the onset "
+            "that settles onto the exact note in about 12 ms, and attack speed (1 to 5 ms). The four "
+            "takes are dealt out so no two share a setting. Round 2 of round robin: you heard round 1's "
+            "takes as the same. The A/B clips at the end play one take four times, then four takes.")
 takes = {}
 for v in (0.6, 1.0):
     for k in range(1, 5):
@@ -258,6 +290,12 @@ for (v, k), y in takes.items():
 seq = np.concatenate([np.concatenate([takes[(v, k)][:int(0.32 * e.RATE)], np.zeros(int(0.05 * e.RATE))])
                       for v in (0.6, 1.0) for k in range(1, 5)])
 save(s, "takes-back-to-back", seq, "eight takes at real relative levels", level=False)
+one = takes[(0.6, 1)][:int(0.32 * e.RATE)]
+gap = np.zeros(int(0.05 * e.RATE))
+same = np.concatenate([np.concatenate([one, gap]) for _ in range(4)])
+four = np.concatenate([np.concatenate([takes[(0.6, k)][:int(0.32 * e.RATE)], gap]) for k in range(1, 5)])
+save(s, "ab-one-take-repeated", same, "A: take 1 played four times (what no round robin sounds like)", level=False)
+save(s, "ab-four-takes", four, "B: takes 1 to 4 (round robin)", level=False)
 MANIFEST["checks"]["round_robin"] = rr_metrics
 
 # ------------------------------------------------------------------ round 2: six voices
@@ -324,6 +362,11 @@ for voice in e.VOICES:
          "hard_attack_hz": round(band_centroid(hard[:int(0.06 * e.RATE)])),
          "rr_attack_spread_pct": round(100 * (max(att) - min(att)) / float(np.mean(att)), 1),
          "rr_late_spread_pct": round(100 * (max(late) - min(late)) / float(np.mean(late)), 1)}
+    pairs_d = [take_distance_db(a, b) for i, a in enumerate(takes) for b in takes[i + 1:]]
+    d["rr_closest_db"] = round(min(pairs_d), 2)
+    d["rr_widest_db"] = round(max(pairs_d), 2)
+    d["velocity_step_db"] = round(take_distance_db(e.render_note(36, voice, {"SPACE": 0.0}, vel=0.6),
+                                                   e.render_note(36, voice, {"SPACE": 0.0}, vel=0.8)), 2)
     dyn[voice] = d
     save(s, f"{voice.lower()}-soft", soft, f"{voice} velocity 0.35",
          {"attack_band_centroid_hz": d["soft_attack_hz"]})

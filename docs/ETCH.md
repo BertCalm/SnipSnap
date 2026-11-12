@@ -256,6 +256,41 @@ Disclosed: RUBBER is by far the darkest voice (−40 dB above 2 kHz). GRIT's acc
 level by only 0.1 dB, because folding flattens the peaks; its accent is a change of tone.
 Python harness, not Kotlin; nothing in round 2 has been heard.
 
+## Round robin, rebuilt (2026-11-12)
+
+**Heard:** after round 2 the owner said "Mostly good, but the 4 takes in RR sound the same."
+That fails the round-robin gate ("Repeated copies of one strike are not round robin"). The
+round-1 takes drew small independent random wobbles (filter opening ±1.5%, decay ±6%), so
+any two could land close together and every difference was small.
+
+Rebuilt in `take_params`: every take moves five things a listener hears, and with four takes
+each dimension's four positions are dealt out by a different permutation (a Latin hypercube),
+so no two takes share a position on any dimension. The settled pitch never moves.
+
+| Dimension | Range per take |
+|---|---|
+| filter opening | ±9.5% of the whole opening (about ±0.8 octave fully open) |
+| filter-envelope decay | ±48% |
+| resonance feedback | ±18% |
+| onset pitch dip | 0 to 40 cents above the note, settling in about 12 ms |
+| amp attack | 1.2 to 5.5 ms |
+
+Measured with a new take distance (`take_distance_db`): the RMS difference of two strikes'
+level-matched third-octave spectrograms over their first 300 ms. The round-1 takes the owner
+heard as the same measured 0.5 to 0.8 dB apart. Rebuilt, at velocity 0.6, the closest two takes
+on each voice are 2.9 (SAW) to 3.6 dB (SQUARE) apart, and the widest pair stays under the gap
+between velocity 0.6 and 0.8 on every voice (SAW 8.5 against 9.2 dB), so a take should not
+read as a different hit. Across velocities 0.6 and 1.0 the closest pairs are 2.2 to 3.0 dB.
+
+The sweep also showed what the measure sees: switching off the filter-opening dimension
+alone cut SAW's widest pair from 10.1 to 7.5 dB; the pitch dip and attack speed barely move it.
+Their audibility is the owner's call. A first setting (opening ±11%) put SAW's and SQUARE's
+widest pairs above a velocity step (10.1 and 10.8 dB) and was narrowed. Narrowing the decay
+range did not help: it widened the widest pair.
+
+Only the 15 take clips changed; the other 73 clips are byte-identical. The audition adds an
+A/B pair: one take played four times, then four takes. Not heard.
+
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:

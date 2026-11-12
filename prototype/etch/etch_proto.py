@@ -132,7 +132,7 @@ LINE_B = dict(name="LINE B", bpm=130.0, root=36, voice="SAW",      # C2, brighte
 @njit(cache=True)
 def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak, sweep,
                   phase0, drift_cut, drift_dec, fs, fb_hp_hz, fc_max, sub_level, pre_drive,
-                  keytrack, k_scale, in_scale):
+                  keytrack, k_scale, in_scale, k_take, scoop_cents, att_s):
     """Per-sample voice at the internal rate.
 
     target_midi : pitch the oscillator heads for (MIDI, float)
@@ -167,7 +167,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
     dec_s = (0.12 + 1.6 * sweep * sweep) * drift_dec
     a_fdec_norm = math.exp(-1.0 / (dec_s * fs))
     a_fdec_acc = math.exp(-1.0 / (0.16 * fs))    # accented notes decay short, fixed. "shape"
-    a_att = math.exp(-1.0 / (0.002 * fs))        # 2 ms amp attack. "shape"
+    a_att = math.exp(-1.0 / (att_s * fs))        # amp attack, 2 ms unless a take moves it
     a_rel = math.exp(-1.0 / (0.007 * fs))        # 7 ms amp release. "shape"
     a_hold = math.exp(-1.0 / (2.5 * fs))         # slow amp sag while held. "shape"
     # The accent capacitor: charges fast from the accented envelope, discharges slower,
@@ -175,7 +175,9 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
     # sweep "becomes more prominent as the Resonance pot is increased"). "shape"
     a_cap_up = math.exp(-1.0 / (0.012 * fs))
     a_cap_dn = math.exp(-1.0 / ((0.12 + 0.35 * peak) * fs))
-    k = 4.15 * peak * k_scale                    # ladder feedback; self-oscillates near 1.0
+    k = 4.15 * peak * k_scale * k_take           # ladder feedback; self-oscillates near 1.0
+    sc = 0.0                                     # this take's onset pitch dip, in semitones
+    a_sc = math.exp(-1.0 / (0.012 * fs))         # settles with a 12 ms time constant
     a_fbhp = math.exp(-2.0 * math.pi * fb_hp_hz / fs)  # high-pass in the feedback path
     a_sq = math.exp(-2.0 * math.pi * 9000.0 / fs)   # square edge softening
     cur_vel = 0.6
@@ -188,6 +190,7 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             # are identical and the seam closes; the round-robin take picks phase0
             ph = phase0
             ph2 = phase0
+            sc = scoop_cents / 100.0
             cur_vel = vel[i]
             # accent amount: nothing below vel 0.55, full at 1.0, smooth in between
             t = (cur_vel - 0.55) / 0.45
@@ -202,7 +205,12 @@ def _voice_kernel(target_midi, gate, trig, slide_on, vel, cut_oct, square, peak,
             cv = target_midi[i] + (cv - target_midi[i]) * a_glide
         else:
             cv = target_midi[i]
-        hz = 440.0 * 2.0 ** ((cv - 69.0) / 12.0)
+        if scoop_cents != 0.0:
+            # the take starts a few cents sharp and settles onto the exact pitch
+            sc *= a_sc
+            hz = 440.0 * 2.0 ** ((cv + sc - 69.0) / 12.0)
+        else:
+            hz = 440.0 * 2.0 ** ((cv - 69.0) / 12.0)
         dt = hz / fs
         # polyBLEP saw
         ph += dt
@@ -329,6 +337,42 @@ def _controls(steps, bpm, root, cycles, cut_oct_fn=None, gate_frac=0.55):
     return tgt, gate, trig, sld, vel, cut, step_n
 
 
+# Round robin, round 2. The owner heard round 1's takes as the same strike: each take drew
+# small independent random wobbles (opening +/-1.5%, decay +/-6%), so takes measured 4 to
+# 9% apart in attack brightness and could land close together. Now every take moves five
+# things a listener hears, by more, and the takes are spread on purpose: with four takes,
+# each dimension's four positions are dealt out by a different permutation (a Latin
+# hypercube), so no two takes share a position on any dimension. The settled pitch is
+# never moved; only the onset dips in from above and settles. "shape" ranges.
+RR_CUT = 0.095     # +/- share of the whole filter opening (~ +/-0.8 octave at full opening)
+RR_DEC = 0.48      # +/- share of the filter-envelope decay
+RR_RES = 0.18      # +/- share of the resonance feedback
+RR_SCOOP = 40.0    # onset pitch dip, cents above the note at the attack, 0..this
+RR_ATT = (0.0012, 0.0055)  # amp attack range, seconds
+_STRATA = (-0.75, -0.25, 0.25, 0.75)
+_PERMS = {"cut": (0, 2, 3, 1), "dec": (2, 0, 1, 3), "res": (3, 1, 0, 2),
+          "scoop": (1, 3, 0, 2), "att": (2, 3, 1, 0)}
+
+
+def take_params(seed):
+    """The round-robin take for `seed`. Seed 0 is the plain, unvaried render (loops, single
+    notes, the accepted round-1b clips) and returns exactly the old constants."""
+    if not seed:
+        return dict(phase0=0.0, drift_cut=1.0, drift_dec=1.0, k_take=1.0, scoop=0.0, att=0.002)
+    rng = np.random.default_rng(seed)
+    k = (seed - 1) % 4
+    jit = lambda: (float(rng.random()) - 0.5) * 0.3  # noqa: E731  stays inside the stratum
+
+    def pos(dim):
+        return _STRATA[_PERMS[dim][k]] + jit()
+    return dict(phase0=float(rng.random()),
+                drift_cut=1.0 + RR_CUT * pos("cut"),
+                drift_dec=1.0 + RR_DEC * pos("dec"),
+                k_take=1.0 + RR_RES * pos("res"),
+                scoop=RR_SCOOP * (0.5 + 0.5 * pos("scoop")),
+                att=RR_ATT[0] + (RR_ATT[1] - RR_ATT[0]) * (0.5 + 0.5 * pos("att")))
+
+
 def render_voice(steps, bpm, root, voice, macros, cycles=1, seed=0, ride=None):
     """The dry voice at the internal rate. `ride(t)` adds a CUTOFF offset (0..1 knob units)
     over normalized time t in [0,1) of the whole render: the hand on the cutoff knob."""
@@ -343,16 +387,13 @@ def render_voice(steps, bpm, root, voice, macros, cycles=1, seed=0, ride=None):
 
     tune = int(round((m["TUNE"] - 0.5) * TUNE_SEMITONES))
     tgt, gate, trig, sld, vel, cut, step_n = _controls(steps, bpm, root + tune, cycles, cut_fn)
-    rng = np.random.default_rng(seed)
-    # Round robin is the analog box's own wander: where the oscillator cycle starts, about
-    # 1.5% on how far the filter opens, about 6% on the decay. No detuning. "shape"
-    phase0 = float(rng.random()) if seed else 0.0
-    drift_cut = 1.0 + (float(rng.random()) - 0.5) * 0.03 if seed else 1.0
-    drift_dec = 1.0 + (float(rng.random()) - 0.5) * 0.12 if seed else 1.0
+    t = take_params(seed)
+    phase0, drift_cut, drift_dec = t["phase0"], t["drift_cut"], t["drift_dec"]
     c = VOICE_CFG[voice]
     return _voice_kernel(tgt, gate, trig, sld, vel, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
                          phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
-                         c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"]), step_n
+                         c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"],
+                         t["k_take"], t["scoop"], t["att"]), step_n
 
 
 # ----------------------------------------------------------------------------- BITE (4x)
@@ -585,14 +626,13 @@ def render_note(midi, voice, macros, vel=0.6, seconds=0.9, gate_s=0.45, seed=0, 
     tgt = tgt + tune
     base = math.log2(expmap(m["CUTOFF"], CUT_LO, CUT_HI) / 20.0)
     cut = np.full(len(tgt), base)
-    rng = np.random.default_rng(seed)
-    phase0 = float(rng.random()) if seed else 0.0
-    drift_cut = 1.0 + (float(rng.random()) - 0.5) * 0.03 if seed else 1.0
-    drift_dec = 1.0 + (float(rng.random()) - 0.5) * 0.12 if seed else 1.0
+    t = take_params(seed)
+    phase0, drift_cut, drift_dec = t["phase0"], t["drift_cut"], t["drift_dec"]
     c = VOICE_CFG[voice]
     raw = _voice_kernel(tgt, gate, trig, sld, velv, cut, c["wave"] == 1, m["PEAK"], m["SWEEP"],
                         phase0, drift_cut, drift_dec, float(FS), FB_HP_HZ, FC_MAX,
-                        c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"])
+                        c["sub"], c["pre"], c["keytrack"], c["k_scale"], c["in_scale"],
+                        t["k_take"], t["scoop"], t["att"])
     if bite_on:
         raw = bite(raw, m["BITE"])
     y = to_output_rate(raw)

@@ -85,8 +85,8 @@ LISTEN = {
     "waves": "Do the two waves now sound clearly different? The square should be hollower.",
     "notes": "Are these usable as keygroup notes as they are?",
     "velocity": "Does the hard hit sound like an accent, not just louder?",
-    "round-robin": "Are the takes different enough for a repeated note? "
-                   "The accented takes vary less than the plain ones.",
+    "round-robin": "Start with the A/B pair at the end: does B sound like four strikes and A like "
+                   "one strike repeated? Then: is any take so different it sounds like another note?",
     "six-voices": "Are these six different instruments, not six settings of one? "
                   "Is RUBBER round or just muffled? Does WHISTLE sing without getting shrill?",
     "six-notes": "Would each work as a keygroup note? RUBBER's sub octave is as loud as the note itself.",
@@ -130,11 +130,14 @@ for s in M["sections"]:
         dyn = M["checks"]["six_dynamics"]
         rows = "".join(
             f"<tr><td>{v}</td><td>{d['soft_attack_hz']} → {d['hard_attack_hz']} Hz</td>"
-            f"<td>{d['rr_attack_spread_pct']}%</td><td>{d['rr_late_spread_pct']}%</td></tr>"
+            f"<td>{d['rr_closest_db']} dB</td><td>{d['rr_widest_db']} dB</td><td>{d['velocity_step_db']} dB</td></tr>"
             for v, d in dyn.items())
         extra = f"""
+        <p class="intro">Take distances are the RMS difference of two strikes' level-matched third-octave
+        spectrograms over their first 300 ms. Round 1's takes, which you heard as the same, measured
+        0.5 to 0.8 dB apart. The last column is the gap between velocity 0.6 and 0.8 on that voice, for scale.</p>
         <div class="table-wrap"><table>
-          <thead><tr><th>Voice</th><th>Attack centroid, soft → hard</th><th>Take spread at attack</th><th>Take spread at 0.2 s</th></tr></thead>
+          <thead><tr><th>Voice</th><th>Attack centroid, soft → hard</th><th>Closest two takes</th><th>Widest two takes</th><th>Velocity 0.6 → 0.8</th></tr></thead>
           <tbody>{rows}</tbody></table></div>"""
     sections.append(f"""
     <section class="card" id="{ESC(s['id'])}">
@@ -167,12 +170,11 @@ GATES = [
     ("Velocity: rendering", "pass (Python only)",
      "On all six voices a hard hit changes the tone, not only the level. Level-matched attack centroid, "
      "velocity 0.35 → 1.0, in Hz: " + " · ".join(f"{v} {d['soft_attack_hz']}→{d['hard_attack_hz']}" for v, d in checks["six_dynamics"].items()) + ". Kotlin not built."),
-    ("Round robin: rendering", "pass (Python only)",
-     "Four takes per voice differ at the attack by "
-     f"{min(d['rr_attack_spread_pct'] for d in checks['six_dynamics'].values())}% to "
-     f"{max(d['rr_attack_spread_pct'] for d in checks['six_dynamics'].values())}% at velocity 0.6; "
-     "you accepted the round-1b takes. Accented SAW takes differ less "
-     f"({checks['round_robin']['1.0']['attack_spread_pct']}% at attack). Kotlin not built."),
+    ("Round robin: rendering", "rebuilt, not heard",
+     "You heard round 1's takes as the same strike (they measured 0.5 to 0.8 dB apart). Rebuilt: five "
+     "audible dimensions, takes dealt out so no two share a setting. The closest two takes on any voice "
+     f"are now {min(d['rr_closest_db'] for d in checks['six_dynamics'].values())} dB apart, the widest "
+     f"{max(d['rr_widest_db'] for d in checks['six_dynamics'].values())} dB. Kotlin not built."),
     ("Velocity and round robin: saving", "not yet verified", "No Kotlin patch exists to save."),
     ("Velocity and round robin: playback", "not yet verified", "No phone playback."),
     ("Velocity and round robin: export", "not yet verified", "No MPC export."),
@@ -309,6 +311,7 @@ MACROS  TUNE · CUTOFF · PEAK · SWEEP · BITE · SPACE      VELOCITY = ACCENT<
   <section class="card" id="next">
     <h2>What I need from you</h2>
     <ul class="plain">
+      <li><b>Round robin:</b> rebuilt after your note. Does the A/B pair in the round-robin section now sound like four strikes against one? Is any take too far, like a different note?</li>
       <li><b>Each new voice:</b> keep, change or drop RUBBER, WHISTLE, GRIT and DUB (the six-voice loops and held notes).</li>
       <li><b>RUBBER:</b> round, or too muffled? It is the darkest voice by far.</li>
       <li><b>WHISTLE:</b> does it sing, or is it shrill?</li>
