@@ -37,6 +37,12 @@ class BreakerTest {
     /** The tail (100 to 400 ms) against the hit (its first 20 ms), in dB. */
     private fun tailToHit(x: FloatArray) = db(rms(x, .1, .4)) - db(rms(x, 0.0, .02))
 
+    /** [x] under two one-pole low-passes at 2 kHz: the drum's body and the spring's tail, without the crack. */
+    private fun below2k(x: FloatArray): FloatArray {
+        val a = Dsp.OnePole(rate); val b = Dsp.OnePole(rate)
+        return FloatArray(x.size) { b.lp(a.lp(x[it], 2000f), 2000f) }
+    }
+
     private fun band(x: FloatArray, hz: Float, q: Float): FloatArray {
         val bp = Dsp.Biquad().apply { bandpass(hz, q, rate) }
         val bp2 = Dsp.Biquad().apply { bandpass(hz, q, rate) }
@@ -88,11 +94,14 @@ class BreakerTest {
             // tail for the crush to lift; every other one must come up.
             if (r[0] < -6.0) assertTrue(r[2] > r[0] + 1.0, "$voice: the crush lifts the tail ($r)")
             // The swell the owner heard at round 0, on the kick and snare. A short hat is already held
-            // down hard by the first half, so its tail is up by CRUSH .5. Model 4's open rig, which the
-            // owner picked by ear, makes the kick's smaller: CRUSH .5 to .9 lifts its tail 0.9 dB, where
-            // model 3 lifted it 1.6 dB through the speaker.
+            // down hard by the first half, so its tail is up by CRUSH .5. It is the spring's tail coming
+            // back up, so it is measured below 2 kHz, where the tail is: model 4's open top end makes the
+            // hit's crack louder and hides it in a broadband ratio (snare .5 to .9: 0.4 dB broadband,
+            // 1.3 dB below 2 kHz; kick 0.9 and 1.2 dB).
             if (voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) {
-                assertTrue(r[2] > r[1] + .5, "$voice: the crush after the spring swells the tail ($r)")
+                val body = listOf(.5f, .9f).map { tailToHit(below2k(Breaker.render(voice, mapOf("CRUSH" to it, "DRIP" to .6f)).samples)) }
+                println("BREAKER $voice tail-to-hit below 2 kHz at CRUSH .5/.9 (DRIP .6): ${body.map { "%.1f".format(it) }} dB")
+                assertTrue(body[1] > body[0] + 1.0, "$voice: the crush after the spring swells the tail ($body)")
             }
         }
     }

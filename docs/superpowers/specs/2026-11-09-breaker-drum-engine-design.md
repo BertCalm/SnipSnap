@@ -626,7 +626,7 @@ It has two dynamic layers of two recorded takes, so it now gets exactly that: 2 
 - **Their takes are distinct strikes, but close.** Each is struck again up to 15% softer with fresh
   click noise. The crush at CRUSH .9 to 1 evens out the force difference, so the takes are
   34 dB apart. A copy measures more than 40 dB apart.
-- **Their soft zones move only 0.9 to 1.2 dB in spectral shape.**
+- **Their soft zones move only 0.9 to 1.2 dB in spectral shape** (0.6 to 0.8 dB on model 4).
 - **The owner has accepted the kick as is.** They heard it at round 1b as "the same drum, a softer
   hand".
 - **If more variation is wanted,** a later model can vary the beater per strike, as a drummer does,
@@ -695,5 +695,8 @@ Checked against what was heard:
   within 6 × 10⁻⁸.
 - **The top octave rises:** the snare by 9.6 dB, the hats by 8.7 to 10 dB, the kick by 6.3 dB
   (`BreakerTest`).
-- **The kick's crush swell past halfway shrinks:** CRUSH .5 to .9 lifts the tail 0.9 dB, where it
-  was 1.6 dB. The test's bound goes from 1 to .5 dB, with the reason recorded.
+- **The crush's swell past halfway holds** where the spring's tail is:
+  - **Below 2 kHz,** CRUSH .5 to .9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's
+    1.2 dB (1.9).
+  - **Broadband,** the opened crack of the hit hides it (0.4 and 0.9 dB).
+  - **So `BreakerTest` measures it below 2 kHz,** with its 1 dB bound unchanged.

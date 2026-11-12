@@ -106,7 +106,7 @@ presence do not close the outstanding gates above.
 - **The kit (2026-11-12): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, `:shell:generateBreakerKit`).
   - **Rendering:** the shared robin deals every pad from its recipe. Each synth drum gets 3 zones of 3 takes: softer zones are re-rendered at velocity .3 and .6, and each later take is re-struck. The tambourine gets its recordings, 2 dynamic layers × 2 takes.
     - No two takes are copies. A copy measures more than 40 dB apart; the closest pair here, the kick's, is 34 dB apart.
-    - No soft zone is the hard one turned down. The least change in spectral shape is 0.9 dB, on the kick.
+    - No soft zone is the hard one turned down. The least change in spectral shape is 0.6 dB, on the kick (model 4).
     - **The kick is weak.** Its takes are distinct strikes but close, because the crush evens out the force difference. This is disclosed and waits for the owner's listen.
     - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
   - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.

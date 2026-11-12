@@ -90,21 +90,21 @@ from its recipe:
   - With 3 × 3 it measured both: one zone was another only turned down, and two takes were the same
     recording, −119 dB apart.
 
-Measured on the saved grid (`BreakerKitProof`):
+Measured on the saved grid (`BreakerKitProof`), on model 4:
 
 | Pad | Closest two takes, apart by | Least-changed soft zone |
 |---|---:|---:|
-| Boom | 34.1 dB | 0.9 dB |
-| Crushed Boom | 33.8 dB | 1.0 dB |
-| High Tom | 30.1 dB | 3.2 dB |
-| Floor Tom | 27.4 dB | 3.4 dB |
-| Rack Tom | 26.6 dB | 3.8 dB |
+| Boom | 33.6 dB | 0.6 dB |
+| Crushed Boom | 32.9 dB | 0.8 dB |
+| High Tom | 29.0 dB | 3.8 dB |
+| Cross Stick | 28.7 dB | 2.3 dB |
 | Snare Riser | 25.3 dB | 4.7 dB |
-| Cross Stick | 25.1 dB | 1.5 dB |
-| Drip Snare | 17.0 dB | 6.5 dB |
-| Crushed Snare | 17.0 dB | 3.4 dB |
-| Bap | 16.0 dB | 6.3 dB |
-| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.7 to 6.6 dB |
+| Floor Tom | 24.3 dB | 4.7 dB |
+| Rack Tom | 24.0 dB | 4.2 dB |
+| Crushed Snare | 15.6 dB | 3.1 dB |
+| Drip Snare | 15.2 dB | 7.0 dB |
+| Bap | 14.4 dB | 6.7 dB |
+| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.5 to 6.6 dB |
 
 How to read the two columns:
 - **"Apart by"** is what differs between two takes against what they share. A copy, dealt with a
@@ -113,8 +113,8 @@ How to read the two columns:
   the hard zone, at matched loudness. A zone that is the hard one turned down moves 0.
 - **The weak spot is the kick.** The crush evens out the small force differences between strikes.
   So the two kicks' takes are distinct strikes, but close: 34 dB apart, against more than 40 for a
-  copy. Their soft zones move about 1 dB in shape. GATECRASH's stone kick was disclosed the same
-  way. The owner's listen decides whether the kick needs more variation per strike.
+  copy. Their soft zones move only 0.6 to 0.8 dB in shape. GATECRASH's stone kick was disclosed
+  the same way. The owner's listen decides whether the kick needs more variation per strike.
 
 **Through saving, playback and export** (`BreakerKitTest`; the full kit and listening pack:
 `./gradlew :shell:generateBreakerKit`):
@@ -219,8 +219,9 @@ The top octave against the whole hit, model 3 to model 4:
 | Open hat | −19.1 → −9.1 dB |
 | Kick | −40.7 → −34.4 dB |
 
-On the open kick, the crush's swell past halfway is smaller: CRUSH .5 to .9 lifts the tail 0.9 dB,
-against 1.6 dB through the speaker.
+The crush's swell past halfway is still there. Below 2 kHz, where the spring's tail is, CRUSH .5 to
+.9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's 1.2 dB (1.9). Measured broadband,
+the opened crack of the hit hides it (0.4 and 0.9 dB), so `BreakerTest` measures it below 2 kHz.
 
 Model-3 saves keep the speaker and the darker filter.
 
