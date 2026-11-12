@@ -46,7 +46,12 @@ import kotlin.math.pow
  *
  * Sits after ECHO and before SPRING, where the brainstorm put it: after the amp, where a reverse delay sits
  * on a board, beside ECHO, and in front of the spring and the room, so a reversed swell has the same space
- * on it as the hit. Chip-less until the owner's listening gate.
+ * on it as the hit.
+ *
+ * For drums and held sounds both. At its gate (2026-11-11) the owner heard it on ONSET's snare and tom, JANGLE
+ * and the choir, beside the whole pad flipped by REVERSE: the reverse snare works, JANGLE reads as backwards
+ * guitar, and it is not too close to FLIP. They chose the middle TIME and some repeats (REPEAT 0.5), so the
+ * REWIND chip's tap is TIME 0.5, REPEAT 0.5 and MIX 0.7 (the `rewound` character).
  */
 object Rewind {
 

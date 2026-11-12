@@ -77,10 +77,12 @@ unverified completion gates explicit.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (round 1, 2026-11-09)
+## BREAKER (rounds 1 to 3, 2026-11-09 to 11-11)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
-- **Articulation:** finite hits, with no HOLD. The authored snare roll and riser, and the surf tom fill, are not yet built.
+- **Articulation:** finite hits, with no HOLD.
+  - **The snare riser (round 3): built in rendering, chosen by ear.** The owner picked the tamed roll in the Python harness on 2026-11-11. It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. Its Kotlin render has not been heard, played from a pad, saved in a kit or exported. Until then, it does not satisfy the percussion gate's roll or riser.
+  - **The surf tom fill:** not yet built.
 - **Drum shelf:** not yet built. The owner picked Dub Tank and Trip hop on 2026-11-09 to join the BREAKER kit. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
@@ -94,9 +96,16 @@ presence do not close the outstanding gates above.
   - **Round robin: verified in rendering.** Each take is a fresh strike (re-seeded SKIN noise, or the tambourine's two recorded takes).
   - **Saving, playback and export:** not yet verified.
   - **Sound character, heard 2026-11-10:** the hats, stick (short slap), tambourine, shaker and toms accepted, and the repeat and 40% hits too. The ride was heard as a crash and is re-voiced at round 3.
-- **Overall: incomplete.** This is a prototype with twelve voices and no kit yet.
+- **Round 3 (2026-11-11, model 3):** the ride re-voiced, and the crash and snare riser added.
+  - **The cymbals:** a modal synth of 400 and 418 resonances, fitted to CC0 recordings that do not ship. Dry by default, with every control a true bypass at 0.
+  - **Velocity: verified in rendering, measured.** A cymbal's soft hit follows the difference measured between a soft and a hard recording. At matched loudness, a 40% ride gains 8.9 dB at 250 Hz and a 40% crash 6.4 dB at 500 Hz. Neither is simply darker; the change in spectral shape is what is asserted. The riser's strikes take SKIN's contact law.
+  - **Round robin: verified in rendering.** A cymbal take re-strikes every mode: a fresh phase, up to 0.3 Hz of detune, a 1.6 dB rms level scatter, and a fresh stick. A riser take re-strikes all twenty snares.
+  - **Saving: partly verified.** Patches round-trip through JSON with model 3, and model 2's ride still replays. A saved kit has not been tested.
+  - **Playback and export:** not yet verified.
+  - **Sound character:** the owner picked the tight cymbals (heard dry) and the tamed riser in the Python harness. The Kotlin renders wait for a confirming listen.
+- **Overall: incomplete.** This is a prototype with fourteen voices and no kit yet. The kit, the two genre kits and velocity and round robin through saving, playback and export are still open.
 
-## GATECRASH kits (candidate, 2026-11-10)
+## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
 A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro Funk. See [GATECRASH](GATECRASH.md).
 
@@ -108,8 +117,8 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Saving: verified.** A saved kit reloads equal, and all 576 saved slices match their renders (`:shell:generateGatecrashKits`, `GatecrashKitTest`).
   - **Playback: verified in software.** `PadHit.resolve`, the resolver the app's pad engine calls, picks the zone by velocity and deals the four takes in order, then repeats. No phone has played these kits.
   - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
-- **Sound character: round 1 rejected, rounds 2 and 3 each heard with one correction, round 4 not heard.** On round 3 the owner said "we are missing some brightness"; round 4 opens the returns from 1.5 to 3.5 kHz to 2.2 to 6 kHz and restores some snap to the snares and toms. On round 2 the owner said 80s drums "round off at the end rather than cut abruptly"; round 3 lengthens every close from 10 to 25 ms to 45 to 130 ms. The owner has not approved any round. On 2026-11-10 the owner heard round 1 as "harsh" and "more like loud static" than 80s drums. Measured afterwards, its rooms carried 14 to 20 dB more energy than the drums and were as bright as the drums. Round 2 sets each room's energy against its drum's (at most +4 dB), darkens every return, removes the hard clip and leaves cymbals dry. Round 1 passed every software probe it had, so those probes are not evidence of sound.
-- **Overall: incomplete.** The software evidence is in place. Owner listening, phone playback and MPC hardware playback remain open.
+- **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
 
 ## ETCH (round 1, 2026-11-11)
 

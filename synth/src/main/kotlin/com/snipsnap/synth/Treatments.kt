@@ -167,6 +167,17 @@ object Treatments {
         // amount heard. DRIVE, TONE and HANG are left at their defaults, which are also their neutrals, so AMT never moves
         // them; DRIVE's default, 1, is Grit. AMT 1 is DEPTH about 0.71, a lower AMT less octave, AMT 0 none.
         "octaved" to FxChain(octaver = mapOf("DEPTH" to 0.5f / 0.7f)),
+        // REWIND: a reverse delay, the REWIND section. The owner heard it at its gate (2026-11-11) on ONSET's snare and tom,
+        // JANGLE and the choir, at MIX 1, each beside the whole pad flipped by REVERSE: the reverse snare works, JANGLE
+        // reads as backwards guitar, it is not too close to FLIP, and it is for drums and held sounds both. They chose the
+        // middle TIME (the backwards attack about 0.48 s after the hit) and some repeats, REPEAT 0.5 of the three heard
+        // (none, 0.5, 1). A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT;
+        // PadSheetTest pins that they still land here) and REPEAT and MIX fade linearly toward 0, so REPEAT 0.5 / 0.7
+        // makes a tap REPEAT 0.5, the repeats chosen. TIME is left at its default, 0.5, which is also its neutral, so AMT
+        // never moves it. MIX is 1, the level every clip was heard at, so AMT 1 is the copy at the pad's own level and a
+        // tap MIX 0.7: a macro tops out at 1, so a tap cannot reach the heard MIX while AMT still walks the level
+        // (RewindTest measures how far under the heard clip the tap's copy lands). AMT 0 is no copy at all.
+        "rewound" to FxChain(rewind = mapOf("MIX" to 1.0f, "REPEAT" to 0.5f / 0.7f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

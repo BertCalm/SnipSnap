@@ -1,7 +1,7 @@
-> GATECRASH candidate kits (2026-11-10): three 1980s gated drum kits on the shelf, Stone Room, Machine Pop
-> and Electro Funk. A new treatment stage crushes each pad's room flat and cuts it on the drum's own timing.
-> Velocity × round robin is proven through save, playback and MPC 3 export in software. Not heard; no
-> hardware. See [GATECRASH](GATECRASH.md).
+> GATECRASH kits (sound approved 2026-11-11, round 4): three 1980s gated drum kits on the shelf, Stone Room,
+> Machine Pop and Electro Funk. A treatment stage holds each pad's room level behind the drum and rounds it
+> off on the drum's own timing. Velocity × round robin is proven through save, playback and MPC 3 export in
+> software. No phone or MPC hardware audition; MPC 2 keeps one take per zone. See [GATECRASH](GATECRASH.md).
 
 > Cosmic Breaks gate update: DnB, Jungle and Dubstep shelf kits, each with 18 pads
 > and three velocity layers × four takes. Native/SFZ round trips and DecentSampler
@@ -3424,4 +3424,17 @@ Round 2 adds ten drums through the same rig:
 - **Repeat hits:** SKIN's unstruck voices can re-seed their noise per take, but only when asked; only BREAKER asks.
 - **Soft hits:** the unstruck drums soften after the rig, since darkening their source came out
   brighter.
-- **Status:** waiting for the owner's listen.
+- **Status:** heard on 2026-11-10. The owner accepted all but the ride, which sounded like a crash.
+
+Round 3 (renderer model 3, 2026-11-11) re-voices the ride and adds the crash and the snare riser:
+- **The cymbals:** the recordings' own resonances (400 on the ride, 418 on the crash) as a modal
+  synth. They are fitted by `scripts/fit_breaker_cymbals.py` to Virtuosity Drums (CC0), and the
+  recordings do not ship.
+- **Heard:** through the rig, the first cymbals and riser were harsh. Noise-band cymbals sounded
+  processed even dry. The owner picked the modal synth with "tight" decays, heard dry.
+- **In the kit:** the cymbals are dry by default, with every control a true bypass. The crash rings
+  3.2 s. The riser is the tamed roll.
+- **Velocity:** measured from soft and hard recordings. It changes the spectrum's shape, and it is
+  not simply darker.
+- **Saves:** model-2 saves keep round 2's ride.
+- **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.

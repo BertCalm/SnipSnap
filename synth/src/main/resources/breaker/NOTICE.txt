@@ -1,0 +1,22 @@
+BREAKER cymbals, renderer model 3
+
+cymbals.json holds synthesis parameters fitted to four recordings from
+Virtuosity Drums, https://github.com/sfzinstruments/virtuosity_drums
+at commit 9f04cf9a734527edfbb0a4eee1f674e45bbf71bc, overhead mic.
+License: CC0 1.0 Universal (credited although not required).
+  Samples/oh/ride/oh_ride_ride_vl3_rr1.flac
+    sha256 855f22d2408439f7944c056dab306003b8fc172310c92b37b63a6aef21aa4f5c
+  Samples/oh/ride/oh_ride_ride_vl1_rr1.flac
+    sha256 df47cd9bee89a98afa6626e38a7363c36ac6091e9964f113693807d0675fd0ab
+  Samples/oh/crash/oh_crash_crash_vl3_rr1.flac
+    sha256 28ac4dc5c130175555ef54009f9186e418a664c544c1f996058b5acd3b85ccb9
+  Samples/oh/crash/oh_crash_crash_vl1_rr1.flac
+    sha256 3307ad060004db51990b81b80badc0d26c90dae87e7b0f9b9ebcf099224fd823
+
+Changes: decoded to mono 44.1 kHz; resonances picked from an 8192-point
+STFT (a frequency, an amplitude and a decay each); one level correction per
+third-octave band; the stick's band levels over the first 40 ms; the soft
+recording's band levels against the hard one's. These are derived synthesis
+parameters, not recordings or PCM. The engine synthesizes sinusoids and a
+noise burst; it does not play back any recording, and none ships.
+Fitted by scripts/fit_breaker_cymbals.py. No endorsement is implied.

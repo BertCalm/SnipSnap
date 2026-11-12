@@ -40,7 +40,7 @@ enum class PedalSide(val id: String) {
  * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
  * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
  * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07; SUB, the octave down,
- * gated on 2026-11-09.
+ * gated on 2026-11-09; REWIND, the reverse delay, gated on 2026-11-11.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -173,6 +173,12 @@ object Pedals {
         // phone does not play. Gated on 2026-11-09 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 11).
         // Behind MORE.
         Entry("SUB", "octaved", character("octaved"), PedalSide.PRE, movable = false, gated = true),
+        // A reverse delay: the `rewound` character, the REWIND section, whose tap (AMT 0.7) plays the hit back backwards, its
+        // attack landing about 0.48 s after the hit, at MIX 0.7, then forward and backwards again, each pass darker, at
+        // REPEAT 0.5. After the amp, where the rack puts it beside ECHO and a reverse delay sits on a board; not movable,
+        // since the owner heard it only there. For drums and held sounds both. Gated on 2026-11-11
+        // (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 6). Behind MORE.
+        Entry("REWIND", "rewound", character("rewound"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {
