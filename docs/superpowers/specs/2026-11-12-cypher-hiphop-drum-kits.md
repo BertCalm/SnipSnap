@@ -500,3 +500,14 @@ its onsets by a few milliseconds; the kit's timing is sample-accurate.
 
 Not built: BACKROOM, LOWRIDER, DUST, FLINT (round 2), the riser, SFZ and DecentSampler exports. Not heard:
 everything. The [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner.
+
+## Round 1 heard, round 1b (2026-11-12)
+
+The owner heard round 1 and said: "The triple snare thing is messy." That is DRILL's A15. Two causes, both
+mine: the phrase sent every part through the dark room, so each hat eighth re-keyed the gate and the room
+stood open for the whole bar (the GATECRASH key is keyed by the dry signal, and a hat is an attack); and the
+two clap pickups sat 70 ms apart before each snare, inside the clap's own decay, so they read as one smeared
+hit. Round 1b: `Phrase.printed` names the parts a phrase's space prints; the drill bar prints the snare and
+clap only, keeps the kick and hats dry, and takes the drill shape (snare on three and the and of four, one
+eighth-triplet clap pickup before each). The space's send is calibrated on the printed notes, since the
+others never reach it. `CypherKits.VERSION` is 2. Not heard.

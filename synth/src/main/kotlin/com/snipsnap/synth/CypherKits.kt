@@ -6,6 +6,7 @@ import com.snipsnap.synth.Cypher.Note
 import com.snipsnap.synth.Gatecrash.Mode.STONE
 import com.snipsnap.synth.Gatecrash.Space
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -40,7 +41,7 @@ import kotlin.math.min
  */
 object CypherKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         TRAP("cypher-trap", "Trap", 140),
@@ -63,10 +64,13 @@ object CypherKits {
                         val subMacros: Map<String, Float>? = null)
 
     /**
-     * A phrase: notes on the kit's grid, one shared space (or dry), and the parts that choke each other inside
-     * it (a sub stops the sub before it, as the pads would on the sampler).
+     * A phrase: notes on the kit's grid, one shared space (or dry), the parts that choke each other inside
+     * it (a sub stops the sub before it, as the pads would on the sampler), and which parts the space prints
+     * ([printed]; null is every part). Round 1's drill phrase sent its kick and hats through the room too:
+     * every hat re-opened the gate, the room never closed, and the owner heard it as messy.
      */
-    internal class Phrase(val name: String, val space: Space?, val notes: List<Note>, val choke: Set<Int> = emptySet())
+    internal class Phrase(val name: String, val space: Space?, val notes: List<Note>, val choke: Set<Int> = emptySet(),
+                          val printed: Set<Int>? = null)
 
     /** A dry hit's level against a full one, as its space hears it. The finished zones are then levelled ([zoneGain]). */
     fun touch(velocity: Float): Float = .35f + .65f * velocity.coerceIn(0f, 1f)
@@ -97,10 +101,13 @@ object CypherKits {
         }
     }
 
-    /** The space [role] is printed in, or null for a dry pad; its send measured once on the pad's own first take. */
+    /**
+     * The space [role] is printed in, or null for a dry pad; its send measured once on the pad's own first
+     * take (on a phrase, on the notes the space prints, since the others never reach it).
+     */
     fun spaceOf(kit: Kit, role: Int): Space? {
         val authored = (if (role < HITS) parts(kit)[role].space else phrases(kit)[role - HITS].space) ?: return null
-        return spaces.getOrPut(kit to role) { Gatecrash.calibrated(dryRaw(kit, role, 1f, 0), authored, seedOf(kit, role)) }
+        return spaces.getOrPut(kit to role) { Gatecrash.calibrated(printedRaw(kit, role, 1f, 0), authored, seedOf(kit, role)) }
     }
 
     private val spaces = ConcurrentHashMap<Pair<Kit, Int>, Space>()
@@ -119,10 +126,19 @@ object CypherKits {
         return KitStrikes.finish(dryRaw(kit, role, velocity, take), zoneGain(kit, role, velocity))
     }
 
-    /** Each stage of one pad's space, for the tests that measure it. Null for a dry pad. */
+    /**
+     * Each stage of one pad's space, for the tests that measure it. Null for a dry pad. On a phrase, `out`
+     * is the printed notes with their room plus the unprinted notes dry; `ret` is the room alone.
+     */
     internal fun stages(kit: Kit, role: Int, velocity: Float, take: Int): Gatecrash.Stages? {
         val space = spaceOf(kit, role) ?: return null
-        return Gatecrash.process(dryRaw(kit, role, velocity, take), space, touch(velocity), seedOf(kit, role))
+        val printed = Gatecrash.process(printedRaw(kit, role, velocity, take), space, touch(velocity), seedOf(kit, role))
+        if (role < HITS || phrases(kit)[role - HITS].printed == null) return printed
+        val dry = unprintedRaw(kit, role, velocity, take)
+        val out = FloatArray(max(printed.out.size, dry.size)) { i ->
+            (if (i < printed.out.size) printed.out[i] else 0f) + (if (i < dry.size) dry[i] else 0f)
+        }
+        return Gatecrash.Stages(out, printed.ret, printed.gate, printed.attacks)
     }
 
     private fun raw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray =
@@ -131,22 +147,41 @@ object CypherKits {
     /** The bar at this kit's tempo plus the tail a long sub needs. */
     fun phraseSeconds(kit: Kit): Float = (4 * 60f / kit.bpm + 1.2f)
 
+    /** The whole pad dry: a hit, or every note of a phrase. */
     internal fun dryRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
         val parts = parts(kit)
         if (role < HITS) return KitStrikes.struck(parts[role].strike, velocity, take, touch(velocity))
+        return phraseRaw(kit, phrases(kit)[role - HITS], velocity, take)
+    }
+
+    /** What the pad's space hears: the hit, or only the notes a phrase prints. */
+    internal fun printedRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
+        if (role < HITS) return dryRaw(kit, role, velocity, take)
         val phrase = phrases(kit)[role - HITS]
-        return phraseRaw(kit, phrase, velocity, take)
+        return phraseRaw(kit, phrase, velocity, take, only = phrase.printed)
+    }
+
+    /** The notes a phrase keeps dry beside its space; empty when the space prints every part. */
+    private fun unprintedRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
+        val phrase = phrases(kit)[role - HITS]
+        val printed = phrase.printed ?: return FloatArray(0)
+        return phraseRaw(kit, phrase, velocity, take, only = phrase.notes.map { it.part }.toSet() - printed)
     }
 
     /** [phraseRaw] for a phrase a test authors. */
     internal fun phraseRawForTest(kit: Kit, phrase: Phrase, velocity: Float, take: Int): FloatArray = phraseRaw(kit, phrase, velocity, take)
 
-    /** A dry phrase: every note a fresh strike at its offset start, summed, with the in-phrase chokes applied as the sampler would. */
-    private fun phraseRaw(kit: Kit, phrase: Phrase, velocity: Float, take: Int): FloatArray {
+    /**
+     * A dry phrase: every note a fresh strike at its offset start, summed, with the in-phrase chokes applied
+     * as the sampler would. [only] limits it to notes of those parts (the take still walks over every note,
+     * so a part's strikes are the same whether or not the other parts are summed).
+     */
+    private fun phraseRaw(kit: Kit, phrase: Phrase, velocity: Float, take: Int, only: Set<Int>? = null): FloatArray {
         val parts = parts(kit)
         val out = FloatArray((phraseSeconds(kit) * Dsp.RATE).toInt())
         val choked = phrase.notes.withIndex().filter { it.value.part in phrase.choke }.sortedBy { Cypher.startFrame(it.value, kit.bpm) }
         for ((i, note) in phrase.notes.withIndex()) {
+            if (only != null && note.part !in only) continue
             val v = (velocity * note.weight).coerceIn(.05f, 1f)
             val hit = KitStrikes.struck(parts[note.part].strike, v, (take + i) % TAKES, touch(v), note.tuneSemis)
             val start = Cypher.startFrame(note, kit.bpm)
@@ -294,12 +329,17 @@ object CypherKits {
     )
 
     private val drillPhrases = listOf(
-        // The drill snare bar: the snare on two and the and of three, each with two sixteenth-triplet clap
-        // pickups, the kick on one and the and of two's off-beat, hats in eighths. One shared room.
-        Phrase("Triplet Snare", drillRoom,
-            listOf(Note(0.0, 0, 1f), Note(1.75, 0, .9f), Note(1.0, 1, 1f), Note(2.5, 1, 1f),
-                Note(1 - 1.0 / 3, 8, .55f), Note(1 - 1.0 / 6, 8, .70f), Note(2.5 - 1.0 / 3, 8, .55f), Note(2.5 - 1.0 / 6, 8, .70f)) +
-                List(8) { Note(it * .5, 2, if (it % 2 == 0) .7f else .45f) }),
+        // The drill snare bar, round 1b. Round 1 put the snare on two and the and of three with two
+        // sixteenth-triplet claps before each, and sent the kick and hats through the room too; the owner
+        // heard it as messy. Now: the snare on three and the and of four (the drill backbeat that leans into
+        // the next bar), one eighth-triplet clap pickup before each, the kick on one and the and of two,
+        // hats in straight eighths. Only the snare and the clap go to the room; the kick and hats stay dry,
+        // as they are on their own pads, so the gate is keyed by the snare and not by every hat.
+        Phrase("Drill Snare", drillRoom,
+            listOf(Note(0.0, 0, 1f), Note(1.5, 0, .85f), Note(2.0, 1, 1f), Note(3.5, 1, .95f),
+                Note(2 - 1.0 / 3, 8, .55f), Note(3.5 - 1.0 / 3, 8, .50f)) +
+                List(8) { Note(it * .5, 2, if (it % 2 == 0) .7f else .45f) },
+            printed = setOf(1, 8)),
         // The sub pattern: the root on one, down a fifth on the and of two, the late slide on three, up an octave before four.
         Phrase("Slide Call", null,
             listOf(Note(0.0, 0, 1f), Note(0.0, 4, 1f), Note(1.5, 5, .95f), Note(2.0, 7, .9f), Note(3.5, 6, .9f)), choke = setOf(4, 5, 6, 7)),

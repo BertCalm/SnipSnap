@@ -16,11 +16,22 @@ privately now live in one place (`KitStrikes`) for both families.
 The [engineering specification](superpowers/specs/2026-11-12-cypher-hiphop-drum-kits.md) has the six kits'
 design, the Python prototype's numbers, and what changed while building.
 
-**Status: round 1 built, not heard.** The owner chose the family on 2026-11-12 ("I want to build this"),
-asked for the sub as an editable THUMP voice, and chose TRAP and DRILL first. Both kits are on the shelf, with
-their velocity and round-robin grid proven through save, playback and MPC 3 export in software. Nothing has
-been played on a phone or an MPC, and the owner has not yet heard round 1. The
+**Status: round 1b, waiting for the second listen.** The owner chose the family on 2026-11-12 ("I want to
+build this"), asked for the sub as an editable THUMP voice, and chose TRAP and DRILL first. Both kits are on
+the shelf, with their velocity and round-robin grid proven through save, playback and MPC 3 export in
+software. Nothing has been played on a phone or an MPC. The
 [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner's account.
+
+**Round 1 heard (2026-11-12).** The owner's words: "The triple snare thing is messy." That is DRILL's A15.
+Round 1 sent the whole phrase through the dark room, kick and hats included, so every hat re-opened the gate
+and the room never closed between backbeats; its two clap pickups 70 ms apart smeared into that wash. Nothing
+was said about the other thirty-one pads, which is not the same as approval.
+
+**Round 1b (kit version 2):** a phrase now names the parts its space prints (`Phrase.printed`); the drill bar
+prints only the snare and clap, and the kick and hats stay dry, as they are on their own pads. The pattern is
+the drill shape: snare on three and the and of four, one eighth-triplet clap pickup before each, kick on one
+and the and of two, hats in straight eighths. `CypherTest` checks the gate is keyed only by the printed
+notes and shuts between them. Not heard.
 
 ## THUMP SUB
 

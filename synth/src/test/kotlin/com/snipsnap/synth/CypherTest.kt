@@ -223,6 +223,22 @@ class CypherTest {
         assertTrue(worst < -20.0, "the 1/64 roll's worst dip is $worst dB")
     }
 
+    @Test fun `a phrase prints only the parts it names`() {
+        // The drill snare bar sends its snare and clap to the room and keeps the kick and hats dry: the gate
+        // is keyed by the snare, not by every hat, so the room opens once per backbeat and shuts between.
+        val phrase = CypherKits.phrases(Kit.DRILL)[0]
+        assertEquals(setOf(1, 8), phrase.printed)
+        val stages = assertNotNull(CypherKits.stages(Kit.DRILL, 14, 1f, 0))
+        val printedNotes = phrase.notes.filter { it.part in phrase.printed!! }.map { Cypher.startFrame(it, Kit.DRILL.bpm) }.sorted()
+        assertEquals(printedNotes.size, stages.attacks.size, "attacks ${stages.attacks} against printed notes $printedNotes")
+        // Between the clap pickup before beat three and the snare on the and of four the room shuts: 250 ms after
+        // the snare on three its hold (140 ms) and close (60 ms) are over and the gate is at zero.
+        val snareOnThree = Cypher.startFrame(Cypher.Note(2.0, 1, 1f), Kit.DRILL.bpm)
+        assertEquals(0f, stages.gate[snareOnThree + frames(250f)], 1e-6f)
+        // And the printed notes' room plus the dry notes is what the pad plays.
+        assertTrue(stages.out.size >= CypherKits.dryRaw(Kit.DRILL, 14, 1f, 0).size)
+    }
+
     @Test fun `a phrase lands where it was written`() {
         // On the drum phrase, GATECRASH's attack key hears one attack per distinct note time (notes closer
         // than its 12 ms re-arm merge), each within 2 ms of the authored start.
@@ -290,7 +306,8 @@ class CypherTest {
         for (kit in Kit.entries) for (role in 0 until CypherKits.PADS) {
             val space = CypherKits.spaceOf(kit, role) ?: continue
             val stages = assertNotNull(CypherKits.stages(kit, role, 1f, 0))
-            val measured = 10 * log10(energy(stages.ret) / energy(CypherKits.dryRaw(kit, role, 1f, 0)))
+            // Against what the space hears: the hit, or the notes a phrase prints.
+            val measured = 10 * log10(energy(stages.ret) / energy(CypherKits.printedRaw(kit, role, 1f, 0)))
             assertEquals(space.roomDb.toDouble(), measured, 0.3, "${kit.name} role $role room energy")
             assertTrue(space.roomDb <= 4f, "${kit.name} role $role is authored at ${space.roomDb} dB")
         }
