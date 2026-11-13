@@ -42,8 +42,7 @@ import com.snipsnap.shell.Places
  * composable only draws them. It scrolls because a phone in one hand is
  * short, and it is one tap from every screen now, behind the gear.
  *
- * The boot lines stay on their LCD strip at the head; the sections are
- * group boxes under it, THIS KIT's pattern, so a wall of small type is five
+ * The sections are group boxes, THIS KIT's pattern, so a wall of small type is five
  * closed lines and the one that matters is open. [cameFrom] is the place
  * that was under the gear - the gear opens from any place - and its section
  * starts open; the others start closed, and a tap opens or shuts any of them.
@@ -59,19 +58,6 @@ fun HelpScreen(cameFrom: Place) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .lcdPanel(scheme)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            TapeText(Copy.BOOT_READY, TapeType.lcdHeader, scheme.lcdInk.tape)
-            Spacer(Modifier.height(4.dp))
-            for (line in Copy.BOOT_LINES) {
-                TapeText(line, TapeType.lcdSmall, scheme.lcdInk2)
-            }
-        }
         for ((section, lines) in Places.HELP) {
             val here = section == cameFrom.label
             var open by rememberSaveable(section) { mutableStateOf(here) }

@@ -24,7 +24,7 @@ import org.junit.runner.RunWith
  *
  * It says it is loading by the 200 ms / 500 ms rule every loading screen
  * keeps: an empty LCD panel and no words for the first 200 ms, so a library
- * that reads at once never flashes "LOADING THE LIBRARY…"; the panel with its
+ * that reads at once never flashes "Loading the LIBRARY…"; the panel with its
  * words once the read has run that long; and, once the words have shown, at
  * least 500 ms of them even if the read ends a moment later. The footer's way
  * in stays away for the whole of it, lingering included, because which button

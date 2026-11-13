@@ -51,7 +51,7 @@ class RimeSynthScreenTest : ComposeScreenTest() {
             SynthScreen(entry=null,shelfRoot=root,onToast={},onKitUpdated={},onShelfAssetWritten={},
                 onDroneToLoop={_,_,_->},onOpenSurface={},appScope=scope,settings=settings)
         }
-        compose.onNodeWithText("UNFOLD SHAPES THE OPENING. HELD DETAIL STAYS STEADY.").assertExists()
+        compose.onNodeWithText("Unfold shapes the opening. Held detail stays steady.").assertExists()
         assertEquals(patch.velocity,progress("VELOCITY"),.00001f)
         compose.runOnIdle {
             val saved=SynthDrafts.read(settings).filterIsInstance<RimePatch>().single()
@@ -79,7 +79,7 @@ class RimeSynthScreenTest : ComposeScreenTest() {
             assertEquals(patch.velocity,progress("VELOCITY"),.00001f)
             assertEquals((patch.gateSeconds-.15f)/3.85f,progress("GATE"),.00001f)
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
-            compose.onNodeWithText("UNFOLD 60–100 REPEATS DETAIL DURING HOLD. LOWER SETTINGS UNFOLD ONCE.").assertExists()
+            compose.onNodeWithText("Unfold 60–100 repeats detail during hold. Lower settings unfold once.").assertExists()
         }
     }
 }

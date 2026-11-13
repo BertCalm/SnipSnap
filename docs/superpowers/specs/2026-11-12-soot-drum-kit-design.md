@@ -569,3 +569,23 @@ byte-identical through the change (a hash over all four, `6412613f…`, before a
 
 Page: https://claude.ai/artifact/Gqu8thscT25ga3iWQrG2S7. The owner picks; the pick replaces A16's
 groove, and `SootGenreKits.VERSION` goes to 2.
+
+## Basement Dub's four bars, picked (2026-11-13, `SootGenreKits.VERSION` 2)
+
+The owner picked B, steppers, for SOOT BASEMENT DUB's A16. The kit now uses:
+- **The groove:** a kick on every beat, the rim on 3, offbeat hats, and the rim thrown at the turn.
+- **The coil's wetness:** .5.
+- **The rim's send:** .4.
+
+These are the candidate's exact parameters. Checked by hash:
+- the kit's A16 is byte-identical to the clip the owner picked;
+- the other three kits' four bars are unchanged;
+- the candidate generator still reproduces the version-1 one-drop for its comparison.
+
+Re-checked:
+- **The loop seam:** 0.0045, against the music's 0.056.
+- **The roll:** it still rises 11.1 dB.
+- **The proof:** all four kits again (768 slices through save, playback and MPC 3 read-back).
+
+With this pick the owner has approved every pad of the four sibling kits: 63 kept as built, and
+Dub's four bars by choice.

@@ -14,10 +14,10 @@ import kotlin.test.assertTrue
 class NacrePresetTest {
     @Test
     fun `three starting recipes preserve the accepted source controls and their return settings`() {
-        val presets = NacrePresets.all()
+        val presets = NacrePresets.all().take(3)
         assertEquals(listOf("Pearl Close", "Coral Reply", "Kelp Passage"), presets.map { it.name })
         assertEquals(presets.size, presets.map { it.name }.toSet().size)
-        assertEquals(presets, NacrePresets.forVoice(NacreVoice.PEARL))
+        assertEquals(presets, NacrePresets.forVoice(NacreVoice.PEARL).take(3))
         for (patch in presets) {
             assertTrue(patch.name.isNotBlank())
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name), patch.name)
@@ -44,7 +44,7 @@ class NacrePresetTest {
             "Kelp Passage" to "14fa2b8dfcbc4fb5fcd036b15b081d1b695e30201986cd69370592214cfc3303",
         )
         val renders = mutableListOf<FloatArray>()
-        for (patch in NacrePresets.all()) {
+        for (patch in NacrePresets.all().take(3)) {
             val restored = Patches.fromJsonText(patch.toJsonText())
             assertEquals(patch, restored)
             val rendered = patch.render()
@@ -67,7 +67,7 @@ class NacrePresetTest {
     }
 
     @Test
-    fun `factory discovery serves exactly the current three recipes and lands them dry`() {
+    fun `factory discovery serves retained and kept contact recipes and lands them dry`() {
         val expected = NacrePresets.all()
         assertEquals(expected, Presets.all().filterIsInstance<NacrePatch>())
         assertEquals(expected, Presets.forVoice("NACRE", "PEARL"))

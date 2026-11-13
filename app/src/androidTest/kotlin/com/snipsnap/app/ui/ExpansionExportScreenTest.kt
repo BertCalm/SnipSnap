@@ -132,7 +132,7 @@ class ExpansionExportScreenTest : ComposeScreenTest() {
         waitFor("the write button") { shows(Copy.EXPANSION_WRITE) }
         press(Copy.EXPANSION_WRITE)
         waitFor("the write to land", timeoutMillis = 30_000) { Copy.expansionWritten("DAWN SHIFT", 2) in toasts }
-        assertTrue("the skipped kit is named: $toasts", toasts.any { it.startsWith("BROKEN SKIPPED") })
+        assertTrue("the skipped kit is named: $toasts", toasts.any { it.startsWith("BROKEN skipped") })
         assertTrue(File(Exports.dir(context), "Expansions/DAWN SHIFT/Expansion.xml").isFile)
     }
 

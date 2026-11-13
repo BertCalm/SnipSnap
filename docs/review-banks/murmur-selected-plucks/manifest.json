@@ -1,0 +1,918 @@
+{
+  "bank": "murmur-selected-plucks",
+  "version": 1,
+  "base": "0f7d0e26cfdf875a995e6c8a5aec8225e3fd1fe9",
+  "opt_in_only": true,
+  "factory_promotion": false,
+  "pre_guard_checkpoint": "5c2a8fe9c",
+  "renderer_source_sha256": {
+    "Murmur.kt": "683bf1f204569401ce3c12fa451559329a4ed2acd0c1b7f71a816f18ef2dbdf2",
+    "MurmurPatch.kt": "2609389d4902ef491c8e035bc01788eda5d34809be39618ce31adc0018450217",
+    "MurmurSelectedPlucks.kt": "fcc8c6466c385b5b5b87c6cf64755c223bb6efea9b22984ae9a38f447954850b"
+  },
+  "entries": [
+    {
+      "id": "held-hollow-wire",
+      "gain": 1.0885975360870361,
+      "pcm_sha256": "29912f67bf0ed9ca1aaa17d404a73040160ad4aefc786dcb9fbbbd910d887974",
+      "matched_wav_sha256": "3a8c07f472a5d0667bf38bd063524b7450f8bd3cb2b9ccb1d7670893d70b814b",
+      "native_recipe_sha256": "54227024db276b6492a06db188ba665a1028fcd54d24f91527fd691eaece2693",
+      "native_seam": 0,
+      "predecessor_sha256": "465dc002628b7be13aa676d2f2aecdc4c1f9d8fb7639906475293cf66687416a",
+      "recipe_exact_except_model_body": true,
+      "recipe": "held-hollow-wire.json",
+      "native_recipe": {
+        "engine": "MURMUR",
+        "version": 1,
+        "name": "OPEN STRING",
+        "voice": "PLUCK",
+        "macros": {
+          "MOUTH": 0.8399999737739563,
+          "EDGE": 0.2199999988079071,
+          "BREATH": 0.03999999910593033,
+          "MOTION": 0.019999999552965164,
+          "BODY": 0.8799999952316284,
+          "HOLD": 1
+        },
+        "midi": 60,
+        "velocity": 0.8600000143051147,
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            2.006,
+            3
+          ],
+          "trajectory": "ATTACK",
+          "direction": 1,
+          "referenceSeconds": 0.48,
+          "attack": 0.002,
+          "decay": 0.24,
+          "sustain": 0.08,
+          "release": 0.35,
+          "targets": [
+            {
+              "name": "pluck Closed hum",
+              "centers": [
+                283.5,
+                840,
+                1680.0000000000002,
+                2860.0000000000005,
+                3800
+              ],
+              "widths": [
+                103.49999999999999,
+                186.29999999999998,
+                254.14999999999998,
+                322,
+                488.74999999999994
+              ],
+              "gains": [
+                1.1700000000000002,
+                0.7200000000000001,
+                0.325,
+                0.18000000000000002,
+                0.065
+              ],
+              "sourceBalance": 0.05000000000000001
+            },
+            {
+              "name": "pluck Rounded",
+              "centers": [
+                346.5,
+                787.5,
+                1568.0000000000002,
+                2585,
+                3500
+              ],
+              "widths": [
+                124.19999999999999,
+                165.6,
+                234.6,
+                322,
+                439.87499999999994
+              ],
+              "gains": [
+                1.105,
+                0.81,
+                0.39,
+                0.18000000000000002,
+                0.0975
+              ],
+              "sourceBalance": 0.098
+            },
+            {
+              "name": "pluck Open",
+              "centers": [
+                798,
+                1312.5,
+                2744.0000000000005,
+                3630.0000000000005,
+                4400
+              ],
+              "widths": [
+                196.64999999999998,
+                206.99999999999997,
+                293.25,
+                349.59999999999997,
+                508.29999999999995
+              ],
+              "gains": [
+                0.8450000000000001,
+                1.26,
+                0.8450000000000001,
+                0.36000000000000004,
+                0.0975
+              ],
+              "sourceBalance": 0.23000000000000004
+            },
+            {
+              "name": "pluck Narrow",
+              "centers": [
+                378,
+                2152.5,
+                3192.0000000000005,
+                4180,
+                4800
+              ],
+              "widths": [
+                113.85,
+                238.04999999999998,
+                342.125,
+                386.4,
+                566.9499999999999
+              ],
+              "gains": [
+                0.7150000000000001,
+                1.215,
+                0.9750000000000001,
+                0.27,
+                0.078
+              ],
+              "sourceBalance": 0.13
+            }
+          ],
+          "model": 4,
+          "body": "HOLLOW_WIRE_V1"
+        }
+      },
+      "supported_midi": [
+        36,
+        96
+      ],
+      "source_recipe": {
+        "renderer": "snipsnap-murmur-body-study",
+        "version": 1,
+        "source_sha256": "626793bc9743b075b296e51231aa9d36b943872ac56eb3da60ede5943e991a19",
+        "variant": "HOLLOW_WIRE",
+        "patch": {
+          "engine": "MURMUR",
+          "version": 1,
+          "name": "OPEN STRING",
+          "voice": "PLUCK",
+          "macros": {
+            "MOUTH": 0.8399999737739563,
+            "EDGE": 0.2199999988079071,
+            "BREATH": 0.03999999910593033,
+            "MOTION": 0.019999999552965164,
+            "BODY": 0.8799999952316284,
+            "HOLD": 1
+          },
+          "midi": 60,
+          "velocity": 0.8600000143051147,
+          "config": {
+            "routing": "PAIRS",
+            "ratios": [
+              1,
+              2,
+              2.006,
+              3
+            ],
+            "trajectory": "ATTACK",
+            "direction": 1,
+            "referenceSeconds": 0.48,
+            "attack": 0.002,
+            "decay": 0.24,
+            "sustain": 0.08,
+            "release": 0.35,
+            "targets": [
+              {
+                "name": "pluck Closed hum",
+                "centers": [
+                  283.5,
+                  840,
+                  1680.0000000000002,
+                  2860.0000000000005,
+                  3800
+                ],
+                "widths": [
+                  103.49999999999999,
+                  186.29999999999998,
+                  254.14999999999998,
+                  322,
+                  488.74999999999994
+                ],
+                "gains": [
+                  1.1700000000000002,
+                  0.7200000000000001,
+                  0.325,
+                  0.18000000000000002,
+                  0.065
+                ],
+                "sourceBalance": 0.05000000000000001
+              },
+              {
+                "name": "pluck Rounded",
+                "centers": [
+                  346.5,
+                  787.5,
+                  1568.0000000000002,
+                  2585,
+                  3500
+                ],
+                "widths": [
+                  124.19999999999999,
+                  165.6,
+                  234.6,
+                  322,
+                  439.87499999999994
+                ],
+                "gains": [
+                  1.105,
+                  0.81,
+                  0.39,
+                  0.18000000000000002,
+                  0.0975
+                ],
+                "sourceBalance": 0.098
+              },
+              {
+                "name": "pluck Open",
+                "centers": [
+                  798,
+                  1312.5,
+                  2744.0000000000005,
+                  3630.0000000000005,
+                  4400
+                ],
+                "widths": [
+                  196.64999999999998,
+                  206.99999999999997,
+                  293.25,
+                  349.59999999999997,
+                  508.29999999999995
+                ],
+                "gains": [
+                  0.8450000000000001,
+                  1.26,
+                  0.8450000000000001,
+                  0.36000000000000004,
+                  0.0975
+                ],
+                "sourceBalance": 0.23000000000000004
+              },
+              {
+                "name": "pluck Narrow",
+                "centers": [
+                  378,
+                  2152.5,
+                  3192.0000000000005,
+                  4180,
+                  4800
+                ],
+                "widths": [
+                  113.85,
+                  238.04999999999998,
+                  342.125,
+                  386.4,
+                  566.9499999999999
+                ],
+                "gains": [
+                  0.7150000000000001,
+                  1.215,
+                  0.9750000000000001,
+                  0.27,
+                  0.078
+                ],
+                "sourceBalance": 0.13
+              }
+            ],
+            "model": 2
+          }
+        },
+        "output_gain": 1.0885975360870361
+      },
+      "owner_verdict": "keep",
+      "approval_scope": "Exact heard note and native velocity only; wider probes are engineering qualification",
+      "house_normalized_render_is_audition_wav": false
+    },
+    {
+      "id": "finite-hollow-wire",
+      "gain": 2.000858783721924,
+      "pcm_sha256": "6ccd1ecab8e2124f0aca17e9b6769a6cbda8edea060bf51f12eaae6b64a8b8e5",
+      "matched_wav_sha256": "22e71cbd248a75c99aeba6521bdbf58553fa7911baefc1ee767ebf1841bb137d",
+      "native_recipe_sha256": "ec8ee43ab080ed1c0f97ef578206f3a7a95d417b21cceaf74bafa7b496d492fc",
+      "native_seam": 0,
+      "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recipe_exact_except_model_body": true,
+      "recipe": "finite-hollow-wire.json",
+      "native_recipe": {
+        "engine": "MURMUR",
+        "version": 1,
+        "name": "SHORT ANSWER",
+        "voice": "PLUCK",
+        "macros": {
+          "MOUTH": 0.3499999940395355,
+          "EDGE": 0.550000011920929,
+          "BREATH": 0.10000000149011612,
+          "MOTION": 0.3499999940395355,
+          "BODY": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 1,
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            2.006,
+            3
+          ],
+          "trajectory": "ATTACK",
+          "direction": 1,
+          "referenceSeconds": 0.48,
+          "attack": 0.002,
+          "decay": 0.24,
+          "sustain": 0.08,
+          "release": 0.35,
+          "targets": [
+            {
+              "name": "pluck Closed hum",
+              "centers": [
+                283.5,
+                840,
+                1680.0000000000002,
+                2860.0000000000005,
+                3800
+              ],
+              "widths": [
+                103.49999999999999,
+                186.29999999999998,
+                254.14999999999998,
+                322,
+                488.74999999999994
+              ],
+              "gains": [
+                1.1700000000000002,
+                0.7200000000000001,
+                0.325,
+                0.18000000000000002,
+                0.065
+              ],
+              "sourceBalance": 0.05000000000000001
+            },
+            {
+              "name": "pluck Rounded",
+              "centers": [
+                346.5,
+                787.5,
+                1568.0000000000002,
+                2585,
+                3500
+              ],
+              "widths": [
+                124.19999999999999,
+                165.6,
+                234.6,
+                322,
+                439.87499999999994
+              ],
+              "gains": [
+                1.105,
+                0.81,
+                0.39,
+                0.18000000000000002,
+                0.0975
+              ],
+              "sourceBalance": 0.098
+            },
+            {
+              "name": "pluck Open",
+              "centers": [
+                798,
+                1312.5,
+                2744.0000000000005,
+                3630.0000000000005,
+                4400
+              ],
+              "widths": [
+                196.64999999999998,
+                206.99999999999997,
+                293.25,
+                349.59999999999997,
+                508.29999999999995
+              ],
+              "gains": [
+                0.8450000000000001,
+                1.26,
+                0.8450000000000001,
+                0.36000000000000004,
+                0.0975
+              ],
+              "sourceBalance": 0.23000000000000004
+            },
+            {
+              "name": "pluck Narrow",
+              "centers": [
+                378,
+                2152.5,
+                3192.0000000000005,
+                4180,
+                4800
+              ],
+              "widths": [
+                113.85,
+                238.04999999999998,
+                342.125,
+                386.4,
+                566.9499999999999
+              ],
+              "gains": [
+                0.7150000000000001,
+                1.215,
+                0.9750000000000001,
+                0.27,
+                0.078
+              ],
+              "sourceBalance": 0.13
+            }
+          ],
+          "model": 4,
+          "body": "HOLLOW_WIRE_V1"
+        }
+      },
+      "supported_midi": [
+        36,
+        96
+      ],
+      "source_recipe": {
+        "renderer": "snipsnap-murmur-body-study",
+        "version": 1,
+        "source_sha256": "626793bc9743b075b296e51231aa9d36b943872ac56eb3da60ede5943e991a19",
+        "variant": "HOLLOW_WIRE",
+        "patch": {
+          "engine": "MURMUR",
+          "version": 1,
+          "name": "SHORT ANSWER",
+          "voice": "PLUCK",
+          "macros": {
+            "MOUTH": 0.3499999940395355,
+            "EDGE": 0.550000011920929,
+            "BREATH": 0.10000000149011612,
+            "MOTION": 0.3499999940395355,
+            "BODY": 0.44999998807907104,
+            "HOLD": 0
+          },
+          "midi": 60,
+          "velocity": 1,
+          "config": {
+            "routing": "PAIRS",
+            "ratios": [
+              1,
+              2,
+              2.006,
+              3
+            ],
+            "trajectory": "ATTACK",
+            "direction": 1,
+            "referenceSeconds": 0.48,
+            "attack": 0.002,
+            "decay": 0.24,
+            "sustain": 0.08,
+            "release": 0.35,
+            "targets": [
+              {
+                "name": "pluck Closed hum",
+                "centers": [
+                  283.5,
+                  840,
+                  1680.0000000000002,
+                  2860.0000000000005,
+                  3800
+                ],
+                "widths": [
+                  103.49999999999999,
+                  186.29999999999998,
+                  254.14999999999998,
+                  322,
+                  488.74999999999994
+                ],
+                "gains": [
+                  1.1700000000000002,
+                  0.7200000000000001,
+                  0.325,
+                  0.18000000000000002,
+                  0.065
+                ],
+                "sourceBalance": 0.05000000000000001
+              },
+              {
+                "name": "pluck Rounded",
+                "centers": [
+                  346.5,
+                  787.5,
+                  1568.0000000000002,
+                  2585,
+                  3500
+                ],
+                "widths": [
+                  124.19999999999999,
+                  165.6,
+                  234.6,
+                  322,
+                  439.87499999999994
+                ],
+                "gains": [
+                  1.105,
+                  0.81,
+                  0.39,
+                  0.18000000000000002,
+                  0.0975
+                ],
+                "sourceBalance": 0.098
+              },
+              {
+                "name": "pluck Open",
+                "centers": [
+                  798,
+                  1312.5,
+                  2744.0000000000005,
+                  3630.0000000000005,
+                  4400
+                ],
+                "widths": [
+                  196.64999999999998,
+                  206.99999999999997,
+                  293.25,
+                  349.59999999999997,
+                  508.29999999999995
+                ],
+                "gains": [
+                  0.8450000000000001,
+                  1.26,
+                  0.8450000000000001,
+                  0.36000000000000004,
+                  0.0975
+                ],
+                "sourceBalance": 0.23000000000000004
+              },
+              {
+                "name": "pluck Narrow",
+                "centers": [
+                  378,
+                  2152.5,
+                  3192.0000000000005,
+                  4180,
+                  4800
+                ],
+                "widths": [
+                  113.85,
+                  238.04999999999998,
+                  342.125,
+                  386.4,
+                  566.9499999999999
+                ],
+                "gains": [
+                  0.7150000000000001,
+                  1.215,
+                  0.9750000000000001,
+                  0.27,
+                  0.078
+                ],
+                "sourceBalance": 0.13
+              }
+            ],
+            "model": 2
+          }
+        },
+        "output_gain": 2.000858783721924
+      },
+      "owner_verdict": "keep",
+      "approval_scope": "Exact heard note and native velocity only; wider probes are engineering qualification",
+      "house_normalized_render_is_audition_wav": false
+    },
+    {
+      "id": "approved-c2",
+      "gain": 3.3389108180999756,
+      "pcm_sha256": "3e1eccc0f7e1ee9aad90852b1eae9b730deedd7f5e8baaf3c2044fde216468b6",
+      "matched_wav_sha256": "f444994044e6b2b5f4d2403ae8f7403aa927c5c9ae5154c2df94719d15074ca3",
+      "native_recipe_sha256": "f0676aad9c5ea0123ed93121b8112e5e77ea3dfd5f787816e9385f40efb1ba15",
+      "native_seam": 0,
+      "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recipe_exact_except_model_body": true,
+      "recipe": "approved-c2.json",
+      "native_recipe": {
+        "engine": "MURMUR",
+        "version": 1,
+        "name": "SHORT ANSWER",
+        "voice": "PLUCK",
+        "macros": {
+          "MOUTH": 0.3499999940395355,
+          "EDGE": 0.550000011920929,
+          "BREATH": 0.10000000149011612,
+          "MOTION": 0.3499999940395355,
+          "BODY": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 36,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            1,
+            4,
+            3
+          ],
+          "trajectory": "ATTACK",
+          "direction": 1,
+          "referenceSeconds": 0.48,
+          "attack": 0.002,
+          "decay": 0.24,
+          "sustain": 0.08,
+          "release": 0.35,
+          "targets": [
+            {
+              "name": "pluck Closed hum",
+              "centers": [
+                283.5,
+                840,
+                1680.0000000000002,
+                2860.0000000000005,
+                3800
+              ],
+              "widths": [
+                90,
+                162,
+                221,
+                280,
+                425
+              ],
+              "gains": [
+                1.1700000000000002,
+                0.7200000000000001,
+                0.325,
+                0.18000000000000002,
+                0.065
+              ],
+              "sourceBalance": 0.05000000000000001
+            },
+            {
+              "name": "pluck Rounded",
+              "centers": [
+                346.5,
+                787.5,
+                1568.0000000000002,
+                2585,
+                3500
+              ],
+              "widths": [
+                108,
+                144,
+                204,
+                280,
+                382.5
+              ],
+              "gains": [
+                1.105,
+                0.81,
+                0.39,
+                0.18000000000000002,
+                0.0975
+              ],
+              "sourceBalance": 0.098
+            },
+            {
+              "name": "pluck Open",
+              "centers": [
+                798,
+                1312.5,
+                2744.0000000000005,
+                3630.0000000000005,
+                4400
+              ],
+              "widths": [
+                171,
+                180,
+                255,
+                304,
+                442
+              ],
+              "gains": [
+                0.8450000000000001,
+                1.26,
+                0.8450000000000001,
+                0.36000000000000004,
+                0.0975
+              ],
+              "sourceBalance": 0.23000000000000004
+            },
+            {
+              "name": "pluck Narrow",
+              "centers": [
+                378,
+                2152.5,
+                3192.0000000000005,
+                4180,
+                4800
+              ],
+              "widths": [
+                99,
+                207,
+                297.5,
+                336,
+                493
+              ],
+              "gains": [
+                0.7150000000000001,
+                1.215,
+                0.9750000000000001,
+                0.27,
+                0.078
+              ],
+              "sourceBalance": 0.13
+            }
+          ],
+          "model": 4,
+          "body": "STEADY_ROOT_V1"
+        }
+      },
+      "supported_midi": [
+        36,
+        54
+      ],
+      "source_recipe": {
+        "renderer": "snipsnap-murmur-finite-root",
+        "version": 1,
+        "source_sha256": "58642d41290485af6497ab80297ac0fe992eb1a5f8bc6663f271cce161b39142",
+        "root_policy": "quadrature-075-c3-c4-smoothstep",
+        "variant": "STEADY_WITH_ROOT",
+        "patch": {
+          "engine": "MURMUR",
+          "version": 1,
+          "name": "SHORT ANSWER",
+          "voice": "PLUCK",
+          "macros": {
+            "MOUTH": 0.3499999940395355,
+            "EDGE": 0.550000011920929,
+            "BREATH": 0.10000000149011612,
+            "MOTION": 0.3499999940395355,
+            "BODY": 0.44999998807907104,
+            "HOLD": 0
+          },
+          "midi": 36,
+          "velocity": 0.6499999761581421,
+          "config": {
+            "routing": "PAIRS",
+            "ratios": [
+              1,
+              1,
+              4,
+              3
+            ],
+            "trajectory": "ATTACK",
+            "direction": 1,
+            "referenceSeconds": 0.48,
+            "attack": 0.002,
+            "decay": 0.24,
+            "sustain": 0.08,
+            "release": 0.35,
+            "targets": [
+              {
+                "name": "pluck Closed hum",
+                "centers": [
+                  283.5,
+                  840,
+                  1680.0000000000002,
+                  2860.0000000000005,
+                  3800
+                ],
+                "widths": [
+                  90,
+                  162,
+                  221,
+                  280,
+                  425
+                ],
+                "gains": [
+                  1.1700000000000002,
+                  0.7200000000000001,
+                  0.325,
+                  0.18000000000000002,
+                  0.065
+                ],
+                "sourceBalance": 0.05000000000000001
+              },
+              {
+                "name": "pluck Rounded",
+                "centers": [
+                  346.5,
+                  787.5,
+                  1568.0000000000002,
+                  2585,
+                  3500
+                ],
+                "widths": [
+                  108,
+                  144,
+                  204,
+                  280,
+                  382.5
+                ],
+                "gains": [
+                  1.105,
+                  0.81,
+                  0.39,
+                  0.18000000000000002,
+                  0.0975
+                ],
+                "sourceBalance": 0.098
+              },
+              {
+                "name": "pluck Open",
+                "centers": [
+                  798,
+                  1312.5,
+                  2744.0000000000005,
+                  3630.0000000000005,
+                  4400
+                ],
+                "widths": [
+                  171,
+                  180,
+                  255,
+                  304,
+                  442
+                ],
+                "gains": [
+                  0.8450000000000001,
+                  1.26,
+                  0.8450000000000001,
+                  0.36000000000000004,
+                  0.0975
+                ],
+                "sourceBalance": 0.23000000000000004
+              },
+              {
+                "name": "pluck Narrow",
+                "centers": [
+                  378,
+                  2152.5,
+                  3192.0000000000005,
+                  4180,
+                  4800
+                ],
+                "widths": [
+                  99,
+                  207,
+                  297.5,
+                  336,
+                  493
+                ],
+                "gains": [
+                  0.7150000000000001,
+                  1.215,
+                  0.9750000000000001,
+                  0.27,
+                  0.078
+                ],
+                "sourceBalance": 0.13
+              }
+            ],
+            "model": 2
+          }
+        },
+        "output_gain": 3.3389108180999756
+      },
+      "owner_verdict": "keep",
+      "approval_scope": "Exact heard note and native velocity only; wider probes are engineering qualification",
+      "house_normalized_render_is_audition_wav": false
+    }
+  ],
+  "held_playback": {
+    "cycles": 2,
+    "release_frames": 3528,
+    "silence_frames": 11025,
+    "onset_frames": 0,
+    "rounding": "ties to even",
+    "heard_wav_sha256": "b595fd3d5c3a7fde5e3f68244bd7fdce84ab2305de70ad485d067851abfc4ac9"
+  },
+  "preservation": {
+    "legacy_recipe_pcm_predecessor_cases": 60,
+    "C3": "B preference only, not final bank approval",
+    "KEY_CHOIR": "legacy hash equality",
+    "finite_grained": "quarantined and absent"
+  }
+}

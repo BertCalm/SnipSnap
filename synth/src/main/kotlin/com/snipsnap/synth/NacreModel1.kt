@@ -115,7 +115,16 @@ internal object NacreModel1 {
         velocity: Float = 1f,
         seed: Long = DEFAULT_SEED,
         options: Options = Options(),
-    ): Probe = play(voice, macros, midi, velocity, seed, options, record = true)
+        strike: NacreStrikeShape = NacreStrikeShape.DEFAULT,
+    ): Probe = play(voice, macros, midi, velocity, seed, options, record = true, strike = strike)
+
+    /** Versioned study adapter; ordinary model-1 replay never supplies additional loss. */
+    internal fun inspectContactStudy(voice: NacreVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Long, options: Options, contactLoss: Float,
+        strike: NacreStrikeShape = NacreStrikeShape.DEFAULT): Probe {
+        require(contactLoss.isFinite() && contactLoss in 0f..1f)
+        return play(voice, macros, midi, velocity, seed, options, true, contactLoss, strike)
+    }
 
     private fun stopIfInterrupted() {
         if (Thread.currentThread().isInterrupted) throw CancellationException("NACRE render cancelled")
@@ -241,11 +250,23 @@ internal object NacreModel1 {
         }
     }
 
+    /** Unit-DC raised-cosine contact smoothing; the burst's smooth .35 ms edges stay smooth. */
+    private fun contact(burst: FloatArray, frames: Int): FloatArray {
+        val kernel = DoubleArray(frames) { .5 - .5 * cos(TWO_PI * (it + 1) / (frames + 1)) }
+        val sum = kernel.sum()
+        return FloatArray(burst.size + frames - 1) { n ->
+            var acc = 0.0
+            for (j in maxOf(0, n - burst.lastIndex)..minOf(frames - 1, n)) acc += kernel[j] * burst[n - j]
+            (acc / sum).toFloat()
+        }
+    }
+
     private data class StringState(val event: Event, val start: Int, val burst: FloatArray,
-                                   val loop: Strings.Loop, val baseFeedback: Double, val t60: Double)
+                                   val loop: Strings.Loop, val baseFeedback: Double, val t60: Double, val contactScale: Double)
 
     private fun play(voice: NacreVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
-                     seed: Long, options: Options, record: Boolean): Probe {
+                     seed: Long, options: Options, record: Boolean, contactLoss: Float = 0f,
+                     strike: NacreStrikeShape = NacreStrikeShape.DEFAULT): Probe {
         require(midi in MIN_MIDI..MAX_MIDI) { "NACRE model 1 supports MIDI $MIN_MIDI..$MAX_MIDI, got $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be finite and in 0..1, got $velocity" }
         val m = settled(voice, macros)
@@ -268,7 +289,9 @@ internal object NacreModel1 {
             val feedback = 10.0.pow(-3.0 / (t60 * hz)).coerceAtMost(.9995)
             val tuning = Strings.tune(hz.toFloat(), loopHz, rate)
             val loop = Strings.Loop(tuning.n, tuning.a, feedback.toFloat(), loopHz, rate)
-            val pickHz = (if (bass) 2200.0 + 5700.0 * touch else 4300.0 + 8200.0 * touch) * (.7 + .3 * velocity)
+            // A strike shape darkens the pick (a broader, softer contact). DEFAULT multiplies by exactly 1.
+            val pickHz = (if (bass) 2200.0 + 5700.0 * touch else 4300.0 + 8200.0 * touch) * (.7 + .3 * velocity) *
+                strike.pickBrightness
             val pickPosition = (if (bass) .18 else .115) + .025 * event.stringId +
                 .012 * variation(seed, event.performer, event.stringId, "pick")
             val burst = Strings.pluckExciter(tuning.n, hz.toFloat(), pickHz.toFloat(), pickPosition.toFloat(),
@@ -280,11 +303,15 @@ internal object NacreModel1 {
             // Upper high strings can lead a descending gesture before either root speaks. Give
             // those strings a clear pitched onset rather than an isolated broadband noise click;
             // the brighter loop/pick spectra still distinguish their touch from the bass harp.
-            val foundation = when {
+            val builtFoundation = when {
                 event.stringId == 0 -> .72
                 !bass -> .80 - .12 * touch
                 else -> .48
             }
+            // A soft contact moves the burst toward pitched tone and away from contact noise.
+            // DEFAULT keeps the built share untouched (no addition is performed).
+            val foundation = if (strike.toneShift == 0.0) builtFoundation
+                else minOf(1.0, builtFoundation + strike.toneShift)
             val pickNoise = LowPass(if (bass) pickHz else minOf(pickHz, 2.6 * hz), rate)
             val edgeFrames = minOf((.00035 * rate).roundToInt(), (burst.size - 1) / 3).coerceAtLeast(1)
             for (i in burst.indices) {
@@ -298,7 +325,17 @@ internal object NacreModel1 {
                 burst[i] = (.28 * event.strength * envelope *
                     ((1.0 - foundation) * pickNoise.next(noise.toDouble()) + foundation * displacement)).toFloat()
             }
-            StringState(event, (event.timeSeconds * rate).roundToInt(), burst, loop, feedback, t60)
+            val contactScale = if (contactLoss == 0f) 1.0 else
+                NacreContactStudy.perPeriodGain(contactLoss, hz)
+            // A broader contact presses the string over [NacreStrikeShape.widthMs] instead of an
+            // instant: a unit-DC raised-cosine smoothing of the finished burst, a low-pass whose first
+            // null sits at 2 / contact width. The burst starts half a kernel early so its centre stays
+            // on the scheduled time (no added delay against Hard). DEFAULT skips this entirely.
+            val contactFrames = (strike.widthMs / 1000.0 * rate).roundToInt()
+            val shaped = if (contactFrames < 2) burst else contact(burst, contactFrames)
+            val scheduled = (event.timeSeconds * rate).roundToInt()
+            val start = if (contactFrames < 2) scheduled else (scheduled - (contactFrames - 1) / 2).coerceAtLeast(0)
+            StringState(event, start, shaped, loop, feedback, t60, contactScale)
         }
         val bassBody = arrayOf(138.0, 261.0, 427.0).mapIndexed { i, hz -> Mode(hz, 3.0 + i, rate) }
         val upperBody = arrayOf(397.0, 743.0, 1261.0).mapIndexed { i, hz -> Mode(hz, 2.8 + i, rate) }
@@ -341,7 +378,11 @@ internal object NacreModel1 {
                     // The extra per-period loss is always nonnegative. Keeping all phase-bearing
                     // coefficients fixed avoids detuning the existing waveguide tuning budget.
                     val scale = exp(-amount * loading * ln(1000.0) / (state.t60 * state.event.frequencyHz))
-                    state.loop.gain(scale.toFloat().coerceIn(0f, 1f))
+                    // Additional finger loading only removes round-trip energy. No new phase,
+                    // retuning, exciter, or output normalization; the old path skips the multiply.
+                    if (contactLoss == 0f) {
+                        state.loop.gain(scale.toFloat().coerceIn(0f, 1f))
+                    } else state.loop.gain((scale * state.contactScale).toFloat().coerceIn(0f, 1f))
                 }
             }
             var bass = 0.0

@@ -85,7 +85,7 @@ class OrbitPanelsTest {
         assertEquals("THE CINQUILLO", OrbitPanels.spreadNote(5, 8))
         assertNull(OrbitPanels.spreadNote(3, 16), "three round sixteen is not the tresillo")
         assertEquals("1 HIT", OrbitPanels.spreadName(1))
-        assertEquals("SPACE EVENLY · HOW MANY HITS ROUND 1 STEP?", OrbitPanels.spreadTitle(1))
+        assertEquals("SPACE EVENLY · how many hits round 1 step?", OrbitPanels.spreadTitle(1))
     }
 
     @Test

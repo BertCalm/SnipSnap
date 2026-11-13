@@ -1387,9 +1387,9 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         ) {
             TapeText(tag, TapeType.pixelSmall, color)
         }
-        // Capitals, like every other line in the UI: a finding's message is
-        // written once in `:kit` in sentence case for the CLI and the report.
-        TapeText(finding.message.uppercase(Locale.ROOT), TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
+        // A finding's message is a sentence, written once in `:kit` in sentence
+        // case for the CLI and the report. It is drawn as written.
+        TapeText(finding.message, TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
     }
 }
 

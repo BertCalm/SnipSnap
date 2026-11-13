@@ -23,6 +23,12 @@ object NativePads {
     external fun beginBank(handle: Long)
     external fun addSample(handle: Long, interleaved: FloatArray, channels: Int, rate: Int): Int
     external fun commitBank(handle: Long)
+    /** Additive allocation-safe loading surface for a dedicated owned RR handle. */
+    external fun prepareRoundRobinBank(preferredSampleRate: Int): Long
+    external fun addRoundRobinSample(handle: Long, mono44100: FloatArray): Int
+    external fun commitRoundRobinBank(handle: Long): Boolean
+    external fun startRoundRobinBank(handle: Long): Boolean
+
     external fun noteOn(
         handle: Long, voiceId: Int, sample: Int,
         startFrame: Long, endFrame: Long, loopStart: Long, gainL: Float, gainR: Float, pitch: Double,
@@ -56,6 +62,18 @@ object NativePads {
         startFrame: Long, endFrame: Long, loopStart: Long,
         gainsL: FloatArray, gainsR: FloatArray, pitch: Double, reverses: BooleanArray,
     ): Boolean
+
+    /**
+     * Dedicated RR handle only. Every array has the same 1..8 entries; each note
+     * owns its window and pitch. False publishes nothing. The serialized RR
+     * controller accounts for all outstanding voices through actual ended IDs.
+     */
+    external fun admitRoundRobinChord(
+        handle: Long, voiceIds: IntArray, samples: IntArray,
+        startFrames: LongArray, endFrames: LongArray, loopStarts: LongArray,
+        gains: FloatArray, pitches: DoubleArray,
+    ): Boolean
+
     external fun setVoiceGain(handle: Long, voiceId: Int, gainL: Float, gainR: Float, glideMs: Float)
 
     /**

@@ -132,7 +132,7 @@ class ChopReviewTest {
         assertEquals(model.rows[0].slice.sourceFrame, merged.rows[0].slice.sourceFrame)
         assertEquals(DrumClass.CLAP, merged.rows[1].override, "the chip after the join is still the human's")
         assertTrue(merged.edited)
-        assertTrue("EDITED" in merged.modeLabel(), merged.modeLabel())
+        assertTrue(merged.modeLabel().contains("EDITED", ignoreCase = true), merged.modeLabel())
         assertEquals(null, model.merged(3), "nothing after the last slice")
         assertEquals(null, model.merged(-1))
         // SPLIT the joined slice: its inner hit is the hat, so the cut lands where it was.
@@ -262,9 +262,9 @@ class ChopReviewTest {
         } finally {
             dir.deleteRecursively()
         }
-        assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToPads(5, 3, true))
-        assertEquals("1 SLICE FOLDED ONTO 1 PAD.", Copy.foldedToPads(1, 1, false))
-        assertEquals("'K' BANK B: 5 SLICES FOLDED ONTO 3 PADS.", Copy.foldedOnto("K", 'B', 5, 3, 0))
+        assertEquals("5 slices folded onto 3 pads. CHOKE GROUP set.", Copy.foldedToPads(5, 3, true))
+        assertEquals("1 slice folded onto 1 pad.", Copy.foldedToPads(1, 1, false))
+        assertEquals("'K' bank B: 5 slices folded onto 3 pads.", Copy.foldedOnto("K", 'B', 5, 3, 0))
     }
 
     /** Eight hits 100 ms apart, each an 80 ms burst, the tape ending on the last: the ear hears every hit, and there is nothing between them. */
@@ -316,10 +316,10 @@ class ChopReviewTest {
         val dir = java.nio.file.Files.createTempDirectory("ghost").toFile()
         try {
             val kit = KitBuilderModel.fromChop("Ghosts", send.arranged, dir).kit
-            assertTrue(kit.pads.all { !it.oneShot && it.displayName.startsWith("AFTER ") }, "the assembler keeps the name and the gate")
+            assertTrue(kit.pads.all { !it.oneShot && it.displayName.startsWith("AFTER ", ignoreCase = true) }, "the assembler keeps the name and the gate")
             val onto = KitBuilderModel.create("Onto", File(dir, "onto"))
             val landed = onto.landArranged(send.arranged, 1)
-            assertTrue(landed.map { onto.pad(it)!! }.all { !it.oneShot && it.displayName.startsWith("AFTER ") }, "and so does ONTO")
+            assertTrue(landed.map { onto.pad(it)!! }.all { !it.oneShot && it.displayName.startsWith("AFTER ", ignoreCase = true) }, "and so does ONTO")
             // AutoPlace scatters LOOP pads across the bank, so the landed
             // slots are read against the arranged entries that are there,
             // not against 0..3.
@@ -471,7 +471,7 @@ class ChopReviewTest {
         assertTrue(sent.chokeSet)
         assertEquals(16, sent.arranged.size)
         assertEquals(DrumClass.KICK, sent.arranged[0]?.drumClass)
-        assertEquals("4 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(sent.sliceCount, sent.chokeSet))
+        assertEquals("4 slices on the pads. CHOKE GROUP set.", Copy.sentToPads(sent.sliceCount, sent.chokeSet))
     }
 
     @Test

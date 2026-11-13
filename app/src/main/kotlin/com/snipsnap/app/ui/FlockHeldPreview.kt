@@ -87,7 +87,7 @@ internal fun FlockPerformanceControls(
             readout = FlockPadMaker.secondsLabel(patch.releaseSeconds),
         )
         TapeText("DRY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("SEND MAKES A ONE-SHOT. MAKE INSTRUMENT SUSTAINS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        TapeText("Send makes a one-shot. MAKE INSTRUMENT sustains.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         TapeText("FINITE GESTURE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }

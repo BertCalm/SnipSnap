@@ -2,7 +2,7 @@
 
 Nacre revision 3 keeps the first listening model's preferred paired-harp source and gives it the later coral and moving seaweed responses from the owner's “Much better” listening verdict. It renders finite six-second mono audio at 44.1 kHz. Saved patches select their exact renderer: revisions 1 and 2 retain their original synthesis, defaults and diagnostic behavior.
 
-New patches select revision 3. Three factory recipes are available in the Nacre picker, CLI and shared preset roster: **Pearl Close**, **Coral Reply** and **Kelp Passage**. FRESH TAPE offers a separate velocity-layered NACRE bank. The playable-range audition is at https://nacre-first-audition.bertcalm.chatgpt.site; the new sampler-bank comparison is at https://nacre-first-audition.bertcalm.chatgpt.site/velocity/index.html. Software integration does not establish MPC hardware or musical acceptance.
+New patches select revision 3. Three factory recipes are available in the Nacre picker, CLI and shared preset roster: **Pearl Close**, **Coral Reply** and **Kelp Passage**. Two further presets, **Pearl Moderate Contact** and **Pearl Strong Contact**, save the opt-in model 4 with the owner-kept CONTACT settings .35 and .8 ([NACRE_KEPT_CONTACT.md](NACRE_KEPT_CONTACT.md)); their soft/medium/hard source recipe is in [NACRE_CONTACT_NATIVE_VELOCITY.md](NACRE_CONTACT_NATIVE_VELOCITY.md). FRESH TAPE offers a separate velocity-layered NACRE bank built from the three model-3 recipes. The playable-range audition is at https://nacre-first-audition.bertcalm.chatgpt.site; the new sampler-bank comparison is at https://nacre-first-audition.bertcalm.chatgpt.site/velocity/index.html. Software integration does not establish MPC hardware or musical acceptance.
 
 ## The gesture
 

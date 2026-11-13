@@ -80,7 +80,7 @@ fun XRayScreen(
                 Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(unreadable.uppercase(), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
+                TapeText(unreadable, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
             reading.programs.isEmpty() -> Box(
                 Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp),
