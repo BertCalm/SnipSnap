@@ -308,7 +308,13 @@ class NacreContactStrikeRecipe(layers: List<NacreContactStrikeLayerRecipe>) {
 
 /** Recipe construction only; v1 [NacreContactVelocityRecipes] and every existing starter stay unchanged. */
 object NacreContactStrikeRecipes {
-    fun recipeFor(hardPatch: NacrePatch, variant: NacreStrikeVariant): NacreContactStrikeRecipe {
+    /**
+     * The owner kept both strengths by ear (Listening Desk round nacre-strike-1, 2026-11-13) and
+     * chose MODERATE (A) as the default. STRONG (B) stays available by name.
+     */
+    val DEFAULT_VARIANT: NacreStrikeVariant = NacreStrikeVariant.MODERATE
+
+    fun recipeFor(hardPatch: NacrePatch, variant: NacreStrikeVariant = DEFAULT_VARIANT): NacreContactStrikeRecipe {
         val unshaped = NacreContactVelocityRecipes.recipeFor(hardPatch)
         return NacreContactStrikeRecipe(unshaped.layers.mapIndexed { index, layer ->
             NacreContactStrikeLayerRecipe(variant, variant.shapes[index], layer)

@@ -119,6 +119,16 @@ class NacreContactStrikeRecipeTest {
     }
 
     @Test
+    fun theOwnersChoiceModerateIsTheDefaultAndStrongStaysAvailable() {
+        // Listening Desk round nacre-strike-1, 2026-11-13: both kept; the owner chose A (MODERATE).
+        assertEquals(NacreStrikeVariant.MODERATE, NacreContactStrikeRecipes.DEFAULT_VARIANT)
+        for (contact in listOf(.35f, .8f)) {
+            assertEquals(bank(NacreStrikeVariant.MODERATE, hard(contact)), NacreContactStrikeRecipes.recipeFor(hard(contact)))
+            assertEquals(NacreStrikeVariant.STRONG, bank(NacreStrikeVariant.STRONG, hard(contact)).variant)
+        }
+    }
+
+    @Test
     fun constructorsRefuseMixedVariantsShapesAndV1Violations() {
         val a = bank(); val b = bank(NacreStrikeVariant.STRONG)
         assertFails { NacreContactStrikeRecipe(listOf(b.layers[0]) + a.layers.drop(1)) }

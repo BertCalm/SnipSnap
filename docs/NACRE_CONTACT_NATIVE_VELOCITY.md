@@ -76,7 +76,8 @@ Status: built, measured and **kept by ear**. On the Listening Desk (round `nacre
 2026-11-13) the owner marked KEEP on all four candidates: A and B at CONTACT .35 (N2, N3) and
 A and B at CONTACT .80 (N5, N6), with no notes. That answers the four Soft/Medium TWEAK
 verdicts ("Sounds the same as hard", "Same as other group") for v2. Both strengths are
-acceptable; which one becomes the recipe's default is the owner's call and is still open.
+acceptable. The owner chose A (MODERATE) as the default:
+`NacreContactStrikeRecipes.recipeFor` uses it unless B (STRONG) is named.
 This is a listen to the recipe's renders, not to a phone or an MPC. v1 above is unchanged: it still decodes, and it still renders
 byte-identically (Float hashes of all six v1 layers read at `f3df719d` are pinned in
 `NacreContactStrikeRecipeTest`).
