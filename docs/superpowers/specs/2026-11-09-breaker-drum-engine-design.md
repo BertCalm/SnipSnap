@@ -764,3 +764,67 @@ the rig's tail stages off, and prints its measure in the rig beside it.
 **Found while testing Bump.** A softer kick of the tank barely changes its tone, since the tank's send
 is normalised and its 3 kHz corner hides a duller jolt. It does ring shorter: at 40%, 1.4 to 2.2 s in,
 it sits 8.6 dB under a full kick, so that is the soft-hit claim.
+
+## As built: the genre kits and model 6 (2026-11-13)
+
+Dub Tank (`breaker-dub`, 74 BPM) and Trip hop (`breaker-triphop`, 92 BPM) are on the shelf after
+BREAKER, built to the approved layouts. docs/BREAKER.md, "The genre kits" and "Model 6", has the
+pads, settings and measurements.
+
+**Departures from the layouts**, each for a measured reason:
+- **High Timbale:** about three semitones over the high tom, not five. 220 Hz is the top of SKIN's
+  tom.
+- **Steppers Kick:** DAMP .7 and CRUSH .6, not .8 and .8. Harder, its strikes measured as copies.
+- **Second Kick:** DRIP .1, not fully dry. Dry, its soft strikes measured as copies once the click
+  was cut.
+
+**Found while building the kits.** BreakerKitTest's copy check failed on two kicks: the Steppers Kick
+(42.4 dB apart) and the Second Kick (45.8). In each zone, one take's peak was about 15 dB under the
+others. The engine was not at fault. Every render peaks at a 0.4 ms click, and the shared robin
+trims up to 2 ms off a later take's front as timing jitter. Where the trim passes the click, the take
+loses its attack, and what is left of a damped, crushed kick is the same body every time:
+- Model 5's later takes differ only in force, which the crush evens out, and in the click.
+- **Model 6** gives each later kick or tom take another beater: CLICK, PUNCH, DROP and TONE move up
+  to .1 either way, seeded per take. Take 0 stays model 5's. The Steppers Kick moved to 33.9 dB.
+- The Second Kick also needed a touch of spring. With the click cut, it measured 43.9 dB on model 5
+  with DRIP .1, 43.8 on model 6 dry, and 35.2 with both.
+
+The BREAKER kit stays on model 5, so it renders exactly as the owner accepted it.
+
+**Not changed, and open:** the trim itself. It belongs to the shared `Robin` and applies to every
+re-struck kit, including kits already accepted. A trimmed take of the Second Kick plays about 2.5 to
+3 dB quieter over its first 300 ms, without its click. Whether the trim should spare a synth
+strike's attack is the owner's call.
+
+## Heard: the genre kits (2026-11-13)
+
+**Accepted:**
+- the kicks hit again: "one kick played again: fine";
+- the High Timbale at about three semitones up: high enough;
+- every pad soft to hard: softer in character, with a fresh hit each time.
+
+**Both grooves: "the balance is off".** Asked what was off, the owner answered "too much echo or
+spring" for each. Measured against BREAKER's accepted groove:
+- **Dub Tank** echoed nearly every pad: the hats at 150 ms, the kick and toms at 95 ms, besides the
+  two throws.
+- **Trip hop** slapped its kick and snare. Its crush pulled the ride's and crash's ringing tails 8 to
+  9 dB above BREAKER's: with the crush off, the ride's tail fell from −1.8 to −6.1 dB against its hit.
+  Halving its drums' spring alone barely changed the groove's wash.
+
+The owner heard each groove four ways, from as built to driest, at one loudness, and picked:
+- **Dub Tank (3):** echo only on the rimshot and the thrown snare, and every pad's spring halved
+  (Bump's DRIP stays).
+- **Trip hop (4):** no echo, a quarter of every pad's spring, and the ride and crash without their
+  crush.
+
+**As built from the picks.** Both kits' grooves are the picked versions sample for sample, except for
+one pad. Trip hop's Second Kick keeps DRIP .1: at a quarter (.025), its closest takes measured
+39.7 dB apart, a hair under a copy. The Steppers Kick, at half its spring, measures 37.7 dB.
+
+## As built: the final audition (2026-11-13)
+
+`BreakerAuditionGenerator` (`./gradlew :shell:generateBreakerAudition`) renders the engine end to end
+for the owner's closing listen, as docs/BREAKER.md, "The audition", lists. It sits in `:shell` rather
+than `:synth`, so its kits section plays the three kits as the shelf deals them, through the app's own
+preview mixer. The page template is the strike gate's, with its title, badge and section lines taken
+from the manifest. Published 2026-11-13; the owner's answers are not in yet.

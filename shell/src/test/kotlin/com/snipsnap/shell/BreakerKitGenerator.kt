@@ -18,12 +18,12 @@ import java.util.Locale
 import kotlin.math.abs
 
 /**
- * Builds the BREAKER kit as the app's starter does, proves its velocity and round-robin grid through save,
- * reload, playback and MPC 3 export, and writes the listening pack. Every pad clip is cut from the exported
- * WAV through the app's own pad resolver ([PadHit.resolve]), and the groove is the app's own preview mixer
- * ([KitPreview]), so what the page plays is what a pad would play.
+ * Builds BREAKER's three kits as the app's starters do, proves each one's velocity and round-robin grid
+ * through save, reload, playback and MPC 3 export, and writes the listening pack. Every pad clip is cut from
+ * the exported WAV through the app's own pad resolver ([PadHit.resolve]), and each groove is the app's own
+ * preview mixer ([KitPreview]), so what the page plays is what a pad would play.
  *
- * Run: `./gradlew :shell:generateBreakerKit` (writes testkit/breaker-kit).
+ * Run: `./gradlew :shell:generateBreakerKit` (writes testkit/breaker-kit/<kit id>).
  */
 object BreakerKitGenerator {
     private const val BEAT = 960L
@@ -33,6 +33,65 @@ object BreakerKitGenerator {
      * Five bars at 92 BPM: two on the hats, one on the ride with a tom run, the riser into the fifth bar's
      * crash. Velocities wander across all three zones, so the groove deals soft, middle and hard takes.
      */
+    /** The kit's name in the app, as its starter renders it. */
+    fun nameOf(kit: BreakerKits.Kit) = when (kit) {
+        BreakerKits.Kit.BREAKER -> "Breaker"
+        BreakerKits.Kit.DUB_TANK -> "Breaker Dub Tank"
+        BreakerKits.Kit.TRIP_HOP -> "Breaker Trip Hop"
+    }
+
+    fun grooveFor(kit: BreakerKits.Kit): Mpc3Clip = when (kit) {
+        BreakerKits.Kit.BREAKER -> groove()
+        BreakerKits.Kit.DUB_TANK -> dubGroove()
+        BreakerKits.Kit.TRIP_HOP -> tripGroove()
+    }
+
+    /**
+     * Five bars of one-drop at 74 BPM: two bars with the kick and rimshot together on three and the hats on
+     * the off-beats, the thrown snare on four in bar 2; a steppers bar with the ride; a run down the open toms
+     * into Bump; the crash and the drop kick on the fifth bar's one.
+     */
+    fun dubGroove(): Mpc3Clip {
+        val notes = mutableListOf<Mpc3Note>()
+        fun hit(slot: Int, bar: Int, beat: Double, v: Float) { notes += Mpc3Note(Mpc3Note.noteFor(slot), bar * BAR + (beat * BEAT).toLong(), v) }
+        for (bar in 0..1) {
+            hit(1, bar, 2.0, 1f); hit(2, bar, 2.0, .9f)
+            for (b in 0..3) hit(3, bar, b + .5, if (b % 2 == 0) .55f else .7f)
+            for (e in 0..7) hit(12, bar, e * .5, if (e % 2 == 0) .3f else .45f)
+        }
+        hit(4, 1, 3.5, .6f); hit(5, 1, 3.0, .85f)
+        for (b in 0..3) { hit(6, 2, b.toDouble(), .9f); hit(13, 2, b.toDouble(), .55f); hit(13, 2, b + .5, .35f) }
+        hit(7, 2, 2.0, .9f); hit(8, 2, 1.5, .5f); hit(8, 2, 3.5, .6f)
+        hit(11, 3, 0.0, .9f); hit(11, 3, .5, .7f); hit(10, 3, 1.0, .9f); hit(10, 3, 1.5, .7f); hit(9, 3, 2.0, 1f); hit(9, 3, 2.5, .8f)
+        hit(15, 3, 3.0, 1f)
+        hit(14, 4, 0.0, 1f); hit(1, 4, 0.0, 1f)
+        return Mpc3Clip("Dub Tank One Drop", 5, notes.sortedBy { it.timePulses })
+    }
+
+    /**
+     * Five bars of a heavy break at 92 BPM: the kick on one and the and of two, the fat snare on two and four,
+     * ghost notes and the short second kick between; the ride takes bar 3; the break snare and the toms close
+     * bar 4 as the crushed riser builds into the fifth bar's crash and heavy kick.
+     */
+    fun tripGroove(): Mpc3Clip {
+        val notes = mutableListOf<Mpc3Note>()
+        fun hit(slot: Int, bar: Int, beat: Double, v: Float) { notes += Mpc3Note(Mpc3Note.noteFor(slot), bar * BAR + (beat * BEAT).toLong(), v) }
+        for (bar in 0..3) {
+            hit(1, bar, 0.0, 1f); hit(1, bar, 1.5, .85f)
+            hit(2, bar, 1.0, .95f)
+            if (bar < 3) hit(2, bar, 3.0, .95f) else hit(12, bar, 3.0, 1f)
+            hit(5, bar, .75, .3f); hit(5, bar, 2.25, .35f); hit(5, bar, 3.75, .3f)
+            hit(6, bar, 2.75, .7f)
+            if (bar == 2) for (e in 0..7) hit(13, bar, e * .5, if (e % 2 == 0) .6f else .4f)
+            else if (bar < 3) { for (e in 0..6) hit(3, bar, e * .5, if (e % 2 == 0) .75f else .45f); hit(if (bar == 0) 4 else 8, bar, 3.5, .65f) }
+        }
+        hit(11, 1, 2.5, .6f); hit(7, 0, 3.5, .5f); hit(7, 1, 3.5, .55f); hit(16, 2, 1.5, .4f)
+        hit(9, 3, 2.25, .85f); hit(10, 3, 2.5, .8f)
+        notes += Mpc3Note(Mpc3Note.noteFor(15), 4 * BAR - (BreakerKits.Kit.TRIP_HOP.bpm / 60.0 * 2.4 * BEAT).toLong(), .9f)
+        hit(14, 4, 0.0, 1f); hit(1, 4, 0.0, 1f)
+        return Mpc3Clip("Trip Hop Break", 5, notes.sortedBy { it.timePulses })
+    }
+
     fun groove(): Mpc3Clip {
         val notes = mutableListOf<Mpc3Note>()
         fun hit(slot: Int, bar: Int, beat: Double, v: Float) { notes += Mpc3Note(Mpc3Note.noteFor(slot), bar * BAR + (beat * BEAT).toLong(), v) }
@@ -62,34 +121,38 @@ object BreakerKitGenerator {
 
     @JvmStatic fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "testkit/breaker-kit").absoluteFile.apply { deleteRecursively(); mkdirs() }
+        for (which in BreakerKits.Kit.entries) build(which, File(root, which.id).apply { mkdirs() })
+    }
+
+    private fun build(which: BreakerKits.Kit, root: File) {
         val work = File(root, "native")
         val began = System.nanoTime()
-        val kit = requireNotNull(StarterKits.byId(BreakerKits.ID)).render("Breaker", work)
+        val kit = requireNotNull(StarterKits.byId(which.id)).render(nameOf(which), work)
         val buildMs = (System.nanoTime() - began) / 1_000_000
         val saved = KitStore.load(work)
-        check(saved == kit) { "the reloaded kit differs from the one saved" }
+        check(saved == kit) { "${which.title}: the reloaded kit differs from the one saved" }
 
         // Velocity and round robin, measured on the saved grid.
         val grids = BreakerKitProof.measure(saved, work)
         for (g in grids) {
-            check(g.closestTakes < BreakerKitProof.COPY_LIKENESS) { "${g.name}: two takes are copies" }
-            check(g.leastZoneMoveDb > BreakerKitProof.LEVEL_ONLY_DB) { "${g.name}: a zone is only quieter" }
+            check(g.closestTakes < BreakerKitProof.COPY_LIKENESS) { "${which.title} ${g.name}: two takes are copies" }
+            check(g.leastZoneMoveDb > BreakerKitProof.LEVEL_ONLY_DB) { "${which.title} ${g.name}: a zone is only quieter" }
         }
 
         // Export: MPC 3 with the groove embedded, and the MPC 2 twin for comparison.
-        val clip = groove()
+        val clip = grooveFor(which)
         val export = Mpc3Exporter.exportTrack(saved, work, File(root, "MPC3"), overwrite = true, mpc2Twin = true, clip = clip)
         TriadKitProof.verifyTrack(export.program, saved)
         val data = export.samples.first().parentFile
         check(!ExportReadBack.verify(saved, ExportOutcome(ExportFormat.MPC3_TRACK, export.program, data, export.findings)).blocked())
 
         val proof = StringBuilder("slot,pad,zones,takes,closest_takes_db_apart,least_zone_move_db,saved_pcm,exported_pcm,playback_cycles,mpc3_track\n")
-        val manifest = StringBuilder("{\n  \"bpm\": ${BreakerKits.BPM},\n  \"buildMs\": $buildMs,\n  \"pads\": [\n")
+        val manifest = StringBuilder("{\n  \"kit\": \"${which.title}\",\n  \"bpm\": ${which.bpm},\n  \"buildMs\": $buildMs,\n  \"pads\": [\n")
         for ((pad, g) in saved.pads.zip(grids)) {
             val mine = WavReader.read(File(work, pad.sampleFile))
             val exported = WavReader.read(File(data, pad.sampleFile))
             check(mine.frameCount == exported.frameCount && mine.samples.indices.all { abs(mine.samples[it] - exported.samples[it]) <= 3f / 8388608 }) {
-                "${pad.displayName}: the exported PCM is not the saved PCM"
+                "${which.title} ${pad.displayName}: the exported PCM is not the saved PCM"
             }
             // Through the pad resolver on the exported WAV: each zone's takes in the order a pad deals them,
             // twice round, checked against the chain's own slices.
@@ -125,21 +188,21 @@ object BreakerKitGenerator {
         manifest.append("  ]\n}\n")
 
         // The groove through the app's own preview mixer: velocity picks the zone, each hit deals the next
-        // take, the pad's level sets the balance, and the open hat is choked by the closed one.
-        val groove = KitPreview.render(saved, work, clip, BreakerKits.BPM)
+        // take, the pad's level sets the balance, and the open hats are choked by the closed one.
+        val groove = KitPreview.render(saved, work, clip, which.bpm)
         check(groove.samples.all { it.isFinite() })
         WavWriter.write(File(root, "groove.wav"), groove, WavWriter.BitDepth.PCM_24)
 
         File(root, "verification.csv").writeText(proof.toString())
         File(root, "manifest.json").writeText(manifest.toString())
         File(root, "README.txt").writeText(
-            "BREAKER kit (renderer model 3), 16 pads at ${BreakerKits.BPM} BPM, built in $buildMs ms.\n" +
+            "${which.title} (BREAKER renderer model ${which.model}), 16 pads at ${which.bpm} BPM, built in $buildMs ms.\n" +
                 "Each synth pad is 3 velocity zones x 3 re-struck takes, dealt by the shared robin from its saved recipe;\n" +
                 "the tambourine is its 2 recorded dynamic layers x 2 recorded takes.\n" +
                 "Verified here: saved PCM, regenerable recipes, playback zone selection and take cycling (PadHit.resolve,\n" +
                 "KitPreview), and the MPC 3 track's velocity ranges, slice anchors, cycle lengths and exported PCM.\n" +
                 "MPC 2 plays each zone's first take only and does not pass the round-robin export gate.\n" +
                 "No phone or MPC has played this kit.\n")
-        println("Verified BREAKER: 16 pads, ${saved.pads.sumOf { it.chain!!.boundaries.size }} slices, saved PCM + playback + MPC 3 track, built in $buildMs ms")
+        println("Verified ${which.title}: 16 pads, ${saved.pads.sumOf { it.chain!!.boundaries.size }} slices, saved PCM + playback + MPC 3 track, built in $buildMs ms")
     }
 }
