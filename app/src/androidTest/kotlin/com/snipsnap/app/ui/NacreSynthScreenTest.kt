@@ -96,6 +96,53 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("ENGINE ORIGAMI. CHOOSE ENGINE").assertExists()
     }
 
+    @Test
+    fun saved_contact_control_survives_macro_edit_scramble_and_recreation() {
+        val saved = NacrePresets.all().last().copy(midi = 57, velocity = .37f,
+            seed = Long.MIN_VALUE + 19)
+        val settings = mutableMapOf("engine" to "NACRE", "voice" to "PEARL")
+        SynthDrafts.write(settings, listOf(saved))
+        show(settings)
+        assertEquals(.8f, progress("CONTACT"), .00001f)
+        dial("CONTACT", .62f)
+        dial("BLOOM", .52f)
+        waitFor("saved contact edit") {
+            draft(settings)?.let { it.model == 4 && it.macros["CONTACT"] == .62f &&
+                it.macros["BLOOM"] == .52f } == true
+        }
+        press("RANDOMISE")
+        waitFor("complete contact draft after scramble") {
+            draft(settings)?.let { it.model == 4 && it.macros["CONTACT"] == .62f &&
+                it.macros.keys == Nacre.defaults(it.voice, 4).keys } == true
+        }
+        assertEquals(.62f, progress("CONTACT"), .00001f)
+        val scrambled = requireNotNull(draft(settings))
+        assertEquals(saved.seed, scrambled.seed)
+        assertEquals(saved.midi, scrambled.midi)
+        assertEquals(saved.velocity, scrambled.velocity, .00001f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(.62f, progress("CONTACT"), .00001f)
+        compose.runOnIdle { assertEquals(scrambled, draft(settings)) }
+        assertFiniteControls()
+    }
+
+    @Test
+    fun switching_contact_and_legacy_presets_refreshes_same_voice_controls() {
+        val settings = mutableMapOf("engine" to "NACRE", "voice" to "PEARL")
+        show(settings)
+        compose.onNodeWithContentDescription("CONTACT", useUnmergedTree = true).assertDoesNotExist()
+        val close = NacrePresets.all().first()
+        for (contact in NacrePresets.all().filter { it.model == 4 }) {
+            press("PRESET ${contact.name}")
+            assertEquals(contact.macros.getValue("CONTACT"), progress("CONTACT"), .00001f)
+            press("PRESET ${close.name}")
+            compose.onNodeWithContentDescription("CONTACT", useUnmergedTree = true).assertDoesNotExist()
+            assertEquals(close.macros.getValue("DUET"), progress("DUET"), .00001f)
+        }
+        assertFiniteControls()
+    }
+
     private fun retainLegacy(model: Int) {
         val saved = NacrePatch("MY SAVED HARP", NacreVoice.PEARL,
             Nacre.defaults() + mapOf("TOUCH" to .19f, "DUET" to .72f, "CURRENT" to .47f,

@@ -58,7 +58,7 @@ class MidiReportTest {
         repeat(MidiReport.REPORT_LINES + 10) { m.deliver("A", byteArrayOf(0xB0.toByte(), 1, (it % 128).toByte()), timestampNanos = 0) }
         val text = MidiReport.text(phone, true, emptyList(), emptyList(), m.snapshot())
         assertEquals(MidiReport.REPORT_LINES, text.lines().count { it.startsWith("first  A") })
-        assertTrue("LAST ${MidiReport.REPORT_LINES} MESSAGES" in text)
+        assertTrue(text.contains("LAST ${MidiReport.REPORT_LINES} MESSAGES", ignoreCase = true))
     }
 
     @Test fun `a port list that is empty says NONE`() {

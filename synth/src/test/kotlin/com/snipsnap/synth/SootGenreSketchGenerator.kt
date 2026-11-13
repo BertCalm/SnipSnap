@@ -160,7 +160,8 @@ object SootGenreSketchGenerator {
     /**
      * Since the owner chose all four (2026-11-13), the sketches render through [SootGenreKits]: the four
      * bars are each kit's A16 at full velocity, take 0, and the signature pads its hits. The four bars
-     * matched the heard sketches byte for byte when this switch was made.
+     * matched the heard sketches byte for byte when this switch was made. Since kit version 2, Basement
+     * Dub's four bars are the steppers groove the owner picked instead of its sketch.
      */
     private val kitOf = mapOf("drumless" to SootGenreKits.Genre.DRUMLESS, "dub" to SootGenreKits.Genre.DUB,
         "noir" to SootGenreKits.Genre.NOIR, "industrial" to SootGenreKits.Genre.INDUSTRIAL)

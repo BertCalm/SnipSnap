@@ -6,6 +6,7 @@ import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
+import com.snipsnap.synth.MurmurKeptBank
 import com.snipsnap.synth.ChordStabs
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.ConfluenceVoiceBank
@@ -723,6 +724,13 @@ object StarterKits {
             "Straight and hard: a driven kick, bench snares, struck plates and rods, the dictaphone pushed. Three touch zones, four takes; a snare roll and four bars.",
             seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
         ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
+        Starter(
+            MurmurKeptBank.ID, "MURMUR KEPT",
+            "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+            prepare = { directory -> MurmurKeptBankFiles.write(directory) },
+        ) { SynthKits.murmurKept() },
         Starter(
             "scuff-detroit", "SCUFF DETROIT",
             "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",

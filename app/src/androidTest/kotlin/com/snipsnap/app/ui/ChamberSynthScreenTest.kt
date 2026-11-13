@@ -96,7 +96,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         .config[SemanticsProperties.ProgressBarRangeInfo].current
 
     private fun assertFiniteControls() {
-        compose.onNodeWithText("FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.").assertExists()
+        compose.onNodeWithText("Finite strike · room tail included. Spread transposes the room too.").assertExists()
         compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
         compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()

@@ -25,19 +25,21 @@ class PlacesTest {
                 assertTrue(line.startsWith("· "), "$section: bulleted: $line")
                 assertTrue(line.length <= Places.HELP_LINE_CHARS, "$section: too long (${line.length}): $line")
                 assertTrue(line.endsWith("."), "$section: a sentence: $line")
-                assertEquals(line, line.replace(Regex("(?<![0-9])[a-z]"), { it.value.uppercase() }), "$section: TapeOS shouts: $line")
+                // HELP lines are messages: sentence case, so the first word is capitalised and the line is not all caps.
+                assertTrue(line.removePrefix("· ").first().let { !it.isLetter() || it.isUpperCase() }, "$section: opens with a capital: $line")
+                assertTrue(line.any { it.isLowerCase() }, "$section: sentence case, not caps: $line")
             }
         }
         for (tag in listOf("M0", "M1", "SKELETON", "ARRIVES WITH")) {
-            assertFalse(Places.HELP.values.flatten().any { tag in it }, "HELP talks about the app, not the build: $tag")
+            assertFalse(Places.HELP.values.flatten().any { it.contains(tag, ignoreCase = true) }, "HELP talks about the app, not the build: $tag")
         }
     }
 
     @Test
     fun `the front door says who the app is for`() {
         val firstSection = Places.HELP.values.first()
-        assertTrue(firstSection.take(2).any { "MPC" in it }, "the MPC is named at the top of HELP, not ninth word of the fourth bullet")
-        assertTrue(Places.HELP.getValue("PROJECT").any { "SESSION" in it }, "and the session export is named")
+        assertTrue(firstSection.take(2).any { it.contains("MPC", ignoreCase = true) }, "the MPC is named at the top of HELP, not ninth word of the fourth bullet")
+        assertTrue(Places.HELP.getValue("PROJECT").any { it.contains("SESSION", ignoreCase = true) }, "and the session export is named")
     }
 
     @Test
@@ -50,14 +52,14 @@ class PlacesTest {
     @Test
     fun `the first-run note keeps the four verbs and ends on the kit way in`() {
         val note = Copy.FIRST_RUN_PLACES_NOTE
-        assertTrue(note.startsWith("RECORD IT, CUT IT, KIT IT, WRITE IT."), note)
-        assertTrue(note.endsWith(" OR START FROM A KIT."), note)
+        assertTrue(note.startsWith("Record it, cut it, kit it, write it."), note)
+        assertTrue(note.endsWith(" Or start from a kit."), note)
         // The places moved out of the note when the panel's row of places went:
         // the tab row above says them, and the buttons under the note are the way in.
-        assertFalse("SAMPLE" in note || "PROJECT" in note, "the note repeats the tab row: $note")
-        assertFalse("TABS" in note, "there are no tabs in the four-place shape: $note")
+        assertFalse(note.contains("SAMPLE", ignoreCase = true) || note.contains("PROJECT", ignoreCase = true), "the note repeats the tab row: $note")
+        assertFalse(note.contains("TABS", ignoreCase = true), "there are no tabs in the four-place shape: $note")
         for (word in listOf("CHOP", "EXPORT", "LIBRARY", "CREATE")) {
-            assertFalse(Regex("""\b$word\b""").containsMatchIn(note), "$word is a stage or a place the note does not need: $note")
+            assertFalse(Regex("""\b$word\b""", RegexOption.IGNORE_CASE).containsMatchIn(note), "$word is a stage or a place the note does not need: $note")
         }
     }
 
@@ -90,14 +92,14 @@ class PlacesTest {
         assertEquals("SWITCH KIT · FUNK ROOM · 2 KITS IN THIS PROJECT", Places.switchKitName(line))
         assertEquals("● FUNK ROOM · ACTIVE", Places.kitRow("Funk Room", active = true))
         assertEquals("KITCHEN", Places.kitRow("Kitchen", active = false))
-        assertFalse("ON THE GRID" in Places.kitRow("Funk Room", active = true), "ON THE GRID is the quantize phrase")
+        assertFalse(Places.kitRow("Funk Room", active = true).contains("ON THE GRID", ignoreCase = true), "ON THE GRID is the quantize phrase")
         for (drawn in listOf(Places.ADD_KIT, Places.SHEET_ADD_FROM_SHELF)) {
             assertFalse("▾" in drawn || "▸" in drawn, "a row inside a sheet carries no arrow; the control that opens the sheet has the ▾: " + drawn)
         }
     }
 
     @Test
-    fun `the menus that open as sheets name a thing and say what it does on a line of its own, in capitals and with no arrow`() {
+    fun `the menus that open as sheets name a thing in capitals and say what it does on a line of its own in sentence case, with no arrow`() {
         val pairs = listOf(
             Places.ARM_MIC to Places.ARM_MIC_DESC,
             Places.ARM_INSIDE to Places.ARM_INSIDE_DESC,
@@ -113,8 +115,9 @@ class PlacesTest {
         for ((name, description) in pairs) {
             for (line in listOf(name, description)) {
                 assertFalse("▸" in line, "the description is a line of its own, not after an arrow: $line")
-                assertEquals(line.uppercase(), line, "TapeOS shouts: $line")
             }
+            assertEquals(name.uppercase(), name)
+            assertTrue(description.first().isUpperCase() && description.any { it.isLowerCase() }, "a description is a caption, in sentence case: $description")
         }
         for (title in listOf(Places.ARM_SHEET_TITLE, Places.SHEET_KITS_TITLE, Places.TOOLS_TITLE, Places.STARTER_SHEET_TITLE)) {
             assertEquals(title.uppercase(), title)

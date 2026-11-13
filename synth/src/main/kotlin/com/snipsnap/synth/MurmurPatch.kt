@@ -19,8 +19,9 @@ data class MurmurPatch(
 ) : Patch {
     init {
         Patches.validateMacros(this, Murmur.macrosFor(voice))
-        require(midi in Murmur.MIN_MIDI..Murmur.MAX_MIDI) {
-            "MURMUR midi out of ${Murmur.MIN_MIDI}..${Murmur.MAX_MIDI}: $midi"
+        require(config.body == MurmurBody.LEGACY || voice == MurmurVoice.PLUCK) { "Murmur revised bodies are PLUCK recipes" }
+        require(midi in Murmur.rootRange(config)) {
+            "MURMUR midi out of ${Murmur.rootRange(config)}: $midi"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "MURMUR velocity out of 0..1: $velocity" }
     }
@@ -78,7 +79,10 @@ data class MurmurPatch(
                 "sourceBalance" to JsonValue.Num(target.sourceBalance),
             )) }),
             "model" to JsonValue.Num(config.model.toDouble()),
-        ))
+        ).apply {
+            // Omit for existing recipes so their canonical JSON/cache identities stay byte-identical.
+            if (config.body != MurmurBody.LEGACY) put("body", JsonValue.Str(config.body.name))
+        })
 
         private fun configFromJson(value: JsonValue): MurmurConfig {
             val obj = value.obj()
@@ -108,6 +112,10 @@ data class MurmurPatch(
                 },
                 // Existing saved definitions predate model selection and retain their original renderer.
                 model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: 1,
+                body = obj["body"]?.takeUnless { it is JsonValue.Null }?.let { raw ->
+                    MurmurBody.entries.firstOrNull { it.name == raw.str() }
+                        ?: throw JsonException("unknown MURMUR body")
+                } ?: MurmurBody.LEGACY,
             )
         }
     }

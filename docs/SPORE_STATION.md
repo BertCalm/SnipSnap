@@ -196,3 +196,7 @@ Owner listening, browser audio decoding, phone timing and MPC hardware remain un
 ## Sample-free kick/snare prototype — 12 November 2026
 
 [Audition the synthesized prototype](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthesis/). Coupled heads and impact-driven snare wires replace the recorded source for these two experimental voices. Three velocity zones and three physical restrikes survive native saving, PadHit playback and SFZ export/import. The page compares acoustic references, the earlier synth and this prototype, with mechanism-off clips and a two-pad download. Listening acceptance is pending; this does not complete the genre-kit, roll/riser or app-engine gates. See [the mechanical design and evidence](superpowers/specs/2026-11-12-spore-membrane-prototype.md).
+
+## Snare reference reset — 13 November 2026
+
+The owner rejected the coupled-head prototype across attack, body and tail. A separate Python study now calibrates procedural oscillators and noise envelopes against the supplied live 170 BPM clip, with disjoint calibration/check hits. It does not replace the existing Kotlin engine. See [the review, design and measured limits](superpowers/specs/2026-11-13-spore-snare-reference-reset.md) and [reproduction instructions](../scripts/spore_snare_study/README.md). The prepared audition is intended for `/snare-reset/`; publication is pending because the Sites service returned `codex_auth` without a working local Git credential helper.

@@ -561,6 +561,9 @@ testkit/.caustic-native-*/
 # Saved playable NACRE revision and musical comparison exports.
 testkit/nacre-playable-audition/
 
+# NACRE model-4 strike-shaping ladders (Listening Desk round nacre-strike-1).
+testkit/nacre-strike-audition/
+
 # Rebuildable sixteen-pad NACRE hardware trial and its complete download.
 testkit/SnipSnap Nacre Kit/
 testkit/SnipSnap-Nacre-Kit.zip
@@ -751,3 +754,4 @@ testkit/soot-snares/
 testkit/soot-genres/
 testkit/soot-genre-kits/
 testkit/soot-dub-candidates/
+/testkit/murmur-rr-v2-audition/

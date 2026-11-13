@@ -77,7 +77,7 @@ internal fun OrbitSheets(
 
 @Composable
 private fun SnipSheet(snips: List<File>, onAddSnipRing: (File) -> Unit, onDismiss: () -> Unit) {
-    SheetMenu("WHICH SAMPLE GOES ROUND A RING?", onDismiss) {
+    SheetMenu("Which sample goes round a ring?", onDismiss) {
         for (file in snips) {
             val name = SnipStore.displayName(file).uppercase(Locale.ROOT)
             SheetRow(name, onClick = { onAddSnipRing(file) }, accessibilityLabel = "ADD RING $name")
@@ -87,7 +87,7 @@ private fun SnipSheet(snips: List<File>, onAddSnipRing: (File) -> Unit, onDismis
 
 @Composable
 private fun StepsSheet(ring: Orbit, onSetSteps: (Int) -> Unit, onDismiss: () -> Unit) {
-    SheetMenu("HOW MANY STEPS ROUND ${ring.name}?", onDismiss) {
+    SheetMenu("How many steps round ${ring.name}?", onDismiss) {
         for (n in OrbitPatterns.STEP_CHOICES) {
             SheetRow(
                 Places.pickedRow(OrbitPanels.stepsName(n), n == ring.steps),
@@ -101,7 +101,7 @@ private fun StepsSheet(ring: Orbit, onSetSteps: (Int) -> Unit, onDismiss: () -> 
 
 @Composable
 private fun SpanSheet(ring: Orbit, onPickSpan: (OrbitSpan) -> Unit, onDismiss: () -> Unit) {
-    SheetMenu("HOW MANY BARS IS ONE TURN OF ${ring.name}?", onDismiss) {
+    SheetMenu("How many bars is one turn of ${ring.name}?", onDismiss) {
         for (span in OrbitSpan.entries) {
             SheetRow(
                 Places.pickedRow(span.label, span == ring.span),

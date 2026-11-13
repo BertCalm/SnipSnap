@@ -266,6 +266,6 @@ class ExportWizardModel(
     fun dubFilesLine(filesShown: Int): String = when (stage) {
         Stage.READY -> "$DUB_SIDES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
         Stage.WRITING -> "$DUB_SIDES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
-        Stage.COMPLETE -> "ALL ${Copy.countOf(fileCount, "FILE", "FILES")} WRITTEN."
+        Stage.COMPLETE -> "All ${Copy.countOf(fileCount, "file", "files")} written."
     }
 }

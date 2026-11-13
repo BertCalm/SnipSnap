@@ -547,7 +547,7 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS SAMPLE? IT WAITS IN DELETED SAMPLES FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("Delete this sample? It waits in deleted samples for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
@@ -611,7 +611,7 @@ private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfir
             }
             if (!safe) {
                 TapeText(
-                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    "Names can't hold / \\ : * ? \" < > | or end in a dot/space.",
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     maxLines = 2,

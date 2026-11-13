@@ -269,6 +269,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
+        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
+        Nacre.clearCoreCache()
+        val original = bank.layers.first().render().samples
+        Nacre.clearCoreCache()
+        val saved = NacreContactStrikeRecipe.fromJsonText(bank.toJsonText())
+        assertContentEquals(original, saved.layers.first().render().samples)
+    }
+
+    @Test
     fun `CAIRN fresh uncached renders reproduce all voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
             for (hold in listOf(0f, 1f)) {

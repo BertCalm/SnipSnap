@@ -1,3 +1,4 @@
+#include "RoundRobinLoading.h"
 // JNI bridge, one opaque handle per owner. Surface/Pad/LiveSnap controls
 // run on their serialized callers and hand audio-thread state across the
 // engines' rings/atomics/sample handshakes. The ORBIT array bus instead
@@ -462,6 +463,39 @@ Java_com_snipsnap_app_NativePads_latencyMillis(JNIEnv*, jobject, jlong handle) {
     return pads(handle)->latencyMillis();
 }
 
+// Separate owned RR bank loading; legacy APIs remain byte-for-byte below.
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_prepareRoundRobinBank(JNIEnv* env, jobject, jint rate) {
+    if (env->ExceptionCheck() || rate < 8000 || rate > 192000) return 0;
+    return reinterpret_cast<jlong>(snipsnap::rr_loading::prepare<PadEngine>(rate));
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_addRoundRobinSample(JNIEnv* env, jobject, jlong handle, jfloatArray input) {
+    if (env->ExceptionCheck() || !handle || !input) return -1;
+    const jsize n = env->GetArrayLength(input);
+    if (env->ExceptionCheck() || n <= 0 || n > 128 * 1024 * 1024 / 4) return -1;
+    try {
+        std::vector<float> pcm(static_cast<size_t>(n));
+        env->GetFloatArrayRegion(input, 0, n, pcm.data());
+        if (env->ExceptionCheck()) return -1; // Preserve the pending Java exception.
+        for (float value : pcm) if (!std::isfinite(value)) return -1;
+        return snipsnap::rr_loading::add(*pads(handle), std::move(pcm));
+    } catch (...) { return -1; }
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_commitRoundRobinBank(JNIEnv* env, jobject, jlong handle) {
+    if (env->ExceptionCheck() || !handle) return JNI_FALSE;
+    return snipsnap::rr_loading::commit(*pads(handle)) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_startRoundRobinBank(JNIEnv* env, jobject, jlong handle) {
+    if (env->ExceptionCheck() || !handle) return JNI_FALSE;
+    return snipsnap::rr_loading::start(*pads(handle)) ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativePads_beginBank(JNIEnv*, jobject, jlong handle) {
     pads(handle)->beginBank();
@@ -587,6 +621,53 @@ Java_com_snipsnap_app_NativePads_noteOnLayers(
     jlong startFrame, jlong endFrame, jlong loopStart,
     jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses) {
     return pushLayers(env, handle, voiceIds, samples, startFrame, endFrame, loopStart, gainsL, gainsR, pitch, reverses, -1);
+}
+
+/** A dedicated RR chord, copied and validated in full before any publication. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_admitRoundRobinChord(
+    JNIEnv* env, jobject, jlong handle, jintArray voiceIds, jintArray samples,
+    jlongArray startFrames, jlongArray endFrames, jlongArray loopStarts,
+    jfloatArray gains, jdoubleArray pitches) {
+    if (!handle || !voiceIds || !samples || !startFrames || !endFrames || !loopStarts ||
+        !gains || !pitches || env->ExceptionCheck()) return JNI_FALSE;
+    const jsize count = env->GetArrayLength(voiceIds);
+    if (env->ExceptionCheck() || count <= 0 || count > static_cast<jsize>(PadEngine::kMaxRoundRobinChordNotes)) return JNI_FALSE;
+    for (jarray array : {static_cast<jarray>(samples), static_cast<jarray>(startFrames),
+                        static_cast<jarray>(endFrames), static_cast<jarray>(loopStarts),
+                        static_cast<jarray>(gains), static_cast<jarray>(pitches)}) {
+        if (env->GetArrayLength(array) != count || env->ExceptionCheck()) return JNI_FALSE;
+    }
+    jint ids[PadEngine::kMaxRoundRobinChordNotes], sampleIndices[PadEngine::kMaxRoundRobinChordNotes];
+    jlong starts[PadEngine::kMaxRoundRobinChordNotes], ends[PadEngine::kMaxRoundRobinChordNotes], loops[PadEngine::kMaxRoundRobinChordNotes];
+    jfloat levels[PadEngine::kMaxRoundRobinChordNotes];
+    jdouble speeds[PadEngine::kMaxRoundRobinChordNotes];
+    env->GetIntArrayRegion(voiceIds, 0, count, ids);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetIntArrayRegion(samples, 0, count, sampleIndices);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetLongArrayRegion(startFrames, 0, count, starts);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetLongArrayRegion(endFrames, 0, count, ends);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetLongArrayRegion(loopStarts, 0, count, loops);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetFloatArrayRegion(gains, 0, count, levels);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    env->GetDoubleArrayRegion(pitches, 0, count, speeds);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    PadCommand notes[PadEngine::kMaxRoundRobinChordNotes];
+    for (jsize i = 0; i < count; ++i) {
+        notes[i].voiceId = ids[i];
+        notes[i].sample = sampleIndices[i];
+        notes[i].start = starts[i];
+        notes[i].end = ends[i];
+        notes[i].loopStart = loops[i];
+        notes[i].gainL = levels[i];
+        notes[i].gainR = levels[i];
+        notes[i].pitch = speeds[i];
+    }
+    return pads(handle)->admitRoundRobinChord(notes, static_cast<size_t>(count)) ? JNI_TRUE : JNI_FALSE;
 }
 
 /** [noteOnLayers] on the engine's own frame [atFrame]: the group still reaches the callback whole, and starts together. */
