@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.shell.MurmurRoundRobinShelf
 import java.io.File
 import java.util.concurrent.CancellationException
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit
  * Stream/device start memory is separate from the shelf's128MiB PCM working budget.
  */
 internal class MurmurRoundRobinOwnedPlayer(
-    private val preferredRate: Int = 44100,
+    private val preferredRate: Int = WavWriter.MPC_SAMPLE_RATE,
     private val backend: Backend = NativeMurmurRoundRobinBank,
     private val retry: Retry = TimerRetry(),
 ) : AutoCloseable {

@@ -5860,6 +5860,7 @@ class ConventionTest {
 
     /** Controls that open a screen: a bench, or a place or stage switch. */
     private val SCREEN_OPENERS = setOf(
+        "RR KEYS ▸", // MAKE's instrument shelf: a saved MURMUR round-robin bank opens its own KEYS screen
         "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
         "OPEN ▸", "CAPTURE ▸", "FROM SAVED SAMPLES ▸", // the pad strip's doors, and a project row's OPEN
         "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
@@ -5880,6 +5881,7 @@ class ConventionTest {
 
     /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
     private val SHEET_OPENERS = setOf(
+        "MURMUR PLUCK ▾", // MAKE's instrument shelf: opens the kept-pluck picker dialog
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
         "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
