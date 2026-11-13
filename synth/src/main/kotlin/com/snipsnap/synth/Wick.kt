@@ -145,6 +145,28 @@ object Wick {
         val seamContext: FloatArray? = null,
     )
 
+    /**
+     * Opt-in held source from the selected engine's actual cold start to its
+     * accepted loop. This is a held pulse/schedule opening, not finite INITIAL
+     * articulation or a natural release. The old [Probe] remains unchanged.
+     */
+    data class HeldSource(
+        val probe: Probe,
+        val note: KeyNote,
+        val origin: String,
+        val selectedPeriods: Int,
+        val selectedNativeFrames: Long,
+        val nativeSampleRate: Int,
+        val rightGuardNativeFrames: Int,
+        val joinedSeam: Double,
+        val prefixPeak: Double,
+        val prefixDc: Double,
+    ) {
+        val selectedStartNativeFrame: Long get() = 0L
+        val naturalAttack: Boolean get() = false
+        val nativeRelease: Boolean get() = false
+    }
+
     fun render(voice: WickVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
                velocity: Float = 1f, rattleSource: RattleSource = RattleSource.WARM_WIRE): Snip =
         Snip(inspect(voice, macros, midi, velocity, rattleSource = rattleSource).samples,
@@ -170,6 +192,83 @@ object Wick {
         val samples = raw.copyOf()
         Dsp.levelTo(samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         return Probe(raw, samples, diagnostics(raw, engine, null))
+    }
+
+    /**
+     * Retain the real selected-engine history without requesting extra synthesis.
+     * A replay fallback starts a new history; it is not presented as a continuation
+     * of the abandoned causal engine. Conditioning that chronology separately
+     * preserves a genuine opening while the loop body is the exact old result.
+     */
+    fun inspectHeldSource(voice: WickVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
+                          velocity: Float = 1f, options: Options = Options(),
+                          rattleSource: RattleSource = RattleSource.WARM_WIRE): HeldSource {
+        require(midi in MIN_MIDI..MAX_MIDI) { "WICK midi must be $MIN_MIDI..$MAX_MIDI" }
+        require(velocity.isFinite() && velocity > 0f && velocity <= 1f) { "WICK held source velocity must be finite, positive and <=1" }
+        require(options.oversample in listOf(1, 2, 4, 8)) { "WICK oversample must be 1, 2, 4 or 8" }
+        val m = settled(macros, voice)
+        require(isLoop(m.getValue("HOLD"))) { "WICK held source requires an existing held recipe" }
+        val resolved = if (voice == WickVoice.RATTLE)
+            options.copy(rattleSource = options.rattleSource ?: rattleSource) else options
+        val history = HeldHistory()
+        val probe = held(voice, m, midi, velocity, resolved, history)
+        val p = probe.samples.size
+        val periods = history.blocks.size
+        require(periods >= 2 && periods <= MAX_LOOP_ATTEMPTS + 1)
+        require(history.nextFrame == periods.toLong() * p * options.oversample)
+        val guard = requireNotNull(history.guard)
+        require(history.nextFrame + guard.size <= Int.MAX_VALUE)
+        val chronological = FloatArray(history.nextFrame.toInt() + guard.size)
+        var at = 0
+        for (block in history.blocks) { block.copyInto(chronological, at); at += block.size }
+        guard.copyInto(chronological, at)
+        val down = condition(chronological, options.oversample)
+        val prefixFrames = (periods - 1) * p
+        require(prefixFrames >= 256 && down.size >= prefixFrames + p)
+        val joined = FloatArray(prefixFrames + p)
+        down.copyInto(joined, endIndex = prefixFrames)
+        // Match the existing context's gain, without leveling the opening on its
+        // own or changing the independently leveled accepted loop by one bit.
+        val rawPeak = probe.raw.maxOfOrNull { abs(it) } ?: 0f
+        val gain = if (rawPeak > 1e-12f) (probe.samples.maxOfOrNull { abs(it) } ?: 0f) / rawPeak else 1f
+        var peak = 0.0
+        var sum = 0.0
+        for (i in 0 until prefixFrames) {
+            joined[i] *= gain
+            require(joined[i].isFinite()) { "WICK held source has nonfinite entry" }
+            peak = max(peak, abs(joined[i].toDouble()))
+            sum += joined[i]
+        }
+        probe.samples.copyInto(joined, destinationOffset = prefixFrames)
+        val seam = Keys.seamError(joined, prefixFrames)
+        require(seam.isFinite() && seam < Keys.MAX_SEAM_ERROR) {
+            "WICK real history join $seam exceeds ${Keys.MAX_SEAM_ERROR}"
+        }
+        return HeldSource(probe, KeyNote(Snip(joined, 1, Dsp.RATE), prefixFrames.toLong()),
+            history.origin, periods, history.nextFrame, Dsp.RATE * options.oversample,
+            guard.size, seam, peak, sum / prefixFrames)
+    }
+
+    /** References only: no engine state, block count, source arithmetic or input is modified. */
+    private class HeldHistory {
+        val blocks = ArrayList<FloatArray>()
+        var nextFrame = 0L
+        var origin = ""
+        var guard: FloatArray? = null
+        fun begin(strategy: String, start: Long) {
+            require(start == 0L) { "WICK selected history must start with a cold engine" }
+            blocks.clear(); nextFrame = 0L; guard = null
+            origin = if (strategy == "causal") "CAUSAL_COLD_HELD_PULSE" else "REPLAY_COLD_HELD_SCHEDULE"
+        }
+        fun append(block: FloatArray, start: Long) {
+            require(start == nextFrame && block.isNotEmpty()) { "WICK selected history has a gap" }
+            require(blocks.isEmpty() || block.size == blocks.first().size)
+            blocks.add(block); nextFrame += block.size
+        }
+        fun finish(block: FloatArray, start: Long) {
+            require(start == nextFrame && block.isNotEmpty() && guard == null)
+            guard = block
+        }
     }
 
     private data class Plan(val frames: Int, val cycles: Int, val hz: Double) {
@@ -720,7 +819,8 @@ object Wick {
         }
     }
 
-    private fun held(voice: WickVoice, m: Map<String, Float>, midi: Int, velocity: Float, options: Options): Probe {
+    private fun held(voice: WickVoice, m: Map<String, Float>, midi: Int, velocity: Float, options: Options,
+                     history: HeldHistory? = null): Probe {
         val p = plan(midi)
         var engine = Engine(voice, m, midi, velocity, options, p)
         var previous = FloatArray(0)
@@ -734,6 +834,7 @@ object Wick {
         var replaySourceEvents = emptyList<Event>()
         var replaySourcePeriodStartSeconds: Double? = null
         fun search(): Boolean {
+            history?.begin(strategy, engine.sample)
             var confirmations = 0
             previous = FloatArray(0)
             current = FloatArray(0)
@@ -741,6 +842,7 @@ object Wick {
             repeat(MAX_LOOP_ATTEMPTS) {
                 previous = current
                 current = engine.block(engine.periodSamples)
+                history?.append(current, engine.sample - current.size)
                 val state = engine.state()
                 attempts++
                 stateError = difference(oldState, state)
@@ -780,10 +882,12 @@ object Wick {
         // guard while bandlimiting/decimating. The resampler never sees a synthetic cut boundary.
         previous = current
         current = engine.block(engine.periodSamples)
+        history?.append(current, engine.sample - current.size)
         stateError = difference(oldState, engine.state())
         audioError = relativeDifference(previous, current)
         require(stateError < 2e-6 && audioError < 1e-7) { "WICK HOLD recurrence did not persist" }
         val guard = engine.block(min(engine.periodSamples, 4096 * options.oversample))
+        history?.finish(guard, engine.sample - guard.size)
         val down = condition(previous + current + guard, options.oversample)
         val before = down.copyOfRange(0, p.frames)
         val raw = down.copyOfRange(p.frames, 2 * p.frames)

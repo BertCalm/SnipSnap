@@ -295,3 +295,40 @@ accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
   the owner kept V2's repeated C2s and its four takes heard one at a time. V1's REVISIT
   stays on record for V1. This is a listen to saved-player renders, not to a phone or an MPC.
 - **Overall: incomplete.** Phone playback and MPC rotation remain open.
+
+## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
+
+A pitched cascade of three low-pass gates with six voices. See [WICK](WICK.md) and
+[finite keygroups](WICK_KEYGROUPS.md).
+
+This port brings back two pieces of work. MAKE INSTRUMENT now builds a finite WICK recipe
+into keys: native roots every minor third from C1 to C6 plus the authored root, three
+native touch layers, no loop (`WickKeygroupMaker`, `WickPadMaker`). And
+`Wick.inspectHeldSource` keeps a held recipe's real opening ahead of its accepted loop,
+with a one-root sampler prototype (`WickHeldPadMaker`) that has no sheet or export route.
+Every existing render, preset and saved recipe is unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | Pass | PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE. |
+| Presets | Pass | 36 factory presets, six per voice (`WickPresets`). |
+| Playable keygroups | Partial | Finite keygroups build, validate and land on the shelf in software (`WickKeygroupMakerTest`, `WickPadMakerTest`). The sheet test (`WickFiniteInstrumentScreenTest`) has not run on a device here, and no phone or MPC has played a WICK keygroup. HOLD loops do not make keys. |
+| Premade kit | Pass in software | The WICK starter: sixteen dry pads with all six voices and the three RATTLE bodies. |
+| Chord-tool compatibility | Partial | The keygroup fixture schedules all 384 major/minor `ChordStabs` note sets through `InstrumentEngine` on synthetic PCM. No chord has been rendered from WICK samples or heard. |
+| Articulation: HOLD | Partial | Causal-recovery loops are accepted; the held entry source keeps the real opening (`WickHeldEntrySourceTest`). Native held keygroups across a range are not built. |
+| Articulation: STRUM | Not yet verified | Whether PLUCK needs STRUM is an open design question: its loop is a gate/recovery gesture, not a picked string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Velocity is native excitation; each keygroup touch layer is a separate render at .30, .65 and 1 times the authored velocity, not one sample turned down. |
+| Velocity: saving, playback, export | Pass in software | The packet's source manifest binds every WAV hash to its recipe; validation checks the phone sidecar, MPC 3 `.xty` and MPC 2 `.xpm` (`WickKeygroupMakerTest`). No phone or MPC has played it. |
+| Round robin | Not yet verified | WICK has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | No phone or MPC check is recorded for the keygroups or the held entry. |
+
+- **Sound character:** [WICK](WICK.md) records the owner's acceptance of PLUCK, the revised
+  BUBBLE direction, WOOD, BREATH, FLICKER, the three-voice phrases and Warm wire as RATTLE's
+  default with Hollow reed and Rubbed glass as saved variants. It says the nine factory-bank
+  additions had no owner feedback; the backup's keygroup notes later record, "The owner has
+  now accepted WICK's nine additions". The recovery backup's backlog note records the held
+  entry's opening and sustain-handoff crops as owner KEEP and that the "held native core
+  passed"; no listening document for them came back with it.
+- **Overall: incomplete.** Device runs of the keygroups, native held keygroups, chord tools on
+  real WICK samples, the PLUCK STRUM question, round robin and hardware playback remain open.
