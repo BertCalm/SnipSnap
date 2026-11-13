@@ -13,13 +13,17 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitLayer
@@ -120,6 +124,56 @@ class StrikeStripTest : ComposeScreenTest() {
         val bounds = pad().fetchSemanticsNode().boundsInRoot
         val density = compose.density.density
         assertTrue("pad keeps a 48dp touch target", bounds.width >= 48f * density && bounds.height >= 48f * density)
+    }
+
+    /**
+     * 7d: PADS draws the four strip buttons inside a VELOCITY STRIP section that starts closed.
+     * Opening it names each toggle by its caption, and a toggle in it still works.
+     */
+    @Test
+    fun the_velocity_strip_section_starts_closed_names_each_toggle_and_a_toggle_still_works() {
+        setPhoneContent {
+            Column(Modifier.fillMaxSize()) { StrikeStripSection(owner.value, LocalScheme.current) }
+        }
+        // Closed: the heading and the strip's state are there, no toggle is.
+        button("EXPAND VELOCITY STRIP").assertExists()
+        compose.onAllNodesWithText("VELOCITY STRIP", useUnmergedTree = true).assertCountEquals(1)
+        compose.onNodeWithText("STRIP OFF", useUnmergedTree = true).assertExists()
+        for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
+            button(label).assertDoesNotExist()
+        }
+        for (caption in listOf("SIDE", "RELEASE", "LEVEL")) {
+            compose.onAllNodesWithText(caption, useUnmergedTree = true).assertCountEquals(0)
+        }
+
+        button("EXPAND VELOCITY STRIP").performClick()
+        pump()
+        // Open: every toggle is there, each under the caption saying what it sets.
+        button("COLLAPSE VELOCITY STRIP").assertExists()
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            assertTrue("caption $caption is on screen", compose.onAllNodesWithText(caption, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        }
+        for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
+            button(label).assertExists()
+        }
+        for (text in listOf("LEFT", "STAY", "VOL OFF")) {
+            compose.onNodeWithText(text, useUnmergedTree = true).assertExists()
+        }
+
+        // A toggle still works, and the closed summary follows the state.
+        button("VELOCITY STRIP").performClick()
+        pump()
+        assertTrue(state.enabled)
+        assertEquals("STRIP ON", stateOf("VELOCITY STRIP"))
+        button("VELOCITY STRIP ON RELEASE").performClick()
+        pump()
+        assertTrue(state.returns)
+        button("COLLAPSE VELOCITY STRIP").performClick()
+        pump()
+        button("VELOCITY STRIP ON RELEASE").assertDoesNotExist()
+        assertTrue("closing the section keeps the setting", state.returns)
+        // Closed again, the section's own summary now reads ON (the one remaining text of that name).
+        compose.onNodeWithText("STRIP ON", useUnmergedTree = true).assertExists()
     }
 
     /**
