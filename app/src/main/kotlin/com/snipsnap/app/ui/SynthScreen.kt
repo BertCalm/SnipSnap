@@ -1587,6 +1587,10 @@ fun SynthScreen(
         if (engine == Engine.MURMUR) {
             settings.remove(presetSettingsKey(engine, voice))
             SynthDrafts.write(settings, currentDrafts())
+            // A reopened pad's working recipe outranks the draft when the screen is rebuilt,
+            // and a rebuild seeds before this screen's dispose writes it. Write it now, or
+            // the edit is lost to the recipe the pad was opened with.
+            if ((engine to voice) in loadedRecipesByVoice) persistReopenedWork()
         }
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
